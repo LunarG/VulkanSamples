@@ -1,0 +1,3 @@
+// the CMAKE options and settings
+#define XGL_VERSION_MAJOR @XGL_VERSION_MAJOR@
+#define XGL_VERSION_MINOR @XGL_VERSION_MINOR@
