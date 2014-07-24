@@ -830,4 +830,4 @@ struct _xgl_api
 } // extern "C"
 #endif // __cplusplus
 
-#endif /* EGLAPI_INCLUDED */
+#endif /* XGLAPI_INCLUDED */
