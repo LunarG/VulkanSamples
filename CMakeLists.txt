@@ -24,6 +24,5 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall")
 # drivers: Device dependent (DD) XGL components
 # tests: XGL tests
 add_subdirectory (loader)
-add_subdirectory (main) 
 add_subdirectory (drivers)
 add_subdirectory (tests)
