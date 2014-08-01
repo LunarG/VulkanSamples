@@ -67,18 +67,6 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-class LoaderSubcommand(Subcommand):
-    # functions that the loader implements
-    impl = ("InitAndEnumerateGpus",
-            "DbgRegisterMsgCallback",
-            "DbgUnregisterMsgCallback",
-            "DbgSetGlobalOption")
-
-    def generate_header(self):
-        return "\n".join([
-            "#include <xgl.h>",
-            "#include <xglDbg.h>"])
-
     def _generate_icd_dispatch_table(self):
         proto_map = {}
         for proto in self.protos:
@@ -92,6 +80,18 @@ class LoaderSubcommand(Subcommand):
         return """struct icd_dispatch_table {
     %s;
 };""" % ";\n    ".join(entries)
+
+class LoaderSubcommand(Subcommand):
+    # functions that the loader implements
+    impl = ("InitAndEnumerateGpus",
+            "DbgRegisterMsgCallback",
+            "DbgUnregisterMsgCallback",
+            "DbgSetGlobalOption")
+
+    def generate_header(self):
+        return "\n".join([
+            "#include <xgl.h>",
+            "#include <xglDbg.h>"])
 
     def _generate_api(self):
         funcs = []
