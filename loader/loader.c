@@ -24,9 +24,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
+
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include <dlfcn.h>
 #include <pthread.h>
@@ -36,6 +40,8 @@
 
 #include "loader.generated"
 
+typedef XGL_RESULT (*LoadT)();
+typedef XGL_RESULT (*UnloadT)();
 typedef XGL_RESULT (XGLAPI *InitAndEnumerateGpusT)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *DbgRegisterMsgCallbackT)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
 typedef XGL_RESULT (XGLAPI *DbgUnregisterMsgCallbackT)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
@@ -44,6 +50,8 @@ typedef XGL_RESULT (XGLAPI *DbgSetGlobalOptionT)(XGL_INT dbgOption, XGL_SIZE dat
 struct loader_icd {
     void *handle;
 
+    LoadT Load;
+    UnloadT Unload;
     InitAndEnumerateGpusT InitAndEnumerateGpus;
     DbgRegisterMsgCallbackT DbgRegisterMsgCallback;
     DbgUnregisterMsgCallbackT DbgUnregisterMsgCallback;
@@ -171,6 +179,7 @@ static void loader_log(XGL_DBG_MSG_TYPE msg_type, XGL_INT msg_code,
 static void
 loader_icd_destroy(struct loader_icd *icd)
 {
+    icd->Unload();
     dlclose(icd->handle);
     free(icd);
 }
@@ -199,6 +208,8 @@ loader_icd_create(const char *filename)
         return NULL;                                        \
     }                                                       \
 } while (0)
+    LOOKUP(icd, Load);
+    LOOKUP(icd, Unload);
     LOOKUP(icd, InitAndEnumerateGpus);
     LOOKUP(icd, DbgRegisterMsgCallback);
     LOOKUP(icd, DbgUnregisterMsgCallback);
@@ -255,36 +266,79 @@ static XGL_RESULT loader_icd_set_global_options(const struct loader_icd *icd)
 return XGL_SUCCESS;
 }
 
-static void
-loader_icd_scan(void)
+#ifndef DEFAULT_XGL_DRIVERS_PATH
+// TODO: Is this a good default location?
+// Need to search for both 32bit and 64bit ICDs
+#define DEFAULT_XGL_DRIVERS_PATH "/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
+#endif
+
+/**
+ * Try to \c loader_icd_scan XGL driver(s).
+ *
+ * This function scans the default system path or path
+ * specified by the \c LIBXGL_DRIVERS_PATH environment variable in
+ * order to find loadable XGL ICDs with the name of libXGL_*.
+ *
+ * \returns
+ * void; but side effect is to set loader_icd_scanned to true
+ */
+static void loader_icd_scan(void)
 {
-    /* XXX How to discover ICDs? */
-    static const char *filenames[] = {
-        "libmesaxgl.so",
-        "libintelxgl.so",
-        "libxgl.so",
-    };
-    int i;
+    const char *libPaths, *p, *next;
+    DIR *sysdir;
+    struct dirent *dent;
+    char icd_library[1024];
+    int len;
 
-    for (i = 0; i < sizeof(filenames) / sizeof(filenames[0]); i++) {
-        struct loader_icd *icd;
+    libPaths = NULL;
+    if (geteuid() == getuid()) {
+       /* don't allow setuid apps to use LIBXGL_DRIVERS_PATH */
+       libPaths = getenv("LIBXGL_DRIVERS_PATH");
+    }
+    if (libPaths == NULL)
+       libPaths = DEFAULT_XGL_DRIVERS_PATH;
 
-        icd = loader_icd_create(filenames[i]);
-        if (!icd) {
-            continue;
-        }
+    for (p = libPaths; *p; p = next) {
+       next = strchr(p, ':');
+       if (next == NULL) {
+          len = strlen(p);
+          next = p + len;
+       }
+       else {
+          len = next - p;
+          next++;
+       }
 
-        if (loader_icd_set_global_options(icd) != XGL_SUCCESS ||
-            loader_icd_register_msg_callbacks(icd) != XGL_SUCCESS) {
-            loader_log(XGL_DBG_MSG_WARNING, 0,
-                    "%s ignored: failed to migrate settings", filenames[i]);
-            loader_icd_destroy(icd);
-            continue;
-        }
+       sysdir = opendir(p);
+       if (sysdir) {
+          dent = readdir(sysdir);
+          while (dent) {
+             /* look for ICDs starting with "libXGL_" */
+             if (!strncmp(dent->d_name, "libXGL_", 7)) {
+                struct loader_icd *icd;
 
-        /* prepend to the list */
-        icd->next = loader.icds;
-        loader.icds = icd;
+                snprintf(icd_library, 1024, "%s/%s",p,dent->d_name);
+
+                icd = loader_icd_create(icd_library);
+                if (icd) {
+                   if (XGL_SUCCESS == icd->Load() &&
+                       XGL_SUCCESS == loader_icd_set_global_options(icd) &&
+                       XGL_SUCCESS == loader_icd_register_msg_callbacks(icd)) {
+                      /* prepend to the list */
+                      icd->next = loader.icds;
+                      loader.icds = icd;
+                   } else {
+                      loader_log(XGL_DBG_MSG_WARNING, 0,
+                               "%s ignored: failed to migrate settings", icd_library);
+                      loader_icd_destroy(icd);
+                   }
+                }
+             }
+
+             dent = readdir(sysdir);
+          }
+          closedir(sysdir);
+       }
     }
 
     /* we have nothing to log anymore */
