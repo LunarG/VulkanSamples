@@ -1,7 +1,7 @@
 /*
- * Mesa 3-D graphics library
+ * XGL
  *
- * Copyright (C) 2012-2013 LunarG, Inc.
+ * Copyright (C) 2014 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,18 +20,10 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *    Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "xglapi.h"
-
-// GPU initialization
+#include <xgl.h>
+#include <xglDbg.h>
 
 XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     const XGL_APPLICATION_INFO*                 pAppInfo,
@@ -40,6 +32,7 @@ XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     XGL_UINT*                                   pGpuCount,
     XGL_PHYSICAL_GPU*                           pGpus)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetGpuInfo(
@@ -48,31 +41,29 @@ XGL_RESULT XGLAPI xglGetGpuInfo(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Device functions
 
 XGL_RESULT XGLAPI xglCreateDevice(
     XGL_PHYSICAL_GPU                            gpu,
     const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
     XGL_DEVICE*                                 pDevice)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglDestroyDevice(
     XGL_DEVICE                                  device)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Extension discovery functions
 
 XGL_RESULT XGLAPI xglGetExtensionSupport(
     XGL_PHYSICAL_GPU                            gpu,
     const XGL_CHAR*                             pExtName)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Queue functions
 
 XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
@@ -80,6 +71,7 @@ XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_UINT                                    queueIndex,
     XGL_QUEUE*                                  pQueue)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglQueueSubmit(
@@ -90,6 +82,7 @@ XGL_RESULT XGLAPI xglQueueSubmit(
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
@@ -97,24 +90,26 @@ XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     XGL_UINT                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglQueueWaitIdle(
     XGL_QUEUE                                   queue)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglDeviceWaitIdle(
     XGL_DEVICE                                  device)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Memory functions
 
 XGL_RESULT XGLAPI xglGetMemoryHeapCount(
     XGL_DEVICE                                  device,
     XGL_UINT*                                   pCount)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetMemoryHeapInfo(
@@ -124,6 +119,7 @@ XGL_RESULT XGLAPI xglGetMemoryHeapInfo(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglAllocMemory(
@@ -131,29 +127,34 @@ XGL_RESULT XGLAPI xglAllocMemory(
     const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
     XGL_GPU_MEMORY*                             pMem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglFreeMemory(
     XGL_GPU_MEMORY                              mem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglSetMemoryPriority(
     XGL_GPU_MEMORY                              mem,
     XGL_MEMORY_PRIORITY                         priority)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglMapMemory(
     XGL_GPU_MEMORY                              mem,
-    XGL_FLAGS                                   flags,                // Reserved
+    XGL_FLAGS                                   flags,
     XGL_VOID**                                  ppData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglUnmapMemory(
     XGL_GPU_MEMORY                              mem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglPinSystemMemory(
@@ -162,6 +163,7 @@ XGL_RESULT XGLAPI xglPinSystemMemory(
     XGL_SIZE                                    memSize,
     XGL_GPU_MEMORY*                             pMem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(
@@ -173,15 +175,15 @@ XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(
     XGL_UINT                                    postSignalSemaphoreCount,
     const XGL_QUEUE_SEMAPHORE*                  pPostSignalSemaphores)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Multi-device functions
 
 XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(
     XGL_PHYSICAL_GPU                            gpu0,
     XGL_PHYSICAL_GPU                            gpu1,
     XGL_GPU_COMPATIBILITY_INFO*                 pInfo)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglOpenSharedMemory(
@@ -189,6 +191,7 @@ XGL_RESULT XGLAPI xglOpenSharedMemory(
     const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
     XGL_GPU_MEMORY*                             pMem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(
@@ -196,6 +199,7 @@ XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(
     const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglOpenPeerMemory(
@@ -203,6 +207,7 @@ XGL_RESULT XGLAPI xglOpenPeerMemory(
     const XGL_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
     XGL_GPU_MEMORY*                             pMem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglOpenPeerImage(
@@ -211,13 +216,13 @@ XGL_RESULT XGLAPI xglOpenPeerImage(
     XGL_IMAGE*                                  pImage,
     XGL_GPU_MEMORY*                             pMem)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Generic API object functions
 
 XGL_RESULT XGLAPI xglDestroyObject(
     XGL_OBJECT                                  object)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetObjectInfo(
@@ -226,6 +231,7 @@ XGL_RESULT XGLAPI xglGetObjectInfo(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglBindObjectMemory(
@@ -233,20 +239,21 @@ XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                offset)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Fence functions
 
 XGL_RESULT XGLAPI xglCreateFence(
     XGL_DEVICE                                  device,
     const XGL_FENCE_CREATE_INFO*                pCreateInfo,
     XGL_FENCE*                                  pFence)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetFenceStatus(
-    XGL_FENCE fence)
+    XGL_FENCE                                   fence)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglWaitForFences(
@@ -256,60 +263,63 @@ XGL_RESULT XGLAPI xglWaitForFences(
     XGL_BOOL                                    waitAll,
     XGL_UINT64                                  timeout)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Queue semaphore functions
 
 XGL_RESULT XGLAPI xglCreateQueueSemaphore(
     XGL_DEVICE                                  device,
     const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglSignalQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Event functions
 
 XGL_RESULT XGLAPI xglCreateEvent(
     XGL_DEVICE                                  device,
     const XGL_EVENT_CREATE_INFO*                pCreateInfo,
     XGL_EVENT*                                  pEvent)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetEventStatus(
     XGL_EVENT                                   event)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglSetEvent(
     XGL_EVENT                                   event)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglResetEvent(
     XGL_EVENT                                   event)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Query functions
 
 XGL_RESULT XGLAPI xglCreateQueryPool(
     XGL_DEVICE                                  device,
     const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
     XGL_QUERY_POOL*                             pQueryPool)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetQueryPoolResults(
@@ -319,9 +329,8 @@ XGL_RESULT XGLAPI xglGetQueryPoolResults(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Format capabilities
 
 XGL_RESULT XGLAPI xglGetFormatInfo(
     XGL_DEVICE                                  device,
@@ -330,15 +339,15 @@ XGL_RESULT XGLAPI xglGetFormatInfo(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Image functions
 
 XGL_RESULT XGLAPI xglCreateImage(
     XGL_DEVICE                                  device,
     const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
     XGL_IMAGE*                                  pImage)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
@@ -348,15 +357,15 @@ XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Image view functions
 
 XGL_RESULT XGLAPI xglCreateImageView(
     XGL_DEVICE                                  device,
     const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
     XGL_IMAGE_VIEW*                             pView)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateColorAttachmentView(
@@ -364,6 +373,7 @@ XGL_RESULT XGLAPI xglCreateColorAttachmentView(
     const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
     XGL_COLOR_ATTACHMENT_VIEW*                  pView)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateDepthStencilView(
@@ -371,24 +381,23 @@ XGL_RESULT XGLAPI xglCreateDepthStencilView(
     const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
     XGL_DEPTH_STENCIL_VIEW*                     pView)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Shader functions
 
 XGL_RESULT XGLAPI xglCreateShader(
     XGL_DEVICE                                  device,
     const XGL_SHADER_CREATE_INFO*               pCreateInfo,
     XGL_SHADER*                                 pShader)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Pipeline functions
 
 XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
     XGL_DEVICE                                  device,
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
     XGL_PIPELINE*                               pPipeline)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateComputePipeline(
@@ -396,6 +405,7 @@ XGL_RESULT XGLAPI xglCreateComputePipeline(
     const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
     XGL_PIPELINE*                               pPipeline)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglStorePipeline(
@@ -403,6 +413,7 @@ XGL_RESULT XGLAPI xglStorePipeline(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglLoadPipeline(
@@ -411,6 +422,7 @@ XGL_RESULT XGLAPI xglLoadPipeline(
     const XGL_VOID*                             pData,
     XGL_PIPELINE*                               pPipeline)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreatePipelineDelta(
@@ -419,24 +431,23 @@ XGL_RESULT XGLAPI xglCreatePipelineDelta(
     XGL_PIPELINE                                p2,
     XGL_PIPELINE_DELTA*                         delta)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Sampler functions
 
 XGL_RESULT XGLAPI xglCreateSampler(
     XGL_DEVICE                                  device,
     const XGL_SAMPLER_CREATE_INFO*              pCreateInfo,
     XGL_SAMPLER*                                pSampler)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Descriptor set functions
 
 XGL_RESULT XGLAPI xglCreateDescriptorSet(
     XGL_DEVICE                                  device,
     const XGL_DESCRIPTOR_SET_CREATE_INFO*       pCreateInfo,
     XGL_DESCRIPTOR_SET*                         pDescriptorSet)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_VOID XGLAPI xglBeginDescriptorSetUpdate(
@@ -488,13 +499,12 @@ XGL_VOID XGLAPI xglClearDescriptorSetSlots(
 {
 }
 
-// State object functions
-
 XGL_RESULT XGLAPI xglCreateViewportState(
     XGL_DEVICE                                  device,
     const XGL_VIEWPORT_STATE_CREATE_INFO*       pCreateInfo,
     XGL_VIEWPORT_STATE_OBJECT*                  pState)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateRasterState(
@@ -502,6 +512,7 @@ XGL_RESULT XGLAPI xglCreateRasterState(
     const XGL_RASTER_STATE_CREATE_INFO*         pCreateInfo,
     XGL_RASTER_STATE_OBJECT*                    pState)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateMsaaState(
@@ -509,6 +520,7 @@ XGL_RESULT XGLAPI xglCreateMsaaState(
     const XGL_MSAA_STATE_CREATE_INFO*           pCreateInfo,
     XGL_MSAA_STATE_OBJECT*                      pState)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateColorBlendState(
@@ -516,6 +528,7 @@ XGL_RESULT XGLAPI xglCreateColorBlendState(
     const XGL_COLOR_BLEND_STATE_CREATE_INFO*    pCreateInfo,
     XGL_COLOR_BLEND_STATE_OBJECT*               pState)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglCreateDepthStencilState(
@@ -523,34 +536,35 @@ XGL_RESULT XGLAPI xglCreateDepthStencilState(
     const XGL_DEPTH_STENCIL_STATE_CREATE_INFO*  pCreateInfo,
     XGL_DEPTH_STENCIL_STATE_OBJECT*             pState)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Command buffer functions
 
 XGL_RESULT XGLAPI xglCreateCommandBuffer(
     XGL_DEVICE                                  device,
     const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
     XGL_CMD_BUFFER*                             pCmdBuffer)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglBeginCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_FLAGS                                   flags)
 {
-}               // XGL_CMD_BUFFER_BUILD_FLAGS
+    return XGL_ERROR_UNAVAILABLE;
+}
 
 XGL_RESULT XGLAPI xglEndCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI xglResetCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
+    return XGL_ERROR_UNAVAILABLE;
 }
-
-// Command buffer building functions
 
 XGL_VOID XGLAPI xglCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
@@ -852,3 +866,66 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
 {
 }
 
+XGL_RESULT XGLAPI xglDbgSetValidationLevel(
+    XGL_DEVICE                                  device,
+    XGL_VALIDATION_LEVEL                        validationLevel)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
+    XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
+    XGL_VOID*                                   pUserData)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
+    XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI xglDbgSetMessageFilter(
+    XGL_DEVICE                                  device,
+    XGL_INT                                     msgCode,
+    XGL_DBG_MSG_FILTER                          filter)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI xglDbgSetObjectTag(
+    XGL_BASE_OBJECT                             object,
+    XGL_SIZE                                    tagSize,
+    const XGL_VOID*                             pTag)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI xglDbgSetGlobalOption(
+    XGL_DBG_GLOBAL_OPTION                       dbgOption,
+    XGL_SIZE                                    dataSize,
+    const XGL_VOID*                             pData)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI xglDbgSetDeviceOption(
+    XGL_DEVICE                                  device,
+    XGL_DBG_DEVICE_OPTION                       dbgOption,
+    XGL_SIZE                                    dataSize,
+    const XGL_VOID*                             pData)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_VOID XGLAPI xglCmdDbgMarkerBegin(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    const XGL_CHAR*                             pMarker)
+{
+}
+
+XGL_VOID XGLAPI xglCmdDbgMarkerEnd(
+    XGL_CMD_BUFFER                              cmdBuffer)
+{
+}
