@@ -1,2 +1,2 @@
 add_executable(xglinfo xglinfo.c)
-target_link_libraries(xglinfo libxgl)
+target_link_libraries(xglinfo XGL)
