@@ -82,12 +82,6 @@ class Subcommand(object):
 };""" % ";\n    ".join(entries)
 
 class LoaderSubcommand(Subcommand):
-    # functions that the loader implements
-    impl = ("InitAndEnumerateGpus",
-            "DbgRegisterMsgCallback",
-            "DbgUnregisterMsgCallback",
-            "DbgSetGlobalOption")
-
     def generate_header(self):
         return "\n".join([
             "#include <xgl.h>",
@@ -96,7 +90,7 @@ class LoaderSubcommand(Subcommand):
     def _generate_api(self):
         funcs = []
         for proto in self.protos:
-            if proto.name in self.impl:
+            if not xgl.is_dispatchable(proto):
                 continue
 
             decl = proto.c_func(prefix="xgl", attr="XGLAPI")

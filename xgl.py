@@ -814,3 +814,15 @@ icd_dispatch_table = (
     "CmdDbgMarkerBegin",
     "CmdDbgMarkerEnd",
 )
+
+def is_dispatchable(proto):
+    """Return true if the prototype is dispatchable.
+
+    That is, return true when the prototype takes a XGL_PHYSICAL_GPU or
+    XGL_BASE_OBJECT.
+    """
+    return proto.name not in (
+        "InitAndEnumerateGpus",
+        "DbgRegisterMsgCallback",
+        "DbgUnregisterMsgCallback",
+        "DbgSetGlobalOption")
