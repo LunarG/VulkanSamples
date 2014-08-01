@@ -17,6 +17,8 @@ include_directories("${PROJECT_BINARY_DIR}")
 # xgl global includes
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall")
+
 # loader: Generic XGL ICD loader
 # main: Device independent (DI) XGL library
 # drivers: Device dependent (DD) XGL components
