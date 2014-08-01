@@ -17,9 +17,11 @@ include_directories("${PROJECT_BINARY_DIR}")
 # xgl global includes
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
+# loader: Generic XGL ICD loader
 # main: Device independent (DI) XGL library
 # drivers: Device dependent (DD) XGL components
 # tests: XGL tests
+add_subdirectory (loader)
 add_subdirectory (main) 
 add_subdirectory (drivers)
 add_subdirectory (tests)
