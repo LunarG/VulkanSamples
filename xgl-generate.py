@@ -81,6 +81,38 @@ class Subcommand(object):
     %s;
 };""" % ";\n    ".join(entries)
 
+class PrettyDummySubcommand(Subcommand):
+    def generate_header(self):
+        return "\n".join([
+            "#include <xgl.h>",
+            "#include <xglDbg.h>"])
+
+    def generate_body(self):
+        funcs = []
+        for proto in self.protos:
+            plist = []
+            for param in proto.params:
+                idx = param.ty.find("[")
+                if idx < 0:
+                    idx = len(param.ty)
+
+                pad = 44 - idx
+                if pad <= 0:
+                    pad = 1
+
+                plist.append("    %s%s%s%s" % (param.ty[:idx],
+                    " " * pad, param.name, param.ty[idx:]))
+
+            if proto.ret != "XGL_VOID":
+                stmt = "    return XGL_ERROR_UNAVAILABLE;\n"
+            else:
+                stmt = ""
+
+            funcs.append("%s XGLAPI xgl%s(\n%s)\n{\n%s}" % (proto.ret,
+                    proto.name, ",\n".join(plist), stmt))
+
+        return "\n\n".join(funcs)
+
 class LoaderSubcommand(Subcommand):
     def generate_header(self):
         return "\n".join([
@@ -115,6 +147,7 @@ class LoaderSubcommand(Subcommand):
 
 def main():
     subcommands = {
+            "pretty-dummy": PrettyDummySubcommand,
             "loader": LoaderSubcommand,
     }
 
