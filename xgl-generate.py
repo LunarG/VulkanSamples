@@ -100,7 +100,8 @@ class LoaderSubcommand(Subcommand):
 
             funcs.append("%s\n"
                          "{\n"
-                         "    const struct icd_dispatch_table **disp = (const struct icd_dispatch_table **) %s;\n"
+                         "    const struct icd_dispatch_table * const *disp =\n"
+                         "        (const struct icd_dispatch_table * const *) %s;\n"
                          "    %s;\n"
                          "}" % (decl, proto.params[0].name, stmt))
 
