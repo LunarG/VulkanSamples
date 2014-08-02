@@ -20,6 +20,9 @@ include_directories("/usr/include/drm")
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 # loader: Generic XGL ICD loader
 # main: Device independent (DI) XGL library
