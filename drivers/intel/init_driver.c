@@ -44,7 +44,7 @@
 #include <pciaccess.h>
 
 #include <xf86drm.h>
-#include <drm/i915_drm.h>
+#include <i915_drm.h>
 
 #include <libudev.h>
 #include <dlfcn.h>

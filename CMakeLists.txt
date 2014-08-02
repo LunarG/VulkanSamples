@@ -14,12 +14,17 @@ configure_file (
    )
 
 include_directories("${PROJECT_BINARY_DIR}")
-
-# xgl global includes
-include_directories("/usr/include/drm")
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
+
+include(FindPkgConfig)
+pkg_check_modules(LIBDRM REQUIRED libdrm)
+if (NOT LIBDRM_FOUND)
+	message(FATAL_ERROR "libdrm not found")
+endif()
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)

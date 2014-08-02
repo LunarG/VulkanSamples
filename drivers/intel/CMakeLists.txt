@@ -1,13 +1,16 @@
 # Create the i965 XGL DRI library
 
-include_directories("${PROJECT_SOURCE_DIR}/loader")
-
 link_directories (
+    ${LIBDRM_LIBRARY_DIRS}
 )
 
 link_libraries (
-   drm
+   ${LIBDRM_LIBRARIES}
    udev
+)
+
+include_directories (
+    ${LIBDRM_INCLUDE_DIRS}
 )
 
 SET(SOURCES 
