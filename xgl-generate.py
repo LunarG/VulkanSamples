@@ -81,6 +81,26 @@ class Subcommand(object):
     %s;
 };""" % ";\n    ".join(entries)
 
+    def _generate_icd_dispatch_entrypoints(self):
+        funcs = []
+        for proto in self.protos:
+            if not xgl.is_dispatchable(proto):
+                continue
+
+            decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+            stmt = "(*disp)->%s" % proto.c_call()
+            if proto.ret != "XGL_VOID":
+                stmt = "return " + stmt
+
+            funcs.append("%s\n"
+                         "{\n"
+                         "    const struct icd_dispatch_table * const *disp =\n"
+                         "        (const struct icd_dispatch_table * const *) %s;\n"
+                         "    %s;\n"
+                         "}" % (decl, proto.params[0].name, stmt))
+
+        return "\n\n".join(funcs)
+
 class PrettyDummySubcommand(Subcommand):
     def generate_header(self):
         return "\n".join([
@@ -119,29 +139,9 @@ class LoaderSubcommand(Subcommand):
             "#include <xgl.h>",
             "#include <xglDbg.h>"])
 
-    def _generate_api(self):
-        funcs = []
-        for proto in self.protos:
-            if not xgl.is_dispatchable(proto):
-                continue
-
-            decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-            stmt = "(*disp)->%s" % proto.c_call()
-            if proto.ret != "XGL_VOID":
-                stmt = "return " + stmt
-
-            funcs.append("%s\n"
-                         "{\n"
-                         "    const struct icd_dispatch_table * const *disp =\n"
-                         "        (const struct icd_dispatch_table * const *) %s;\n"
-                         "    %s;\n"
-                         "}" % (decl, proto.params[0].name, stmt))
-
-        return "\n\n".join(funcs)
-
     def generate_body(self):
         body = [self._generate_icd_dispatch_table(),
-                self._generate_api()]
+                self._generate_icd_dispatch_entrypoints()]
 
         return "\n\n".join(body)
 
