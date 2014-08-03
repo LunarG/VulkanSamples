@@ -76,116 +76,16 @@ XGL_RESULT XGLAPI GetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExt
 #  define ICDENTRY __attribute__((visibility("default")))
 #endif /* WIN32 && !CYGWIN */
 
-#define LOADER_DBG_MSG_SIZE 256
-
 /*
  * Global to contain application allocation call-backs
  * and GPU enumeration info.
  */
 struct _xgl_config icd_data;
 
-struct icd_msg_callback {
-    XGL_DBG_MSG_CALLBACK_FUNCTION func;
-    XGL_VOID *data;
-
-    struct icd_msg_callback *next;
-};
-
-static XGL_VOID *_xglAlloc(XGL_VOID * pUserData, XGL_SIZE size,
-                           XGL_SIZE alignment, XGL_SYSTEM_ALLOC_TYPE allocType)
+static void loader_err(XGL_INT msg_code, const char *msg)
 {
-    // TODO: ensure alignment
-    // can we use? aligned_alloc(alignment, size);
-    return (XGL_VOID *) malloc(size);
-}
-
-static XGL_VOID _xglFree(XGL_VOID * pUserData, XGL_VOID * pMem)
-{
-    free(pMem);
-}
-
-static struct icd_msg_callback *icd_msg_callbacks = NULL;
-
-static XGL_RESULT icd_msg_callback_add(XGL_DBG_MSG_CALLBACK_FUNCTION func,
-                                       XGL_VOID * data)
-{
-    struct icd_msg_callback *cb;
-
-    cb = malloc(sizeof(*cb));
-    if (!cb)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    cb->func = func;
-    cb->data = data;
-
-    cb->next = icd_msg_callbacks;
-    icd_msg_callbacks = cb;
-
-    return XGL_SUCCESS;
-}
-
-static XGL_RESULT icd_msg_callback_remove(XGL_DBG_MSG_CALLBACK_FUNCTION func)
-{
-    struct icd_msg_callback *cb = icd_msg_callbacks;
-
-    /*
-     * Find the first match.
-     *
-     * XXX What if the same callback function is registered more
-     * than once?
-     */
-    while (cb) {
-        if (cb->func == func)
-            break;
-        cb = cb->next;
-    }
-
-    if (!cb)
-        return XGL_ERROR_INVALID_POINTER;
-
-    free(cb);
-
-    return XGL_SUCCESS;
-}
-
-static void icd_msg_callback_clear(void)
-{
-    struct icd_msg_callback *cb = icd_msg_callbacks;
-
-    cb = icd_msg_callbacks;
-    while (cb) {
-        struct icd_msg_callback *next = cb->next;
-        free(cb);
-        cb = next;
-    }
-}
-
-static void loader_err(XGL_INT msg_code, const char *format, ...)
-{
-    const struct icd_msg_callback *cb = icd_msg_callbacks;
-    char msg[LOADER_DBG_MSG_SIZE];
-    va_list ap;
-    int ret;
-
-    if (!cb) {
-#if 1
-        fputs(msg, stderr);
-        fputc('\n', stderr);
-#endif
-        return;
-    }
-
-    va_start(ap, format);
-    ret = vsnprintf(msg, sizeof(msg), format, ap);
-    if (ret >= sizeof(msg) || ret < 0)
-        msg[sizeof(msg) - 1] = '\0';
-    va_end(ap);
-
-    while (cb) {
-        cb->func(0, 0, XGL_NULL_HANDLE, 0, msg_code, (const XGL_CHAR *) msg,
-                 cb->data);
-        cb = cb->next;
-    }
+    icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+            XGL_NULL_HANDLE, 0, msg_code, msg);
 }
 
 ICDENTRY XGL_RESULT XGLAPI xglLoad()
@@ -197,28 +97,8 @@ ICDENTRY XGL_RESULT XGLAPI xglLoad()
 ICDENTRY XGL_RESULT XGLAPI xglUnload()
 {
     // TODO: Free resources
-   icd_msg_callback_clear();
+    icd_clear_msg_callbacks();
     return XGL_SUCCESS;
-}
-
-ICDENTRY XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption,
-                                                 XGL_SIZE dataSize,
-                                                 const XGL_VOID * pData)
-{
-    return XGL_SUCCESS;
-}
-
-ICDENTRY XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION
-                                              pfnMsgCallback,
-                                              XGL_VOID * pUserData)
-{
-    return icd_msg_callback_add(pfnMsgCallback, pUserData);
-}
-
-ICDENTRY XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION
-                                                pfnMsgCallback)
-{
-    return icd_msg_callback_remove(pfnMsgCallback);
 }
 
 static int is_render_node(int fd, struct stat *st)
@@ -266,9 +146,15 @@ ICDENTRY XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO *
     int fd;
     struct stat st;
     char *pci_glob = "*:*";
-    XGL_RESULT ret = XGL_ERROR_UNAVAILABLE;
+    XGL_RESULT ret;
     XGL_UINT count = 0;
     struct _xgl_device *pXglDev;
+
+    ret = icd_set_alloc_callbacks(pAllocCb);
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    ret = XGL_ERROR_UNAVAILABLE;
 
     // TODO: Do we need to keep track of previous calls to xglInitAndEnumerageGpus?
     /*
@@ -277,32 +163,9 @@ ICDENTRY XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO *
      */
 
     if (icd_data.num_gpus > 0) {
-        /*
-         * When xglInitAndEnumerateGpus() is called multiple times,
-         * the same callbacks have to be provided on each invocation.
-         * Changing the callbacks on subsequent calls to xglInitAndEnumerateGpus()
-         * causes it to fail with XGL_ERROR_INVALID_POINTER error.
-         */
-        if (icd_data.UserDefinedAlloc
-            && (icd_data.xgl_alloc.pfnAlloc != pAllocCb->pfnAlloc
-                || icd_data.xgl_alloc.pfnFree != pAllocCb->pfnFree)) {
-            // TODO: Do we still re-initialize the structure?
-            return XGL_ERROR_INVALID_POINTER;
-        }
         // TODO: Free resources and re-initialize
     }
     // TODO: Do we need any other validation for incoming pointers?
-
-    if (pAllocCb != XGL_NULL_HANDLE && pAllocCb->pfnAlloc != XGL_NULL_HANDLE) {
-        icd_data.UserDefinedAlloc = XGL_TRUE;
-        icd_data.xgl_alloc.pfnAlloc = pAllocCb->pfnAlloc;
-        icd_data.xgl_alloc.pfnFree = pAllocCb->pfnFree;
-        icd_data.xgl_alloc.pUserData = pAllocCb->pUserData;
-    } else {
-        icd_data.xgl_alloc.pfnAlloc = _xglAlloc;
-        icd_data.xgl_alloc.pfnFree = _xglFree;
-        icd_data.xgl_alloc.pUserData = XGL_NULL_HANDLE;
-    }
 
     udev = udev_new();
     if (udev == NULL) {
