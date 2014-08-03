@@ -38,8 +38,6 @@
 #include <xgl.h>
 #include <xglDbg.h>
 
-typedef XGL_RESULT (*LoadT)();
-typedef XGL_RESULT (*UnloadT)();
 typedef XGL_RESULT (XGLAPI *InitAndEnumerateGpusT)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *DbgRegisterMsgCallbackT)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
 typedef XGL_RESULT (XGLAPI *DbgUnregisterMsgCallbackT)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
@@ -48,8 +46,6 @@ typedef XGL_RESULT (XGLAPI *DbgSetGlobalOptionT)(XGL_INT dbgOption, XGL_SIZE dat
 struct loader_icd {
     void *handle;
 
-    LoadT Load;
-    UnloadT Unload;
     InitAndEnumerateGpusT InitAndEnumerateGpus;
     DbgRegisterMsgCallbackT DbgRegisterMsgCallback;
     DbgUnregisterMsgCallbackT DbgUnregisterMsgCallback;
@@ -177,7 +173,6 @@ static void loader_log(XGL_DBG_MSG_TYPE msg_type, XGL_INT msg_code,
 static void
 loader_icd_destroy(struct loader_icd *icd)
 {
-    icd->Unload();
     dlclose(icd->handle);
     free(icd);
 }
@@ -206,8 +201,6 @@ loader_icd_create(const char *filename)
         return NULL;                                        \
     }                                                       \
 } while (0)
-    LOOKUP(icd, Load);
-    LOOKUP(icd, Unload);
     LOOKUP(icd, InitAndEnumerateGpus);
     LOOKUP(icd, DbgRegisterMsgCallback);
     LOOKUP(icd, DbgUnregisterMsgCallback);
@@ -319,8 +312,7 @@ static void loader_icd_scan(void)
 
                 icd = loader_icd_create(icd_library);
                 if (icd) {
-                   if (XGL_SUCCESS == icd->Load() &&
-                       XGL_SUCCESS == loader_icd_set_global_options(icd) &&
+                   if (XGL_SUCCESS == loader_icd_set_global_options(icd) &&
                        XGL_SUCCESS == loader_icd_register_msg_callbacks(icd)) {
                       /* prepend to the list */
                       icd->next = loader.icds;
