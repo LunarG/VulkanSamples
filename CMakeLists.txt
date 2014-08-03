@@ -30,9 +30,8 @@ include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 # loader: Generic XGL ICD loader
-# main: Device independent (DI) XGL library
-# drivers: Device dependent (DD) XGL components
+# icd: Device dependent (DD) XGL components
 # tests: XGL tests
-add_subdirectory (loader)
-add_subdirectory (drivers)
-add_subdirectory (tests)
+add_subdirectory(loader)
+add_subdirectory(icd)
+add_subdirectory(tests)
