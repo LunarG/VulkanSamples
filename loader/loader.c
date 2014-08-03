@@ -38,8 +38,6 @@
 #include <xgl.h>
 #include <xglDbg.h>
 
-#include "loader.generated"
-
 typedef XGL_RESULT (*LoadT)();
 typedef XGL_RESULT (*UnloadT)();
 typedef XGL_RESULT (XGLAPI *InitAndEnumerateGpusT)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
