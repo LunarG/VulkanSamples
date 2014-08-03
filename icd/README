@@ -1,0 +1,4 @@
+common/ provides helper and utility functions, as well as all XGL entry points
+except xglInitAndEnumerateGpus.  Hardware drivers are required to provide that
+function, and to embed a "struct icd_dispatch_table *" as the first member of
+XGL_PHYSICAL_GPU and all XGL_BASE_OBJECT.

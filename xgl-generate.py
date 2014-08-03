@@ -145,10 +145,46 @@ class LoaderSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class IcdDispatchTableSubcommand(Subcommand):
+    def generate_header(self):
+        return "\n".join([
+            "#include <xgl.h>",
+            "#include <xglDbg.h>"])
+
+    def generate_body(self):
+        return self._generate_icd_dispatch_table()
+
+class IcdDispatchTableSubcommand(Subcommand):
+    def generate_header(self):
+        return "\n".join([
+            "#include <xgl.h>",
+            "#include <xglDbg.h>"])
+
+    def generate_body(self):
+        return self._generate_icd_dispatch_table()
+
+class IcdDispatchEntrypointsSubcommand(Subcommand):
+    def run(self):
+        if len(self.argv) != 1:
+            print("IcdDispatchEntrypointsSubcommand requires a header to include")
+            return
+        super().run()
+
+    def generate_header(self):
+        return "\n".join([
+            "#include <xgl.h>",
+            "#include <xglDbg.h>",
+            "#include \"%s\"" % self.argv[0]])
+
+    def generate_body(self):
+        return self._generate_icd_dispatch_entrypoints()
+
 def main():
     subcommands = {
             "pretty-dummy": PrettyDummySubcommand,
             "loader": LoaderSubcommand,
+            "icd-dispatch-table": IcdDispatchTableSubcommand,
+            "icd-dispatch-entrypoints": IcdDispatchEntrypointsSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
