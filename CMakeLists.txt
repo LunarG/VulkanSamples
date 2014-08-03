@@ -23,7 +23,7 @@ if (NOT LIBDRM_FOUND)
 	message(FATAL_ERROR "libdrm not found")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Werror -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 include(GetGitRevisionDescription)
