@@ -28,11 +28,7 @@
 #ifndef __DRIVER_H_INCLUDED__
 #define __DRIVER_H_INCLUDED__
 
-#include <stdio.h>
-
-#include "xgl.h"
-#include "xglDbg.h"
-#include "icd.h"
+#include "intel.h"
 
 /**
  * Typedefs for all XGL API entrypoint functions.
