@@ -49,10 +49,7 @@ extern "C" {
 
 struct _xgl_device {
     /* MUST be first element of structure */
-    struct icd_dispatch_table *exec;
-
-    struct icd_dispatch_table xgl;
-    struct icd_dispatch_table validation;
+    const struct icd_dispatch_table *exec;
 
     int fd;                 /* file descriptor of render-node */
     uint32_t dev_id;

@@ -24,15 +24,7 @@
 
 #include "icd.h"
 #include "dispatch_tables.h"
-
-static XGL_RESULT XGLAPI intelGetGpuInfo(
-    XGL_PHYSICAL_GPU                            gpu,
-    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
+#include "gen7_functions.h"
 
 static XGL_RESULT XGLAPI intelCreateDevice(
     XGL_PHYSICAL_GPU                            gpu,
@@ -44,13 +36,6 @@ static XGL_RESULT XGLAPI intelCreateDevice(
 
 static XGL_RESULT XGLAPI intelDestroyDevice(
     XGL_DEVICE                                  device)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetExtensionSupport(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_CHAR*                             pExtName)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

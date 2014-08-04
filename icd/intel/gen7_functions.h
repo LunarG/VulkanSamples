@@ -29,8 +29,14 @@
 #define GEN7_FUNCTIONS_H
 #include "driver.h"
 
-XGL_RESULT gen7_GetGpuInfo(XGL_PHYSICAL_GPU gpu,
-                           XGL_PHYSICAL_GPU_INFO_TYPE infoType,
-                           XGL_SIZE * pDataSize, XGL_VOID * pData);
+XGL_RESULT XGLAPI intelGetGpuInfo(
+    XGL_PHYSICAL_GPU                            gpu,
+    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData);
+
+XGL_RESULT XGLAPI intelGetExtensionSupport(
+    XGL_PHYSICAL_GPU                            gpu,
+    const XGL_CHAR*                             pExtName);
 
 #endif                          // GEN7_FUNCTIONS_H

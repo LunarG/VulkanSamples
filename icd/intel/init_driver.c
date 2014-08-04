@@ -65,8 +65,7 @@
 #include "driver.h"
 #include "intel_chipset.h"
 #include "gen7_functions.h"
-
-XGL_RESULT XGLAPI GetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName);
+#include "dispatch_tables.h"
 
 
 /*
@@ -90,24 +89,6 @@ static int is_render_node(int fd, struct stat *st)
         return 0;
 
     return st->st_rdev & 0x80;
-}
-
-static void init_xgl_dispatch_table(struct icd_dispatch_table *pDispatch)
-{
-#define LOAD(xglfunc, driverfunc) do {                              \
-    pDispatch->xglfunc = driverfunc;                                     \
-} while (0)
-    LOAD(GetGpuInfo, gen7_GetGpuInfo);
-    LOAD(GetExtensionSupport, GetExtensionSupport);
-}
-
-static void init_validation_dispatch_table(struct icd_dispatch_table *pDispatch)
-{
-#define LOAD(xglfunc, driverfunc) do {                              \
-    pDispatch->xglfunc = driverfunc;                                     \
-} while (0)
-    LOAD(GetGpuInfo, gen7_GetGpuInfo);
-    LOAD(GetExtensionSupport, GetExtensionSupport);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO *
@@ -202,9 +183,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
         pXglDev->fd = fd;
         strncpy(pXglDev->device_path, dnode, XGL_MAX_PHYSICAL_GPU_NAME);
         icd_data.render_node_list[count] = pXglDev;
-        init_xgl_dispatch_table(&pXglDev->xgl);
-        init_validation_dispatch_table(&pXglDev->validation);
-        pXglDev->exec = & pXglDev->xgl;
+        pXglDev->exec = &intel_normal_dispatch_table;
 
         ret = XGL_SUCCESS;
         count++;
@@ -224,7 +203,9 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
     return ret;
 }
 
-XGL_RESULT XGLAPI GetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName)
+XGL_RESULT XGLAPI intelGetExtensionSupport(
+    XGL_PHYSICAL_GPU                            gpu,
+    const XGL_CHAR*                             pExtName)
 {
     // struct _xgl_device *pdev = (struct _xgl_device *) gpu;
 

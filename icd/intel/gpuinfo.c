@@ -112,9 +112,11 @@ XGL_RESULT XGLAPI gen7_GetGpuMemoryProperties(struct _xgl_device *pdev,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI gen7_GetGpuInfo(XGL_PHYSICAL_GPU gpu,
-                                  XGL_PHYSICAL_GPU_INFO_TYPE infoType,
-                                  XGL_SIZE * pDataSize, XGL_VOID * pData)
+XGL_RESULT XGLAPI intelGetGpuInfo(
+    XGL_PHYSICAL_GPU                            gpu,
+    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData)
 {
     XGL_RESULT ret = XGL_SUCCESS;
     struct _xgl_device *pdev = (struct _xgl_device *) gpu;
