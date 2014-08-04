@@ -88,19 +88,6 @@ static void loader_err(XGL_INT msg_code, const char *msg)
             XGL_NULL_HANDLE, 0, msg_code, msg);
 }
 
-ICDENTRY XGL_RESULT XGLAPI xglLoad()
-{
-    memset(&icd_data, 0, sizeof(icd_data));
-    return XGL_SUCCESS;
-}
-
-ICDENTRY XGL_RESULT XGLAPI xglUnload()
-{
-    // TODO: Free resources
-    icd_clear_msg_callbacks();
-    return XGL_SUCCESS;
-}
-
 static int is_render_node(int fd, struct stat *st)
 {
     if (fstat(fd, st))
