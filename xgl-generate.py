@@ -104,38 +104,6 @@ class Subcommand(object):
 
         return "\n\n".join(funcs)
 
-class PrettyDummySubcommand(Subcommand):
-    def generate_header(self):
-        return "\n".join([
-            "#include <xgl.h>",
-            "#include <xglDbg.h>"])
-
-    def generate_body(self):
-        funcs = []
-        for proto in self.protos:
-            plist = []
-            for param in proto.params:
-                idx = param.ty.find("[")
-                if idx < 0:
-                    idx = len(param.ty)
-
-                pad = 44 - idx
-                if pad <= 0:
-                    pad = 1
-
-                plist.append("    %s%s%s%s" % (param.ty[:idx],
-                    " " * pad, param.name, param.ty[idx:]))
-
-            if proto.ret != "XGL_VOID":
-                stmt = "    return XGL_ERROR_UNAVAILABLE;\n"
-            else:
-                stmt = ""
-
-            funcs.append("%s XGLAPI xgl%s(\n%s)\n{\n%s}" % (proto.ret,
-                    proto.name, ",\n".join(plist), stmt))
-
-        return "\n\n".join(funcs)
-
 class LoaderSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
@@ -171,12 +139,81 @@ class IcdDispatchEntrypointsSubcommand(Subcommand):
     def generate_body(self):
         return self._generate_icd_dispatch_entrypoints("ICD_EXPORT")
 
+class IcdDispatchDummyImplSubcommand(Subcommand):
+    def run(self):
+        if len(self.argv) != 1:
+            print("IcdDispatchDummyImplSubcommand: <prefix> unspecified")
+            return
+
+        self.prefix = self.argv[0]
+
+        super().run()
+
+    def generate_header(self):
+        return "#include \"icd.h\""
+
+    def _generate_stub_decl(self, proto):
+        plist = []
+        for param in proto.params:
+            idx = param.ty.find("[")
+            if idx < 0:
+                idx = len(param.ty)
+
+            pad = 44 - idx
+            if pad <= 0:
+                pad = 1
+
+            plist.append("    %s%s%s%s" % (param.ty[:idx],
+                " " * pad, param.name, param.ty[idx:]))
+
+        return "%s XGLAPI %s%s(\n%s)" % (proto.ret, self.prefix,
+                proto.name, ",\n".join(plist))
+
+    def _generate_stubs(self):
+        stubs = []
+        for proto in self.protos:
+            if not xgl.is_dispatchable(proto):
+                continue
+
+            decl = self._generate_stub_decl(proto)
+            if proto.ret != "XGL_VOID":
+                stmt = "    return XGL_ERROR_UNAVAILABLE;\n"
+            else:
+                stmt = ""
+
+            stubs.append("static %s\n{\n%s}" % (decl, stmt))
+
+        return "\n\n".join(stubs)
+
+
+    def _generate_tables(self):
+        initializer = []
+        for proto in self.protos:
+            prefix = self.prefix if xgl.is_dispatchable(proto) else "xgl"
+            initializer.append(".%s = %s%s" %
+                    (proto.name, prefix, proto.name))
+
+        return """const struct icd_dispatch_table %s_normal_dispatch_table = {
+    %s,
+};
+
+const struct icd_dispatch_table %s_debug_dispatch_table = {
+    %s,
+};""" % (self.prefix, ",\n    ".join(initializer),
+         self.prefix, ",\n    ".join(initializer))
+
+    def generate_body(self):
+        body = [self._generate_stubs(),
+                self._generate_tables()]
+
+        return "\n\n".join(body)
+
 def main():
     subcommands = {
-            "pretty-dummy": PrettyDummySubcommand,
             "loader": LoaderSubcommand,
             "icd-dispatch-table": IcdDispatchTableSubcommand,
             "icd-dispatch-entrypoints": IcdDispatchEntrypointsSubcommand,
+            "icd-dispatch-dummy-impl": IcdDispatchDummyImplSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
