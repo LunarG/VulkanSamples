@@ -22,52 +22,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef ICD_H
-#define ICD_H
-
-#include <stdarg.h>
+#ifndef LOADER_H
+#define LOADER_H
 
 #include <xgl.h>
 #include <xglDbg.h>
 
-#include "icd-dispatch-table.h"
-
 #if defined(__GNUC__) && __GNUC__ >= 4
-#  define ICD_EXPORT __attribute__((visibility("default")))
+#  define LOADER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
-#  define ICD_EXPORT __attribute__((visibility("default")))
+#  define LOADER_EXPORT __attribute__((visibility("default")))
 #else
-#  define ICD_EXPORT
+#  define LOADER_EXPORT
 #endif
 
-void icd_msg(XGL_DBG_MSG_TYPE msg_type,
-             XGL_VALIDATION_LEVEL validation_level,
-             XGL_BASE_OBJECT src_object,
-             XGL_SIZE location,
-             XGL_INT msg_code,
-             const char *msg);
-
-void icd_vlog(XGL_DBG_MSG_TYPE msg_type,
-              XGL_VALIDATION_LEVEL validation_level,
-              XGL_BASE_OBJECT src_object,
-              XGL_SIZE location,
-              XGL_INT msg_code,
-              const char *format, va_list ap);
-
-void icd_log(XGL_DBG_MSG_TYPE msg_type,
-             XGL_VALIDATION_LEVEL validation_level,
-             XGL_BASE_OBJECT src_object,
-             XGL_SIZE location,
-             XGL_INT msg_code,
-             const char *format, ...);
-
-void icd_clear_msg_callbacks(void);
-
-XGL_RESULT icd_set_alloc_callbacks(const XGL_ALLOC_CALLBACKS *alloc_cb);
-
-void *icd_alloc(XGL_SIZE size, XGL_SIZE alignment,
-                XGL_SYSTEM_ALLOC_TYPE type);
-
-void icd_free(void *mem);
-
-#endif /* ICD_H */
+#endif /* LOADER_H */

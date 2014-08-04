@@ -35,8 +35,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 
-#include <xgl.h>
-#include <xglDbg.h>
+#include "loader.h"
 
 typedef XGL_RESULT (XGLAPI *InitAndEnumerateGpusT)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *DbgRegisterMsgCallbackT)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
@@ -337,7 +336,7 @@ static void loader_icd_scan(void)
     loader.scanned = true;
 }
 
-XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
+LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
 {
     static pthread_once_t once = PTHREAD_ONCE_INIT;
     const struct loader_icd *icd;
@@ -376,7 +375,7 @@ XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, 
     return (count > 0) ? XGL_SUCCESS : res;
 }
 
-XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
+LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
 {
     const struct loader_icd *icd = loader.icds;
     XGL_RESULT res;
@@ -409,7 +408,7 @@ XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsg
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     const struct loader_icd *icd = loader.icds;
     XGL_RESULT res = XGL_SUCCESS;
@@ -429,7 +428,7 @@ XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnM
     return res;
 }
 
-XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
+LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
     const struct loader_icd *icd = loader.icds;
     XGL_RESULT res = XGL_SUCCESS;

@@ -81,7 +81,10 @@ class Subcommand(object):
     %s;
 };""" % ";\n    ".join(entries)
 
-    def _generate_icd_dispatch_entrypoints(self):
+    def _generate_icd_dispatch_entrypoints(self, qual=""):
+        if qual:
+            qual += " "
+
         funcs = []
         for proto in self.protos:
             if not xgl.is_dispatchable(proto):
@@ -92,12 +95,12 @@ class Subcommand(object):
             if proto.ret != "XGL_VOID":
                 stmt = "return " + stmt
 
-            funcs.append("%s\n"
+            funcs.append("%s%s\n"
                          "{\n"
                          "    const struct icd_dispatch_table * const *disp =\n"
                          "        (const struct icd_dispatch_table * const *) %s;\n"
                          "    %s;\n"
-                         "}" % (decl, proto.params[0].name, stmt))
+                         "}" % (qual, decl, proto.params[0].name, stmt))
 
         return "\n\n".join(funcs)
 
@@ -135,13 +138,11 @@ class PrettyDummySubcommand(Subcommand):
 
 class LoaderSubcommand(Subcommand):
     def generate_header(self):
-        return "\n".join([
-            "#include <xgl.h>",
-            "#include <xglDbg.h>"])
+        return "#include \"loader.h\""
 
     def generate_body(self):
         body = [self._generate_icd_dispatch_table(),
-                self._generate_icd_dispatch_entrypoints()]
+                self._generate_icd_dispatch_entrypoints("LOADER_EXPORT")]
 
         return "\n\n".join(body)
 
@@ -164,20 +165,11 @@ class IcdDispatchTableSubcommand(Subcommand):
         return self._generate_icd_dispatch_table()
 
 class IcdDispatchEntrypointsSubcommand(Subcommand):
-    def run(self):
-        if len(self.argv) != 1:
-            print("IcdDispatchEntrypointsSubcommand requires a header to include")
-            return
-        super().run()
-
     def generate_header(self):
-        return "\n".join([
-            "#include <xgl.h>",
-            "#include <xglDbg.h>",
-            "#include \"%s\"" % self.argv[0]])
+        return "#include \"icd.h\""
 
     def generate_body(self):
-        return self._generate_icd_dispatch_entrypoints()
+        return self._generate_icd_dispatch_entrypoints("ICD_EXPORT")
 
 def main():
     subcommands = {

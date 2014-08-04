@@ -69,13 +69,6 @@
 XGL_RESULT XGLAPI GetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName);
 
 
-#if defined(__WIN32__) && !defined(__CYGWIN__)
-#elif defined(__CYGWIN__) && defined(USE_OPENGL32) /* use native windows opengl32 */
-#  define ICDENTRY extern
-#elif (defined(__GNUC__) && __GNUC__ >= 4) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
-#  define ICDENTRY __attribute__((visibility("default")))
-#endif /* WIN32 && !CYGWIN */
-
 /*
  * Global to contain application allocation call-backs
  * and GPU enumeration info.
@@ -117,7 +110,7 @@ static void init_validation_dispatch_table(struct icd_dispatch_table *pDispatch)
     LOAD(GetExtensionSupport, GetExtensionSupport);
 }
 
-ICDENTRY XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO *
+ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO *
                                             pAppInfo,
                                             const XGL_ALLOC_CALLBACKS *
                                             pAllocCb, XGL_UINT maxGpus,
