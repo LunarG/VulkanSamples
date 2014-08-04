@@ -24,14 +24,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <dirent.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
 
-#include <sys/syscall.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <unistd.h>
-
 #include <dlfcn.h>
 #include <pthread.h>
 
@@ -256,6 +255,28 @@ static XGL_RESULT loader_icd_set_global_options(const struct loader_icd *icd)
 return XGL_SUCCESS;
 }
 
+static struct loader_icd *loader_icd_add(const char *filename)
+{
+    struct loader_icd *icd;
+
+    icd = loader_icd_create(filename);
+    if (!icd)
+        return NULL;
+
+    if (loader_icd_set_global_options(icd) != XGL_SUCCESS ||
+        loader_icd_register_msg_callbacks(icd) != XGL_SUCCESS) {
+        loader_log(XGL_DBG_MSG_WARNING, 0,
+                "%s ignored: failed to migrate settings", filename);
+        loader_icd_destroy(icd);
+    }
+
+    /* prepend to the list */
+    icd->next = loader.icds;
+    loader.icds = icd;
+
+    return icd;
+}
+
 #ifndef DEFAULT_XGL_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
@@ -305,23 +326,8 @@ static void loader_icd_scan(void)
           while (dent) {
              /* look for ICDs starting with "libXGL_" */
              if (!strncmp(dent->d_name, "libXGL_", 7)) {
-                struct loader_icd *icd;
-
                 snprintf(icd_library, 1024, "%s/%s",p,dent->d_name);
-
-                icd = loader_icd_create(icd_library);
-                if (icd) {
-                   if (XGL_SUCCESS == loader_icd_set_global_options(icd) &&
-                       XGL_SUCCESS == loader_icd_register_msg_callbacks(icd)) {
-                      /* prepend to the list */
-                      icd->next = loader.icds;
-                      loader.icds = icd;
-                   } else {
-                      loader_log(XGL_DBG_MSG_WARNING, 0,
-                               "%s ignored: failed to migrate settings", icd_library);
-                      loader_icd_destroy(icd);
-                   }
-                }
+                loader_icd_add(icd_library);
              }
 
              dent = readdir(sysdir);
