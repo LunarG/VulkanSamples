@@ -26,22 +26,19 @@
  */
 
 #include <string.h>
+#include <limits.h>
 #include <errno.h>
 #ifndef ETIME
 #define ETIME ETIMEDOUT
 #endif
+#include <assert.h>
 
 #include <xf86drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
-#include "os/os_thread.h"
-#include "state_tracker/drm_driver.h"
-#include "pipe/p_state.h"
-#include "util/u_inlines.h"
-#include "util/u_memory.h"
-#include "util/u_debug.h"
-#include "../intel_winsys.h"
+#include "icd.h"
+#include "winsys.h"
 
 #define BATCH_SZ (8192 * sizeof(uint32_t))
 
@@ -50,10 +47,7 @@ struct intel_winsys {
    drm_intel_bufmgr *bufmgr;
    struct intel_winsys_info info;
 
-   /* these are protected by the mutex */
-   pipe_mutex mutex;
-   drm_intel_context *first_gem_ctx;
-   struct drm_intel_decode *decode;
+   drm_intel_context *ctx;
 };
 
 static drm_intel_bo *
@@ -133,7 +127,6 @@ probe_winsys(struct intel_winsys *winsys)
     */
    get_param(winsys, I915_PARAM_HAS_RELAXED_DELTA, &val);
    if (!val) {
-      debug_error("kernel 2.6.39 required");
       return false;
    }
 
@@ -145,8 +138,11 @@ probe_winsys(struct intel_winsys *winsys)
    info->has_llc = val;
    info->has_address_swizzling = test_address_swizzling(winsys);
 
-   winsys->first_gem_ctx = drm_intel_gem_context_create(winsys->bufmgr);
-   info->has_logical_context = (winsys->first_gem_ctx != NULL);
+   winsys->ctx = drm_intel_gem_context_create(winsys->bufmgr);
+   if (!winsys->ctx)
+      return false;
+
+   info->has_logical_context = (winsys->ctx != NULL);
 
    get_param(winsys, I915_PARAM_HAS_ALIASING_PPGTT, &val);
    info->has_ppgtt = val;
@@ -165,25 +161,23 @@ intel_winsys_create_for_fd(int fd)
 {
    struct intel_winsys *winsys;
 
-   winsys = CALLOC_STRUCT(intel_winsys);
+   winsys = icd_alloc(sizeof(*winsys), 0, XGL_SYSTEM_ALLOC_INTERNAL);
    if (!winsys)
       return NULL;
+
+   memset(winsys, 0, sizeof(*winsys));
 
    winsys->fd = fd;
 
    winsys->bufmgr = drm_intel_bufmgr_gem_init(winsys->fd, BATCH_SZ);
    if (!winsys->bufmgr) {
-      debug_error("failed to create GEM buffer manager");
-      FREE(winsys);
+      icd_free(winsys);
       return NULL;
    }
 
-   pipe_mutex_init(winsys->mutex);
-
    if (!probe_winsys(winsys)) {
-      pipe_mutex_destroy(winsys->mutex);
       drm_intel_bufmgr_destroy(winsys->bufmgr);
-      FREE(winsys);
+      icd_free(winsys);
       return NULL;
    }
 
@@ -206,45 +200,15 @@ intel_winsys_create_for_fd(int fd)
 void
 intel_winsys_destroy(struct intel_winsys *winsys)
 {
-   if (winsys->decode)
-      drm_intel_decode_context_free(winsys->decode);
-
-   if (winsys->first_gem_ctx)
-      drm_intel_gem_context_destroy(winsys->first_gem_ctx);
-
-   pipe_mutex_destroy(winsys->mutex);
+   drm_intel_gem_context_destroy(winsys->ctx);
    drm_intel_bufmgr_destroy(winsys->bufmgr);
-   FREE(winsys);
+   icd_free(winsys);
 }
 
 const struct intel_winsys_info *
 intel_winsys_get_info(const struct intel_winsys *winsys)
 {
    return &winsys->info;
-}
-
-struct intel_context *
-intel_winsys_create_context(struct intel_winsys *winsys)
-{
-   drm_intel_context *gem_ctx;
-
-   /* try the preallocated context first */
-   pipe_mutex_lock(winsys->mutex);
-   gem_ctx = winsys->first_gem_ctx;
-   winsys->first_gem_ctx = NULL;
-   pipe_mutex_unlock(winsys->mutex);
-
-   if (!gem_ctx)
-      gem_ctx = drm_intel_gem_context_create(winsys->bufmgr);
-
-   return (struct intel_context *) gem_ctx;
-}
-
-void
-intel_winsys_destroy_context(struct intel_winsys *winsys,
-                             struct intel_context *ctx)
-{
-   drm_intel_gem_context_destroy((drm_intel_context *) ctx);
 }
 
 int
@@ -312,7 +276,7 @@ intel_winsys_alloc_bo(struct intel_winsys *winsys,
 struct intel_bo *
 intel_winsys_import_handle(struct intel_winsys *winsys,
                            const char *name,
-                           const struct winsys_handle *handle,
+                           const struct intel_winsys_handle *handle,
                            unsigned long height,
                            enum intel_tiling_mode *tiling,
                            unsigned long *pitch)
@@ -322,14 +286,14 @@ intel_winsys_import_handle(struct intel_winsys *winsys,
    int err;
 
    switch (handle->type) {
-   case DRM_API_HANDLE_TYPE_SHARED:
+   case INTEL_WINSYS_HANDLE_SHARED:
       {
          const uint32_t gem_name = handle->handle;
          bo = drm_intel_bo_gem_create_from_name(winsys->bufmgr,
                name, gem_name);
       }
       break;
-   case DRM_API_HANDLE_TYPE_FD:
+   case INTEL_WINSYS_HANDLE_FD:
       {
          const int fd = (int) handle->handle;
          bo = drm_intel_bo_gem_create_from_prime(winsys->bufmgr,
@@ -362,12 +326,12 @@ intel_winsys_export_handle(struct intel_winsys *winsys,
                            enum intel_tiling_mode tiling,
                            unsigned long pitch,
                            unsigned long height,
-                           struct winsys_handle *handle)
+                           struct intel_winsys_handle *handle)
 {
    int err = 0;
 
    switch (handle->type) {
-   case DRM_API_HANDLE_TYPE_SHARED:
+   case INTEL_WINSYS_HANDLE_SHARED:
       {
          uint32_t name;
 
@@ -376,10 +340,10 @@ intel_winsys_export_handle(struct intel_winsys *winsys,
             handle->handle = name;
       }
       break;
-   case DRM_API_HANDLE_TYPE_KMS:
+   case INTEL_WINSYS_HANDLE_KMS:
       handle->handle = gem_bo(bo)->handle;
       break;
-   case DRM_API_HANDLE_TYPE_FD:
+   case INTEL_WINSYS_HANDLE_FD:
       {
          int fd;
 
@@ -414,18 +378,17 @@ int
 intel_winsys_submit_bo(struct intel_winsys *winsys,
                        enum intel_ring_type ring,
                        struct intel_bo *bo, int used,
-                       struct intel_context *ctx,
                        unsigned long flags)
 {
    const unsigned long exec_flags = (unsigned long) ring | flags;
+   drm_intel_context *ctx;
 
    /* logical contexts are only available for the render ring */
-   if (ring != INTEL_RING_RENDER)
-      ctx = NULL;
+   ctx = (ring == INTEL_RING_RENDER) ? winsys->ctx : NULL;
 
    if (ctx) {
       return drm_intel_gem_bo_context_exec(gem_bo(bo),
-            (drm_intel_context *) ctx, used, exec_flags);
+            ctx, used, exec_flags);
    }
    else {
       return drm_intel_bo_mrb_exec(gem_bo(bo),
@@ -437,37 +400,29 @@ void
 intel_winsys_decode_bo(struct intel_winsys *winsys,
                        struct intel_bo *bo, int used)
 {
+   struct drm_intel_decode *decode;
    void *ptr;
 
    ptr = intel_bo_map(bo, false);
    if (!ptr) {
-      debug_printf("failed to map buffer for decoding\n");
       return;
    }
 
-   pipe_mutex_lock(winsys->mutex);
-
-   if (!winsys->decode) {
-      winsys->decode = drm_intel_decode_context_alloc(winsys->info.devid);
-      if (!winsys->decode) {
-         pipe_mutex_unlock(winsys->mutex);
-         intel_bo_unmap(bo);
-         return;
-      }
-
-      /* debug_printf()/debug_error() uses stderr by default */
-      drm_intel_decode_set_output_file(winsys->decode, stderr);
+   decode = drm_intel_decode_context_alloc(winsys->info.devid);
+   if (!decode) {
+      intel_bo_unmap(bo);
+      return;
    }
+
+   drm_intel_decode_set_output_file(decode, stderr);
 
    /* in dwords */
    used /= 4;
 
-   drm_intel_decode_set_batch_pointer(winsys->decode,
+   drm_intel_decode_set_batch_pointer(decode,
          ptr, gem_bo(bo)->offset64, used);
 
-   drm_intel_decode(winsys->decode);
-
-   pipe_mutex_unlock(winsys->mutex);
+   drm_intel_decode(decode);
 
    intel_bo_unmap(bo);
 }
@@ -491,7 +446,6 @@ intel_bo_map(struct intel_bo *bo, bool write_enable)
 
    err = drm_intel_bo_map(gem_bo(bo), write_enable);
    if (err) {
-      debug_error("failed to map bo");
       return NULL;
    }
 
@@ -505,7 +459,6 @@ intel_bo_map_gtt(struct intel_bo *bo)
 
    err = drm_intel_gem_bo_map_gtt(gem_bo(bo));
    if (err) {
-      debug_error("failed to map bo");
       return NULL;
    }
 
@@ -519,7 +472,6 @@ intel_bo_map_unsynchronized(struct intel_bo *bo)
 
    err = drm_intel_gem_bo_map_unsynchronized(gem_bo(bo));
    if (err) {
-      debug_error("failed to map bo");
       return NULL;
    }
 

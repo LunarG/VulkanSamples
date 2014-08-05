@@ -28,7 +28,8 @@
 #ifndef INTEL_WINSYS_H
 #define INTEL_WINSYS_H
 
-#include "pipe/p_compiler.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 /* this is compatible with i915_drm.h's definitions */
 enum intel_ring_type {
@@ -61,9 +62,13 @@ enum intel_tiling_mode {
    INTEL_TILING_Y    = 2,
 };
 
-struct winsys_handle;
+enum intel_winsys_handle_type {
+   INTEL_WINSYS_HANDLE_SHARED,
+   INTEL_WINSYS_HANDLE_KMS,
+   INTEL_WINSYS_HANDLE_FD,
+};
+
 struct intel_winsys;
-struct intel_context;
 struct intel_bo;
 
 struct intel_winsys_info {
@@ -82,6 +87,12 @@ struct intel_winsys_info {
    bool has_gen7_sol_reset;
 };
 
+struct intel_winsys_handle {
+    enum intel_winsys_handle_type type;
+    unsigned handle;
+    unsigned stride;
+};
+
 struct intel_winsys *
 intel_winsys_create_for_fd(int fd);
 
@@ -90,19 +101,6 @@ intel_winsys_destroy(struct intel_winsys *winsys);
 
 const struct intel_winsys_info *
 intel_winsys_get_info(const struct intel_winsys *winsys);
-
-/**
- * Create a logical context for use with the render ring.
- */
-struct intel_context *
-intel_winsys_create_context(struct intel_winsys *winsys);
-
-/**
- * Destroy a logical context.
- */
-void
-intel_winsys_destroy_context(struct intel_winsys *winsys,
-                             struct intel_context *ctx);
 
 /**
  * Read a register.  Only registers that are considered safe, such as
@@ -151,7 +149,7 @@ intel_winsys_alloc_buffer(struct intel_winsys *winsys,
 struct intel_bo *
 intel_winsys_import_handle(struct intel_winsys *winsys,
                            const char *name,
-                           const struct winsys_handle *handle,
+                           const struct intel_winsys_handle *handle,
                            unsigned long height,
                            enum intel_tiling_mode *tiling,
                            unsigned long *pitch);
@@ -165,7 +163,7 @@ intel_winsys_export_handle(struct intel_winsys *winsys,
                            enum intel_tiling_mode tiling,
                            unsigned long pitch,
                            unsigned long height,
-                           struct winsys_handle *handle);
+                           struct intel_winsys_handle *handle);
 
 /**
  * Return true when buffer objects directly specified in \p bo_array, and
@@ -187,7 +185,6 @@ int
 intel_winsys_submit_bo(struct intel_winsys *winsys,
                        enum intel_ring_type ring,
                        struct intel_bo *bo, int used,
-                       struct intel_context *ctx,
                        unsigned long flags);
 
 /**
