@@ -25,8 +25,8 @@
 #ifndef GENHW_H
 #define GENHW_H
 
-#include "pipe/p_compiler.h"
-#include "util/u_debug.h"
+#include <stdbool.h>
+#include <assert.h>
 
 #include "gen_regs.xml.h"
 #include "gen_mi.xml.h"

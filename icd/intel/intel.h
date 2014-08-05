@@ -25,12 +25,19 @@
 #ifndef INTEL_H
 #define INTEL_H
 
+#include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <assert.h>
 
 #include <xgl.h>
 #include <xglDbg.h>
 
 #include "icd.h"
+
+#define INTEL_API_VERSION XGL_MAKE_VERSION(0, 22, 0)
+#define INTEL_DRIVER_VERSION 0
+
+#define INTEL_GEN(gen) ((int) ((gen) * 100))
 
 #endif /* INTEL_H */
