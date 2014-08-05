@@ -18,6 +18,7 @@ SET(SOURCES
     init_driver.c
     gpu.c
     gpuinfo.c
+    obj.c
     )
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.c.in"
