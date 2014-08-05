@@ -27,7 +27,8 @@
 
 #ifndef GEN7_FUNCTIONS_H
 #define GEN7_FUNCTIONS_H
-#include "driver.h"
+
+#include "intel.h"
 
 XGL_RESULT XGLAPI intelGetGpuInfo(
     XGL_PHYSICAL_GPU                            gpu,
