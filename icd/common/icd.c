@@ -50,7 +50,7 @@ struct icd {
     bool break_on_warning;
 
     XGL_ALLOC_CALLBACKS alloc_callbacks;
-    bool alloc_callbacks_initialized;
+    int init_count;
 };
 
 static XGL_VOID *default_alloc(XGL_VOID *user_data,
@@ -217,9 +217,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOpti
     return res;
 }
 
-XGL_RESULT icd_set_alloc_callbacks(const XGL_ALLOC_CALLBACKS *alloc_cb)
+XGL_RESULT icd_set_allocator(const XGL_ALLOC_CALLBACKS *alloc_cb)
 {
-    if (icd.alloc_callbacks_initialized) {
+    if (icd.init_count) {
+        /*
+         * The spec says: Changing the callbacks on subsequent calls to
+         * xglInitAndEnumerateGpus() causes it to fail with
+         * XGL_ERROR_INVALID_POINTER error.
+         */
         return (memcmp(&icd.alloc_callbacks, alloc_cb, sizeof(*alloc_cb))) ?
             XGL_ERROR_INVALID_POINTER : XGL_SUCCESS;
     }
@@ -227,9 +232,14 @@ XGL_RESULT icd_set_alloc_callbacks(const XGL_ALLOC_CALLBACKS *alloc_cb)
     if (alloc_cb)
         icd.alloc_callbacks = *alloc_cb;
 
-    icd.alloc_callbacks_initialized = true;
+    icd.init_count++;
 
     return XGL_SUCCESS;
+}
+
+int icd_get_allocator_id(void)
+{
+    return icd.init_count;
 }
 
 void *icd_alloc(XGL_SIZE size, XGL_SIZE alignment,

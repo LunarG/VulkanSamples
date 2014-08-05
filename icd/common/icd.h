@@ -63,7 +63,8 @@ void icd_log(XGL_DBG_MSG_TYPE msg_type,
 
 void icd_clear_msg_callbacks(void);
 
-XGL_RESULT icd_set_alloc_callbacks(const XGL_ALLOC_CALLBACKS *alloc_cb);
+XGL_RESULT icd_set_allocator(const XGL_ALLOC_CALLBACKS *alloc_cb);
+int icd_get_allocator_id(void);
 
 void *icd_alloc(XGL_SIZE size, XGL_SIZE alignment,
                 XGL_SYSTEM_ALLOC_TYPE type);

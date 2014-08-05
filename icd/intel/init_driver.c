@@ -73,7 +73,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
     XGL_RESULT ret;
     XGL_UINT count = 0;
 
-    ret = icd_set_alloc_callbacks(pAllocCb);
+    ret = icd_set_allocator(pAllocCb);
     if (ret != XGL_SUCCESS)
         return ret;
 
