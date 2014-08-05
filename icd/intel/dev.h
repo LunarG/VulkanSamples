@@ -91,4 +91,23 @@ XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
 void intel_dev_remove_msg_filter(struct intel_dev *dev,
                                  XGL_INT msg_code);
 
+XGL_RESULT XGLAPI intelCreateDevice(
+    XGL_PHYSICAL_GPU                            gpu,
+    const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
+    XGL_DEVICE*                                 pDevice);
+
+XGL_RESULT XGLAPI intelDestroyDevice(
+    XGL_DEVICE                                  device);
+
+XGL_RESULT XGLAPI intelGetMemoryHeapCount(
+    XGL_DEVICE                                  device,
+    XGL_UINT*                                   pCount);
+
+XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
+    XGL_DEVICE                                  device,
+    XGL_UINT                                    heapId,
+    XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData);
+
 #endif /* DEV_H */

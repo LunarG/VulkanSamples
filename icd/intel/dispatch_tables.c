@@ -24,21 +24,8 @@
 
 #include "icd.h"
 #include "dispatch_tables.h"
+#include "dev.h"
 #include "gen7_functions.h"
-
-static XGL_RESULT XGLAPI intelCreateDevice(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
-    XGL_DEVICE*                                 pDevice)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelDestroyDevice(
-    XGL_DEVICE                                  device)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
 
 static XGL_RESULT XGLAPI intelGetDeviceQueue(
     XGL_DEVICE                                  device,
@@ -76,23 +63,6 @@ static XGL_RESULT XGLAPI intelQueueWaitIdle(
 
 static XGL_RESULT XGLAPI intelDeviceWaitIdle(
     XGL_DEVICE                                  device)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetMemoryHeapCount(
-    XGL_DEVICE                                  device,
-    XGL_UINT*                                   pCount)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    heapId,
-    XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

@@ -296,3 +296,46 @@ void intel_dev_remove_msg_filter(struct intel_dev *dev,
         f = f->next;
     }
 }
+
+XGL_RESULT XGLAPI intelCreateDevice(
+    XGL_PHYSICAL_GPU                            gpu_,
+    const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
+    XGL_DEVICE*                                 pDevice)
+{
+    struct intel_gpu *gpu = intel_gpu(gpu_);
+
+    return intel_dev_create(gpu, pCreateInfo, (struct intel_dev **) pDevice);
+}
+
+XGL_RESULT XGLAPI intelDestroyDevice(
+    XGL_DEVICE                                  device)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    intel_dev_destroy(dev);
+
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelGetMemoryHeapCount(
+    XGL_DEVICE                                  device,
+    XGL_UINT*                                   pCount)
+{
+    *pCount = 1;
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
+    XGL_DEVICE                                  device,
+    XGL_UINT                                    heapId,
+    XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    intel_dev_get_heap_props(dev, pData);
+    *pDataSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);
+
+    return XGL_SUCCESS;
+}
