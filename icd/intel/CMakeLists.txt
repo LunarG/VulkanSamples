@@ -17,6 +17,7 @@ include_directories (
 )
 
 SET(SOURCES 
+    dev.c
     dispatch_tables.c
     init_driver.c
     gpu.c
