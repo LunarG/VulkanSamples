@@ -30,7 +30,11 @@ struct app_gpu {
 
 	XGL_PHYSICAL_GPU_PROPERTIES props;
 	XGL_PHYSICAL_GPU_PERFORMANCE perf;
-	XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
+
+	XGL_UINT queue_count;
+	XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+	XGL_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
+
 	XGL_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
 
 	XGL_UINT extension_count;
@@ -223,7 +227,7 @@ static void app_dev_dump_heap_props(const struct app_dev *dev, XGL_UINT id)
 
 	printf("\tflags =%s%s%s%s%s%s\n",
 			(props->flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT) ? " visible" : "",
-			(props->flags & XGL_MEMORY_HEAP_CPU_GPU_COHERENT_BIT) ?  "coherent" : "",
+			(props->flags & XGL_MEMORY_HEAP_CPU_GPU_COHERENT_BIT) ?  " coherent" : "",
 			(props->flags & XGL_MEMORY_HEAP_CPU_UNCACHED_BIT) ? " uc" : "",
 			(props->flags & XGL_MEMORY_HEAP_CPU_WRITE_COMBINED_BIT) ? " wc" : "",
 			(props->flags & XGL_MEMORY_HEAP_HOLDS_PINNED_BIT) ? " pinnable" : "",
@@ -254,7 +258,7 @@ app_dev_dump(const struct app_dev *dev)
 }
 
 static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct app_gpu *other,
-		                      const XGL_GPU_COMPATIBILITY_INFO *info)
+				      const XGL_GPU_COMPATIBILITY_INFO *info)
 {
 	printf("XGL_GPU_COMPATIBILITY_INFO[GPU%d]\n", other->id);
 
@@ -302,11 +306,11 @@ static void app_gpu_dump_perf(const struct app_gpu *gpu)
 	printf("\tpixelsPerClock = %f\n",	perf->pixelsPerClock);
 }
 
-static void app_gpu_dump_queue_props(const struct app_gpu *gpu)
+static void app_gpu_dump_queue_props(const struct app_gpu *gpu, XGL_UINT id)
 {
-	const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props;
+	const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
 
-	printf("XGL_PHYSICAL_GPU_QUEUE_PROPERTIES\n");
+	printf("XGL_PHYSICAL_GPU_QUEUE_PROPERTIES[%d]\n", id);
 	printf("\tstructSize = %u\n",		props->structSize);
 	printf("\tqueueFlags = %c%c%c%c\n",
 			(props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
@@ -331,13 +335,17 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
 
 static void app_gpu_dump(const struct app_gpu *gpu)
 {
+	XGL_UINT i;
+
 	printf("GPU%u\n", gpu->id);
 	app_gpu_dump_props(gpu);
 	printf("\n");
 	app_gpu_dump_perf(gpu);
 	printf("\n");
-	app_gpu_dump_queue_props(gpu);
-	printf("\n");
+	for (i = 0; i < gpu->queue_count; i++) {
+		app_gpu_dump_queue_props(gpu, i);
+		printf("\n");
+	}
 	app_gpu_dump_memory_props(gpu);
 	printf("\n");
 	app_dev_dump(&gpu->dev);
@@ -387,7 +395,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
 	XGL_SIZE size;
 	XGL_UINT i;
 
-	/* XXX how to request queues? */
+	/* request all queues */
+	info.queueRecordCount = gpu->queue_count;
+	info.pRequestedQueues = gpu->queue_reqs;
 
 	/* enable all extensions */
 	info.extensionCount = gpu->extension_count;
@@ -454,6 +464,7 @@ static void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
 {
 	XGL_SIZE size;
 	XGL_RESULT err;
+	XGL_UINT i;
 
 	memset(gpu, 0, sizeof(*gpu));
 
@@ -472,11 +483,32 @@ static void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
 	if (err || size != sizeof(gpu->perf))
 		ERR_EXIT(err);
 
+	/* get queue count */
 	err = xglGetGpuInfo(gpu->obj,
 			XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
-			&size, &gpu->queue_props);
-	if (err || size != sizeof(gpu->queue_props))
+			&size, NULL);
+	if (err || size % sizeof(gpu->queue_props[0]))
 		ERR_EXIT(err);
+	gpu->queue_count = size / sizeof(gpu->queue_props[0]);
+
+	gpu->queue_props =
+		malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
+	if (!gpu->queue_props)
+		ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
+	err = xglGetGpuInfo(gpu->obj,
+			XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+			&size, gpu->queue_props);
+	if (err || size != sizeof(gpu->queue_props[0]) * gpu->queue_count)
+		ERR_EXIT(err);
+
+	/* set up queue requests */
+	gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
+	if (!gpu->queue_reqs)
+		ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
+	for (i = 0; i < gpu->queue_count; i++) {
+		gpu->queue_reqs[i].queueNodeIndex = i;
+		gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
+	}
 
 	err = xglGetGpuInfo(gpu->obj,
 			XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
@@ -493,6 +525,8 @@ static void app_gpu_destroy(struct app_gpu *gpu)
 {
 	app_dev_destroy(&gpu->dev);
 	free(gpu->extensions);
+	free(gpu->queue_reqs);
+	free(gpu->queue_props);
 }
 
 static void app_gpu_multi_compat(struct app_gpu *gpus, XGL_UINT gpu_count)
