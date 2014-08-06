@@ -103,9 +103,13 @@ int main(int argc, char **argv)
             if (err)
                 ERR_EXIT(err);
 
+            printf("xglAllocMemory: Passed\n");
+
             err = xglFreeMemory(gpu_mem);
             if (err)
                 ERR_EXIT(err);
+
+            printf("xglFreeMemory: Passed\n");
 
         } else {
             debug_printf("No heaps available for GPU #%d: %s", gpu_idx, gpus[gpu_idx].props.gpuName);
