@@ -24,6 +24,7 @@
 
 #include "icd.h"
 #include "dev.h"
+#include "event.h"
 #include "fence.h"
 #include "gpu.h"
 #include "mem.h"
@@ -131,32 +132,6 @@ static XGL_RESULT XGLAPI intelSignalQueueSemaphore(
 static XGL_RESULT XGLAPI intelWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateEvent(
-    XGL_DEVICE                                  device,
-    const XGL_EVENT_CREATE_INFO*                pCreateInfo,
-    XGL_EVENT*                                  pEvent)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetEventStatus(
-    XGL_EVENT                                   event)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelSetEvent(
-    XGL_EVENT                                   event)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelResetEvent(
-    XGL_EVENT                                   event)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
