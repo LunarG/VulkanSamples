@@ -220,6 +220,13 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOpti
 XGL_RESULT icd_set_allocator(const XGL_ALLOC_CALLBACKS *alloc_cb)
 {
     if (icd.init_count) {
+        const XGL_ALLOC_CALLBACKS default_cb = {
+            NULL, default_alloc, default_free
+        };
+
+        if (!alloc_cb)
+            alloc_cb = &default_cb;
+
         /*
          * The spec says: Changing the callbacks on subsequent calls to
          * xglInitAndEnumerateGpus() causes it to fail with
