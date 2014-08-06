@@ -108,28 +108,40 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
         parent = udev_device_get_parent(device);
         usub = udev_device_get_subsystem(parent);
         /* Filter out KMS output devices. */
-        if (!usub || (strcmp(usub, "pci") != 0))
+        if (!usub || (strcmp(usub, "pci") != 0)) {
+            udev_device_unref(device);
             continue;
+        }
         pci_id = udev_device_get_property_value(parent, "PCI_ID");
-        if (fnmatch(pci_glob, pci_id, 0) != 0)
+        if (fnmatch(pci_glob, pci_id, 0) != 0) {
+            udev_device_unref(device);
             continue;
+        }
         sscanf(pci_id, "%x:%x", &ven_id, &dev_id);
-        if (ven_id != 0x8086)
+        if (ven_id != 0x8086) {
+            udev_device_unref(device);
             continue;
+        }
 
         dnode = udev_device_get_devnode(device);
         /* TODO do not open the device at this point */
         fd = open(dnode, O_RDWR);
-        if (fd < 0)
+        if (fd < 0) {
+            udev_device_unref(device);
             continue;
+        }
         if (!is_render_node(fd, &st)) {
             close(fd);
             fd = -1;
+            udev_device_unref(device);
             continue;
         }
         close(fd);
 
         ret = intel_gpu_add(dev_id, dnode, &gpu);
+
+        udev_device_unref(device);
+
         if (ret == XGL_SUCCESS) {
             pGpus[count++] = (XGL_PHYSICAL_GPU) gpu;
             if (count >= maxGpus)
