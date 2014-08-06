@@ -39,7 +39,6 @@
 
 #include <libudev.h>
 
-#include "gen7_functions.h"
 #include "gpu.h"
 #include "intel.h"
 
@@ -157,14 +156,4 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
     *pGpuCount = count;
 
     return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
-}
-
-XGL_RESULT XGLAPI intelGetExtensionSupport(
-    XGL_PHYSICAL_GPU                            gpu_,
-    const XGL_CHAR*                             pExtName)
-{
-    struct intel_gpu *gpu = intel_gpu(gpu_);
-
-    return (intel_gpu_has_extension(gpu, (const char *) pExtName)) ?
-        XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;
 }

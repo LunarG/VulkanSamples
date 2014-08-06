@@ -23,9 +23,9 @@
  */
 
 #include "icd.h"
-#include "dispatch_tables.h"
 #include "dev.h"
-#include "gen7_functions.h"
+#include "gpu.h"
+#include "dispatch_tables.h"
 
 static XGL_RESULT XGLAPI intelGetDeviceQueue(
     XGL_DEVICE                                  device,

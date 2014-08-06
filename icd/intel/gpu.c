@@ -309,3 +309,75 @@ bool intel_gpu_has_extension(const struct intel_gpu *gpu, const char *ext)
 {
     return false;
 }
+
+XGL_RESULT XGLAPI intelGetGpuInfo(
+    XGL_PHYSICAL_GPU                            gpu_,
+    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData)
+{
+    const struct intel_gpu *gpu = intel_gpu(gpu_);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (infoType) {
+    case XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
+        if (pData == NULL) {
+            return XGL_ERROR_INVALID_POINTER;
+        }
+        *pDataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
+        intel_gpu_get_props(gpu, pData);
+        break;
+
+    case XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
+        if (pData == NULL) {
+            return XGL_ERROR_INVALID_POINTER;
+        }
+        *pDataSize = sizeof(XGL_PHYSICAL_GPU_PERFORMANCE);
+        intel_gpu_get_perf(gpu, pData);
+        break;
+
+    case XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:
+        /*
+         * XGL Programmers guide, page 33:
+         * to determine the data size an application calls
+         * xglGetGpuInfo() with a NULL data pointer. The
+         * expected data size for all queue property structures
+         * is returned in pDataSize
+         */
+        *pDataSize = sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES) *
+            INTEL_GPU_ENGINE_COUNT;
+        if (pData != NULL) {
+            XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *dst = pData;
+            int engine;
+
+            for (engine = 0; engine < INTEL_GPU_ENGINE_COUNT; engine++) {
+                intel_gpu_get_queue_props(gpu, engine, dst);
+                dst++;
+            }
+        }
+        break;
+
+    case XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES:
+        if (pData == NULL) {
+            return XGL_ERROR_INVALID_POINTER;
+        }
+        *pDataSize = sizeof(XGL_PHYSICAL_GPU_MEMORY_PROPERTIES);
+        intel_gpu_get_memory_props(gpu, pData);
+        break;
+
+    default:
+        ret = XGL_ERROR_INVALID_VALUE;
+    }
+
+    return ret;
+}
+
+XGL_RESULT XGLAPI intelGetExtensionSupport(
+    XGL_PHYSICAL_GPU                            gpu_,
+    const XGL_CHAR*                             pExtName)
+{
+    struct intel_gpu *gpu = intel_gpu(gpu_);
+
+    return (intel_gpu_has_extension(gpu, (const char *) pExtName)) ?
+        XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;
+}

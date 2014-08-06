@@ -21,7 +21,6 @@ SET(SOURCES
     dispatch_tables.c
     init_driver.c
     gpu.c
-    gpuinfo.c
     obj.c
     kmd/winsys_drm.c
     )

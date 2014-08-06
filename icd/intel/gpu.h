@@ -93,4 +93,14 @@ void intel_gpu_close(struct intel_gpu *gpu);
 
 bool intel_gpu_has_extension(const struct intel_gpu *gpu, const char *ext);
 
+XGL_RESULT XGLAPI intelGetGpuInfo(
+    XGL_PHYSICAL_GPU                            gpu,
+    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData);
+
+XGL_RESULT XGLAPI intelGetExtensionSupport(
+    XGL_PHYSICAL_GPU                            gpu,
+    const XGL_CHAR*                             pExtName);
+
 #endif /* GPU_H */
