@@ -27,15 +27,6 @@
 #include "gpu.h"
 #include "dispatch_tables.h"
 
-static XGL_RESULT XGLAPI intelGetDeviceQueue(
-    XGL_DEVICE                                  device,
-    XGL_QUEUE_TYPE                              queueType,
-    XGL_UINT                                    queueIndex,
-    XGL_QUEUE*                                  pQueue)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
 static XGL_RESULT XGLAPI intelQueueSubmit(
     XGL_QUEUE                                   queue,
     XGL_UINT                                    cmdBufferCount,
@@ -43,26 +34,6 @@ static XGL_RESULT XGLAPI intelQueueSubmit(
     XGL_UINT                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    XGL_UINT                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelQueueWaitIdle(
-    XGL_QUEUE                                   queue)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelDeviceWaitIdle(
-    XGL_DEVICE                                  device)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

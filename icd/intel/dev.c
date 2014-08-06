@@ -59,6 +59,14 @@ static void queue_destroy(struct intel_queue *queue)
     icd_free(queue);
 }
 
+static XGL_RESULT queue_wait(struct intel_queue *queue, int64_t timeout)
+{
+    struct intel_bo *bo = queue->last_submitted_bo;
+
+    return (!bo || intel_bo_wait(bo, timeout) == 0) ?
+        XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+}
+
 static struct intel_dev_dbg *dev_dbg_create(const XGL_DEVICE_CREATE_INFO *info)
 {
     struct intel_dev_dbg *dbg;
@@ -338,4 +346,63 @@ XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
     *pDataSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);
 
     return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelGetDeviceQueue(
+    XGL_DEVICE                                  device,
+    XGL_QUEUE_TYPE                              queueType,
+    XGL_UINT                                    queueIndex,
+    XGL_QUEUE*                                  pQueue)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    switch (queueType) {
+    case XGL_QUEUE_TYPE_GRAPHICS:
+    case XGL_QUEUE_TYPE_COMPUTE:
+        if (queueIndex > 0)
+            return XGL_ERROR_UNAVAILABLE;
+        *pQueue = dev->queues[INTEL_GPU_ENGINE_3D];
+        return XGL_SUCCESS;
+    case XGL_QUEUE_TYPE_DMA:
+    default:
+        return XGL_ERROR_UNAVAILABLE;
+    }
+}
+
+XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
+    XGL_QUEUE                                   queue,
+    XGL_UINT                                    memRefCount,
+    const XGL_MEMORY_REF*                       pMemRefs)
+{
+    /*
+     * The winwys maintains the list of memory references.  These are ignored
+     * until we move away from the winsys.
+     */
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelQueueWaitIdle(
+    XGL_QUEUE                                   queue_)
+{
+    struct intel_queue *queue = intel_queue(queue_);
+
+    return queue_wait(queue, -1);
+}
+
+XGL_RESULT XGLAPI intelDeviceWaitIdle(
+    XGL_DEVICE                                  device)
+{
+    struct intel_dev *dev = intel_dev(device);
+    XGL_RESULT ret = XGL_SUCCESS;
+    XGL_UINT i;
+
+    for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
+        if (dev->queues[i]) {
+            const XGL_RESULT r = queue_wait(dev->queues[i], -1);
+            if (r != XGL_SUCCESS)
+                ret = r;
+        }
+    }
+
+    return ret;
 }
