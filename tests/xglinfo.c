@@ -577,5 +577,7 @@ int main(int argc, char **argv)
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);
 
+    xglInitAndEnumerateGpus(&app_info, NULL, 0, &gpu_count, NULL);
+
     return 0;
 }
