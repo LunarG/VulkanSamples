@@ -24,6 +24,7 @@
 
 #include "icd.h"
 #include "dev.h"
+#include "fence.h"
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
@@ -99,30 +100,6 @@ static XGL_RESULT XGLAPI intelOpenPeerImage(
     const XGL_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
     XGL_IMAGE*                                  pImage,
     XGL_GPU_MEMORY*                             pMem)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateFence(
-    XGL_DEVICE                                  device,
-    const XGL_FENCE_CREATE_INFO*                pCreateInfo,
-    XGL_FENCE*                                  pFence)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetFenceStatus(
-    XGL_FENCE                                   fence)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelWaitForFences(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    fenceCount,
-    const XGL_FENCE*                            pFences,
-    XGL_BOOL                                    waitAll,
-    XGL_UINT64                                  timeout)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

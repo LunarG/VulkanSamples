@@ -20,6 +20,7 @@ SET(SOURCES
     dev.c
     dispatch_tables.c
     init_driver.c
+    fence.c
     gpu.c
     mem.c
     obj.c
