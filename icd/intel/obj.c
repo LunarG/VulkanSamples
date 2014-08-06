@@ -84,6 +84,7 @@ struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
     if (!dbg)
         return NULL;
 
+    memset(dbg, 0, sizeof(*dbg));
     if (!intel_base_dbg_init(dbg, type, create_info, create_info_size)) {
         icd_free(dbg);
         return NULL;
