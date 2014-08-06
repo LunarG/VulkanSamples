@@ -289,7 +289,8 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
     /* no kernel support yet */
     props->supportsVirtualMemoryRemapping = false;
 
-    props->supportsPinning = true;
+    /* no winsys support for DRM_I915_GEM_USERPTR yet */
+    props->supportsPinning = false;
 }
 
 XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
