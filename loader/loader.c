@@ -364,7 +364,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
         }
 
         res = icd->InitAndEnumerateGpus(pAppInfo, pAllocCb, max, &n, gpus);
-        if (res == XGL_SUCCESS) {
+        if (res == XGL_SUCCESS && n) {
             memcpy(pGpus + count, gpus, sizeof(*pGpus) * n);
             count += n;
 
