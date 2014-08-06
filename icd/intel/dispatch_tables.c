@@ -109,6 +109,15 @@ static XGL_RESULT XGLAPI intelCreateQueueSemaphore(
     const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
 {
+
+    /*
+     * We want to find an unused semaphore register and initialize it.  Signal
+     * will increment the register.  Wait will atomically decrement it and
+     * block if the value is zero, or a large constant N if we do not want to
+     * go negative.
+     *
+     * XXX However, MI_SEMAPHORE_MBOX does not seem to have the flexibility.
+     */
     return XGL_ERROR_UNAVAILABLE;
 }
 
