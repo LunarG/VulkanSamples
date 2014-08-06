@@ -83,8 +83,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
      */
     intel_gpu_remove_all();
 
-    if (!maxGpus)
+    if (!maxGpus) {
+        *pGpuCount = 0;
         return XGL_SUCCESS;
+    }
 
     // TODO: Do we need any other validation for incoming pointers?
 
