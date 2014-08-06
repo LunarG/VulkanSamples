@@ -68,7 +68,9 @@ void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     XGL_SIZE size;
     XGL_UINT i;
 
-    /* XXX how to request queues? */
+    /* request all queues */
+    info.queueRecordCount = gpu->queue_count;
+    info.pRequestedQueues = gpu->queue_reqs;
 
     /* enable all extensions */
     info.extensionCount = gpu->extension_count;
@@ -172,6 +174,15 @@ void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
     if (err || size != sizeof(gpu->queue_props[0]) * gpu->queue_count)
         ERR_EXIT(err);
 
+    /* set up queue requests */
+    gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
+    if (!gpu->queue_reqs)
+        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
+    for (i = 0; i < gpu->queue_count; i++) {
+        gpu->queue_reqs[i].queueNodeIndex = i;
+        gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
+    }
+
     err = xglGetGpuInfo(gpu->obj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
                         &size, &gpu->memory_props);
@@ -187,5 +198,7 @@ void app_gpu_destroy(struct app_gpu *gpu)
 {
     app_dev_destroy(&gpu->dev);
     free(gpu->extensions);
+    free(gpu->queue_reqs);
+    free(gpu->queue_props);
 }
 

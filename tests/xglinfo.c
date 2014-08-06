@@ -4,93 +4,7 @@
 #include <string.h>
 
 #include <xgl.h>
-
-#define ERR(err) printf("%s:%d: failed with %s\n", \
-        __FILE__, __LINE__, xgl_result_string(err));
-#define ERR_EXIT(err) do { ERR(err); exit(-1); } while (0)
-
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
-#define MAX_GPUS 8
-
-struct app_dev {
-    struct app_gpu *gpu; /* point back to the GPU */
-
-    XGL_DEVICE obj;
-
-    XGL_UINT heap_count;
-    XGL_MEMORY_HEAP_PROPERTIES *heap_props;
-
-    XGL_FORMAT_PROPERTIES format_props[XGL_MAX_CH_FMT][XGL_MAX_NUM_FMT];
-};
-
-struct app_gpu {
-    XGL_UINT id;
-    XGL_PHYSICAL_GPU obj;
-
-    XGL_PHYSICAL_GPU_PROPERTIES props;
-    XGL_PHYSICAL_GPU_PERFORMANCE perf;
-
-    XGL_UINT queue_count;
-    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
-    XGL_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
-
-    XGL_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
-
-    XGL_UINT extension_count;
-    const XGL_CHAR **extensions;
-
-    struct app_dev dev;
-};
-
-static const char *xgl_result_string(XGL_RESULT err)
-{
-    switch (err) {
-#define STR(r) case r: return #r
-    STR(XGL_SUCCESS);
-    STR(XGL_UNSUPPORTED);
-    STR(XGL_NOT_READY);
-    STR(XGL_TIMEOUT);
-    STR(XGL_EVENT_SET);
-    STR(XGL_EVENT_RESET);
-    STR(XGL_ERROR_UNKNOWN);
-    STR(XGL_ERROR_UNAVAILABLE);
-    STR(XGL_ERROR_INITIALIZATION_FAILED);
-    STR(XGL_ERROR_OUT_OF_MEMORY);
-    STR(XGL_ERROR_OUT_OF_GPU_MEMORY);
-    STR(XGL_ERROR_DEVICE_ALREADY_CREATED);
-    STR(XGL_ERROR_DEVICE_LOST);
-    STR(XGL_ERROR_INVALID_POINTER);
-    STR(XGL_ERROR_INVALID_VALUE);
-    STR(XGL_ERROR_INVALID_HANDLE);
-    STR(XGL_ERROR_INVALID_ORDINAL);
-    STR(XGL_ERROR_INVALID_MEMORY_SIZE);
-    STR(XGL_ERROR_INVALID_EXTENSION);
-    STR(XGL_ERROR_INVALID_FLAGS);
-    STR(XGL_ERROR_INVALID_ALIGNMENT);
-    STR(XGL_ERROR_INVALID_FORMAT);
-    STR(XGL_ERROR_INVALID_IMAGE);
-    STR(XGL_ERROR_INVALID_DESCRIPTOR_SET_DATA);
-    STR(XGL_ERROR_INVALID_QUEUE_TYPE);
-    STR(XGL_ERROR_INVALID_OBJECT_TYPE);
-    STR(XGL_ERROR_UNSUPPORTED_SHADER_IL_VERSION);
-    STR(XGL_ERROR_BAD_SHADER_CODE);
-    STR(XGL_ERROR_BAD_PIPELINE_DATA);
-    STR(XGL_ERROR_TOO_MANY_MEMORY_REFERENCES);
-    STR(XGL_ERROR_NOT_MAPPABLE);
-    STR(XGL_ERROR_MEMORY_MAP_FAILED);
-    STR(XGL_ERROR_MEMORY_UNMAP_FAILED);
-    STR(XGL_ERROR_INCOMPATIBLE_DEVICE);
-    STR(XGL_ERROR_INCOMPATIBLE_DRIVER);
-    STR(XGL_ERROR_INCOMPLETE_COMMAND_BUFFER);
-    STR(XGL_ERROR_BUILDING_COMMAND_BUFFER);
-    STR(XGL_ERROR_MEMORY_NOT_BOUND);
-    STR(XGL_ERROR_INCOMPATIBLE_QUEUE);
-    STR(XGL_ERROR_NOT_SHAREABLE);
-#undef STR
-    default: return "UNKNOWN_RESULT";
-    }
-}
+#include "common.h"
 
 static const char *xgl_gpu_type_string(XGL_PHYSICAL_GPU_TYPE type)
 {
@@ -273,6 +187,28 @@ static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct ap
 #undef TEST
 }
 
+static void app_gpu_multi_compat(struct app_gpu *gpus, XGL_UINT gpu_count)
+{
+        XGL_RESULT err;
+        XGL_UINT i, j;
+
+        for (i = 0; i < gpu_count; i++) {
+                for (j = 0; j < gpu_count; j++) {
+                        XGL_GPU_COMPATIBILITY_INFO info;
+
+                        if (i == j)
+                                continue;
+
+                        err = xglGetMultiGpuCompatibility(gpus[i].obj,
+                                        gpus[j].obj, &info);
+                        if (err)
+                                ERR_EXIT(err);
+
+                        app_gpu_dump_multi_compat(&gpus[i], &gpus[j], &info);
+                }
+        }
+}
+
 static void app_gpu_dump_props(const struct app_gpu *gpu)
 {
     const XGL_PHYSICAL_GPU_PROPERTIES *props = &gpu->props;
@@ -349,200 +285,6 @@ static void app_gpu_dump(const struct app_gpu *gpu)
     app_gpu_dump_memory_props(gpu);
     printf("\n");
     app_dev_dump(&gpu->dev);
-}
-
-static void app_dev_init_formats(struct app_dev *dev)
-{
-    XGL_CHANNEL_FORMAT ch;
-    XGL_NUM_FORMAT num;
-
-    for (ch = 0; ch < XGL_MAX_CH_FMT; ch++) {
-        for (num = 0; num < XGL_MAX_NUM_FMT; num++) {
-            const XGL_FORMAT fmt = {
-                .channelFormat = ch,
-                .numericFormat = num,
-            };
-            XGL_RESULT err;
-            XGL_SIZE size;
-
-            err = xglGetFormatInfo(dev->obj, fmt,
-                    XGL_INFO_TYPE_FORMAT_PROPERTIES,
-                    &size, &dev->format_props[ch][num]);
-            if (err) {
-                memset(&dev->format_props[ch][num], 0,
-                        sizeof(dev->format_props[ch][num]));
-            }
-            else if (size != sizeof(dev->format_props[ch][num])) {
-                ERR_EXIT(XGL_ERROR_UNKNOWN);
-            }
-        }
-    }
-}
-
-static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
-{
-    XGL_DEVICE_CREATE_INFO info = {
-        .sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = NULL,
-        .queueRecordCount = 0,
-        .pRequestedQueues = NULL,
-        .extensionCount = 0,
-        .ppEnabledExtensionNames = NULL,
-        .maxValidationLevel = XGL_VALIDATION_LEVEL_END_RANGE,
-        .flags = XGL_DEVICE_CREATE_VALIDATION_BIT,
-    };
-    XGL_RESULT err;
-    XGL_SIZE size;
-    XGL_UINT i;
-
-    /* request all queues */
-    info.queueRecordCount = gpu->queue_count;
-    info.pRequestedQueues = gpu->queue_reqs;
-
-    /* enable all extensions */
-    info.extensionCount = gpu->extension_count;
-    info.ppEnabledExtensionNames = gpu->extensions;
-
-    dev->gpu = gpu;
-    err = xglCreateDevice(gpu->obj, &info, &dev->obj);
-    if (err)
-        ERR_EXIT(err);
-
-    err = xglGetMemoryHeapCount(dev->obj, &dev->heap_count);
-    if (err)
-        ERR_EXIT(err);
-
-    dev->heap_props = malloc(sizeof(dev->heap_props[0]) * dev->heap_count);
-    if (!dev->heap_props)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
-
-    for (i = 0; i < dev->heap_count; i++) {
-        err = xglGetMemoryHeapInfo(dev->obj, i,
-                XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES,
-                &size, &dev->heap_props[i]);
-        if (err || size != sizeof(dev->heap_props[0]))
-            ERR_EXIT(err);
-    }
-}
-
-static void app_dev_destroy(struct app_dev *dev)
-{
-    free(dev->heap_props);
-    xglDestroyDevice(dev->obj);
-}
-
-static void app_gpu_init_extensions(struct app_gpu *gpu)
-{
-    XGL_RESULT err;
-    XGL_UINT i;
-
-    static const XGL_CHAR *known_extensions[] = {
-        (const XGL_CHAR *) "some_extension",
-    };
-
-    for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        err = xglGetExtensionSupport(gpu->obj, known_extensions[i]);
-        if (!err)
-            gpu->extension_count++;
-    }
-
-    gpu->extensions =
-        malloc(sizeof(gpu->extensions[0]) * gpu->extension_count);
-    if (!gpu->extensions)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
-
-    gpu->extension_count = 0;
-    for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        err = xglGetExtensionSupport(gpu->obj, known_extensions[i]);
-        if (!err)
-            gpu->extensions[gpu->extension_count++] = known_extensions[i];
-    }
-}
-
-static void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
-{
-    XGL_SIZE size;
-    XGL_RESULT err;
-    XGL_UINT i;
-
-    memset(gpu, 0, sizeof(*gpu));
-
-    gpu->id = id;
-    gpu->obj = obj;
-
-    err = xglGetGpuInfo(gpu->obj, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
-            &size, &gpu->props);
-    if (err || size != sizeof(gpu->props))
-        ERR_EXIT(err);
-
-    err = xglGetGpuInfo(gpu->obj, XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
-            &size, &gpu->perf);
-    if (err || size != sizeof(gpu->perf))
-        ERR_EXIT(err);
-
-    /* get queue count */
-    err = xglGetGpuInfo(gpu->obj, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
-            &size, NULL);
-    if (err || size % sizeof(gpu->queue_props[0]))
-        ERR_EXIT(err);
-    gpu->queue_count = size / sizeof(gpu->queue_props[0]);
-
-    gpu->queue_props = malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
-    if (!gpu->queue_props)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
-    err = xglGetGpuInfo(gpu->obj, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
-            &size, gpu->queue_props);
-    if (err || size != sizeof(gpu->queue_props[0]) * gpu->queue_count)
-        ERR_EXIT(err);
-
-    /* set up queue requests */
-    gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
-    if (!gpu->queue_reqs)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
-    for (i = 0; i < gpu->queue_count; i++) {
-        gpu->queue_reqs[i].queueNodeIndex = i;
-        gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
-    }
-
-    err = xglGetGpuInfo(gpu->obj,
-            XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
-            &size, &gpu->memory_props);
-    if (err || size != sizeof(gpu->memory_props))
-        ERR_EXIT(err);
-
-    app_gpu_init_extensions(gpu);
-    app_dev_init(&gpu->dev, gpu);
-    app_dev_init_formats(&gpu->dev);
-}
-
-static void app_gpu_destroy(struct app_gpu *gpu)
-{
-    app_dev_destroy(&gpu->dev);
-    free(gpu->extensions);
-    free(gpu->queue_reqs);
-    free(gpu->queue_props);
-}
-
-static void app_gpu_multi_compat(struct app_gpu *gpus, XGL_UINT gpu_count)
-{
-    XGL_RESULT err;
-    XGL_UINT i, j;
-
-    for (i = 0; i < gpu_count; i++) {
-        for (j = 0; j < gpu_count; j++) {
-            XGL_GPU_COMPATIBILITY_INFO info;
-
-            if (i == j)
-                continue;
-
-            err = xglGetMultiGpuCompatibility(gpus[i].obj,
-                    gpus[j].obj, &info);
-            if (err)
-                ERR_EXIT(err);
-
-            app_gpu_dump_multi_compat(&gpus[i], &gpus[j], &info);
-        }
-    }
 }
 
 int main(int argc, char **argv)

@@ -66,6 +66,7 @@ struct app_gpu {
 
     XGL_UINT queue_count;
     XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+    XGL_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
 
     XGL_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
 
