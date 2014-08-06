@@ -25,6 +25,7 @@
 #include "icd.h"
 #include "dev.h"
 #include "gpu.h"
+#include "mem.h"
 #include "dispatch_tables.h"
 
 static XGL_RESULT XGLAPI intelQueueSubmit(
@@ -34,41 +35,6 @@ static XGL_RESULT XGLAPI intelQueueSubmit(
     XGL_UINT                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelAllocMemory(
-    XGL_DEVICE                                  device,
-    const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    XGL_GPU_MEMORY*                             pMem)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelFreeMemory(
-    XGL_GPU_MEMORY                              mem)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelSetMemoryPriority(
-    XGL_GPU_MEMORY                              mem,
-    XGL_MEMORY_PRIORITY                         priority)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelMapMemory(
-    XGL_GPU_MEMORY                              mem,
-    XGL_FLAGS                                   flags,
-    XGL_VOID**                                  ppData)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelUnmapMemory(
-    XGL_GPU_MEMORY                              mem)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
