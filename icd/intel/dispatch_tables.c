@@ -26,6 +26,7 @@
 #include "dev.h"
 #include "gpu.h"
 #include "mem.h"
+#include "obj.h"
 #include "dispatch_tables.h"
 
 static XGL_RESULT XGLAPI intelQueueSubmit(
@@ -97,29 +98,6 @@ static XGL_RESULT XGLAPI intelOpenPeerImage(
     const XGL_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
     XGL_IMAGE*                                  pImage,
     XGL_GPU_MEMORY*                             pMem)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelDestroyObject(
-    XGL_OBJECT                                  object)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetObjectInfo(
-    XGL_BASE_OBJECT                             object,
-    XGL_OBJECT_INFO_TYPE                        infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelBindObjectMemory(
-    XGL_OBJECT                                  object,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

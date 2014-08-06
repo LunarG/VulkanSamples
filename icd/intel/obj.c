@@ -97,3 +97,53 @@ void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
     intel_base_dbg_cleanup(dbg);
     icd_free(dbg);
 }
+
+XGL_RESULT XGLAPI intelDestroyObject(
+    XGL_OBJECT                                  object)
+{
+    struct intel_obj *obj = intel_obj(object);
+
+    obj->destroy(obj);
+
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelGetObjectInfo(
+    XGL_BASE_OBJECT                             object,
+    XGL_OBJECT_INFO_TYPE                        infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData)
+{
+    struct intel_base *base = intel_base(object);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (infoType) {
+    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+        /*
+         * Since most objects do not need a bo, we could use a callback so
+         * that we do not need to embed XGL_MEMORY_REQUIREMENTS.
+         */
+        memcpy(pData, &base->mem_requirements,
+                sizeof(XGL_MEMORY_REQUIREMENTS));
+        *pDataSize = sizeof(XGL_MEMORY_REQUIREMENTS);
+        break;
+    default:
+        ret = XGL_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
+}
+
+XGL_RESULT XGLAPI intelBindObjectMemory(
+    XGL_OBJECT                                  object,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                offset)
+{
+    struct intel_obj *obj = intel_obj(object);
+
+    obj->mem = mem;
+    obj->offset = offset;
+
+    return XGL_SUCCESS;
+}
