@@ -184,7 +184,10 @@ XGL_RESULT XGLAPI intelCreateQueryPool(
     const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
     XGL_QUERY_POOL*                             pQueryPool)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_query_create(dev, pCreateInfo,
+            (struct intel_query **) pQueryPool);
 }
 
 XGL_RESULT XGLAPI intelGetQueryPoolResults(
@@ -194,5 +197,22 @@ XGL_RESULT XGLAPI intelGetQueryPoolResults(
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_query *query = intel_query(queryPool);
+
+    switch (query->type) {
+    case XGL_QUERY_OCCLUSION:
+        *pDataSize = sizeof(uint64_t) * queryCount;
+        break;
+    case XGL_QUERY_PIPELINE_STATISTICS:
+        *pDataSize = sizeof(XGL_PIPELINE_STATISTICS_DATA) * queryCount;
+        break;
+    default:
+        return XGL_ERROR_INVALID_HANDLE;
+        break;
+    }
+
+    if (pData)
+        return intel_query_get_results(query, startQuery, queryCount, pData);
+    else
+        return XGL_SUCCESS;
 }

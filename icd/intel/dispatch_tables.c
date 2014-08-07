@@ -29,6 +29,7 @@
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
+#include "query.h"
 #include "queue.h"
 #include "dispatch_tables.h"
 
@@ -134,24 +135,6 @@ static XGL_RESULT XGLAPI intelSignalQueueSemaphore(
 static XGL_RESULT XGLAPI intelWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateQueryPool(
-    XGL_DEVICE                                  device,
-    const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
-    XGL_QUERY_POOL*                             pQueryPool)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetQueryPoolResults(
-    XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    startQuery,
-    XGL_UINT                                    queryCount,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
