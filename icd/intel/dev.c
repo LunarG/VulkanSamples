@@ -31,7 +31,7 @@
 static struct intel_dev_dbg *dev_dbg_create(const XGL_DEVICE_CREATE_INFO *info)
 {
     return (struct intel_dev_dbg *)
-        intel_base_dbg_create(XGL_DBG_OBJECT_DEVICE, info, sizeof(*info),
+        intel_base_dbg_create(XGL_DBG_OBJECT_DEVICE, info,
                 sizeof(struct intel_dev_dbg));
 }
 

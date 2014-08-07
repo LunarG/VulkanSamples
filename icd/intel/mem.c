@@ -43,8 +43,8 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
 
     mem->base.dispatch = dev->base.dispatch;
     if (dev->base.dbg) {
-        mem->base.dbg = intel_base_dbg_create(XGL_DBG_OBJECT_GPU_MEMORY,
-                NULL, 0, 0);
+        mem->base.dbg =
+            intel_base_dbg_create(XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
         if (!mem->base.dbg) {
             intel_mem_free(mem);
             return XGL_ERROR_OUT_OF_MEMORY;

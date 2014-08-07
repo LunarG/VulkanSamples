@@ -61,13 +61,103 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
     return ret;
 }
 
+static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
+                                      const void *create_info)
+{
+    const union {
+        const void *ptr;
+        const struct {
+            XGL_STRUCTURE_TYPE struct_type;
+            XGL_VOID *next;
+        } *header;
+    } info = { .ptr = create_info };
+    XGL_SIZE shallow_copy = 0;
+
+    if (!create_info)
+        return true;
+
+    switch (info.header->struct_type) {
+    case XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_DEVICE);
+        break;
+    case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_GPU_MEMORY);
+        shallow_copy = sizeof(XGL_MEMORY_ALLOC_INFO);
+        break;
+    case XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_EVENT);
+        shallow_copy = sizeof(XGL_EVENT_CREATE_INFO);
+        break;
+    case XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_FENCE);
+        shallow_copy = sizeof(XGL_FENCE_CREATE_INFO);
+        break;
+    default:
+        return false;
+        break;
+    }
+
+    if (shallow_copy) {
+        assert(!info.header->next);
+
+        dbg->create_info = icd_alloc(shallow_copy, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        if (!dbg->create_info)
+            return false;
+
+        memcpy(dbg->create_info, create_info, shallow_copy);
+    } else if (info.header->struct_type ==
+            XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO) {
+        const XGL_DEVICE_CREATE_INFO *src = info.ptr;
+        XGL_DEVICE_CREATE_INFO *dst;
+        uint8_t *d;
+        XGL_SIZE size;
+        XGL_UINT i;
+
+        size = sizeof(*src);
+        size += sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
+        size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
+        for (i = 0; i < src->extensionCount; i++) {
+            size += 1 +
+                strlen((const char *) src->ppEnabledExtensionNames[i]);
+        }
+
+        dst = icd_alloc(sizeof(size), 0, XGL_SYSTEM_ALLOC_DEBUG);
+        if (!dst)
+            return false;
+
+        memcpy(dst, src, sizeof(*src));
+
+        d = (uint8_t *) dst;
+        d += sizeof(*src);
+
+        size = sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
+        memcpy(d, src->pRequestedQueues, size);
+        dst->pRequestedQueues = (const XGL_DEVICE_QUEUE_CREATE_INFO *) d;
+        d += size;
+
+        size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
+        dst->ppEnabledExtensionNames = (const XGL_CHAR * const *) d;
+
+        for (i = 0; i < src->extensionCount; i++) {
+            const XGL_SIZE len =
+                strlen((const char *) src->ppEnabledExtensionNames[i]);
+
+            memcpy(d + size, src->ppEnabledExtensionNames[i], len + 1);
+            ((const XGL_CHAR **) d)[i] = (const XGL_CHAR *) (d + size);
+
+            size += len + 1;
+        }
+    }
+
+    return true;
+}
+
 /**
  * Create an intel_base_dbg.  When alloc_size is non-zero, a buffer of that
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
-                                             XGL_SIZE create_info_size,
                                              XGL_SIZE alloc_size)
 {
     struct intel_base_dbg *dbg;
@@ -86,15 +176,9 @@ struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
     dbg->alloc_id = icd_get_allocator_id();
     dbg->type = type;
 
-    if (create_info_size) {
-        dbg->create_info =
-            icd_alloc(create_info_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
-        if (!dbg->create_info) {
-            icd_free(dbg);
-            return NULL;
-        }
-
-        memcpy(dbg->create_info, create_info, create_info_size);
+    if (!base_dbg_copy_create_info(dbg, create_info)) {
+        icd_free(dbg);
+        return NULL;
     }
 
     return dbg;

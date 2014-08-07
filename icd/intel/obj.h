@@ -85,7 +85,6 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
 
 struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
-                                             XGL_SIZE create_info_size,
                                              XGL_SIZE alloc_size);
 void intel_base_dbg_destroy(struct intel_base_dbg *dbg);
 
