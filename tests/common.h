@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <assert.h>
 
 #include <xgl.h>
 
@@ -46,6 +47,8 @@
 
 #define MAX_GPUS 8
 
+#define MAX_QUEUE_TYPES 5
+
 struct app_dev {
     struct app_gpu *gpu; /* point back to the GPU */
 
@@ -53,6 +56,7 @@ struct app_dev {
 
     XGL_UINT heap_count;
     XGL_MEMORY_HEAP_PROPERTIES *heap_props;
+    XGL_QUEUE queues[MAX_QUEUE_TYPES];
 
     XGL_FORMAT_PROPERTIES format_props[XGL_MAX_CH_FMT][XGL_MAX_NUM_FMT];
 };
@@ -131,5 +135,6 @@ void app_dev_destroy(struct app_dev *dev);
 void app_gpu_init_extensions(struct app_gpu *gpu);
 void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj);
 void app_gpu_destroy(struct app_gpu *gpu);
+void app_dev_init_queue(struct app_dev *dev, XGL_QUEUE_TYPE qtype);
 
 #endif // COMMON_H
