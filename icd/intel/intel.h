@@ -42,4 +42,10 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
+static inline unsigned int align(unsigned int val, unsigned alignment)
+{
+    assert(alignment && (alignment & (alignment - 1)) == 0);
+    return (val + alignment - 1) & ~(alignment - 1);
+}
+
 #endif /* INTEL_H */
