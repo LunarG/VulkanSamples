@@ -25,6 +25,7 @@ SET(SOURCES
     gpu.c
     mem.c
     obj.c
+    query.c
     queue.c
     kmd/winsys_drm.c
     )
