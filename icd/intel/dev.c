@@ -156,6 +156,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
 
     dev->base.dispatch = dispatch;
     dev->base.dbg = &dbg->base;
+    dev->base.get_info = intel_base_get_info;
 
     *dev_ret = dev;
 

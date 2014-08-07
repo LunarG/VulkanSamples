@@ -48,6 +48,7 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
             return XGL_ERROR_OUT_OF_MEMORY;
         }
     }
+    queue->base.get_info = intel_base_get_info;
 
     *queue_ret = queue;
 

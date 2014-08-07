@@ -41,6 +41,26 @@ bool intel_base_is_valid(const struct intel_base *base)
     return !intel_gpu_is_valid((const struct intel_gpu *) base);
 }
 
+XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
+                               XGL_SIZE *size, XGL_VOID *data)
+{
+    XGL_RESULT ret = XGL_SUCCESS;
+    XGL_SIZE s;
+
+    switch (type) {
+    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+        s = sizeof(XGL_MEMORY_REQUIREMENTS);
+        memset(data, 0, s);
+        *size = s;
+        break;
+    default:
+        ret = XGL_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
+}
+
 /**
  * Initialize intel_base_dbg.  It is assumed that the struct has already been
  * zero initialized.
@@ -116,24 +136,8 @@ XGL_RESULT XGLAPI intelGetObjectInfo(
     XGL_VOID*                                   pData)
 {
     struct intel_base *base = intel_base(object);
-    XGL_RESULT ret = XGL_SUCCESS;
 
-    switch (infoType) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
-        /*
-         * Since most objects do not need a bo, we could use a callback so
-         * that we do not need to embed XGL_MEMORY_REQUIREMENTS.
-         */
-        memcpy(pData, &base->mem_requirements,
-                sizeof(XGL_MEMORY_REQUIREMENTS));
-        *pDataSize = sizeof(XGL_MEMORY_REQUIREMENTS);
-        break;
-    default:
-        ret = XGL_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
+    return base->get_info(base, infoType, pDataSize, pData);
 }
 
 XGL_RESULT XGLAPI intelBindObjectMemory(

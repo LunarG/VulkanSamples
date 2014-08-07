@@ -50,6 +50,7 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
             return XGL_ERROR_OUT_OF_MEMORY;
         }
     }
+    mem->base.get_info = intel_base_get_info;
 
     mem->bo = intel_winsys_alloc_buffer(dev->winsys,
             "xgl-gpu-memory", info->allocationSize, 0);

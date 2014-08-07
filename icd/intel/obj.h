@@ -42,9 +42,11 @@ struct intel_base_dbg {
 
 struct intel_base {
     const struct icd_dispatch_table *dispatch;
+
     struct intel_base_dbg *dbg;
 
-    XGL_MEMORY_REQUIREMENTS mem_requirements;
+    XGL_RESULT (*get_info)(struct intel_base *base, int type,
+                           XGL_SIZE *size, XGL_VOID *data);
 };
 
 struct intel_obj {
@@ -52,6 +54,7 @@ struct intel_obj {
 
     void (*destroy)(struct intel_obj *obj);
 
+    /* for memory binding */
     struct intel_mem *mem;
     XGL_SIZE offset;
 };
@@ -76,6 +79,9 @@ static inline struct intel_state *intel_state(XGL_STATE_OBJECT state)
 }
 
 bool intel_base_is_valid(const struct intel_base *base);
+
+XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
+                               XGL_SIZE *size, XGL_VOID *data);
 
 struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,

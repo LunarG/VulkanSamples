@@ -26,7 +26,7 @@
 #include "dev.h"
 #include "fence.h"
 
-static void fence_destroy_callback(struct intel_obj *obj)
+static void fence_destroy(struct intel_obj *obj)
 {
     struct intel_fence *fence = intel_fence_from_obj(obj);
 
@@ -45,7 +45,7 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 
     memset(fence, 0, sizeof(*fence));
 
-    fence->obj.destroy = fence_destroy_callback;
+    fence->obj.destroy = fence_destroy;
 
     fence->obj.base.dispatch = dev->base.dispatch;
     if (dev->base.dbg) {
@@ -56,6 +56,7 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
             return XGL_ERROR_OUT_OF_MEMORY;
         }
     }
+    fence->obj.base.get_info = intel_base_get_info;
 
     *fence_ret = fence;
 

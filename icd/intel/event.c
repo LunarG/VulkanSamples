@@ -81,11 +81,38 @@ static XGL_RESULT event_read(struct intel_event *event, uint32_t *val)
     return ret;
 }
 
-static void event_destroy_callback(struct intel_obj *obj)
+static void event_destroy(struct intel_obj *obj)
 {
     struct intel_event *event = intel_event_from_obj(obj);
 
     intel_event_destroy(event);
+}
+
+static XGL_RESULT event_get_info(struct intel_base *base, int type,
+                                 XGL_SIZE *size, XGL_VOID *data)
+{
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (type) {
+    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+        {
+            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+
+            /* use dword aligned to 64-byte boundaries */
+            mem_req->size = 4;
+            mem_req->alignment = 64;
+            mem_req->heapCount = 1;
+            mem_req->heaps[0] = 0;
+
+            *size = sizeof(*mem_req);
+        }
+        break;
+    default:
+        ret = intel_base_get_info(base, type, size, data);
+        break;
+    }
+
+    return ret;
 }
 
 XGL_RESULT intel_event_create(struct intel_dev *dev,
@@ -93,7 +120,6 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
                               struct intel_event **event_ret)
 {
     struct intel_event *event;
-    XGL_MEMORY_REQUIREMENTS *mem_req;
 
     event = icd_alloc(sizeof(*event), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!event)
@@ -101,14 +127,7 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
 
     memset(event, 0, sizeof(*event));
 
-    event->obj.destroy = event_destroy_callback;
-
-    /* use dword aligned to 64-byte boundaries */
-    mem_req = &event->obj.base.mem_requirements;
-    mem_req->size = 4;
-    mem_req->alignment = 64;
-    mem_req->heapCount = 1;
-    mem_req->heaps[0] = 0;
+    event->obj.destroy = event_destroy;
 
     event->obj.base.dispatch = dev->base.dispatch;
     if (dev->base.dbg) {
@@ -119,6 +138,7 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
             return XGL_ERROR_OUT_OF_MEMORY;
         }
     }
+    event->obj.base.get_info = event_get_info;
 
     *event_ret = event;
 
