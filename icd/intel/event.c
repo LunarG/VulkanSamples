@@ -22,7 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "kmd/winsys.h"
 #include "dev.h"
 #include "mem.h"
 #include "event.h"
