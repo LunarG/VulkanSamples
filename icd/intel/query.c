@@ -74,6 +74,11 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
     query->type = info->queryType;
     query->slot_count = info->slots;
 
+    /*
+     * For each query type, the GPU will be asked to write the values of some
+     * registers to a buffer before and after a sequence of commands.  We will
+     * compare the differences to get the query results.
+     */
     switch (info->queryType) {
     case XGL_QUERY_OCCLUSION:
         query->slot_stride = align(sizeof(uint32_t) * 2, 64);
@@ -104,12 +109,46 @@ void intel_query_destroy(struct intel_query *query)
     intel_base_destroy(&query->obj.base);
 }
 
+static void
+query_process_occlusion(const struct intel_query *query,
+                        XGL_UINT count, const uint8_t *raw,
+                        uint64_t *results)
+{
+    XGL_UINT i;
+
+    for (i = 0; i < count; i++) {
+        const uint32_t *pair = (const uint32_t *) raw;
+
+        results[i] = pair[1] - pair[0];
+        raw += query->slot_stride;
+    }
+}
+
+static void
+query_process_pipeline_statistics(const struct intel_query *query,
+                                  XGL_UINT count, const uint8_t *raw,
+                                  XGL_PIPELINE_STATISTICS_DATA *results)
+{
+    const XGL_UINT num_regs = sizeof(results[0]) / sizeof(uint64_t);
+    XGL_UINT i, j;
+
+    for (i = 0; i < count; i++) {
+        const uint64_t *before = (const uint64_t *) raw;
+        const uint64_t *after = before + num_regs;
+        uint64_t *dst = (uint64_t *) (results + i);
+
+        for (j = 0; j < num_regs; j++)
+            dst[j] = after[j] - before[j];
+
+        raw += query->slot_stride;
+    }
+}
+
 XGL_RESULT intel_query_get_results(struct intel_query *query,
                                    XGL_UINT slot_start, XGL_UINT slot_count,
                                    void *results)
 {
     const uint8_t *ptr;
-    XGL_UINT i;
 
     if (!query->obj.mem)
         return XGL_ERROR_MEMORY_NOT_BOUND;
@@ -125,28 +164,10 @@ XGL_RESULT intel_query_get_results(struct intel_query *query,
 
     switch (query->type) {
     case XGL_QUERY_OCCLUSION:
-        for (i = 0; i < slot_count; i++) {
-            const uint32_t *pair = (const uint32_t *) ptr;
-
-            ((uint64_t *) results)[i] = pair[1] - pair[0];
-            ptr += query->slot_stride;
-        }
+        query_process_occlusion(query, slot_count, ptr, results);
         break;
     case XGL_QUERY_PIPELINE_STATISTICS:
-        for (i = 0; i < slot_count; i++) {
-            const XGL_UINT count =
-                sizeof(XGL_PIPELINE_STATISTICS_DATA) / sizeof(uint64_t);
-            const uint64_t *before = (const uint64_t *) ptr;
-            const uint64_t *after = (const uint64_t *) ptr + count;
-            uint64_t *dst = (uint64_t *)
-                ((XGL_PIPELINE_STATISTICS_DATA *) results + i);
-            XGL_UINT j;
-
-            for (j = 0; j < count; j++)
-                dst[j] = after[j] - before[j];
-
-            ptr += query->slot_stride;
-        }
+        query_process_pipeline_statistics(query, slot_count, ptr, results);
         break;
     default:
         assert(0);
