@@ -25,12 +25,10 @@
 #ifndef DEV_H
 #define DEV_H
 
+#include "intel.h"
 #include "obj.h"
 #include "gpu.h"
-#include "intel.h"
 
-struct intel_bo;
-struct intel_gpu;
 struct intel_queue;
 struct intel_winsys;
 
@@ -56,13 +54,6 @@ struct intel_dev {
     struct intel_queue *queues[INTEL_GPU_ENGINE_COUNT];
 };
 
-struct intel_queue {
-    struct intel_base base;
-
-    struct intel_dev *dev;
-    struct intel_bo *last_submitted_bo;
-};
-
 static inline struct intel_dev *intel_dev(XGL_DEVICE dev)
 {
     return (struct intel_dev *) dev;
@@ -71,11 +62,6 @@ static inline struct intel_dev *intel_dev(XGL_DEVICE dev)
 static inline struct intel_dev_dbg *intel_dev_dbg(struct intel_dev *dev)
 {
     return (struct intel_dev_dbg *) dev->base.dbg;
-}
-
-static inline struct intel_queue *intel_queue(XGL_QUEUE queue)
-{
-    return (struct intel_queue *) queue;
 }
 
 XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
@@ -117,14 +103,6 @@ XGL_RESULT XGLAPI intelGetDeviceQueue(
     XGL_QUEUE_TYPE                              queueType,
     XGL_UINT                                    queueIndex,
     XGL_QUEUE*                                  pQueue);
-
-XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    XGL_UINT                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs);
-
-XGL_RESULT XGLAPI intelQueueWaitIdle(
-    XGL_QUEUE                                   queue);
 
 XGL_RESULT XGLAPI intelDeviceWaitIdle(
     XGL_DEVICE                                  device);

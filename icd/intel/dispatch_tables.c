@@ -27,6 +27,7 @@
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
+#include "queue.h"
 #include "dispatch_tables.h"
 
 static XGL_RESULT XGLAPI intelQueueSubmit(

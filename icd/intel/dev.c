@@ -25,47 +25,8 @@
 #include "kmd/winsys.h"
 #include "dispatch_tables.h"
 #include "gpu.h"
+#include "queue.h"
 #include "dev.h"
-
-static struct intel_queue *queue_create(struct intel_dev *dev,
-                                        XGL_QUEUE_TYPE type)
-{
-    struct intel_queue *queue;
-
-    queue = icd_alloc(sizeof(*queue), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
-    if (!queue)
-        return NULL;
-
-    memset(queue, 0, sizeof(*queue));
-    queue->dev = dev;
-
-    queue->base.dispatch = dev->base.dispatch;
-    if (dev->base.dbg) {
-        queue->base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_QUEUE, NULL, 0);
-        if (!queue->base.dbg) {
-            icd_free(queue);
-            return NULL;
-        }
-    }
-
-    return queue;
-}
-
-static void queue_destroy(struct intel_queue *queue)
-{
-    if (queue->base.dbg)
-        intel_base_dbg_destroy(queue->base.dbg);
-    icd_free(queue);
-}
-
-static XGL_RESULT queue_wait(struct intel_queue *queue, int64_t timeout)
-{
-    struct intel_bo *bo = queue->last_submitted_bo;
-
-    return (!bo || intel_bo_wait(bo, timeout) == 0) ?
-        XGL_SUCCESS : XGL_ERROR_UNKNOWN;
-}
 
 static struct intel_dev_dbg *dev_dbg_create(const XGL_DEVICE_CREATE_INFO *info)
 {
@@ -121,7 +82,7 @@ static XGL_RESULT dev_create_queues(struct intel_dev *dev,
         }
         else {
             dev->queues[q->queueNodeIndex] =
-                queue_create(dev, q->queueNodeIndex);
+                intel_queue_create(dev, q->queueNodeIndex);
             if (!dev->queues[q->queueNodeIndex])
                 ret = XGL_ERROR_OUT_OF_MEMORY;
         }
@@ -129,7 +90,7 @@ static XGL_RESULT dev_create_queues(struct intel_dev *dev,
         if (ret != XGL_SUCCESS) {
             XGL_UINT j;
             for (j = 0; j < i; j++)
-                queue_destroy(dev->queues[j]);
+                intel_queue_destroy(dev->queues[j]);
 
             return ret;
         }
@@ -213,7 +174,7 @@ void intel_dev_destroy(struct intel_dev *dev)
 
     for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
         if (dev->queues[i])
-            queue_destroy(dev->queues[i]);
+            intel_queue_destroy(dev->queues[i]);
     }
 
     if (dev->winsys)
@@ -369,26 +330,6 @@ XGL_RESULT XGLAPI intelGetDeviceQueue(
     }
 }
 
-XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    XGL_UINT                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs)
-{
-    /*
-     * The winwys maintains the list of memory references.  These are ignored
-     * until we move away from the winsys.
-     */
-    return XGL_SUCCESS;
-}
-
-XGL_RESULT XGLAPI intelQueueWaitIdle(
-    XGL_QUEUE                                   queue_)
-{
-    struct intel_queue *queue = intel_queue(queue_);
-
-    return queue_wait(queue, -1);
-}
-
 XGL_RESULT XGLAPI intelDeviceWaitIdle(
     XGL_DEVICE                                  device)
 {
@@ -398,7 +339,7 @@ XGL_RESULT XGLAPI intelDeviceWaitIdle(
 
     for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
         if (dev->queues[i]) {
-            const XGL_RESULT r = queue_wait(dev->queues[i], -1);
+            const XGL_RESULT r = intel_queue_wait(dev->queues[i], -1);
             if (r != XGL_SUCCESS)
                 ret = r;
         }
