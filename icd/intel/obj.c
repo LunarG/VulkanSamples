@@ -121,7 +121,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
                 strlen((const char *) src->ppEnabledExtensionNames[i]);
         }
 
-        dst = icd_alloc(sizeof(size), 0, XGL_SYSTEM_ALLOC_DEBUG);
+        dst = icd_alloc(size, 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!dst)
             return false;
 
@@ -162,7 +162,7 @@ struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
 {
     struct intel_base_dbg *dbg;
 
-    if (alloc_size)
+    if (!alloc_size)
         alloc_size = sizeof(*dbg);
 
     assert(alloc_size >= sizeof(*dbg));
