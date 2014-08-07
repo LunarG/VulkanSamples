@@ -62,52 +62,39 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
 }
 
 /**
- * Initialize intel_base_dbg.  It is assumed that the struct has already been
- * zero initialized.
+ * Create an intel_base_dbg.  When alloc_size is non-zero, a buffer of that
+ * size is allocated and zeroed.
  */
-bool intel_base_dbg_init(struct intel_base_dbg *dbg,
-                         XGL_DBG_OBJECT_TYPE type,
-                         const void *create_info,
-                         XGL_SIZE create_info_size)
+struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
+                                             const void *create_info,
+                                             XGL_SIZE create_info_size,
+                                             XGL_SIZE alloc_size)
 {
+    struct intel_base_dbg *dbg;
+
+    if (alloc_size)
+        alloc_size = sizeof(*dbg);
+
+    assert(alloc_size >= sizeof(*dbg));
+
+    dbg = icd_alloc(alloc_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    if (!dbg)
+        return NULL;
+
+    memset(dbg, 0, alloc_size);
+
     dbg->alloc_id = icd_get_allocator_id();
     dbg->type = type;
 
     if (create_info_size) {
         dbg->create_info =
             icd_alloc(create_info_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
-        if (!dbg->create_info)
-            return false;
+        if (!dbg->create_info) {
+            icd_free(dbg);
+            return NULL;
+        }
 
         memcpy(dbg->create_info, create_info, create_info_size);
-    }
-
-    return true;
-}
-
-void intel_base_dbg_cleanup(struct intel_base_dbg *dbg)
-{
-    if (dbg->tag)
-        icd_free(dbg->tag);
-
-    if (dbg->create_info)
-        icd_free(dbg->create_info);
-}
-
-struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
-                                             const void *create_info,
-                                             XGL_SIZE create_info_size)
-{
-    struct intel_base_dbg *dbg;
-
-    dbg = icd_alloc(sizeof(*dbg), 0, XGL_SYSTEM_ALLOC_DEBUG);
-    if (!dbg)
-        return NULL;
-
-    memset(dbg, 0, sizeof(*dbg));
-    if (!intel_base_dbg_init(dbg, type, create_info, create_info_size)) {
-        icd_free(dbg);
-        return NULL;
     }
 
     return dbg;
@@ -115,7 +102,12 @@ struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
 
 void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
 {
-    intel_base_dbg_cleanup(dbg);
+    if (dbg->tag)
+        icd_free(dbg->tag);
+
+    if (dbg->create_info)
+        icd_free(dbg->create_info);
+
     icd_free(dbg);
 }
 

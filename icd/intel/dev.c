@@ -30,21 +30,9 @@
 
 static struct intel_dev_dbg *dev_dbg_create(const XGL_DEVICE_CREATE_INFO *info)
 {
-    struct intel_dev_dbg *dbg;
-
-    dbg = icd_alloc(sizeof(*dbg), 0, XGL_SYSTEM_ALLOC_DEBUG);
-    if (!dbg)
-        return NULL;
-
-    memset(dbg, 0, sizeof(*dbg));
-
-    if (!intel_base_dbg_init(&dbg->base, XGL_DBG_OBJECT_DEVICE,
-            info, sizeof(*info))) {
-        icd_free(dbg);
-        return NULL;
-    }
-
-    return dbg;
+    return (struct intel_dev_dbg *)
+        intel_base_dbg_create(XGL_DBG_OBJECT_DEVICE, info, sizeof(*info),
+                sizeof(struct intel_dev_dbg));
 }
 
 static void dev_dbg_destroy(struct intel_dev_dbg *dbg)
@@ -58,8 +46,7 @@ static void dev_dbg_destroy(struct intel_dev_dbg *dbg)
         filter = next;
     }
 
-    intel_base_dbg_cleanup(&dbg->base);
-    icd_free(dbg);
+    intel_base_dbg_destroy(&dbg->base);
 }
 
 static XGL_RESULT dev_create_queues(struct intel_dev *dev,

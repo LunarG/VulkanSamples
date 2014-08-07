@@ -49,8 +49,8 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 
     fence->obj.base.dispatch = dev->base.dispatch;
     if (dev->base.dbg) {
-        fence->obj.base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_FENCE, info, sizeof(*info));
+        fence->obj.base.dbg = intel_base_dbg_create(XGL_DBG_OBJECT_FENCE,
+                info, sizeof(*info), 0);
         if (!fence->obj.base.dbg) {
             icd_free(fence);
             return XGL_ERROR_OUT_OF_MEMORY;

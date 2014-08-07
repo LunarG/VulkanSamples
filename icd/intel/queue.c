@@ -41,8 +41,8 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
     queue->base.dispatch = dev->base.dispatch;
     if (dev->base.dbg) {
-        queue->base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_QUEUE, NULL, 0);
+        queue->base.dbg = intel_base_dbg_create(XGL_DBG_OBJECT_QUEUE,
+                NULL, 0, 0);
         if (!queue->base.dbg) {
             icd_free(queue);
             return XGL_ERROR_OUT_OF_MEMORY;

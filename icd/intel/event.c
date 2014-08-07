@@ -131,8 +131,8 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
 
     event->obj.base.dispatch = dev->base.dispatch;
     if (dev->base.dbg) {
-        event->obj.base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_EVENT, info, sizeof(*info));
+        event->obj.base.dbg = intel_base_dbg_create(XGL_DBG_OBJECT_EVENT,
+                info, sizeof(*info), 0);
         if (!event->obj.base.dbg) {
             icd_free(event);
             return XGL_ERROR_OUT_OF_MEMORY;
