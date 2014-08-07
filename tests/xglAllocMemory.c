@@ -42,6 +42,7 @@ int main(int argc, char **argv)
     XGL_RESULT err;
     XGL_MEMORY_ALLOC_INFO alloc_info;
     XGL_GPU_MEMORY gpu_mem;
+    XGL_UINT8 *pData;
 
     err = xglInitAndEnumerateGpus(&app_info, NULL,
                                   MAX_GPUS, &gpu_count, objs);
@@ -104,6 +105,28 @@ int main(int argc, char **argv)
                 ERR_EXIT(err);
 
             printf("xglAllocMemory: Passed\n");
+
+//            XGL_RESULT XGLAPI xglMapMemory(
+//                XGL_GPU_MEMORY                              mem,
+//                XGL_FLAGS                                   flags,                // Reserved
+//                XGL_VOID**                                  ppData);
+            err = xglMapMemory(gpu_mem, 0, (XGL_VOID *) &pData);
+            if (err)
+                ERR_EXIT(err);
+
+            printf("xglMapMemory: Passed\n");
+
+            memset(pData, 0x55, alloc_info.allocationSize);
+            if (pData[0] == 0x55) {
+                printf("xglMapMemory: Successfully wrote data\n");
+            }
+
+            err = xglUnmapMemory(gpu_mem);
+            if (err)
+                ERR_EXIT(err);
+
+            printf("xglUnmapMemory: Passed\n");
+
 
             err = xglFreeMemory(gpu_mem);
             if (err)
