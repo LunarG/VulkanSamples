@@ -32,23 +32,12 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 {
     struct intel_queue *queue;
 
-    queue = icd_alloc(sizeof(*queue), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    queue = (struct intel_queue *) intel_base_create(sizeof(*queue),
+            dev->base.dbg, XGL_DBG_OBJECT_QUEUE, NULL, 0);
     if (!queue)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    memset(queue, 0, sizeof(*queue));
     queue->dev = dev;
-
-    queue->base.dispatch = dev->base.dispatch;
-    if (dev->base.dbg) {
-        queue->base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_QUEUE, NULL, 0);
-        if (!queue->base.dbg) {
-            icd_free(queue);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-    }
-    queue->base.get_info = intel_base_get_info;
 
     *queue_ret = queue;
 
@@ -57,9 +46,7 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
 void intel_queue_destroy(struct intel_queue *queue)
 {
-    if (queue->base.dbg)
-        intel_base_dbg_destroy(queue->base.dbg);
-    icd_free(queue);
+    intel_base_destroy(&queue->base);
 }
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)

@@ -153,25 +153,25 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
 }
 
 /**
- * Create an intel_base_dbg.  When alloc_size is non-zero, a buffer of that
+ * Create an intel_base_dbg.  When dbg_size is non-zero, a buffer of that
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
-                                             XGL_SIZE alloc_size)
+                                             XGL_SIZE dbg_size)
 {
     struct intel_base_dbg *dbg;
 
-    if (!alloc_size)
-        alloc_size = sizeof(*dbg);
+    if (!dbg_size)
+        dbg_size = sizeof(*dbg);
 
-    assert(alloc_size >= sizeof(*dbg));
+    assert(dbg_size >= sizeof(*dbg));
 
-    dbg = icd_alloc(alloc_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    dbg = icd_alloc(dbg_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
     if (!dbg)
         return NULL;
 
-    memset(dbg, 0, alloc_size);
+    memset(dbg, 0, dbg_size);
 
     dbg->alloc_id = icd_get_allocator_id();
     dbg->type = type;
@@ -193,6 +193,51 @@ void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
         icd_free(dbg->create_info);
 
     icd_free(dbg);
+}
+
+/**
+ * Create an intel_base.  obj_size and dbg_size specify the real sizes of the
+ * object and the debug metadata.  Memories are zeroed.
+ */
+struct intel_base *intel_base_create(XGL_SIZE obj_size, bool debug,
+                                     XGL_DBG_OBJECT_TYPE type,
+                                     const void *create_info,
+                                     XGL_SIZE dbg_size)
+{
+    struct intel_base *base;
+
+    if (!obj_size)
+        obj_size = sizeof(*base);
+
+    assert(obj_size >= sizeof(*base));
+
+    base = icd_alloc(obj_size, 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    if (!base)
+        return NULL;
+
+    memset(base, 0, obj_size);
+
+    if (debug) {
+        base->dispatch = &intel_debug_dispatch_table;
+        base->dbg = intel_base_dbg_create(type, create_info, dbg_size);
+        if (!base->dbg) {
+            icd_free(base);
+            return NULL;
+        }
+    }
+    else {
+        base->dispatch = &intel_normal_dispatch_table;
+    }
+    base->get_info = intel_base_get_info;
+
+    return base;
+}
+
+void intel_base_destroy(struct intel_base *base)
+{
+    if (base->dbg)
+        intel_base_dbg_destroy(base->dbg);
+    icd_free(base);
 }
 
 XGL_RESULT XGLAPI intelDestroyObject(

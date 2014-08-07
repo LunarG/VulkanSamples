@@ -28,27 +28,6 @@
 #include "queue.h"
 #include "dev.h"
 
-static struct intel_dev_dbg *dev_dbg_create(const XGL_DEVICE_CREATE_INFO *info)
-{
-    return (struct intel_dev_dbg *)
-        intel_base_dbg_create(XGL_DBG_OBJECT_DEVICE, info,
-                sizeof(struct intel_dev_dbg));
-}
-
-static void dev_dbg_destroy(struct intel_dev_dbg *dbg)
-{
-    struct intel_dev_dbg_msg_filter *filter;
-
-    filter = dbg->filters;
-    while (filter) {
-        struct intel_dev_dbg_msg_filter *next = filter->next;
-        icd_free(filter);
-        filter = next;
-    }
-
-    intel_base_dbg_destroy(&dbg->base);
-}
-
 static XGL_RESULT dev_create_queues(struct intel_dev *dev,
                                     const XGL_DEVICE_QUEUE_CREATE_INFO *queues,
                                     XGL_UINT count)
@@ -87,8 +66,6 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
                             const XGL_DEVICE_CREATE_INFO *info,
                             struct intel_dev **dev_ret)
 {
-    const struct icd_dispatch_table *dispatch;
-    struct intel_dev_dbg *dbg;
     struct intel_dev *dev;
     XGL_RESULT ret;
 
@@ -98,11 +75,12 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
     if (gpu->fd >= 0)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
 
-    dev = icd_alloc(sizeof(*dev), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    dev = (struct intel_dev *) intel_base_create(sizeof(*dev),
+            info->flags & XGL_DEVICE_CREATE_VALIDATION_BIT,
+            XGL_DBG_OBJECT_DEVICE, info, sizeof(struct intel_dev_dbg));
     if (!dev)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    memset(dev, 0, sizeof(*dev));
     dev->gpu = gpu;
 
     ret = intel_gpu_open(gpu);
@@ -126,28 +104,24 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return ret;
     }
 
-    if (info->flags & XGL_DEVICE_CREATE_VALIDATION_BIT) {
-        dispatch = &intel_debug_dispatch_table;
-        dbg = dev_dbg_create(info);
-
-        if (!dbg) {
-            icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                    XGL_NULL_HANDLE, 0, 0,
-                    "failed to create device debug layer for %s", gpu->path);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-    } else {
-        dispatch = &intel_normal_dispatch_table;
-        dbg = NULL;
-    }
-
-    dev->base.dispatch = dispatch;
-    dev->base.dbg = &dbg->base;
-    dev->base.get_info = intel_base_get_info;
-
     *dev_ret = dev;
 
     return XGL_SUCCESS;
+}
+
+static void dev_clear_msg_filters(struct intel_dev *dev)
+{
+    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
+    struct intel_dev_dbg_msg_filter *filter;
+
+    filter = dbg->filters;
+    while (filter) {
+        struct intel_dev_dbg_msg_filter *next = filter->next;
+        icd_free(filter);
+        filter = next;
+    }
+
+    dbg->filters = NULL;
 }
 
 void intel_dev_destroy(struct intel_dev *dev)
@@ -155,7 +129,7 @@ void intel_dev_destroy(struct intel_dev *dev)
     XGL_UINT i;
 
     if (dev->base.dbg)
-        dev_dbg_destroy((struct intel_dev_dbg *) dev->base.dbg);
+        dev_clear_msg_filters(dev);
 
     for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
         if (dev->queues[i])
@@ -168,7 +142,7 @@ void intel_dev_destroy(struct intel_dev *dev)
     if (dev->gpu->fd >= 0)
         intel_gpu_close(dev->gpu);
 
-    icd_free(dev);
+    intel_base_destroy(&dev->base);
 }
 
 void intel_dev_get_heap_props(const struct intel_dev *dev,

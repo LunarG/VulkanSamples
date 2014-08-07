@@ -39,24 +39,12 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 {
     struct intel_fence *fence;
 
-    fence = icd_alloc(sizeof(*fence), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    fence = (struct intel_fence *) intel_base_create(sizeof(*fence),
+            dev->base.dbg, XGL_DBG_OBJECT_FENCE, info, 0);
     if (!fence)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    memset(fence, 0, sizeof(*fence));
-
     fence->obj.destroy = fence_destroy;
-
-    fence->obj.base.dispatch = dev->base.dispatch;
-    if (dev->base.dbg) {
-        fence->obj.base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_FENCE, info, 0);
-        if (!fence->obj.base.dbg) {
-            icd_free(fence);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-    }
-    fence->obj.base.get_info = intel_base_get_info;
 
     *fence_ret = fence;
 
@@ -68,10 +56,7 @@ void intel_fence_destroy(struct intel_fence *fence)
     if (fence->submitted_bo)
         intel_bo_unreference(fence->submitted_bo);
 
-    if (fence->obj.base.dbg)
-        intel_base_dbg_destroy(fence->obj.base.dbg);
-
-    icd_free(fence);
+    intel_base_destroy(&fence->obj.base);
 }
 
 XGL_RESULT intel_fence_get_status(struct intel_fence *fence)

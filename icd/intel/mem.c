@@ -37,20 +37,10 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
     if (info->heapCount != 1 || info->heaps[0] != 0)
         return XGL_ERROR_INVALID_POINTER;
 
-    mem = icd_alloc(sizeof(*mem), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    mem = (struct intel_mem *) intel_base_create(sizeof(*mem),
+            dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
     if (!mem)
         return XGL_ERROR_OUT_OF_MEMORY;
-
-    mem->base.dispatch = dev->base.dispatch;
-    if (dev->base.dbg) {
-        mem->base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
-        if (!mem->base.dbg) {
-            intel_mem_free(mem);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-    }
-    mem->base.get_info = intel_base_get_info;
 
     mem->bo = intel_winsys_alloc_buffer(dev->winsys,
             "xgl-gpu-memory", info->allocationSize, 0);
@@ -69,10 +59,7 @@ void intel_mem_free(struct intel_mem *mem)
     if (mem->bo)
         intel_bo_unreference(mem->bo);
 
-    if (mem->base.dbg)
-        intel_base_dbg_destroy(mem->base.dbg);
-
-    icd_free(mem);
+    intel_base_destroy(&mem->base);
 }
 
 XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,

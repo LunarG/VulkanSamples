@@ -121,24 +121,13 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
 {
     struct intel_event *event;
 
-    event = icd_alloc(sizeof(*event), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    event = (struct intel_event *) intel_base_create(sizeof(*event),
+            dev->base.dbg, XGL_DBG_OBJECT_EVENT, info, 0);
     if (!event)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    memset(event, 0, sizeof(*event));
-
-    event->obj.destroy = event_destroy;
-
-    event->obj.base.dispatch = dev->base.dispatch;
-    if (dev->base.dbg) {
-        event->obj.base.dbg =
-            intel_base_dbg_create(XGL_DBG_OBJECT_EVENT, info, 0);
-        if (!event->obj.base.dbg) {
-            icd_free(event);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-    }
     event->obj.base.get_info = event_get_info;
+    event->obj.destroy = event_destroy;
 
     *event_ret = event;
 
@@ -147,10 +136,7 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
 
 void intel_event_destroy(struct intel_event *event)
 {
-    if (event->obj.base.dbg)
-        intel_base_dbg_destroy(event->obj.base.dbg);
-
-    icd_free(event);
+    intel_base_destroy(&event->obj.base);
 }
 
 XGL_RESULT intel_event_set(struct intel_event *event)

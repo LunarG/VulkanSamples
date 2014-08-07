@@ -27,6 +27,7 @@
 
 #include "intel.h"
 
+struct intel_dev;
 struct intel_mem;
 
 struct intel_base_dbg {
@@ -85,8 +86,14 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
 
 struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
-                                             XGL_SIZE alloc_size);
+                                             XGL_SIZE dbg_size);
 void intel_base_dbg_destroy(struct intel_base_dbg *dbg);
+
+struct intel_base *intel_base_create(XGL_SIZE obj_size, bool debug,
+                                     XGL_DBG_OBJECT_TYPE type,
+                                     const void *create_info,
+                                     XGL_SIZE dbg_size);
+void intel_base_destroy(struct intel_base *base);
 
 XGL_RESULT XGLAPI intelDestroyObject(
     XGL_OBJECT                                  object);
