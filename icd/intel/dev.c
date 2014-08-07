@@ -75,16 +75,13 @@ static XGL_RESULT dev_create_queues(struct intel_dev *dev,
         const XGL_DEVICE_QUEUE_CREATE_INFO *q = &queues[i];
         XGL_RESULT ret = XGL_SUCCESS;
 
-        if (q->queueNodeIndex >= INTEL_GPU_ENGINE_COUNT ||
-            q->queueCount > 1 ||
-            dev->queues[q->queueNodeIndex]) {
-            ret = XGL_ERROR_INVALID_POINTER;
+        if (q->queueNodeIndex < INTEL_GPU_ENGINE_COUNT &&
+            q->queueCount == 1 && !dev->queues[q->queueNodeIndex]) {
+            ret = intel_queue_create(dev, q->queueNodeIndex,
+                    &dev->queues[q->queueNodeIndex]);
         }
         else {
-            dev->queues[q->queueNodeIndex] =
-                intel_queue_create(dev, q->queueNodeIndex);
-            if (!dev->queues[q->queueNodeIndex])
-                ret = XGL_ERROR_OUT_OF_MEMORY;
+            ret = XGL_ERROR_INVALID_POINTER;
         }
 
         if (ret != XGL_SUCCESS) {

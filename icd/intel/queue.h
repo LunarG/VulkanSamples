@@ -43,8 +43,9 @@ static inline struct intel_queue *intel_queue(XGL_QUEUE queue)
     return (struct intel_queue *) queue;
 }
 
-struct intel_queue *intel_queue_create(struct intel_dev *dev,
-                                       XGL_QUEUE_TYPE type);
+XGL_RESULT intel_queue_create(struct intel_dev *dev,
+                              XGL_QUEUE_TYPE type,
+                              struct intel_queue **queue_ret);
 void intel_queue_destroy(struct intel_queue *queue);
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout);

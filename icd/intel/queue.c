@@ -26,14 +26,15 @@
 #include "dev.h"
 #include "queue.h"
 
-struct intel_queue *intel_queue_create(struct intel_dev *dev,
-                                       XGL_QUEUE_TYPE type)
+XGL_RESULT intel_queue_create(struct intel_dev *dev,
+                              XGL_QUEUE_TYPE type,
+                              struct intel_queue **queue_ret)
 {
     struct intel_queue *queue;
 
     queue = icd_alloc(sizeof(*queue), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!queue)
-        return NULL;
+        return XGL_ERROR_OUT_OF_MEMORY;
 
     memset(queue, 0, sizeof(*queue));
     queue->dev = dev;
@@ -44,11 +45,13 @@ struct intel_queue *intel_queue_create(struct intel_dev *dev,
             intel_base_dbg_create(XGL_DBG_OBJECT_QUEUE, NULL, 0);
         if (!queue->base.dbg) {
             icd_free(queue);
-            return NULL;
+            return XGL_ERROR_OUT_OF_MEMORY;
         }
     }
 
-    return queue;
+    *queue_ret = queue;
+
+    return XGL_SUCCESS;
 }
 
 void intel_queue_destroy(struct intel_queue *queue)
