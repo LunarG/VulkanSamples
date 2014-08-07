@@ -22,6 +22,7 @@ SET(SOURCES
     init_driver.c
     event.c
     fence.c
+    format.c
     gpu.c
     mem.c
     obj.c

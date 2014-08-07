@@ -26,6 +26,7 @@
 #include "dev.h"
 #include "event.h"
 #include "fence.h"
+#include "format.h"
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
@@ -135,16 +136,6 @@ static XGL_RESULT XGLAPI intelSignalQueueSemaphore(
 static XGL_RESULT XGLAPI intelWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetFormatInfo(
-    XGL_DEVICE                                  device,
-    XGL_FORMAT                                  format,
-    XGL_FORMAT_INFO_TYPE                        infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
