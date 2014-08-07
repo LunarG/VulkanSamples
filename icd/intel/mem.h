@@ -25,6 +25,7 @@
 #ifndef MEM_H
 #define MEM_H
 
+#include "kmd/winsys.h"
 #include "intel.h"
 
 struct intel_bo;
@@ -43,8 +44,25 @@ void intel_mem_free(struct intel_mem *mem);
 XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
                                   XGL_MEMORY_PRIORITY priority);
 
-void *intel_mem_map(struct intel_mem *mem, XGL_FLAGS flags);
-void intel_mem_unmap(struct intel_mem *mem);
+static inline void *intel_mem_map(struct intel_mem *mem, XGL_FLAGS flags)
+{
+    return intel_bo_map_unsynchronized(mem->bo);
+}
+
+static inline void *intel_mem_map_sync(struct intel_mem *mem, bool rw)
+{
+    return intel_bo_map(mem->bo, rw);
+}
+
+static inline void intel_mem_unmap(struct intel_mem *mem)
+{
+    intel_bo_unmap(mem->bo);
+}
+
+static inline bool intel_mem_is_busy(struct intel_mem *mem)
+{
+    return intel_bo_is_busy(mem->bo);
+}
 
 static inline struct intel_mem *intel_mem(XGL_GPU_MEMORY mem)
 {

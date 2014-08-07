@@ -22,7 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "kmd/winsys.h"
 #include "dev.h"
 #include "mem.h"
 
@@ -67,16 +66,6 @@ XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
 {
     /* pin the bo when XGL_MEMORY_PRIORITY_VERY_HIGH? */
     return XGL_SUCCESS;
-}
-
-void *intel_mem_map(struct intel_mem *mem, XGL_FLAGS flags)
-{
-    return intel_bo_map_unsynchronized(mem->bo);
-}
-
-void intel_mem_unmap(struct intel_mem *mem)
-{
-    intel_bo_unmap(mem->bo);
 }
 
 XGL_RESULT XGLAPI intelAllocMemory(
