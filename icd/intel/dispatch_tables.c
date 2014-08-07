@@ -40,6 +40,7 @@ static XGL_RESULT XGLAPI intelQueueSubmit(
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence)
 {
+    /* need XGL_CMD_BUFFER first */
     return XGL_ERROR_UNAVAILABLE;
 }
 
@@ -49,6 +50,7 @@ static XGL_RESULT XGLAPI intelPinSystemMemory(
     XGL_SIZE                                    memSize,
     XGL_GPU_MEMORY*                             pMem)
 {
+    /* add DRM_I915_GEM_USERPTR to wisys first */
     return XGL_ERROR_UNAVAILABLE;
 }
 
@@ -61,6 +63,7 @@ static XGL_RESULT XGLAPI intelRemapVirtualMemoryPages(
     XGL_UINT                                    postSignalSemaphoreCount,
     const XGL_QUEUE_SEMAPHORE*                  pPostSignalSemaphores)
 {
+    /* no kernel support */
     return XGL_ERROR_UNAVAILABLE;
 }
 
@@ -110,7 +113,6 @@ static XGL_RESULT XGLAPI intelCreateQueueSemaphore(
     const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
 {
-
     /*
      * We want to find an unused semaphore register and initialize it.  Signal
      * will increment the register.  Wait will atomically decrement it and
