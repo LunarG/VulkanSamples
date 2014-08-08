@@ -417,7 +417,6 @@ static int intel_format_translate_color(XGL_FORMAT format)
 static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
                                                  XGL_FORMAT format)
 {
-    const int gen = intel_gpu_gen(dev->gpu);
     const int fmt = intel_format_translate_color(format);
     const struct intel_sampler_cap *sampler;
     const struct intel_dp_cap *dp;
@@ -432,21 +431,22 @@ static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
 
     features = XGL_FORMAT_MEMORY_SHADER_ACCESS_BIT;
 
-#define TEST(func, cap, gen) ((func) && (func)->cap && (gen) >= (func)->cap)
-    if (TEST(sampler, sampling, gen)) {
+#define TEST(dev, func, cap) ((func) && (func)->cap && \
+        intel_gpu_gen((dev)->gpu) >= (func)->cap)
+    if (TEST(dev, sampler, sampling)) {
         if (format.numericFormat == XGL_NUM_FMT_UINT ||
             format.numericFormat == XGL_NUM_FMT_SINT ||
-            TEST(sampler, filtering, gen))
+            TEST(dev, sampler, filtering))
             features |= XGL_FORMAT_IMAGE_SHADER_READ_BIT;
     }
 
-    if (TEST(dp, typed_write, gen))
+    if (TEST(dev, dp, typed_write))
         features |= XGL_FORMAT_IMAGE_SHADER_WRITE_BIT;
 
-    if (TEST(dp, rt_write, gen)) {
+    if (TEST(dev, dp, rt_write)) {
         features |= XGL_FORMAT_COLOR_ATTACHMENT_WRITE_BIT;
 
-        if (TEST(dp, rt_write_blending, gen))
+        if (TEST(dev, dp, rt_write_blending))
             features |= XGL_FORMAT_COLOR_ATTACHMENT_BLEND_BIT;
 
         if (features & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
