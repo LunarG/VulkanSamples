@@ -24,6 +24,7 @@ SET(SOURCES
     fence.c
     format.c
     gpu.c
+    img.c
     mem.c
     obj.c
     query.c

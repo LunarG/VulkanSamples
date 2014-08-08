@@ -27,6 +27,7 @@
 #include "event.h"
 #include "fence.h"
 #include "format.h"
+#include "img.h"
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
@@ -136,24 +137,6 @@ static XGL_RESULT XGLAPI intelSignalQueueSemaphore(
 static XGL_RESULT XGLAPI intelWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateImage(
-    XGL_DEVICE                                  device,
-    const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
-    XGL_IMAGE*                                  pImage)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
-    XGL_IMAGE                                   image,
-    const XGL_IMAGE_SUBRESOURCE*                pSubresource,
-    XGL_SUBRESOURCE_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

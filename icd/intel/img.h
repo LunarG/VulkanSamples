@@ -25,6 +25,7 @@
 #ifndef IMG_H
 #define IMG_H
 
+#include "kmd/winsys.h"
 #include "intel.h"
 #include "obj.h"
 
@@ -41,6 +42,58 @@ struct intel_img_slice {
 
 struct intel_img {
     struct intel_obj obj;
+
+    XGL_FORMAT bo_format;
+
+    enum intel_tiling_mode tiling;
+    unsigned long bo_stride; /* distance between two block rows in bytes */
+    unsigned long bo_height;
+
+    unsigned block_width;
+    unsigned block_height;
+    unsigned block_size;
+
+    /* true if the mip level alignments are stricter */
+    bool halign_8, valign_4;
+    /* true if space is reserved between layers */
+    bool array_spacing_full;
+    /* true if samples are interleaved */
+    bool interleaved;
+
+    struct intel_img_slice *slices[INTEL_IMG_MAX_LEVELS];
 };
+
+static inline struct intel_img *intel_img(XGL_IMAGE image)
+{
+    return (struct intel_img *) image;
+}
+
+static inline struct intel_img *intel_img_from_base(struct intel_base *base)
+{
+    return (struct intel_img *) base;
+}
+
+static inline struct intel_img *intel_img_from_obj(struct intel_obj *obj)
+{
+    return intel_img_from_base(&obj->base);
+}
+
+XGL_RESULT intel_img_create(struct intel_dev *dev,
+                            const XGL_IMAGE_CREATE_INFO *info,
+                            struct intel_img **img_ret);
+
+void intel_img_destroy(struct intel_img *img);
+
+XGL_RESULT XGLAPI intelCreateImage(
+    XGL_DEVICE                                  device,
+    const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
+    XGL_IMAGE*                                  pImage);
+
+XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
+    XGL_IMAGE                                   image,
+    const XGL_IMAGE_SUBRESOURCE*                pSubresource,
+    XGL_SUBRESOURCE_INFO_TYPE                   infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData);
 
 #endif /* IMG_H */

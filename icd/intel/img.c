@@ -1018,3 +1018,193 @@ tex_layout_calculate_hiz_size(struct tex_layout *layout)
    layout->hiz_stride = u_align(hz_width, 128);
    layout->hiz_height = u_align(hz_height, 32);
 }
+
+static bool
+img_alloc_slices(struct intel_img *img,
+                 XGL_UINT levels, XGL_INT depth,
+                 XGL_UINT array_size)
+{
+   struct intel_img_slice *slices;
+   int total_depth, lv;
+
+   /* sum the depths of all levels */
+   total_depth = 0;
+   for (lv = 0; lv < levels; lv++)
+      total_depth += u_minify(depth, lv);
+
+   /*
+    * There are (depth * tex->base.array_size) slices in total.  Either depth
+    * is one (non-3D) or templ->array_size is one (non-array), but it does
+    * not matter.
+    */
+   slices = icd_alloc(sizeof(*slices) * total_depth * array_size,
+           0, XGL_SYSTEM_ALLOC_INTERNAL);
+   if (!slices)
+      return false;
+
+   img->slices[0] = slices;
+
+   /* point to the respective positions in the buffer */
+   for (lv = 1; lv < levels; lv++) {
+      img->slices[lv] = img->slices[lv - 1] +
+         u_minify(depth, lv - 1) * array_size;
+   }
+
+   return true;
+}
+
+static void img_destroy(struct intel_obj *obj)
+{
+    struct intel_img *img = intel_img_from_obj(obj);
+
+    intel_img_destroy(img);
+}
+
+static XGL_RESULT img_get_info(struct intel_base *base, int type,
+                               XGL_SIZE *size, XGL_VOID *data)
+{
+    struct intel_img *img = intel_img_from_base(base);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (type) {
+    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+        {
+            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+
+            mem_req->size = img->bo_stride * img->bo_height;
+            mem_req->alignment = 4096;
+            mem_req->heapCount = 1;
+            mem_req->heaps[0] = 0;
+
+            *size = sizeof(*mem_req);
+        }
+        break;
+    default:
+        ret = intel_base_get_info(base, type, size, data);
+        break;
+    }
+
+    return ret;
+}
+
+XGL_RESULT intel_img_create(struct intel_dev *dev,
+                            const XGL_IMAGE_CREATE_INFO *info,
+                            struct intel_img **img_ret)
+{
+    struct tex_layout layout;
+    struct intel_img *img;
+    XGL_RESULT ret;
+
+    img = (struct intel_img *) intel_base_create(sizeof(*img),
+            dev->base.dbg, XGL_DBG_OBJECT_IMAGE, info, 0);
+    if (!img)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    if (!img_alloc_slices(img, info->mipLevels, info->extent.depth,
+                info->arraySize)) {
+        intel_img_destroy(img);
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
+
+    ret = tex_layout_init(&layout, dev->gpu, info, img->slices);
+    if (ret != XGL_SUCCESS) {
+        intel_img_destroy(img);
+        return ret;
+    }
+
+    if (info->imageType == XGL_IMAGE_3D)
+        tex_layout_3d(&layout);
+    else
+        tex_layout_2d(&layout);
+
+    if (!tex_layout_calculate_bo_size(&layout)) {
+        intel_img_destroy(img);
+        return XGL_ERROR_INVALID_MEMORY_SIZE;
+    }
+
+    tex_layout_calculate_hiz_size(&layout);
+
+    /* TODO */
+    if (layout.hiz || layout.separate_stencil) {
+        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+                XGL_NULL_HANDLE, 0, 0, "HiZ or separate stencil enabled");
+        intel_img_destroy(img);
+        return XGL_ERROR_INVALID_MEMORY_SIZE;
+    }
+
+    img->bo_format = layout.format;
+    img->tiling = layout.tiling;
+    img->bo_stride = layout.bo_stride;
+    img->bo_height = layout.bo_height;
+    img->block_width = layout.block_width;
+    img->block_height = layout.block_height;
+    img->block_size = layout.block_size;
+    img->halign_8 = (layout.align_i == 8);
+    img->valign_4 = (layout.align_j == 4);
+    img->array_spacing_full = layout.array_spacing_full;
+    img->interleaved = layout.interleaved;
+
+    img->obj.destroy = img_destroy;
+    img->obj.base.get_info = img_get_info;
+
+    *img_ret = img;
+
+    return XGL_SUCCESS;
+}
+
+void intel_img_destroy(struct intel_img *img)
+{
+    if (img->slices[0])
+        icd_free(img->slices[0]);
+
+    intel_base_destroy(&img->obj.base);
+}
+
+XGL_RESULT XGLAPI intelCreateImage(
+    XGL_DEVICE                                  device,
+    const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
+    XGL_IMAGE*                                  pImage)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_img_create(dev, pCreateInfo, (struct intel_img **) pImage);
+}
+
+XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
+    XGL_IMAGE                                   image,
+    const XGL_IMAGE_SUBRESOURCE*                pSubresource,
+    XGL_SUBRESOURCE_INFO_TYPE                   infoType,
+    XGL_SIZE*                                   pDataSize,
+    XGL_VOID*                                   pData)
+{
+    const struct intel_img *img = intel_img(image);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (infoType) {
+    case XGL_INFO_TYPE_SUBRESOURCE_LAYOUT:
+        {
+            XGL_SUBRESOURCE_LAYOUT *layout = (XGL_SUBRESOURCE_LAYOUT *) pData;
+            const struct intel_img_slice *slice =
+                &img->slices[pSubresource->mipLevel][pSubresource->arraySlice];
+            const unsigned int bx = slice->x / img->block_width;
+            const unsigned int by = slice->y / img->block_height;
+
+            *pDataSize = sizeof(XGL_SUBRESOURCE_LAYOUT);
+
+            /*
+             * size is not readily available and depthPitch might not be
+             * available.  Leave them alone for now.
+             */
+            layout->offset = by * img->bo_stride + bx * img->block_size;
+            layout->size = 0;
+            layout->rowPitch = img->bo_stride;
+            layout->depthPitch = 0;
+        }
+        break;
+    default:
+        ret = XGL_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
+}

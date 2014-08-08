@@ -96,6 +96,10 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(dbg->type == XGL_DBG_OBJECT_QUERY_POOL);
         shallow_copy = sizeof(XGL_QUERY_POOL_CREATE_INFO);
         break;
+    case XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_IMAGE);
+        shallow_copy = sizeof(XGL_IMAGE_CREATE_INFO);
+        break;
     default:
         return false;
         break;
