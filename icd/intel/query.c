@@ -81,11 +81,11 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
      */
     switch (info->queryType) {
     case XGL_QUERY_OCCLUSION:
-        query->slot_stride = align(sizeof(uint32_t) * 2, 64);
+        query->slot_stride = u_align(sizeof(uint32_t) * 2, 64);
         break;
     case XGL_QUERY_PIPELINE_STATISTICS:
         query->slot_stride =
-            align(sizeof(XGL_PIPELINE_STATISTICS_DATA) * 2, 64);
+            u_align(sizeof(XGL_PIPELINE_STATISTICS_DATA) * 2, 64);
         break;
     default:
         break;

@@ -42,10 +42,23 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-static inline unsigned int align(unsigned int val, unsigned alignment)
+/**
+ * Return true if val is power of two, or zero.
+ */
+static inline bool u_is_pow2(unsigned int val)
 {
-    assert(alignment && (alignment & (alignment - 1)) == 0);
+    return ((val & (val - 1)) == 0);
+}
+
+static inline unsigned int u_align(unsigned int val, unsigned alignment)
+{
+    assert(alignment && u_is_pow2(alignment));
     return (val + alignment - 1) & ~(alignment - 1);
+}
+
+static inline unsigned int u_minify(unsigned int val, unsigned level)
+{
+    return (val >> level) ? val >> level : 1;
 }
 
 #endif /* INTEL_H */
