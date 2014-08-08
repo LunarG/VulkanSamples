@@ -22,20 +22,19 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "ilo_screen.h"
-#include "ilo_resource.h"
-
-/* use PIPE_BIND_CUSTOM to indicate MCS */
-#define ILO_BIND_MCS PIPE_BIND_CUSTOM
+#include "kmd/winsys.h"
+#include "dev.h"
+#include "gpu.h"
+#include "img.h"
 
 struct tex_layout {
-   const struct ilo_dev_info *dev;
-   const struct pipe_resource *templ;
+   const struct intel_gpu *gpu;
+   const XGL_IMAGE_CREATE_INFO *info;
 
    bool has_depth, has_stencil;
    bool hiz, separate_stencil;
 
-   enum pipe_format format;
+   XGL_FORMAT format;
    unsigned block_width, block_height, block_size;
    bool compressed;
 
@@ -47,8 +46,8 @@ struct tex_layout {
 
    struct {
       int w, h, d;
-      struct ilo_texture_slice *slices;
-   } levels[PIPE_MAX_TEXTURE_LEVELS];
+      struct intel_img_slice *slices;
+   } levels[INTEL_IMG_MAX_LEVELS];
 
    int align_i, align_j;
    int qpitch;
@@ -66,72 +65,25 @@ struct tex_layout {
  *      surfaces are also restricted to a maximum size in bytes. This
  *      maximum is 2 GB for all products and all surface types."
  */
-static const size_t max_resource_size = 1u << 31;
-
-static const char *
-resource_get_bo_name(const struct pipe_resource *templ)
-{
-   static const char *target_names[PIPE_MAX_TEXTURE_TYPES] = {
-      [PIPE_BUFFER] = "buf",
-      [PIPE_TEXTURE_1D] = "tex-1d",
-      [PIPE_TEXTURE_2D] = "tex-2d",
-      [PIPE_TEXTURE_3D] = "tex-3d",
-      [PIPE_TEXTURE_CUBE] = "tex-cube",
-      [PIPE_TEXTURE_RECT] = "tex-rect",
-      [PIPE_TEXTURE_1D_ARRAY] = "tex-1d-array",
-      [PIPE_TEXTURE_2D_ARRAY] = "tex-2d-array",
-      [PIPE_TEXTURE_CUBE_ARRAY] = "tex-cube-array",
-   };
-   const char *name = target_names[templ->target];
-
-   if (templ->target == PIPE_BUFFER) {
-      switch (templ->bind) {
-      case PIPE_BIND_VERTEX_BUFFER:
-         name = "buf-vb";
-         break;
-      case PIPE_BIND_INDEX_BUFFER:
-         name = "buf-ib";
-         break;
-      case PIPE_BIND_CONSTANT_BUFFER:
-         name = "buf-cb";
-         break;
-      case PIPE_BIND_STREAM_OUTPUT:
-         name = "buf-so";
-         break;
-      default:
-         break;
-      }
-   }
-
-   return name;
-}
-
-static enum intel_domain_flag
-resource_get_bo_initial_domain(const struct pipe_resource *templ)
-{
-   return (templ->bind & (PIPE_BIND_DEPTH_STENCIL |
-                          PIPE_BIND_RENDER_TARGET |
-                          PIPE_BIND_STREAM_OUTPUT)) ?
-      INTEL_DOMAIN_RENDER : 0;
-}
+static const size_t intel_max_resource_size = 1u << 31;
 
 static void
 tex_layout_init_qpitch(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
    int h0, h1;
 
-   if (templ->array_size <= 1)
+   if (info->arraySize <= 1)
       return;
 
-   h0 = align(layout->levels[0].h, layout->align_j);
+   h0 = u_align(layout->levels[0].h, layout->align_j);
 
    if (!layout->array_spacing_full) {
       layout->qpitch = h0;
       return;
    }
 
-   h1 = align(layout->levels[1].h, layout->align_j);
+   h1 = u_align(layout->levels[1].h, layout->align_j);
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 115:
@@ -168,17 +120,17 @@ tex_layout_init_qpitch(struct tex_layout *layout)
     * to divide QPitch by 4.
     */
    layout->qpitch = h0 + h1 +
-      ((layout->dev->gen >= ILO_GEN(7)) ? 12 : 11) * layout->align_j;
+      ((intel_gpu_gen(layout->gpu) >= INTEL_GEN(7)) ? 12 : 11) * layout->align_j;
 
-   if (layout->dev->gen == ILO_GEN(6) && templ->nr_samples > 1 &&
-       templ->height0 % 4 == 1)
+   if (intel_gpu_gen(layout->gpu) == INTEL_GEN(6) && info->samples > 1 &&
+       info->extent.height % 4 == 1)
       layout->qpitch += 4;
 }
 
 static void
 tex_layout_init_alignments(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 113:
@@ -273,14 +225,14 @@ tex_layout_init_alignments(struct tex_layout *layout)
       layout->align_i = layout->block_width;
       layout->align_j = layout->block_height;
    }
-   else if (layout->has_depth || layout->has_stencil) {
-      if (layout->dev->gen >= ILO_GEN(7)) {
-         switch (layout->format) {
-         case PIPE_FORMAT_Z16_UNORM:
+   else if (layout->format.numericFormat == XGL_NUM_FMT_DS) {
+      if (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7)) {
+         switch (layout->format.channelFormat) {
+         case XGL_CH_FMT_R16:
             layout->align_i = 8;
             layout->align_j = 4;
             break;
-         case PIPE_FORMAT_S8_UINT:
+         case XGL_CH_FMT_R8:
             layout->align_i = 8;
             layout->align_j = 8;
             break;
@@ -291,8 +243,8 @@ tex_layout_init_alignments(struct tex_layout *layout)
          }
       }
       else {
-         switch (layout->format) {
-         case PIPE_FORMAT_S8_UINT:
+         switch (layout->format.channelFormat) {
+         case XGL_CH_FMT_R8:
             layout->align_i = 4;
             layout->align_j = 2;
             break;
@@ -304,10 +256,10 @@ tex_layout_init_alignments(struct tex_layout *layout)
       }
    }
    else {
-      const bool valign_4 = (templ->nr_samples > 1) ||
-         (layout->dev->gen >= ILO_GEN(7) &&
+      const bool valign_4 = (info->samples > 1) ||
+         (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7) &&
           layout->tiling == INTEL_TILING_Y &&
-          (templ->bind & PIPE_BIND_RENDER_TARGET));
+          (info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
 
       if (valign_4)
          assert(layout->block_size != 12);
@@ -325,32 +277,32 @@ tex_layout_init_alignments(struct tex_layout *layout)
    assert(layout->align_i % layout->block_width == 0);
    assert(layout->align_j % layout->block_height == 0);
 
-   /* make sure align() works */
-   assert(util_is_power_of_two(layout->align_i) &&
-          util_is_power_of_two(layout->align_j));
-   assert(util_is_power_of_two(layout->block_width) &&
-          util_is_power_of_two(layout->block_height));
+   /* make sure u_align() works */
+   assert(u_is_pow2(layout->align_i) &&
+          u_is_pow2(layout->align_j));
+   assert(u_is_pow2(layout->block_width) &&
+          u_is_pow2(layout->block_height));
 }
 
 static void
 tex_layout_init_levels(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
    int last_level, lv;
 
-   last_level = templ->last_level;
+   last_level = info->mipLevels - 1;
 
    /* need at least 2 levels to compute full qpitch */
-   if (last_level == 0 && templ->array_size > 1 && layout->array_spacing_full)
+   if (last_level == 0 && info->arraySize > 1 && layout->array_spacing_full)
       last_level++;
 
    /* compute mip level sizes */
    for (lv = 0; lv <= last_level; lv++) {
       int w, h, d;
 
-      w = u_minify(templ->width0, lv);
-      h = u_minify(templ->height0, lv);
-      d = u_minify(templ->depth0, lv);
+      w = u_minify(info->extent.width, lv);
+      h = u_minify(info->extent.height, lv);
+      d = u_minify(info->extent.depth, lv);
 
       /*
        * From the Sandy Bridge PRM, volume 1 part 1, page 114:
@@ -360,8 +312,8 @@ tex_layout_init_levels(struct tex_layout *layout)
        *      above. Then, if necessary, they are padded out to compression
        *      block boundaries."
        */
-      w = align(w, layout->block_width);
-      h = align(h, layout->block_height);
+      w = u_align(w, layout->block_width);
+      h = u_align(h, layout->block_height);
 
       /*
        * From the Sandy Bridge PRM, volume 1 part 1, page 111:
@@ -399,28 +351,28 @@ tex_layout_init_levels(struct tex_layout *layout)
        *
        * Thus the need to
        *
-       *   w = align(w, 2) * 2;
-       *   y = align(y, 2) * 2;
+       *   w = u_align(w, 2) * 2;
+       *   y = u_align(y, 2) * 2;
        */
       if (layout->interleaved) {
-         switch (templ->nr_samples) {
+         switch (info->samples) {
          case 0:
          case 1:
             break;
          case 2:
-            w = align(w, 2) * 2;
+            w = u_align(w, 2) * 2;
             break;
          case 4:
-            w = align(w, 2) * 2;
-            h = align(h, 2) * 2;
+            w = u_align(w, 2) * 2;
+            h = u_align(h, 2) * 2;
             break;
          case 8:
-            w = align(w, 2) * 4;
-            h = align(h, 2) * 2;
+            w = u_align(w, 2) * 4;
+            h = u_align(h, 2) * 2;
             break;
          case 16:
-            w = align(w, 2) * 4;
-            h = align(h, 2) * 4;
+            w = u_align(w, 2) * 4;
+            h = u_align(h, 2) * 4;
             break;
          default:
             assert(!"unsupported sample count");
@@ -437,9 +389,9 @@ tex_layout_init_levels(struct tex_layout *layout)
 static void
 tex_layout_init_spacing(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
 
-   if (layout->dev->gen >= ILO_GEN(7)) {
+   if (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7)) {
       /*
        * It is not explicitly states, but render targets are expected to be
        * UMS/CMS (samples non-interleaved) and depth/stencil buffers are
@@ -471,9 +423,9 @@ tex_layout_init_spacing(struct tex_layout *layout)
           * As multisampled resources are not mipmapped, we never use
           * ARYSPC_FULL for them.
           */
-         if (templ->nr_samples > 1)
-            assert(templ->last_level == 0);
-         layout->array_spacing_full = (templ->last_level > 0);
+         if (info->samples > 1)
+            assert(info->mipLevels == 1);
+         layout->array_spacing_full = (info->mipLevels > 1);
       }
    }
    else {
@@ -492,45 +444,23 @@ tex_layout_init_spacing(struct tex_layout *layout)
        *
        * GEN6 does not support compact spacing otherwise.
        */
-      layout->array_spacing_full = (layout->format != PIPE_FORMAT_S8_UINT);
+      layout->array_spacing_full =
+          !(layout->format.channelFormat == XGL_CH_FMT_R8 &&
+            layout->format.numericFormat == XGL_NUM_FMT_DS);
    }
 }
 
 static void
 tex_layout_init_tiling(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
-   const enum pipe_format format = layout->format;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
    const unsigned tile_none = 1 << INTEL_TILING_NONE;
    const unsigned tile_x = 1 << INTEL_TILING_X;
    const unsigned tile_y = 1 << INTEL_TILING_Y;
    unsigned valid_tilings = tile_none | tile_x | tile_y;
 
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 2, page 32:
-    *
-    *     "Display/Overlay   Y-Major not supported.
-    *                        X-Major required for Async Flips"
-    */
-   if (unlikely(templ->bind & PIPE_BIND_SCANOUT))
-      valid_tilings &= tile_x;
-
-   /*
-    * From the Sandy Bridge PRM, volume 3 part 2, page 158:
-    *
-    *     "The cursor surface address must be 4K byte aligned. The cursor must
-    *      be in linear memory, it cannot be tiled."
-    */
-   if (unlikely(templ->bind & (PIPE_BIND_CURSOR | PIPE_BIND_LINEAR)))
+   if (info->tiling == XGL_LINEAR_TILING)
       valid_tilings &= tile_none;
-
-   /*
-    * From the Ivy Bridge PRM, volume 4 part 1, page 76:
-    *
-    *     "The MCS surface must be stored as Tile Y."
-    */
-   if (templ->bind & ILO_BIND_MCS)
-      valid_tilings &= tile_y;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 318:
@@ -547,18 +477,15 @@ tex_layout_init_tiling(struct tex_layout *layout)
     * Since the HW does not support W-tiled fencing, we have to do it in the
     * driver.
     */
-   if (templ->bind & PIPE_BIND_DEPTH_STENCIL) {
-      switch (format) {
-      case PIPE_FORMAT_S8_UINT:
-         valid_tilings &= tile_none;
-         break;
-      default:
-         valid_tilings &= tile_y;
-         break;
-      }
+   if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+       if (layout->format.channelFormat == XGL_CH_FMT_R8 &&
+           layout->format.numericFormat == XGL_NUM_FMT_DS)
+           valid_tilings &= tile_none;
+       else
+           valid_tilings &= tile_y;
    }
 
-   if (templ->bind & PIPE_BIND_RENDER_TARGET) {
+   if (info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       /*
        * From the Sandy Bridge PRM, volume 1 part 2, page 32:
        *
@@ -576,7 +503,7 @@ tex_layout_init_tiling(struct tex_layout *layout)
        *
        *     "VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
        */
-      if (layout->dev->gen >= ILO_GEN(7) && layout->block_size == 12)
+      if (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7) && layout->block_size == 12)
          valid_tilings &= ~tile_y;
    }
 
@@ -585,15 +512,16 @@ tex_layout_init_tiling(struct tex_layout *layout)
 
    layout->valid_tilings = valid_tilings;
 
-   if (templ->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW)) {
+   if (info->usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                      XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
-      if (templ->width0 < 64 && (valid_tilings & ~tile_x))
+      if (info->extent.width < 64 && (valid_tilings & ~tile_x))
          valid_tilings &= ~tile_x;
 
-      if ((templ->width0 < 32 || templ->height0 < 16) &&
-          (templ->width0 < 16 || templ->height0 < 32) &&
+      if ((info->extent.width < 32 || info->extent.height < 16) &&
+          (info->extent.width < 16 || info->extent.height < 32) &&
           (valid_tilings & ~tile_y))
          valid_tilings &= ~tile_y;
    }
@@ -615,58 +543,76 @@ tex_layout_init_tiling(struct tex_layout *layout)
 static void
 tex_layout_init_format(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
-   enum pipe_format format;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
+   XGL_FORMAT format = info->format;
 
-   switch (templ->format) {
-   case PIPE_FORMAT_ETC1_RGB8:
-      format = PIPE_FORMAT_R8G8B8X8_UNORM;
-      break;
-   case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-      if (layout->separate_stencil)
-         format = PIPE_FORMAT_Z24X8_UNORM;
-      else
-         format = templ->format;
-      break;
-   case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-      if (layout->separate_stencil)
-         format = PIPE_FORMAT_Z32_FLOAT;
-      else
-         format = templ->format;
-      break;
-   default:
-      format = templ->format;
-      break;
+   if (format.numericFormat == XGL_NUM_FMT_DS) {
+       switch (format.channelFormat) {
+       case XGL_CH_FMT_R32G8:
+           if (layout->separate_stencil)
+               format.channelFormat = XGL_CH_FMT_R32;
+           break;
+       default:
+           break;
+       }
    }
 
    layout->format = format;
 
-   layout->block_width = util_format_get_blockwidth(format);
-   layout->block_height = util_format_get_blockheight(format);
-   layout->block_size = util_format_get_blocksize(format);
-   layout->compressed = util_format_is_compressed(format);
+   switch (format.channelFormat) {
+   case XGL_CH_FMT_BC1:
+   case XGL_CH_FMT_BC2:
+   case XGL_CH_FMT_BC3:
+   case XGL_CH_FMT_BC4:
+   case XGL_CH_FMT_BC5:
+   case XGL_CH_FMT_BC6U:
+   case XGL_CH_FMT_BC6S:
+   case XGL_CH_FMT_BC7:
+       layout->block_width = 4;
+       layout->block_height = 4;
+       layout->block_size =
+           (format.channelFormat == XGL_CH_FMT_BC1 ||
+            format.channelFormat == XGL_CH_FMT_BC4) ? 8 : 16;
+       layout->compressed = true;
+       break;
+   default:
+       layout->block_width = 1;
+       layout->block_height = 1;
+       layout->block_size = 1;
+       layout->compressed = false;
+       break;
+   }
 }
 
 static void
 tex_layout_init_hiz(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
-   const struct util_format_description *desc;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
 
-   desc = util_format_description(templ->format);
-   layout->has_depth = util_format_has_depth(desc);
-   layout->has_stencil = util_format_has_stencil(desc);
+   if (info->format.numericFormat == XGL_NUM_FMT_DS) {
+       switch (info->format.channelFormat) {
+       case XGL_CH_FMT_R32G8:
+           layout->has_depth = true;
+           layout->has_stencil = true;
+           break;
+       case XGL_CH_FMT_R32:
+           layout->has_depth = true;
+           break;
+       case XGL_CH_FMT_R8:
+           layout->has_stencil = true;
+           break;
+       default:
+           assert(!"unsupported DS format");
+           break;
+       }
+   }
 
    if (!layout->has_depth)
       return;
 
    layout->hiz = true;
 
-   /* no point in having HiZ */
-   if (templ->usage == PIPE_USAGE_STAGING)
-      layout->hiz = false;
-
-   if (layout->dev->gen == ILO_GEN(6)) {
+   if (intel_gpu_gen(layout->gpu) == INTEL_GEN(6)) {
       /*
        * From the Sandy Bridge PRM, volume 2 part 1, page 312:
        *
@@ -680,12 +626,9 @@ tex_layout_init_hiz(struct tex_layout *layout)
        * (check out the callers of ilo_texture_get_slice_offset()), we already
        * have to require the texture to be non-mipmapped and non-array.
        */
-      if (templ->last_level > 0 || templ->array_size > 1 || templ->depth0 > 1)
+      if (info->mipLevels > 1 || info->arraySize > 1 || info->extent.depth > 1)
          layout->hiz = false;
    }
-
-   if (ilo_debug & ILO_DEBUG_NOHIZ)
-      layout->hiz = false;
 
    if (layout->has_stencil) {
       /*
@@ -697,7 +640,7 @@ tex_layout_init_hiz(struct tex_layout *layout)
        *
        * GEN7+ requires separate stencil buffers.
        */
-      if (layout->dev->gen >= ILO_GEN(7))
+      if (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7))
          layout->separate_stencil = true;
       else
          layout->separate_stencil = layout->hiz;
@@ -707,18 +650,16 @@ tex_layout_init_hiz(struct tex_layout *layout)
    }
 }
 
-static bool
+static XGL_RESULT
 tex_layout_init(struct tex_layout *layout,
-                struct pipe_screen *screen,
-                const struct pipe_resource *templ,
-                struct ilo_texture_slice **slices)
+                const struct intel_gpu *gpu,
+                const XGL_IMAGE_CREATE_INFO *info,
+                struct intel_img_slice **slices)
 {
-   struct ilo_screen *is = ilo_screen(screen);
-
    memset(layout, 0, sizeof(*layout));
 
-   layout->dev = &is->dev;
-   layout->templ = templ;
+   layout->gpu = gpu;
+   layout->info = info;
 
    /* note that there are dependencies between these functions */
    tex_layout_init_hiz(layout);
@@ -729,22 +670,14 @@ tex_layout_init(struct tex_layout *layout,
    tex_layout_init_alignments(layout);
    tex_layout_init_qpitch(layout);
 
-   if (templ->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT) {
-      /* require on-the-fly tiling/untiling or format conversion */
-      if (layout->separate_stencil ||
-          layout->format == PIPE_FORMAT_S8_UINT ||
-          layout->format != templ->format)
-         return false;
-   }
-
    if (slices) {
       int lv;
 
-      for (lv = 0; lv <= templ->last_level; lv++)
+      for (lv = 0; lv < info->mipLevels; lv++)
          layout->levels[lv].slices = slices[lv];
    }
 
-   return true;
+   return XGL_SUCCESS;
 }
 
 static void
@@ -774,15 +707,18 @@ tex_layout_align(struct tex_layout *layout)
     *      padding purposes. The value of 4 for j still applies for mip level
     *      alignment and QPitch calculation."
     */
-   if (layout->templ->bind & PIPE_BIND_SAMPLER_VIEW) {
-      align_w = MAX2(align_w, layout->align_i);
-      align_h = MAX2(align_h, layout->align_j);
+   if (layout->info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+       if (align_w < layout->align_i)
+           align_w = layout->align_i;
+       if (align_h < layout->align_j)
+           align_h = layout->align_j;
 
-      if (layout->templ->target == PIPE_TEXTURE_CUBE)
+       /* in case it is used as a cube */
+      if (layout->info->imageType == XGL_IMAGE_2D)
          pad_h += 2;
 
-      if (layout->compressed)
-         align_h = MAX2(align_h, layout->align_j * 2);
+      if (layout->compressed && align_h < 8)
+         align_h = 8;
    }
 
    /*
@@ -791,8 +727,10 @@ tex_layout_align(struct tex_layout *layout)
     *     "If the surface contains an odd number of rows of data, a final row
     *      below the surface must be allocated."
     */
-   if (layout->templ->bind & PIPE_BIND_RENDER_TARGET)
-      align_h = MAX2(align_h, 2);
+   if (layout->info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+       if (align_h < 2)
+           align_h = 2;
+   }
 
    /*
     * Depth Buffer Clear/Resolve works in 8x4 sample blocks.  In
@@ -800,12 +738,14 @@ tex_layout_align(struct tex_layout *layout)
     * To avoid out-of-bound access, we have to pad.
     */
    if (layout->hiz) {
-      align_w = MAX2(align_w, 8);
-      align_h = MAX2(align_h, 4);
+       if (align_w < 8)
+           align_w = 8;
+       if (align_h < 4)
+           align_h = 4;
    }
 
-   layout->width = align(layout->width, align_w);
-   layout->height = align(layout->height + pad_h, align_h);
+   layout->width = u_align(layout->width, align_w);
+   layout->height = u_align(layout->height + pad_h, align_h);
 }
 
 /**
@@ -814,20 +754,20 @@ tex_layout_align(struct tex_layout *layout)
 static void
 tex_layout_2d(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
    unsigned int level_x, level_y, num_slices;
    int lv;
 
    level_x = 0;
    level_y = 0;
-   for (lv = 0; lv <= templ->last_level; lv++) {
+   for (lv = 0; lv < info->mipLevels; lv++) {
       const unsigned int level_w = layout->levels[lv].w;
       const unsigned int level_h = layout->levels[lv].h;
       int slice;
 
       /* set slice offsets */
       if (layout->levels[lv].slices) {
-         for (slice = 0; slice < templ->array_size; slice++) {
+         for (slice = 0; slice < info->arraySize; slice++) {
             layout->levels[lv].slices[slice].x = level_x;
             /* slices are qpitch apart in Y-direction */
             layout->levels[lv].slices[slice].y =
@@ -843,15 +783,15 @@ tex_layout_2d(struct tex_layout *layout)
 
       /* MIPLAYOUT_BELOW */
       if (lv == 1)
-         level_x += align(level_w, layout->align_i);
+         level_x += u_align(level_w, layout->align_i);
       else
-         level_y += align(level_h, layout->align_j);
+         level_y += u_align(level_h, layout->align_j);
    }
 
-   num_slices = templ->array_size;
+   num_slices = info->arraySize;
    /* samples of the same index are stored in a slice */
-   if (templ->nr_samples > 1 && !layout->interleaved)
-      num_slices *= templ->nr_samples;
+   if (info->samples > 1 && !layout->interleaved)
+      num_slices *= info->samples;
 
    /* we did not take slices into consideration in the computation above */
    layout->height += layout->qpitch * (num_slices - 1);
@@ -865,17 +805,17 @@ tex_layout_2d(struct tex_layout *layout)
 static void
 tex_layout_3d(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
    unsigned int level_y;
    int lv;
 
    level_y = 0;
-   for (lv = 0; lv <= templ->last_level; lv++) {
+   for (lv = 0; lv < info->mipLevels; lv++) {
       const unsigned int level_w = layout->levels[lv].w;
       const unsigned int level_h = layout->levels[lv].h;
       const unsigned int level_d = layout->levels[lv].d;
-      const unsigned int slice_pitch = align(level_w, layout->align_i);
-      const unsigned int slice_qpitch = align(level_h, layout->align_j);
+      const unsigned int slice_pitch = u_align(level_w, layout->align_i);
+      const unsigned int slice_qpitch = u_align(level_h, layout->align_j);
       const unsigned int num_slices_per_row = 1 << lv;
       int slice;
 
@@ -895,12 +835,15 @@ tex_layout_3d(struct tex_layout *layout)
       }
 
       /* rightmost slice */
-      slice = MIN2(num_slices_per_row, level_d) - 1;
+      if (num_slices_per_row < level_d)
+          slice = num_slices_per_row - 1;
+      else
+          slice = level_d - 1;
 
       /* extend the size of the monolithic bo to cover this slice */
       if (layout->width < slice_pitch * slice + level_w)
          layout->width = slice_pitch * slice + level_w;
-      if (lv == templ->last_level)
+      if (lv == info->mipLevels - 1)
          layout->height = (level_y - slice_qpitch) + level_h;
    }
 
@@ -930,8 +873,8 @@ tex_layout_calculate_bo_size(struct tex_layout *layout)
        *      at the bottom of the surface. This is in addition to the padding
        *      required above."
        */
-      if (layout->dev->gen >= ILO_GEN(7.5) &&
-          (layout->templ->bind & PIPE_BIND_SAMPLER_VIEW) &&
+      if (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7.5) &&
+          (layout->info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
           layout->tiling == INTEL_TILING_NONE) {
          layout->bo_height +=
             (64 + layout->bo_stride - 1) / layout->bo_stride;
@@ -951,7 +894,7 @@ tex_layout_calculate_bo_size(struct tex_layout *layout)
        *
        * Different requirements may exist when the bo is used in different
        * places, but our alignments here should be good enough that we do not
-       * need to check layout->templ->bind.
+       * need to check layout->info->usage.
        */
       switch (layout->tiling) {
       case INTEL_TILING_X:
@@ -963,7 +906,8 @@ tex_layout_calculate_bo_size(struct tex_layout *layout)
          align_h = 32;
          break;
       default:
-         if (layout->format == PIPE_FORMAT_S8_UINT) {
+         if (layout->format.channelFormat == XGL_CH_FMT_R8 &&
+             layout->format.numericFormat == XGL_NUM_FMT_DS) {
             /*
              * From the Sandy Bridge PRM, volume 1 part 2, page 22:
              *
@@ -985,8 +929,8 @@ tex_layout_calculate_bo_size(struct tex_layout *layout)
          break;
       }
 
-      w = align(w, align_w);
-      h = align(h, align_h);
+      w = u_align(w, align_w);
+      h = u_align(h, align_h);
 
       /* make sure the bo is mappable */
       if (layout->tiling != INTEL_TILING_NONE) {
@@ -1007,7 +951,7 @@ tex_layout_calculate_bo_size(struct tex_layout *layout)
                continue;
             }
             else {
-               ilo_warn("cannot force texture to be linear\n");
+               /* send a warning? */
             }
          }
       }
@@ -1017,13 +961,13 @@ tex_layout_calculate_bo_size(struct tex_layout *layout)
       break;
    }
 
-   return (layout->bo_height <= max_resource_size / layout->bo_stride);
+   return (layout->bo_height <= intel_max_resource_size / layout->bo_stride);
 }
 
 static void
 tex_layout_calculate_hiz_size(struct tex_layout *layout)
 {
-   const struct pipe_resource *templ = layout->templ;
+   const XGL_IMAGE_CREATE_INFO *info = layout->info;
    const int hz_align_j = 8;
    int hz_width, hz_height;
 
@@ -1038,39 +982,39 @@ tex_layout_calculate_hiz_size(struct tex_layout *layout)
     * memory row.
     */
 
-   hz_width = align(layout->levels[0].w, 16);
+   hz_width = u_align(layout->levels[0].w, 16);
 
-   if (templ->target == PIPE_TEXTURE_3D) {
+   if (info->imageType == XGL_IMAGE_3D) {
       unsigned lv;
 
       hz_height = 0;
 
-      for (lv = 0; lv <= templ->last_level; lv++) {
-         const unsigned h = align(layout->levels[lv].h, hz_align_j);
+      for (lv = 0; lv < info->mipLevels; lv++) {
+         const unsigned h = u_align(layout->levels[lv].h, hz_align_j);
          hz_height += h * layout->levels[lv].d;
       }
 
       hz_height /= 2;
    }
    else {
-      const unsigned h0 = align(layout->levels[0].h, hz_align_j);
+      const unsigned h0 = u_align(layout->levels[0].h, hz_align_j);
       unsigned hz_qpitch = h0;
 
       if (layout->array_spacing_full) {
-         const unsigned h1 = align(layout->levels[1].h, hz_align_j);
+         const unsigned h1 = u_align(layout->levels[1].h, hz_align_j);
          const unsigned htail =
-            ((layout->dev->gen >= ILO_GEN(7)) ? 12 : 11) * hz_align_j;
+            ((intel_gpu_gen(layout->gpu) >= INTEL_GEN(7)) ? 12 : 11) * hz_align_j;
 
          hz_qpitch += h1 + htail;
       }
 
-      hz_height = hz_qpitch * templ->array_size / 2;
+      hz_height = hz_qpitch * info->arraySize / 2;
 
-      if (layout->dev->gen >= ILO_GEN(7))
-         hz_height = align(hz_height, 8);
+      if (intel_gpu_gen(layout->gpu) >= INTEL_GEN(7))
+         hz_height = u_align(hz_height, 8);
    }
 
    /* align to Y-tile */
-   layout->hiz_stride = align(hz_width, 128);
-   layout->hiz_height = align(hz_height, 32);
+   layout->hiz_stride = u_align(hz_width, 128);
+   layout->hiz_height = u_align(hz_height, 32);
 }
