@@ -79,6 +79,14 @@ XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
 void intel_dev_remove_msg_filter(struct intel_dev *dev,
                                  XGL_INT msg_code);
 
+void intel_dev_log(struct intel_dev *dev,
+                   XGL_DBG_MSG_TYPE msg_type,
+                   XGL_VALIDATION_LEVEL validation_level,
+                   XGL_BASE_OBJECT src_object,
+                   XGL_SIZE location,
+                   XGL_INT msg_code,
+                   const char *format, ...);
+
 XGL_RESULT XGLAPI intelCreateDevice(
     XGL_PHYSICAL_GPU                            gpu,
     const XGL_DEVICE_CREATE_INFO*               pCreateInfo,

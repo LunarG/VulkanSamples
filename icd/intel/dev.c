@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdarg.h>
 #include "kmd/winsys.h"
 #include "dispatch_tables.h"
 #include "gpu.h"
@@ -223,6 +224,55 @@ void intel_dev_remove_msg_filter(struct intel_dev *dev,
         prev = f;
         f = f->next;
     }
+}
+
+static bool dev_filter_msg(struct intel_dev *dev,
+                           XGL_INT msg_code)
+{
+    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
+    struct intel_dev_dbg_msg_filter *filter;
+
+    if (!dbg)
+        return false;
+
+    filter = dbg->filters;
+    while (filter) {
+        if (filter->msg_code != msg_code) {
+            filter = filter->next;
+            continue;
+        }
+
+        if (filter->filter == XGL_DBG_MSG_FILTER_ALL)
+            return true;
+
+        if (filter->filter == XGL_DBG_MSG_FILTER_REPEATED &&
+            filter->triggered)
+            return true;
+
+        filter->triggered = true;
+        break;
+    }
+
+    return false;
+}
+
+void intel_dev_log(struct intel_dev *dev,
+                   XGL_DBG_MSG_TYPE msg_type,
+                   XGL_VALIDATION_LEVEL validation_level,
+                   XGL_BASE_OBJECT src_object,
+                   XGL_SIZE location,
+                   XGL_INT msg_code,
+                   const char *format, ...)
+{
+    va_list ap;
+
+    if (dev_filter_msg(dev, msg_code))
+        return;
+
+    va_start(ap, format);
+    icd_vlog(msg_type, validation_level, src_object,
+            location, msg_code, format, ap);
+    va_end(ap);
 }
 
 XGL_RESULT XGLAPI intelCreateDevice(
