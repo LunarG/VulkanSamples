@@ -66,10 +66,6 @@ struct intel_obj {
     XGL_SIZE offset;
 };
 
-struct intel_state {
-    struct intel_obj obj;
-};
-
 static inline struct intel_base *intel_base(XGL_BASE_OBJECT base)
 {
     return (struct intel_base *) base;
@@ -78,11 +74,6 @@ static inline struct intel_base *intel_base(XGL_BASE_OBJECT base)
 static inline struct intel_obj *intel_obj(XGL_OBJECT obj)
 {
     return (struct intel_obj *) obj;
-}
-
-static inline struct intel_state *intel_state(XGL_STATE_OBJECT state)
-{
-    return (struct intel_state *) state;
 }
 
 bool intel_base_is_valid(const struct intel_base *base);

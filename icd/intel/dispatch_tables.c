@@ -35,6 +35,7 @@
 #include "query.h"
 #include "queue.h"
 #include "sampler.h"
+#include "state.h"
 #include "view.h"
 #include "dispatch_tables.h"
 
@@ -190,46 +191,6 @@ static XGL_RESULT XGLAPI intelCreatePipelineDelta(
     XGL_PIPELINE                                p1,
     XGL_PIPELINE                                p2,
     XGL_PIPELINE_DELTA*                         delta)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateViewportState(
-    XGL_DEVICE                                  device,
-    const XGL_VIEWPORT_STATE_CREATE_INFO*       pCreateInfo,
-    XGL_VIEWPORT_STATE_OBJECT*                  pState)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateRasterState(
-    XGL_DEVICE                                  device,
-    const XGL_RASTER_STATE_CREATE_INFO*         pCreateInfo,
-    XGL_RASTER_STATE_OBJECT*                    pState)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateMsaaState(
-    XGL_DEVICE                                  device,
-    const XGL_MSAA_STATE_CREATE_INFO*           pCreateInfo,
-    XGL_MSAA_STATE_OBJECT*                      pState)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateColorBlendState(
-    XGL_DEVICE                                  device,
-    const XGL_COLOR_BLEND_STATE_CREATE_INFO*    pCreateInfo,
-    XGL_COLOR_BLEND_STATE_OBJECT*               pState)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateDepthStencilState(
-    XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_STATE_CREATE_INFO*  pCreateInfo,
-    XGL_DEPTH_STENCIL_STATE_OBJECT*             pState)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

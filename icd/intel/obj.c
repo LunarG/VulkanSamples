@@ -121,6 +121,26 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO);
         shallow_copy = sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO);
         break;
+    case XGL_DBG_OBJECT_VIEWPORT_STATE:
+        /* no struct header! */
+        shallow_copy = sizeof(XGL_VIEWPORT_STATE_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_RASTER_STATE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO);
+        shallow_copy = sizeof(XGL_RASTER_STATE_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_MSAA_STATE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO);
+        shallow_copy = sizeof(XGL_MSAA_STATE_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_COLOR_BLEND_STATE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO);
+        shallow_copy = sizeof(XGL_COLOR_BLEND_STATE_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_DEPTH_STENCIL_STATE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO);
+        shallow_copy = sizeof(XGL_DEPTH_STENCIL_STATE_CREATE_INFO);
+        break;
     default:
         // log debug message regarding invalid struct_type?
         intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
