@@ -24,6 +24,7 @@
 
 #include "icd.h"
 #include "dev.h"
+#include "dset.h"
 #include "event.h"
 #include "fence.h"
 #include "format.h"
@@ -191,63 +192,6 @@ static XGL_RESULT XGLAPI intelCreatePipelineDelta(
     XGL_PIPELINE_DELTA*                         delta)
 {
     return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateDescriptorSet(
-    XGL_DEVICE                                  device,
-    const XGL_DESCRIPTOR_SET_CREATE_INFO*       pCreateInfo,
-    XGL_DESCRIPTOR_SET*                         pDescriptorSet)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_VOID XGLAPI intelBeginDescriptorSetUpdate(
-    XGL_DESCRIPTOR_SET                          descriptorSet)
-{
-}
-
-static XGL_VOID XGLAPI intelEndDescriptorSetUpdate(
-    XGL_DESCRIPTOR_SET                          descriptorSet)
-{
-}
-
-static XGL_VOID XGLAPI intelAttachSamplerDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_SAMPLER*                          pSamplers)
-{
-}
-
-static XGL_VOID XGLAPI intelAttachImageViewDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_IMAGE_VIEW_ATTACH_INFO*           pImageViews)
-{
-}
-
-static XGL_VOID XGLAPI intelAttachMemoryViewDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemViews)
-{
-}
-
-static XGL_VOID XGLAPI intelAttachNestedDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_DESCRIPTOR_SET_ATTACH_INFO*       pNestedDescriptorSets)
-{
-}
-
-static XGL_VOID XGLAPI intelClearDescriptorSetSlots(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount)
-{
 }
 
 static XGL_RESULT XGLAPI intelCreateViewportState(

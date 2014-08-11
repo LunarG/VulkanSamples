@@ -19,6 +19,7 @@ include_directories (
 SET(SOURCES 
     dev.c
     dispatch_tables.c
+    dset.c
     init_driver.c
     event.c
     fence.c
