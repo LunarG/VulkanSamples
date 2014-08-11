@@ -33,6 +33,7 @@
 #include "obj.h"
 #include "query.h"
 #include "queue.h"
+#include "view.h"
 #include "dispatch_tables.h"
 
 static XGL_RESULT XGLAPI intelQueueSubmit(
@@ -137,30 +138,6 @@ static XGL_RESULT XGLAPI intelSignalQueueSemaphore(
 static XGL_RESULT XGLAPI intelWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateImageView(
-    XGL_DEVICE                                  device,
-    const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-    XGL_IMAGE_VIEW*                             pView)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateColorAttachmentView(
-    XGL_DEVICE                                  device,
-    const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
-    XGL_COLOR_ATTACHMENT_VIEW*                  pView)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateDepthStencilView(
-    XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
-    XGL_DEPTH_STENCIL_VIEW*                     pView)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

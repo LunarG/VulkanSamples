@@ -101,6 +101,18 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(dbg->type == XGL_DBG_OBJECT_IMAGE);
         shallow_copy = sizeof(XGL_IMAGE_CREATE_INFO);
         break;
+    case XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_IMAGE_VIEW);
+        shallow_copy = sizeof(XGL_IMAGE_VIEW_CREATE_INFO);
+        break;
+    case XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_COLOR_TARGET_VIEW);
+        shallow_copy = sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
+        break;
+    case XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW);
+        shallow_copy = sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO);
+        break;
     default:
         // log debug message regarding invalid struct_type?
         intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
