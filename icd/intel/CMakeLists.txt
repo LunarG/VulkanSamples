@@ -9,6 +9,7 @@ link_libraries (
    ${LIBDRM_LIBRARIES}
    ${LIBDRM_INTEL_LIBRARIES}
    udev
+   m
 )
 
 include_directories (

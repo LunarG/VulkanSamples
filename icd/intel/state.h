@@ -31,6 +31,7 @@
 struct intel_viewport_state {
     struct intel_obj obj;
 
+    bool scissor_enable;
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
     uint32_t *cmd;
     XGL_SIZE size;
@@ -39,8 +40,12 @@ struct intel_viewport_state {
 struct intel_raster_state {
     struct intel_obj obj;
 
-    /* a part of 3DSTATE_SF? */
-    uint32_t cmd[6];
+    uint32_t cmd_clip_cull;
+    uint32_t cmd_sf_fill;
+    uint32_t cmd_sf_cull;
+    uint32_t cmd_depth_offset_const;
+    uint32_t cmd_depth_offset_scale;
+    uint32_t cmd_depth_offset_clamp;
 };
 
 struct intel_msaa_state {
@@ -55,13 +60,17 @@ struct intel_blend_state {
 
     /* BLEND_STATE */
     uint32_t cmd[XGL_MAX_COLOR_ATTACHMENTS * 2];
+    /* a part of COLOR_CALC_STATE */
+    uint32_t cmd_blend_color[4];
 };
 
 struct intel_ds_state {
     struct intel_obj obj;
 
     /* DEPTH_STENCIL_STATE */
-    uint32_t cmd[2];
+    uint32_t cmd[3];
+    /* a part of COLOR_CALC_STATE */
+    uint32_t cmd_stencil_ref;
 };
 
 static inline struct intel_viewport_state *intel_viewport_state(XGL_VIEWPORT_STATE_OBJECT state)
