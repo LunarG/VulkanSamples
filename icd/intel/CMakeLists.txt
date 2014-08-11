@@ -18,6 +18,7 @@ include_directories (
 )
 
 SET(SOURCES 
+    cmd.c
     dev.c
     dispatch_tables.c
     dset.c
