@@ -124,9 +124,9 @@ void XglGpu::init_device()
 
     err = xglGetMemoryHeapCount(this->devObj, &this->heap_count);
     ASSERT_XGL_SUCCESS(err);
+    ASSERT_GE(1, this->heap_count) << "No memory heaps available";
 
     this->heap_props = new XGL_MEMORY_HEAP_PROPERTIES [this->heap_count];
-//            malloc(sizeof(dev->heap_props[0]) * dev->heap_count);
     ASSERT_TRUE(NULL != this->heap_props) << "Out of memory";
 
     for (i = 0; i < this->heap_count; i++) {
@@ -134,7 +134,7 @@ void XglGpu::init_device()
                                    XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES,
                                    &size, &this->heap_props[i]);
         ASSERT_XGL_SUCCESS(err);
-        ASSERT_EQ(size, sizeof(this->heap_props[0]));
+        ASSERT_EQ(size, sizeof(this->heap_props[0])) << "Invalid heap property size";
     }
 }
 

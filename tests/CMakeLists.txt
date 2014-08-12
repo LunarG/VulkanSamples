@@ -15,11 +15,11 @@ add_executable(xglFence xglFence.c ${COMMON})
 add_executable(xglQueue xglQueue.c ${COMMON})
 add_executable(xglEvent xglEvent.c ${COMMON})
 add_executable(xglQuery xglQuery.c ${COMMON})
-add_executable(xglinit init.cpp ${COMMON_CPP})
-set_target_properties(xglinit
+add_executable(xglbase init.cpp ${COMMON_CPP})
+set_target_properties(xglbase
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xglinit XGL gtest gtest_main)
+target_link_libraries(xglbase XGL gtest gtest_main)
 
 target_link_libraries(xglinfo XGL)
 target_link_libraries(xglAllocMemory XGL)

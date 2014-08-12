@@ -18,7 +18,8 @@ public:
     void init_device();
     void init_formats();
 
-private:
+    // Do we want to hide/abstract this data?
+// private:
     XGL_UINT id;
     XGL_PHYSICAL_GPU gpuObj;
 
