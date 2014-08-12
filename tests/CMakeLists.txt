@@ -3,7 +3,7 @@ SET(COMMON
     )
 
 SET(COMMON_CPP
-   testobject.cpp
+   xglgpu.cpp
    )
 
 include_directories("${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include")
@@ -15,7 +15,7 @@ add_executable(xglFence xglFence.c ${COMMON})
 add_executable(xglQueue xglQueue.c ${COMMON})
 add_executable(xglEvent xglEvent.c ${COMMON})
 add_executable(xglQuery xglQuery.c ${COMMON})
-add_executable(xglinit init.cpp)
+add_executable(xglinit init.cpp ${COMMON_CPP})
 set_target_properties(xglinit
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
