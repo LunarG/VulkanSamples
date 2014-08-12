@@ -33,6 +33,11 @@
 
 #include <xgl.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
 #define ERR(err) printf("%s:%d: failed with %s\n", \
     __FILE__, __LINE__, xgl_result_string(err));
 
@@ -136,5 +141,9 @@ void app_gpu_init_extensions(struct app_gpu *gpu);
 void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj);
 void app_gpu_destroy(struct app_gpu *gpu);
 void app_dev_init_queue(struct app_dev *dev, XGL_QUEUE_TYPE qtype);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif // __cplusplus
 
 #endif // COMMON_H
