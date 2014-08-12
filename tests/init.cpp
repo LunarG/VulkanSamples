@@ -61,7 +61,7 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
 
     err = xglInitAndEnumerateGpus(&app_info, NULL,
             MAX_GPUS, &gpu_count, objs);
-    ASSERT_EQ(XGL_SUCCESS, err) << xgl_result_string(err);
+    ASSERT_XGL_SUCCESS(err);
 
     gpu = &gpus[0];
     memset(gpu, 0, sizeof(*gpu));
@@ -72,4 +72,41 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
     err = xglGetGpuInfo(gpu->obj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
                         &size, &gpu->props);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(size, sizeof(gpu->props));
+
+    err = xglGetGpuInfo(gpu->obj,
+                        XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
+                        &size, &gpu->perf);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(size, sizeof(gpu->perf));
+
+    /* get queue count */
+    err = xglGetGpuInfo(gpu->obj,
+                        XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+                        &size, NULL);
+    ASSERT_XGL_SUCCESS(err);
+    gpu->queue_count = size / sizeof(gpu->queue_props[0]);
+    ASSERT_EQ(gpu->queue_count*sizeof(gpu->queue_props[0]), size) << "invalid GPU_QUEUE_PROPERTIES size";
+
+    gpu->queue_props = (XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *)
+            malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
+    ASSERT_TRUE(NULL != gpu->queue_props) << "Out of memory";
+
+    err = xglGetGpuInfo(gpu->obj,
+                        XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+                        &size, gpu->queue_props);
+    ASSERT_EQ(gpu->queue_count*sizeof(gpu->queue_props[0]), size) << "invalid GPU_QUEUE_PROPERTIES size";
+
+    err = xglGetGpuInfo(gpu->obj,
+                        XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
+                        &size, &gpu->memory_props);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(size, sizeof(gpu->memory_props));
+
+}
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

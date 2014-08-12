@@ -33,6 +33,8 @@
 
 #include <xgl.h>
 
+#define ASSERT_XGL_SUCCESS(err) ASSERT_EQ(XGL_SUCCESS, err) << xgl_result_string(err)
+
 #ifdef __cplusplus
 extern "C"
 {
