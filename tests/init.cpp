@@ -67,6 +67,7 @@
 class XglTest : public ::testing::Test {
 public:
     XglGpu *gpu;
+    void CreateImageTest();
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -141,7 +142,7 @@ TEST_F(XglTest, AllocMemory) {
     // TODO: Try variety of memory priorities
     alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
-    err = xglAllocMemory(this->gpu->devObj, &alloc_info, &gpu_mem);
+    err = xglAllocMemory(this->gpu->device(), &alloc_info, &gpu_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglMapMemory(gpu_mem, 0, (XGL_VOID **) &pData);
@@ -173,7 +174,7 @@ TEST_F(XglTest, Event) {
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-    err = xglCreateEvent(this->gpu->devObj, &event_info, &event);
+    err = xglCreateEvent(this->gpu->device(), &event_info, &event);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetObjectInfo(event, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
@@ -187,7 +188,7 @@ TEST_F(XglTest, Event) {
     XGL_MEMORY_ALLOC_INFO mem_info;
     XGL_GPU_MEMORY event_mem;
 
-    ASSERT_LE(1, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect events to require memory";
+    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect events to require memory";
 
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -197,7 +198,7 @@ TEST_F(XglTest, Event) {
     memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(this->gpu->devObj, &mem_info, &event_mem);
+    err = xglAllocMemory(this->gpu->device(), &mem_info, &event_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglBindObjectMemory(event, event_mem, 0);
@@ -239,7 +240,7 @@ TEST_F(XglTest, Fence) {
     //                XGL_FLAGS                               flags;      // Reserved
     fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-    err = xglCreateFence(this->gpu->devObj, &fence_info, &fence);
+    err = xglCreateFence(this->gpu->device(), &fence_info, &fence);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetFenceStatus(fence);
@@ -254,7 +255,7 @@ TEST_F(XglTest, Fence) {
     //            const XGL_FENCE*                            pFences,
     //            XGL_BOOL                                    waitAll,
     //            XGL_UINT64                                  timeout);
-    err = xglWaitForFences(this->gpu->devObj, 1, &fence, XGL_TRUE, 0);
+    err = xglWaitForFences(this->gpu->device(), 1, &fence, XGL_TRUE, 0);
     EXPECT_EQ(XGL_ERROR_UNAVAILABLE, err);
 
     // TODO: Attached to command buffer and test GetFenceStatus
@@ -276,42 +277,42 @@ TEST_F(XglTest, Query) {
     XGL_UINT *query_result_data;
     XGL_RESULT err;
 
-//        typedef enum _XGL_QUERY_TYPE
-//        {
-//            XGL_QUERY_OCCLUSION                                     = 0x00000000,
-//            XGL_QUERY_PIPELINE_STATISTICS                           = 0x00000001,
+    //        typedef enum _XGL_QUERY_TYPE
+    //        {
+    //            XGL_QUERY_OCCLUSION                                     = 0x00000000,
+    //            XGL_QUERY_PIPELINE_STATISTICS                           = 0x00000001,
 
-//            XGL_QUERY_TYPE_BEGIN_RANGE                              = XGL_QUERY_OCCLUSION,
-//            XGL_QUERY_TYPE_END_RANGE                                = XGL_QUERY_PIPELINE_STATISTICS,
-//            XGL_NUM_QUERY_TYPE                                      = (XGL_QUERY_TYPE_END_RANGE - XGL_QUERY_TYPE_BEGIN_RANGE + 1),
-//            XGL_MAX_ENUM(_XGL_QUERY_TYPE)
-//        } XGL_QUERY_TYPE;
+    //            XGL_QUERY_TYPE_BEGIN_RANGE                              = XGL_QUERY_OCCLUSION,
+    //            XGL_QUERY_TYPE_END_RANGE                                = XGL_QUERY_PIPELINE_STATISTICS,
+    //            XGL_NUM_QUERY_TYPE                                      = (XGL_QUERY_TYPE_END_RANGE - XGL_QUERY_TYPE_BEGIN_RANGE + 1),
+    //            XGL_MAX_ENUM(_XGL_QUERY_TYPE)
+    //        } XGL_QUERY_TYPE;
 
-//        typedef struct _XGL_QUERY_POOL_CREATE_INFO
-//        {
-//            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
-//            const XGL_VOID*                         pNext;      // Pointer to next structure
-//            XGL_QUERY_TYPE                          queryType;
-//            XGL_UINT                                slots;
-//        } XGL_QUERY_POOL_CREATE_INFO;
+    //        typedef struct _XGL_QUERY_POOL_CREATE_INFO
+    //        {
+    //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
+    //            const XGL_VOID*                         pNext;      // Pointer to next structure
+    //            XGL_QUERY_TYPE                          queryType;
+    //            XGL_UINT                                slots;
+    //        } XGL_QUERY_POOL_CREATE_INFO;
 
     memset(&query_info, 0, sizeof(query_info));
     query_info.sType = XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     query_info.queryType = XGL_QUERY_OCCLUSION;
     query_info.slots = MAX_QUERY_SLOTS;
 
-//        XGL_RESULT XGLAPI xglCreateQueryPool(
-//            XGL_DEVICE                                  device,
-//            const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
-//            XGL_QUERY_POOL*                             pQueryPool);
+    //        XGL_RESULT XGLAPI xglCreateQueryPool(
+    //            XGL_DEVICE                                  device,
+    //            const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
+    //            XGL_QUERY_POOL*                             pQueryPool);
 
-    err = xglCreateQueryPool(this->gpu->devObj, &query_info, &query_pool);
+    err = xglCreateQueryPool(this->gpu->device(), &query_info, &query_pool);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetObjectInfo(query_pool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
-    ASSERT_LT(0, data_size) << "Invalid data_size";
+    ASSERT_NE(0, data_size) << "Invalid data_size";
 
     //        XGL_RESULT XGLAPI xglAllocMemory(
     //            XGL_DEVICE                                  device,
@@ -332,7 +333,7 @@ TEST_F(XglTest, Query) {
     // TODO: are the flags right?
     // TODO: Should this be pinned? Or maybe a separate test with pinned.
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(this->gpu->devObj, &mem_info, &query_mem);
+    err = xglAllocMemory(this->gpu->device(), &mem_info, &query_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglBindObjectMemory(query_pool, query_mem, 0);
@@ -365,7 +366,170 @@ TEST_F(XglTest, Query) {
 
     err = xglDestroyObject(query_pool);
     ASSERT_XGL_SUCCESS(err);
+}
 
+void XglTest::CreateImageTest()
+{
+    XGL_RESULT err;
+    XGL_IMAGE image;
+    XGL_UINT w, h, mipCount;
+    XGL_SIZE size;
+    XGL_FORMAT fmt;
+    XGL_FORMAT_PROPERTIES image_fmt;
+
+    w =512;
+    h = 256;
+    mipCount = 0;
+
+    XGL_UINT _w = w;
+    XGL_UINT _h = h;
+    while( ( _w > 0 ) || ( _h > 0 ) )
+    {
+        _w >>= 1;
+        _h >>= 1;
+        mipCount++;
+    }
+
+    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    fmt.numericFormat = XGL_NUM_FMT_UINT;
+    // TODO: Pick known good format rather than just expect common format
+    /*
+     * XXX: What should happen if given NULL HANDLE for the pData argument?
+     * We're not requesting XGL_INFO_TYPE_MEMORY_REQUIREMENTS so there is
+     * an expectation that pData is a valid pointer.
+     * However, why include a returned size value? That implies that the
+     * amount of data may vary and that doesn't work well for using a
+     * fixed structure.
+     */
+
+    err = xglGetFormatInfo(this->gpu->device(), fmt,
+                           XGL_INFO_TYPE_FORMAT_PROPERTIES,
+                           &size, &image_fmt);
+    ASSERT_XGL_SUCCESS(err);
+
+//    typedef struct _XGL_IMAGE_CREATE_INFO
+//    {
+//        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO
+//        const XGL_VOID*                         pNext;                      // Pointer to next structure.
+//        XGL_IMAGE_TYPE                          imageType;
+//        XGL_FORMAT                              format;
+//        XGL_EXTENT3D                            extent;
+//        XGL_UINT                                mipLevels;
+//        XGL_UINT                                arraySize;
+//        XGL_UINT                                samples;
+//        XGL_IMAGE_TILING                        tiling;
+//        XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
+//        XGL_FLAGS                               flags;                      // XGL_IMAGE_CREATE_FLAGS
+//    } XGL_IMAGE_CREATE_INFO;
+
+
+    XGL_IMAGE_CREATE_INFO imageCreateInfo = {};
+    imageCreateInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = XGL_IMAGE_2D;
+    imageCreateInfo.format = fmt;
+    imageCreateInfo.arraySize = 1;
+    imageCreateInfo.extent.width = w;
+    imageCreateInfo.extent.height = h;
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels = mipCount;
+    imageCreateInfo.samples = 1;
+    imageCreateInfo.tiling = XGL_LINEAR_TILING;
+
+// Image usage flags
+//    typedef enum _XGL_IMAGE_USAGE_FLAGS
+//    {
+//        XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
+//        XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
+//        XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
+//        XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
+//    } XGL_IMAGE_USAGE_FLAGS;
+    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+//    XGL_RESULT XGLAPI xglCreateImage(
+//        XGL_DEVICE                                  device,
+//        const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
+//        XGL_IMAGE*                                  pImage);
+    err = xglCreateImage(this->gpu->device(), &imageCreateInfo, &image);
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_MEMORY_REQUIREMENTS mem_req;
+    XGL_UINT data_size;
+    err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(data_size, sizeof(mem_req));
+    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
+
+    //        XGL_RESULT XGLAPI xglAllocMemory(
+    //            XGL_DEVICE                                  device,
+    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            XGL_GPU_MEMORY*                             pMem);
+    XGL_MEMORY_ALLOC_INFO mem_info;
+    XGL_GPU_MEMORY image_mem;
+
+    memset(&mem_info, 0, sizeof(mem_info));
+    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.allocationSize = mem_req.size;
+    mem_info.alignment = mem_req.alignment;
+    mem_info.heapCount = mem_req.heapCount;
+    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    err = xglAllocMemory(this->gpu->device(), &mem_info, &image_mem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglBindObjectMemory(image, image_mem, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+//    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
+//    {
+//        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+//        const XGL_VOID*                         pNext;                  // Pointer to next structure
+//        XGL_IMAGE                               image;
+//        XGL_IMAGE_VIEW_TYPE                     viewType;
+//        XGL_FORMAT                              format;
+//        XGL_CHANNEL_MAPPING                     channels;
+//        XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
+//        XGL_FLOAT                               minLod;
+//    } XGL_IMAGE_VIEW_CREATE_INFO;
+    XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
+    XGL_IMAGE_VIEW view;
+    viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = image;
+    viewInfo.viewType = XGL_IMAGE_VIEW_2D;
+    viewInfo.format = fmt;
+
+    viewInfo.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    viewInfo.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    viewInfo.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    viewInfo.channels.a = XGL_CHANNEL_SWIZZLE_A;
+
+    viewInfo.subresourceRange.baseArraySlice = 0;
+    viewInfo.subresourceRange.arraySize = 1;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.mipLevels = 1;
+    viewInfo.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+
+//    XGL_RESULT XGLAPI xglCreateImageView(
+//        XGL_DEVICE                                  device,
+//        const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
+//        XGL_IMAGE_VIEW*                             pView);
+
+    err = xglCreateImageView(gpu->device(), &viewInfo, &view);
+    ASSERT_XGL_SUCCESS(err);
+
+    // TODO: Test image memory.
+
+    // All done with image memory, clean up
+    ASSERT_XGL_SUCCESS(xglBindObjectMemory(image, XGL_NULL_HANDLE, 0));
+
+    ASSERT_XGL_SUCCESS(xglFreeMemory(image_mem));
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(image));
+}
+
+TEST_F(XglTest, CreateImage) {
+    CreateImageTest();
 }
 
 int main(int argc, char **argv) {

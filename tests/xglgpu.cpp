@@ -119,10 +119,10 @@ void XglGpu::init_device()
     info.extensionCount = this->extension_count;
     info.ppEnabledExtensionNames = this->extensions;
 
-    err = xglCreateDevice(this->gpuObj, &info, &this->devObj);
+    err = xglCreateDevice(this->gpuObj, &info, &this->m_devObj);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglGetMemoryHeapCount(this->devObj, &this->heap_count);
+    err = xglGetMemoryHeapCount(this->m_devObj, &this->heap_count);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_GE(1, this->heap_count) << "No memory heaps available";
 
@@ -130,7 +130,7 @@ void XglGpu::init_device()
     ASSERT_TRUE(NULL != this->heap_props) << "Out of memory";
 
     for (i = 0; i < this->heap_count; i++) {
-        err = xglGetMemoryHeapInfo(this->devObj, i,
+        err = xglGetMemoryHeapInfo(this->m_devObj, i,
                                    XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES,
                                    &size, &this->heap_props[i]);
         ASSERT_XGL_SUCCESS(err);
@@ -152,7 +152,7 @@ void XglGpu::init_formats()
             fmt.channelFormat = static_cast<XGL_CHANNEL_FORMAT>(chInt);
             fmt.numericFormat = static_cast<XGL_NUM_FORMAT>(numInt);
 
-            err = xglGetFormatInfo(this->devObj, fmt,
+            err = xglGetFormatInfo(this->m_devObj, fmt,
                                    XGL_INFO_TYPE_FORMAT_PROPERTIES,
                                    &size, &this->format_props[ch][num]);
             if (err) {

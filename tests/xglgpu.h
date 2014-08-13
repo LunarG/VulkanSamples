@@ -17,6 +17,7 @@ public:
     void init_extensions();
     void init_device();
     void init_formats();
+    XGL_DEVICE device() {return this->m_devObj;}
 
     // Do we want to hide/abstract this data?
 // private:
@@ -37,7 +38,7 @@ public:
 
     // Device info
     // struct app_dev dev;
-    XGL_DEVICE devObj;
+    XGL_DEVICE m_devObj;
 
     XGL_UINT heap_count;
     XGL_MEMORY_HEAP_PROPERTIES *heap_props;
