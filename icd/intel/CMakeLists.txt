@@ -25,6 +25,7 @@ SET(SOURCES
     format.c
     gpu.c
     img.c
+    layout.c
     mem.c
     obj.c
     query.c

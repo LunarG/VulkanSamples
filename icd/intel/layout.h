@@ -25,27 +25,26 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ILO_LAYOUT_H
-#define ILO_LAYOUT_H
+#ifndef LAYOUT_H
+#define LAYOUT_H
 
-#include "intel_winsys.h"
+#include "kmd/winsys.h"
+#include "intel.h"
 
-#include "ilo_common.h"
+#define INTEL_IMG_MAX_LEVELS 16
 
-struct pipe_resource;
-
-enum ilo_layout_aux_type {
-   ILO_LAYOUT_AUX_NONE,
-   ILO_LAYOUT_AUX_HIZ,
-   ILO_LAYOUT_AUX_MCS,
+enum intel_layout_aux_type {
+   INTEL_LAYOUT_AUX_NONE,
+   INTEL_LAYOUT_AUX_HIZ,
+   INTEL_LAYOUT_AUX_MCS,
 };
 
 /**
  * Texture layout.
  */
-struct ilo_layout {
-   enum ilo_layout_aux_type aux_type;
-   enum pipe_format format;
+struct intel_layout {
+   enum intel_layout_aux_type aux_type;
+   XGL_FORMAT format;
    bool separate_stencil;
 
    /*
@@ -80,7 +79,7 @@ struct ilo_layout {
        */
       unsigned slice_width;
       unsigned slice_height;
-   } levels[PIPE_MAX_TEXTURE_LEVELS];
+   } levels[INTEL_IMG_MAX_LEVELS];
 
    /* physical height of array layers, cube faces, or sample layers */
    unsigned layer_height;
@@ -94,22 +93,22 @@ struct ilo_layout {
    unsigned aux_height;
 };
 
-void ilo_layout_init(struct ilo_layout *layout,
-                     const struct ilo_dev_info *dev,
-                     const struct pipe_resource *templ);
+void intel_layout_init(struct intel_layout *layout,
+                       const struct intel_dev *dev,
+                       const XGL_IMAGE_CREATE_INFO *info);
 
 bool
-ilo_layout_update_for_imported_bo(struct ilo_layout *layout,
-                                  enum intel_tiling_mode tiling,
-                                  unsigned bo_stride);
+intel_layout_update_for_imported_bo(struct intel_layout *layout,
+                                    enum intel_tiling_mode tiling,
+                                    unsigned bo_stride);
 
 /**
  * Convert from pixel position to memory position.
  */
 static inline void
-ilo_layout_pos_to_mem(const struct ilo_layout *layout,
-                      unsigned x, unsigned y,
-                      unsigned *mem_x, unsigned *mem_y)
+intel_layout_pos_to_mem(const struct intel_layout *layout,
+                        unsigned x, unsigned y,
+                        unsigned *mem_x, unsigned *mem_y)
 {
    assert(x % layout->block_width == 0);
    assert(y % layout->block_height == 0);
@@ -122,8 +121,8 @@ ilo_layout_pos_to_mem(const struct ilo_layout *layout,
  * Convert from memory position to memory offset.
  */
 static inline unsigned
-ilo_layout_mem_to_off(const struct ilo_layout *layout,
-                      unsigned mem_x, unsigned mem_y)
+intel_layout_mem_to_off(const struct intel_layout *layout,
+                        unsigned mem_x, unsigned mem_y)
 {
    return mem_y * layout->bo_stride + mem_x;
 }
@@ -132,7 +131,8 @@ ilo_layout_mem_to_off(const struct ilo_layout *layout,
  * Return the stride, in bytes, between slices within a level.
  */
 static inline unsigned
-ilo_layout_get_slice_stride(const struct ilo_layout *layout, unsigned level)
+intel_layout_get_slice_stride(const struct intel_layout *layout,
+                              unsigned level)
 {
    unsigned y;
 
@@ -154,7 +154,7 @@ ilo_layout_get_slice_stride(const struct ilo_layout *layout, unsigned level)
  * Return the physical size, in bytes, of a slice in a level.
  */
 static inline unsigned
-ilo_layout_get_slice_size(const struct ilo_layout *layout, unsigned level)
+intel_layout_get_slice_size(const struct intel_layout *layout, unsigned level)
 {
    const unsigned w = layout->levels[level].slice_width;
    const unsigned h = layout->levels[level].slice_height;
@@ -170,9 +170,9 @@ ilo_layout_get_slice_size(const struct ilo_layout *layout, unsigned level)
  * Return the pixel position of a slice.
  */
 static inline void
-ilo_layout_get_slice_pos(const struct ilo_layout *layout,
-                         unsigned level, unsigned slice,
-                         unsigned *x, unsigned *y)
+intel_layout_get_slice_pos(const struct intel_layout *layout,
+                           unsigned level, unsigned slice,
+                           unsigned *x, unsigned *y)
 {
    if (layout->is_2d) {
       *x = layout->levels[level].x;
@@ -185,7 +185,8 @@ ilo_layout_get_slice_pos(const struct ilo_layout *layout,
       *y = layout->levels[level].y + layout->levels[level].slice_height * sy;
 
       /* should not overlap with the next level */
-      if (level + 1 < Elements(layout->levels) && layout->levels[level + 1].y) {
+      if (level + 1 < ARRAY_SIZE(layout->levels) &&
+          layout->levels[level + 1].y) {
          assert(*y + layout->levels[level].slice_height <=
                layout->levels[level + 1].y);
       }
@@ -196,9 +197,4 @@ ilo_layout_get_slice_pos(const struct ilo_layout *layout,
          layout->bo_height * layout->block_height);
 }
 
-unsigned
-ilo_layout_get_slice_tile_offset(const struct ilo_layout *layout,
-                                 unsigned level, unsigned slice,
-                                 unsigned *x_offset, unsigned *y_offset);
-
-#endif /* ILO_LAYOUT_H */
+#endif /* LAYOUT_H */
