@@ -67,7 +67,12 @@
 class XglImageTest : public ::testing::Test {
 public:
     XglGpu *gpu;
-    void CreateImage();
+    void CreateImage(XGL_UINT w, XGL_UINT h);
+    void DestroyImage();
+
+    void CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
+                         XGL_IMAGE_VIEW* pView);
+    void DestroyImageView(XGL_IMAGE_VIEW imageView);
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -222,8 +227,27 @@ void XglImageTest::DestroyImage()
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_image));
 }
 
-TEST_F(XglImageTest, CreateImage) {
-    CreateImageTest();
+void XglImageTest::CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
+                                   XGL_IMAGE_VIEW *pView)
+{
+    pCreateInfo->image = this->m_image;
+    ASSERT_XGL_SUCCESS(xglCreateImageView(gpu->device(), pCreateInfo, pView));
+}
+
+void XglImageTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
+{
+    ASSERT_XGL_SUCCESS(xglDestroyObject(imageView));
+}
+
+TEST_F(XglImageTest, CreateImageViewTest) {
+    XGL_FORMAT fmt;
+    XGL_IMAGE_VIEW imageView;
+    XGL_RESULT err;
+
+    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    fmt.numericFormat = XGL_NUM_FMT_UINT;
+
+    CreateImage(512, 256);
 
     //    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
     //    {
@@ -237,9 +261,7 @@ TEST_F(XglImageTest, CreateImage) {
     //        XGL_FLOAT                               minLod;
     //    } XGL_IMAGE_VIEW_CREATE_INFO;
     XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
-    XGL_IMAGE_VIEW view;
     viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
     viewInfo.viewType = XGL_IMAGE_VIEW_2D;
     viewInfo.format = fmt;
 
@@ -259,8 +281,9 @@ TEST_F(XglImageTest, CreateImage) {
     //        const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
     //        XGL_IMAGE_VIEW*                             pView);
 
-    err = xglCreateImageView(gpu->device(), &viewInfo, &view);
-    ASSERT_XGL_SUCCESS(err);
+    CreateImageView(&viewInfo, &imageView);
+
+    DestroyImageView(imageView);
 }
 
 int main(int argc, char **argv) {
