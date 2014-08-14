@@ -449,6 +449,7 @@ void XglTest::CreateImageTest()
     XGL_SIZE size;
     XGL_FORMAT fmt;
     XGL_FORMAT_PROPERTIES image_fmt;
+    XGL_UINT data_size;
 
     w =512;
     h = 256;
@@ -525,8 +526,58 @@ void XglTest::CreateImageTest()
     err = xglCreateImage(this->gpu->device(), &imageCreateInfo, &image);
     ASSERT_XGL_SUCCESS(err);
 
+    // Verify image resources
+//    XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
+//        XGL_IMAGE                                   image,
+//        const XGL_IMAGE_SUBRESOURCE*                pSubresource,
+//        XGL_SUBRESOURCE_INFO_TYPE                   infoType,
+//        XGL_SIZE*                                   pDataSize,
+//        XGL_VOID*                                   pData);
+//    typedef struct _XGL_SUBRESOURCE_LAYOUT
+//    {
+//        XGL_GPU_SIZE                            offset;                 // Specified in bytes
+//        XGL_GPU_SIZE                            size;                   // Specified in bytes
+//        XGL_GPU_SIZE                            rowPitch;               // Specified in bytes
+//        XGL_GPU_SIZE                            depthPitch;             // Specified in bytes
+//    } XGL_SUBRESOURCE_LAYOUT;
+
+//    typedef struct _XGL_IMAGE_SUBRESOURCE
+//    {
+//        XGL_IMAGE_ASPECT                        aspect;
+//        XGL_UINT                                mipLevel;
+//        XGL_UINT                                arraySlice;
+//    } XGL_IMAGE_SUBRESOURCE;
+//    typedef enum _XGL_SUBRESOURCE_INFO_TYPE
+//    {
+//        // Info type for xglGetImageSubresourceInfo()
+//        XGL_INFO_TYPE_SUBRESOURCE_LAYOUT                        = 0x00000000,
+
+//        XGL_MAX_ENUM(_XGL_SUBRESOURCE_INFO_TYPE)
+//    } XGL_SUBRESOURCE_INFO_TYPE;
+    XGL_IMAGE_SUBRESOURCE subresource = {};
+    subresource.aspect = XGL_IMAGE_ASPECT_COLOR;
+    subresource.arraySlice = 0;
+
+    _w = w;
+    _h = h;
+    while( ( _w > 0 ) || ( _h > 0 ) )
+    {
+        XGL_SUBRESOURCE_LAYOUT layout = {};
+
+        err = xglGetImageSubresourceInfo(image, &subresource, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+                                         &data_size, &layout);
+        ASSERT_XGL_SUCCESS(err);
+        ASSERT_EQ(sizeof(XGL_SUBRESOURCE_LAYOUT), data_size) << "Invalid structure (XGL_SUBRESOURCE_LAYOUT) size";
+
+        // TODO: 4 should be replaced with pixel size for given format
+        EXPECT_LE(_w * 4, layout.rowPitch) << "Pitch does not match expected image pitch";
+        _w >>= 1;
+        _h >>= 1;
+
+        subresource.mipLevel++;
+    }
+
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
     err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
@@ -589,7 +640,7 @@ void XglTest::CreateImageTest()
 //        XGL_IMAGE_VIEW*                             pView);
 
     err = xglCreateImageView(gpu->device(), &viewInfo, &view);
-    ASSERT_XGL_SUCCESS(err);
+    ASSERT_XGL_SUCCESS(err) << "xglCreateImageView failed";
 
     // TODO: Test image memory.
 
