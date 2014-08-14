@@ -27,40 +27,13 @@
 
 #include "kmd/winsys.h"
 #include "intel.h"
+#include "layout.h"
 #include "obj.h"
-
-#define INTEL_IMG_MAX_LEVELS 16
-
-/**
- * A 3D image slice, cube face, or array layer.
- */
-struct intel_img_slice {
-   /* 2D offset to the slice */
-   unsigned x, y;
-   unsigned flags;
-};
 
 struct intel_img {
     struct intel_obj obj;
 
-    XGL_FORMAT bo_format;
-
-    enum intel_tiling_mode tiling;
-    unsigned long bo_stride; /* distance between two block rows in bytes */
-    unsigned long bo_height;
-
-    unsigned block_width;
-    unsigned block_height;
-    unsigned block_size;
-
-    /* true if the mip level alignments are stricter */
-    bool halign_8, valign_4;
-    /* true if space is reserved between layers */
-    bool array_spacing_full;
-    /* true if samples are interleaved */
-    bool interleaved;
-
-    struct intel_img_slice *slices[INTEL_IMG_MAX_LEVELS];
+    struct intel_layout layout;
 };
 
 static inline struct intel_img *intel_img(XGL_IMAGE image)
