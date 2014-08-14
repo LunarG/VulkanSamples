@@ -368,6 +368,79 @@ TEST_F(XglTest, Query) {
     ASSERT_XGL_SUCCESS(err);
 }
 
+void getQueue(XglGpu *gpu, XGL_QUEUE_TYPE qtype, const char *qname)
+{
+    int que_idx;
+    XGL_RESULT err;
+    XGL_QUEUE queue;
+
+    for (que_idx = 0; que_idx < gpu->queue_props->queueCount; que_idx++) {
+        err = xglGetDeviceQueue(gpu->device(), qtype, que_idx, &queue);
+        ASSERT_EQ(XGL_SUCCESS, err) << "xglGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << xgl_result_string(err);
+    }
+}
+
+TEST_F(XglTest, Queue)
+{
+    XGL_UINT que_idx;
+
+    ASSERT_NE(0, gpu->queue_props->queueCount) << "No heaps available for GPU #" << gpu->id << ": " << gpu->props.gpuName;
+
+//            XGL_RESULT XGLAPI xglGetDeviceQueue(
+//                XGL_DEVICE                                  device,
+//                XGL_QUEUE_TYPE                              queueType,
+//                XGL_UINT                                    queueIndex,
+//                XGL_QUEUE*                                  pQueue);
+    /*
+     * queue handles are retrieved from the device by calling
+     * xglGetDeviceQueue() with a queue type and a requested logical
+     * queue ID. The logical queue ID is a sequential number starting
+     * from zero and referencing up to the number of queues requested
+     * at device creation. Each queue type has its own sequence of IDs
+     * starting at zero.
+     */
+
+    for (que_idx = 0; que_idx < gpu->queue_props->queueCount; que_idx++) {
+
+//                typedef enum _XGL_QUEUE_FLAGS
+//                {
+//                    XGL_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
+//                    XGL_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
+//                    XGL_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
+//                    XGL_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
+//                } XGL_QUEUE_FLAGS;
+
+//                typedef enum _XGL_QUEUE_TYPE
+//                {
+//                    XGL_QUEUE_TYPE_GRAPHICS                                 = 0x1,
+//                    XGL_QUEUE_TYPE_COMPUTE                                  = 0x2,
+//                    XGL_QUEUE_TYPE_DMA                                      = 0x3,
+//                    XGL_MAX_ENUM(_XGL_QUEUE_TYPE)
+//                } XGL_QUEUE_TYPE;
+
+        if (gpu->queue_props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+            getQueue(gpu, XGL_QUEUE_TYPE_GRAPHICS, "Graphics");
+        }
+
+        if (gpu->queue_props->queueFlags & XGL_QUEUE_COMPUTE_BIT) {
+            getQueue(gpu, XGL_QUEUE_TYPE_GRAPHICS, "Compute");
+        }
+
+        if (gpu->queue_props->queueFlags & XGL_QUEUE_DMA_BIT) {
+            getQueue(gpu, XGL_QUEUE_TYPE_GRAPHICS, "DMA");
+        }
+
+        // TODO: What do we do about EXTENDED_BIT?
+
+        /* Guide: pg 34:
+         * The queue objects cannot be destroyed explicitly by an application
+         * and are automatically destroyed when the associated device is destroyed.
+         * Once the device is destroyed, attempting to use a queue results in
+         * undefined behavior.
+         */
+    }
+}
+
 void XglTest::CreateImageTest()
 {
     XGL_RESULT err;
