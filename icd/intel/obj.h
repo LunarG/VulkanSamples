@@ -39,6 +39,12 @@ struct intel_base_dbg {
 
     void *tag;
     XGL_SIZE tag_size;
+
+    /*
+     * Need pointer to base object to be able to log debug
+     * messages with intel_dev_log
+     */
+    struct intel_dev *dev;
 };
 
 struct intel_base {
@@ -84,12 +90,14 @@ bool intel_base_is_valid(const struct intel_base *base);
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
                                XGL_SIZE *size, XGL_VOID *data);
 
-struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
+struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
+                                             XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              XGL_SIZE dbg_size);
 void intel_base_dbg_destroy(struct intel_base_dbg *dbg);
 
-struct intel_base *intel_base_create(XGL_SIZE obj_size, bool debug,
+struct intel_base *intel_base_create(struct intel_dev *dev,
+                                     XGL_SIZE obj_size, bool debug,
                                      XGL_DBG_OBJECT_TYPE type,
                                      const void *create_info,
                                      XGL_SIZE dbg_size);

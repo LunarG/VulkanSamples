@@ -36,7 +36,7 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
     if (info->heapCount != 1 || info->heaps[0] != 0)
         return XGL_ERROR_INVALID_POINTER;
 
-    mem = (struct intel_mem *) intel_base_create(sizeof(*mem),
+    mem = (struct intel_mem *) intel_base_create(dev, sizeof(*mem),
             dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
     if (!mem)
         return XGL_ERROR_OUT_OF_MEMORY;

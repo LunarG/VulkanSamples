@@ -76,7 +76,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
     if (gpu->fd >= 0)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
 
-    dev = (struct intel_dev *) intel_base_create(sizeof(*dev),
+    dev = (struct intel_dev *) intel_base_create(NULL, sizeof(*dev),
             info->flags & XGL_DEVICE_CREATE_VALIDATION_BIT,
             XGL_DBG_OBJECT_DEVICE, info, sizeof(struct intel_dev_dbg));
     if (!dev)

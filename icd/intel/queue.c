@@ -32,7 +32,7 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 {
     struct intel_queue *queue;
 
-    queue = (struct intel_queue *) intel_base_create(sizeof(*queue),
+    queue = (struct intel_queue *) intel_base_create(dev, sizeof(*queue),
             dev->base.dbg, XGL_DBG_OBJECT_QUEUE, NULL, 0);
     if (!queue)
         return XGL_ERROR_OUT_OF_MEMORY;

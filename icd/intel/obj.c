@@ -24,6 +24,7 @@
 
 #include "dispatch_tables.h"
 #include "gpu.h"
+#include "dev.h"
 #include "obj.h"
 
 /**
@@ -101,6 +102,10 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         shallow_copy = sizeof(XGL_IMAGE_CREATE_INFO);
         break;
     default:
+        // log debug message regarding invalid struct_type?
+        intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
+                      XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                      "Invalid Create Info type: 0x%x", info.header->struct_type);
         return false;
         break;
     }
@@ -164,7 +169,8 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
  * Create an intel_base_dbg.  When dbg_size is non-zero, a buffer of that
  * size is allocated and zeroed.
  */
-struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
+struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
+                                             XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              XGL_SIZE dbg_size)
 {
@@ -183,6 +189,7 @@ struct intel_base_dbg *intel_base_dbg_create(XGL_DBG_OBJECT_TYPE type,
 
     dbg->alloc_id = icd_get_allocator_id();
     dbg->type = type;
+    dbg->dev = dev;
 
     if (!base_dbg_copy_create_info(dbg, create_info)) {
         icd_free(dbg);
@@ -207,7 +214,8 @@ void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
  * Create an intel_base.  obj_size and dbg_size specify the real sizes of the
  * object and the debug metadata.  Memories are zeroed.
  */
-struct intel_base *intel_base_create(XGL_SIZE obj_size, bool debug,
+struct intel_base *intel_base_create(struct intel_dev *dev,
+                                     XGL_SIZE obj_size, bool debug,
                                      XGL_DBG_OBJECT_TYPE type,
                                      const void *create_info,
                                      XGL_SIZE dbg_size)
@@ -223,11 +231,19 @@ struct intel_base *intel_base_create(XGL_SIZE obj_size, bool debug,
     if (!base)
         return NULL;
 
+    if (dev == NULL) {
+        /*
+         * dev is NULL when we are creating the base device object
+         * Set dev now so that debug setup happens correctly
+         */
+        dev = (struct intel_dev *) base;
+    }
+
     memset(base, 0, obj_size);
 
     if (debug) {
         base->dispatch = &intel_debug_dispatch_table;
-        base->dbg = intel_base_dbg_create(type, create_info, dbg_size);
+        base->dbg = intel_base_dbg_create(dev, type, create_info, dbg_size);
         if (!base->dbg) {
             icd_free(base);
             return NULL;
