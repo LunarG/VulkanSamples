@@ -28,8 +28,6 @@
 #include "kmd/winsys.h"
 #include "intel.h"
 
-struct intel_bo;
-
 struct intel_mem {
     struct intel_base base;
 

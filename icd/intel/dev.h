@@ -26,8 +26,8 @@
 #define DEV_H
 
 #include "intel.h"
-#include "obj.h"
 #include "gpu.h"
+#include "obj.h"
 
 struct intel_queue;
 struct intel_winsys;

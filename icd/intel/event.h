@@ -25,6 +25,9 @@
 #ifndef EVENT_H
 #define EVENT_H
 
+#include "intel.h"
+#include "obj.h"
+
 struct intel_dev;
 
 struct intel_event {
