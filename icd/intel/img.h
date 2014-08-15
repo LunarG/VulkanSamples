@@ -34,6 +34,13 @@ struct intel_img {
     struct intel_obj obj;
 
     struct intel_layout layout;
+
+    /* layout of separate stencil */
+    struct intel_layout *s8_layout;
+
+    XGL_SIZE total_size;
+    XGL_SIZE aux_offset;
+    XGL_SIZE s8_offset;
 };
 
 static inline struct intel_img *intel_img(XGL_IMAGE image)

@@ -54,7 +54,7 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
         {
             XGL_MEMORY_REQUIREMENTS *mem_req = data;
 
-            mem_req->size = img->layout.bo_stride * img->layout.bo_height;
+            mem_req->size = img->total_size;
             mem_req->alignment = 4096;
             mem_req->heapCount = 1;
             mem_req->heaps[0] = 0;
@@ -93,13 +93,33 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
         return XGL_ERROR_INVALID_MEMORY_SIZE;
     }
 
-    /* TODO */
-    if (layout->aux_type != INTEL_LAYOUT_AUX_NONE ||
-        layout->separate_stencil) {
-        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "HiZ or separate stencil required");
-        intel_img_destroy(img);
-        return XGL_ERROR_INVALID_MEMORY_SIZE;
+    img->total_size = img->layout.bo_stride * img->layout.bo_height;
+
+    if (layout->aux_type != INTEL_LAYOUT_AUX_NONE) {
+        img->aux_offset = u_align(img->total_size, 4096);
+        img->total_size = img->aux_offset +
+            layout->aux_stride * layout->aux_height;
+    }
+
+    if (layout->separate_stencil) {
+        XGL_IMAGE_CREATE_INFO s8_info;
+
+        img->s8_layout = icd_alloc(sizeof(*img->s8_layout), 0,
+                XGL_SYSTEM_ALLOC_INTERNAL);
+        if (!img->s8_layout) {
+            intel_img_destroy(img);
+            return XGL_ERROR_OUT_OF_MEMORY;
+        }
+
+        s8_info = *info;
+        s8_info.format.channelFormat = XGL_CH_FMT_R8;
+        assert(info->format.numericFormat == XGL_NUM_FMT_DS);
+
+        intel_layout_init(img->s8_layout, dev, &s8_info);
+
+        img->s8_offset = u_align(img->total_size, 4096);
+        img->total_size = img->s8_offset +
+            img->s8_layout->bo_stride * img->s8_layout->bo_height;
     }
 
     img->obj.destroy = img_destroy;
@@ -112,6 +132,9 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
 void intel_img_destroy(struct intel_img *img)
 {
+    if (img->s8_layout)
+        icd_free(img->s8_layout);
+
     intel_base_destroy(&img->obj.base);
 }
 
