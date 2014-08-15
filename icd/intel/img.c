@@ -75,19 +75,29 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
                             struct intel_img **img_ret)
 {
     struct intel_img *img;
+    struct intel_layout *layout;
 
     img = (struct intel_img *) intel_base_create(dev, sizeof(*img),
             dev->base.dbg, XGL_DBG_OBJECT_IMAGE, info, 0);
     if (!img)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    intel_layout_init(&img->layout, dev, info);
+    layout = &img->layout;
+
+    intel_layout_init(layout, dev, info);
+
+    if (layout->bo_stride > intel_max_resource_size / layout->bo_height) {
+        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+                XGL_NULL_HANDLE, 0, 0, "image too big");
+        intel_img_destroy(img);
+        return XGL_ERROR_INVALID_MEMORY_SIZE;
+    }
 
     /* TODO */
-    if (img->layout.aux_type != INTEL_LAYOUT_AUX_NONE ||
-        img->layout.separate_stencil) {
+    if (layout->aux_type != INTEL_LAYOUT_AUX_NONE ||
+        layout->separate_stencil) {
         intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "HiZ or separate stencil enabled");
+                XGL_NULL_HANDLE, 0, 0, "HiZ or separate stencil required");
         intel_img_destroy(img);
         return XGL_ERROR_INVALID_MEMORY_SIZE;
     }
