@@ -145,6 +145,9 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
         shallow_copy = sizeof(XGL_CMD_BUFFER_CREATE_INFO);
         break;
+    case XGL_DBG_OBJECT_GRAPHICS_PIPELINE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
+        break;
     default:
         // log debug message regarding invalid struct_type?
         intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
@@ -207,6 +210,8 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
 
             size += len + 1;
         }
+    } else if (info.header->struct_type == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {
+        // TODO: What do we want to copy here?
     }
 
     return true;

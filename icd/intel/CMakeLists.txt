@@ -31,6 +31,7 @@ SET(SOURCES
     layout.c
     mem.c
     obj.c
+    pipeline.c
     query.c
     queue.c
     sampler.c
