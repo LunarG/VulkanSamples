@@ -118,6 +118,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
             return false;
 
         memcpy(dbg->create_info, create_info, shallow_copy);
+        dbg->create_info_size = shallow_copy;
     } else if (info.header->struct_type ==
             XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO) {
         const XGL_DEVICE_CREATE_INFO *src = info.ptr;
@@ -127,6 +128,8 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         XGL_UINT i;
 
         size = sizeof(*src);
+        dbg->create_info_size = size;
+
         size += sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
         size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
         for (i = 0; i < src->extensionCount; i++) {
