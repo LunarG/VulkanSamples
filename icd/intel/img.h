@@ -33,6 +33,10 @@
 struct intel_img {
     struct intel_obj obj;
 
+    XGL_IMAGE_TYPE type;
+    XGL_EXTENT3D extent;
+    XGL_UINT array_size;
+    XGL_UINT samples;
     struct intel_layout layout;
 
     /* layout of separate stencil */

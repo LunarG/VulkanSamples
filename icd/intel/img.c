@@ -84,6 +84,10 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
     layout = &img->layout;
 
+    img->type = info->imageType;
+    img->extent = info->extent;
+    img->array_size = info->arraySize;
+    img->samples = info->samples;
     intel_layout_init(layout, dev, info);
 
     if (layout->bo_stride > intel_max_resource_size / layout->bo_height) {
