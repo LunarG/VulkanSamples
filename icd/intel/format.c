@@ -395,7 +395,7 @@ static const int intel_color_mapping[XGL_MAX_CH_FMT + 1][6] = {
                                   GEN6_FORMAT_BC7_UNORM_SRGB, },
 };
 
-static int intel_format_translate_color(XGL_FORMAT format)
+int intel_format_translate_color(XGL_FORMAT format)
 {
     int fmt;
 

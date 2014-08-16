@@ -26,6 +26,7 @@
  */
 
 #include "dev.h"
+#include "format.h"
 #include "gpu.h"
 #include "layout.h"
 
@@ -581,8 +582,7 @@ layout_init_arrangements_gen6(struct intel_layout *layout,
     *
     * GEN6 does not support compact spacing otherwise.
     */
-   layout->full_layers = !(layout->format.channelFormat == XGL_CH_FMT_R8 &&
-                           layout->format.numericFormat == XGL_NUM_FMT_DS);
+   layout->full_layers = !intel_format_is_stencil(layout->format);
 }
 
 static void
@@ -634,88 +634,11 @@ layout_init_format(struct intel_layout *layout,
    }
 
    layout->format = format;
+   layout->block_width = icd_format_get_block_width(format);
+   layout->block_height = layout->block_width;
+   layout->block_size = icd_format_get_size(format);
 
-   layout->block_width = 1;
-   layout->block_height = 1;
-   layout->block_size = 1;
-   params->compressed = false;
-
-   switch (format.channelFormat) {
-   case XGL_CH_FMT_UNDEFINED:
-       break;
-   case XGL_CH_FMT_R4G4:
-       layout->block_size = 1;
-       break;
-   case XGL_CH_FMT_R4G4B4A4:
-       layout->block_size = 2;
-       break;
-   case XGL_CH_FMT_R5G6B5:
-   case XGL_CH_FMT_B5G6R5:
-   case XGL_CH_FMT_R5G5B5A1:
-       layout->block_size = 2;
-       break;
-   case XGL_CH_FMT_R8:
-       layout->block_size = 1;
-       break;
-   case XGL_CH_FMT_R8G8:
-       layout->block_size = 2;
-       break;
-   case XGL_CH_FMT_R8G8B8A8:
-   case XGL_CH_FMT_B8G8R8A8:
-   case XGL_CH_FMT_R10G11B11:
-   case XGL_CH_FMT_R11G11B10:
-   case XGL_CH_FMT_R10G10B10A2:
-       layout->block_size = 4;
-       break;
-   case XGL_CH_FMT_R16:
-       layout->block_size = 2;
-       break;
-   case XGL_CH_FMT_R16G16:
-       layout->block_size = 4;
-       break;
-   case XGL_CH_FMT_R16G16B16A16:
-       layout->block_size = 8;
-       break;
-   case XGL_CH_FMT_R32:
-       layout->block_size = 4;
-       break;
-   case XGL_CH_FMT_R32G32:
-       layout->block_size = 8;
-       break;
-   case XGL_CH_FMT_R32G32B32:
-       layout->block_size = 12;
-       break;
-   case XGL_CH_FMT_R32G32B32A32:
-       layout->block_size = 16;
-       break;
-   case XGL_CH_FMT_R16G8:
-       layout->block_size = 3;
-       break;
-   case XGL_CH_FMT_R32G8:
-       layout->block_size = 5;
-       break;
-   case XGL_CH_FMT_R9G9B9E5:
-       layout->block_size = 4;
-       break;
-   case XGL_CH_FMT_BC1:
-   case XGL_CH_FMT_BC2:
-   case XGL_CH_FMT_BC3:
-   case XGL_CH_FMT_BC4:
-   case XGL_CH_FMT_BC5:
-   case XGL_CH_FMT_BC6U:
-   case XGL_CH_FMT_BC6S:
-   case XGL_CH_FMT_BC7:
-       layout->block_width = 4;
-       layout->block_height = 4;
-       layout->block_size =
-           (format.channelFormat == XGL_CH_FMT_BC1 ||
-            format.channelFormat == XGL_CH_FMT_BC4) ? 8 : 16;
-       params->compressed = true;
-       break;
-   default:
-       assert(!"unknown format");
-       break;
-   }
+   params->compressed = icd_format_is_compressed(format);
 }
 
 static bool
@@ -789,7 +712,7 @@ layout_want_hiz(const struct intel_layout *layout,
    if (!(info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT))
       return false;
 
-   if (info->format.channelFormat == XGL_CH_FMT_R8)
+   if (!intel_format_is_depth(info->format))
       return false;
 
    if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
@@ -951,8 +874,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
          align_h = 32;
          break;
       default:
-         if (layout->format.channelFormat == XGL_CH_FMT_R8 &&
-             layout->format.numericFormat == XGL_NUM_FMT_DS) {
+         if (intel_format_is_stencil(layout->format)) {
             /*
              * From the Sandy Bridge PRM, volume 1 part 2, page 22:
              *

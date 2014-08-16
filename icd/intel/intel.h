@@ -34,6 +34,7 @@
 #include <xglDbg.h>
 
 #include "icd.h"
+#include "icd-format.h"
 #include "icd-utils.h"
 
 #define INTEL_API_VERSION XGL_MAKE_VERSION(0, 22, 0)

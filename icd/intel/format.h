@@ -27,6 +27,21 @@
 
 #include "intel.h"
 
+static inline bool intel_format_is_depth(XGL_FORMAT format)
+{
+    return (format.numericFormat == XGL_NUM_FMT_DS &&
+            (format.channelFormat == XGL_CH_FMT_R16 ||
+             format.channelFormat == XGL_CH_FMT_R32));
+}
+
+static inline bool intel_format_is_stencil(XGL_FORMAT format)
+{
+   return (format.numericFormat == XGL_NUM_FMT_DS &&
+           format.channelFormat == XGL_CH_FMT_R8);
+}
+
+int intel_format_translate_color(XGL_FORMAT format);
+
 XGL_RESULT XGLAPI intelGetFormatInfo(
     XGL_DEVICE                                  device,
     XGL_FORMAT                                  format,
