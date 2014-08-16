@@ -27,6 +27,10 @@
 
 #include "intel.h"
 
+#define INTEL_GPU_ASSERT(gpu, min_gen, max_gen)   \
+       assert(intel_gpu_gen(gpu) >= INTEL_GEN(min_gen) && \
+              intel_gpu_gen(gpu) <= INTEL_GEN(max_gen))
+
 enum intel_gpu_engine_type {
     /* TODO BLT support */
     INTEL_GPU_ENGINE_3D,
