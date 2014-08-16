@@ -395,7 +395,8 @@ static const int intel_color_mapping[XGL_MAX_CH_FMT + 1][6] = {
                                   GEN6_FORMAT_BC7_UNORM_SRGB, },
 };
 
-int intel_format_translate_color(XGL_FORMAT format)
+int intel_format_translate_color(const struct intel_gpu *gpu,
+                                 XGL_FORMAT format)
 {
     int fmt;
 
@@ -417,7 +418,7 @@ int intel_format_translate_color(XGL_FORMAT format)
 static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
                                                  XGL_FORMAT format)
 {
-    const int fmt = intel_format_translate_color(format);
+    const int fmt = intel_format_translate_color(dev->gpu, format);
     const struct intel_sampler_cap *sampler;
     const struct intel_dp_cap *dp;
     XGL_FLAGS features;

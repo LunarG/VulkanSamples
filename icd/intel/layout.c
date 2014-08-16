@@ -582,7 +582,8 @@ layout_init_arrangements_gen6(struct intel_layout *layout,
     *
     * GEN6 does not support compact spacing otherwise.
     */
-   layout->full_layers = !intel_format_is_stencil(layout->format);
+   layout->full_layers =
+       !intel_format_is_stencil(params->gpu, layout->format);
 }
 
 static void
@@ -712,7 +713,7 @@ layout_want_hiz(const struct intel_layout *layout,
    if (!(info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT))
       return false;
 
-   if (!intel_format_is_depth(info->format))
+   if (!intel_format_is_depth(params->gpu, info->format))
       return false;
 
    if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
@@ -874,7 +875,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
          align_h = 32;
          break;
       default:
-         if (intel_format_is_stencil(layout->format)) {
+         if (intel_format_is_stencil(params->gpu, layout->format)) {
             /*
              * From the Sandy Bridge PRM, volume 1 part 2, page 22:
              *

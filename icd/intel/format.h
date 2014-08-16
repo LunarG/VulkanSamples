@@ -27,20 +27,25 @@
 
 #include "intel.h"
 
-static inline bool intel_format_is_depth(XGL_FORMAT format)
+struct intel_gpu;
+
+static inline bool intel_format_is_depth(const struct intel_gpu *gpu,
+                                         XGL_FORMAT format)
 {
     return (format.numericFormat == XGL_NUM_FMT_DS &&
             (format.channelFormat == XGL_CH_FMT_R16 ||
              format.channelFormat == XGL_CH_FMT_R32));
 }
 
-static inline bool intel_format_is_stencil(XGL_FORMAT format)
+static inline bool intel_format_is_stencil(const struct intel_gpu *gpu,
+                                           XGL_FORMAT format)
 {
    return (format.numericFormat == XGL_NUM_FMT_DS &&
            format.channelFormat == XGL_CH_FMT_R8);
 }
 
-int intel_format_translate_color(XGL_FORMAT format);
+int intel_format_translate_color(const struct intel_gpu *gpu,
+                                 XGL_FORMAT format);
 
 XGL_RESULT XGLAPI intelGetFormatInfo(
     XGL_DEVICE                                  device,
