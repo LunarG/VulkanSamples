@@ -77,48 +77,48 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
     if (!create_info)
         return true;
 
-    switch (info.header->struct_type) {
-    case XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_DEVICE);
+    switch (dbg->type) {
+    case XGL_DBG_OBJECT_DEVICE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_GPU_MEMORY);
+    case XGL_DBG_OBJECT_GPU_MEMORY:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
         shallow_copy = sizeof(XGL_MEMORY_ALLOC_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_EVENT);
+    case XGL_DBG_OBJECT_EVENT:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO);
         shallow_copy = sizeof(XGL_EVENT_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_FENCE);
+    case XGL_DBG_OBJECT_FENCE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO);
         shallow_copy = sizeof(XGL_FENCE_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_QUERY_POOL);
+    case XGL_DBG_OBJECT_QUERY_POOL:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
         shallow_copy = sizeof(XGL_QUERY_POOL_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_IMAGE);
+    case XGL_DBG_OBJECT_IMAGE:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
         shallow_copy = sizeof(XGL_IMAGE_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_IMAGE_VIEW);
+    case XGL_DBG_OBJECT_IMAGE_VIEW:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
         shallow_copy = sizeof(XGL_IMAGE_VIEW_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_COLOR_TARGET_VIEW);
+    case XGL_DBG_OBJECT_COLOR_TARGET_VIEW:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
         shallow_copy = sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW);
+    case XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO);
         shallow_copy = sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_SAMPLER);
+    case XGL_DBG_OBJECT_SAMPLER:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
         shallow_copy = sizeof(XGL_SAMPLER_CREATE_INFO);
         break;
-    case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO:
-        assert(dbg->type == XGL_DBG_OBJECT_DESCRIPTOR_SET);
+    case XGL_DBG_OBJECT_DESCRIPTOR_SET:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO);
         shallow_copy = sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO);
         break;
     default:
