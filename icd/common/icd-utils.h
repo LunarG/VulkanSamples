@@ -25,6 +25,8 @@
 #ifndef ICD_UTILS_H
 #define ICD_UTILS_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <assert.h>
 #include "icd.h"
 
@@ -33,6 +35,9 @@
 #define STATIC_ASSERT(expr) do {            \
     (void) sizeof(char[1 - 2 * !(expr)]);   \
 } while (0)
+
+#define U_CLAMP(val, min, max) \
+    ((val) < (min) ? (min) : (val) > (max)? (max) : (val))
 
 /**
  * Return true if val is power of two, or zero.
@@ -52,5 +57,25 @@ static inline unsigned int u_minify(unsigned int val, unsigned level)
 {
     return (val >> level) ? val >> level : 1;
 }
+
+static inline uint32_t u_fui(float f)
+{
+    union {
+        float f;
+        uint32_t ui;
+    } u = { .f = f };
+
+    return u.ui;
+}
+
+static inline int u_iround(float f)
+{
+    if (f >= 0.0f)
+        return (int) (f + 0.5f);
+    else
+        return (int) (f - 0.5f);
+}
+
+uint16_t u_float_to_half(float f);
 
 #endif /* ICD_UTILS_H */
