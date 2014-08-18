@@ -117,6 +117,10 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(dbg->type == XGL_DBG_OBJECT_SAMPLER);
         shallow_copy = sizeof(XGL_SAMPLER_CREATE_INFO);
         break;
+    case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO:
+        assert(dbg->type == XGL_DBG_OBJECT_DESCRIPTOR_SET);
+        shallow_copy = sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO);
+        break;
     default:
         // log debug message regarding invalid struct_type?
         intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,

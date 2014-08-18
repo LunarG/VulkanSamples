@@ -39,8 +39,8 @@ XGL_RESULT intel_dset_create(struct intel_dev *dev,
 {
     struct intel_dset *dset;
 
-    dset = (struct intel_dset *) intel_base_create(dev,
-            sizeof(*dset), dev->base.dbg, XGL_DBG_OBJECT_SAMPLER, info, 0);
+    dset = (struct intel_dset *) intel_base_create(dev, sizeof(*dset),
+            dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_SET, info, 0);
     if (!dset)
         return XGL_ERROR_OUT_OF_MEMORY;
 
