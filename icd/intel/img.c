@@ -99,7 +99,7 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
     img->total_size = img->layout.bo_stride * img->layout.bo_height;
 
-    if (layout->aux_type != INTEL_LAYOUT_AUX_NONE) {
+    if (layout->aux != INTEL_LAYOUT_AUX_NONE) {
         img->aux_offset = u_align(img->total_size, 4096);
         img->total_size = img->aux_offset +
             layout->aux_stride * layout->aux_height;
@@ -174,7 +174,7 @@ XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
 
             *pDataSize = sizeof(XGL_SUBRESOURCE_LAYOUT);
 
-            layout->offset = intel_layout_mem_to_off(&img->layout, x, y);
+            layout->offset = intel_layout_mem_to_linear(&img->layout, x, y);
             layout->size = intel_layout_get_slice_size(&img->layout,
                     pSubresource->mipLevel);
             layout->rowPitch = img->layout.bo_stride;

@@ -239,7 +239,6 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
 {
    int surface_type, surface_format;
    int width, height, depth, pitch, lod;
-   unsigned layer_offset, x_offset, y_offset;
 
    INTEL_GPU_ASSERT(gpu, 7, 7.5);
 
@@ -310,10 +309,6 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
       lod = num_levels - 1;
    }
 
-   layer_offset = 0;
-   x_offset = 0;
-   y_offset = 0;
-
    /*
     * From the Ivy Bridge PRM, volume 4 part 1, page 68:
     *
@@ -340,11 +335,8 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
    if (img->layout.tiling == INTEL_TILING_NONE) {
       if (is_rt) {
          const int elem_size = icd_format_get_size(format);
-         assert(layer_offset % elem_size == 0);
          assert(pitch % elem_size == 0);
       }
-
-      assert(!x_offset);
    }
 
    dw[0] = surface_type << GEN7_SURFACE_DW0_TYPE__SHIFT |
@@ -378,10 +370,10 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
    if (img->layout.align_i == 8)
       dw[0] |= GEN7_SURFACE_DW0_HALIGN_8;
 
-   if (img->layout.full_layers)
-      dw[0] |= GEN7_SURFACE_DW0_ARYSPC_FULL;
-   else
+   if (img->layout.walk == INTEL_LAYOUT_WALK_LOD)
       dw[0] |= GEN7_SURFACE_DW0_ARYSPC_LOD0;
+   else
+      dw[0] |= GEN7_SURFACE_DW0_ARYSPC_FULL;
 
    if (is_rt)
       dw[0] |= GEN7_SURFACE_DW0_RENDER_CACHE_RW;
@@ -389,7 +381,7 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
    if (surface_type == GEN6_SURFTYPE_CUBE && !is_rt)
       dw[0] |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
-   dw[1] = layer_offset;
+   dw[1] = 0;
 
    dw[2] = (height - 1) << GEN7_SURFACE_DW2_HEIGHT__SHIFT |
            (width - 1) << GEN7_SURFACE_DW2_WIDTH__SHIFT;
@@ -420,9 +412,7 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
    else
       dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_1;
 
-   dw[5] = x_offset << GEN7_SURFACE_DW5_X_OFFSET__SHIFT |
-           y_offset << GEN7_SURFACE_DW5_Y_OFFSET__SHIFT |
-           (first_level) << GEN7_SURFACE_DW5_MIN_LOD__SHIFT |
+   dw[5] = (first_level) << GEN7_SURFACE_DW5_MIN_LOD__SHIFT |
            lod;
 
    dw[6] = 0;
@@ -571,7 +561,6 @@ static void emit_img_view_gen6(const struct intel_gpu *gpu,
 {
    int surface_type, surface_format;
    int width, height, depth, pitch, lod;
-   unsigned layer_offset, x_offset, y_offset;
 
    INTEL_GPU_ASSERT(gpu, 6, 6);
 
@@ -639,7 +628,7 @@ static void emit_img_view_gen6(const struct intel_gpu *gpu,
    }
 
    /* non-full array spacing is supported only on GEN7+ */
-   assert(img->layout.full_layers);
+   assert(img->layout.walk != INTEL_LAYOUT_WALK_LOD);
    /* non-interleaved samples are supported only on GEN7+ */
    if (img->samples > 1)
       assert(img->layout.interleaved_samples);
@@ -651,10 +640,6 @@ static void emit_img_view_gen6(const struct intel_gpu *gpu,
    else {
       lod = num_levels - 1;
    }
-
-   layer_offset = 0;
-   x_offset = 0;
-   y_offset = 0;
 
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 76:
@@ -677,11 +662,8 @@ static void emit_img_view_gen6(const struct intel_gpu *gpu,
    if (img->layout.tiling == INTEL_TILING_NONE) {
       if (is_rt) {
          const int elem_size = icd_format_get_size(format);
-         assert(layer_offset % elem_size == 0);
          assert(pitch % elem_size == 0);
       }
-
-      assert(!x_offset);
    }
 
    dw[0] = surface_type << GEN6_SURFACE_DW0_TYPE__SHIFT |
@@ -696,7 +678,7 @@ static void emit_img_view_gen6(const struct intel_gpu *gpu,
    if (is_rt)
       dw[0] |= GEN6_SURFACE_DW0_RENDER_CACHE_RW;
 
-   dw[1] = layer_offset;
+   dw[1] = 0;
 
    dw[2] = (height - 1) << GEN6_SURFACE_DW2_HEIGHT__SHIFT |
            (width - 1) << GEN6_SURFACE_DW2_WIDTH__SHIFT |
@@ -712,8 +694,7 @@ static void emit_img_view_gen6(const struct intel_gpu *gpu,
            ((img->samples > 1) ? GEN6_SURFACE_DW4_MULTISAMPLECOUNT_4 :
                                          GEN6_SURFACE_DW4_MULTISAMPLECOUNT_1);
 
-   dw[5] = x_offset << GEN6_SURFACE_DW5_X_OFFSET__SHIFT |
-           y_offset << GEN6_SURFACE_DW5_Y_OFFSET__SHIFT;
+   dw[5] = 0;
 
    assert(img->layout.align_j == 2 || img->layout.align_j == 4);
    if (img->layout.align_j == 4)
@@ -726,6 +707,7 @@ struct ds_surface_info {
 
    struct {
       unsigned stride;
+      unsigned offset;
    } zs, stencil, hiz;
 
    unsigned width, height, depth;
@@ -852,12 +834,29 @@ ds_init_info(const struct intel_gpu *gpu,
        * even though the Ivy Bridge PRM does not say anything about it.
        */
       info->stencil.stride = img->s8_layout->bo_stride * 2;
+
+      if (intel_gpu_gen(gpu) == INTEL_GEN(6)) {
+         unsigned x, y;
+
+         assert(img->s8_layout->walk == INTEL_LAYOUT_WALK_LOD);
+
+         /* offset to the level */
+         intel_layout_get_slice_pos(img->s8_layout, level, 0, &x, &y);
+         intel_layout_pos_to_mem(img->s8_layout, x, y, &x, &y);
+         info->stencil.offset = intel_layout_mem_to_raw(img->s8_layout, x, y);
+      }
    } else if (format.channelFormat == XGL_CH_FMT_R8) {
       info->stencil.stride = img->layout.bo_stride * 2;
    }
 
-   if (img->aux_offset)
+   if (img->aux_offset) {
       info->hiz.stride = img->layout.aux_stride;
+
+      /* offset to the level */
+      if (intel_gpu_gen(gpu) == INTEL_GEN(6))
+          info->hiz.offset = img->layout.aux_offsets[level];
+   }
+
 
    info->width = img->extent.width;
    info->height = img->extent.height;

@@ -60,8 +60,8 @@ layout_get_slice_size(const struct intel_layout *layout,
    const XGL_IMAGE_CREATE_INFO *info = params->info;
    unsigned w, h;
 
-   w = u_minify(info->extent.width, level);
-   h = u_minify(info->extent.height, level);
+   w = u_minify(layout->width0, level);
+   h = u_minify(layout->height0, level);
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 114:
@@ -109,8 +109,8 @@ layout_get_slice_size(const struct intel_layout *layout,
     *
     * Thus the need to
     *
-    *   w = u_align(w, 2) * 2;
-    *   y = u_align(y, 2) * 2;
+    *   w = align(w, 2) * 2;
+    *   y = align(y, 2) * 2;
     */
    if (layout->interleaved_samples) {
       switch (info->samples) {
@@ -138,6 +138,15 @@ layout_get_slice_size(const struct intel_layout *layout,
       }
    }
 
+   /*
+    * From the Ivy Bridge PRM, volume 1 part 1, page 108:
+    *
+    *     "For separate stencil buffer, the width must be mutiplied by 2 and
+    *      height divided by 2..."
+    *
+    * To make things easier (for transfer), we will just double the stencil
+    * stride in 3DSTATE_STENCIL_BUFFER.
+    */
    w = u_align(w, layout->align_i);
    h = u_align(h, layout->align_j);
 
@@ -166,15 +175,12 @@ layout_init_layer_height(struct intel_layout *layout,
    const XGL_IMAGE_CREATE_INFO *info = params->info;
    unsigned num_layers;
 
+   if (layout->walk != INTEL_LAYOUT_WALK_LAYER)
+      return;
+
    num_layers = layout_get_num_layers(layout, params);
    if (num_layers <= 1)
       return;
-
-   if (!layout->full_layers) {
-      layout->layer_height = params->h0;
-      params->max_y += params->h0 * (num_layers - 1);
-      return;
-   }
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 115:
@@ -214,15 +220,15 @@ layout_init_layer_height(struct intel_layout *layout,
       ((intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) ? 12 : 11) * layout->align_j;
 
    if (intel_gpu_gen(params->gpu) == INTEL_GEN(6) && info->samples > 1 &&
-       info->extent.height % 4 == 1)
+       layout->height0 % 4 == 1)
       layout->layer_height += 4;
 
    params->max_y += layout->layer_height * (num_layers - 1);
 }
 
 static void
-layout_init_levels(struct intel_layout *layout,
-                   struct intel_layout_params *params)
+layout_init_lods(struct intel_layout *layout,
+                 struct intel_layout_params *params)
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
    unsigned cur_x, cur_y;
@@ -231,43 +237,63 @@ layout_init_levels(struct intel_layout *layout,
    cur_x = 0;
    cur_y = 0;
    for (lv = 0; lv < info->mipLevels; lv++) {
-      unsigned level_w, level_h;
+      unsigned lod_w, lod_h;
 
-      layout_get_slice_size(layout, params, lv, &level_w, &level_h);
+      layout_get_slice_size(layout, params, lv, &lod_w, &lod_h);
 
-      layout->levels[lv].x = cur_x;
-      layout->levels[lv].y = cur_y;
-      layout->levels[lv].slice_width = level_w;
-      layout->levels[lv].slice_height = level_h;
+      layout->lods[lv].x = cur_x;
+      layout->lods[lv].y = cur_y;
+      layout->lods[lv].slice_width = lod_w;
+      layout->lods[lv].slice_height = lod_h;
 
-      if (info->imageType == XGL_IMAGE_3D) {
-         const unsigned num_slices = u_minify(info->extent.depth, lv);
-         const unsigned num_slices_per_row = 1 << lv;
-         const unsigned num_rows =
-            (num_slices + num_slices_per_row - 1) / num_slices_per_row;
+      switch (layout->walk) {
+      case INTEL_LAYOUT_WALK_LOD:
+         lod_h *= layout_get_num_layers(layout, params);
+         if (lv == 1)
+            cur_x += lod_w;
+         else
+            cur_y += lod_h;
 
-         level_w *= num_slices_per_row;
-         level_h *= num_rows;
-
-         cur_y += level_h;
-      } else {
+         /* every LOD begins at tile boundaries */
+         if (info->mipLevels > 1) {
+            intel_format_is_stencil(params->gpu, layout->format);
+            cur_x = u_align(cur_x, 64);
+            cur_y = u_align(cur_y, 64);
+         }
+         break;
+      case INTEL_LAYOUT_WALK_LAYER:
          /* MIPLAYOUT_BELOW */
          if (lv == 1)
-            cur_x += level_w;
+            cur_x += lod_w;
          else
-            cur_y += level_h;
+            cur_y += lod_h;
+         break;
+      case INTEL_LAYOUT_WALK_3D:
+         {
+            const unsigned num_slices = u_minify(info->extent.depth, lv);
+            const unsigned num_slices_per_row = 1 << lv;
+            const unsigned num_rows =
+               (num_slices + num_slices_per_row - 1) / num_slices_per_row;
+
+            lod_w *= num_slices_per_row;
+            lod_h *= num_rows;
+
+            cur_y += lod_h;
+         }
+         break;
       }
 
-      if (params->max_x < layout->levels[lv].x + level_w)
-         params->max_x = layout->levels[lv].x + level_w;
-      if (params->max_y < layout->levels[lv].y + level_h)
-         params->max_y = layout->levels[lv].y + level_h;
+      if (params->max_x < layout->lods[lv].x + lod_w)
+         params->max_x = layout->lods[lv].x + lod_w;
+      if (params->max_y < layout->lods[lv].y + lod_h)
+         params->max_y = layout->lods[lv].y + lod_h;
    }
 
-   params->h0 = layout->levels[0].slice_height;
-   if (layout->full_layers) {
+   if (layout->walk == INTEL_LAYOUT_WALK_LAYER) {
+      params->h0 = layout->lods[0].slice_height;
+
       if (info->mipLevels > 1)
-         params->h1 = layout->levels[1].slice_height;
+         params->h1 = layout->lods[1].slice_height;
       else
          layout_get_slice_size(layout, params, 1, &cur_x, &params->h1);
    }
@@ -360,7 +386,7 @@ layout_init_alignments(struct intel_layout *layout,
     *  compressed formats              block width    block height
     *  PIPE_FORMAT_Z16_UNORM           8              4
     *  PIPE_FORMAT_S8_UINT             8              8
-    *  other depth/stencil formats     4 or 8         4
+    *  other depth/stencil formats     4              4
     *  2x or 4x multisampled           4 or 8         4
     *  tiled Y                         4 or 8         4 (if rt)
     *  PIPE_FORMAT_R32G32B32_FLOAT     4 or 8         2
@@ -494,17 +520,22 @@ layout_init_tiling(struct intel_layout *layout,
    const XGL_IMAGE_CREATE_INFO *info = params->info;
    unsigned valid_tilings = layout_get_valid_tilings(layout, params);
 
+   /* no hardware support for W-tile */
+   if (valid_tilings & LAYOUT_TILING_W)
+      valid_tilings = (valid_tilings & ~LAYOUT_TILING_W) | LAYOUT_TILING_NONE;
+
    layout->valid_tilings = valid_tilings;
 
-   if (info->usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
+   if (info->usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                      XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
-      if (info->extent.width < 64 && (valid_tilings & ~LAYOUT_TILING_X))
+      if (layout->width0 < 64 && (valid_tilings & ~LAYOUT_TILING_X))
          valid_tilings &= ~LAYOUT_TILING_X;
 
-      if ((info->extent.width < 32 || info->extent.height < 16) &&
-          (info->extent.width < 16 || info->extent.height < 32) &&
+      if ((layout->width0 < 32 || layout->height0 < 16) &&
+          (layout->width0 < 16 || layout->height0 < 32) &&
           (valid_tilings & ~LAYOUT_TILING_Y))
          valid_tilings &= ~LAYOUT_TILING_Y;
    } else {
@@ -518,12 +549,12 @@ layout_init_tiling(struct intel_layout *layout,
       layout->tiling = INTEL_TILING_Y;
    else if (valid_tilings & LAYOUT_TILING_X)
       layout->tiling = INTEL_TILING_X;
-   else /* linear or W-tiled, which has no hardware support */
+   else
       layout->tiling = INTEL_TILING_NONE;
 }
 
 static void
-layout_init_arrangements_gen7(struct intel_layout *layout,
+layout_init_walk_gen7(struct intel_layout *layout,
                               struct intel_layout_params *params)
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
@@ -536,18 +567,17 @@ layout_init_arrangements_gen7(struct intel_layout *layout,
     * See "Multisampled Surface Storage Format" field of SURFACE_STATE.
     */
    if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
-      layout->interleaved_samples = true;
-
       /*
        * From the Ivy Bridge PRM, volume 1 part 1, page 111:
        *
        *     "note that the depth buffer and stencil buffer have an implied
        *      value of ARYSPC_FULL"
        */
-      layout->full_layers = true;
-   } else {
-      layout->interleaved_samples = false;
+      layout->walk = (info->imageType == XGL_IMAGE_3D) ?
+         INTEL_LAYOUT_WALK_3D : INTEL_LAYOUT_WALK_LAYER;
 
+      layout->interleaved_samples = true;
+   } else {
       /*
        * From the Ivy Bridge PRM, volume 4 part 1, page 66:
        *
@@ -560,17 +590,20 @@ layout_init_arrangements_gen7(struct intel_layout *layout,
        */
       if (info->samples > 1)
          assert(info->mipLevels == 1);
-      layout->full_layers = (info->mipLevels > 1);
+
+      layout->walk =
+         (info->imageType == XGL_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
+         (info->mipLevels > 1) ? INTEL_LAYOUT_WALK_LAYER :
+         INTEL_LAYOUT_WALK_LOD;
+
+      layout->interleaved_samples = false;
    }
 }
 
 static void
-layout_init_arrangements_gen6(struct intel_layout *layout,
-                              struct intel_layout_params *params)
+layout_init_walk_gen6(struct intel_layout *layout,
+                      struct intel_layout_params *params)
 {
-   /* GEN6 supports only interleaved samples */
-   layout->interleaved_samples = true;
-
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 115:
     *
@@ -582,29 +615,35 @@ layout_init_arrangements_gen6(struct intel_layout *layout,
     *
     * GEN6 does not support compact spacing otherwise.
     */
-   layout->full_layers =
-       !intel_format_is_stencil(params->gpu, layout->format);
+   layout->walk =
+      (params->info->imageType == XGL_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
+      intel_format_is_stencil(params->gpu, layout->format) ? INTEL_LAYOUT_WALK_LOD :
+      INTEL_LAYOUT_WALK_LAYER;
+
+   /* GEN6 supports only interleaved samples */
+   layout->interleaved_samples = true;
 }
 
 static void
-layout_init_arrangements(struct intel_layout *layout,
-                         struct intel_layout_params *params)
+layout_init_walk(struct intel_layout *layout,
+                 struct intel_layout_params *params)
 {
    if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
-      layout_init_arrangements_gen7(layout, params);
+      layout_init_walk_gen7(layout, params);
    else
-      layout_init_arrangements_gen6(layout, params);
-
-   layout->is_2d = (params->info->imageType != XGL_IMAGE_3D);
+      layout_init_walk_gen6(layout, params);
 }
 
 static void
-layout_init_format(struct intel_layout *layout,
-                   struct intel_layout_params *params)
+layout_init_size_and_format(struct intel_layout *layout,
+                            struct intel_layout_params *params)
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
-   XGL_FORMAT format = params->info->format;
+   XGL_FORMAT format = info->format;
    bool require_separate_stencil;
+
+   layout->width0 = info->extent.width;
+   layout->height0 = info->extent.height;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 317:
@@ -618,7 +657,7 @@ layout_init_format(struct intel_layout *layout,
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
          require_separate_stencil = true;
       else
-         require_separate_stencil =(layout->aux_type == INTEL_LAYOUT_AUX_HIZ);
+         require_separate_stencil = (layout->aux == INTEL_LAYOUT_AUX_HIZ);
    }
 
    if (format.numericFormat == XGL_NUM_FMT_DS) {
@@ -668,8 +707,7 @@ layout_want_mcs(struct intel_layout *layout,
     *      are not written"
     */
    if (info->samples > 1 && !layout->interleaved_samples &&
-       !(info->format.numericFormat == XGL_NUM_FMT_UINT ||
-         info->format.numericFormat == XGL_NUM_FMT_SINT)) {
+       !icd_format_is_int(info->format)) {
       want_mcs = true;
    } else if (info->samples <= 1) {
       /*
@@ -708,7 +746,6 @@ layout_want_hiz(const struct intel_layout *layout,
                 const struct intel_layout_params *params)
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
-   bool want_hiz = false;
 
    if (!(info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT))
       return false;
@@ -716,29 +753,19 @@ layout_want_hiz(const struct intel_layout *layout,
    if (!intel_format_is_depth(params->gpu, info->format))
       return false;
 
-   if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
-      want_hiz = true;
-   } else {
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 312:
-       *
-       *     "The hierarchical depth buffer does not support the LOD field, it
-       *      is assumed by hardware to be zero. A separate hierarachical
-       *      depth buffer is required for each LOD used, and the
-       *      corresponding buffer's state delivered to hardware each time a
-       *      new depth buffer state with modified LOD is delivered."
-       *
-       * But we have a stronger requirement.  Because of layer offsetting
-       * (check out the callers of intel_layout_get_slice_tile_offset()), we
-       * already have to require the texture to be non-mipmapped and
-       * non-array.
-       */
-      if (info->mipLevels == 1 && info->arraySize == 1 &&
-          info->extent.depth == 1)
-         want_hiz = true;
-   }
+   /*
+    * As can be seen in layout_calculate_hiz_size(), HiZ may not be enabled
+    * for every level.  This is generally fine except on GEN6, where HiZ and
+    * separate stencil are enabled and disabled at the same time.  When the
+    * format is PIPE_FORMAT_Z32_FLOAT_S8X24_UINT, enabling and disabling HiZ
+    * can result in incompatible formats.
+    */
+   if (intel_gpu_gen(params->gpu) == INTEL_GEN(6) &&
+       info->format.channelFormat == XGL_CH_FMT_R32G8 &&
+       info->mipLevels > 1)
+      return false;
 
-   return want_hiz;
+   return true;
 }
 
 static void
@@ -746,9 +773,9 @@ layout_init_aux(struct intel_layout *layout,
                 struct intel_layout_params *params)
 {
    if (layout_want_hiz(layout, params))
-      layout->aux_type = INTEL_LAYOUT_AUX_HIZ;
+      layout->aux = INTEL_LAYOUT_AUX_HIZ;
    else if (layout_want_mcs(layout, params))
-      layout->aux_type = INTEL_LAYOUT_AUX_MCS;
+      layout->aux = INTEL_LAYOUT_AUX_MCS;
 }
 
 static void
@@ -804,10 +831,13 @@ layout_align(struct intel_layout *layout, struct intel_layout_params *params)
 
    /*
     * Depth Buffer Clear/Resolve works in 8x4 sample blocks.  In
-    * ilo_texture_can_enable_hiz(), we always return true for the first slice.
+    * intel_texture_can_enable_hiz(), we always return true for the first slice.
     * To avoid out-of-bound access, we have to pad.
     */
-   if (layout->aux_type == INTEL_LAYOUT_AUX_HIZ) {
+   if (layout->aux == INTEL_LAYOUT_AUX_HIZ &&
+       info->mipLevels == 1 &&
+       info->arraySize == 1 &&
+       info->extent.depth == 1) {
       if (align_w < 8)
           align_w = 8;
       if (align_h < 4)
@@ -916,9 +946,9 @@ layout_calculate_bo_size(struct intel_layout *layout,
             if (layout->valid_tilings & LAYOUT_TILING_NONE) {
                layout->tiling = INTEL_TILING_NONE;
                /* MCS support for non-MSRTs is limited to tiled RTs */
-               if (layout->aux_type == INTEL_LAYOUT_AUX_MCS &&
+               if (layout->aux == INTEL_LAYOUT_AUX_MCS &&
                    params->info->samples <= 1)
-                  layout->aux_type = INTEL_LAYOUT_AUX_NONE;
+                  layout->aux = INTEL_LAYOUT_AUX_NONE;
 
                continue;
             } else {
@@ -938,10 +968,31 @@ layout_calculate_hiz_size(struct intel_layout *layout,
                           struct intel_layout_params *params)
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
-   const int hz_align_j = 8;
-   int hz_width, hz_height;
+   const unsigned hz_align_j = 8;
+   enum intel_layout_walk_type hz_walk;
+   unsigned hz_width, hz_height, lv;
+   unsigned hz_clear_w, hz_clear_h;
 
-   assert(layout->aux_type == INTEL_LAYOUT_AUX_HIZ);
+   assert(layout->aux == INTEL_LAYOUT_AUX_HIZ);
+
+   assert(layout->walk == INTEL_LAYOUT_WALK_LAYER ||
+          layout->walk == INTEL_LAYOUT_WALK_3D);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 312:
+    *
+    *     "The hierarchical depth buffer does not support the LOD field, it is
+    *      assumed by hardware to be zero. A separate hierarachical depth
+    *      buffer is required for each LOD used, and the corresponding
+    *      buffer's state delivered to hardware each time a new depth buffer
+    *      state with modified LOD is delivered."
+    *
+    * We will put all LODs in a single bo with INTEL_LAYOUT_WALK_LOD.
+    */
+   if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
+      hz_walk = layout->walk;
+   else
+      hz_walk = INTEL_LAYOUT_WALK_LOD;
 
    /*
     * See the Sandy Bridge PRM, volume 2 part 1, page 312, and the Ivy Bridge
@@ -950,38 +1001,119 @@ layout_calculate_hiz_size(struct intel_layout *layout,
     * It seems HiZ buffer is aligned to 8x8, with every two rows packed into a
     * memory row.
     */
+   switch (hz_walk) {
+   case INTEL_LAYOUT_WALK_LOD:
+      {
+         unsigned lod_tx[INTEL_LAYOUT_MAX_LEVELS];
+         unsigned lod_ty[INTEL_LAYOUT_MAX_LEVELS];
+         unsigned cur_tx, cur_ty;
 
-   hz_width = u_align(layout->levels[0].slice_width, 16);
+         /* figure out the tile offsets of LODs */
+         hz_width = 0;
+         hz_height = 0;
+         cur_tx = 0;
+         cur_ty = 0;
+         for (lv = 0; lv < info->mipLevels; lv++) {
+            unsigned tw, th;
 
-   if (info->imageType == XGL_IMAGE_3D) {
-      unsigned lv;
+            lod_tx[lv] = cur_tx;
+            lod_ty[lv] = cur_ty;
 
-      hz_height = 0;
+            tw = u_align(layout->lods[lv].slice_width, 16);
+            th = u_align(layout->lods[lv].slice_height, hz_align_j) *
+               info->arraySize / 2;
+            /* convert to Y-tiles */
+            tw = u_align(tw, 128) / 128;
+            th = u_align(th, 32) / 32;
 
-      for (lv = 0; lv < info->mipLevels; lv++) {
-         const unsigned h =
-            u_align(layout->levels[lv].slice_height, hz_align_j);
-         hz_height += h * u_minify(info->extent.depth, lv);
+            if (hz_width < cur_tx + tw)
+               hz_width = cur_tx + tw;
+            if (hz_height < cur_ty + th)
+               hz_height = cur_ty + th;
+
+            if (lv == 1)
+               cur_tx += tw;
+            else
+               cur_ty += th;
+         }
+
+         /* convert tile offsets to memory offsets */
+         for (lv = 0; lv < info->mipLevels; lv++) {
+            layout->aux_offsets[lv] =
+               (lod_ty[lv] * hz_width + lod_tx[lv]) * 4096;
+         }
+         hz_width *= 128;
+         hz_height *= 32;
       }
-
-      hz_height /= 2;
-   } else {
-      const unsigned h0 = u_align(params->h0, hz_align_j);
-      unsigned hz_qpitch = h0;
-
-      if (layout->full_layers) {
+      break;
+   case INTEL_LAYOUT_WALK_LAYER:
+      {
+         const unsigned h0 = u_align(params->h0, hz_align_j);
          const unsigned h1 = u_align(params->h1, hz_align_j);
          const unsigned htail =
             ((intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) ? 12 : 11) * hz_align_j;
+         const unsigned hz_qpitch = h0 + h1 + htail;
 
-         hz_qpitch += h1 + htail;
+         hz_width = u_align(layout->lods[0].slice_width, 16);
+
+         hz_height = hz_qpitch * info->arraySize / 2;
+         if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
+            hz_height = u_align(hz_height, 8);
       }
+      break;
+   case INTEL_LAYOUT_WALK_3D:
+      hz_width = u_align(layout->lods[0].slice_width, 16);
 
-      hz_height = hz_qpitch * info->arraySize / 2;
-
-      if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
-         hz_height = u_align(hz_height, 8);
+      hz_height = 0;
+      for (lv = 0; lv < info->mipLevels; lv++) {
+         const unsigned h = u_align(layout->lods[lv].slice_height, hz_align_j);
+         /* according to the formula, slices are packed together vertically */
+         hz_height += h * u_minify(info->extent.depth, lv);
+      }
+      hz_height /= 2;
+      break;
    }
+
+   /*
+    * In hiz_align_fb(), we will align the LODs to 8x4 sample blocks.
+    * Experiments on Haswell show that aligning the RECTLIST primitive and
+    * 3DSTATE_DRAWING_RECTANGLE alone are not enough.  The LOD sizes must be
+    * aligned.
+    */
+   hz_clear_w = 8;
+   hz_clear_h = 4;
+   switch (info->samples) {
+   case 0:
+   case 1:
+   default:
+      break;
+   case 2:
+      hz_clear_w /= 2;
+      break;
+   case 4:
+      hz_clear_w /= 2;
+      hz_clear_h /= 2;
+      break;
+   case 8:
+      hz_clear_w /= 4;
+      hz_clear_h /= 2;
+      break;
+   case 16:
+      hz_clear_w /= 4;
+      hz_clear_h /= 4;
+      break;
+   }
+
+   for (lv = 0; lv < info->mipLevels; lv++) {
+      if (u_minify(layout->width0, lv) % hz_clear_w ||
+          u_minify(layout->height0, lv) % hz_clear_h)
+         break;
+      layout->aux_enables |= 1 << lv;
+   }
+
+   /* we padded to allow this in layout_align() */
+   if (info->mipLevels == 1 && info->arraySize == 1 && info->extent.depth == 1)
+      layout->aux_enables |= 0x1;
 
    /* align to Y-tile */
    layout->aux_stride = u_align(hz_width, 128);
@@ -996,7 +1128,7 @@ layout_calculate_mcs_size(struct intel_layout *layout,
    int mcs_width, mcs_height, mcs_cpp;
    int downscale_x, downscale_y;
 
-   assert(layout->aux_type == INTEL_LAYOUT_AUX_MCS);
+   assert(layout->aux == INTEL_LAYOUT_AUX_MCS);
 
    if (info->samples > 1) {
       /*
@@ -1040,10 +1172,9 @@ layout_calculate_mcs_size(struct intel_layout *layout,
        * clear rectangle cannot be masked.  The scale-down clear rectangle
        * thus must be aligned to 2x2, and we need to pad.
        */
-      mcs_width = u_align(info->extent.width, downscale_x * 2);
-      mcs_height = u_align(info->extent.height, downscale_y * 2);
-   }
-   else {
+      mcs_width = u_align(layout->width0, downscale_x * 2);
+      mcs_height = u_align(layout->height0, downscale_y * 2);
+   } else {
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 327:
        *
@@ -1105,11 +1236,12 @@ layout_calculate_mcs_size(struct intel_layout *layout,
        * The scaled-down clear rectangle must be aligned to 4x4 instead of
        * 2x2, and we need to pad.
        */
-      mcs_width = u_align(info->extent.width, downscale_x * 4) / downscale_x;
-      mcs_height = u_align(info->extent.height, downscale_y * 4) / downscale_y;
+      mcs_width = u_align(layout->width0, downscale_x * 4) / downscale_x;
+      mcs_height = u_align(layout->height0, downscale_y * 4) / downscale_y;
       mcs_cpp = 16; /* an OWord */
    }
 
+   layout->aux_enables = (1 << info->mipLevels) - 1;
    /* align to Y-tile */
    layout->aux_stride = u_align(mcs_width * mcs_cpp, 128);
    layout->aux_height = u_align(mcs_height, 32);
@@ -1130,17 +1262,17 @@ void intel_layout_init(struct intel_layout *layout,
 
    /* note that there are dependencies between these functions */
    layout_init_aux(layout, &params);
-   layout_init_format(layout, &params);
-   layout_init_arrangements(layout, &params);
+   layout_init_size_and_format(layout, &params);
+   layout_init_walk(layout, &params);
    layout_init_tiling(layout, &params);
    layout_init_alignments(layout, &params);
-   layout_init_levels(layout, &params);
+   layout_init_lods(layout, &params);
    layout_init_layer_height(layout, &params);
 
    layout_align(layout, &params);
    layout_calculate_bo_size(layout, &params);
 
-   switch (layout->aux_type) {
+   switch (layout->aux) {
    case INTEL_LAYOUT_AUX_HIZ:
       layout_calculate_hiz_size(layout, &params);
       break;
@@ -1157,8 +1289,8 @@ void intel_layout_init(struct intel_layout *layout,
  */
 bool
 intel_layout_update_for_imported_bo(struct intel_layout *layout,
-                                    enum intel_tiling_mode tiling,
-                                    unsigned bo_stride)
+                                  enum intel_tiling_mode tiling,
+                                  unsigned bo_stride)
 {
    if (!(layout->valid_tilings & (1 << tiling)))
       return false;

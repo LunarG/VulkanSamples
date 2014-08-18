@@ -31,7 +31,28 @@
 #include "kmd/winsys.h"
 #include "intel.h"
 
-#define INTEL_IMG_MAX_LEVELS 16
+#define INTEL_LAYOUT_MAX_LEVELS 16
+
+enum intel_layout_walk_type {
+   /*
+    * Array layers of an LOD are packed together vertically.  This maps to
+    * ARYSPC_LOD0 for non-mipmapped 2D textures, and is extended to support
+    * mipmapped stencil textures and HiZ on GEN6.
+    */
+   INTEL_LAYOUT_WALK_LOD,
+
+   /*
+    * LODs of an array layer are packed together.  This maps to ARYSPC_FULL
+    * and is used for mipmapped 2D textures.
+    */
+   INTEL_LAYOUT_WALK_LAYER,
+
+   /*
+    * 3D slices of an LOD are packed together, horizontally with wrapping.
+    * Used for 3D textures.
+    */
+   INTEL_LAYOUT_WALK_3D,
+};
 
 enum intel_layout_aux_type {
    INTEL_LAYOUT_AUX_NONE,
@@ -39,11 +60,28 @@ enum intel_layout_aux_type {
    INTEL_LAYOUT_AUX_MCS,
 };
 
+struct intel_layout_lod {
+   /* physical position */
+   unsigned x;
+   unsigned y;
+
+   /*
+    * Physical size of an LOD slice.  There may be multiple slices when the
+    * walk type is not INTEL_LAYOUT_WALK_LAYER.
+    */
+   unsigned slice_width;
+   unsigned slice_height;
+};
+
 /**
  * Texture layout.
  */
 struct intel_layout {
-   enum intel_layout_aux_type aux_type;
+   enum intel_layout_aux_type aux;
+
+   /* physical width0, height0, and format */
+   unsigned width0;
+   unsigned height0;
    XGL_FORMAT format;
    bool separate_stencil;
 
@@ -55,10 +93,8 @@ struct intel_layout {
    unsigned block_height;
    unsigned block_size;
 
-   /* arrangements of samples and array layers */
+   enum intel_layout_walk_type walk;
    bool interleaved_samples;
-   bool full_layers;
-   bool is_2d;
 
    /* bitmask of valid tiling modes */
    unsigned valid_tilings;
@@ -68,20 +104,9 @@ struct intel_layout {
    unsigned align_i;
    unsigned align_j;
 
-   struct {
-      /* physical position of a mipmap */
-      unsigned x;
-      unsigned y;
+   struct intel_layout_lod lods[INTEL_LAYOUT_MAX_LEVELS];
 
-      /*
-       * Physical size of a mipmap slice.  For 3D textures, there may be
-       * multiple slices.
-       */
-      unsigned slice_width;
-      unsigned slice_height;
-   } levels[INTEL_IMG_MAX_LEVELS];
-
-   /* physical height of array layers, cube faces, or sample layers */
+   /* physical height of layers for INTEL_LAYOUT_WALK_LAYER */
    unsigned layer_height;
 
    /* distance in bytes between two pixel block rows */
@@ -89,6 +114,9 @@ struct intel_layout {
    /* number of pixel block rows */
    unsigned bo_height;
 
+   /* bitmask of levels that can use aux */
+   unsigned aux_enables;
+   unsigned aux_offsets[INTEL_LAYOUT_MAX_LEVELS];
    unsigned aux_stride;
    unsigned aux_height;
 };
@@ -103,51 +131,102 @@ intel_layout_update_for_imported_bo(struct intel_layout *layout,
                                     unsigned bo_stride);
 
 /**
- * Convert from pixel position to memory position.
+ * Convert from pixel position to 2D memory offset.
  */
 static inline void
 intel_layout_pos_to_mem(const struct intel_layout *layout,
-                        unsigned x, unsigned y,
+                        unsigned pos_x, unsigned pos_y,
                         unsigned *mem_x, unsigned *mem_y)
 {
-   assert(x % layout->block_width == 0);
-   assert(y % layout->block_height == 0);
+   assert(pos_x % layout->block_width == 0);
+   assert(pos_y % layout->block_height == 0);
 
-   *mem_x = x / layout->block_width * layout->block_size;
-   *mem_y = y / layout->block_height;
+   *mem_x = pos_x / layout->block_width * layout->block_size;
+   *mem_y = pos_y / layout->block_height;
 }
 
 /**
- * Convert from memory position to memory offset.
+ * Convert from 2D memory offset to linear offset.
  */
 static inline unsigned
-intel_layout_mem_to_off(const struct intel_layout *layout,
-                        unsigned mem_x, unsigned mem_y)
+intel_layout_mem_to_linear(const struct intel_layout *layout,
+                           unsigned mem_x, unsigned mem_y)
 {
    return mem_y * layout->bo_stride + mem_x;
+}
+
+/**
+ * Convert from 2D memory offset to raw offset.
+ */
+static inline unsigned
+intel_layout_mem_to_raw(const struct intel_layout *layout,
+                        unsigned mem_x, unsigned mem_y)
+{
+   unsigned tile_w, tile_h;
+
+   switch (layout->tiling) {
+   case INTEL_TILING_NONE:
+      if (layout->format.numericFormat == XGL_NUM_FMT_DS &&
+          layout->format.channelFormat == XGL_CH_FMT_R8) {
+         /* W-tile */
+         tile_w = 64;
+         tile_h = 64;
+      } else {
+         tile_w = 1;
+         tile_h = 1;
+      }
+      break;
+   case INTEL_TILING_X:
+      tile_w = 512;
+      tile_h = 8;
+      break;
+   case INTEL_TILING_Y:
+      tile_w = 128;
+      tile_h = 32;
+      break;
+   default:
+      assert(!"unknown tiling");
+      tile_w = 1;
+      tile_h = 1;
+      break;
+   }
+
+   assert(mem_x % tile_w == 0);
+   assert(mem_y % tile_h == 0);
+
+   return mem_y * layout->bo_stride + mem_x * tile_h;
 }
 
 /**
  * Return the stride, in bytes, between slices within a level.
  */
 static inline unsigned
-intel_layout_get_slice_stride(const struct intel_layout *layout,
-                              unsigned level)
+intel_layout_get_slice_stride(const struct intel_layout *layout, unsigned level)
 {
-   unsigned y;
+   unsigned h;
 
-   if (layout->is_2d) {
-      y = layout->layer_height;
-   } else if (level == 0) {
-      y = layout->levels[0].slice_height;
-   } else {
-      assert(!"no single slice stride for 3D texture with level > 0");
-      y = 0;
+   switch (layout->walk) {
+   case INTEL_LAYOUT_WALK_LOD:
+      h = layout->lods[level].slice_height;
+      break;
+   case INTEL_LAYOUT_WALK_LAYER:
+      h = layout->layer_height;
+      break;
+   case INTEL_LAYOUT_WALK_3D:
+      if (level == 0) {
+         h = layout->lods[0].slice_height;
+         break;
+      }
+      /* fall through */
+   default:
+      assert(!"no single stride to walk across slices");
+      h = 0;
+      break;
    }
 
-   assert(y % layout->block_height == 0);
+   assert(h % layout->block_height == 0);
 
-   return (y / layout->block_height) * layout->bo_stride;
+   return (h / layout->block_height) * layout->bo_stride;
 }
 
 /**
@@ -156,8 +235,8 @@ intel_layout_get_slice_stride(const struct intel_layout *layout,
 static inline unsigned
 intel_layout_get_slice_size(const struct intel_layout *layout, unsigned level)
 {
-   const unsigned w = layout->levels[level].slice_width;
-   const unsigned h = layout->levels[level].slice_height;
+   const unsigned w = layout->lods[level].slice_width;
+   const unsigned h = layout->lods[level].slice_height;
 
    assert(w % layout->block_width == 0);
    assert(h % layout->block_height == 0);
@@ -174,26 +253,39 @@ intel_layout_get_slice_pos(const struct intel_layout *layout,
                            unsigned level, unsigned slice,
                            unsigned *x, unsigned *y)
 {
-   if (layout->is_2d) {
-      *x = layout->levels[level].x;
-      *y = layout->levels[level].y + layout->layer_height * slice;
-   } else {
-      const unsigned sx = slice & ((1 << level) - 1);
-      const unsigned sy = slice >> level;
+   switch (layout->walk) {
+   case INTEL_LAYOUT_WALK_LOD:
+      *x = layout->lods[level].x;
+      *y = layout->lods[level].y + layout->lods[level].slice_height * slice;
+      break;
+   case INTEL_LAYOUT_WALK_LAYER:
+      *x = layout->lods[level].x;
+      *y = layout->lods[level].y + layout->layer_height * slice;
+      break;
+   case INTEL_LAYOUT_WALK_3D:
+      {
+         /* slices are packed horizontally with wrapping */
+         const unsigned sx = slice & ((1 << level) - 1);
+         const unsigned sy = slice >> level;
 
-      *x = layout->levels[level].x + layout->levels[level].slice_width * sx;
-      *y = layout->levels[level].y + layout->levels[level].slice_height * sy;
+         *x = layout->lods[level].x + layout->lods[level].slice_width * sx;
+         *y = layout->lods[level].y + layout->lods[level].slice_height * sy;
 
-      /* should not overlap with the next level */
-      if (level + 1 < ARRAY_SIZE(layout->levels) &&
-          layout->levels[level + 1].y) {
-         assert(*y + layout->levels[level].slice_height <=
-               layout->levels[level + 1].y);
+         /* should not overlap with the next level */
+         if (level + 1 < ARRAY_SIZE(layout->lods) &&
+             layout->lods[level + 1].y) {
+            assert(*y + layout->lods[level].slice_height <=
+                  layout->lods[level + 1].y);
+         }
+         break;
       }
+   default:
+      assert(!"unknown layout walk type");
+      break;
    }
 
    /* should not exceed the bo size */
-   assert(*y + layout->levels[level].slice_height <=
+   assert(*y + layout->lods[level].slice_height <=
          layout->bo_height * layout->block_height);
 }
 
