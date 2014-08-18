@@ -30,6 +30,7 @@ SET(SOURCES
     obj.c
     query.c
     queue.c
+    sampler.c
     view.c
     kmd/winsys_drm.c
     )

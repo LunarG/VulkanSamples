@@ -33,6 +33,7 @@
 #include "obj.h"
 #include "query.h"
 #include "queue.h"
+#include "sampler.h"
 #include "view.h"
 #include "dispatch_tables.h"
 
@@ -188,14 +189,6 @@ static XGL_RESULT XGLAPI intelCreatePipelineDelta(
     XGL_PIPELINE                                p1,
     XGL_PIPELINE                                p2,
     XGL_PIPELINE_DELTA*                         delta)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateSampler(
-    XGL_DEVICE                                  device,
-    const XGL_SAMPLER_CREATE_INFO*              pCreateInfo,
-    XGL_SAMPLER*                                pSampler)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
