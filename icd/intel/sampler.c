@@ -172,9 +172,9 @@ emit_border_color_gen6(const struct intel_gpu *gpu,
 }
 
 static void
-emit_sampler(const struct intel_gpu *gpu,
-             const XGL_SAMPLER_CREATE_INFO *info,
-             uint32_t cmd[15])
+sampler_init(struct intel_sampler *sampler,
+             const struct intel_gpu *gpu,
+             const XGL_SAMPLER_CREATE_INFO *info)
 {
    int mip_filter, min_filter, mag_filter, max_aniso;
    int lod_bias, max_lod, min_lod;
@@ -183,6 +183,7 @@ emit_sampler(const struct intel_gpu *gpu,
    float border_color[4];
 
    INTEL_GPU_ASSERT(gpu, 6, 7.5);
+   STATIC_ASSERT(ARRAY_SIZE(sampler->cmd) >= 15);
 
    mip_filter = translate_tex_mipmap_mode(info->mipMode);
    min_filter = translate_tex_filter(info->minFilter);
@@ -298,11 +299,11 @@ emit_sampler(const struct intel_gpu *gpu,
              wrap_t << 3 |
              wrap_r;
 
-      cmd[0] = dw0;
-      cmd[1] = dw1;
-      cmd[2] = dw3;
+      sampler->cmd[0] = dw0;
+      sampler->cmd[1] = dw1;
+      sampler->cmd[2] = dw3;
 
-      memcpy(&cmd[3], &border_color, sizeof(border_color));
+      memcpy(&sampler->cmd[3], &border_color, sizeof(border_color));
    }
    else {
       dw0 = 1 << 28 |
@@ -342,11 +343,11 @@ emit_sampler(const struct intel_gpu *gpu,
                  GEN6_SAMPLER_DW3_R_MAG_ROUND);
       }
 
-      cmd[0] = dw0;
-      cmd[1] = dw1;
-      cmd[2] = dw3;
+      sampler->cmd[0] = dw0;
+      sampler->cmd[1] = dw1;
+      sampler->cmd[2] = dw3;
 
-      emit_border_color_gen6(gpu, border_color, &cmd[3]);
+      emit_border_color_gen6(gpu, border_color, &sampler->cmd[3]);
    }
 }
 
@@ -370,7 +371,7 @@ XGL_RESULT intel_sampler_create(struct intel_dev *dev,
 
     sampler->obj.destroy = sampler_destroy;
 
-    emit_sampler(dev->gpu, info, sampler->cmd);
+    sampler_init(sampler, dev->gpu, info);
 
     *sampler_ret = sampler;
 
