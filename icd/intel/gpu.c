@@ -382,3 +382,11 @@ XGL_RESULT XGLAPI intelGetExtensionSupport(
     return (intel_gpu_has_extension(gpu, (const char *) pExtName)) ?
         XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;
 }
+
+XGL_RESULT XGLAPI intelGetMultiGpuCompatibility(
+    XGL_PHYSICAL_GPU                            gpu0,
+    XGL_PHYSICAL_GPU                            gpu1,
+    XGL_GPU_COMPATIBILITY_INFO*                 pInfo)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}

@@ -142,6 +142,15 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
+XGL_RESULT XGLAPI intelOpenPeerImage(
+    XGL_DEVICE                                  device,
+    const XGL_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
+    XGL_IMAGE*                                  pImage,
+    XGL_GPU_MEMORY*                             pMem)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
 XGL_RESULT XGLAPI intelCreateImage(
     XGL_DEVICE                                  device,
     const XGL_IMAGE_CREATE_INFO*                pCreateInfo,

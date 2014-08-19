@@ -119,3 +119,42 @@ XGL_RESULT XGLAPI intelUnmapMemory(
 
     return XGL_SUCCESS;
 }
+
+XGL_RESULT XGLAPI intelPinSystemMemory(
+    XGL_DEVICE                                  device,
+    const XGL_VOID*                             pSysMem,
+    XGL_SIZE                                    memSize,
+    XGL_GPU_MEMORY*                             pMem)
+{
+    /* add DRM_I915_GEM_USERPTR to wisys first */
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelRemapVirtualMemoryPages(
+    XGL_DEVICE                                  device,
+    XGL_UINT                                    rangeCount,
+    const XGL_VIRTUAL_MEMORY_REMAP_RANGE*       pRanges,
+    XGL_UINT                                    preWaitSemaphoreCount,
+    const XGL_QUEUE_SEMAPHORE*                  pPreWaitSemaphores,
+    XGL_UINT                                    postSignalSemaphoreCount,
+    const XGL_QUEUE_SEMAPHORE*                  pPostSignalSemaphores)
+{
+    /* no kernel support */
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelOpenSharedMemory(
+    XGL_DEVICE                                  device,
+    const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
+    XGL_GPU_MEMORY*                             pMem)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelOpenPeerMemory(
+    XGL_DEVICE                                  device,
+    const XGL_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
+    XGL_GPU_MEMORY*                             pMem)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}

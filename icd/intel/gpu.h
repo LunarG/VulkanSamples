@@ -107,4 +107,9 @@ XGL_RESULT XGLAPI intelGetExtensionSupport(
     XGL_PHYSICAL_GPU                            gpu,
     const XGL_CHAR*                             pExtName);
 
+XGL_RESULT XGLAPI intelGetMultiGpuCompatibility(
+    XGL_PHYSICAL_GPU                            gpu0,
+    XGL_PHYSICAL_GPU                            gpu1,
+    XGL_GPU_COMPATIBILITY_INFO*                 pInfo);
+
 #endif /* GPU_H */

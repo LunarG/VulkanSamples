@@ -76,3 +76,53 @@ XGL_RESULT XGLAPI intelQueueWaitIdle(
 
     return intel_queue_wait(queue, -1);
 }
+
+XGL_RESULT XGLAPI intelQueueSubmit(
+    XGL_QUEUE                                   queue,
+    XGL_UINT                                    cmdBufferCount,
+    const XGL_CMD_BUFFER*                       pCmdBuffers,
+    XGL_UINT                                    memRefCount,
+    const XGL_MEMORY_REF*                       pMemRefs,
+    XGL_FENCE                                   fence)
+{
+    /* need XGL_CMD_BUFFER first */
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelOpenSharedQueueSemaphore(
+    XGL_DEVICE                                  device,
+    const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
+    XGL_QUEUE_SEMAPHORE*                        pSemaphore)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelCreateQueueSemaphore(
+    XGL_DEVICE                                  device,
+    const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
+    XGL_QUEUE_SEMAPHORE*                        pSemaphore)
+{
+    /*
+     * We want to find an unused semaphore register and initialize it.  Signal
+     * will increment the register.  Wait will atomically decrement it and
+     * block if the value is zero, or a large constant N if we do not want to
+     * go negative.
+     *
+     * XXX However, MI_SEMAPHORE_MBOX does not seem to have the flexibility.
+     */
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelSignalQueueSemaphore(
+    XGL_QUEUE                                   queue,
+    XGL_QUEUE_SEMAPHORE                         semaphore)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+XGL_RESULT XGLAPI intelWaitQueueSemaphore(
+    XGL_QUEUE                                   queue,
+    XGL_QUEUE_SEMAPHORE                         semaphore)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
