@@ -28,6 +28,41 @@
 #include "intel.h"
 #include "obj.h"
 
+struct intel_cmd {
+    struct intel_obj obj;
+
+    struct intel_dev *dev;
+
+    XGL_FLAGS flags;
+
+    XGL_SIZE bo_size;
+    struct intel_bo *bo;
+    uint32_t *ptr;
+
+    XGL_UINT used, size;
+    bool grow_failed;
+};
+
+static inline struct intel_cmd *intel_cmd(XGL_CMD_BUFFER cmd)
+{
+    return (struct intel_cmd *) cmd;
+}
+
+static inline struct intel_cmd *intel_cmd_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_cmd *) obj;
+}
+
+XGL_RESULT intel_cmd_create(struct intel_dev *dev,
+                            const XGL_CMD_BUFFER_CREATE_INFO *info,
+                            struct intel_cmd **cmd_ret);
+void intel_cmd_destroy(struct intel_cmd *cmd);
+
+XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags);
+XGL_RESULT intel_cmd_end(struct intel_cmd *cmd);
+
+void intel_cmd_grow(struct intel_cmd *cmd);
+
 XGL_RESULT XGLAPI intelCreateCommandBuffer(
     XGL_DEVICE                                  device,
     const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,

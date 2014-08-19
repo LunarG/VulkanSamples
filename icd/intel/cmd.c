@@ -22,33 +22,202 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "genhw/genhw.h"
+#include "kmd/winsys.h"
+#include "dev.h"
+#include "obj.h"
 #include "cmd.h"
+
+/* reserved space used for intel_cmd_end() */
+static const XGL_UINT intel_cmd_reserved = 2;
+
+static XGL_RESULT cmd_alloc_and_map(struct intel_cmd *cmd, XGL_SIZE bo_size)
+{
+    struct intel_winsys *winsys = cmd->dev->winsys;
+    struct intel_bo *bo;
+    void *ptr;
+
+    bo = intel_winsys_alloc_buffer(winsys,
+            "batch buffer", bo_size, INTEL_DOMAIN_CPU);
+    if (!bo)
+        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+
+    ptr = intel_bo_map(bo, true);
+    if (!bo) {
+        intel_bo_unreference(bo);
+        return XGL_ERROR_MEMORY_MAP_FAILED;
+    }
+
+    cmd->bo_size = bo_size;
+    cmd->bo = bo;
+    cmd->ptr = ptr;
+    cmd->size = bo_size / sizeof(uint32_t) - intel_cmd_reserved;
+
+    return XGL_SUCCESS;
+}
+
+static void cmd_unmap(struct intel_cmd *cmd)
+{
+    intel_bo_unmap(cmd->bo);
+    cmd->ptr = NULL;
+}
+
+static void cmd_free(struct intel_cmd *cmd)
+{
+    intel_bo_unreference(cmd->bo);
+    cmd->bo = NULL;
+}
+
+static void cmd_reset(struct intel_cmd *cmd)
+{
+    if (cmd->ptr)
+        cmd_unmap(cmd);
+    if (cmd->bo)
+        cmd_free(cmd);
+
+    cmd->used = 0;
+    cmd->size = 0;
+    cmd->grow_failed = false;
+}
+
+static void cmd_destroy(struct intel_obj *obj)
+{
+    struct intel_cmd *cmd = intel_cmd_from_obj(obj);
+
+    intel_cmd_destroy(cmd);
+}
+
+XGL_RESULT intel_cmd_create(struct intel_dev *dev,
+                            const XGL_CMD_BUFFER_CREATE_INFO *info,
+                            struct intel_cmd **cmd_ret)
+{
+    struct intel_cmd *cmd;
+
+    cmd = (struct intel_cmd *) intel_base_create(dev, sizeof(*cmd),
+            dev->base.dbg, XGL_DBG_OBJECT_CMD_BUFFER, info, 0);
+    if (!cmd)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    cmd->obj.destroy = cmd_destroy;
+
+    cmd->dev = dev;
+
+    *cmd_ret = cmd;
+
+    return XGL_SUCCESS;
+}
+
+void intel_cmd_destroy(struct intel_cmd *cmd)
+{
+    cmd_reset(cmd);
+    intel_base_destroy(&cmd->obj.base);
+}
+
+XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
+{
+    XGL_SIZE bo_size = cmd->bo_size;
+
+    cmd_reset(cmd);
+
+    if (cmd->flags != flags || !bo_size) {
+        cmd->flags = flags;
+
+        bo_size = cmd->dev->gpu->batch_buffer_size;
+        if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
+            bo_size /= 2;
+
+        bo_size &= ~(sizeof(uint32_t) - 1);
+    }
+
+    return cmd_alloc_and_map(cmd, bo_size);
+}
+
+XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
+{
+    struct intel_winsys *winsys = cmd->dev->winsys;
+
+    /* reclaim the reserved space */
+    cmd->size += intel_cmd_reserved;
+
+    cmd->ptr[cmd->used++] = GEN_MI_CMD(MI_BATCH_BUFFER_END);
+
+    /* pad to even dwords */
+    if (cmd->used & 1)
+        cmd->ptr[cmd->used++] = GEN_MI_CMD(MI_NOOP);
+
+    assert(cmd->used <= cmd->size);
+
+    cmd_unmap(cmd);
+
+    if (cmd->grow_failed)
+        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+    else if (intel_winsys_can_submit_bo(winsys, &cmd->bo, 1))
+        return XGL_SUCCESS;
+    else
+        return XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;
+}
+
+void intel_cmd_grow(struct intel_cmd *cmd)
+{
+    const XGL_SIZE bo_size = cmd->bo_size << 1;
+    struct intel_bo *old_bo = cmd->bo;
+    uint32_t *old_ptr = cmd->ptr;
+
+    if (bo_size >= cmd->bo_size &&
+        cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
+        memcpy(cmd->ptr, old_ptr, cmd->used * sizeof(uint32_t));
+        /* XXX winsys does not let us copy relocs */
+        cmd->grow_failed = true;
+
+        intel_bo_unmap(old_bo);
+        intel_bo_unreference(old_bo);
+    } else {
+        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                "failed to grow command buffer of size %u", cmd->bo_size);
+
+        /* wrap it and fail silently */
+        cmd->used = 0;
+        cmd->grow_failed = true;
+    }
+}
 
 XGL_RESULT XGLAPI intelCreateCommandBuffer(
     XGL_DEVICE                                  device,
     const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
     XGL_CMD_BUFFER*                             pCmdBuffer)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_cmd_create(dev, pCreateInfo,
+            (struct intel_cmd **) pCmdBuffer);
 }
 
 XGL_RESULT XGLAPI intelBeginCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_FLAGS                                   flags)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    return intel_cmd_begin(cmd, flags);
 }
 
 XGL_RESULT XGLAPI intelEndCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    return intel_cmd_end(cmd);
 }
 
 XGL_RESULT XGLAPI intelResetCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd_reset(cmd);
+
+    return XGL_SUCCESS;
 }
 
 XGL_VOID XGLAPI intelCmdBindPipeline(
