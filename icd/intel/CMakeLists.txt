@@ -35,6 +35,7 @@ SET(SOURCES
     query.c
     queue.c
     sampler.c
+    shader.c
     state.c
     view.c
     kmd/winsys_drm.c

@@ -37,17 +37,11 @@
 #include "query.h"
 #include "queue.h"
 #include "sampler.h"
+#include "shader.h"
 #include "state.h"
 #include "view.h"
 #include "dispatch.h"
 
-static XGL_RESULT XGLAPI intelCreateShader(
-    XGL_DEVICE                                  device,
-    const XGL_SHADER_CREATE_INFO*               pCreateInfo,
-    XGL_SHADER*                                 pShader)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
 
 static const struct icd_dispatch_table intel_normal_dispatch_table = {
     .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
