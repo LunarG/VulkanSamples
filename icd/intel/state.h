@@ -28,6 +28,8 @@
 #include "intel.h"
 #include "obj.h"
 
+/* Should we add intel_state back, as the base class for dynamic states? */
+
 struct intel_viewport_state {
     struct intel_obj obj;
 

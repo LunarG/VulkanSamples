@@ -87,7 +87,7 @@ void intel_dev_remove_msg_filter(struct intel_dev *dev,
 void intel_dev_log(struct intel_dev *dev,
                    XGL_DBG_MSG_TYPE msg_type,
                    XGL_VALIDATION_LEVEL validation_level,
-                   XGL_BASE_OBJECT src_object,
+                   struct intel_base *src_object,
                    XGL_SIZE location,
                    XGL_INT msg_code,
                    const char *format, ...);

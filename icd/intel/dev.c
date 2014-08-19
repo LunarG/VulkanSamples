@@ -261,7 +261,7 @@ static bool dev_filter_msg(struct intel_dev *dev,
 void intel_dev_log(struct intel_dev *dev,
                    XGL_DBG_MSG_TYPE msg_type,
                    XGL_VALIDATION_LEVEL validation_level,
-                   XGL_BASE_OBJECT src_object,
+                   struct intel_base *src_object,
                    XGL_SIZE location,
                    XGL_INT msg_code,
                    const char *format, ...)
@@ -272,7 +272,7 @@ void intel_dev_log(struct intel_dev *dev,
         return;
 
     va_start(ap, format);
-    icd_vlog(msg_type, validation_level, src_object,
+    icd_vlog(msg_type, validation_level, (XGL_BASE_OBJECT) src_object,
             location, msg_code, format, ap);
     va_end(ap);
 }

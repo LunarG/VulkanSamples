@@ -32,14 +32,14 @@ struct intel_img;
 struct intel_mem;
 
 struct intel_null_view {
-    /* this is not an object */
+    /* this is not an intel_obj */
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
 };
 
 struct intel_mem_view {
-    /* this is not an object */
+    /* this is not an intel_obj */
 
     struct intel_mem *mem;
 
