@@ -108,4 +108,9 @@ XGL_RESULT XGLAPI intelBindObjectMemory(
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                offset);
 
+XGL_RESULT XGLAPI intelDbgSetObjectTag(
+    XGL_BASE_OBJECT                             object,
+    XGL_SIZE                                    tagSize,
+    const XGL_VOID*                             pTag);
+
 #endif /* OBJ_H */

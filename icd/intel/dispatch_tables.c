@@ -522,38 +522,6 @@ static XGL_VOID XGLAPI intelCmdSaveAtomicCounters(
 {
 }
 
-static XGL_RESULT XGLAPI intelDbgSetValidationLevel(
-    XGL_DEVICE                                  device,
-    XGL_VALIDATION_LEVEL                        validationLevel)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelDbgSetMessageFilter(
-    XGL_DEVICE                                  device,
-    XGL_INT                                     msgCode,
-    XGL_DBG_MSG_FILTER                          filter)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelDbgSetObjectTag(
-    XGL_BASE_OBJECT                             object,
-    XGL_SIZE                                    tagSize,
-    const XGL_VOID*                             pTag)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelDbgSetDeviceOption(
-    XGL_DEVICE                                  device,
-    XGL_DBG_DEVICE_OPTION                       dbgOption,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
 static XGL_VOID XGLAPI intelCmdDbgMarkerBegin(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_CHAR*                             pMarker)

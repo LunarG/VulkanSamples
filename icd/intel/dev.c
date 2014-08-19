@@ -105,6 +105,8 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return ret;
     }
 
+    dev->validation_level = XGL_VALIDATION_LEVEL_0;
+
     *dev_ret = dev;
 
     return XGL_SUCCESS;
@@ -352,6 +354,65 @@ XGL_RESULT XGLAPI intelDeviceWaitIdle(
             if (r != XGL_SUCCESS)
                 ret = r;
         }
+    }
+
+    return ret;
+}
+
+XGL_RESULT XGLAPI intelDbgSetValidationLevel(
+    XGL_DEVICE                                  device,
+    XGL_VALIDATION_LEVEL                        validationLevel)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    dev->validation_level = validationLevel;
+
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelDbgSetMessageFilter(
+    XGL_DEVICE                                  device,
+    XGL_INT                                     msgCode,
+    XGL_DBG_MSG_FILTER                          filter)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    if (!dev->base.dbg)
+        return XGL_SUCCESS;
+
+    if (filter == XGL_DBG_MSG_FILTER_NONE) {
+        intel_dev_remove_msg_filter(dev, msgCode);
+        return XGL_SUCCESS;
+    }
+
+    return intel_dev_add_msg_filter(dev, msgCode, filter);
+}
+
+XGL_RESULT XGLAPI intelDbgSetDeviceOption(
+    XGL_DEVICE                                  device,
+    XGL_DBG_DEVICE_OPTION                       dbgOption,
+    XGL_SIZE                                    dataSize,
+    const XGL_VOID*                             pData)
+{
+    struct intel_dev *dev = intel_dev(device);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    if (dataSize == 0)
+        return XGL_ERROR_INVALID_VALUE;
+
+    switch (dbgOption) {
+    case XGL_DBG_OPTION_DISABLE_PIPELINE_LOADS:
+        dev->disable_pipeline_loads = *((const bool *) pData);
+        break;
+    case XGL_DBG_OPTION_FORCE_OBJECT_MEMORY_REQS:
+        dev->force_object_memory_reqs = *((const bool *) pData);
+        break;
+    case XGL_DBG_OPTION_FORCE_LARGE_IMAGE_ALIGNMENT:
+        dev->force_large_image_alignment = *((const bool *) pData);
+        break;
+    default:
+        ret = XGL_ERROR_INVALID_VALUE;
+        break;
     }
 
     return ret;

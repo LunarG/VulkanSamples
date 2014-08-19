@@ -340,3 +340,30 @@ XGL_RESULT XGLAPI intelBindObjectMemory(
 
     return XGL_SUCCESS;
 }
+
+XGL_RESULT XGLAPI intelDbgSetObjectTag(
+    XGL_BASE_OBJECT                             object,
+    XGL_SIZE                                    tagSize,
+    const XGL_VOID*                             pTag)
+{
+    struct intel_base *base = intel_base(object);
+    struct intel_base_dbg *dbg = base->dbg;
+    void *tag;
+
+    if (!dbg)
+        return XGL_SUCCESS;
+
+    tag = icd_alloc(tagSize, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    if (!tag)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    memcpy(tag, pTag, tagSize);
+
+    if (dbg->tag)
+        icd_free(dbg->tag);
+
+    dbg->tag = tag;
+    dbg->tag_size = tagSize;
+
+    return XGL_SUCCESS;
+}

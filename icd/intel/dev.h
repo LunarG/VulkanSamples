@@ -52,6 +52,11 @@ struct intel_dev {
     struct intel_gpu *gpu;
     struct intel_winsys *winsys;
     struct intel_queue *queues[INTEL_GPU_ENGINE_COUNT];
+
+    XGL_VALIDATION_LEVEL validation_level;
+    bool disable_pipeline_loads;
+    bool force_object_memory_reqs;
+    bool force_large_image_alignment;
 };
 
 static inline struct intel_dev *intel_dev(XGL_DEVICE dev)
@@ -114,5 +119,20 @@ XGL_RESULT XGLAPI intelGetDeviceQueue(
 
 XGL_RESULT XGLAPI intelDeviceWaitIdle(
     XGL_DEVICE                                  device);
+
+XGL_RESULT XGLAPI intelDbgSetValidationLevel(
+    XGL_DEVICE                                  device,
+    XGL_VALIDATION_LEVEL                        validationLevel);
+
+XGL_RESULT XGLAPI intelDbgSetMessageFilter(
+    XGL_DEVICE                                  device,
+    XGL_INT                                     msgCode,
+    XGL_DBG_MSG_FILTER                          filter);
+
+XGL_RESULT XGLAPI intelDbgSetDeviceOption(
+    XGL_DEVICE                                  device,
+    XGL_DBG_DEVICE_OPTION                       dbgOption,
+    XGL_SIZE                                    dataSize,
+    const XGL_VOID*                             pData);
 
 #endif /* DEV_H */
