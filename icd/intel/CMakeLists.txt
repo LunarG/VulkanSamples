@@ -22,7 +22,7 @@ SET(SOURCES
     dev.c
     dispatch.c
     dset.c
-    init_driver.c
+    intel.c
     event.c
     fence.c
     format.c
