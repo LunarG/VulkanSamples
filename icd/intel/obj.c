@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "dispatch_tables.h"
+#include "dispatch.h"
 #include "gpu.h"
 #include "dev.h"
 #include "obj.h"

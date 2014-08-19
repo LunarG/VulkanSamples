@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "genhw/genhw.h"
-#include "dispatch_tables.h"
+#include "dispatch.h"
 #include "gpu.h"
 
 static const char *gpu_get_name(const struct intel_gpu *gpu)

@@ -38,7 +38,7 @@
 #include "sampler.h"
 #include "state.h"
 #include "view.h"
-#include "dispatch_tables.h"
+#include "dispatch.h"
 
 static XGL_RESULT XGLAPI intelCreateShader(
     XGL_DEVICE                                  device,

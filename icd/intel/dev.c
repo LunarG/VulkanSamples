@@ -24,7 +24,7 @@
 
 #include <stdarg.h>
 #include "kmd/winsys.h"
-#include "dispatch_tables.h"
+#include "dispatch.h"
 #include "gpu.h"
 #include "queue.h"
 #include "dev.h"

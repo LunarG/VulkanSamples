@@ -22,12 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef DISPATCH_TABLES_H
-#define DISPATCH_TABLES_H
+#ifndef DISPATCH_H
+#define DISPATCH_H
 
 #include "icd.h"
 
 extern const struct icd_dispatch_table intel_normal_dispatch_table;
 extern const struct icd_dispatch_table intel_debug_dispatch_table;
 
-#endif /* DISPATCH_TABLES_H */
+#endif /* DISPATCH_H */
