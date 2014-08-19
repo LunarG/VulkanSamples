@@ -23,6 +23,7 @@
  */
 
 #include "kmd/winsys.h"
+#include "cmd.h"
 #include "dev.h"
 #include "queue.h"
 
@@ -51,9 +52,9 @@ void intel_queue_destroy(struct intel_queue *queue)
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 {
-    struct intel_bo *bo = queue->last_submitted_bo;
+    struct intel_cmd *cmd = queue->last_submitted_cmd;
 
-    return (!bo || intel_bo_wait(bo, timeout) == 0) ?
+    return (!cmd || intel_bo_wait(cmd->bo, timeout) == 0) ?
         XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 

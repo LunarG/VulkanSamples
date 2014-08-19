@@ -28,13 +28,13 @@
 #include "intel.h"
 #include "obj.h"
 
-struct intel_bo;
+struct intel_cmd;
 struct intel_dev;
 
 struct intel_fence {
     struct intel_obj obj;
 
-    struct intel_bo *submitted_bo;
+    struct intel_cmd *cmd;
 };
 
 static inline struct intel_fence *intel_fence(XGL_FENCE fence)

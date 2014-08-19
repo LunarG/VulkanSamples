@@ -23,6 +23,7 @@
  */
 
 #include "kmd/winsys.h"
+#include "cmd.h"
 #include "dev.h"
 #include "fence.h"
 
@@ -53,29 +54,25 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 
 void intel_fence_destroy(struct intel_fence *fence)
 {
-    if (fence->submitted_bo)
-        intel_bo_unreference(fence->submitted_bo);
-
     intel_base_destroy(&fence->obj.base);
 }
 
 XGL_RESULT intel_fence_get_status(struct intel_fence *fence)
 {
-    if (!fence->submitted_bo)
+    if (!fence->cmd)
         return XGL_ERROR_UNAVAILABLE;
 
-    return (intel_bo_is_busy(fence->submitted_bo)) ?
-        XGL_NOT_READY : XGL_SUCCESS;
+    return (intel_bo_is_busy(fence->cmd->bo)) ? XGL_NOT_READY : XGL_SUCCESS;
 }
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
     int err;
 
-    if (!fence->submitted_bo)
+    if (!fence->cmd)
         return XGL_ERROR_UNAVAILABLE;
 
-    err = intel_bo_wait(fence->submitted_bo, timeout_ns);
+    err = intel_bo_wait(fence->cmd->bo, timeout_ns);
 
     return (err) ? XGL_NOT_READY : XGL_SUCCESS;
 }

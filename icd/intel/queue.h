@@ -28,14 +28,15 @@
 #include "intel.h"
 #include "obj.h"
 
-struct intel_bo;
+struct intel_cmd;
 struct intel_dev;
 
 struct intel_queue {
     struct intel_base base;
 
     struct intel_dev *dev;
-    struct intel_bo *last_submitted_bo;
+
+    struct intel_cmd *last_submitted_cmd;
 };
 
 static inline struct intel_queue *intel_queue(XGL_QUEUE queue)
