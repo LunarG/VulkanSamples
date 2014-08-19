@@ -100,7 +100,7 @@ static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
     memset(gpu, 0, sizeof(*gpu));
 
     /* debug layer is always enabled for intel_gpu */
-    gpu->dispatch = &intel_debug_dispatch_table;
+    gpu->dispatch = intel_dispatch_get(true);
 
     gpu->devid = devid;
 

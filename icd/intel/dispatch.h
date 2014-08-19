@@ -25,9 +25,8 @@
 #ifndef DISPATCH_H
 #define DISPATCH_H
 
-#include "icd.h"
+#include "intel.h"
 
-extern const struct icd_dispatch_table intel_normal_dispatch_table;
-extern const struct icd_dispatch_table intel_debug_dispatch_table;
+const struct icd_dispatch_table *intel_dispatch_get(bool debug);
 
 #endif /* DISPATCH_H */

@@ -90,7 +90,7 @@ static XGL_RESULT XGLAPI intelCreatePipelineDelta(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-const struct icd_dispatch_table intel_normal_dispatch_table = {
+static const struct icd_dispatch_table intel_normal_dispatch_table = {
     .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
     .GetGpuInfo = intelGetGpuInfo,
     .CreateDevice = intelCreateDevice,
@@ -207,7 +207,7 @@ const struct icd_dispatch_table intel_normal_dispatch_table = {
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,
 };
 
-const struct icd_dispatch_table intel_debug_dispatch_table = {
+static const struct icd_dispatch_table intel_debug_dispatch_table = {
     .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
     .GetGpuInfo = intelGetGpuInfo,
     .CreateDevice = intelCreateDevice,
@@ -323,3 +323,9 @@ const struct icd_dispatch_table intel_debug_dispatch_table = {
     .CmdDbgMarkerBegin = intelCmdDbgMarkerBegin,
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,
 };
+
+const struct icd_dispatch_table *intel_dispatch_get(bool debug)
+{
+    return (debug) ? &intel_debug_dispatch_table :
+        &intel_normal_dispatch_table;
+}

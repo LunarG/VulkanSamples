@@ -35,8 +35,8 @@
  */
 bool intel_base_is_valid(const struct intel_base *base)
 {
-    if (base->dispatch != &intel_normal_dispatch_table &&
-        base->dispatch != &intel_debug_dispatch_table)
+    if (base->dispatch != intel_dispatch_get(true) &&
+        base->dispatch != intel_dispatch_get(false))
         return false;
 
     return !intel_gpu_is_valid((const struct intel_gpu *) base);
@@ -288,17 +288,15 @@ struct intel_base *intel_base_create(struct intel_dev *dev,
 
     memset(base, 0, obj_size);
 
+    base->dispatch = intel_dispatch_get(debug);
     if (debug) {
-        base->dispatch = &intel_debug_dispatch_table;
         base->dbg = intel_base_dbg_create(dev, type, create_info, dbg_size);
         if (!base->dbg) {
             icd_free(base);
             return NULL;
         }
     }
-    else {
-        base->dispatch = &intel_normal_dispatch_table;
-    }
+
     base->get_info = intel_base_get_info;
 
     return base;
