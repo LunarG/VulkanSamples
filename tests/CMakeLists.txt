@@ -6,7 +6,10 @@ SET(COMMON_CPP
    xglgpu.cpp
    )
 
-include_directories("${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include")
+include_directories(
+    "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
+    "${PROJECT_SOURCE_DIR}/icd/common"
+    )
 
 
 add_executable(xglinfo xglinfo.c ${COMMON})

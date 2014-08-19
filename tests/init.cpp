@@ -61,8 +61,8 @@
 #include <xgl.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
-// #include "gtest/gtest.h"
 #include "xglgpu.h"
+#include "shader_il.h"
 
 class XglTest : public ::testing::Test {
 public:
@@ -654,6 +654,46 @@ void XglTest::CreateImageTest()
 
 TEST_F(XglTest, CreateImage) {
     CreateImageTest();
+}
+
+TEST_F(XglTest, CreateShader) {
+    void *code;
+    uint32_t codeSize;
+    struct bil_header *pBIL;
+    XGL_RESULT err;
+
+    codeSize = sizeof(struct bil_header) + 100;
+    code = malloc(codeSize);
+    ASSERT_TRUE(NULL != code) << "malloc failed!";
+
+    memset(code, 0, codeSize);
+
+    // Indicate that this is BIL data.
+    pBIL = (struct bil_header *) code;
+    pBIL->bil_magic = BILMagicNumber;
+    pBIL->bil_version = BILVersion;
+
+//    typedef struct _XGL_SHADER_CREATE_INFO
+//    {
+//        XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO
+//        const XGL_VOID*                         pNext;              // Pointer to next structure
+//        XGL_SIZE                                codeSize;           // Specified in bytes
+//        const XGL_VOID*                         pCode;
+//        XGL_FLAGS                               flags;              // Reserved
+//    } XGL_SHADER_CREATE_INFO;
+
+    XGL_SHADER_CREATE_INFO createInfo;
+    XGL_SHADER shader;
+
+    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    createInfo.pNext = NULL;
+    createInfo.pCode = code;
+    createInfo.codeSize = codeSize;
+    createInfo.flags = 0;
+    err = xglCreateShader(gpu->device(), &createInfo, &shader);
+    ASSERT_XGL_SUCCESS(err);
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(shader));
 }
 
 int main(int argc, char **argv) {
