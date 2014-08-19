@@ -29,19 +29,15 @@
 #include "queue.h"
 
 XGL_RESULT intel_queue_create(struct intel_dev *dev,
-                              XGL_QUEUE_TYPE type,
+                              enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret)
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
 
-    switch (type) {
-    case XGL_QUEUE_TYPE_GRAPHICS:
-    case XGL_QUEUE_TYPE_COMPUTE:
+    switch (engine) {
+    case INTEL_GPU_ENGINE_3D:
         ring = INTEL_RING_RENDER;
-        break;
-    case XGL_QUEUE_TYPE_DMA:
-        ring = INTEL_RING_BLT;
         break;
     default:
         return XGL_ERROR_INVALID_VALUE;

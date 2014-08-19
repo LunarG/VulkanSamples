@@ -27,6 +27,7 @@
 
 #include "kmd/winsys.h"
 #include "intel.h"
+#include "gpu.h"
 #include "obj.h"
 
 struct intel_cmd;
@@ -47,7 +48,7 @@ static inline struct intel_queue *intel_queue(XGL_QUEUE queue)
 }
 
 XGL_RESULT intel_queue_create(struct intel_dev *dev,
-                              XGL_QUEUE_TYPE type,
+                              enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret);
 void intel_queue_destroy(struct intel_queue *queue);
 
