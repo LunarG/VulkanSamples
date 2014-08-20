@@ -77,7 +77,7 @@ static void cmd_reset(struct intel_cmd *cmd)
 
     cmd->used = 0;
     cmd->size = 0;
-    cmd->grow_failed = false;
+    cmd->result = XGL_SUCCESS;
 }
 
 static void cmd_destroy(struct intel_obj *obj)
@@ -149,8 +149,8 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
 
     cmd_unmap(cmd);
 
-    if (cmd->grow_failed)
-        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+    if (cmd->result != XGL_SUCCESS)
+        return cmd->result;
     else if (intel_winsys_can_submit_bo(winsys, &cmd->bo, 1))
         return XGL_SUCCESS;
     else
@@ -167,7 +167,7 @@ void intel_cmd_grow(struct intel_cmd *cmd)
         cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
         memcpy(cmd->ptr, old_ptr, cmd->used * sizeof(uint32_t));
         /* XXX winsys does not let us copy relocs */
-        cmd->grow_failed = true;
+        cmd->result = XGL_ERROR_UNKNOWN;
 
         intel_bo_unmap(old_bo);
         intel_bo_unreference(old_bo);
@@ -178,7 +178,7 @@ void intel_cmd_grow(struct intel_cmd *cmd)
 
         /* wrap it and fail silently */
         cmd->used = 0;
-        cmd->grow_failed = true;
+        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
     }
 }
 

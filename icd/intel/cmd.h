@@ -40,7 +40,7 @@ struct intel_cmd {
     uint32_t *ptr;
 
     XGL_UINT used, size;
-    bool grow_failed;
+    XGL_RESULT result;
 };
 
 static inline struct intel_cmd *intel_cmd(XGL_CMD_BUFFER cmd)
