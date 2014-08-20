@@ -32,6 +32,11 @@
 #define CMD_ASSERT(cmd, min_gen, max_gen) \
     INTEL_GPU_ASSERT((cmd)->dev->gpu, (min_gen), (max_gen))
 
+static inline int cmd_gen(const struct intel_cmd *cmd)
+{
+    return intel_gpu_gen(cmd->dev->gpu);
+}
+
 void cmd_grow(struct intel_cmd *cmd);
 
 /**

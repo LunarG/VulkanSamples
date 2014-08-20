@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "genhw/genhw.h"
 #include "dset.h"
 #include "mem.h"
 #include "state.h"
@@ -144,6 +145,59 @@ XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
     }
 }
 
+static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
+                                      struct intel_mem *mem,
+                                      XGL_GPU_SIZE offset,
+                                      XGL_INDEX_TYPE type,
+                                      bool enable_cut_index)
+{
+    const uint8_t cmd_len = 3;
+    uint32_t dw0, end_offset;
+    unsigned offset_align;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw0 = GEN_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
+
+    /* the bit is moved to 3DSTATE_VF */
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
+        assert(!enable_cut_index);
+    if (enable_cut_index)
+        dw0 |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
+
+    switch (type) {
+    case XGL_INDEX_8:
+        dw0 |= GEN6_IB_DW0_FORMAT_BYTE;
+        offset_align = 1;
+        break;
+    case XGL_INDEX_16:
+        dw0 |= GEN6_IB_DW0_FORMAT_WORD;
+        offset_align = 2;
+        break;
+    case XGL_INDEX_32:
+        dw0 |= GEN6_IB_DW0_FORMAT_DWORD;
+        offset_align = 4;
+        break;
+    default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
+        return;
+        break;
+    }
+
+    if (offset % offset_align) {
+        cmd->result = XGL_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    /* aligned and inclusive */
+    end_offset = mem->size - (mem->size % offset_align) - 1;
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write_r(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
+    cmd_write_r(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
+}
+
 XGL_VOID XGLAPI intelCmdBindIndexData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem_,
@@ -153,9 +207,13 @@ XGL_VOID XGLAPI intelCmdBindIndexData(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_mem *mem = intel_mem(mem_);
 
-    cmd->bind.index.mem = mem;
-    cmd->bind.index.offset = offset;
-    cmd->bind.index.type = indexType;
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+        gen6_3DSTATE_INDEX_BUFFER(cmd, mem, offset, indexType, false);
+    } else {
+        cmd->bind.index.mem = mem;
+        cmd->bind.index.offset = offset;
+        cmd->bind.index.type = indexType;
+    }
 }
 
 XGL_VOID XGLAPI intelCmdBindAttachments(
