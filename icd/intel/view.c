@@ -31,7 +31,8 @@
 #include "mem.h"
 #include "view.h"
 
-static void emit_null_view_gen7(const struct intel_gpu *gpu, uint32_t dw[8])
+static void surface_state_null_gen7(const struct intel_gpu *gpu,
+                                    uint32_t dw[8])
 {
    INTEL_GPU_ASSERT(gpu, 7, 7.5);
 
@@ -79,12 +80,12 @@ static void emit_null_view_gen7(const struct intel_gpu *gpu, uint32_t dw[8])
    dw[7] = 0;
 }
 
-static void emit_mem_view_gen7(const struct intel_gpu *gpu,
-                               unsigned offset, unsigned size,
-                               unsigned struct_size,
-                               XGL_FORMAT elem_format,
-                               bool is_rt, bool render_cache_rw,
-                               uint32_t dw[8])
+static void surface_state_buf_gen7(const struct intel_gpu *gpu,
+                                   unsigned offset, unsigned size,
+                                   unsigned struct_size,
+                                   XGL_FORMAT elem_format,
+                                   bool is_rt, bool render_cache_rw,
+                                   uint32_t dw[8])
 {
    const bool typed = !icd_format_is_undef(elem_format);
    const bool structured = (!typed && struct_size > 1);
@@ -226,16 +227,16 @@ static int winsys_tiling_to_surface_tiling(enum intel_tiling_mode tiling)
     }
 }
 
-static void emit_img_view_gen7(const struct intel_gpu *gpu,
-                               const struct intel_img *img,
-                               XGL_IMAGE_VIEW_TYPE type,
-                               XGL_FORMAT format,
-                               unsigned first_level,
-                               unsigned num_levels,
-                               unsigned first_layer,
-                               unsigned num_layers,
-                               bool is_rt,
-                               uint32_t dw[8])
+static void surface_state_tex_gen7(const struct intel_gpu *gpu,
+                                   const struct intel_img *img,
+                                   XGL_IMAGE_VIEW_TYPE type,
+                                   XGL_FORMAT format,
+                                   unsigned first_level,
+                                   unsigned num_levels,
+                                   unsigned first_layer,
+                                   unsigned num_layers,
+                                   bool is_rt,
+                                   uint32_t dw[8])
 {
    int surface_type, surface_format;
    int width, height, depth, pitch, lod;
@@ -426,7 +427,8 @@ static void emit_img_view_gen7(const struct intel_gpu *gpu,
    }
 }
 
-static void emit_null_view_gen6(const struct intel_gpu *gpu, uint32_t dw[6])
+static void surface_state_null_gen6(const struct intel_gpu *gpu,
+                                    uint32_t dw[6])
 {
    INTEL_GPU_ASSERT(gpu, 6, 6);
 
@@ -463,12 +465,12 @@ static void emit_null_view_gen6(const struct intel_gpu *gpu, uint32_t dw[6])
    dw[5] = 0;
 }
 
-static void emit_mem_view_gen6(const struct intel_gpu *gpu,
-                               unsigned offset, unsigned size,
-                               unsigned struct_size,
-                               XGL_FORMAT elem_format,
-                               bool is_rt, bool render_cache_rw,
-                               uint32_t dw[6])
+static void surface_state_buf_gen6(const struct intel_gpu *gpu,
+                                   unsigned offset, unsigned size,
+                                   unsigned struct_size,
+                                   XGL_FORMAT elem_format,
+                                   bool is_rt, bool render_cache_rw,
+                                   uint32_t dw[6])
 {
    const int elem_size = icd_format_get_size(elem_format);
    int width, height, depth, pitch;
@@ -548,16 +550,16 @@ static void emit_mem_view_gen6(const struct intel_gpu *gpu,
    dw[5] = 0;
 }
 
-static void emit_img_view_gen6(const struct intel_gpu *gpu,
-                               const struct intel_img *img,
-                               XGL_IMAGE_VIEW_TYPE type,
-                               XGL_FORMAT format,
-                               unsigned first_level,
-                               unsigned num_levels,
-                               unsigned first_layer,
-                               unsigned num_layers,
-                               bool is_rt,
-                               uint32_t dw[6])
+static void surface_state_tex_gen6(const struct intel_gpu *gpu,
+                                   const struct intel_img *img,
+                                   XGL_IMAGE_VIEW_TYPE type,
+                                   XGL_FORMAT format,
+                                   unsigned first_level,
+                                   unsigned num_levels,
+                                   unsigned first_layer,
+                                   unsigned num_layers,
+                                   bool is_rt,
+                                   uint32_t dw[6])
 {
    int surface_type, surface_format;
    int width, height, depth, pitch, lod;
@@ -868,16 +870,17 @@ ds_init_info(const struct intel_gpu *gpu,
    info->num_layers = num_layers;
 }
 
-static void emit_ds_view(const struct intel_gpu *gpu,
+static void ds_view_init(struct intel_ds_view *view,
+                         const struct intel_gpu *gpu,
                          const struct intel_img *img,
                          XGL_FORMAT format, unsigned level,
-                         unsigned first_layer, unsigned num_layers,
-                         uint32_t dw[10])
+                         unsigned first_layer, unsigned num_layers)
 {
    const int max_2d_size = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16384 : 8192;
    const int max_array_size = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 2048 : 512;
    struct ds_surface_info info;
    uint32_t dw1, dw2, dw3, dw4, dw5, dw6;
+   uint32_t *dw;
 
    INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
@@ -977,6 +980,9 @@ static void emit_ds_view(const struct intel_gpu *gpu,
       dw6 = 0;
    }
 
+   STATIC_ASSERT(ARRAY_SIZE(view->cmd) >= 10);
+   dw = view->cmd;
+
    dw[0] = dw1;
    dw[1] = dw2;
    dw[2] = dw3;
@@ -1015,9 +1021,9 @@ void intel_null_view_init(struct intel_null_view *view,
                           struct intel_dev *dev)
 {
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7))
-        emit_null_view_gen7(dev->gpu, view->cmd);
+        surface_state_null_gen7(dev->gpu, view->cmd);
     else
-        emit_null_view_gen6(dev->gpu, view->cmd);
+        surface_state_null_gen6(dev->gpu, view->cmd);
 }
 
 void intel_mem_view_init(struct intel_mem_view *view,
@@ -1041,11 +1047,13 @@ void intel_mem_view_init(struct intel_mem_view *view,
     view->mem = intel_mem(info->mem);
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
-        emit_mem_view_gen7(dev->gpu, info->offset, info->range, info->stride,
-                info->format, will_write, will_write, view->cmd);
+        surface_state_buf_gen7(dev->gpu, info->offset,
+                info->range, info->stride, info->format,
+                will_write, will_write, view->cmd);
     } else {
-        emit_mem_view_gen6(dev->gpu, info->offset, info->range, info->stride,
-                info->format, will_write, will_write, view->cmd);
+        surface_state_buf_gen6(dev->gpu, info->offset,
+                info->range, info->stride, info->format,
+                will_write, will_write, view->cmd);
     }
 }
 
@@ -1075,13 +1083,13 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
     view->min_lod = info->minLod;
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
-        emit_img_view_gen7(dev->gpu, img, info->viewType, info->format,
+        surface_state_tex_gen7(dev->gpu, img, info->viewType, info->format,
                 info->subresourceRange.baseMipLevel,
                 info->subresourceRange.mipLevels,
                 info->subresourceRange.baseArraySlice,
                 info->subresourceRange.arraySize, false, view->cmd);
     } else {
-        emit_img_view_gen6(dev->gpu, info->image, info->viewType, info->format,
+        surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
                 info->subresourceRange.baseMipLevel,
                 info->subresourceRange.mipLevels,
                 info->subresourceRange.baseArraySlice,
@@ -1122,12 +1130,14 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
     view->img = img;
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
-        emit_img_view_gen7(dev->gpu, img, img_type_to_view_type(img->type),
+        surface_state_tex_gen7(dev->gpu, img,
+                img_type_to_view_type(img->type),
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
                 true, view->cmd);
     } else {
-        emit_img_view_gen6(dev->gpu, img, img_type_to_view_type(img->type),
+        surface_state_tex_gen6(dev->gpu, img,
+                img_type_to_view_type(img->type),
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
                 true, view->cmd);
@@ -1166,8 +1176,8 @@ XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
 
     view->img = img;
 
-    emit_ds_view(dev->gpu, img, img->layout.format, info->mipLevel,
-            info->baseArraySlice, info->arraySize, view->cmd);
+    ds_view_init(view, dev->gpu, img, img->layout.format, info->mipLevel,
+            info->baseArraySlice, info->arraySize);
 
     *view_ret = view;
 

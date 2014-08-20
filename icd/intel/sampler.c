@@ -109,9 +109,9 @@ static void translate_border_color(XGL_BORDER_COLOR_TYPE type, float rgba[4])
 }
 
 static void
-emit_border_color_gen6(const struct intel_gpu *gpu,
-                       const float color[4],
-                       uint32_t dw[12])
+sampler_border_color_state_gen6(const struct intel_gpu *gpu,
+                                const float color[4],
+                                uint32_t dw[12])
 {
    float rgba[4] = { color[0], color[1], color[2], color[3] };
 
@@ -347,7 +347,7 @@ sampler_init(struct intel_sampler *sampler,
       sampler->cmd[1] = dw1;
       sampler->cmd[2] = dw3;
 
-      emit_border_color_gen6(gpu, border_color, &sampler->cmd[3]);
+      sampler_border_color_state_gen6(gpu, border_color, &sampler->cmd[3]);
    }
 }
 
