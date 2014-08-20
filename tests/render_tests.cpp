@@ -62,6 +62,7 @@
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
+#include "shader_il.h"
 
 class XglRenderTest : public ::testing::Test {
 public:
@@ -72,6 +73,8 @@ public:
                          XGL_IMAGE_VIEW* pView);
     void DestroyImageView(XGL_IMAGE_VIEW imageView);
     XGL_DEVICE device() {return m_device->device();}
+    void CreateShader(XGL_SHADER *pshader);
+    void InitPipeline();
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -80,6 +83,7 @@ protected:
     XGL_IMAGE m_image;
     XGL_GPU_MEMORY m_image_mem;
     XglDevice *m_device;
+    XGL_CMD_BUFFER m_cmdBuffer;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -99,6 +103,13 @@ protected:
 
         m_device = new XglDevice(0, objs[0]);
         m_device->get_device_queue();
+
+        XGL_CMD_BUFFER_CREATE_INFO info = {};
+
+        info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+        info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+        err = xglCreateCommandBuffer(device(), &info, &m_cmdBuffer);
+        ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
     }
 
     virtual void TearDown() {
@@ -240,51 +251,131 @@ void XglRenderTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
     ASSERT_XGL_SUCCESS(xglDestroyObject(imageView));
 }
 
-TEST_F(XglRenderTest, DrawTriangleTest) {
-    XGL_FORMAT fmt;
-    XGL_IMAGE_VIEW imageView;
+void XglRenderTest::CreateShader(XGL_SHADER *pshader)
+{
+    void *code;
+    uint32_t codeSize;
+    struct bil_header *pBIL;
     XGL_RESULT err;
 
-    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    fmt.numericFormat = XGL_NUM_FMT_UINT;
+    codeSize = sizeof(struct bil_header) + 100;
+    code = malloc(codeSize);
+    ASSERT_TRUE(NULL != code) << "malloc failed!";
 
-    CreateImage(512, 256);
+    memset(code, 0, codeSize);
 
-    //    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
-    //    {
-    //        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-    //        const XGL_VOID*                         pNext;                  // Pointer to next structure
-    //        XGL_IMAGE                               image;
-    //        XGL_IMAGE_VIEW_TYPE                     viewType;
-    //        XGL_FORMAT                              format;
-    //        XGL_CHANNEL_MAPPING                     channels;
-    //        XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
-    //        XGL_FLOAT                               minLod;
-    //    } XGL_IMAGE_VIEW_CREATE_INFO;
-    XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
-    viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.viewType = XGL_IMAGE_VIEW_2D;
-    viewInfo.format = fmt;
+    // Indicate that this is BIL data.
+    pBIL = (struct bil_header *) code;
+    pBIL->bil_magic = BILMagicNumber;
+    pBIL->bil_version = BILVersion;
 
-    viewInfo.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    viewInfo.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    viewInfo.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    viewInfo.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    XGL_SHADER_CREATE_INFO createInfo;
+    XGL_SHADER shader;
 
-    viewInfo.subresourceRange.baseArraySlice = 0;
-    viewInfo.subresourceRange.arraySize = 1;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.mipLevels = 1;
-    viewInfo.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    createInfo.pNext = NULL;
+    createInfo.pCode = code;
+    createInfo.codeSize = codeSize;
+    createInfo.flags = 0;
+    err = xglCreateShader(device(), &createInfo, &shader);
+    ASSERT_XGL_SUCCESS(err);
 
-    //    XGL_RESULT XGLAPI xglCreateImageView(
-    //        XGL_DEVICE                                  device,
-    //        const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-    //        XGL_IMAGE_VIEW*                             pView);
+    ASSERT_XGL_SUCCESS(xglDestroyObject(shader));
+    *pshader = shader;
+}
 
-    CreateImageView(&viewInfo, &imageView);
+TEST_F(XglRenderTest, DrawTriangleTest) {
+    XGL_RESULT err;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    XGL_SHADER vs, ps;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
+    XGL_PIPELINE pipeline;
 
-    DestroyImageView(imageView);
+    /*
+     * Define descriptor slots for vertex shader.
+     */
+    XGL_DESCRIPTOR_SLOT_INFO ds_vs = {
+        XGL_SLOT_SHADER_RESOURCE,    // XGL_DESCRIPTOR_SET_SLOT_TYPE
+        1                            // shaderEntityIndex
+    };
+
+    CreateShader(&vs);
+
+    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vs_stage.pNext = XGL_NULL_HANDLE;
+    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
+    vs_stage.shader.shader = vs;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
+    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = &ds_vs;
+    vs_stage.shader.linkConstBufferCount = 0;
+    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    CreateShader(&ps);
+
+    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ps_stage.pNext = &vs_stage;
+    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
+    ps_stage.shader.shader = ps;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
+    // TODO: Do we need a descriptor set mapping for fragment?
+    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = &ds_vs;
+    ps_stage.shader.linkConstBufferCount = 0;
+    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
+        &ps_stage,                                         // pNext
+        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
+        XGL_FALSE,                                         // disableVertexReuse
+        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
+        XGL_FALSE,                                         // primitiveRestartEnable
+        0                                                  // primitiveRestartIndex
+    };
+
+    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+        &ia_state,
+        XGL_FALSE,                                          // depthClipEnable
+        XGL_FALSE,                                          // rasterizerDiscardEnable
+        1.0                                                 // pointSize
+    };
+
+    XGL_PIPELINE_CB_STATE cb_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+        &rs_state,
+        XGL_FALSE,                                          // alphaToCoverageEnable
+        XGL_FALSE,                                          // dualSourceBlendEnable
+        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
+        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
+            {
+                XGL_FALSE,                                  // blendEnable
+                {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UINT},    // XGL_FORMAT
+                0xF                                         // channelWriteMask
+            }
+        }
+    };
+
+    // TODO: Should take depth buffer format from queried formats
+    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+        &cb_state,
+        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
+    };
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = &db_state;
+    info.flags = 0;
+    err = xglCreateGraphicsPipeline(device(), &info, &pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
 }
 
 int main(int argc, char **argv) {
