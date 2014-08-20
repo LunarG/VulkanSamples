@@ -15,9 +15,7 @@ public:
     XglGpu(XGL_UINT id, XGL_PHYSICAL_GPU gpuObj);
     void init_gpu();
     void init_extensions();
-    void init_device();
     void init_formats();
-    XGL_DEVICE device() {return this->m_devObj;}
 
     // Do we want to hide/abstract this data?
 // private:
@@ -36,9 +34,7 @@ public:
     XGL_UINT extension_count;
     const XGL_CHAR **extensions;
 
-    // Device info
-    // struct app_dev dev;
-    XGL_DEVICE m_devObj;
+    XGL_QUEUE m_queue;
 
     XGL_UINT heap_count;
     XGL_MEMORY_HEAP_PROPERTIES *heap_props;

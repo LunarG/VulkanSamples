@@ -51,7 +51,7 @@
 //  DEALINGS IN THE SOFTWARE.
 
 
-// Verify XGL driver initialization
+// Basic rendering tests
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -63,7 +63,7 @@
 
 #include "xgldevice.h"
 
-class XglImageTest : public ::testing::Test {
+class XglRenderTest : public ::testing::Test {
 public:
     void CreateImage(XGL_UINT w, XGL_UINT h);
     void DestroyImage();
@@ -74,12 +74,12 @@ public:
     XGL_DEVICE device() {return m_device->device();}
 
 protected:
-    XglDevice *m_device;
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
     XGL_UINT gpu_count;
     XGL_IMAGE m_image;
     XGL_GPU_MEMORY m_image_mem;
+    XglDevice *m_device;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -97,16 +97,17 @@ protected:
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(1, this->gpu_count) << "No GPU available";
 
-        this->m_device = new XglDevice(0, objs[0]);
+        m_device = new XglDevice(0, objs[0]);
+        m_device->get_device_queue();
     }
 
     virtual void TearDown() {
-        xglInitAndEnumerateGpus(&this->app_info, NULL, 0, &gpu_count, NULL);
+        xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
     }
 };
 
 
-void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
+void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h)
 {
     XGL_RESULT err;
     XGL_IMAGE image;
@@ -138,7 +139,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
      * fixed structure.
      */
 
-    err = xglGetFormatInfo(this->device(), fmt,
+    err = xglGetFormatInfo(this->m_device->device(), fmt,
                            XGL_INFO_TYPE_FORMAT_PROPERTIES,
                            &size, &image_fmt);
     ASSERT_XGL_SUCCESS(err);
@@ -217,7 +218,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglImageTest::DestroyImage()
+void XglRenderTest::DestroyImage()
 {
     // All done with image memory, clean up
     ASSERT_XGL_SUCCESS(xglBindObjectMemory(m_image, XGL_NULL_HANDLE, 0));
@@ -227,19 +228,19 @@ void XglImageTest::DestroyImage()
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_image));
 }
 
-void XglImageTest::CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
+void XglRenderTest::CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
                                    XGL_IMAGE_VIEW *pView)
 {
     pCreateInfo->image = this->m_image;
     ASSERT_XGL_SUCCESS(xglCreateImageView(device(), pCreateInfo, pView));
 }
 
-void XglImageTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
+void XglRenderTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
 {
     ASSERT_XGL_SUCCESS(xglDestroyObject(imageView));
 }
 
-TEST_F(XglImageTest, CreateImageViewTest) {
+TEST_F(XglRenderTest, DrawTriangleTest) {
     XGL_FORMAT fmt;
     XGL_IMAGE_VIEW imageView;
     XGL_RESULT err;

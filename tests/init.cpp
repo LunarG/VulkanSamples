@@ -61,18 +61,20 @@
 #include <xgl.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
-#include "xglgpu.h"
+#include "xgldevice.h"
 #include "shader_il.h"
 
 class XglTest : public ::testing::Test {
 public:
-    XglGpu *gpu;
     void CreateImageTest();
+
+    XGL_DEVICE device() {return m_device->device();}
 
 protected:
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
     XGL_UINT gpu_count;
+    XglDevice *m_device;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -90,7 +92,7 @@ protected:
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(1, this->gpu_count) << "No GPU available";
 
-        this->gpu = new XglGpu(0, objs[0]);
+        this->m_device = new XglDevice(0, objs[0]);
     }
 
     virtual void TearDown() {
@@ -142,7 +144,7 @@ TEST_F(XglTest, AllocMemory) {
     // TODO: Try variety of memory priorities
     alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
-    err = xglAllocMemory(this->gpu->device(), &alloc_info, &gpu_mem);
+    err = xglAllocMemory(device(), &alloc_info, &gpu_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglMapMemory(gpu_mem, 0, (XGL_VOID **) &pData);
@@ -174,7 +176,7 @@ TEST_F(XglTest, Event) {
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-    err = xglCreateEvent(this->gpu->device(), &event_info, &event);
+    err = xglCreateEvent(device(), &event_info, &event);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetObjectInfo(event, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
@@ -198,7 +200,7 @@ TEST_F(XglTest, Event) {
     memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(this->gpu->device(), &mem_info, &event_mem);
+    err = xglAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglBindObjectMemory(event, event_mem, 0);
@@ -240,7 +242,7 @@ TEST_F(XglTest, Fence) {
     //                XGL_FLAGS                               flags;      // Reserved
     fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-    err = xglCreateFence(this->gpu->device(), &fence_info, &fence);
+    err = xglCreateFence(device(), &fence_info, &fence);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetFenceStatus(fence);
@@ -255,7 +257,7 @@ TEST_F(XglTest, Fence) {
     //            const XGL_FENCE*                            pFences,
     //            XGL_BOOL                                    waitAll,
     //            XGL_UINT64                                  timeout);
-    err = xglWaitForFences(this->gpu->device(), 1, &fence, XGL_TRUE, 0);
+    err = xglWaitForFences(device(), 1, &fence, XGL_TRUE, 0);
     EXPECT_EQ(XGL_ERROR_UNAVAILABLE, err);
 
     // TODO: Attached to command buffer and test GetFenceStatus
@@ -306,7 +308,7 @@ TEST_F(XglTest, Query) {
     //            const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
     //            XGL_QUERY_POOL*                             pQueryPool);
 
-    err = xglCreateQueryPool(this->gpu->device(), &query_info, &query_pool);
+    err = xglCreateQueryPool(device(), &query_info, &query_pool);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetObjectInfo(query_pool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
@@ -333,7 +335,7 @@ TEST_F(XglTest, Query) {
     // TODO: are the flags right?
     // TODO: Should this be pinned? Or maybe a separate test with pinned.
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(this->gpu->device(), &mem_info, &query_mem);
+    err = xglAllocMemory(device(), &mem_info, &query_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglBindObjectMemory(query_pool, query_mem, 0);
@@ -368,14 +370,14 @@ TEST_F(XglTest, Query) {
     ASSERT_XGL_SUCCESS(err);
 }
 
-void getQueue(XglGpu *gpu, XGL_QUEUE_TYPE qtype, const char *qname)
+void getQueue(XglDevice *device, XGL_QUEUE_TYPE qtype, const char *qname)
 {
     int que_idx;
     XGL_RESULT err;
     XGL_QUEUE queue;
 
-    for (que_idx = 0; que_idx < gpu->queue_props->queueCount; que_idx++) {
-        err = xglGetDeviceQueue(gpu->device(), qtype, que_idx, &queue);
+    for (que_idx = 0; que_idx < device->queue_props->queueCount; que_idx++) {
+        err = xglGetDeviceQueue(device->device(), qtype, que_idx, &queue);
         ASSERT_EQ(XGL_SUCCESS, err) << "xglGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << xgl_result_string(err);
     }
 }
@@ -384,7 +386,7 @@ TEST_F(XglTest, Queue)
 {
     XGL_UINT que_idx;
 
-    ASSERT_NE(0, gpu->queue_props->queueCount) << "No heaps available for GPU #" << gpu->id << ": " << gpu->props.gpuName;
+    ASSERT_NE(0, m_device->queue_props->queueCount) << "No heaps available for GPU #" << m_device->id << ": " << m_device->props.gpuName;
 
 //            XGL_RESULT XGLAPI xglGetDeviceQueue(
 //                XGL_DEVICE                                  device,
@@ -400,7 +402,7 @@ TEST_F(XglTest, Queue)
      * starting at zero.
      */
 
-    for (que_idx = 0; que_idx < gpu->queue_props->queueCount; que_idx++) {
+    for (que_idx = 0; que_idx < m_device->queue_props->queueCount; que_idx++) {
 
 //                typedef enum _XGL_QUEUE_FLAGS
 //                {
@@ -418,16 +420,16 @@ TEST_F(XglTest, Queue)
 //                    XGL_MAX_ENUM(_XGL_QUEUE_TYPE)
 //                } XGL_QUEUE_TYPE;
 
-        if (gpu->queue_props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
-            getQueue(gpu, XGL_QUEUE_TYPE_GRAPHICS, "Graphics");
+        if (m_device->queue_props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+            getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "Graphics");
         }
 
-        if (gpu->queue_props->queueFlags & XGL_QUEUE_COMPUTE_BIT) {
-            getQueue(gpu, XGL_QUEUE_TYPE_GRAPHICS, "Compute");
+        if (m_device->queue_props->queueFlags & XGL_QUEUE_COMPUTE_BIT) {
+            getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "Compute");
         }
 
-        if (gpu->queue_props->queueFlags & XGL_QUEUE_DMA_BIT) {
-            getQueue(gpu, XGL_QUEUE_TYPE_GRAPHICS, "DMA");
+        if (m_device->queue_props->queueFlags & XGL_QUEUE_DMA_BIT) {
+            getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "DMA");
         }
 
         // TODO: What do we do about EXTENDED_BIT?
@@ -476,7 +478,7 @@ void XglTest::CreateImageTest()
      * fixed structure.
      */
 
-    err = xglGetFormatInfo(this->gpu->device(), fmt,
+    err = xglGetFormatInfo(device(), fmt,
                            XGL_INFO_TYPE_FORMAT_PROPERTIES,
                            &size, &image_fmt);
     ASSERT_XGL_SUCCESS(err);
@@ -523,7 +525,7 @@ void XglTest::CreateImageTest()
 //        XGL_DEVICE                                  device,
 //        const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
 //        XGL_IMAGE*                                  pImage);
-    err = xglCreateImage(this->gpu->device(), &imageCreateInfo, &image);
+    err = xglCreateImage(device(), &imageCreateInfo, &image);
     ASSERT_XGL_SUCCESS(err);
 
     // Verify image resources
@@ -599,7 +601,7 @@ void XglTest::CreateImageTest()
     memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(this->gpu->device(), &mem_info, &image_mem);
+    err = xglAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglBindObjectMemory(image, image_mem, 0);
@@ -639,7 +641,7 @@ void XglTest::CreateImageTest()
 //        const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
 //        XGL_IMAGE_VIEW*                             pView);
 
-    err = xglCreateImageView(gpu->device(), &viewInfo, &view);
+    err = xglCreateImageView(device(), &viewInfo, &view);
     ASSERT_XGL_SUCCESS(err) << "xglCreateImageView failed";
 
     // TODO: Test image memory.
@@ -690,7 +692,7 @@ TEST_F(XglTest, CreateShader) {
     createInfo.pCode = code;
     createInfo.codeSize = codeSize;
     createInfo.flags = 0;
-    err = xglCreateShader(gpu->device(), &createInfo, &shader);
+    err = xglCreateShader(device(), &createInfo, &shader);
     ASSERT_XGL_SUCCESS(err);
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(shader));
