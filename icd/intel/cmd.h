@@ -61,8 +61,6 @@ void intel_cmd_destroy(struct intel_cmd *cmd);
 XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags);
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd);
 
-void intel_cmd_grow(struct intel_cmd *cmd);
-
 XGL_RESULT XGLAPI intelCreateCommandBuffer(
     XGL_DEVICE                                  device,
     const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,

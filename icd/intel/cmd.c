@@ -26,7 +26,7 @@
 #include "kmd/winsys.h"
 #include "dev.h"
 #include "obj.h"
-#include "cmd.h"
+#include "cmd_priv.h"
 
 /* reserved space used for intel_cmd_end() */
 static const XGL_UINT intel_cmd_reserved = 2;
@@ -85,6 +85,31 @@ static void cmd_destroy(struct intel_obj *obj)
     struct intel_cmd *cmd = intel_cmd_from_obj(obj);
 
     intel_cmd_destroy(cmd);
+}
+
+void cmd_grow(struct intel_cmd *cmd)
+{
+    const XGL_SIZE bo_size = cmd->bo_size << 1;
+    struct intel_bo *old_bo = cmd->bo;
+    uint32_t *old_ptr = cmd->ptr;
+
+    if (bo_size >= cmd->bo_size &&
+        cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
+        memcpy(cmd->ptr, old_ptr, cmd->used * sizeof(uint32_t));
+        /* XXX winsys does not let us copy relocs */
+        cmd->result = XGL_ERROR_UNKNOWN;
+
+        intel_bo_unmap(old_bo);
+        intel_bo_unreference(old_bo);
+    } else {
+        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                "failed to grow command buffer of size %u", cmd->bo_size);
+
+        /* wrap it and fail silently */
+        cmd->used = 0;
+        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
+    }
 }
 
 XGL_RESULT intel_cmd_create(struct intel_dev *dev,
@@ -155,31 +180,6 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         return XGL_SUCCESS;
     else
         return XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;
-}
-
-void intel_cmd_grow(struct intel_cmd *cmd)
-{
-    const XGL_SIZE bo_size = cmd->bo_size << 1;
-    struct intel_bo *old_bo = cmd->bo;
-    uint32_t *old_ptr = cmd->ptr;
-
-    if (bo_size >= cmd->bo_size &&
-        cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
-        memcpy(cmd->ptr, old_ptr, cmd->used * sizeof(uint32_t));
-        /* XXX winsys does not let us copy relocs */
-        cmd->result = XGL_ERROR_UNKNOWN;
-
-        intel_bo_unmap(old_bo);
-        intel_bo_unreference(old_bo);
-    } else {
-        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                "failed to grow command buffer of size %u", cmd->bo_size);
-
-        /* wrap it and fail silently */
-        cmd->used = 0;
-        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
-    }
 }
 
 XGL_RESULT XGLAPI intelCreateCommandBuffer(
