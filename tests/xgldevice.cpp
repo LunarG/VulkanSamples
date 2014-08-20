@@ -75,10 +75,11 @@ void XglDevice::init_formats()
     }
 }
 
-void XglDevice::get_device_queue()
+
+void XglDevice::get_device_queue(XGL_QUEUE_TYPE queue_type, XGL_UINT queue_idx)
 {
     XGL_RESULT err;
 
-    err = xglGetDeviceQueue(this->device(), XGL_QUEUE_TYPE_GRAPHICS, 0, &this->m_queue);
+    err = xglGetDeviceQueue(this->device(), queue_type, queue_idx, &this->m_queue);
     ASSERT_XGL_SUCCESS(err) << "xglGetDeviceQueue failed";
 }

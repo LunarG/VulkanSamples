@@ -11,7 +11,9 @@ public:
     XGL_DEVICE device() {return this->m_xgl_device_object;}
     void init_formats();
     void init_device();
-    void get_device_queue();
+    void get_device_queue(XGL_QUEUE_TYPE queue_type,
+                          XGL_UINT queue_idx);
+    void get_device_queue() {get_device_queue();}
 
 private:
     XGL_DEVICE m_xgl_device_object;
