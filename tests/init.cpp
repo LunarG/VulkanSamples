@@ -67,6 +67,10 @@
 class XglTest : public ::testing::Test {
 public:
     void CreateImageTest();
+    void CreateCommandBufferTest();
+    void CreatePipelineTest();
+    void CreateShaderTest();
+    void CreateShader(XGL_SHADER *pshader);
 
     XGL_DEVICE device() {return m_device->device();}
 
@@ -658,7 +662,34 @@ TEST_F(XglTest, CreateImage) {
     CreateImageTest();
 }
 
-TEST_F(XglTest, CreateShader) {
+void XglTest::CreateCommandBufferTest()
+{
+    XGL_RESULT err;
+    XGL_CMD_BUFFER_CREATE_INFO info = {};
+    XGL_CMD_BUFFER cmdBuffer;
+
+//    typedef struct _XGL_CMD_BUFFER_CREATE_INFO
+//    {
+//        XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
+//        const XGL_VOID*                         pNext;
+//        XGL_QUEUE_TYPE                          queueType;
+//        XGL_FLAGS                               flags;
+//    } XGL_CMD_BUFFER_CREATE_INFO;
+
+    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    err = xglCreateCommandBuffer(device(), &info, &cmdBuffer);
+    ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(cmdBuffer));
+}
+
+TEST_F(XglTest, TestComandBuffer) {
+    CreateCommandBufferTest();
+}
+
+void XglTest::CreateShader(XGL_SHADER *pshader)
+{
     void *code;
     uint32_t codeSize;
     struct bil_header *pBIL;
@@ -695,7 +726,120 @@ TEST_F(XglTest, CreateShader) {
     err = xglCreateShader(device(), &createInfo, &shader);
     ASSERT_XGL_SUCCESS(err);
 
+    *pshader = shader;
+}
+
+void XglTest::CreateShaderTest()
+{
+    XGL_SHADER shader;
+
+    CreateShader(&shader);
+
     ASSERT_XGL_SUCCESS(xglDestroyObject(shader));
+}
+
+TEST_F(XglTest, TestCreateShader) {
+    CreateShaderTest();
+}
+
+
+void XglTest::CreatePipelineTest()
+{
+    XGL_RESULT err;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    XGL_SHADER vs, ps;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
+    XGL_PIPELINE pipeline;
+
+    /*
+     * Define descriptor slots for vertex shader.
+     */
+    XGL_DESCRIPTOR_SLOT_INFO ds_vs = {
+        XGL_SLOT_SHADER_RESOURCE,    // XGL_DESCRIPTOR_SET_SLOT_TYPE
+        1                            // shaderEntityIndex
+    };
+
+    CreateShader(&vs);
+
+    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vs_stage.pNext = XGL_NULL_HANDLE;
+    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
+    vs_stage.shader.shader = vs;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
+    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = &ds_vs;
+    vs_stage.shader.linkConstBufferCount = 0;
+    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    CreateShader(&ps);
+
+    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ps_stage.pNext = &vs_stage;
+    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
+    ps_stage.shader.shader = ps;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
+    // TODO: Do we need a descriptor set mapping for fragment?
+    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = &ds_vs;
+    ps_stage.shader.linkConstBufferCount = 0;
+    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
+        &ps_stage,                                         // pNext
+        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
+        XGL_FALSE,                                         // disableVertexReuse
+        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
+        XGL_FALSE,                                         // primitiveRestartEnable
+        0                                                  // primitiveRestartIndex
+    };
+
+    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+        &ia_state,
+        XGL_FALSE,                                          // depthClipEnable
+        XGL_FALSE,                                          // rasterizerDiscardEnable
+        1.0                                                 // pointSize
+    };
+
+    XGL_PIPELINE_CB_STATE cb_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+        &rs_state,
+        XGL_FALSE,                                          // alphaToCoverageEnable
+        XGL_FALSE,                                          // dualSourceBlendEnable
+        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
+        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
+            {
+                XGL_FALSE,                                  // blendEnable
+                {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UINT},    // XGL_FORMAT
+                0xF                                         // channelWriteMask
+            }
+        }
+    };
+
+    // TODO: Should take depth buffer format from queried formats
+    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+        &cb_state,
+        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
+    };
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = &db_state;
+    info.flags = 0;
+    err = xglCreateGraphicsPipeline(device(), &info, &pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+}
+
+TEST_F(XglTest, TestCreatePipeline)  {
+    CreatePipelineTest();
 }
 
 int main(int argc, char **argv) {
