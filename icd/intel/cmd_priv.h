@@ -54,23 +54,29 @@ static inline uint32_t *cmd_ptr(struct intel_cmd *cmd, XGL_UINT len)
 }
 
 /**
+ * Add a reloc for the value at \p offset.
+ */
+static inline void cmd_add_reloc(struct intel_cmd *cmd, XGL_INT offset,
+                                 uint32_t val, struct intel_mem *mem,
+                                 uint16_t read_domains, uint16_t write_domain)
+{
+    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
+
+    reloc->pos = cmd->used + offset;
+    reloc->val = val;
+    reloc->mem = mem;
+    reloc->read_domains = read_domains;
+    reloc->write_domain = write_domain;
+
+    cmd->reloc_used++;
+}
+
+/**
  * Advance without writing.
  */
 static inline void cmd_advance(struct intel_cmd *cmd, XGL_UINT len)
 {
     assert(cmd->used + len <= cmd->size);
-    cmd->used += len;
-}
-
-/**
- * Write \p len DWords and advance.
- */
-static inline void cmd_writen(struct intel_cmd *cmd,
-                              const uint32_t *vals, XGL_UINT len)
-{
-    assert(cmd->used + len <= cmd->size);
-    memcpy((uint32_t *) cmd->ptr_opaque + cmd->used,
-            vals, sizeof(uint32_t) * len);
     cmd->used += len;
 }
 
@@ -81,6 +87,39 @@ static inline void cmd_write(struct intel_cmd *cmd, uint32_t val)
 {
     assert(cmd->used < cmd->size);
     ((uint32_t *) cmd->ptr_opaque)[cmd->used++] = val;
+}
+
+/**
+ * Write \p len DWords and advance.
+ */
+static inline void cmd_write_n(struct intel_cmd *cmd,
+                               const uint32_t *vals, XGL_UINT len)
+{
+    assert(cmd->used + len <= cmd->size);
+    memcpy((uint32_t *) cmd->ptr_opaque + cmd->used,
+            vals, sizeof(uint32_t) * len);
+    cmd->used += len;
+}
+
+/**
+ * Write a reloc and advance.
+ */
+static inline void cmd_write_r(struct intel_cmd *cmd, uint32_t val,
+                               struct intel_mem *mem,
+                               uint16_t read_domains, uint16_t write_domain)
+{
+    cmd_add_reloc(cmd, 0, val, mem, read_domains, write_domain);
+    cmd->used++;
+}
+
+/**
+ * Patch the given \p pos.
+ */
+static inline void cmd_patch(struct intel_cmd *cmd,
+                             XGL_UINT pos, uint32_t val)
+{
+    assert(pos < cmd->used);
+    ((uint32_t *) cmd->ptr_opaque)[pos] = val;
 }
 
 #endif /* CMD_PRIV_H */

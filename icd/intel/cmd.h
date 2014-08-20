@@ -28,10 +28,33 @@
 #include "intel.h"
 #include "obj.h"
 
+struct intel_cmd_reloc {
+    XGL_UINT pos;
+
+    uint32_t val;
+    struct intel_mem *mem;
+
+    /*
+     * With application state tracking promised by XGL, we should be able to
+     * set
+     *
+     *   I915_EXEC_NO_RELOC
+     *   I915_EXEC_HANDLE_LUT
+     *   I915_EXEC_IS_PINNED
+     *
+     * once we figure them out.
+     */
+    uint16_t read_domains;
+    uint16_t write_domain;
+};
+
 struct intel_cmd {
     struct intel_obj obj;
 
     struct intel_dev *dev;
+
+    struct intel_cmd_reloc *relocs;
+    XGL_UINT reloc_count;
 
     XGL_FLAGS flags;
 
@@ -40,6 +63,7 @@ struct intel_cmd {
     void *ptr_opaque;
 
     XGL_UINT used, size;
+    XGL_UINT reloc_used;
     XGL_RESULT result;
 };
 

@@ -25,6 +25,7 @@
 #include "genhw/genhw.h"
 #include "kmd/winsys.h"
 #include "dev.h"
+#include "mem.h"
 #include "obj.h"
 #include "cmd_priv.h"
 
@@ -77,6 +78,7 @@ static void cmd_reset(struct intel_cmd *cmd)
 
     cmd->used = 0;
     cmd->size = 0;
+    cmd->reloc_used = 0;
     cmd->result = XGL_SUCCESS;
 }
 
@@ -96,8 +98,6 @@ void cmd_grow(struct intel_cmd *cmd)
     if (bo_size >= cmd->bo_size &&
         cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
         memcpy(cmd->ptr_opaque, old_ptr, cmd->used * sizeof(uint32_t));
-        /* XXX winsys does not let us copy relocs */
-        cmd->result = XGL_ERROR_UNKNOWN;
 
         intel_bo_unmap(old_bo);
         intel_bo_unreference(old_bo);
@@ -126,6 +126,13 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     cmd->obj.destroy = cmd_destroy;
 
     cmd->dev = dev;
+    cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
+    cmd->relocs = icd_alloc(sizeof(cmd->relocs[0]) * cmd->reloc_count,
+            4096, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!cmd->relocs) {
+        intel_cmd_destroy(cmd);
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
 
     *cmd_ret = cmd;
 
@@ -160,6 +167,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
 {
     struct intel_winsys *winsys = cmd->dev->winsys;
+    XGL_UINT i;
 
     /* reclaim the reserved space */
     cmd->size += intel_cmd_reserved;
@@ -169,6 +177,24 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
     /* pad to even dwords */
     if (cmd->used & 1)
         cmd_write(cmd, GEN_MI_CMD(MI_NOOP));
+
+    /* TODO we need a more "explicit" winsys */
+    for (i = 0; i < cmd->reloc_count; i++) {
+        const struct intel_cmd_reloc *reloc = &cmd->relocs[i];
+        uint64_t presumed_offset;
+        int err;
+
+        err = intel_bo_add_reloc(cmd->bo, sizeof(uint32_t) * reloc->pos,
+                reloc->mem->bo, reloc->val, reloc->read_domains,
+                reloc->write_domain, &presumed_offset);
+        if (err) {
+            cmd->result = XGL_ERROR_UNKNOWN;
+            break;
+        }
+
+        assert(presumed_offset == (uint64_t) (uint32_t) presumed_offset);
+        cmd_patch(cmd, reloc->pos, (uint32_t) presumed_offset);
+    }
 
     cmd_unmap(cmd);
 
