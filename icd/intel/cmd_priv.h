@@ -25,8 +25,62 @@
 #ifndef CMD_PRIV_H
 #define CMD_PRIV_H
 
+#include "dev.h"
+#include "gpu.h"
 #include "cmd.h"
 
+#define CMD_ASSERT(cmd, min_gen, max_gen) \
+    INTEL_GPU_ASSERT((cmd)->dev->gpu, (min_gen), (max_gen))
+
 void cmd_grow(struct intel_cmd *cmd);
+
+/**
+ * Reserve \p len DWords for writing.
+ */
+static inline void cmd_reserve(struct intel_cmd *cmd, XGL_UINT len)
+{
+    if (cmd->used + len > cmd->size)
+        cmd_grow(cmd);
+    assert(cmd->used + len <= cmd->size);
+}
+
+/**
+ * Return a pointer of \p len DWords for writing.
+ */
+static inline uint32_t *cmd_ptr(struct intel_cmd *cmd, XGL_UINT len)
+{
+    cmd_reserve(cmd, len);
+    return &((uint32_t *) cmd->ptr_opaque)[cmd->used];
+}
+
+/**
+ * Advance without writing.
+ */
+static inline void cmd_advance(struct intel_cmd *cmd, XGL_UINT len)
+{
+    assert(cmd->used + len <= cmd->size);
+    cmd->used += len;
+}
+
+/**
+ * Write \p len DWords and advance.
+ */
+static inline void cmd_writen(struct intel_cmd *cmd,
+                              const uint32_t *vals, XGL_UINT len)
+{
+    assert(cmd->used + len <= cmd->size);
+    memcpy((uint32_t *) cmd->ptr_opaque + cmd->used,
+            vals, sizeof(uint32_t) * len);
+    cmd->used += len;
+}
+
+/**
+ * Write a DWord and advance.
+ */
+static inline void cmd_write(struct intel_cmd *cmd, uint32_t val)
+{
+    assert(cmd->used < cmd->size);
+    ((uint32_t *) cmd->ptr_opaque)[cmd->used++] = val;
+}
 
 #endif /* CMD_PRIV_H */

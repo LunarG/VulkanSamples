@@ -37,7 +37,7 @@ struct intel_cmd {
 
     XGL_SIZE bo_size;
     struct intel_bo *bo;
-    uint32_t *ptr;
+    void *ptr_opaque;
 
     XGL_UINT used, size;
     XGL_RESULT result;

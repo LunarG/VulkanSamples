@@ -50,7 +50,7 @@ static XGL_RESULT cmd_alloc_and_map(struct intel_cmd *cmd, XGL_SIZE bo_size)
 
     cmd->bo_size = bo_size;
     cmd->bo = bo;
-    cmd->ptr = ptr;
+    cmd->ptr_opaque = ptr;
     cmd->size = bo_size / sizeof(uint32_t) - intel_cmd_reserved;
 
     return XGL_SUCCESS;
@@ -59,7 +59,7 @@ static XGL_RESULT cmd_alloc_and_map(struct intel_cmd *cmd, XGL_SIZE bo_size)
 static void cmd_unmap(struct intel_cmd *cmd)
 {
     intel_bo_unmap(cmd->bo);
-    cmd->ptr = NULL;
+    cmd->ptr_opaque = NULL;
 }
 
 static void cmd_free(struct intel_cmd *cmd)
@@ -70,7 +70,7 @@ static void cmd_free(struct intel_cmd *cmd)
 
 static void cmd_reset(struct intel_cmd *cmd)
 {
-    if (cmd->ptr)
+    if (cmd->ptr_opaque)
         cmd_unmap(cmd);
     if (cmd->bo)
         cmd_free(cmd);
@@ -91,11 +91,11 @@ void cmd_grow(struct intel_cmd *cmd)
 {
     const XGL_SIZE bo_size = cmd->bo_size << 1;
     struct intel_bo *old_bo = cmd->bo;
-    uint32_t *old_ptr = cmd->ptr;
+    void *old_ptr = cmd->ptr_opaque;
 
     if (bo_size >= cmd->bo_size &&
         cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
-        memcpy(cmd->ptr, old_ptr, cmd->used * sizeof(uint32_t));
+        memcpy(cmd->ptr_opaque, old_ptr, cmd->used * sizeof(uint32_t));
         /* XXX winsys does not let us copy relocs */
         cmd->result = XGL_ERROR_UNKNOWN;
 
@@ -164,13 +164,11 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
     /* reclaim the reserved space */
     cmd->size += intel_cmd_reserved;
 
-    cmd->ptr[cmd->used++] = GEN_MI_CMD(MI_BATCH_BUFFER_END);
-
+    cmd_reserve(cmd, 2);
+    cmd_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));
     /* pad to even dwords */
     if (cmd->used & 1)
-        cmd->ptr[cmd->used++] = GEN_MI_CMD(MI_NOOP);
-
-    assert(cmd->used <= cmd->size);
+        cmd_write(cmd, GEN_MI_CMD(MI_NOOP));
 
     cmd_unmap(cmd);
 
