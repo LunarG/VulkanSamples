@@ -33,6 +33,7 @@
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
+#include "pipeline.h"
 #include "query.h"
 #include "queue.h"
 #include "sampler.h"
@@ -44,48 +45,6 @@ static XGL_RESULT XGLAPI intelCreateShader(
     XGL_DEVICE                                  device,
     const XGL_SHADER_CREATE_INFO*               pCreateInfo,
     XGL_SHADER*                                 pShader)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
-    XGL_DEVICE                                  device,
-    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    XGL_PIPELINE*                               pPipeline)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreateComputePipeline(
-    XGL_DEVICE                                  device,
-    const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
-    XGL_PIPELINE*                               pPipeline)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelStorePipeline(
-    XGL_PIPELINE                                pipeline,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelLoadPipeline(
-    XGL_DEVICE                                  device,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData,
-    XGL_PIPELINE*                               pPipeline)
-{
-    return XGL_ERROR_UNAVAILABLE;
-}
-
-static XGL_RESULT XGLAPI intelCreatePipelineDelta(
-    XGL_DEVICE                                  device,
-    XGL_PIPELINE                                p1,
-    XGL_PIPELINE                                p2,
-    XGL_PIPELINE_DELTA*                         delta)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
