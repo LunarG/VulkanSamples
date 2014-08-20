@@ -244,59 +244,6 @@ XGL_RESULT XGLAPI intelResetCommandBuffer(
     return XGL_SUCCESS;
 }
 
-XGL_VOID XGLAPI intelCmdBindPipeline(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_PIPELINE                                pipeline)
-{
-}
-
-XGL_VOID XGLAPI intelCmdBindPipelineDelta(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_PIPELINE_DELTA                          delta)
-{
-}
-
-XGL_VOID XGLAPI intelCmdBindStateObject(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_STATE_BIND_POINT                        stateBindPoint,
-    XGL_STATE_OBJECT                            state)
-{
-}
-
-XGL_VOID XGLAPI intelCmdBindDescriptorSet(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_UINT                                    index,
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    slotOffset)
-{
-}
-
-XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView)
-{
-}
-
-XGL_VOID XGLAPI intelCmdBindIndexData(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset,
-    XGL_INDEX_TYPE                              indexType)
-{
-}
-
-XGL_VOID XGLAPI intelCmdBindAttachments(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    colorAttachmentCount,
-    const XGL_COLOR_ATTACHMENT_BIND_INFO*       pColorAttachments,
-    const XGL_DEPTH_STENCIL_BIND_INFO*          pDepthStencilAttachment)
-{
-}
-
 XGL_VOID XGLAPI intelCmdPrepareMemoryRegions(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
@@ -308,58 +255,6 @@ XGL_VOID XGLAPI intelCmdPrepareImages(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
     const XGL_IMAGE_STATE_TRANSITION*           pStateTransitions)
-{
-}
-
-XGL_VOID XGLAPI intelCmdDraw(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    firstVertex,
-    XGL_UINT                                    vertexCount,
-    XGL_UINT                                    firstInstance,
-    XGL_UINT                                    instanceCount)
-{
-}
-
-XGL_VOID XGLAPI intelCmdDrawIndexed(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    firstIndex,
-    XGL_UINT                                    indexCount,
-    XGL_INT                                     vertexOffset,
-    XGL_UINT                                    firstInstance,
-    XGL_UINT                                    instanceCount)
-{
-}
-
-XGL_VOID XGLAPI intelCmdDrawIndirect(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset,
-    XGL_UINT32                                  count,
-    XGL_UINT32                                  stride)
-{
-}
-
-XGL_VOID XGLAPI intelCmdDrawIndexedIndirect(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset,
-    XGL_UINT32                                  count,
-    XGL_UINT32                                  stride)
-{
-}
-
-XGL_VOID XGLAPI intelCmdDispatch(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    x,
-    XGL_UINT                                    y,
-    XGL_UINT                                    z)
-{
-}
-
-XGL_VOID XGLAPI intelCmdDispatchIndirect(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset)
 {
 }
 

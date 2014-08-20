@@ -27,6 +27,62 @@
 
 #include "intel.h"
 #include "obj.h"
+#include "view.h"
+
+struct intel_pipeline;
+struct intel_pipeline_delta;
+struct intel_viewport_state;
+struct intel_raster_state;
+struct intel_msaa_state;
+struct intel_blend_state;
+struct intel_ds_state;
+struct intel_dset;
+
+/*
+ * States bounded to the command buffer.  We want to write states directly to
+ * the command buffer when possible, and reduce this struct.
+ */
+struct intel_cmd_bind {
+    struct {
+        const struct intel_pipeline *graphics;
+        const struct intel_pipeline *compute;
+        const struct intel_pipeline_delta *graphics_delta;
+        const struct intel_pipeline_delta *compute_delta;
+    } pipeline;
+
+    struct {
+        const struct intel_viewport_state *viewport;
+        const struct intel_raster_state *raster;
+        const struct intel_msaa_state *msaa;
+        const struct intel_blend_state *blend;
+        const struct intel_ds_state *ds;
+    } state;
+
+    struct {
+        const struct intel_dset *graphics;
+        XGL_UINT graphics_offset;
+        const struct intel_dset *compute;
+        XGL_UINT compute_offset;
+    } dset;
+
+    struct {
+        struct intel_mem_view graphics;
+        struct intel_mem_view compute;
+    } mem_view;
+
+    struct {
+        const struct intel_mem *mem;
+        XGL_GPU_SIZE offset;
+        XGL_INDEX_TYPE type;
+    } index;
+
+    struct {
+        const struct intel_rt_view *rt[XGL_MAX_COLOR_ATTACHMENTS];
+        XGL_UINT rt_count;
+
+        const struct intel_ds_view *ds;
+    } att;
+};
 
 struct intel_cmd_reloc {
     XGL_UINT pos;
@@ -65,6 +121,8 @@ struct intel_cmd {
     XGL_UINT used, size;
     XGL_UINT reloc_used;
     XGL_RESULT result;
+
+    struct intel_cmd_bind bind;
 };
 
 static inline struct intel_cmd *intel_cmd(XGL_CMD_BUFFER cmd)
