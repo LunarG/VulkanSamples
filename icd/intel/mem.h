@@ -32,6 +32,7 @@ struct intel_mem {
     struct intel_base base;
 
     struct intel_bo *bo;
+    XGL_GPU_SIZE size;
 };
 
 XGL_RESULT intel_mem_alloc(struct intel_dev *dev,

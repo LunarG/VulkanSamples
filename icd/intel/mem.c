@@ -48,6 +48,8 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
         return XGL_ERROR_UNKNOWN;
     }
 
+    mem->size = info->allocationSize;
+
     *mem_ret = mem;
 
     return XGL_SUCCESS;
