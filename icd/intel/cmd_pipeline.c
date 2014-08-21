@@ -30,6 +30,141 @@
 #include "view.h"
 #include "cmd_priv.h"
 
+static int translate_primitive_topology(XGL_PRIMITIVE_TOPOLOGY topo)
+{
+    switch (topo) {
+    case XGL_TOPOLOGY_POINT_LIST:           return GEN6_3DPRIM_POINTLIST;
+    case XGL_TOPOLOGY_LINE_LIST:            return GEN6_3DPRIM_LINELIST;
+    case XGL_TOPOLOGY_LINE_STRIP:           return GEN6_3DPRIM_LINESTRIP;
+    case XGL_TOPOLOGY_TRIANGLE_LIST:        return GEN6_3DPRIM_TRILIST;
+    case XGL_TOPOLOGY_TRIANGLE_STRIP:       return GEN6_3DPRIM_TRISTRIP;
+    case XGL_TOPOLOGY_RECT_LIST:            return GEN6_3DPRIM_RECTLIST;
+    case XGL_TOPOLOGY_QUAD_LIST:            return GEN6_3DPRIM_QUADLIST;
+    case XGL_TOPOLOGY_QUAD_STRIP:           return GEN6_3DPRIM_QUADSTRIP;
+    case XGL_TOPOLOGY_LINE_LIST_ADJ:        return GEN6_3DPRIM_LINELIST_ADJ;
+    case XGL_TOPOLOGY_LINE_STRIP_ADJ:       return GEN6_3DPRIM_LINESTRIP_ADJ;
+    case XGL_TOPOLOGY_TRIANGLE_LIST_ADJ:    return GEN6_3DPRIM_TRILIST_ADJ;
+    case XGL_TOPOLOGY_TRIANGLE_STRIP_ADJ:   return GEN6_3DPRIM_TRISTRIP_ADJ;
+    case XGL_TOPOLOGY_PATCH:                return GEN7_3DPRIM_PATCHLIST_1;
+    default:
+        assert(!"unknown primitive topology");
+        return GEN6_3DPRIM_POINTLIST;
+    }
+}
+
+static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
+                             XGL_PRIMITIVE_TOPOLOGY topo,
+                             bool indexed,
+                             uint32_t vertex_count,
+                             uint32_t vertex_start,
+                             uint32_t instance_count,
+                             uint32_t instance_start,
+                             uint32_t vertex_base)
+{
+    const uint8_t cmd_len = 6;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN_RENDER_CMD(3D, 3DPRIMITIVE) |
+          translate_primitive_topology(topo) << GEN6_3DPRIM_DW0_TYPE__SHIFT |
+          (cmd_len - 2);
+
+    if (indexed)
+        dw0 |= GEN6_3DPRIM_DW0_ACCESS_RANDOM;
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write(cmd, vertex_count);
+    cmd_write(cmd, vertex_start);
+    cmd_write(cmd, instance_count);
+    cmd_write(cmd, instance_start);
+    cmd_write(cmd, vertex_base);
+}
+
+static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
+                             XGL_PRIMITIVE_TOPOLOGY topo,
+                             bool indexed,
+                             uint32_t vertex_count,
+                             uint32_t vertex_start,
+                             uint32_t instance_count,
+                             uint32_t instance_start,
+                             uint32_t vertex_base)
+{
+    const uint8_t cmd_len = 7;
+    uint32_t dw0, dw1;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    dw0 = GEN_RENDER_CMD(3D, 3DPRIMITIVE) | (cmd_len - 2);
+    dw1 = translate_primitive_topology(topo) << GEN7_3DPRIM_DW1_TYPE__SHIFT;
+
+    if (indexed)
+        dw1 |= GEN7_3DPRIM_DW1_ACCESS_RANDOM;
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write(cmd, dw1);
+    cmd_write(cmd, vertex_count);
+    cmd_write(cmd, vertex_start);
+    cmd_write(cmd, instance_count);
+    cmd_write(cmd, instance_start);
+    cmd_write(cmd, vertex_base);
+}
+
+static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
+                                      struct intel_mem *mem,
+                                      XGL_GPU_SIZE offset,
+                                      XGL_INDEX_TYPE type,
+                                      bool enable_cut_index)
+{
+    const uint8_t cmd_len = 3;
+    uint32_t dw0, end_offset;
+    unsigned offset_align;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw0 = GEN_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
+
+    /* the bit is moved to 3DSTATE_VF */
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
+        assert(!enable_cut_index);
+    if (enable_cut_index)
+        dw0 |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
+
+    switch (type) {
+    case XGL_INDEX_8:
+        dw0 |= GEN6_IB_DW0_FORMAT_BYTE;
+        offset_align = 1;
+        break;
+    case XGL_INDEX_16:
+        dw0 |= GEN6_IB_DW0_FORMAT_WORD;
+        offset_align = 2;
+        break;
+    case XGL_INDEX_32:
+        dw0 |= GEN6_IB_DW0_FORMAT_DWORD;
+        offset_align = 4;
+        break;
+    default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
+        return;
+        break;
+    }
+
+    if (offset % offset_align) {
+        cmd->result = XGL_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    /* aligned and inclusive */
+    end_offset = mem->size - (mem->size % offset_align) - 1;
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write_r(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
+    cmd_write_r(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
+}
+
 XGL_VOID XGLAPI intelCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
@@ -146,59 +281,6 @@ XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
     }
 }
 
-static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
-                                      struct intel_mem *mem,
-                                      XGL_GPU_SIZE offset,
-                                      XGL_INDEX_TYPE type,
-                                      bool enable_cut_index)
-{
-    const uint8_t cmd_len = 3;
-    uint32_t dw0, end_offset;
-    unsigned offset_align;
-
-    CMD_ASSERT(cmd, 6, 7.5);
-
-    dw0 = GEN_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
-
-    /* the bit is moved to 3DSTATE_VF */
-    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
-        assert(!enable_cut_index);
-    if (enable_cut_index)
-        dw0 |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
-
-    switch (type) {
-    case XGL_INDEX_8:
-        dw0 |= GEN6_IB_DW0_FORMAT_BYTE;
-        offset_align = 1;
-        break;
-    case XGL_INDEX_16:
-        dw0 |= GEN6_IB_DW0_FORMAT_WORD;
-        offset_align = 2;
-        break;
-    case XGL_INDEX_32:
-        dw0 |= GEN6_IB_DW0_FORMAT_DWORD;
-        offset_align = 4;
-        break;
-    default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
-        return;
-        break;
-    }
-
-    if (offset % offset_align) {
-        cmd->result = XGL_ERROR_INVALID_VALUE;
-        return;
-    }
-
-    /* aligned and inclusive */
-    end_offset = mem->size - (mem->size % offset_align) - 1;
-
-    cmd_reserve(cmd, cmd_len);
-    cmd_write(cmd, dw0);
-    cmd_write_r(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
-    cmd_write_r(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
-}
-
 XGL_VOID XGLAPI intelCmdBindIndexData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem_,
@@ -250,6 +332,19 @@ XGL_VOID XGLAPI intelCmdDraw(
     XGL_UINT                                    firstInstance,
     XGL_UINT                                    instanceCount)
 {
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    XGL_PRIMITIVE_TOPOLOGY topo;
+
+    /* TODO emit bounded states */
+    topo = XGL_TOPOLOGY_TRIANGLE_LIST;
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3DPRIMITIVE(cmd, topo, false, vertexCount, firstVertex,
+                instanceCount, firstInstance, 0);
+    } else {
+        gen6_3DPRIMITIVE(cmd, topo, false, vertexCount, firstVertex,
+                instanceCount, firstInstance, 0);
+    }
 }
 
 XGL_VOID XGLAPI intelCmdDrawIndexed(
@@ -260,6 +355,19 @@ XGL_VOID XGLAPI intelCmdDrawIndexed(
     XGL_UINT                                    firstInstance,
     XGL_UINT                                    instanceCount)
 {
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    XGL_PRIMITIVE_TOPOLOGY topo;
+
+    /* TODO emit bounded states */
+    topo = XGL_TOPOLOGY_TRIANGLE_LIST;
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3DPRIMITIVE(cmd, topo, true, indexCount, firstIndex,
+                instanceCount, firstInstance, vertexOffset);
+    } else {
+        gen6_3DPRIMITIVE(cmd, topo, true, indexCount, firstIndex,
+                instanceCount, firstInstance, vertexOffset);
+    }
 }
 
 XGL_VOID XGLAPI intelCmdDrawIndirect(
@@ -269,6 +377,9 @@ XGL_VOID XGLAPI intelCmdDrawIndirect(
     XGL_UINT32                                  count,
     XGL_UINT32                                  stride)
 {
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd->result = XGL_ERROR_UNKNOWN;
 }
 
 XGL_VOID XGLAPI intelCmdDrawIndexedIndirect(
@@ -278,6 +389,9 @@ XGL_VOID XGLAPI intelCmdDrawIndexedIndirect(
     XGL_UINT32                                  count,
     XGL_UINT32                                  stride)
 {
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd->result = XGL_ERROR_UNKNOWN;
 }
 
 XGL_VOID XGLAPI intelCmdDispatch(
@@ -286,6 +400,9 @@ XGL_VOID XGLAPI intelCmdDispatch(
     XGL_UINT                                    y,
     XGL_UINT                                    z)
 {
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd->result = XGL_ERROR_UNKNOWN;
 }
 
 XGL_VOID XGLAPI intelCmdDispatchIndirect(
@@ -293,4 +410,7 @@ XGL_VOID XGLAPI intelCmdDispatchIndirect(
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                offset)
 {
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd->result = XGL_ERROR_UNKNOWN;
 }
