@@ -66,7 +66,7 @@ static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 6);
 
-    dw0 = GEN_RENDER_CMD(3D, 3DPRIMITIVE) |
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DPRIMITIVE) |
           translate_primitive_topology(topo) << GEN6_3DPRIM_DW0_TYPE__SHIFT |
           (cmd_len - 2);
 
@@ -96,7 +96,7 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 7, 7.5);
 
-    dw0 = GEN_RENDER_CMD(3D, 3DPRIMITIVE) | (cmd_len - 2);
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DPRIMITIVE) | (cmd_len - 2);
     dw1 = translate_primitive_topology(topo) << GEN7_3DPRIM_DW1_TYPE__SHIFT;
 
     if (indexed)
@@ -124,7 +124,7 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    dw0 = GEN_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
 
     /* the bit is moved to 3DSTATE_VF */
     if (cmd_gen(cmd) >= INTEL_GEN(7.5))

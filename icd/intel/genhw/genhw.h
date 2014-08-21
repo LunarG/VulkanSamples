@@ -42,10 +42,10 @@
 #define GEN_BLITTER_CMD(op) \
    (GEN6_BLITTER_TYPE_BLITTER | GEN6_BLITTER_OPCODE_ ## op)
 
-#define GEN_RENDER_CMD(subtype, op)    \
-   (GEN6_RENDER_TYPE_RENDER |          \
-    GEN6_RENDER_SUBTYPE_ ## subtype |  \
-    GEN6_RENDER_OPCODE_ ## op)
+#define GEN_RENDER_CMD(subtype, gen, op) \
+   (GEN6_RENDER_TYPE_RENDER |            \
+    GEN6_RENDER_SUBTYPE_ ## subtype |    \
+    gen ## _RENDER_OPCODE_ ## op)
 
 static inline bool
 gen_is_snb(int devid)
