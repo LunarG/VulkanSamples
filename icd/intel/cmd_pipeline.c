@@ -272,6 +272,17 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
                                        INTEL_DOMAIN_RENDER);
 }
 
+static void emit_bounded_states(struct intel_cmd *cmd)
+{
+    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+
+    /* TODO more states */
+
+    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
+    cmd_batch_reserve(cmd, msaa->cmd_len);
+    cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
+}
+
 XGL_VOID XGLAPI intelCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
@@ -451,7 +462,7 @@ XGL_VOID XGLAPI intelCmdDraw(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
-    /* TODO emit bounded states */
+    emit_bounded_states(cmd);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_3DPRIMITIVE(cmd, p->prim_type, false, vertexCount,
@@ -473,7 +484,7 @@ XGL_VOID XGLAPI intelCmdDrawIndexed(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
-    /* TODO emit bounded states */
+    emit_bounded_states(cmd);
 
     if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
         cmd->result = XGL_ERROR_UNKNOWN;
