@@ -31,31 +31,8 @@
 #include "view.h"
 #include "cmd_priv.h"
 
-static int translate_primitive_topology(XGL_PRIMITIVE_TOPOLOGY topo)
-{
-    switch (topo) {
-    case XGL_TOPOLOGY_POINT_LIST:           return GEN6_3DPRIM_POINTLIST;
-    case XGL_TOPOLOGY_LINE_LIST:            return GEN6_3DPRIM_LINELIST;
-    case XGL_TOPOLOGY_LINE_STRIP:           return GEN6_3DPRIM_LINESTRIP;
-    case XGL_TOPOLOGY_TRIANGLE_LIST:        return GEN6_3DPRIM_TRILIST;
-    case XGL_TOPOLOGY_TRIANGLE_STRIP:       return GEN6_3DPRIM_TRISTRIP;
-    case XGL_TOPOLOGY_RECT_LIST:            return GEN6_3DPRIM_RECTLIST;
-    case XGL_TOPOLOGY_QUAD_LIST:            return GEN6_3DPRIM_QUADLIST;
-    case XGL_TOPOLOGY_QUAD_STRIP:           return GEN6_3DPRIM_QUADSTRIP;
-    case XGL_TOPOLOGY_LINE_LIST_ADJ:        return GEN6_3DPRIM_LINELIST_ADJ;
-    case XGL_TOPOLOGY_LINE_STRIP_ADJ:       return GEN6_3DPRIM_LINESTRIP_ADJ;
-    case XGL_TOPOLOGY_TRIANGLE_LIST_ADJ:    return GEN6_3DPRIM_TRILIST_ADJ;
-    case XGL_TOPOLOGY_TRIANGLE_STRIP_ADJ:   return GEN6_3DPRIM_TRISTRIP_ADJ;
-    case XGL_TOPOLOGY_PATCH:                return GEN7_3DPRIM_PATCHLIST_1;
-    default:
-        assert(!"unknown primitive topology");
-        return GEN6_3DPRIM_POINTLIST;
-    }
-}
-
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
-                             XGL_PRIMITIVE_TOPOLOGY topo,
-                             bool indexed,
+                             int prim_type, bool indexed,
                              uint32_t vertex_count,
                              uint32_t vertex_start,
                              uint32_t instance_count,
@@ -68,7 +45,7 @@ static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 6);
 
     dw0 = GEN_RENDER_CMD(3D, GEN6, 3DPRIMITIVE) |
-          translate_primitive_topology(topo) << GEN6_3DPRIM_DW0_TYPE__SHIFT |
+          prim_type << GEN6_3DPRIM_DW0_TYPE__SHIFT |
           (cmd_len - 2);
 
     if (indexed)
@@ -84,8 +61,7 @@ static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
 }
 
 static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
-                             XGL_PRIMITIVE_TOPOLOGY topo,
-                             bool indexed,
+                             int prim_type, bool indexed,
                              uint32_t vertex_count,
                              uint32_t vertex_start,
                              uint32_t instance_count,
@@ -98,7 +74,7 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 7, 7.5);
 
     dw0 = GEN_RENDER_CMD(3D, GEN6, 3DPRIMITIVE) | (cmd_len - 2);
-    dw1 = translate_primitive_topology(topo) << GEN7_3DPRIM_DW1_TYPE__SHIFT;
+    dw1 = prim_type << GEN7_3DPRIM_DW1_TYPE__SHIFT;
 
     if (indexed)
         dw1 |= GEN7_3DPRIM_DW1_ACCESS_RANDOM;
@@ -111,6 +87,50 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
     cmd_write(cmd, instance_count);
     cmd_write(cmd, instance_start);
     cmd_write(cmd, vertex_base);
+}
+
+static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
+{
+    const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
+    bool supported;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
+        return (p->prim_type != GEN6_3DPRIM_RECTLIST);
+
+    switch (p->prim_type) {
+    case GEN6_3DPRIM_POINTLIST:
+    case GEN6_3DPRIM_LINELIST:
+    case GEN6_3DPRIM_LINESTRIP:
+    case GEN6_3DPRIM_TRILIST:
+    case GEN6_3DPRIM_TRISTRIP:
+        supported = true;
+        break;
+    default:
+        supported = false;
+        break;
+    }
+
+    if (!supported)
+        return false;
+
+    switch (cmd->bind.index.type) {
+    case XGL_INDEX_8:
+        supported = (p->primitive_restart_index != 0xffu);
+        break;
+    case XGL_INDEX_16:
+        supported = (p->primitive_restart_index != 0xffffu);
+        break;
+    case XGL_INDEX_32:
+        supported = (p->primitive_restart_index != 0xffffffffu);
+        break;
+    default:
+        supported = false;
+        break;
+    }
+
+    return supported;
 }
 
 static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
@@ -164,6 +184,25 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
     cmd_write(cmd, dw0);
     cmd_write_r(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
     cmd_write_r(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
+}
+
+static inline void
+gen75_3DSTATE_VF(struct intel_cmd *cmd,
+                 bool enable_cut_index,
+                 uint32_t cut_index)
+{
+    const uint8_t cmd_len = 2;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 7.5, 7.5);
+
+    dw0 = GEN_RENDER_CMD(3D, GEN75, 3DSTATE_VF) | (cmd_len - 2);
+    if (enable_cut_index)
+        dw0 |=  GEN75_VF_DW0_CUT_INDEX_ENABLE;
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write(cmd, cut_index);
 }
 
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
@@ -396,6 +435,7 @@ XGL_VOID XGLAPI intelCmdBindAttachments(
         ds = &null_ds;
     }
 
+    /* TODO workarounds */
     gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
     gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
     gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
@@ -409,17 +449,16 @@ XGL_VOID XGLAPI intelCmdDraw(
     XGL_UINT                                    instanceCount)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    XGL_PRIMITIVE_TOPOLOGY topo;
+    const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
     /* TODO emit bounded states */
-    topo = XGL_TOPOLOGY_TRIANGLE_LIST;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3DPRIMITIVE(cmd, topo, false, vertexCount, firstVertex,
-                instanceCount, firstInstance, 0);
+        gen7_3DPRIMITIVE(cmd, p->prim_type, false, vertexCount,
+                firstVertex, instanceCount, firstInstance, 0);
     } else {
-        gen6_3DPRIMITIVE(cmd, topo, false, vertexCount, firstVertex,
-                instanceCount, firstInstance, 0);
+        gen6_3DPRIMITIVE(cmd, p->prim_type, false, vertexCount,
+                firstVertex, instanceCount, firstInstance, 0);
     }
 }
 
@@ -432,17 +471,28 @@ XGL_VOID XGLAPI intelCmdDrawIndexed(
     XGL_UINT                                    instanceCount)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    XGL_PRIMITIVE_TOPOLOGY topo;
+    const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
     /* TODO emit bounded states */
-    topo = XGL_TOPOLOGY_TRIANGLE_LIST;
+
+    if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
+        cmd->result = XGL_ERROR_UNKNOWN;
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+        gen75_3DSTATE_VF(cmd, p->primitive_restart,
+                p->primitive_restart_index);
+    } else {
+        gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
+                cmd->bind.index.offset, cmd->bind.index.type,
+                p->primitive_restart);
+    }
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3DPRIMITIVE(cmd, topo, true, indexCount, firstIndex,
-                instanceCount, firstInstance, vertexOffset);
+        gen7_3DPRIMITIVE(cmd, p->prim_type, true, indexCount,
+                firstIndex, instanceCount, firstInstance, 0);
     } else {
-        gen6_3DPRIMITIVE(cmd, topo, true, indexCount, firstIndex,
-                instanceCount, firstInstance, vertexOffset);
+        gen6_3DPRIMITIVE(cmd, p->prim_type, true, indexCount,
+                firstIndex, instanceCount, firstInstance, 0);
     }
 }
 
