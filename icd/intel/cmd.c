@@ -147,7 +147,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
     if (cmd->flags != flags || !bo_size) {
         cmd->flags = flags;
 
-        bo_size = cmd->dev->gpu->batch_buffer_size;
+        bo_size = cmd->dev->gpu->max_batch_buffer_size;
         if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
             bo_size /= 2;
 

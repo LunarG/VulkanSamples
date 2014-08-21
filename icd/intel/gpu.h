@@ -50,7 +50,8 @@ struct intel_gpu {
     char *path;         /* path to the render or legacy node, or NULL */
     int gen_opaque;     /* always read with intel_gpu_gen() */
 
-    int batch_buffer_size;
+    XGL_SIZE max_batch_buffer_size;
+    XGL_UINT batch_buffer_reloc_count;
 
     /*
      * The enabled hardware features could be limited by the kernel.  This

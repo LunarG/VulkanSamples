@@ -115,7 +115,11 @@ static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
     gpu->gen_opaque = gen;
 
     /* 8192 dwords */
-    gpu->batch_buffer_size = sizeof(uint32_t) * 8192;
+    gpu->max_batch_buffer_size = sizeof(uint32_t) * 8192;
+
+    /* the winsys is prepared for one reloc every two dwords, then minus 2 */
+    gpu->batch_buffer_reloc_count =
+        gpu->max_batch_buffer_size / sizeof(uint32_t) / 2 - 2;
 
     gpu->fd_internal = -1;
     gpu->fd = -1;
@@ -231,9 +235,7 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     memcpy(props->gpuName, name, name_len);
     props->gpuName[name_len] = '\0';
 
-    /* the winsys is prepared for one reloc every two dwords, then minus 2 */
-    props->maxMemRefsPerSubmission =
-        gpu->batch_buffer_size / sizeof(uint32_t) / 2 - 2;
+    props->maxMemRefsPerSubmission = gpu->batch_buffer_reloc_count;
 
     props->virtualMemPageSize = 4096;
 
