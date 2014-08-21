@@ -191,7 +191,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
     cmd_batch_end(cmd);
 
     /* TODO we need a more "explicit" winsys */
-    for (i = 0; i < cmd->reloc_count; i++) {
+    for (i = 0; i < cmd->reloc_used; i++) {
         const struct intel_cmd_reloc *reloc = &cmd->relocs[i];
         uint64_t presumed_offset;
         int err;
