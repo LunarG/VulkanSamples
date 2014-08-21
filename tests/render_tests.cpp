@@ -57,6 +57,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 #include <xgl.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
@@ -73,7 +76,7 @@ public:
                          XGL_IMAGE_VIEW* pView);
     void DestroyImageView(XGL_IMAGE_VIEW imageView);
     XGL_DEVICE device() {return m_device->device();}
-    void CreateShader(XGL_SHADER *pshader);
+    void CreateShader(const char *filename, XGL_SHADER *pshader);
     void InitPipeline();
 
 protected:
@@ -251,37 +254,53 @@ void XglRenderTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
     ASSERT_XGL_SUCCESS(xglDestroyObject(imageView));
 }
 
-void XglRenderTest::CreateShader(XGL_SHADER *pshader)
+void XglRenderTest::CreateShader(const char *filename, XGL_SHADER *pshader)
 {
-    void *code;
-    uint32_t codeSize;
     struct bil_header *pBIL;
+    streampos size;
+    char * memblock;
     XGL_RESULT err;
 
-    codeSize = sizeof(struct bil_header) + 100;
-    code = malloc(codeSize);
-    ASSERT_TRUE(NULL != code) << "malloc failed!";
+    //    codeSize = sizeof(struct bil_header) + 100;
+    //    code = malloc(codeSize);
+    //    ASSERT_TRUE(NULL != code) << "malloc failed!";
 
-    memset(code, 0, codeSize);
+    //    memset(code, 0, codeSize);
 
-    // Indicate that this is BIL data.
-    pBIL = (struct bil_header *) code;
-    pBIL->bil_magic = BILMagicNumber;
-    pBIL->bil_version = BILVersion;
+    //    // Indicate that this is BIL data.
+    //    pBIL = (struct bil_header *) code;
+    //    pBIL->bil_magic = BILMagicNumber;
+    //    pBIL->bil_version = BILVersion;
 
-    XGL_SHADER_CREATE_INFO createInfo;
-    XGL_SHADER shader;
+    // reading an entire binary file
+    ifstream file (filename, ios::in|ios::binary|ios::ate);
+        ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
 
-    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
-    createInfo.pCode = code;
-    createInfo.codeSize = codeSize;
-    createInfo.flags = 0;
-    err = xglCreateShader(device(), &createInfo, &shader);
-    ASSERT_XGL_SUCCESS(err);
+//    if (file.is_open()) {
+//    ASSERT_TRUE(file.is_open() == true);
+        size = file.tellg();
+        memblock = new char [size];
+        ASSERT_TRUE(memblock != NULL) << "memory allocation failed";
 
-    ASSERT_XGL_SUCCESS(xglDestroyObject(shader));
-    *pshader = shader;
+        file.seekg (0, ios::beg);
+        file.read (memblock, size);
+        file.close();
+
+        XGL_SHADER_CREATE_INFO createInfo;
+        XGL_SHADER shader;
+
+        createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+        createInfo.pNext = NULL;
+        createInfo.pCode = memblock;
+        createInfo.codeSize = size;
+        createInfo.flags = 0;
+        err = xglCreateShader(device(), &createInfo, &shader);
+        ASSERT_XGL_SUCCESS(err);
+
+        delete[] memblock;
+
+        *pshader = shader;
+//    }
 }
 
 TEST_F(XglRenderTest, DrawTriangleTest) {
@@ -300,7 +319,7 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
         1                            // shaderEntityIndex
     };
 
-    CreateShader(&vs);
+    CreateShader("vs-kernel.bin", &vs);
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
@@ -313,7 +332,7 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    CreateShader(&ps);
+    CreateShader("wm-kernel.bin", &ps);
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
@@ -373,9 +392,57 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
     err = xglCreateGraphicsPipeline(device(), &info, &pipeline);
     ASSERT_XGL_SUCCESS(err);
 
-    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+    XGL_MEMORY_REQUIREMENTS mem_req;
+    XGL_UINT data_size;
+    err = xglGetObjectInfo(pipeline, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(data_size, sizeof(mem_req));
+    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Pipeline): Failed - expect pipeline to require memory";
+
+    //        XGL_RESULT XGLAPI xglAllocMemory(
+    //            XGL_DEVICE                                  device,
+    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            XGL_GPU_MEMORY*                             pMem);
+
+//    typedef struct _XGL_MEMORY_ALLOC_INFO
+//    {
+//        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
+//        XGL_VOID*                               pNext;                      // Pointer to next structure
+//        XGL_GPU_SIZE                            allocationSize;             // Size of memory allocation
+//        XGL_GPU_SIZE                            alignment;
+//        XGL_FLAGS                               flags;                      // XGL_MEMORY_ALLOC_FLAGS
+//        XGL_UINT                                heapCount;
+//        XGL_UINT                                heaps[XGL_MAX_MEMORY_HEAPS];
+//        XGL_MEMORY_PRIORITY                     memPriority;
+//    } XGL_MEMORY_ALLOC_INFO;
+    XGL_MEMORY_ALLOC_INFO mem_info = {
+        XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        XGL_NULL_HANDLE,
+        mem_req.size,                                   // allocationSize
+        mem_req.alignment,                              // alignment
+        XGL_MEMORY_ALLOC_SHAREABLE_BIT,                 // XGL_MEMORY_ALLOC_FLAGS
+        mem_req.heapCount,                              // heapCount
+        {0},                                  // heaps
+        XGL_MEMORY_PRIORITY_NORMAL                      // XGL_MEMORY_PRIORITY
+    };
+
+    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+
+    err = xglAllocMemory(device(), &mem_info, &m_image_mem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglBindObjectMemory(pipeline, m_image_mem, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
     ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
     ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+
 }
 
 int main(int argc, char **argv) {
