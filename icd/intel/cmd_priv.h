@@ -63,82 +63,6 @@ void cmd_writer_grow(struct intel_cmd *cmd,
                      struct intel_cmd_writer *writer);
 
 /**
- * Reserve \p len DWords and return a pointer to the reserved region for
- * writing.
- */
-static inline uint32_t *cmd_writer_ptr(struct intel_cmd *cmd,
-                                       struct intel_cmd_writer *writer,
-                                       XGL_UINT len)
-{
-    if (writer->used + len > writer->size)
-        cmd_writer_grow(cmd, writer);
-
-    assert(writer->used + len <= writer->size);
-
-    return &((uint32_t *) writer->ptr_opaque)[writer->used];
-}
-
-/**
- * Add a reloc for the value at \p offset, relative to the current writer
- * position.
- */
-static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
-                                        struct intel_cmd_writer *writer,
-                                        XGL_INT offset, uint32_t val,
-                                        const struct intel_mem *mem,
-                                        uint16_t read_domains,
-                                        uint16_t write_domain)
-{
-    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
-
-    assert(cmd->reloc_used < cmd->reloc_count);
-
-    reloc->writer = writer;
-    reloc->pos = writer->used + offset;
-    reloc->val = val;
-    reloc->mem = mem;
-    reloc->read_domains = read_domains;
-    reloc->write_domain = write_domain;
-
-    cmd->reloc_used++;
-}
-
-/**
- * Advance the writer position.
- */
-static inline void cmd_writer_advance(struct intel_cmd *cmd,
-                                      struct intel_cmd_writer *writer,
-                                      XGL_UINT len)
-{
-    assert(writer->used + len <= writer->size);
-    writer->used += len;
-}
-
-/**
- * Copy \p len DWords and advance.
- */
-static inline void cmd_writer_copy(struct intel_cmd *cmd,
-                                   struct intel_cmd_writer *writer,
-                                   const uint32_t *vals, XGL_UINT len)
-{
-    assert(writer->used + len <= writer->size);
-    memcpy((uint32_t *) writer->ptr_opaque + writer->used,
-            vals, sizeof(uint32_t) * len);
-    writer->used += len;
-}
-
-/**
- * Patch the given \p pos.
- */
-static inline void cmd_writer_patch(struct intel_cmd *cmd,
-                                    struct intel_cmd_writer *writer,
-                                    XGL_UINT pos, uint32_t val)
-{
-    assert(pos < writer->used);
-    ((uint32_t *) writer->ptr_opaque)[pos] = val;
-}
-
-/**
  * Reserve \p len DWords in the batch buffer for writing.
  */
 static inline void cmd_batch_reserve(struct intel_cmd *cmd, XGL_UINT len)
@@ -169,10 +93,19 @@ static inline void cmd_batch_reloc(struct intel_cmd *cmd,
                                    uint16_t read_domains,
                                    uint16_t write_domain)
 {
+    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
     struct intel_cmd_writer *writer = &cmd->batch;
 
-    cmd_writer_add_reloc(cmd, writer, 0, val,
-            mem, read_domains, write_domain);
+    assert(cmd->reloc_used < cmd->reloc_count);
+
+    reloc->writer = writer;
+    reloc->pos = writer->used;
+    reloc->val = val;
+    reloc->mem = mem;
+    reloc->read_domains = read_domains;
+    reloc->write_domain = write_domain;
+
+    cmd->reloc_used++;
     writer->used++;
 }
 

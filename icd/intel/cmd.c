@@ -57,6 +57,24 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
     return XGL_SUCCESS;
 }
 
+static void cmd_writer_copy(struct intel_cmd *cmd,
+                            struct intel_cmd_writer *writer,
+                            const uint32_t *vals, XGL_UINT len)
+{
+    assert(writer->used + len <= writer->size);
+    memcpy((uint32_t *) writer->ptr_opaque + writer->used,
+            vals, sizeof(uint32_t) * len);
+    writer->used += len;
+}
+
+static void cmd_writer_patch(struct intel_cmd *cmd,
+                             struct intel_cmd_writer *writer,
+                             XGL_UINT pos, uint32_t val)
+{
+    assert(pos < writer->used);
+    ((uint32_t *) writer->ptr_opaque)[pos] = val;
+}
+
 void cmd_writer_grow(struct intel_cmd *cmd,
                      struct intel_cmd_writer *writer)
 {
