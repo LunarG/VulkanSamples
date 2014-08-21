@@ -105,8 +105,6 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return ret;
     }
 
-    dev->validation_level = XGL_VALIDATION_LEVEL_0;
-
     *dev_ret = dev;
 
     return XGL_SUCCESS;
@@ -364,8 +362,10 @@ XGL_RESULT XGLAPI intelDbgSetValidationLevel(
     XGL_VALIDATION_LEVEL                        validationLevel)
 {
     struct intel_dev *dev = intel_dev(device);
+    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
 
-    dev->validation_level = validationLevel;
+    if (dbg)
+        dbg->validation_level = validationLevel;
 
     return XGL_SUCCESS;
 }
@@ -395,6 +395,7 @@ XGL_RESULT XGLAPI intelDbgSetDeviceOption(
     const XGL_VOID*                             pData)
 {
     struct intel_dev *dev = intel_dev(device);
+    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
     XGL_RESULT ret = XGL_SUCCESS;
 
     if (dataSize == 0)
@@ -402,13 +403,16 @@ XGL_RESULT XGLAPI intelDbgSetDeviceOption(
 
     switch (dbgOption) {
     case XGL_DBG_OPTION_DISABLE_PIPELINE_LOADS:
-        dev->disable_pipeline_loads = *((const bool *) pData);
+        if (dbg)
+            dbg->disable_pipeline_loads = *((const bool *) pData);
         break;
     case XGL_DBG_OPTION_FORCE_OBJECT_MEMORY_REQS:
-        dev->force_object_memory_reqs = *((const bool *) pData);
+        if (dbg)
+            dbg->force_object_memory_reqs = *((const bool *) pData);
         break;
     case XGL_DBG_OPTION_FORCE_LARGE_IMAGE_ALIGNMENT:
-        dev->force_large_image_alignment = *((const bool *) pData);
+        if (dbg)
+            dbg->force_large_image_alignment = *((const bool *) pData);
         break;
     default:
         ret = XGL_ERROR_INVALID_VALUE;

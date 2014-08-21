@@ -43,6 +43,11 @@ struct intel_dev_dbg_msg_filter {
 struct intel_dev_dbg {
     struct intel_base_dbg base;
 
+    XGL_VALIDATION_LEVEL validation_level;
+    bool disable_pipeline_loads;
+    bool force_object_memory_reqs;
+    bool force_large_image_alignment;
+
     struct intel_dev_dbg_msg_filter *filters;
 };
 
@@ -52,11 +57,6 @@ struct intel_dev {
     struct intel_gpu *gpu;
     struct intel_winsys *winsys;
     struct intel_queue *queues[INTEL_GPU_ENGINE_COUNT];
-
-    XGL_VALIDATION_LEVEL validation_level;
-    bool disable_pipeline_loads;
-    bool force_object_memory_reqs;
-    bool force_large_image_alignment;
 };
 
 static inline struct intel_dev *intel_dev(XGL_DEVICE dev)
