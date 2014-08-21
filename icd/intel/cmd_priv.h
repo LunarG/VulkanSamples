@@ -25,6 +25,7 @@
 #ifndef CMD_PRIV_H
 #define CMD_PRIV_H
 
+#include "genhw/genhw.h"
 #include "dev.h"
 #include "gpu.h"
 #include "cmd.h"
@@ -33,6 +34,7 @@
     INTEL_GPU_ASSERT((cmd)->dev->gpu, (min_gen), (max_gen))
 
 struct intel_cmd_reloc {
+    struct intel_cmd_writer *writer;
     XGL_UINT pos;
 
     uint32_t val;
@@ -57,37 +59,42 @@ static inline int cmd_gen(const struct intel_cmd *cmd)
     return intel_gpu_gen(cmd->dev->gpu);
 }
 
-void cmd_grow(struct intel_cmd *cmd);
+void cmd_writer_grow(struct intel_cmd *cmd,
+                     struct intel_cmd_writer *writer);
 
 /**
- * Reserve \p len DWords for writing.
+ * Reserve \p len DWords and return a pointer to the reserved region for
+ * writing.
  */
-static inline void cmd_reserve(struct intel_cmd *cmd, XGL_UINT len)
+static inline uint32_t *cmd_writer_ptr(struct intel_cmd *cmd,
+                                       struct intel_cmd_writer *writer,
+                                       XGL_UINT len)
 {
-    if (cmd->used + len > cmd->size)
-        cmd_grow(cmd);
-    assert(cmd->used + len <= cmd->size);
+    if (writer->used + len > writer->size)
+        cmd_writer_grow(cmd, writer);
+
+    assert(writer->used + len <= writer->size);
+
+    return &((uint32_t *) writer->ptr_opaque)[writer->used];
 }
 
 /**
- * Return a pointer of \p len DWords for writing.
+ * Add a reloc for the value at \p offset, relative to the current writer
+ * position.
  */
-static inline uint32_t *cmd_ptr(struct intel_cmd *cmd, XGL_UINT len)
-{
-    cmd_reserve(cmd, len);
-    return &((uint32_t *) cmd->ptr_opaque)[cmd->used];
-}
-
-/**
- * Add a reloc for the value at \p offset.
- */
-static inline void cmd_add_reloc(struct intel_cmd *cmd, XGL_INT offset,
-                                 uint32_t val, const struct intel_mem *mem,
-                                 uint16_t read_domains, uint16_t write_domain)
+static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
+                                        struct intel_cmd_writer *writer,
+                                        XGL_INT offset, uint32_t val,
+                                        const struct intel_mem *mem,
+                                        uint16_t read_domains,
+                                        uint16_t write_domain)
 {
     struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
 
-    reloc->pos = cmd->used + offset;
+    assert(cmd->reloc_used < cmd->reloc_count);
+
+    reloc->writer = writer;
+    reloc->pos = writer->used + offset;
     reloc->val = val;
     reloc->mem = mem;
     reloc->read_domains = read_domains;
@@ -97,54 +104,91 @@ static inline void cmd_add_reloc(struct intel_cmd *cmd, XGL_INT offset,
 }
 
 /**
- * Advance without writing.
+ * Advance the writer position.
  */
-static inline void cmd_advance(struct intel_cmd *cmd, XGL_UINT len)
+static inline void cmd_writer_advance(struct intel_cmd *cmd,
+                                      struct intel_cmd_writer *writer,
+                                      XGL_UINT len)
 {
-    assert(cmd->used + len <= cmd->size);
-    cmd->used += len;
+    assert(writer->used + len <= writer->size);
+    writer->used += len;
 }
 
 /**
- * Write a DWord and advance.
+ * Copy \p len DWords and advance.
  */
-static inline void cmd_write(struct intel_cmd *cmd, uint32_t val)
+static inline void cmd_writer_copy(struct intel_cmd *cmd,
+                                   struct intel_cmd_writer *writer,
+                                   const uint32_t *vals, XGL_UINT len)
 {
-    assert(cmd->used < cmd->size);
-    ((uint32_t *) cmd->ptr_opaque)[cmd->used++] = val;
-}
-
-/**
- * Write \p len DWords and advance.
- */
-static inline void cmd_write_n(struct intel_cmd *cmd,
-                               const uint32_t *vals, XGL_UINT len)
-{
-    assert(cmd->used + len <= cmd->size);
-    memcpy((uint32_t *) cmd->ptr_opaque + cmd->used,
+    assert(writer->used + len <= writer->size);
+    memcpy((uint32_t *) writer->ptr_opaque + writer->used,
             vals, sizeof(uint32_t) * len);
-    cmd->used += len;
-}
-
-/**
- * Write a reloc and advance.
- */
-static inline void cmd_write_r(struct intel_cmd *cmd, uint32_t val,
-                               const struct intel_mem *mem,
-                               uint16_t read_domains, uint16_t write_domain)
-{
-    cmd_add_reloc(cmd, 0, val, mem, read_domains, write_domain);
-    cmd->used++;
+    writer->used += len;
 }
 
 /**
  * Patch the given \p pos.
  */
-static inline void cmd_patch(struct intel_cmd *cmd,
-                             XGL_UINT pos, uint32_t val)
+static inline void cmd_writer_patch(struct intel_cmd *cmd,
+                                    struct intel_cmd_writer *writer,
+                                    XGL_UINT pos, uint32_t val)
 {
-    assert(pos < cmd->used);
-    ((uint32_t *) cmd->ptr_opaque)[pos] = val;
+    assert(pos < writer->used);
+    ((uint32_t *) writer->ptr_opaque)[pos] = val;
+}
+
+/**
+ * Reserve \p len DWords in the batch buffer for writing.
+ */
+static inline void cmd_batch_reserve(struct intel_cmd *cmd, XGL_UINT len)
+{
+    struct intel_cmd_writer *writer = &cmd->batch;
+
+    if (writer->used + len > writer->size)
+        cmd_writer_grow(cmd, writer);
+    assert(writer->used + len <= writer->size);
+}
+
+/**
+ * Write a DWord to the batch buffer and advance.
+ */
+static inline void cmd_batch_write(struct intel_cmd *cmd, uint32_t val)
+{
+    struct intel_cmd_writer *writer = &cmd->batch;
+
+    assert(writer->used < writer->size);
+    ((uint32_t *) writer->ptr_opaque)[writer->used++] = val;
+}
+
+/**
+ * Add a reloc for the batch buffer and advance.
+ */
+static inline void cmd_batch_reloc(struct intel_cmd *cmd,
+                                   uint32_t val, const struct intel_mem *mem,
+                                   uint16_t read_domains,
+                                   uint16_t write_domain)
+{
+    struct intel_cmd_writer *writer = &cmd->batch;
+
+    cmd_writer_add_reloc(cmd, writer, 0, val,
+            mem, read_domains, write_domain);
+    writer->used++;
+}
+
+/**
+ * End the batch buffer.
+ */
+static inline void cmd_batch_end(struct intel_cmd *cmd)
+{
+    if (cmd->batch.used & 1) {
+        cmd_batch_reserve(cmd, 1);
+        cmd_batch_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));
+    } else {
+        cmd_batch_reserve(cmd, 2);
+        cmd_batch_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));
+        cmd_batch_write(cmd, GEN_MI_CMD(MI_NOOP));
+    }
 }
 
 #endif /* CMD_PRIV_H */

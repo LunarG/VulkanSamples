@@ -64,9 +64,10 @@ void intel_queue_destroy(struct intel_queue *queue)
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 {
-    struct intel_cmd *cmd = queue->last_submitted_cmd;
+    struct intel_bo *bo = (queue->last_submitted_cmd) ?
+        intel_cmd_get_batch(queue->last_submitted_cmd, NULL) : NULL;
 
-    return (!cmd || intel_bo_wait(cmd->bo, timeout) == 0) ?
+    return (!bo || intel_bo_wait(bo, timeout) == 0) ?
         XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 
@@ -74,10 +75,12 @@ XGL_RESULT intel_queue_submit(struct intel_queue *queue,
                               struct intel_cmd *cmd)
 {
     struct intel_winsys *winsys = queue->dev->winsys;
+    struct intel_bo *bo;
+    XGL_GPU_SIZE used;
     int err;
 
-    err = intel_winsys_submit_bo(winsys, queue->ring,
-            cmd->bo, cmd->used * sizeof(uint32_t), 0);
+    bo = intel_cmd_get_batch(cmd, &used);
+    err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
 
     queue->last_submitted_cmd = cmd;
 

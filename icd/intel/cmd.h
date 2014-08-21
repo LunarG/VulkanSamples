@@ -86,6 +86,15 @@ struct intel_cmd_bind {
     } att;
 };
 
+struct intel_cmd_writer {
+    struct intel_bo *bo;
+    void *ptr_opaque;
+
+    /* in DWords */
+    XGL_UINT size;
+    XGL_UINT used;
+};
+
 struct intel_cmd {
     struct intel_obj obj;
 
@@ -96,11 +105,8 @@ struct intel_cmd {
 
     XGL_FLAGS flags;
 
-    XGL_SIZE bo_size;
-    struct intel_bo *bo;
-    void *ptr_opaque;
+    struct intel_cmd_writer batch;
 
-    XGL_UINT used, size;
     XGL_UINT reloc_used;
     XGL_RESULT result;
 
@@ -124,6 +130,17 @@ void intel_cmd_destroy(struct intel_cmd *cmd);
 
 XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags);
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd);
+
+static inline struct intel_bo *intel_cmd_get_batch(const struct intel_cmd *cmd,
+                                                   XGL_GPU_SIZE *used)
+{
+    const struct intel_cmd_writer *writer = &cmd->batch;
+
+    if (used)
+        *used = sizeof(uint32_t) * writer->used;
+
+    return writer->bo;
+}
 
 XGL_RESULT XGLAPI intelCreateCommandBuffer(
     XGL_DEVICE                                  device,

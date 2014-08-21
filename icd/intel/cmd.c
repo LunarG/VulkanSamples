@@ -29,12 +29,12 @@
 #include "obj.h"
 #include "cmd_priv.h"
 
-/* reserved space used for intel_cmd_end() */
-static const XGL_UINT intel_cmd_reserved = 2;
-
-static XGL_RESULT cmd_alloc_and_map(struct intel_cmd *cmd, XGL_SIZE bo_size)
+static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
+                                           struct intel_cmd_writer *writer,
+                                           XGL_UINT size)
 {
     struct intel_winsys *winsys = cmd->dev->winsys;
+    const XGL_GPU_SIZE bo_size = sizeof(uint32_t) * size;
     struct intel_bo *bo;
     void *ptr;
 
@@ -49,35 +49,73 @@ static XGL_RESULT cmd_alloc_and_map(struct intel_cmd *cmd, XGL_SIZE bo_size)
         return XGL_ERROR_MEMORY_MAP_FAILED;
     }
 
-    cmd->bo_size = bo_size;
-    cmd->bo = bo;
-    cmd->ptr_opaque = ptr;
-    cmd->size = bo_size / sizeof(uint32_t) - intel_cmd_reserved;
+    writer->bo = bo;
+    writer->ptr_opaque = ptr;
+    writer->size = size;
+    writer->used = 0;
 
     return XGL_SUCCESS;
 }
 
-static void cmd_unmap(struct intel_cmd *cmd)
+void cmd_writer_grow(struct intel_cmd *cmd,
+                     struct intel_cmd_writer *writer)
 {
-    intel_bo_unmap(cmd->bo);
-    cmd->ptr_opaque = NULL;
+    const XGL_UINT size = writer->size << 1;
+    const XGL_UINT old_used = writer->used;
+    struct intel_bo *old_bo = writer->bo;
+    void *old_ptr = writer->ptr_opaque;
+
+    if (size >= writer->size &&
+        cmd_writer_alloc_and_map(cmd, writer, size) == XGL_SUCCESS) {
+        cmd_writer_copy(cmd, writer, (const uint32_t *) old_ptr, old_used);
+
+        intel_bo_unmap(old_bo);
+        intel_bo_unreference(old_bo);
+    } else {
+        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                "failed to grow command buffer of size %u", writer->size);
+
+        /* wrap it and fail silently */
+        writer->used = 0;
+        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
+    }
 }
 
-static void cmd_free(struct intel_cmd *cmd)
+static void cmd_writer_unmap(struct intel_cmd *cmd,
+                             struct intel_cmd_writer *writer)
 {
-    intel_bo_unreference(cmd->bo);
-    cmd->bo = NULL;
+    intel_bo_unmap(writer->bo);
+    writer->ptr_opaque = NULL;
+}
+
+static void cmd_writer_free(struct intel_cmd *cmd,
+                            struct intel_cmd_writer *writer)
+{
+    intel_bo_unreference(writer->bo);
+    writer->bo = NULL;
+}
+
+static void cmd_writer_reset(struct intel_cmd *cmd,
+                             struct intel_cmd_writer *writer)
+{
+    /* do not reset writer->size as we want to know how big it has grown to */
+    writer->used = 0;
+
+    if (writer->ptr_opaque)
+        cmd_writer_unmap(cmd, writer);
+    if (writer->bo)
+        cmd_writer_free(cmd, writer);
+}
+
+static void cmd_unmap(struct intel_cmd *cmd)
+{
+    cmd_writer_unmap(cmd, &cmd->batch);
 }
 
 static void cmd_reset(struct intel_cmd *cmd)
 {
-    if (cmd->ptr_opaque)
-        cmd_unmap(cmd);
-    if (cmd->bo)
-        cmd_free(cmd);
-
-    cmd->used = 0;
-    cmd->size = 0;
+    cmd_writer_reset(cmd, &cmd->batch);
     cmd->reloc_used = 0;
     cmd->result = XGL_SUCCESS;
 }
@@ -87,29 +125,6 @@ static void cmd_destroy(struct intel_obj *obj)
     struct intel_cmd *cmd = intel_cmd_from_obj(obj);
 
     intel_cmd_destroy(cmd);
-}
-
-void cmd_grow(struct intel_cmd *cmd)
-{
-    const XGL_SIZE bo_size = cmd->bo_size << 1;
-    struct intel_bo *old_bo = cmd->bo;
-    void *old_ptr = cmd->ptr_opaque;
-
-    if (bo_size >= cmd->bo_size &&
-        cmd_alloc_and_map(cmd, bo_size) == XGL_SUCCESS) {
-        memcpy(cmd->ptr_opaque, old_ptr, cmd->used * sizeof(uint32_t));
-
-        intel_bo_unmap(old_bo);
-        intel_bo_unreference(old_bo);
-    } else {
-        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                "failed to grow command buffer of size %u", cmd->bo_size);
-
-        /* wrap it and fail silently */
-        cmd->used = 0;
-        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
-    }
 }
 
 XGL_RESULT intel_cmd_create(struct intel_dev *dev,
@@ -126,6 +141,7 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     cmd->obj.destroy = cmd_destroy;
 
     cmd->dev = dev;
+
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
     cmd->relocs = icd_alloc(sizeof(cmd->relocs[0]) * cmd->reloc_count,
             4096, XGL_SYSTEM_ALLOC_INTERNAL);
@@ -142,26 +158,29 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
 void intel_cmd_destroy(struct intel_cmd *cmd)
 {
     cmd_reset(cmd);
+
+    icd_free(cmd->relocs);
     intel_base_destroy(&cmd->obj.base);
 }
 
 XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
 {
-    XGL_SIZE bo_size = cmd->bo_size;
+    XGL_UINT size = cmd->batch.size;
 
     cmd_reset(cmd);
 
-    if (cmd->flags != flags || !bo_size) {
-        cmd->flags = flags;
+    if (!size || cmd->flags != flags) {
+        XGL_GPU_SIZE bo_size = cmd->dev->gpu->max_batch_buffer_size;
 
-        bo_size = cmd->dev->gpu->max_batch_buffer_size;
         if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
             bo_size /= 2;
 
-        bo_size &= ~(sizeof(uint32_t) - 1);
+        size = bo_size / sizeof(uint32_t);
+
+        cmd->flags = flags;
     }
 
-    return cmd_alloc_and_map(cmd, bo_size);
+    return cmd_writer_alloc_and_map(cmd, &cmd->batch, size);
 }
 
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
@@ -169,14 +188,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
     struct intel_winsys *winsys = cmd->dev->winsys;
     XGL_UINT i;
 
-    /* reclaim the reserved space */
-    cmd->size += intel_cmd_reserved;
-
-    cmd_reserve(cmd, 2);
-    cmd_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));
-    /* pad to even dwords */
-    if (cmd->used & 1)
-        cmd_write(cmd, GEN_MI_CMD(MI_NOOP));
+    cmd_batch_end(cmd);
 
     /* TODO we need a more "explicit" winsys */
     for (i = 0; i < cmd->reloc_count; i++) {
@@ -184,23 +196,25 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         uint64_t presumed_offset;
         int err;
 
-        err = intel_bo_add_reloc(cmd->bo, sizeof(uint32_t) * reloc->pos,
-                reloc->mem->bo, reloc->val, reloc->read_domains,
-                reloc->write_domain, &presumed_offset);
+        err = intel_bo_add_reloc(reloc->writer->bo,
+                sizeof(uint32_t) * reloc->pos, reloc->mem->bo, reloc->val,
+                reloc->read_domains, reloc->write_domain, &presumed_offset);
         if (err) {
             cmd->result = XGL_ERROR_UNKNOWN;
             break;
         }
 
         assert(presumed_offset == (uint64_t) (uint32_t) presumed_offset);
-        cmd_patch(cmd, reloc->pos, (uint32_t) presumed_offset);
+        cmd_writer_patch(cmd, reloc->writer, reloc->pos,
+                (uint32_t) presumed_offset);
     }
 
     cmd_unmap(cmd);
 
     if (cmd->result != XGL_SUCCESS)
         return cmd->result;
-    else if (intel_winsys_can_submit_bo(winsys, &cmd->bo, 1))
+
+    if (intel_winsys_can_submit_bo(winsys, &cmd->batch.bo, 1))
         return XGL_SUCCESS;
     else
         return XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;

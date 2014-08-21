@@ -59,20 +59,25 @@ void intel_fence_destroy(struct intel_fence *fence)
 
 XGL_RESULT intel_fence_get_status(struct intel_fence *fence)
 {
-    if (!fence->cmd)
+    struct intel_bo *bo = (fence->cmd) ?
+        intel_cmd_get_batch(fence->cmd, NULL) : NULL;
+
+    if (!bo)
         return XGL_ERROR_UNAVAILABLE;
 
-    return (intel_bo_is_busy(fence->cmd->bo)) ? XGL_NOT_READY : XGL_SUCCESS;
+    return (intel_bo_is_busy(bo)) ? XGL_NOT_READY : XGL_SUCCESS;
 }
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
+    struct intel_bo *bo = (fence->cmd) ?
+        intel_cmd_get_batch(fence->cmd, NULL) : NULL;
     int err;
 
-    if (!fence->cmd)
+    if (!bo)
         return XGL_ERROR_UNAVAILABLE;
 
-    err = intel_bo_wait(fence->cmd->bo, timeout_ns);
+    err = intel_bo_wait(bo, timeout_ns);
 
     return (err) ? XGL_NOT_READY : XGL_SUCCESS;
 }
