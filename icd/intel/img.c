@@ -85,7 +85,7 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     layout = &img->layout;
 
     img->type = info->imageType;
-    img->extent = info->extent;
+    img->depth = info->extent.depth;
     img->array_size = info->arraySize;
     img->samples = info->samples;
     intel_layout_init(layout, dev, info);

@@ -249,10 +249,10 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
    surface_format = intel_format_translate_color(gpu, format);
    assert(surface_format >= 0);
 
-   width = img->extent.width;
-   height = img->extent.height;
+   width = img->layout.width0;
+   height = img->layout.height0;
    depth = (type == XGL_IMAGE_VIEW_3D) ?
-      img->extent.depth : num_layers;
+      img->depth : num_layers;
    pitch = img->layout.bo_stride;
 
    if (surface_type == GEN6_SURFTYPE_CUBE) {
@@ -572,10 +572,10 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
    surface_format = intel_format_translate_color(gpu, format);
    assert(surface_format >= 0);
 
-   width = img->extent.width;
-   height = img->extent.height;
+   width = img->layout.width0;
+   height = img->layout.height0;
    depth = (type == XGL_IMAGE_VIEW_3D) ?
-      img->extent.depth : num_layers;
+      img->depth : num_layers;
    pitch = img->layout.bo_stride;
 
    if (surface_type == GEN6_SURFTYPE_CUBE) {
@@ -860,10 +860,10 @@ ds_init_info(const struct intel_gpu *gpu,
    }
 
 
-   info->width = img->extent.width;
-   info->height = img->extent.height;
+   info->width = img->layout.width0;
+   info->height = img->layout.height0;
    info->depth = (img->type == XGL_IMAGE_3D) ?
-      img->extent.depth : num_layers;
+      img->depth : num_layers;
 
    info->lod = level;
    info->first_layer = first_layer;
