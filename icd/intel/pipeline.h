@@ -73,6 +73,7 @@ struct intel_pipeline {
     bool has_gen6_wa_pipe_control;
 
     /* XGL IA_STATE */
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state;
     int prim_type;
     bool primitive_restart;
     uint32_t primitive_restart_index;
@@ -103,6 +104,8 @@ struct intel_pipeline {
     XGL_PIPELINE_SHADER tess_control;
     XGL_PIPELINE_SHADER tess_eval;
     XGL_PIPELINE_SHADER compute;
+
+    XGL_SIZE total_size;  // FB memory app needs to allocate for this pipeline
 
     int reduced_prim;
     int so_num_vertices, so_max_vertices;
@@ -151,9 +154,14 @@ static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)
     return (struct intel_pipeline *) pipeline;
 }
 
+static inline struct intel_pipeline *intel_pipeline_from_base(struct intel_base *base)
+{
+    return (struct intel_pipeline *) base;
+}
+
 static inline struct intel_pipeline *intel_pipeline_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_pipeline *) obj;
+    return intel_pipeline_from_base(&obj->base);
 }
 
 XGL_RESULT XGLAPI intelCreateGraphicsPipeline(

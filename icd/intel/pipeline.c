@@ -22,12 +22,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "shader.h"
 #include "pipeline.h"
 #include "brw_defines.h"
 
-static XGL_RESULT intelPipelineIAState(struct intel_dev *dev, struct intel_pipeline *pipeline,
+static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline *pipeline,
                                        const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state)
 {
+    pipeline->ia_state = *ia_state;
+
     if (ia_state->provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
         pipeline->provoking_vertex_tri = BRW_PROVOKING_VERTEX_0;
         pipeline->provoking_vertex_trifan = BRW_PROVOKING_VERTEX_1;
@@ -108,7 +111,7 @@ static XGL_RESULT intelPipelineIAState(struct intel_dev *dev, struct intel_pipel
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT intelPipelineRSState(struct intel_dev *dev, struct intel_pipeline *pipeline,
+static XGL_RESULT pipeline_rs_state(struct intel_dev *dev, struct intel_pipeline *pipeline,
                                        const XGL_PIPELINE_RS_STATE_CREATE_INFO* rs_state)
 {
     pipeline->depthClipEnable = rs_state->depthClipEnable;
@@ -117,11 +120,39 @@ static XGL_RESULT intelPipelineRSState(struct intel_dev *dev, struct intel_pipel
     return XGL_SUCCESS;
 }
 
-static void intelPipelineDestroy(struct intel_obj *obj)
+static void pipeline_destroy(struct intel_obj *obj)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_obj(obj);
 
     intel_base_destroy(&pipeline->obj.base);
+}
+
+static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
+                              XGL_SIZE *size, XGL_VOID *data)
+{
+    struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (type) {
+    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+        {
+            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+
+            mem_req->size = pipeline->total_size;
+            // Programs must be aligned to 64bytes.
+            mem_req->alignment = 64;
+            mem_req->heapCount = 1;
+            mem_req->heaps[0] = 0;
+
+            *size = sizeof(*mem_req);
+        }
+        break;
+    default:
+        ret = intel_base_get_info(base, type, size, data);
+        break;
+    }
+
+    return ret;
 }
 
 XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
@@ -145,6 +176,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     } info = { .ptr = pCreateInfo };
     struct intel_dev *dev = intel_dev(device);
     struct intel_pipeline *pipeline;
+    struct intel_shader *shader;
     XGL_RESULT result;
 
     pipeline = (struct intel_pipeline *) intel_base_create(dev, sizeof(*pipeline),
@@ -154,7 +186,9 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     }
 
     pipeline->dev = dev;
-    pipeline->obj.destroy = intelPipelineDestroy;
+    pipeline->obj.destroy = pipeline_destroy;
+    pipeline->obj.base.get_info = pipeline_get_info;
+    pipeline->total_size = 0;
 
     do {
         result = XGL_SUCCESS;
@@ -171,7 +205,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
             break;
 
         case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            result = intelPipelineIAState(dev, pipeline, info.ia_state);
+            result = pipeline_ia_state(dev, pipeline, info.ia_state);
             break;
 
         case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
@@ -183,7 +217,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
             break;
 
         case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            result = intelPipelineRSState(dev, pipeline, info.rs_state);
+            result = pipeline_rs_state(dev, pipeline, info.rs_state);
             break;
 
         case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
@@ -191,30 +225,37 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
             break;
 
         case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
+            shader = intel_shader(info.shader_state->shader.shader);
             switch (info.shader_state->shader.stage) {
             case XGL_SHADER_STAGE_VERTEX:
                 pipeline->vs = info.shader_state->shader;
                 pipeline->active_shaders |= SHADER_VERTEX_FLAG;
+                pipeline->total_size += shader->codeSize;
                 break;
             case XGL_SHADER_STAGE_GEOMETRY:
                 pipeline->gs = info.shader_state->shader;
                 pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
+                pipeline->total_size += shader->codeSize;
                 break;
             case XGL_SHADER_STAGE_FRAGMENT:
                 pipeline->fs = info.shader_state->shader;
                 pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
+                pipeline->total_size += shader->codeSize;
                 break;
             case XGL_SHADER_STAGE_TESS_CONTROL:
                 pipeline->tess_control = info.shader_state->shader;
                 pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
+                pipeline->total_size += shader->codeSize;
                 break;
             case XGL_SHADER_STAGE_TESS_EVALUATION:
                 pipeline->tess_eval = info.shader_state->shader;
                 pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
+                pipeline->total_size += shader->codeSize;
                 break;
             case XGL_SHADER_STAGE_COMPUTE:
                 pipeline->compute = info.shader_state->shader;
                 pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
+                pipeline->total_size += shader->codeSize;
                 break;
             default:
                 // TODO: Log debug message
@@ -261,6 +302,24 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
                                      SHADER_TESS_EVAL_FLAG | SHADER_GEOMETRY_FLAG |
                                      SHADER_FRAGMENT_FLAG))) {
         // TODO: Log debug message: Can only specify compute shader when doing compute
+        result = XGL_ERROR_BAD_PIPELINE_DATA;
+        goto error_exit;
+    }
+
+    /*
+     * XGL_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
+     * Mismatching primitive topology and tessellation fails graphics pipeline creation.
+     */
+    if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
+        (pipeline->ia_state.topology != XGL_TOPOLOGY_PATCH)) {
+        // TODO: Log debug message: Invalid topology used with tessalation shader.
+        result = XGL_ERROR_BAD_PIPELINE_DATA;
+        goto error_exit;
+    }
+
+    if ((pipeline->ia_state.topology == XGL_TOPOLOGY_PATCH) &&
+            (pipeline->active_shaders & ~(SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
+        // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessalation shader.
         result = XGL_ERROR_BAD_PIPELINE_DATA;
         goto error_exit;
     }

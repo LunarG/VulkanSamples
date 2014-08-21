@@ -25,7 +25,7 @@
 #include "shader.h"
 #include "shader_il.h"
 
-static void intelShaderDestroy(struct intel_obj *obj)
+static void shader_destroy(struct intel_obj *obj)
 {
     struct intel_shader *shader = intel_shader_from_obj(obj);
 
@@ -74,8 +74,9 @@ XGL_RESULT XGLAPI intelCreateShader(
             intel_base_destroy(&shader->obj.base);
             return XGL_ERROR_OUT_OF_MEMORY;
         }
-        shader->codeSize = pCreateInfo->codeSize;
-        shader->obj.destroy = intelShaderDestroy;
+        /* shaders have to be aligned to 64byte boundaries */
+        shader->codeSize = u_align(pCreateInfo->codeSize, 64);
+        shader->obj.destroy = shader_destroy;
 
         // TODO: Shader pre-processing
 
