@@ -25,6 +25,7 @@
 #include "genhw/genhw.h"
 #include "dset.h"
 #include "mem.h"
+#include "pipeline.h"
 #include "state.h"
 #include "view.h"
 #include "cmd_priv.h"
@@ -38,10 +39,10 @@ XGL_VOID XGLAPI intelCmdBindPipeline(
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd->bind.pipeline.compute = pipeline;
+        cmd->bind.pipeline.compute = intel_pipeline(pipeline);
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd->bind.pipeline.graphics = pipeline;
+        cmd->bind.pipeline.graphics = intel_pipeline(pipeline);
         break;
     default:
         break;
