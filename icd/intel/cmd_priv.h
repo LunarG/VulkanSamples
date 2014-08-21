@@ -32,6 +32,26 @@
 #define CMD_ASSERT(cmd, min_gen, max_gen) \
     INTEL_GPU_ASSERT((cmd)->dev->gpu, (min_gen), (max_gen))
 
+struct intel_cmd_reloc {
+    XGL_UINT pos;
+
+    uint32_t val;
+    const struct intel_mem *mem;
+
+    /*
+     * With application state tracking promised by XGL, we should be able to
+     * set
+     *
+     *   I915_EXEC_NO_RELOC
+     *   I915_EXEC_HANDLE_LUT
+     *   I915_EXEC_IS_PINNED
+     *
+     * once we figure them out.
+     */
+    uint16_t read_domains;
+    uint16_t write_domain;
+};
+
 static inline int cmd_gen(const struct intel_cmd *cmd)
 {
     return intel_gpu_gen(cmd->dev->gpu);
@@ -62,7 +82,7 @@ static inline uint32_t *cmd_ptr(struct intel_cmd *cmd, XGL_UINT len)
  * Add a reloc for the value at \p offset.
  */
 static inline void cmd_add_reloc(struct intel_cmd *cmd, XGL_INT offset,
-                                 uint32_t val, struct intel_mem *mem,
+                                 uint32_t val, const struct intel_mem *mem,
                                  uint16_t read_domains, uint16_t write_domain)
 {
     struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
@@ -110,7 +130,7 @@ static inline void cmd_write_n(struct intel_cmd *cmd,
  * Write a reloc and advance.
  */
 static inline void cmd_write_r(struct intel_cmd *cmd, uint32_t val,
-                               struct intel_mem *mem,
+                               const struct intel_mem *mem,
                                uint16_t read_domains, uint16_t write_domain)
 {
     cmd_add_reloc(cmd, 0, val, mem, read_domains, write_domain);

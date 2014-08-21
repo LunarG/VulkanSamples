@@ -38,6 +38,8 @@ struct intel_blend_state;
 struct intel_ds_state;
 struct intel_dset;
 
+struct intel_cmd_reloc;
+
 /*
  * States bounded to the command buffer.  We want to write states directly to
  * the command buffer when possible, and reduce this struct.
@@ -82,26 +84,6 @@ struct intel_cmd_bind {
 
         const struct intel_ds_view *ds;
     } att;
-};
-
-struct intel_cmd_reloc {
-    XGL_UINT pos;
-
-    uint32_t val;
-    struct intel_mem *mem;
-
-    /*
-     * With application state tracking promised by XGL, we should be able to
-     * set
-     *
-     *   I915_EXEC_NO_RELOC
-     *   I915_EXEC_HANDLE_LUT
-     *   I915_EXEC_IS_PINNED
-     *
-     * once we figure them out.
-     */
-    uint16_t read_domains;
-    uint16_t write_domain;
 };
 
 struct intel_cmd {

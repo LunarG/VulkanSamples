@@ -113,7 +113,7 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
 }
 
 static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
-                                      struct intel_mem *mem,
+                                      const struct intel_mem *mem,
                                       XGL_GPU_SIZE offset,
                                       XGL_INDEX_TYPE type,
                                       bool enable_cut_index)
