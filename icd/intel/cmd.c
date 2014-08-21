@@ -129,11 +129,13 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
 static void cmd_unmap(struct intel_cmd *cmd)
 {
     cmd_writer_unmap(cmd, &cmd->batch);
+    cmd_writer_unmap(cmd, &cmd->state);
 }
 
 static void cmd_reset(struct intel_cmd *cmd)
 {
     cmd_writer_reset(cmd, &cmd->batch);
+    cmd_writer_reset(cmd, &cmd->state);
     cmd->reloc_used = 0;
     cmd->result = XGL_SUCCESS;
 }
@@ -183,22 +185,36 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
 
 XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
 {
-    XGL_UINT size = cmd->batch.size;
+    XGL_RESULT ret;
 
     cmd_reset(cmd);
 
-    if (!size || cmd->flags != flags) {
-        XGL_GPU_SIZE bo_size = cmd->dev->gpu->max_batch_buffer_size;
-
-        if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
-            bo_size /= 2;
-
-        size = bo_size / sizeof(uint32_t);
-
+    if (cmd->flags != flags) {
         cmd->flags = flags;
+        cmd->batch.size = 0;
     }
 
-    return cmd_writer_alloc_and_map(cmd, &cmd->batch, size);
+    if (!cmd->batch.size) {
+        XGL_UINT divider = sizeof(uint32_t) * 2;
+
+        if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
+            divider *= 4;
+
+        cmd->batch.size = cmd->dev->gpu->max_batch_buffer_size / divider;
+        cmd->state.size = cmd->dev->gpu->max_batch_buffer_size / divider;
+    }
+
+    ret = cmd_writer_alloc_and_map(cmd, &cmd->batch, cmd->batch.size);
+    if (ret)
+        return ret;
+
+    ret = cmd_writer_alloc_and_map(cmd, &cmd->state, cmd->state.size);
+    if (ret) {
+        cmd_writer_reset(cmd, &cmd->batch);
+        return ret;
+    }
+
+    return XGL_SUCCESS;
 }
 
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)

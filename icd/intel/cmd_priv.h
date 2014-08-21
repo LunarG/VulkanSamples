@@ -124,4 +124,82 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
     }
 }
 
+/**
+ * Reserve \p len DWords in the state buffer for writing, after aligning the
+ * current position to \p alignment.  Both the pointer to the reserved region
+ * and the aligned position are returned.
+ */
+static inline uint32_t *cmd_state_reserve(struct intel_cmd *cmd, XGL_UINT len,
+                                          XGL_UINT alignment, XGL_UINT *pos)
+{
+    struct intel_cmd_writer *writer = &cmd->state;
+    XGL_UINT aligned;
+
+    assert(alignment && u_is_pow2(alignment));
+    aligned = u_align(writer->used, alignment);
+
+    if (aligned + len > writer->size)
+        cmd_writer_grow(cmd, writer);
+    assert(aligned + len <= writer->size);
+
+    writer->used = aligned;
+    *pos = aligned;
+
+    return &((uint32_t *) writer->ptr_opaque)[writer->used];
+}
+
+/**
+ * Add a reloc at \p offset, relative to the current writer
+ * position of the state buffer.
+ */
+static inline void cmd_state_reloc(struct intel_cmd *cmd,
+                                   XGL_INT offset, uint32_t val,
+                                   const struct intel_mem *mem,
+                                   uint16_t read_domains,
+                                   uint16_t write_domain)
+{
+    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
+    struct intel_cmd_writer *writer = &cmd->state;
+
+    assert(cmd->reloc_used < cmd->reloc_count);
+
+    reloc->writer = writer;
+    reloc->pos = writer->used + offset;
+    reloc->val = val;
+    reloc->mem = mem;
+    reloc->read_domains = read_domains;
+    reloc->write_domain = write_domain;
+
+    cmd->reloc_used++;
+}
+
+/**
+ * Advance the writer position of the state buffer.
+ */
+static inline void cmd_state_advance(struct intel_cmd *cmd, XGL_UINT len)
+{
+    struct intel_cmd_writer *writer = &cmd->state;
+
+    assert(writer->used + len <= writer->size);
+    writer->used += len;
+}
+
+/**
+ * A convenient function to copy a state of \p len DWords to the state buffer.
+ * The position of the state is returned.
+ */
+static inline XGL_UINT cmd_state_copy(struct intel_cmd *cmd,
+                                      const uint32_t *vals, XGL_UINT len,
+                                      XGL_UINT alignment)
+{
+    uint32_t *dst;
+    XGL_UINT pos;
+
+    dst = cmd_state_reserve(cmd, len, alignment, &pos);
+    memcpy(dst, vals, sizeof(uint32_t) * len);
+    cmd_state_advance(cmd, len);
+
+    return pos;
+}
+
 #endif /* CMD_PRIV_H */

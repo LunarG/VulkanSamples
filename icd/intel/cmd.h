@@ -106,6 +106,7 @@ struct intel_cmd {
     XGL_FLAGS flags;
 
     struct intel_cmd_writer batch;
+    struct intel_cmd_writer state;
 
     XGL_UINT reloc_used;
     XGL_RESULT result;
