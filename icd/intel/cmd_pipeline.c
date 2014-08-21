@@ -24,6 +24,7 @@
 
 #include "genhw/genhw.h"
 #include "dset.h"
+#include "img.h"
 #include "mem.h"
 #include "pipeline.h"
 #include "state.h"
@@ -163,6 +164,73 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
     cmd_write(cmd, dw0);
     cmd_write_r(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
     cmd_write_r(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
+}
+
+static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
+                                      const struct intel_ds_view *view)
+{
+    const uint8_t cmd_len = 7;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw0 = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        GEN_RENDER_CMD(3D, GEN7, 3DSTATE_DEPTH_BUFFER) :
+        GEN_RENDER_CMD(3D, GEN6, 3DSTATE_DEPTH_BUFFER);
+    dw0 |= (cmd_len - 2);
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write(cmd, view->cmd[0]);
+    cmd_write_r(cmd, view->cmd[1], view->img->obj.mem,
+                                   INTEL_DOMAIN_RENDER,
+                                   INTEL_DOMAIN_RENDER);
+    cmd_write(cmd, view->cmd[2]);
+    cmd_write(cmd, view->cmd[3]);
+    cmd_write(cmd, view->cmd[4]);
+    cmd_write(cmd, view->cmd[5]);
+}
+
+static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
+                                        const struct intel_ds_view *view)
+{
+    const uint8_t cmd_len = 3;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw0 = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        GEN_RENDER_CMD(3D, GEN7, 3DSTATE_STENCIL_BUFFER) :
+        GEN_RENDER_CMD(3D, GEN6, 3DSTATE_STENCIL_BUFFER);
+    dw0 |= (cmd_len - 2);
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write(cmd, view->cmd[6]);
+    cmd_write_r(cmd, view->cmd[7], view->img->obj.mem,
+                                   INTEL_DOMAIN_RENDER,
+                                   INTEL_DOMAIN_RENDER);
+}
+
+static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
+                                           const struct intel_ds_view *view)
+{
+    const uint8_t cmd_len = 3;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw0 = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        GEN_RENDER_CMD(3D, GEN7, 3DSTATE_HIER_DEPTH_BUFFER) :
+        GEN_RENDER_CMD(3D, GEN6, 3DSTATE_HIER_DEPTH_BUFFER);
+    dw0 |= (cmd_len - 2);
+
+    cmd_reserve(cmd, cmd_len);
+    cmd_write(cmd, dw0);
+    cmd_write(cmd, view->cmd[8]);
+    cmd_write_r(cmd, view->cmd[9], view->img->obj.mem,
+                                   INTEL_DOMAIN_RENDER,
+                                   INTEL_DOMAIN_RENDER);
 }
 
 XGL_VOID XGLAPI intelCmdBindPipeline(
@@ -306,6 +374,7 @@ XGL_VOID XGLAPI intelCmdBindAttachments(
     const XGL_DEPTH_STENCIL_BIND_INFO*          pDepthStencilAttachment)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    const struct intel_ds_view *ds;
     XGL_UINT i;
 
     for (i = 0; i < colorAttachmentCount; i++) {
@@ -318,11 +387,18 @@ XGL_VOID XGLAPI intelCmdBindAttachments(
     cmd->bind.att.rt_count = colorAttachmentCount;
 
     if (pDepthStencilAttachment) {
-        struct intel_ds_view *ds = intel_ds_view(pDepthStencilAttachment->view);
-        cmd->bind.att.ds = ds;
+        cmd->bind.att.ds = intel_ds_view(pDepthStencilAttachment->view);
+        ds = cmd->bind.att.ds;
+
     } else {
-        cmd->bind.att.ds = NULL;
+        /* all zeros */
+        static const struct intel_ds_view null_ds;
+        ds = &null_ds;
     }
+
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
 }
 
 XGL_VOID XGLAPI intelCmdDraw(
