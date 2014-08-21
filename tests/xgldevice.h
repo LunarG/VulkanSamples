@@ -13,7 +13,7 @@ public:
     void init_device();
     void get_device_queue(XGL_QUEUE_TYPE queue_type,
                           XGL_UINT queue_idx);
-    void get_device_queue() {get_device_queue();}
+    void get_device_queue() {get_device_queue(XGL_QUEUE_TYPE_GRAPHICS, 0);}
 
 private:
     XGL_DEVICE m_xgl_device_object;
