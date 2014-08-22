@@ -357,13 +357,28 @@ static void gen6_cc_states(struct intel_cmd *cmd)
     const struct intel_blend_state *blend = cmd->bind.state.blend;
     const struct intel_ds_state *ds = cmd->bind.state.ds;
     XGL_UINT blend_pos, ds_pos, cc_pos;
+    uint32_t stencil_ref;
+    uint32_t blend_color[4];
 
     CMD_ASSERT(cmd, 6, 6);
 
-    blend_pos = gen6_BLEND_STATE(cmd, blend);
-    ds_pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-    cc_pos = gen6_COLOR_CALC_STATE(cmd,
-            ds->cmd_stencil_ref, blend->cmd_blend_color);
+    if (blend) {
+        blend_pos = gen6_BLEND_STATE(cmd, blend);
+        memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
+    } else {
+        blend_pos = 0;
+        memset(blend_color, 0, sizeof(blend_color));
+    }
+
+    if (ds) {
+        ds_pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
+        stencil_ref = ds->cmd_stencil_ref;
+    } else {
+        ds_pos = 0;
+        stencil_ref = 0;
+    }
+
+    cc_pos = gen6_COLOR_CALC_STATE(cmd, stencil_ref, blend_color);
 
     gen6_3DSTATE_CC_STATE_POINTERS(cmd, blend_pos, ds_pos, cc_pos);
 }
@@ -372,20 +387,34 @@ static void gen7_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_blend_state *blend = cmd->bind.state.blend;
     const struct intel_ds_state *ds = cmd->bind.state.ds;
+    uint32_t stencil_ref;
+    uint32_t blend_color[4];
     XGL_UINT pos;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
-    pos = gen6_BLEND_STATE(cmd, blend);
-    gen7_3dstate_pointer(cmd,
-            GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, pos);
+    if (!blend && !ds)
+        return;
 
-    pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-    gen7_3dstate_pointer(cmd,
-            GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS, pos);
+    if (blend) {
+        pos = gen6_BLEND_STATE(cmd, blend);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, pos);
 
-    pos = gen6_COLOR_CALC_STATE(cmd,
-            ds->cmd_stencil_ref, blend->cmd_blend_color);
+        memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
+    } else {
+        memset(blend_color, 0, sizeof(blend_color));
+    }
+
+    if (ds) {
+        pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS, pos);
+    } else {
+        stencil_ref = 0;
+    }
+
+    pos = gen6_COLOR_CALC_STATE(cmd, stencil_ref, blend_color);
     gen7_3dstate_pointer(cmd,
             GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, pos);
 }
