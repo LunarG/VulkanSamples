@@ -221,9 +221,13 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[0]);
-    cmd_batch_reloc(cmd, view->cmd[1], view->img->obj.mem,
-                                       INTEL_DOMAIN_RENDER,
-                                       INTEL_DOMAIN_RENDER);
+    if (view->img) {
+        cmd_batch_reloc(cmd, view->cmd[1], view->img->obj.mem,
+                        INTEL_DOMAIN_RENDER,
+                        INTEL_DOMAIN_RENDER);
+    } else {
+        cmd_batch_write(cmd, 0);
+    }
     cmd_batch_write(cmd, view->cmd[2]);
     cmd_batch_write(cmd, view->cmd[3]);
     cmd_batch_write(cmd, view->cmd[4]);
@@ -246,9 +250,13 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[6]);
-    cmd_batch_reloc(cmd, view->cmd[7], view->img->obj.mem,
-                                       INTEL_DOMAIN_RENDER,
-                                       INTEL_DOMAIN_RENDER);
+    if (view->img) {
+        cmd_batch_reloc(cmd, view->cmd[7], view->img->obj.mem,
+                        INTEL_DOMAIN_RENDER,
+                        INTEL_DOMAIN_RENDER);
+    } else {
+        cmd_batch_write(cmd, 0);
+    }
 }
 
 static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
@@ -267,9 +275,13 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[8]);
-    cmd_batch_reloc(cmd, view->cmd[9], view->img->obj.mem,
-                                       INTEL_DOMAIN_RENDER,
-                                       INTEL_DOMAIN_RENDER);
+    if (view->img) {
+        cmd_batch_reloc(cmd, view->cmd[9], view->img->obj.mem,
+                        INTEL_DOMAIN_RENDER,
+                        INTEL_DOMAIN_RENDER);
+    } else {
+        cmd_batch_write(cmd, 0);
+    }
 }
 
 static void gen6_3DSTATE_CC_STATE_POINTERS(struct intel_cmd *cmd,
