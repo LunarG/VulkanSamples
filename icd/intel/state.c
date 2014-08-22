@@ -654,7 +654,7 @@ XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
     XGL_RESULT ret;
 
     state = (struct intel_ds_state *) intel_base_create(dev,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_MSAA_STATE,
+            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_STATE,
             info, 0);
     if (!state)
         return XGL_ERROR_OUT_OF_MEMORY;
