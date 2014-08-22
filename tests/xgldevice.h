@@ -14,6 +14,7 @@ public:
     void get_device_queue(XGL_QUEUE_TYPE queue_type,
                           XGL_UINT queue_idx);
     void get_device_queue() {get_device_queue(XGL_QUEUE_TYPE_GRAPHICS, 0);}
+    XGL_RESULT AllocAndBindGpuMemory(XGL_OBJECT obj, const std::string &objName, XGL_GPU_MEMORY *pMem);
 
 private:
     XGL_DEVICE m_xgl_device_object;
