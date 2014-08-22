@@ -272,11 +272,134 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
                                        INTEL_DOMAIN_RENDER);
 }
 
+static void gen6_3DSTATE_CC_STATE_POINTERS(struct intel_cmd *cmd,
+                                           XGL_UINT blend_pos,
+                                           XGL_UINT ds_pos,
+                                           XGL_UINT cc_pos)
+{
+    const uint8_t cmd_len = 4;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_CC_STATE_POINTERS) |
+          (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, (blend_pos << 2) | 1);
+    cmd_batch_write(cmd, (ds_pos << 2) | 1);
+    cmd_batch_write(cmd, (cc_pos << 2) | 1);
+}
+
+static void gen7_3dstate_pointer(struct intel_cmd *cmd,
+                                 int subop, XGL_UINT pos)
+{
+    const uint8_t cmd_len = 2;
+    const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
+                         GEN6_RENDER_SUBTYPE_3D |
+                         subop | (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, pos << 2);
+}
+
+static XGL_UINT gen6_BLEND_STATE(struct intel_cmd *cmd,
+                                 const struct intel_blend_state *state)
+{
+    const uint8_t cmd_align = GEN6_ALIGNMENT_BLEND_STATE;
+    const uint8_t cmd_len = XGL_MAX_COLOR_ATTACHMENTS * 2;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+    STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
+
+    return cmd_state_copy(cmd, state->cmd, cmd_len, cmd_align);
+}
+
+static XGL_UINT gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
+                                         const struct intel_ds_state *state)
+{
+    const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
+    const uint8_t cmd_len = 3;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+    STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
+
+    return cmd_state_copy(cmd, state->cmd, cmd_len, cmd_align);
+}
+
+static XGL_UINT gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
+                                      uint32_t stencil_ref,
+                                      const uint32_t blend_color[4])
+{
+    const uint8_t cmd_align = GEN6_ALIGNMENT_COLOR_CALC_STATE;
+    const uint8_t cmd_len = 6;
+    XGL_UINT pos;
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw = cmd_state_reserve(cmd, cmd_len, cmd_align, &pos);
+    dw[0] = stencil_ref;
+    dw[1] = 0;
+    dw[2] = blend_color[0];
+    dw[3] = blend_color[1];
+    dw[4] = blend_color[2];
+    dw[5] = blend_color[3];
+    cmd_state_advance(cmd, cmd_len);
+
+    return pos;
+}
+
+static void gen6_cc_states(struct intel_cmd *cmd)
+{
+    const struct intel_blend_state *blend = cmd->bind.state.blend;
+    const struct intel_ds_state *ds = cmd->bind.state.ds;
+    XGL_UINT blend_pos, ds_pos, cc_pos;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    blend_pos = gen6_BLEND_STATE(cmd, blend);
+    ds_pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
+    cc_pos = gen6_COLOR_CALC_STATE(cmd,
+            ds->cmd_stencil_ref, blend->cmd_blend_color);
+
+    gen6_3DSTATE_CC_STATE_POINTERS(cmd, blend_pos, ds_pos, cc_pos);
+}
+
+static void gen7_cc_states(struct intel_cmd *cmd)
+{
+    const struct intel_blend_state *blend = cmd->bind.state.blend;
+    const struct intel_ds_state *ds = cmd->bind.state.ds;
+    XGL_UINT pos;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    pos = gen6_BLEND_STATE(cmd, blend);
+    gen7_3dstate_pointer(cmd,
+            GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, pos);
+
+    pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
+    gen7_3dstate_pointer(cmd,
+            GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS, pos);
+
+    pos = gen6_COLOR_CALC_STATE(cmd,
+            ds->cmd_stencil_ref, blend->cmd_blend_color);
+    gen7_3dstate_pointer(cmd,
+            GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, pos);
+}
+
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
 
     /* TODO more states */
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        gen7_cc_states(cmd);
+    else
+        gen6_cc_states(cmd);
 
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_reserve(cmd, msaa->cmd_len);
