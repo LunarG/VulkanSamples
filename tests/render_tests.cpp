@@ -67,9 +67,67 @@ using namespace std;
 #include "xgldevice.h"
 #include "shader_il.h"
 
+//--------------------------------------------------------------------------------------
+// Mesh and VertexFormat Data
+//--------------------------------------------------------------------------------------
+struct Vertex
+{
+    XGL_FLOAT posX, posY, posZ, posW;    // Position data
+    XGL_FLOAT r, g, b, a;                // Color
+};
+
+#define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
+
+static const Vertex g_vbData[] =
+{
+    { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( 1,  1,  1 ), XYZ1( 1.f, 1.f, 1.f ) },
+
+    { XYZ1( 1,  1,  1 ), XYZ1( 1.f, 1.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
+
+    { XYZ1( 1,  1,  1 ), XYZ1( 1.f, 1.f, 1.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+
+    { XYZ1( 1, -1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
+};
+
+
 class XglRenderTest : public ::testing::Test {
 public:
-    void CreateImage(XGL_UINT w, XGL_UINT h);
+    void CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
+                     XGL_GPU_MEMORY *pMem);
     void DestroyImage();
 
     void CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
@@ -78,15 +136,30 @@ public:
     XGL_DEVICE device() {return m_device->device();}
     void CreateShader(const char *filename, XGL_SHADER *pshader);
     void InitPipeline();
+    void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
+    void DrawTriangleTest();
 
 protected:
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
     XGL_UINT gpu_count;
-    XGL_IMAGE m_image;
-    XGL_GPU_MEMORY m_image_mem;
+    XGL_IMAGE           m_image;
+    XGL_IMAGE_STATE     m_image_state;
+    XGL_GPU_MEMORY      m_image_mem;
+    XGL_GPU_MEMORY      m_descriptor_set_mem;
+    XGL_GPU_MEMORY      m_pipe_mem;
     XglDevice *m_device;
     XGL_CMD_BUFFER m_cmdBuffer;
+    XGL_UINT32 m_numVertices;
+    XGL_MEMORY_VIEW_ATTACH_INFO m_vtxBufferView;
+    XGL_GPU_MEMORY m_vtxBufferMem;
+    XGL_UINT32                      m_numMemRefs;
+    XGL_MEMORY_REF                  m_memRefs[5];
+    XGL_RASTER_STATE_OBJECT         m_stateRaster;
+    XGL_VIEWPORT_STATE_OBJECT       m_stateViewport;
+    XGL_DEPTH_STENCIL_STATE_OBJECT  m_stateDepthStencil;
+    XGL_MSAA_STATE_OBJECT           m_stateMsaa;
+    XGL_DESCRIPTOR_SET              m_rsrcDescSet;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -99,6 +172,9 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
+        memset(&m_vtxBufferView, 0, sizeof(m_vtxBufferView));
+        m_vtxBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
+
         err = xglInitAndEnumerateGpus(&app_info, NULL,
                                       MAX_GPUS, &this->gpu_count, objs);
         ASSERT_XGL_SUCCESS(err);
@@ -106,13 +182,6 @@ protected:
 
         m_device = new XglDevice(0, objs[0]);
         m_device->get_device_queue();
-
-        XGL_CMD_BUFFER_CREATE_INFO info = {};
-
-        info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-        info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
-        err = xglCreateCommandBuffer(device(), &info, &m_cmdBuffer);
-        ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
     }
 
     virtual void TearDown() {
@@ -121,10 +190,10 @@ protected:
 };
 
 
-void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h)
+void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
+                                XGL_GPU_MEMORY *pMem)
 {
     XGL_RESULT err;
-    XGL_IMAGE image;
     XGL_UINT mipCount;
     XGL_SIZE size;
     XGL_FORMAT fmt;
@@ -200,16 +269,18 @@ void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h)
     //        XGL_DEVICE                                  device,
     //        const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
     //        XGL_IMAGE*                                  pImage);
-    err = xglCreateImage(device(), &imageCreateInfo, &m_image);
+    err = xglCreateImage(device(), &imageCreateInfo, pImage);
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
     XGL_UINT data_size;
-    err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = xglGetObjectInfo(*pImage, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
     ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
+
+    m_image_state = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
 
     //        XGL_RESULT XGLAPI xglAllocMemory(
     //            XGL_DEVICE                                  device,
@@ -225,10 +296,10 @@ void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h)
     memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(device(), &mem_info, &m_image_mem);
+    err = xglAllocMemory(device(), &mem_info, pMem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(image, m_image_mem, 0);
+    err = xglBindObjectMemory(*pImage, *pMem, 0);
     ASSERT_XGL_SUCCESS(err);
 }
 
@@ -274,43 +345,193 @@ void XglRenderTest::CreateShader(const char *filename, XGL_SHADER *pshader)
 
     // reading an entire binary file
     ifstream file (filename, ios::in|ios::binary|ios::ate);
-        ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
+    ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
 
-//    if (file.is_open()) {
-//    ASSERT_TRUE(file.is_open() == true);
-        size = file.tellg();
-        memblock = new char [size];
-        ASSERT_TRUE(memblock != NULL) << "memory allocation failed";
+    size = file.tellg();
+    memblock = new char [size];
+    ASSERT_TRUE(memblock != NULL) << "memory allocation failed";
 
-        file.seekg (0, ios::beg);
-        file.read (memblock, size);
-        file.close();
+    file.seekg (0, ios::beg);
+    file.read (memblock, size);
+    file.close();
 
-        XGL_SHADER_CREATE_INFO createInfo;
-        XGL_SHADER shader;
+    XGL_SHADER_CREATE_INFO createInfo;
+    XGL_SHADER shader;
 
-        createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        createInfo.pNext = NULL;
-        createInfo.pCode = memblock;
-        createInfo.codeSize = size;
-        createInfo.flags = 0;
-        err = xglCreateShader(device(), &createInfo, &shader);
-        ASSERT_XGL_SUCCESS(err);
+    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    createInfo.pNext = NULL;
+    createInfo.pCode = memblock;
+    createInfo.codeSize = size;
+    createInfo.flags = 0;
+    err = xglCreateShader(device(), &createInfo, &shader);
+    ASSERT_XGL_SUCCESS(err);
 
-        delete[] memblock;
+    delete[] memblock;
 
-        *pshader = shader;
-//    }
+    *pshader = shader;
 }
 
-TEST_F(XglRenderTest, DrawTriangleTest) {
+// this function will create the vertex buffer and fill it with the mesh data
+void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
+                              const void* vertices )
+{
+    XGL_RESULT err = XGL_SUCCESS;
+
+    assert( numVertices * vbStride > 0 );
+    m_numVertices = numVertices;
+
+    XGL_MEMORY_ALLOC_INFO alloc_info = {};
+    XGL_UINT8 *pData;
+
+    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.allocationSize = numVertices * vbStride;
+    alloc_info.alignment = 0;
+    alloc_info.heapCount = 1;
+    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
+
+    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
+    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+
+    err = xglAllocMemory(device(), &alloc_info, &m_vtxBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglMapMemory(m_vtxBufferMem, 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData, vertices, alloc_info.allocationSize);
+
+    err = xglUnmapMemory(m_vtxBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    // set up the memory view for the vertex buffer
+    this->m_vtxBufferView.stride = vbStride;
+    this->m_vtxBufferView.range  = numVertices * vbStride;
+    this->m_vtxBufferView.offset = 0;
+    this->m_vtxBufferView.mem    = m_vtxBufferMem;
+    this->m_vtxBufferView.format.channelFormat = XGL_CH_FMT_UNDEFINED;
+    this->m_vtxBufferView.format.numericFormat = XGL_NUM_FMT_UNDEFINED;
+
+    // open the command buffer
+    err = xglBeginCommandBuffer( m_cmdBuffer, 0 );
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_MEMORY_STATE_TRANSITION transition = {};
+    transition.mem = m_vtxBufferMem;
+    transition.oldState = XGL_MEMORY_STATE_DATA_TRANSFER;
+    transition.newState = XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY;
+    transition.offset = 0;
+    transition.regionSize = numVertices * vbStride;
+
+    // write transition to the command buffer
+    xglCmdPrepareMemoryRegions( m_cmdBuffer, 1, &transition );
+    this->m_vtxBufferView.state = XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY;
+
+    // finish recording the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS(err);
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 1;
+    m_memRefs[0].flags = 0;
+    m_memRefs[0].mem = m_vtxBufferMem;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS(err);
+}
+
+void XglRenderTest::DrawTriangleTest()
+{
     XGL_RESULT err;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
     XGL_SHADER vs, ps;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
     XGL_PIPELINE pipeline;
+    int width = 256, height = 256;
 
+    // create a raster state (solid, back-face culling)
+    XGL_RASTER_STATE_CREATE_INFO raster = {};
+    raster.sType = XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO;
+    raster.fillMode = XGL_FILL_SOLID;
+    raster.cullMode = XGL_CULL_BACK;
+    raster.frontFace = XGL_FRONT_FACE_CCW;
+    err = xglCreateRasterState( device(), &raster, &m_stateRaster );
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_VIEWPORT_STATE_CREATE_INFO viewport = {};
+    viewport.viewportCount         = 1;
+    viewport.scissorEnable         = XGL_FALSE;
+    viewport.viewports[0].originX  = 0;
+    viewport.viewports[0].originY  = 0;
+    viewport.viewports[0].width    = 1.f * width;
+    viewport.viewports[0].height   = 1.f * height;
+    viewport.viewports[0].minDepth = 0.f;
+    viewport.viewports[0].maxDepth = 1.f;
+
+    err = xglCreateViewportState( device(), &viewport, &m_stateViewport );
+    ASSERT_XGL_SUCCESS( err );
+
+    XGL_DEPTH_STENCIL_STATE_CREATE_INFO depthStencil = {};
+    depthStencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable      = XGL_FALSE;
+    depthStencil.depthWriteEnable = XGL_FALSE;
+    depthStencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
+    depthStencil.depthBoundsEnable = XGL_FALSE;
+    depthStencil.minDepth = 0.f;
+    depthStencil.maxDepth = 1.f;
+    depthStencil.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
+    depthStencil.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
+    depthStencil.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
+    depthStencil.back.stencilRef = 0x00;
+    depthStencil.back.stencilFunc = XGL_COMPARE_ALWAYS;
+    depthStencil.front = depthStencil.back;
+
+    err = xglCreateDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
+    ASSERT_XGL_SUCCESS( err );
+
+    XGL_MSAA_STATE_CREATE_INFO msaa = {};
+    msaa.sType = XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO;
+    msaa.sampleMask = 1;
+    msaa.samples = 1;
+
+    err = xglCreateMsaaState( device(), &msaa, &m_stateMsaa );
+    ASSERT_XGL_SUCCESS( err );
+
+    XGL_CMD_BUFFER_CREATE_INFO cmdInfo = {};
+
+    cmdInfo.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    cmdInfo.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    err = xglCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
+    ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
+
+    ASSERT_NO_FATAL_FAILURE(CreateImage(width, height, &m_image, &m_image_mem));
+
+#if 0
+    // Create descriptor set for our one resource
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = 1; // Vertex buffer only
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // set up the memory view for the vertex buffer
+    this->m_vtxBufferView.stride = vbStride;
+    this->m_vtxBufferView.range  = numVertices * vbStride;
+    this->m_vtxBufferView.offset = 0;
+    this->m_vtxBufferView.mem    = m_vtxBufferMem;
+    this->m_vtxBufferView.format.channelFormat = XGL_CH_FMT_UNDEFINED;
+    this->m_vtxBufferView.format.numericFormat = XGL_NUM_FMT_UNDEFINED;
+    // write the vertex buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+#endif
     /*
      * Define descriptor slots for vertex shader.
      */
@@ -319,7 +540,7 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
         1                            // shaderEntityIndex
     };
 
-    CreateShader("vs-kernel.bin", &vs);
+    ASSERT_NO_FATAL_FAILURE(CreateShader("vs-kernel.bin", &vs));
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
@@ -332,7 +553,7 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    CreateShader("wm-kernel.bin", &ps);
+    ASSERT_NO_FATAL_FAILURE(CreateShader("wm-kernel.bin", &ps));
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
@@ -392,47 +613,7 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
     err = xglCreateGraphicsPipeline(device(), &info, &pipeline);
     ASSERT_XGL_SUCCESS(err);
 
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
-    err = xglGetObjectInfo(pipeline, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Pipeline): Failed - expect pipeline to require memory";
-
-    //        XGL_RESULT XGLAPI xglAllocMemory(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    //            XGL_GPU_MEMORY*                             pMem);
-
-//    typedef struct _XGL_MEMORY_ALLOC_INFO
-//    {
-//        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
-//        XGL_VOID*                               pNext;                      // Pointer to next structure
-//        XGL_GPU_SIZE                            allocationSize;             // Size of memory allocation
-//        XGL_GPU_SIZE                            alignment;
-//        XGL_FLAGS                               flags;                      // XGL_MEMORY_ALLOC_FLAGS
-//        XGL_UINT                                heapCount;
-//        XGL_UINT                                heaps[XGL_MAX_MEMORY_HEAPS];
-//        XGL_MEMORY_PRIORITY                     memPriority;
-//    } XGL_MEMORY_ALLOC_INFO;
-    XGL_MEMORY_ALLOC_INFO mem_info = {
-        XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        XGL_NULL_HANDLE,
-        mem_req.size,                                   // allocationSize
-        mem_req.alignment,                              // alignment
-        XGL_MEMORY_ALLOC_SHAREABLE_BIT,                 // XGL_MEMORY_ALLOC_FLAGS
-        mem_req.heapCount,                              // heapCount
-        {0},                                  // heaps
-        XGL_MEMORY_PRIORITY_NORMAL                      // XGL_MEMORY_PRIORITY
-    };
-
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
-
-    err = xglAllocMemory(device(), &mem_info, &m_image_mem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglBindObjectMemory(pipeline, m_image_mem, 0);
+    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
     ASSERT_XGL_SUCCESS(err);
 
     /*
@@ -441,8 +622,111 @@ TEST_F(XglRenderTest, DrawTriangleTest) {
     ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
     ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
 
-    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+//    typedef struct _XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO
+//    {
+//        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
+//        XGL_VOID*                               pNext;                  // Pointer to next structure
+//        XGL_IMAGE                               image;
+//        XGL_FORMAT                              format;
+//        XGL_UINT                                mipLevel;
+//        XGL_UINT                                baseArraySlice;
+//        XGL_UINT                                arraySize;
+//    } XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
+    XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
+        XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+        XGL_NULL_HANDLE,
+        this->m_image,
+        {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UINT},
+        0,
+        0,
+        1
+    };
+    XGL_COLOR_ATTACHMENT_VIEW colorView;
 
+    err = xglCreateColorAttachmentView(device(), &createView, &colorView);
+    ASSERT_XGL_SUCCESS(err);
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    // whatever we want to do, we do it to the whole buffer
+    XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
+    srRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    srRange.baseMipLevel = 0;
+    srRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
+    srRange.baseArraySlice = 0;
+    srRange.arraySize = XGL_LAST_MIP_OR_SLICE;
+
+    // prepare the whole back buffer for clear
+    XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
+    transitionToClear.image = m_image;
+    transitionToClear.oldState = m_image_state;
+    transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
+    transitionToClear.subresourceRange = srRange;
+    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
+    m_image_state = ( XGL_IMAGE_STATE ) transitionToClear.newState;
+
+    // clear the back buffer to dark grey
+    XGL_UINT clearColor[4] = {64, 64, 64, 0};
+    xglCmdClearColorImageRaw( m_cmdBuffer, m_image, clearColor, 1, &srRange );
+
+    // prepare back buffer for rendering
+    XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
+    transitionToRender.image = m_image;
+    transitionToRender.oldState = m_image_state;
+    transitionToRender.newState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+    transitionToRender.subresourceRange = srRange;
+    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
+    m_image_state = ( XGL_IMAGE_STATE ) transitionToRender.newState;
+
+    // bind render target
+    XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
+    colorBind.view  = colorView;
+    colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+    xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
+
+    // set all states
+    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
+    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, m_stateViewport );
+    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil );
+    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
+
+    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
+    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+//    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
+
+    // render the cube
+    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+
+    // prepare the back buffer for present
+//    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
+//    transitionToPresent.image = m_image;
+//    transitionToPresent.oldState = m_image_state;
+//    transitionToPresent.newState = m_display.fullscreen ? XGL_WSI_WIN_PRESENT_SOURCE_FLIP : XGL_WSI_WIN_PRESENT_SOURCE_BLT;
+//    transitionToPresent.subresourceRange = srRange;
+//    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToPresent );
+//    m_image_state = ( XGL_IMAGE_STATE ) transitionToPresent.newState;
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 0;
+//    m_memRefs[0].flags = 0;
+//    m_memRefs[0].mem = m_vtxBufferMemory;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS( err );
+
+    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+}
+
+TEST_F(XglRenderTest, TestDrawTriangle) {
+    DrawTriangleTest();
 }
 
 int main(int argc, char **argv) {
