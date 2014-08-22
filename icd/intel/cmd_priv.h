@@ -59,11 +59,47 @@ static inline int cmd_gen(const struct intel_cmd *cmd)
     return intel_gpu_gen(cmd->dev->gpu);
 }
 
+static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
+                                     XGL_UINT reloc_len)
+{
+    /* fail silently */
+    if (cmd->reloc_used + reloc_len > cmd->reloc_count) {
+        cmd->reloc_used = 0;
+        cmd->result = XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;
+    }
+    assert(cmd->reloc_used + reloc_len <= cmd->reloc_count);
+}
+
 void cmd_writer_grow(struct intel_cmd *cmd,
                      struct intel_cmd_writer *writer);
 
 /**
- * Reserve \p len DWords in the batch buffer for writing.
+ * Add a reloc at \p offset, relative to the current writer position.  No
+ * error checking.
+ */
+static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
+                                        struct intel_cmd_writer *writer,
+                                        XGL_INT offset, uint32_t val,
+                                        const struct intel_mem *mem,
+                                        uint16_t read_domains,
+                                        uint16_t write_domain)
+{
+    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
+
+    assert(cmd->reloc_used < cmd->reloc_count);
+
+    reloc->writer = writer;
+    reloc->pos = writer->used + offset;
+    reloc->val = val;
+    reloc->mem = mem;
+    reloc->read_domains = read_domains;
+    reloc->write_domain = write_domain;
+
+    cmd->reloc_used++;
+}
+
+/**
+ * Reserve \p len DWords in the batch buffer for building a hardware command.
  */
 static inline void cmd_batch_reserve(struct intel_cmd *cmd, XGL_UINT len)
 {
@@ -75,7 +111,18 @@ static inline void cmd_batch_reserve(struct intel_cmd *cmd, XGL_UINT len)
 }
 
 /**
- * Write a DWord to the batch buffer and advance.
+ * Reserve \p len DWords in the batch buffer and \p reloc_len relocs for
+ * building a hardware command.
+ */
+static inline void cmd_batch_reserve_reloc(struct intel_cmd *cmd,
+                                           XGL_UINT len, XGL_UINT reloc_len)
+{
+    cmd_reserve_reloc(cmd, reloc_len);
+    cmd_batch_reserve(cmd, len);
+}
+
+/**
+ * Add a DWord to the hardware command being built.  No error checking.
  */
 static inline void cmd_batch_write(struct intel_cmd *cmd, uint32_t val)
 {
@@ -86,26 +133,33 @@ static inline void cmd_batch_write(struct intel_cmd *cmd, uint32_t val)
 }
 
 /**
- * Add a reloc for the batch buffer and advance.
+ * Add \p len DWords to the hardware command being built.  No error checking.
+ */
+static inline void cmd_batch_write_n(struct intel_cmd *cmd,
+                                     const uint32_t *vals, XGL_UINT len)
+{
+    struct intel_cmd_writer *writer = &cmd->batch;
+
+    assert(writer->used + len <= writer->size);
+
+    memcpy((uint32_t *) writer->ptr_opaque + writer->used,
+            vals, sizeof(uint32_t) * len);
+    writer->used += len;
+}
+
+/**
+ * Add a reloc to the hardware command being built.  No error checking.
  */
 static inline void cmd_batch_reloc(struct intel_cmd *cmd,
                                    uint32_t val, const struct intel_mem *mem,
                                    uint16_t read_domains,
                                    uint16_t write_domain)
 {
-    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
     struct intel_cmd_writer *writer = &cmd->batch;
 
-    assert(cmd->reloc_used < cmd->reloc_count);
+    cmd_writer_add_reloc(cmd, writer, 0, val,
+            mem, read_domains, write_domain);
 
-    reloc->writer = writer;
-    reloc->pos = writer->used;
-    reloc->val = val;
-    reloc->mem = mem;
-    reloc->read_domains = read_domains;
-    reloc->write_domain = write_domain;
-
-    cmd->reloc_used++;
     writer->used++;
 }
 
@@ -125,9 +179,11 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
 }
 
 /**
- * Reserve \p len DWords in the state buffer for writing, after aligning the
- * current position to \p alignment.  Both the pointer to the reserved region
- * and the aligned position are returned.
+ * Reserve \p len DWords in the state buffer for building a hardware state.
+ * The current writer position is aligned to \p alignment first.  Both the
+ * pointer to the reserved region and the aligned position are returned.
+ *
+ * Note that the returned pointer is only valid until the next reserve call.
  */
 static inline uint32_t *cmd_state_reserve(struct intel_cmd *cmd, XGL_UINT len,
                                           XGL_UINT alignment, XGL_UINT *pos)
@@ -149,32 +205,21 @@ static inline uint32_t *cmd_state_reserve(struct intel_cmd *cmd, XGL_UINT len,
 }
 
 /**
- * Add a reloc at \p offset, relative to the current writer
- * position of the state buffer.
+ * Similar to \p cmd_state_reserve, except that \p reloc_len relocs are also
+ * reserved.
  */
-static inline void cmd_state_reloc(struct intel_cmd *cmd,
-                                   XGL_INT offset, uint32_t val,
-                                   const struct intel_mem *mem,
-                                   uint16_t read_domains,
-                                   uint16_t write_domain)
+static inline uint32_t *cmd_state_reserve_reloc(struct intel_cmd *cmd,
+                                                XGL_UINT len,
+                                                XGL_UINT reloc_len,
+                                                XGL_UINT alignment,
+                                                XGL_UINT *pos)
 {
-    struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
-    struct intel_cmd_writer *writer = &cmd->state;
-
-    assert(cmd->reloc_used < cmd->reloc_count);
-
-    reloc->writer = writer;
-    reloc->pos = writer->used + offset;
-    reloc->val = val;
-    reloc->mem = mem;
-    reloc->read_domains = read_domains;
-    reloc->write_domain = write_domain;
-
-    cmd->reloc_used++;
+    cmd_reserve_reloc(cmd, reloc_len);
+    return cmd_state_reserve(cmd, len, alignment, pos);
 }
 
 /**
- * Advance the writer position of the state buffer.
+ * Advance the writer position of the state buffer.  No error checking.
  */
 static inline void cmd_state_advance(struct intel_cmd *cmd, XGL_UINT len)
 {
@@ -185,8 +230,8 @@ static inline void cmd_state_advance(struct intel_cmd *cmd, XGL_UINT len)
 }
 
 /**
- * A convenient function to copy a state of \p len DWords to the state buffer.
- * The position of the state is returned.
+ * A convenient function to copy a hardware state of \p len DWords into the
+ * state buffer.  The position of the state is returned.
  */
 static inline XGL_UINT cmd_state_copy(struct intel_cmd *cmd,
                                       const uint32_t *vals, XGL_UINT len,
