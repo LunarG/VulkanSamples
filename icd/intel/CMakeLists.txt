@@ -33,6 +33,7 @@ SET(SOURCES
     mem.c
     obj.c
     pipeline.c
+    pipeline_rmap.c
     query.c
     queue.c
     sampler.c

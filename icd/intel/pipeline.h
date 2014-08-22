@@ -29,6 +29,46 @@
 #include "obj.h"
 #include "dev.h"
 
+#define INTEL_RMAP_SLOT_RT ((XGL_UINT) -1)
+#define INTEL_RMAP_SLOT_DYN ((XGL_UINT) -2)
+struct intel_rmap_slot {
+    /*
+     *
+     * When path_len is 0, the slot is unused.
+     * When path_len is 1, the slot uses descriptor "index".
+     * When path_len is INTEL_RMAP_SLOT_RT, the slot uses RT "index".
+     * When path_len is INTEL_RMAP_SLOT_DYN, the slot uses the dynamic view.
+     * Otherwise, the slot uses "path" to find the descriptor.
+     */
+    XGL_UINT path_len;
+
+    union {
+        XGL_UINT index;
+        XGL_UINT *path;
+    } u;
+};
+
+/**
+ * Shader resource mapping.
+ */
+struct intel_rmap {
+    /* this is not an intel_obj */
+
+    XGL_UINT rt_count;
+    XGL_UINT resource_count;
+    XGL_UINT uav_count;
+    XGL_UINT sampler_count;
+
+    /*
+     * rt_count slots +
+     * resource_count slots +
+     * uav_count slots +
+     * sampler_count slots
+     */
+    struct intel_rmap_slot *slots;
+    XGL_UINT slot_count;
+};
+
 #define INTEL_MAX_DRAW_BUFFERS    8
 #define INTEL_MAX_CONST_BUFFERS   (1 + 12)
 #define INTEL_MAX_SAMPLER_VIEWS   16
