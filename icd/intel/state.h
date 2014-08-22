@@ -55,6 +55,7 @@ struct intel_msaa_state {
 
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     uint32_t cmd[6];
+    XGL_UINT cmd_len;
 };
 
 struct intel_blend_state {

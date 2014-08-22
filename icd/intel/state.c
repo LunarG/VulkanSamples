@@ -343,6 +343,8 @@ msaa_state_init(struct intel_msaa_state *state,
 
     dw += cmd_len;
 
+    state->cmd_len = cmd_len + 2;
+
     /* 3DSTATE_SAMPLE_MASK */
     cmd = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_SAMPLE_MASK);
     cmd_len = 2;
