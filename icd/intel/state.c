@@ -219,6 +219,48 @@ viewport_get_guardband(const struct intel_gpu *gpu,
 }
 
 static XGL_RESULT
+viewport_state_alloc_cmd(struct intel_viewport_state *state,
+                         const struct intel_gpu *gpu,
+                         const XGL_VIEWPORT_STATE_CREATE_INFO *info)
+{
+    INTEL_GPU_ASSERT(gpu, 6, 7.5);
+
+    state->scissor_enable = info->scissorEnable;
+
+    if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
+        state->cmd_align = GEN7_ALIGNMENT_SF_CLIP_VIEWPORT;
+        state->cmd_len = 16 * info->viewportCount;
+
+        state->cmd_clip_offset = 8;
+    } else {
+        state->cmd_align = GEN6_ALIGNMENT_SF_VIEWPORT;
+        state->cmd_len = 8 * info->viewportCount;
+
+        state->cmd_clip_offset =
+            u_align(state->cmd_len, GEN6_ALIGNMENT_CLIP_VIEWPORT);
+        state->cmd_len = state->cmd_clip_offset + 4 * info->viewportCount;
+    }
+
+    state->cmd_cc_offset =
+        u_align(state->cmd_len, GEN6_ALIGNMENT_CC_VIEWPORT);
+    state->cmd_len = state->cmd_cc_offset + 2 * info->viewportCount;
+
+    if (state->scissor_enable) {
+        state->cmd_scissor_rect_offset =
+            u_align(state->cmd_len, GEN6_ALIGNMENT_SCISSOR_RECT);
+        state->cmd_len = state->cmd_scissor_rect_offset +
+            2 * info->viewportCount;
+    }
+
+    state->cmd = icd_alloc(sizeof(uint32_t) * state->cmd_len,
+            0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!state->cmd)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT
 viewport_state_init(struct intel_viewport_state *state,
                     const struct intel_gpu *gpu,
                     const XGL_VIEWPORT_STATE_CREATE_INFO *info)
@@ -227,26 +269,18 @@ viewport_state_init(struct intel_viewport_state *state,
     const XGL_UINT clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
     uint32_t *sf_viewport, *clip_viewport, *cc_viewport, *scissor_rect;
     XGL_UINT i;
+    XGL_RESULT ret;
 
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
-    state->scissor_enable = info->scissorEnable;
-
-    if (intel_gpu_gen(gpu) >= INTEL_GEN(7))
-        state->size = (16 + 2 + 2) * info->viewportCount;
-    else
-        state->size = (8 + 4 + 2 + 2) * info->viewportCount;
-
-    state->cmd = icd_alloc(sizeof(uint32_t) * state->size,
-            0, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!state->cmd)
-        return XGL_ERROR_OUT_OF_MEMORY;
+    ret = viewport_state_alloc_cmd(state, gpu, info);
+    if (ret != XGL_SUCCESS)
+        return ret;
 
     sf_viewport = state->cmd;
-    clip_viewport = sf_viewport + 8;
-    cc_viewport = sf_viewport +
-        ((intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 12);
-    scissor_rect = cc_viewport + 2;
+    clip_viewport = state->cmd + state->cmd_clip_offset;
+    cc_viewport = state->cmd + state->cmd_cc_offset;
+    scissor_rect = state->cmd + state->cmd_scissor_rect_offset;
 
     for (i = 0; i < info->viewportCount; i++) {
         const XGL_VIEWPORT *viewport = &info->viewports[i];
@@ -292,18 +326,23 @@ viewport_state_init(struct intel_viewport_state *state,
         cc_viewport += 2;
 
         /* SCISSOR_RECT */
-        dw = scissor_rect;
-        if (scissor->extent.width && scissor->extent.height) {
-            dw[0] = (scissor->offset.y & 0xffff) << 16 |
-                    (scissor->offset.x & 0xffff);
-            dw[1] =
-                ((scissor->offset.y + scissor->extent.height - 1) & 0xffff) << 16 |
-                ((scissor->offset.x + scissor->extent.width - 1) & 0xffff);
-        } else {
-            dw[0] = 1 << 16 | 1;
-            dw[1] = 0;
+        if (state->scissor_enable) {
+            int16_t max_x, max_y;
+
+            max_x = (scissor->offset.x + scissor->extent.width - 1) & 0xffff;
+            max_y = (scissor->offset.y + scissor->extent.height - 1) & 0xffff;
+
+            dw = scissor_rect;
+            if (scissor->extent.width && scissor->extent.height) {
+                dw[0] = (scissor->offset.y & 0xffff) << 16 |
+                        (scissor->offset.x & 0xffff);
+                dw[1] = max_y << 16 | max_x;
+            } else {
+                dw[0] = 1 << 16 | 1;
+                dw[1] = 0;
+            }
+            scissor_rect += 2;
         }
-        scissor_rect += 2;
     }
 
     return XGL_SUCCESS;

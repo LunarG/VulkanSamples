@@ -36,7 +36,11 @@ struct intel_viewport_state {
     bool scissor_enable;
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
     uint32_t *cmd;
-    XGL_SIZE size;
+    XGL_UINT cmd_len;
+    XGL_UINT cmd_align;
+    XGL_UINT cmd_clip_offset;
+    XGL_UINT cmd_cc_offset;
+    XGL_UINT cmd_scissor_rect_offset;
 };
 
 struct intel_raster_state {
