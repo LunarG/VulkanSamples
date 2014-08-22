@@ -292,6 +292,45 @@ static void gen6_3DSTATE_CC_STATE_POINTERS(struct intel_cmd *cmd,
     cmd_batch_write(cmd, (cc_pos << 2) | 1);
 }
 
+static void gen6_3DSTATE_VIEWPORT_STATE_POINTERS(struct intel_cmd *cmd,
+                                                 XGL_UINT clip_pos,
+                                                 XGL_UINT sf_pos,
+                                                 XGL_UINT cc_pos)
+{
+    const uint8_t cmd_len = 4;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_VIEWPORT_STATE_POINTERS) |
+          GEN6_PTR_VP_DW0_CLIP_CHANGED |
+          GEN6_PTR_VP_DW0_SF_CHANGED |
+          GEN6_PTR_VP_DW0_CC_CHANGED |
+          (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, clip_pos << 2);
+    cmd_batch_write(cmd, sf_pos << 2);
+    cmd_batch_write(cmd, cc_pos << 2);
+}
+
+static void gen6_3DSTATE_SCISSOR_STATE_POINTERS(struct intel_cmd *cmd,
+                                                XGL_UINT scissor_pos)
+{
+    const uint8_t cmd_len = 2;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_SCISSOR_STATE_POINTERS) |
+          (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, scissor_pos << 2);
+}
+
 static void gen7_3dstate_pointer(struct intel_cmd *cmd,
                                  int subop, XGL_UINT pos)
 {
@@ -383,6 +422,28 @@ static void gen6_cc_states(struct intel_cmd *cmd)
     gen6_3DSTATE_CC_STATE_POINTERS(cmd, blend_pos, ds_pos, cc_pos);
 }
 
+static void gen6_viewport_states(struct intel_cmd *cmd)
+{
+    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
+    XGL_UINT pos;
+
+    if (!viewport)
+        return;
+
+    pos = cmd_state_copy(cmd, viewport->cmd, viewport->cmd_len,
+            viewport->cmd_align);
+
+    gen6_3DSTATE_VIEWPORT_STATE_POINTERS(cmd,
+            pos + viewport->cmd_clip_offset,
+            pos,
+            pos + viewport->cmd_cc_offset);
+
+    pos = (viewport->scissor_enable) ?
+        pos + viewport->cmd_scissor_rect_offset : 0;
+
+    gen6_3DSTATE_SCISSOR_STATE_POINTERS(cmd, pos);
+}
+
 static void gen7_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_blend_state *blend = cmd->bind.state.blend;
@@ -419,16 +480,42 @@ static void gen7_cc_states(struct intel_cmd *cmd)
             GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, pos);
 }
 
+static void gen7_viewport_states(struct intel_cmd *cmd)
+{
+    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
+    XGL_UINT pos;
+
+    if (!viewport)
+        return;
+
+    pos = cmd_state_copy(cmd, viewport->cmd, viewport->cmd_len,
+            viewport->cmd_align);
+
+    gen7_3dstate_pointer(cmd,
+            GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP, pos);
+    gen7_3dstate_pointer(cmd,
+            GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
+            pos + viewport->cmd_cc_offset);
+    if (viewport->scissor_enable) {
+        gen7_3dstate_pointer(cmd,
+                GEN6_RENDER_OPCODE_3DSTATE_SCISSOR_STATE_POINTERS,
+                pos + viewport->cmd_scissor_rect_offset);
+    }
+}
+
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
 
     /* TODO more states */
 
-    if (cmd_gen(cmd) >= INTEL_GEN(7))
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_cc_states(cmd);
-    else
+        gen7_viewport_states(cmd);
+    } else {
         gen6_cc_states(cmd);
+        gen6_viewport_states(cmd);
+    }
 
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_reserve(cmd, msaa->cmd_len);
