@@ -24,7 +24,7 @@
 
 #include "shader.h"
 #include "pipeline.h"
-#include "brw_defines.h"
+#include "genhw/gen_render_3d.xml.h"
 
 static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline *pipeline,
                                        const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state)
@@ -32,30 +32,30 @@ static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline
     pipeline->ia_state = *ia_state;
 
     if (ia_state->provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
-        pipeline->provoking_vertex_tri = BRW_PROVOKING_VERTEX_0;
-        pipeline->provoking_vertex_trifan = BRW_PROVOKING_VERTEX_1;
-        pipeline->provoking_vertex_line = BRW_PROVOKING_VERTEX_0;
+        pipeline->provoking_vertex_tri = 0;
+        pipeline->provoking_vertex_trifan = 1;
+        pipeline->provoking_vertex_line = 0;
     } else {
-        pipeline->provoking_vertex_tri = BRW_PROVOKING_VERTEX_2;
-        pipeline->provoking_vertex_trifan = BRW_PROVOKING_VERTEX_2;
-        pipeline->provoking_vertex_line = BRW_PROVOKING_VERTEX_1;
+        pipeline->provoking_vertex_tri = 2;
+        pipeline->provoking_vertex_trifan = 2;
+        pipeline->provoking_vertex_line = 1;
     }
 
     switch (ia_state->topology) {
     case XGL_TOPOLOGY_POINT_LIST:
-        pipeline->prim_type = _3DPRIM_POINTLIST;
+        pipeline->prim_type = GEN6_3DPRIM_POINTLIST;
         break;
     case XGL_TOPOLOGY_LINE_LIST:
-        pipeline->prim_type = _3DPRIM_LINELIST;
+        pipeline->prim_type = GEN6_3DPRIM_LINELIST;
         break;
     case XGL_TOPOLOGY_LINE_STRIP:
-        pipeline->prim_type = _3DPRIM_LINESTRIP;
+        pipeline->prim_type = GEN6_3DPRIM_LINESTRIP;
         break;
     case XGL_TOPOLOGY_TRIANGLE_LIST:
-        pipeline->prim_type = _3DPRIM_TRILIST;
+        pipeline->prim_type = GEN6_3DPRIM_TRILIST;
         break;
     case XGL_TOPOLOGY_TRIANGLE_STRIP:
-        pipeline->prim_type = _3DPRIM_TRISTRIP;
+        pipeline->prim_type = GEN6_3DPRIM_TRISTRIP;
         break;
     case XGL_TOPOLOGY_RECT_LIST:
         /*
@@ -70,25 +70,25 @@ static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline
          * Failure to comply with these restrictions results in
          * undefined rendering results.
          */
-        pipeline->prim_type = _3DPRIM_RECTLIST;
+        pipeline->prim_type = GEN6_3DPRIM_RECTLIST;
         break;
     case XGL_TOPOLOGY_QUAD_LIST:
-        pipeline->prim_type = _3DPRIM_QUADLIST;
+        pipeline->prim_type = GEN6_3DPRIM_QUADLIST;
         break;
     case XGL_TOPOLOGY_QUAD_STRIP:
-        pipeline->prim_type = _3DPRIM_QUADSTRIP;
+        pipeline->prim_type = GEN6_3DPRIM_QUADSTRIP;
         break;
     case XGL_TOPOLOGY_LINE_LIST_ADJ:
-        // TODO: implement
+        pipeline->prim_type = GEN6_3DPRIM_LINELIST_ADJ;
         break;
     case XGL_TOPOLOGY_LINE_STRIP_ADJ:
-        // TODO: implement
+        pipeline->prim_type = GEN6_3DPRIM_LINESTRIP_ADJ;
         break;
     case XGL_TOPOLOGY_TRIANGLE_LIST_ADJ:
-        // TODO: implement
+        pipeline->prim_type = GEN6_3DPRIM_TRILIST_ADJ;
         break;
     case XGL_TOPOLOGY_TRIANGLE_STRIP_ADJ:
-        // TODO: implement
+        pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
     case XGL_TOPOLOGY_PATCH:
         // TODO: implement something here
