@@ -66,6 +66,8 @@ static void intel_debug_init(void)
 
         if (strncmp(env, "batch", len) == 0)
             intel_debug |= INTEL_DEBUG_BATCH;
+        else if (strncmp(env, "nohw", len) == 0)
+            intel_debug |= INTEL_DEBUG_NOHW;
 
         if (!p)
             break;

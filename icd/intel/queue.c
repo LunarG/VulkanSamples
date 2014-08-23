@@ -84,7 +84,10 @@ XGL_RESULT intel_queue_submit(struct intel_queue *queue,
     if (intel_debug & INTEL_DEBUG_BATCH)
         intel_winsys_decode_bo(winsys, bo, used);
 
-    err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
+    if (intel_debug & INTEL_DEBUG_NOHW)
+        err = 0;
+    else
+        err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
 
     queue->last_submitted_cmd = cmd;
 

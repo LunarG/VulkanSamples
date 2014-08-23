@@ -45,6 +45,8 @@
 
 enum intel_debug_flags {
     INTEL_DEBUG_BATCH       = 1 << 0,
+
+    INTEL_DEBUG_NOHW        = 1 << 20,
 };
 
 extern int intel_debug;
