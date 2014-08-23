@@ -36,6 +36,7 @@ struct intel_null_view {
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
+    XGL_UINT cmd_len;
 };
 
 struct intel_mem_view {
@@ -45,6 +46,7 @@ struct intel_mem_view {
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
+    XGL_UINT cmd_len;
 };
 
 struct intel_img_view {
@@ -57,6 +59,7 @@ struct intel_img_view {
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
+    XGL_UINT cmd_len;
 };
 
 struct intel_rt_view {
@@ -66,6 +69,7 @@ struct intel_rt_view {
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
+    XGL_UINT cmd_len;
 };
 
 struct intel_ds_view {

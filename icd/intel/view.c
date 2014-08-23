@@ -1020,10 +1020,13 @@ static void ds_view_init(struct intel_ds_view *view,
 void intel_null_view_init(struct intel_null_view *view,
                           struct intel_dev *dev)
 {
-    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7))
+    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_null_gen7(dev->gpu, view->cmd);
-    else
+        view->cmd_len = 8;
+    } else {
         surface_state_null_gen6(dev->gpu, view->cmd);
+        view->cmd_len = 6;
+    }
 }
 
 void intel_mem_view_init(struct intel_mem_view *view,
@@ -1050,10 +1053,12 @@ void intel_mem_view_init(struct intel_mem_view *view,
         surface_state_buf_gen7(dev->gpu, info->offset,
                 info->range, info->stride, info->format,
                 will_write, will_write, view->cmd);
+        view->cmd_len = 8;
     } else {
         surface_state_buf_gen6(dev->gpu, info->offset,
                 info->range, info->stride, info->format,
                 will_write, will_write, view->cmd);
+        view->cmd_len = 6;
     }
 }
 
@@ -1088,12 +1093,14 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
                 info->subresourceRange.mipLevels,
                 info->subresourceRange.baseArraySlice,
                 info->subresourceRange.arraySize, false, view->cmd);
+        view->cmd_len = 8;
     } else {
         surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
                 info->subresourceRange.baseMipLevel,
                 info->subresourceRange.mipLevels,
                 info->subresourceRange.baseArraySlice,
                 info->subresourceRange.arraySize, false, view->cmd);
+        view->cmd_len = 6;
     }
 
     *view_ret = view;
@@ -1135,12 +1142,14 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
                 true, view->cmd);
+        view->cmd_len = 8;
     } else {
         surface_state_tex_gen6(dev->gpu, img,
                 img_type_to_view_type(img->type),
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
                 true, view->cmd);
+        view->cmd_len = 6;
     }
 
     *view_ret = view;
