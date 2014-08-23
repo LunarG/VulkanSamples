@@ -43,4 +43,10 @@
 
 #define INTEL_GEN(gen) ((int) ((gen) * 100))
 
+enum intel_debug_flags {
+    INTEL_DEBUG_BATCH       = 1 << 0,
+};
+
+extern int intel_debug;
+
 #endif /* INTEL_H */

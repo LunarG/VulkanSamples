@@ -42,6 +42,38 @@
 #include "gpu.h"
 #include "intel.h"
 
+int intel_debug = -1;
+
+static void intel_debug_init(void)
+{
+    const char *env;
+
+    if (intel_debug >= 0)
+        return;
+
+    intel_debug = 0;
+
+    /* parse comma-separated debug options */
+    env = getenv("INTEL_DEBUG");
+    while (env) {
+        const char *p = strchr(env, ',');
+        size_t len;
+
+        if (p)
+            len = p - env;
+        else
+            len = strlen(env);
+
+        if (strncmp(env, "batch", len) == 0)
+            intel_debug |= INTEL_DEBUG_BATCH;
+
+        if (!p)
+            break;
+
+        env = p + 1;
+    }
+}
+
 static int is_render_node(int fd, struct stat *st)
 {
     if (fstat(fd, st))
@@ -71,6 +103,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
     char *pci_glob = "*:*";
     XGL_RESULT ret;
     XGL_UINT count = 0;
+
+    intel_debug_init();
 
     ret = icd_set_allocator(pAllocCb);
     if (ret != XGL_SUCCESS)

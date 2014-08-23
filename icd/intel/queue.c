@@ -81,7 +81,8 @@ XGL_RESULT intel_queue_submit(struct intel_queue *queue,
 
     bo = intel_cmd_get_batch(cmd, &used);
 
-    intel_winsys_decode_bo(winsys, bo, used);
+    if (intel_debug & INTEL_DEBUG_BATCH)
+        intel_winsys_decode_bo(winsys, bo, used);
 
     err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
 
