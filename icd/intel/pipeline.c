@@ -23,7 +23,7 @@
  */
 
 #include "shader.h"
-#include "pipeline.h"
+#include "pipeline_priv.h"
 #include "genhw/gen_render_3d.xml.h"
 
 static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline *pipeline,
@@ -123,6 +123,11 @@ static XGL_RESULT pipeline_rs_state(struct intel_dev *dev, struct intel_pipeline
 static void pipeline_destroy(struct intel_obj *obj)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_obj(obj);
+
+    if (pipeline->vs_rmap)
+        intel_rmap_destroy(pipeline->vs_rmap);
+    if (pipeline->fs_rmap)
+        intel_rmap_destroy(pipeline->fs_rmap);
 
     intel_base_destroy(&pipeline->obj.base);
 }
@@ -286,6 +291,27 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
         goto error_exit;
     }
 
+    if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
+        pipeline->vs_rmap = intel_rmap_create(dev,
+                &pipeline->vs.descriptorSetMapping[0],
+                &pipeline->vs.dynamicMemoryViewMapping, 0);
+        if (!pipeline->vs_rmap) {
+            result = XGL_ERROR_OUT_OF_MEMORY;
+            goto error_exit;
+        }
+    }
+
+    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
+        /* assuming one RT; need to parse the shader */
+        pipeline->fs_rmap = intel_rmap_create(dev,
+                &pipeline->fs.descriptorSetMapping[0],
+                &pipeline->fs.dynamicMemoryViewMapping, 1);
+        if (!pipeline->fs_rmap) {
+            result = XGL_ERROR_OUT_OF_MEMORY;
+            goto error_exit;
+        }
+    }
+
     /*
      * Tessalation control and evaluation have to both have a shader defined or
      * neither should have a shader defined.
@@ -333,6 +359,11 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     return XGL_SUCCESS;
 
 error_exit:
+    if (pipeline->vs_rmap)
+        intel_rmap_destroy(pipeline->vs_rmap);
+    if (pipeline->fs_rmap)
+        intel_rmap_destroy(pipeline->fs_rmap);
+
     intel_base_destroy(&pipeline->obj.base);
     return result;
 }

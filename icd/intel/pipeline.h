@@ -139,7 +139,9 @@ struct intel_pipeline {
 
     uint32_t active_shaders;
     XGL_PIPELINE_SHADER vs;
+    struct intel_rmap *vs_rmap;
     XGL_PIPELINE_SHADER fs;
+    struct intel_rmap *fs_rmap;
     XGL_PIPELINE_SHADER gs;
     XGL_PIPELINE_SHADER tess_control;
     XGL_PIPELINE_SHADER tess_eval;
