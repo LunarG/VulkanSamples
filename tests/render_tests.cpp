@@ -532,13 +532,6 @@ void XglRenderTest::DrawTriangleTest()
     xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
-    /*
-     * Define descriptor slots for vertex shader.
-     */
-    XGL_DESCRIPTOR_SLOT_INFO ds_vs = {
-        XGL_SLOT_SHADER_RESOURCE,    // XGL_DESCRIPTOR_SET_SLOT_TYPE
-        1                            // shaderEntityIndex
-    };
 
     ASSERT_NO_FATAL_FAILURE(CreateShader("vs-kernel.bin", &vs));
 
@@ -546,11 +539,10 @@ void XglRenderTest::DrawTriangleTest()
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs_stage.shader.shader = vs;
-    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
-    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = &ds_vs;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
     vs_stage.shader.linkConstBufferCount = 0;
     vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
-    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
     ASSERT_NO_FATAL_FAILURE(CreateShader("wm-kernel.bin", &ps));
@@ -559,12 +551,11 @@ void XglRenderTest::DrawTriangleTest()
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     ps_stage.shader.shader = ps;
-    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
     // TODO: Do we need a descriptor set mapping for fragment?
-    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = &ds_vs;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
     ps_stage.shader.linkConstBufferCount = 0;
     ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
-    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
     XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
