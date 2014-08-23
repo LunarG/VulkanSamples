@@ -343,6 +343,29 @@ static void gen6_3DSTATE_SCISSOR_STATE_POINTERS(struct intel_cmd *cmd,
     cmd_batch_write(cmd, scissor_pos << 2);
 }
 
+static void gen6_3DSTATE_BINDING_TABLE_POINTERS(struct intel_cmd *cmd,
+                                                XGL_UINT vs_pos,
+                                                XGL_UINT gs_pos,
+                                                XGL_UINT ps_pos)
+{
+    const uint8_t cmd_len = 4;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_BINDING_TABLE_POINTERS) |
+          GEN6_PTR_BINDING_TABLE_DW0_VS_CHANGED |
+          GEN6_PTR_BINDING_TABLE_DW0_GS_CHANGED |
+          GEN6_PTR_BINDING_TABLE_DW0_PS_CHANGED |
+          (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, vs_pos << 2);
+    cmd_batch_write(cmd, gs_pos << 2);
+    cmd_batch_write(cmd, ps_pos << 2);
+}
+
 static void gen7_3dstate_pointer(struct intel_cmd *cmd,
                                  int subop, XGL_UINT pos)
 {
@@ -515,6 +538,74 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
     }
 }
 
+static void emit_ps_resources(struct intel_cmd *cmd,
+                              const struct intel_rmap *rmap)
+{
+    const XGL_UINT surface_count = rmap->rt_count +
+        rmap->resource_count + rmap->uav_count;
+    uint32_t binding_table[256];
+    XGL_UINT pos, i;
+
+    assert(surface_count <= ARRAY_SIZE(binding_table));
+
+    for (i = 0; i < surface_count; i++) {
+        const struct intel_rmap_slot *slot = &rmap->slots[i];
+        uint32_t *dw;
+
+        switch (slot->path_len) {
+        case 0:
+            pos = 0;
+            break;
+        case INTEL_RMAP_SLOT_RT:
+            {
+                const struct intel_rt_view *view = cmd->bind.att.rt[i];
+
+                dw = cmd_state_reserve_reloc(cmd, view->cmd_len, 1,
+                        GEN6_ALIGNMENT_SURFACE_STATE, &pos);
+
+                memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
+                cmd_writer_add_reloc(cmd, &cmd->state,
+                        1, view->cmd[1], view->img->obj.mem,
+                        INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
+                cmd_state_advance(cmd, view->cmd_len);
+            }
+            break;
+        case INTEL_RMAP_SLOT_DYN:
+            {
+                const struct intel_mem_view *view =
+                    &cmd->bind.mem_view.graphics;
+
+                dw = cmd_state_reserve_reloc(cmd, view->cmd_len, 1,
+                        GEN6_ALIGNMENT_SURFACE_STATE, &pos);
+
+                memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
+                cmd_writer_add_reloc(cmd, &cmd->state,
+                        1, view->cmd[1], view->mem,
+                        INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
+                cmd_state_advance(cmd, view->cmd_len);
+            }
+            break;
+        case 1:
+        default:
+            /* TODO */
+            assert(!"no dset support");
+            break;
+        }
+
+        binding_table[i] = pos << 2;
+    }
+
+    pos = cmd_state_copy(cmd, binding_table, surface_count,
+            GEN6_ALIGNMENT_BINDING_TABLE_STATE);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS, pos);
+    } else {
+        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, pos);
+    }
+}
+
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
@@ -528,6 +619,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_cc_states(cmd);
         gen6_viewport_states(cmd);
     }
+
+    emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
 
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_reserve(cmd, msaa->cmd_len);
