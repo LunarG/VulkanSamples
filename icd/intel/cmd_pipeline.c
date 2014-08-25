@@ -284,6 +284,36 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     }
 }
 
+static void gen6_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
+                                      uint32_t clear_val)
+{
+    const uint8_t cmd_len = 2;
+    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_CLEAR_PARAMS) |
+                         GEN6_CLEAR_PARAMS_DW0_VALID |
+                         (cmd_len - 2);
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, clear_val);
+}
+
+static void gen7_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
+                                      uint32_t clear_val)
+{
+    const uint8_t cmd_len = 3;
+    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN7, 3DSTATE_CLEAR_PARAMS) |
+                         (cmd_len - 2);
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, clear_val);
+    cmd_batch_write(cmd, 1);
+}
+
 static void gen6_3DSTATE_CC_STATE_POINTERS(struct intel_cmd *cmd,
                                            XGL_UINT blend_pos,
                                            XGL_UINT ds_pos,
@@ -726,6 +756,11 @@ static void cmd_bind_ds(struct intel_cmd *cmd,
     gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
     gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
     gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
+    else
+        gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
 }
 
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
