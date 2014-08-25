@@ -616,8 +616,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
                         GEN6_ALIGNMENT_SURFACE_STATE, &pos);
 
                 memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
-                cmd_writer_add_reloc(cmd, &cmd->state,
-                        1, view->cmd[1], view->img->obj.mem->bo,
+                cmd_state_reloc(cmd, 1, view->cmd[1], view->img->obj.mem->bo,
                         INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
                 cmd_state_advance(cmd, view->cmd_len);
             }
@@ -631,8 +630,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
                         GEN6_ALIGNMENT_SURFACE_STATE, &pos);
 
                 memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
-                cmd_writer_add_reloc(cmd, &cmd->state,
-                        1, view->cmd[1], view->mem->bo,
+                cmd_state_reloc(cmd, 1, view->cmd[1], view->mem->bo,
                         INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
                 cmd_state_advance(cmd, view->cmd_len);
             }

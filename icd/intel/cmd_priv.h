@@ -74,12 +74,11 @@ void cmd_writer_grow(struct intel_cmd *cmd,
                      struct intel_cmd_writer *writer);
 
 /**
- * Add a reloc at \p offset, relative to the current writer position.  No
- * error checking.
+ * Add a reloc at \p pos.  No error checking.
  */
 static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
                                         struct intel_cmd_writer *writer,
-                                        XGL_INT offset, uint32_t val,
+                                        XGL_UINT pos, uint32_t val,
                                         struct intel_bo *bo,
                                         uint16_t read_domains,
                                         uint16_t write_domain)
@@ -89,7 +88,7 @@ static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
     assert(cmd->reloc_used < cmd->reloc_count);
 
     reloc->writer = writer;
-    reloc->pos = writer->used + offset;
+    reloc->pos = pos;
     reloc->val = val;
     reloc->bo = bo;
     reloc->read_domains = read_domains;
@@ -157,7 +156,7 @@ static inline void cmd_batch_reloc(struct intel_cmd *cmd,
 {
     struct intel_cmd_writer *writer = &cmd->batch;
 
-    cmd_writer_add_reloc(cmd, writer, 0, val,
+    cmd_writer_add_reloc(cmd, writer, writer->used, val,
             bo, read_domains, write_domain);
 
     writer->used++;
@@ -216,6 +215,22 @@ static inline uint32_t *cmd_state_reserve_reloc(struct intel_cmd *cmd,
 {
     cmd_reserve_reloc(cmd, reloc_len);
     return cmd_state_reserve(cmd, len, alignment, pos);
+}
+
+/**
+ * Add a reloc at \p offset, relative to the current writer position.  No
+ * error checking.
+ */
+static inline void cmd_state_reloc(struct intel_cmd *cmd,
+                                   XGL_INT offset, uint32_t val,
+                                   struct intel_bo *bo,
+                                   uint16_t read_domains,
+                                   uint16_t write_domain)
+{
+    struct intel_cmd_writer *writer = &cmd->state;
+
+    cmd_writer_add_reloc(cmd, writer, writer->used + offset, val,
+            bo, read_domains, write_domain);
 }
 
 /**
