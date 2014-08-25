@@ -107,6 +107,7 @@ struct intel_cmd {
 
     struct intel_cmd_writer batch;
     struct intel_cmd_writer state;
+    struct intel_cmd_writer kernel;
 
     XGL_UINT reloc_used;
     XGL_RESULT result;

@@ -247,4 +247,34 @@ static inline XGL_UINT cmd_state_copy(struct intel_cmd *cmd,
     return pos;
 }
 
+static inline XGL_UINT cmd_kernel_copy(struct intel_cmd *cmd,
+                                       const void *kernel, XGL_SIZE size)
+{
+    /*
+     * From the Sandy Bridge PRM, volume 4 part 2, page 112:
+     *
+     *     "Due to prefetch of the instruction stream, the EUs may attempt to
+     *      access up to 8 instructions (128 bytes) beyond the end of the
+     *      kernel program - possibly into the next memory page.  Although
+     *      these instructions will not be executed, software must account for
+     *      the prefetch in order to avoid invalid page access faults."
+     */
+    const XGL_UINT prefetch_len = 128 / sizeof(uint32_t);
+    /* kernels are aligned to 64-byte */
+    const XGL_UINT kernel_align = 64 / sizeof(uint32_t);
+    const XGL_UINT kernel_len = ((size + 3) & ~3) / sizeof(uint32_t);
+    struct intel_cmd_writer *writer = &cmd->kernel;
+    XGL_UINT kernel_pos;
+
+    kernel_pos = u_align(writer->used, kernel_align);
+    if (kernel_pos + kernel_len + prefetch_len > writer->size)
+        cmd_writer_grow(cmd, writer);
+    assert(kernel_pos + kernel_len + prefetch_len <= writer->size);
+
+    memcpy(&((uint32_t *) writer->ptr_opaque)[kernel_pos], kernel, size);
+    writer->used = kernel_pos + kernel_len;
+
+    return kernel_pos;
+}
+
 #endif /* CMD_PRIV_H */

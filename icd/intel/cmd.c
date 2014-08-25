@@ -130,12 +130,14 @@ static void cmd_unmap(struct intel_cmd *cmd)
 {
     cmd_writer_unmap(cmd, &cmd->batch);
     cmd_writer_unmap(cmd, &cmd->state);
+    cmd_writer_unmap(cmd, &cmd->kernel);
 }
 
 static void cmd_reset(struct intel_cmd *cmd)
 {
     cmd_writer_reset(cmd, &cmd->batch);
     cmd_writer_reset(cmd, &cmd->state);
+    cmd_writer_reset(cmd, &cmd->kernel);
     cmd->reloc_used = 0;
     cmd->result = XGL_SUCCESS;
 }
@@ -195,22 +197,25 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
     }
 
     if (!cmd->batch.size) {
-        XGL_UINT divider = sizeof(uint32_t) * 2;
+        const XGL_UINT size =
+            cmd->dev->gpu->max_batch_buffer_size / sizeof(uint32_t) / 2;
+        XGL_UINT divider = 1;
 
         if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
             divider *= 4;
 
-        cmd->batch.size = cmd->dev->gpu->max_batch_buffer_size / divider;
-        cmd->state.size = cmd->dev->gpu->max_batch_buffer_size / divider;
+        cmd->batch.size = size / divider;
+        cmd->state.size = size / divider;
+        cmd->kernel.size = 16384 / sizeof(uint32_t) / divider;
     }
 
     ret = cmd_writer_alloc_and_map(cmd, &cmd->batch, cmd->batch.size);
-    if (ret)
-        return ret;
-
-    ret = cmd_writer_alloc_and_map(cmd, &cmd->state, cmd->state.size);
-    if (ret) {
-        cmd_writer_reset(cmd, &cmd->batch);
+    if (ret == XGL_SUCCESS)
+        ret = cmd_writer_alloc_and_map(cmd, &cmd->state, cmd->state.size);
+    if (ret == XGL_SUCCESS)
+        ret = cmd_writer_alloc_and_map(cmd, &cmd->kernel, cmd->kernel.size);
+    if (ret != XGL_SUCCESS) {
+        cmd_reset(cmd);
         return ret;
     }
 
