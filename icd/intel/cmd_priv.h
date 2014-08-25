@@ -163,10 +163,57 @@ static inline void cmd_batch_reloc(struct intel_cmd *cmd,
 }
 
 /**
+ * Begin the batch buffer with a STATE_BASE_ADDRESS.
+ */
+static inline void cmd_batch_begin(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 10;
+    const uint32_t dw0 = GEN_RENDER_CMD(COMMON, GEN6, STATE_BASE_ADDRESS) |
+                         (cmd_len - 2);
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd_batch_reserve(cmd, cmd_len);
+
+    /* relocs are not added until cmd_batch_end() */
+    assert(cmd->batch.used == 0);
+
+    cmd_batch_write(cmd, dw0);
+
+    /* start offsets */
+    cmd_batch_write(cmd, 1);
+    cmd_batch_write(cmd, 1);
+    cmd_batch_write(cmd, 1);
+    cmd_batch_write(cmd, 1);
+    cmd_batch_write(cmd, 1);
+    /* end offsets */
+    cmd_batch_write(cmd, 1);
+    cmd_batch_write(cmd, 1 + 0xfffff000);
+    cmd_batch_write(cmd, 1 + 0xfffff000);
+    cmd_batch_write(cmd, 1);
+}
+
+/**
  * End the batch buffer.
  */
 static inline void cmd_batch_end(struct intel_cmd *cmd)
 {
+    struct intel_cmd_writer *writer = &cmd->batch;
+    const struct intel_cmd_writer *state = &cmd->state;
+    const struct intel_cmd_writer *kernel = &cmd->kernel;
+
+    cmd_reserve_reloc(cmd, 5);
+    cmd_writer_add_reloc(cmd, writer, 2, 1,
+            state->bo, INTEL_DOMAIN_SAMPLER, 0);
+    cmd_writer_add_reloc(cmd, writer, 3, 1,
+            state->bo, INTEL_DOMAIN_RENDER | INTEL_DOMAIN_INSTRUCTION, 0);
+    cmd_writer_add_reloc(cmd, writer, 5, 1,
+            kernel->bo, INTEL_DOMAIN_INSTRUCTION, 0);
+    cmd_writer_add_reloc(cmd, writer, 7, 1 + (state->size << 2),
+            state->bo, INTEL_DOMAIN_RENDER | INTEL_DOMAIN_INSTRUCTION, 0);
+    cmd_writer_add_reloc(cmd, writer, 9, 1 + (kernel->size << 2),
+            kernel->bo, INTEL_DOMAIN_INSTRUCTION, 0);
+
     if (cmd->batch.used & 1) {
         cmd_batch_reserve(cmd, 1);
         cmd_batch_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));

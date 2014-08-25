@@ -224,6 +224,8 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
         return ret;
     }
 
+    cmd_batch_begin(cmd);
+
     return XGL_SUCCESS;
 }
 
