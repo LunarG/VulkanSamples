@@ -39,10 +39,12 @@ struct intel_queue {
     struct intel_dev *dev;
     enum intel_ring_type ring;
 
-    /* for context initialization and atomic counters */
-    struct intel_bo *bo;
+    struct intel_bo *atomic_bo;
+    struct intel_bo *select_graphics_bo;
+    struct intel_bo *select_compute_bo;
 
     struct intel_cmd *last_submitted_cmd;
+    int last_pipeline_select;
 };
 
 static inline struct intel_queue *intel_queue(XGL_QUEUE queue)

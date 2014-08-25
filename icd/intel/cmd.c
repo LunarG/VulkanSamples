@@ -153,7 +153,23 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
                             const XGL_CMD_BUFFER_CREATE_INFO *info,
                             struct intel_cmd **cmd_ret)
 {
+    int pipeline_select;
     struct intel_cmd *cmd;
+
+    switch (info->queueType) {
+    case XGL_QUEUE_TYPE_GRAPHICS:
+        pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_3D;
+        break;
+    case XGL_QUEUE_TYPE_COMPUTE:
+        pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_MEDIA;
+        break;
+    case XGL_QUEUE_TYPE_DMA:
+        pipeline_select = -1;
+        break;
+    default:
+        return XGL_ERROR_INVALID_VALUE;
+        break;
+    }
 
     cmd = (struct intel_cmd *) intel_base_create(dev, sizeof(*cmd),
             dev->base.dbg, XGL_DBG_OBJECT_CMD_BUFFER, info, 0);
@@ -163,6 +179,7 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     cmd->obj.destroy = cmd_destroy;
 
     cmd->dev = dev;
+    cmd->pipeline_select = pipeline_select;
 
     /*
      * XXX This is not quite right.  intel_gpu sets maxMemRefsPerSubmission to

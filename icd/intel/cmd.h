@@ -99,6 +99,7 @@ struct intel_cmd {
     struct intel_obj obj;
 
     struct intel_dev *dev;
+    int pipeline_select;
 
     struct intel_cmd_reloc *relocs;
     XGL_UINT reloc_count;

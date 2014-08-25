@@ -29,6 +29,13 @@
 #include "fence.h"
 #include "queue.h"
 
+/* must match intel_cmd::pipeline_select */
+enum queue_state {
+    QUEUE_STATE_GRAPHICS_SELECTED = GEN6_PIPELINE_SELECT_DW0_SELECT_3D,
+    QUEUE_STATE_COMPUTE_SELECTED = GEN6_PIPELINE_SELECT_DW0_SELECT_MEDIA,
+    QUEUE_STATE_INITIALIZED = -1,
+};
+
 static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
                                   struct intel_bo *bo,
                                   XGL_GPU_SIZE used)
@@ -47,48 +54,118 @@ static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
     return (err) ? XGL_ERROR_UNKNOWN : XGL_SUCCESS;
 }
 
-static XGL_RESULT queue_init_hw_and_bo(struct intel_queue *queue)
+static XGL_RESULT queue_set_state(struct intel_queue *queue,
+                                  enum queue_state state)
 {
-    struct intel_winsys *winsys = queue->dev->winsys;
+    static const uint32_t queue_state_init[] = {
+        /* STATE_SIP */
+        GEN_RENDER_CMD(COMMON, GEN6, STATE_SIP),
+        0,
+        /* PIPELINE_SELECT */
+        GEN_RENDER_CMD(SINGLE_DW, GEN6, PIPELINE_SELECT) |
+            GEN6_PIPELINE_SELECT_DW0_SELECT_3D,
+        /* 3DSTATE_VF_STATISTICS */
+        GEN_RENDER_CMD(SINGLE_DW, GEN6, 3DSTATE_VF_STATISTICS),
+        /* end */
+        GEN_MI_CMD(MI_BATCH_BUFFER_END),
+        GEN_MI_CMD(MI_NOOP),
+    };
+    static const uint32_t queue_state_select_graphics[] = {
+        /* PIPELINE_SELECT */
+        GEN_RENDER_CMD(SINGLE_DW, GEN6, PIPELINE_SELECT) |
+            GEN6_PIPELINE_SELECT_DW0_SELECT_3D,
+        /* end */
+        GEN_MI_CMD(MI_BATCH_BUFFER_END),
+    };
+    static const uint32_t queue_state_select_compute[] = {
+        /* PIPELINE_SELECT */
+        GEN_RENDER_CMD(SINGLE_DW, GEN6, PIPELINE_SELECT) |
+            GEN6_PIPELINE_SELECT_DW0_SELECT_MEDIA,
+        /* end */
+        GEN_MI_CMD(MI_BATCH_BUFFER_END),
+    };
     struct intel_bo *bo;
-    uint32_t *cmd;
-    XGL_UINT used;
+    XGL_GPU_SIZE size;
     XGL_RESULT ret;
 
-    bo = intel_winsys_alloc_buffer(winsys,
-            "queue buffer", 4096, INTEL_DOMAIN_CPU);
-    if (!bo)
-        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+    if (queue->last_pipeline_select == state)
+        return XGL_SUCCESS;
 
-    cmd = (uint32_t *) intel_bo_map(bo, true);
-    if (!cmd) {
-        intel_bo_unreference(bo);
-        return XGL_ERROR_MEMORY_MAP_FAILED;
+    switch (state) {
+    case QUEUE_STATE_GRAPHICS_SELECTED:
+        bo = queue->select_graphics_bo;
+        size = sizeof(queue_state_select_graphics);
+        break;
+    case QUEUE_STATE_COMPUTE_SELECTED:
+        bo = queue->select_compute_bo;
+        size = sizeof(queue_state_select_compute);
+        break;
+    case QUEUE_STATE_INITIALIZED:
+        /* will be reused for the atomic counters */
+        assert(!queue->atomic_bo);
+        bo = NULL;
+        size = sizeof(queue_state_init);
+        break;
+    default:
+        return XGL_ERROR_INVALID_VALUE;
+        break;
     }
 
-    used = 0;
+    if (!bo) {
+        const void *cmd;
+        void *ptr;
 
-    /* disable SIP and VF statistics */
-    cmd[used++] = GEN_RENDER_CMD(COMMON, GEN6, STATE_SIP);
-    cmd[used++] = 0;
-    cmd[used++] = GEN_RENDER_CMD(SINGLE_DW, GEN6, 3DSTATE_VF_STATISTICS);
+        bo = intel_winsys_alloc_buffer(queue->dev->winsys,
+                "queue bo", 4096, INTEL_DOMAIN_CPU);
+        if (!bo)
+            return XGL_ERROR_OUT_OF_GPU_MEMORY;
 
-    cmd[used++] = GEN_MI_CMD(MI_BATCH_BUFFER_END);
-    if (used & 1)
-        cmd[used++] = GEN_MI_CMD(MI_NOOP);
+        /* do the allocation only */
+        if (queue->ring != INTEL_RING_RENDER) {
+            assert(state == QUEUE_STATE_INITIALIZED);
+            queue->atomic_bo = bo;
+            queue->last_pipeline_select = QUEUE_STATE_INITIALIZED;
+            return XGL_SUCCESS;
+        }
 
-    intel_bo_unmap(bo);
+        ptr = intel_bo_map(bo, true);
+        if (!ptr) {
+            intel_bo_unreference(bo);
+            return XGL_ERROR_MEMORY_MAP_FAILED;
+        }
 
-    ret = queue_submit_bo(queue, bo, sizeof(cmd[0]) * used);
-    if (ret != XGL_SUCCESS) {
-        intel_bo_unreference(bo);
-        return ret;
+        switch (state) {
+        case QUEUE_STATE_GRAPHICS_SELECTED:
+            queue->select_graphics_bo = bo;
+            cmd = queue_state_select_graphics;
+            break;
+        case QUEUE_STATE_COMPUTE_SELECTED:
+            queue->select_compute_bo = bo;
+            cmd = queue_state_select_compute;
+            break;
+        case QUEUE_STATE_INITIALIZED:
+            /* reused for the atomic counters */
+            queue->atomic_bo = bo;
+            cmd = queue_state_init;
+            break;
+        default:
+            break;
+        }
+
+        memcpy(ptr, cmd, size);
+        intel_bo_unmap(bo);
     }
 
-    /* reuse the bo for atomic counters */
-    queue->bo = bo;
+    assert(queue->ring == INTEL_RING_RENDER);
 
-    return XGL_SUCCESS;
+    ret = queue_submit_bo(queue, bo, size);
+    if (ret == XGL_SUCCESS) {
+        if (state == QUEUE_STATE_INITIALIZED)
+            state = QUEUE_STATE_GRAPHICS_SELECTED;
+        queue->last_pipeline_select = state;
+    }
+
+    return ret;
 }
 
 XGL_RESULT intel_queue_create(struct intel_dev *dev,
@@ -97,7 +174,6 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
-    XGL_RESULT ret;
 
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -116,10 +192,9 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
     queue->dev = dev;
     queue->ring = ring;
 
-    ret = queue_init_hw_and_bo(queue);
-    if (ret != XGL_SUCCESS) {
+    if (queue_set_state(queue, QUEUE_STATE_INITIALIZED) != XGL_SUCCESS) {
         intel_queue_destroy(queue);
-        return ret;
+        return XGL_ERROR_INITIALIZATION_FAILED;
     }
 
     *queue_ret = queue;
@@ -129,8 +204,12 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
 void intel_queue_destroy(struct intel_queue *queue)
 {
-    if (queue->bo)
-        intel_bo_unreference(queue->bo);
+    if (queue->atomic_bo)
+        intel_bo_unreference(queue->atomic_bo);
+    if (queue->select_graphics_bo)
+        intel_bo_unreference(queue->select_graphics_bo);
+    if (queue->select_compute_bo)
+        intel_bo_unreference(queue->select_compute_bo);
     intel_base_destroy(&queue->base);
 }
 
@@ -180,6 +259,10 @@ XGL_RESULT XGLAPI intelQueueSubmit(
         struct intel_bo *bo;
         XGL_GPU_SIZE used;
         XGL_RESULT ret;
+
+        ret = queue_set_state(queue, cmd->pipeline_select);
+        if (ret != XGL_SUCCESS)
+            break;
 
         bo = intel_cmd_get_batch(cmd, &used);
         ret = queue_submit_bo(queue, bo, used);
