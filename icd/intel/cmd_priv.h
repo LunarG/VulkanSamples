@@ -163,13 +163,20 @@ static inline void cmd_batch_reloc(struct intel_cmd *cmd,
 }
 
 /**
- * Begin the batch buffer with a STATE_BASE_ADDRESS.
+ * Begin the batch buffer.
  */
 static inline void cmd_batch_begin(struct intel_cmd *cmd)
 {
+    /* STATE_BASE_ADDRESS */
     const uint8_t cmd_len = 10;
     const uint32_t dw0 = GEN_RENDER_CMD(COMMON, GEN6, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
+
+    /*
+     * assume all workarounds have been emitted for we do not need them for a
+     * fresh batch buffer
+     */
+    cmd->bind.wa_flags = 0xffffffff;
 
     CMD_ASSERT(cmd, 6, 7.5);
 

@@ -31,6 +31,11 @@
 #include "view.h"
 #include "cmd_priv.h"
 
+enum {
+    GEN6_WA_POST_SYNC_FLUSH     = 1 << 0,
+    GEN6_WA_DS_FLUSH            = 1 << 1,
+};
+
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              int prim_type, bool indexed,
                              uint32_t vertex_count,
@@ -566,6 +571,57 @@ static XGL_UINT gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
     return pos;
 }
 
+static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
+{
+    if (cmd->bind.wa_flags & GEN6_WA_POST_SYNC_FLUSH)
+        return;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd->bind.wa_flags |= GEN6_WA_POST_SYNC_FLUSH;
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 60:
+    *
+    *     "Pipe-control with CS-stall bit set must be sent BEFORE the
+    *      pipe-control with a post-sync op and no write-cache flushes."
+    *
+    * The workaround below necessitates this workaround.
+    */
+    gen6_PIPE_CONTROL(cmd,
+            GEN6_PIPE_CONTROL_CS_STALL |
+            GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL,
+            NULL, 0);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 60:
+    *
+    *     "Before any depth stall flush (including those produced by
+    *      non-pipelined state commands), software needs to first send a
+    *      PIPE_CONTROL with no bits set except Post-Sync Operation != 0."
+    *
+    *     "Before a PIPE_CONTROL with Write Cache Flush Enable =1, a
+    *      PIPE_CONTROL with any non-zero post-sync-op is required."
+    */
+   gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM, cmd->scratch_bo, 0);
+}
+
+static void gen6_wa_ds_flush(struct intel_cmd *cmd)
+{
+    if (cmd->bind.wa_flags & GEN6_WA_DS_FLUSH)
+        return;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd->bind.wa_flags |= GEN6_WA_DS_FLUSH;
+
+    gen6_wa_post_sync_flush(cmd);
+
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+}
+
 static void gen6_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_blend_state *blend = cmd->bind.state.blend;
@@ -761,6 +817,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
 
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
+    gen6_wa_post_sync_flush(cmd);
     cmd_batch_reserve(cmd, msaa->cmd_len);
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
 }
@@ -857,6 +914,7 @@ static void cmd_bind_rt(struct intel_cmd *cmd,
 
     cmd->bind.att.rt_count = count;
 
+    gen6_wa_post_sync_flush(cmd);
     gen6_3DSTATE_DRAWING_RECTANGLE(cmd, width, height);
 }
 
@@ -874,10 +932,7 @@ static void cmd_bind_ds(struct intel_cmd *cmd,
         ds = &null_ds;
     }
 
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0);
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
-
+    gen6_wa_ds_flush(cmd);
     gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
     gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
     gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
@@ -953,6 +1008,9 @@ static void cmd_draw(struct intel_cmd *cmd,
         gen6_3DPRIMITIVE(cmd, p->prim_type, indexed, vertex_count,
                 vertex_start, instance_count, instance_start, vertex_base);
     }
+
+    /* need to re-emit all workarounds */
+    cmd->bind.wa_flags = 0;
 }
 
 XGL_VOID XGLAPI intelCmdBindPipeline(

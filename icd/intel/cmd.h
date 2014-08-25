@@ -84,6 +84,8 @@ struct intel_cmd_bind {
 
         const struct intel_ds_view *ds;
     } att;
+
+    uint32_t wa_flags;
 };
 
 struct intel_cmd_writer {
