@@ -236,7 +236,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         int err;
 
         err = intel_bo_add_reloc(reloc->writer->bo,
-                sizeof(uint32_t) * reloc->pos, reloc->mem->bo, reloc->val,
+                sizeof(uint32_t) * reloc->pos, reloc->bo, reloc->val,
                 reloc->read_domains, reloc->write_domain, &presumed_offset);
         if (err) {
             cmd->result = XGL_ERROR_UNKNOWN;

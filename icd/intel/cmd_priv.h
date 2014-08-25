@@ -38,7 +38,7 @@ struct intel_cmd_reloc {
     XGL_UINT pos;
 
     uint32_t val;
-    const struct intel_mem *mem;
+    struct intel_bo *bo;
 
     /*
      * With application state tracking promised by XGL, we should be able to
@@ -80,7 +80,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
 static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
                                         struct intel_cmd_writer *writer,
                                         XGL_INT offset, uint32_t val,
-                                        const struct intel_mem *mem,
+                                        struct intel_bo *bo,
                                         uint16_t read_domains,
                                         uint16_t write_domain)
 {
@@ -91,7 +91,7 @@ static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
     reloc->writer = writer;
     reloc->pos = writer->used + offset;
     reloc->val = val;
-    reloc->mem = mem;
+    reloc->bo = bo;
     reloc->read_domains = read_domains;
     reloc->write_domain = write_domain;
 
@@ -151,14 +151,14 @@ static inline void cmd_batch_write_n(struct intel_cmd *cmd,
  * Add a reloc to the hardware command being built.  No error checking.
  */
 static inline void cmd_batch_reloc(struct intel_cmd *cmd,
-                                   uint32_t val, const struct intel_mem *mem,
+                                   uint32_t val, struct intel_bo *bo,
                                    uint16_t read_domains,
                                    uint16_t write_domain)
 {
     struct intel_cmd_writer *writer = &cmd->batch;
 
     cmd_writer_add_reloc(cmd, writer, 0, val,
-            mem, read_domains, write_domain);
+            bo, read_domains, write_domain);
 
     writer->used++;
 }

@@ -182,8 +182,8 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
 
     cmd_batch_reserve_reloc(cmd, cmd_len, 2);
     cmd_batch_write(cmd, dw0);
-    cmd_batch_reloc(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
-    cmd_batch_reloc(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
+    cmd_batch_reloc(cmd, offset, mem->bo, INTEL_DOMAIN_VERTEX, 0);
+    cmd_batch_reloc(cmd, end_offset, mem->bo, INTEL_DOMAIN_VERTEX, 0);
 }
 
 static inline void
@@ -244,7 +244,7 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[0]);
     if (view->img) {
-        cmd_batch_reloc(cmd, view->cmd[1], view->img->obj.mem,
+        cmd_batch_reloc(cmd, view->cmd[1], view->img->obj.mem->bo,
                         INTEL_DOMAIN_RENDER,
                         INTEL_DOMAIN_RENDER);
     } else {
@@ -273,7 +273,7 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[6]);
     if (view->img) {
-        cmd_batch_reloc(cmd, view->cmd[7], view->img->obj.mem,
+        cmd_batch_reloc(cmd, view->cmd[7], view->img->obj.mem->bo,
                         INTEL_DOMAIN_RENDER,
                         INTEL_DOMAIN_RENDER);
     } else {
@@ -298,7 +298,7 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[8]);
     if (view->img) {
-        cmd_batch_reloc(cmd, view->cmd[9], view->img->obj.mem,
+        cmd_batch_reloc(cmd, view->cmd[9], view->img->obj.mem->bo,
                         INTEL_DOMAIN_RENDER,
                         INTEL_DOMAIN_RENDER);
     } else {
@@ -617,7 +617,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
 
                 memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
                 cmd_writer_add_reloc(cmd, &cmd->state,
-                        1, view->cmd[1], view->img->obj.mem,
+                        1, view->cmd[1], view->img->obj.mem->bo,
                         INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
                 cmd_state_advance(cmd, view->cmd_len);
             }
@@ -632,7 +632,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
 
                 memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
                 cmd_writer_add_reloc(cmd, &cmd->state,
-                        1, view->cmd[1], view->mem,
+                        1, view->cmd[1], view->mem->bo,
                         INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
                 cmd_state_advance(cmd, view->cmd_len);
             }
