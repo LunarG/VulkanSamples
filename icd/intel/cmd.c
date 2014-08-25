@@ -164,6 +164,11 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
 
     cmd->dev = dev;
 
+    /*
+     * XXX This is not quite right.  intel_gpu sets maxMemRefsPerSubmission to
+     * batch_buffer_reloc_count, but we may emit up to two relocs, for start
+     * and end offsets, for each referenced memories.
+     */
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
     cmd->relocs = icd_alloc(sizeof(cmd->relocs[0]) * cmd->reloc_count,
             4096, XGL_SYSTEM_ALLOC_INTERNAL);
