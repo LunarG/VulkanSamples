@@ -205,6 +205,28 @@ gen75_3DSTATE_VF(struct intel_cmd *cmd,
     cmd_batch_write(cmd, cut_index);
 }
 
+static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
+                                           XGL_UINT width, XGL_UINT height)
+{
+    const uint8_t cmd_len = 4;
+    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_DRAWING_RECTANGLE) |
+                         (cmd_len - 2);
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    if (width && height) {
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, (height - 1) << 16 |
+                             (width - 1));
+    } else {
+        cmd_batch_write(cmd, 1);
+        cmd_batch_write(cmd, 0);
+    }
+    cmd_batch_write(cmd, 0);
+}
+
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
                                       const struct intel_ds_view *view)
 {
@@ -726,16 +748,30 @@ static void cmd_bind_rt(struct intel_cmd *cmd,
                         const XGL_COLOR_ATTACHMENT_BIND_INFO *attachments,
                         XGL_UINT count)
 {
+    XGL_UINT width = 0, height = 0;
     XGL_UINT i;
 
     for (i = 0; i < count; i++) {
         const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &attachments[i];
         const struct intel_rt_view *rt = intel_rt_view(att->view);
+        const struct intel_layout *layout = &rt->img->layout;
+
+        if (i == 0) {
+            width = layout->width0;
+            height = layout->height0;
+        } else {
+            if (width > layout->width0)
+                width = layout->width0;
+            if (height > layout->height0)
+                height = layout->height0;
+        }
 
         cmd->bind.att.rt[i] = rt;
     }
 
     cmd->bind.att.rt_count = count;
+
+    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, width, height);
 }
 
 static void cmd_bind_ds(struct intel_cmd *cmd,
