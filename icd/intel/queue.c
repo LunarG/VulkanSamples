@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "genhw/genhw.h"
 #include "kmd/winsys.h"
 #include "cmd.h"
 #include "dev.h"
@@ -46,12 +47,57 @@ static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
     return (err) ? XGL_ERROR_UNKNOWN : XGL_SUCCESS;
 }
 
+static XGL_RESULT queue_init_hw_and_bo(struct intel_queue *queue)
+{
+    struct intel_winsys *winsys = queue->dev->winsys;
+    struct intel_bo *bo;
+    uint32_t *cmd;
+    XGL_UINT used;
+    XGL_RESULT ret;
+
+    bo = intel_winsys_alloc_buffer(winsys,
+            "queue buffer", 4096, INTEL_DOMAIN_CPU);
+    if (!bo)
+        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+
+    cmd = (uint32_t *) intel_bo_map(bo, true);
+    if (!cmd) {
+        intel_bo_unreference(bo);
+        return XGL_ERROR_MEMORY_MAP_FAILED;
+    }
+
+    used = 0;
+
+    /* disable SIP and VF statistics */
+    cmd[used++] = GEN_RENDER_CMD(COMMON, GEN6, STATE_SIP);
+    cmd[used++] = 0;
+    cmd[used++] = GEN_RENDER_CMD(SINGLE_DW, GEN6, 3DSTATE_VF_STATISTICS);
+
+    cmd[used++] = GEN_MI_CMD(MI_BATCH_BUFFER_END);
+    if (used & 1)
+        cmd[used++] = GEN_MI_CMD(MI_NOOP);
+
+    intel_bo_unmap(bo);
+
+    ret = queue_submit_bo(queue, bo, sizeof(cmd[0]) * used);
+    if (ret != XGL_SUCCESS) {
+        intel_bo_unreference(bo);
+        return ret;
+    }
+
+    /* reuse the bo for atomic counters */
+    queue->bo = bo;
+
+    return XGL_SUCCESS;
+}
+
 XGL_RESULT intel_queue_create(struct intel_dev *dev,
                               enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret)
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
+    XGL_RESULT ret;
 
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -70,6 +116,12 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
     queue->dev = dev;
     queue->ring = ring;
 
+    ret = queue_init_hw_and_bo(queue);
+    if (ret != XGL_SUCCESS) {
+        intel_queue_destroy(queue);
+        return ret;
+    }
+
     *queue_ret = queue;
 
     return XGL_SUCCESS;
@@ -77,6 +129,8 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
 void intel_queue_destroy(struct intel_queue *queue)
 {
+    if (queue->bo)
+        intel_bo_unreference(queue->bo);
     intel_base_destroy(&queue->base);
 }
 

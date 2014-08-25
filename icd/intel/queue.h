@@ -39,6 +39,9 @@ struct intel_queue {
     struct intel_dev *dev;
     enum intel_ring_type ring;
 
+    /* for context initialization and atomic counters */
+    struct intel_bo *bo;
+
     struct intel_cmd *last_submitted_cmd;
 };
 
