@@ -98,6 +98,13 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return XGL_ERROR_UNKNOWN;
     }
 
+    dev->cmd_scratch_bo = intel_winsys_alloc_buffer(dev->winsys,
+            "command buffer scratch", 4096, INTEL_DOMAIN_INSTRUCTION);
+    if (!dev->cmd_scratch_bo) {
+        intel_dev_destroy(dev);
+        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+    }
+
     ret = dev_create_queues(dev, info->pRequestedQueues,
             info->queueRecordCount);
     if (ret != XGL_SUCCESS) {
@@ -136,6 +143,9 @@ void intel_dev_destroy(struct intel_dev *dev)
         if (dev->queues[i])
             intel_queue_destroy(dev->queues[i]);
     }
+
+    if (dev->cmd_scratch_bo)
+        intel_bo_unreference(dev->cmd_scratch_bo);
 
     if (dev->winsys)
         intel_winsys_destroy(dev->winsys);

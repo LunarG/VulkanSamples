@@ -99,6 +99,7 @@ struct intel_cmd {
     struct intel_obj obj;
 
     struct intel_dev *dev;
+    struct intel_bo *scratch_bo;
     int pipeline_select;
 
     struct intel_cmd_reloc *relocs;

@@ -56,6 +56,8 @@ struct intel_dev {
 
     struct intel_gpu *gpu;
     struct intel_winsys *winsys;
+    struct intel_bo *cmd_scratch_bo;
+
     struct intel_queue *queues[INTEL_GPU_ENGINE_COUNT];
 };
 

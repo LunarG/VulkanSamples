@@ -179,6 +179,7 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     cmd->obj.destroy = cmd_destroy;
 
     cmd->dev = dev;
+    cmd->scratch_bo = dev->cmd_scratch_bo;
     cmd->pipeline_select = pipeline_select;
 
     /*
