@@ -180,7 +180,7 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
     /* aligned and inclusive */
     end_offset = mem->size - (mem->size % offset_align) - 1;
 
-    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_reserve_reloc(cmd, cmd_len, 2);
     cmd_batch_write(cmd, dw0);
     cmd_batch_reloc(cmd, offset, mem, INTEL_DOMAIN_VERTEX, 0);
     cmd_batch_reloc(cmd, end_offset, mem, INTEL_DOMAIN_VERTEX, 0);
@@ -218,7 +218,7 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
         GEN_RENDER_CMD(3D, GEN6, 3DSTATE_DEPTH_BUFFER);
     dw0 |= (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[0]);
     if (view->img) {
@@ -247,7 +247,7 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
         GEN_RENDER_CMD(3D, GEN6, 3DSTATE_STENCIL_BUFFER);
     dw0 |= (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[6]);
     if (view->img) {
@@ -272,7 +272,7 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
         GEN_RENDER_CMD(3D, GEN6, 3DSTATE_HIER_DEPTH_BUFFER);
     dw0 |= (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, view->cmd[8]);
     if (view->img) {
