@@ -89,6 +89,94 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
     cmd_batch_write(cmd, vertex_base);
 }
 
+static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
+                              struct intel_bo *bo, uint32_t bo_offset)
+{
+   const uint8_t cmd_len = 5;
+   const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, PIPE_CONTROL) |
+                        (cmd_len - 2);
+   const uint32_t read_domains = INTEL_DOMAIN_INSTRUCTION;
+   const uint32_t write_domain = INTEL_DOMAIN_INSTRUCTION;
+
+   CMD_ASSERT(cmd, 6, 7.5);
+
+   assert(bo_offset % 8 == 0);
+
+   if (dw1 & GEN6_PIPE_CONTROL_CS_STALL) {
+      /*
+       * From the Sandy Bridge PRM, volume 2 part 1, page 73:
+       *
+       *     "1 of the following must also be set (when CS stall is set):
+       *
+       *       * Depth Cache Flush Enable ([0] of DW1)
+       *       * Stall at Pixel Scoreboard ([1] of DW1)
+       *       * Depth Stall ([13] of DW1)
+       *       * Post-Sync Operation ([13] of DW1)
+       *       * Render Target Cache Flush Enable ([12] of DW1)
+       *       * Notify Enable ([8] of DW1)"
+       *
+       * From the Ivy Bridge PRM, volume 2 part 1, page 61:
+       *
+       *     "One of the following must also be set (when CS stall is set):
+       *
+       *       * Render Target Cache Flush Enable ([12] of DW1)
+       *       * Depth Cache Flush Enable ([0] of DW1)
+       *       * Stall at Pixel Scoreboard ([1] of DW1)
+       *       * Depth Stall ([13] of DW1)
+       *       * Post-Sync Operation ([13] of DW1)"
+       */
+      uint32_t bit_test = GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH |
+                          GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                          GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL |
+                          GEN6_PIPE_CONTROL_DEPTH_STALL;
+
+      /* post-sync op */
+      bit_test |= GEN6_PIPE_CONTROL_WRITE_IMM |
+                  GEN6_PIPE_CONTROL_WRITE_PS_DEPTH_COUNT |
+                  GEN6_PIPE_CONTROL_WRITE_TIMESTAMP;
+
+      if (cmd_gen(cmd) == INTEL_GEN(6))
+         bit_test |= GEN6_PIPE_CONTROL_NOTIFY_ENABLE;
+
+      assert(dw1 & bit_test);
+   }
+
+   if (dw1 & GEN6_PIPE_CONTROL_DEPTH_STALL) {
+      /*
+       * From the Sandy Bridge PRM, volume 2 part 1, page 73:
+       *
+       *     "Following bits must be clear (when Depth Stall is set):
+       *
+       *       * Render Target Cache Flush Enable ([12] of DW1)
+       *       * Depth Cache Flush Enable ([0] of DW1)"
+       */
+      assert(!(dw1 & (GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH |
+                      GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH)));
+   }
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 3, page 19:
+    *
+    *     "[DevSNB] PPGTT memory writes by MI_* (such as MI_STORE_DATA_IMM)
+    *      and PIPE_CONTROL are not supported."
+    *
+    * The kernel will add the mapping automatically (when write domain is
+    * INTEL_DOMAIN_INSTRUCTION).
+    */
+   if (cmd_gen(cmd) == INTEL_GEN(6) && bo)
+      bo_offset |= GEN6_PIPE_CONTROL_DW2_USE_GGTT;
+
+   cmd_batch_reserve_reloc(cmd, cmd_len, (bool) bo);
+   cmd_batch_write(cmd, dw0);
+   cmd_batch_write(cmd, dw1);
+   if (bo)
+       cmd_batch_reloc(cmd, bo_offset, bo, read_domains, write_domain);
+   else
+       cmd_batch_write(cmd, 0);
+   cmd_batch_write(cmd, 0);
+   cmd_batch_write(cmd, 0);
+}
+
 static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
 {
     const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
@@ -786,7 +874,10 @@ static void cmd_bind_ds(struct intel_cmd *cmd,
         ds = &null_ds;
     }
 
-    /* TODO workarounds */
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+
     gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
     gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
     gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
