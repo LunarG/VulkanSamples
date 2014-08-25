@@ -70,7 +70,7 @@ struct intel_cmd_bind {
     struct {
         struct intel_mem_view graphics;
         struct intel_mem_view compute;
-    } mem_view;
+    } dyn_view;
 
     struct {
         const struct intel_mem *mem;

@@ -573,7 +573,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
         case INTEL_RMAP_SLOT_DYN:
             {
                 const struct intel_mem_view *view =
-                    &cmd->bind.mem_view.graphics;
+                    &cmd->bind.dyn_view.graphics;
 
                 dw = cmd_state_reserve_reloc(cmd, view->cmd_len, 1,
                         GEN6_ALIGNMENT_SURFACE_STATE, &pos);
@@ -627,6 +627,174 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
 }
 
+static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
+                                       const struct intel_pipeline *pipeline)
+{
+    cmd->bind.pipeline.graphics = pipeline;
+}
+
+static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
+                                      const struct intel_pipeline *pipeline)
+{
+    cmd->bind.pipeline.compute = pipeline;
+}
+
+static void cmd_bind_graphics_delta(struct intel_cmd *cmd,
+                                    const struct intel_pipeline_delta *delta)
+{
+    cmd->bind.pipeline.graphics_delta = delta;
+}
+
+static void cmd_bind_compute_delta(struct intel_cmd *cmd,
+                                   const struct intel_pipeline_delta *delta)
+{
+    cmd->bind.pipeline.compute_delta = delta;
+}
+
+static void cmd_bind_graphics_dset(struct intel_cmd *cmd,
+                                   const struct intel_dset *dset,
+                                   XGL_UINT slot_offset)
+{
+    cmd->bind.dset.graphics = dset;
+    cmd->bind.dset.graphics_offset = slot_offset;
+}
+
+static void cmd_bind_compute_dset(struct intel_cmd *cmd,
+                                  const struct intel_dset *dset,
+                                  XGL_UINT slot_offset)
+{
+    cmd->bind.dset.compute = dset;
+    cmd->bind.dset.compute_offset = slot_offset;
+}
+
+static void cmd_bind_graphics_dyn_view(struct intel_cmd *cmd,
+                                       const XGL_MEMORY_VIEW_ATTACH_INFO *info)
+{
+    intel_mem_view_init(&cmd->bind.dyn_view.graphics, cmd->dev, info);
+}
+
+static void cmd_bind_compute_dyn_view(struct intel_cmd *cmd,
+                                      const XGL_MEMORY_VIEW_ATTACH_INFO *info)
+{
+    intel_mem_view_init(&cmd->bind.dyn_view.compute, cmd->dev, info);
+}
+
+static void cmd_bind_index_data(struct intel_cmd *cmd,
+                                const struct intel_mem *mem,
+                                XGL_GPU_SIZE offset, XGL_INDEX_TYPE type)
+{
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+        gen6_3DSTATE_INDEX_BUFFER(cmd, mem, offset, type, false);
+    } else {
+        cmd->bind.index.mem = mem;
+        cmd->bind.index.offset = offset;
+        cmd->bind.index.type = type;
+    }
+}
+
+static void cmd_bind_rt(struct intel_cmd *cmd,
+                        const XGL_COLOR_ATTACHMENT_BIND_INFO *attachments,
+                        XGL_UINT count)
+{
+    XGL_UINT i;
+
+    for (i = 0; i < count; i++) {
+        const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &attachments[i];
+        const struct intel_rt_view *rt = intel_rt_view(att->view);
+
+        cmd->bind.att.rt[i] = rt;
+    }
+
+    cmd->bind.att.rt_count = count;
+}
+
+static void cmd_bind_ds(struct intel_cmd *cmd,
+                        const XGL_DEPTH_STENCIL_BIND_INFO *info)
+{
+    const struct intel_ds_view *ds;
+
+    if (info) {
+        cmd->bind.att.ds = intel_ds_view(info->view);
+        ds = cmd->bind.att.ds;
+    } else {
+        /* all zeros */
+        static const struct intel_ds_view null_ds;
+        ds = &null_ds;
+    }
+
+    /* TODO workarounds */
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+}
+
+static void cmd_bind_viewport_state(struct intel_cmd *cmd,
+                                    const struct intel_viewport_state *state)
+{
+    cmd->bind.state.viewport = state;
+}
+
+static void cmd_bind_raster_state(struct intel_cmd *cmd,
+                                  const struct intel_raster_state *state)
+{
+    cmd->bind.state.raster = state;
+}
+
+static void cmd_bind_ds_state(struct intel_cmd *cmd,
+                              const struct intel_ds_state *state)
+{
+    cmd->bind.state.ds = state;
+}
+
+static void cmd_bind_blend_state(struct intel_cmd *cmd,
+                                 const struct intel_blend_state *state)
+{
+    cmd->bind.state.blend = state;
+}
+
+static void cmd_bind_msaa_state(struct intel_cmd *cmd,
+                                const struct intel_msaa_state *state)
+{
+    cmd->bind.state.msaa = state;
+}
+
+static void cmd_draw(struct intel_cmd *cmd,
+                     XGL_UINT vertex_start,
+                     XGL_UINT vertex_count,
+                     XGL_UINT instance_start,
+                     XGL_UINT instance_count,
+                     bool indexed,
+                     XGL_UINT vertex_base)
+{
+    const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
+
+    emit_bounded_states(cmd);
+
+    if (indexed) {
+        if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
+            cmd->result = XGL_ERROR_UNKNOWN;
+
+        if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+            gen75_3DSTATE_VF(cmd, p->primitive_restart,
+                    p->primitive_restart_index);
+        } else {
+            gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
+                    cmd->bind.index.offset, cmd->bind.index.type,
+                    p->primitive_restart);
+        }
+    } else {
+        assert(!vertex_base);
+    }
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3DPRIMITIVE(cmd, p->prim_type, indexed, vertex_count,
+                vertex_start, instance_count, instance_start, vertex_base);
+    } else {
+        gen6_3DPRIMITIVE(cmd, p->prim_type, indexed, vertex_count,
+                vertex_start, instance_count, instance_start, vertex_base);
+    }
+}
+
 XGL_VOID XGLAPI intelCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
@@ -636,12 +804,13 @@ XGL_VOID XGLAPI intelCmdBindPipeline(
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd->bind.pipeline.compute = intel_pipeline(pipeline);
+        cmd_bind_compute_pipeline(cmd, intel_pipeline(pipeline));
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd->bind.pipeline.graphics = intel_pipeline(pipeline);
+        cmd_bind_graphics_pipeline(cmd, intel_pipeline(pipeline));
         break;
     default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
         break;
     }
 }
@@ -655,12 +824,13 @@ XGL_VOID XGLAPI intelCmdBindPipelineDelta(
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd->bind.pipeline.compute_delta = delta;
+        cmd_bind_compute_delta(cmd, delta);
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd->bind.pipeline.graphics_delta = delta;
+        cmd_bind_graphics_delta(cmd, delta);
         break;
     default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
         break;
     }
 }
@@ -674,26 +844,27 @@ XGL_VOID XGLAPI intelCmdBindStateObject(
 
     switch (stateBindPoint) {
     case XGL_STATE_BIND_VIEWPORT:
-        cmd->bind.state.viewport =
-            intel_viewport_state((XGL_VIEWPORT_STATE_OBJECT) state);
+        cmd_bind_viewport_state(cmd,
+                intel_viewport_state((XGL_VIEWPORT_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_RASTER:
-        cmd->bind.state.raster =
-            intel_raster_state((XGL_RASTER_STATE_OBJECT) state);
+        cmd_bind_raster_state(cmd,
+                intel_raster_state((XGL_RASTER_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_DEPTH_STENCIL:
-        cmd->bind.state.ds =
-            intel_ds_state((XGL_DEPTH_STENCIL_STATE_OBJECT) state);
+        cmd_bind_ds_state(cmd,
+                intel_ds_state((XGL_DEPTH_STENCIL_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_COLOR_BLEND:
-        cmd->bind.state.blend =
-            intel_blend_state((XGL_COLOR_BLEND_STATE_OBJECT) state);
+        cmd_bind_blend_state(cmd,
+                intel_blend_state((XGL_COLOR_BLEND_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_MSAA:
-        cmd->bind.state.msaa =
-            intel_msaa_state((XGL_MSAA_STATE_OBJECT) state);
+        cmd_bind_msaa_state(cmd,
+                intel_msaa_state((XGL_MSAA_STATE_OBJECT) state));
         break;
     default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
         break;
     }
 }
@@ -712,14 +883,13 @@ XGL_VOID XGLAPI intelCmdBindDescriptorSet(
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd->bind.dset.compute = dset;
-        cmd->bind.dset.compute_offset = slotOffset;
+        cmd_bind_compute_dset(cmd, dset, slotOffset);
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd->bind.dset.graphics = dset;
-        cmd->bind.dset.graphics_offset = slotOffset;
+        cmd_bind_graphics_dset(cmd, dset, slotOffset);
         break;
     default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
         break;
     }
 }
@@ -733,12 +903,13 @@ XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        intel_mem_view_init(&cmd->bind.mem_view.compute, cmd->dev, pMemView);
+        cmd_bind_compute_dyn_view(cmd, pMemView);
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        intel_mem_view_init(&cmd->bind.mem_view.graphics, cmd->dev, pMemView);
+        cmd_bind_graphics_dyn_view(cmd, pMemView);
         break;
     default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
         break;
     }
 }
@@ -752,13 +923,7 @@ XGL_VOID XGLAPI intelCmdBindIndexData(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_mem *mem = intel_mem(mem_);
 
-    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
-        gen6_3DSTATE_INDEX_BUFFER(cmd, mem, offset, indexType, false);
-    } else {
-        cmd->bind.index.mem = mem;
-        cmd->bind.index.offset = offset;
-        cmd->bind.index.type = indexType;
-    }
+    cmd_bind_index_data(cmd, mem, offset, indexType);
 }
 
 XGL_VOID XGLAPI intelCmdBindAttachments(
@@ -768,32 +933,9 @@ XGL_VOID XGLAPI intelCmdBindAttachments(
     const XGL_DEPTH_STENCIL_BIND_INFO*          pDepthStencilAttachment)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    const struct intel_ds_view *ds;
-    XGL_UINT i;
 
-    for (i = 0; i < colorAttachmentCount; i++) {
-        const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &pColorAttachments[i];
-        struct intel_rt_view *rt = intel_rt_view(att->view);
-
-        cmd->bind.att.rt[i] = rt;
-    }
-
-    cmd->bind.att.rt_count = colorAttachmentCount;
-
-    if (pDepthStencilAttachment) {
-        cmd->bind.att.ds = intel_ds_view(pDepthStencilAttachment->view);
-        ds = cmd->bind.att.ds;
-
-    } else {
-        /* all zeros */
-        static const struct intel_ds_view null_ds;
-        ds = &null_ds;
-    }
-
-    /* TODO workarounds */
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+    cmd_bind_rt(cmd, pColorAttachments, colorAttachmentCount);
+    cmd_bind_ds(cmd, pDepthStencilAttachment);
 }
 
 XGL_VOID XGLAPI intelCmdDraw(
@@ -804,17 +946,9 @@ XGL_VOID XGLAPI intelCmdDraw(
     XGL_UINT                                    instanceCount)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
-    emit_bounded_states(cmd);
-
-    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3DPRIMITIVE(cmd, p->prim_type, false, vertexCount,
-                firstVertex, instanceCount, firstInstance, 0);
-    } else {
-        gen6_3DPRIMITIVE(cmd, p->prim_type, false, vertexCount,
-                firstVertex, instanceCount, firstInstance, 0);
-    }
+    cmd_draw(cmd, firstVertex, vertexCount,
+            firstInstance, instanceCount, false, 0);
 }
 
 XGL_VOID XGLAPI intelCmdDrawIndexed(
@@ -826,29 +960,9 @@ XGL_VOID XGLAPI intelCmdDrawIndexed(
     XGL_UINT                                    instanceCount)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
-    emit_bounded_states(cmd);
-
-    if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
-        cmd->result = XGL_ERROR_UNKNOWN;
-
-    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
-        gen75_3DSTATE_VF(cmd, p->primitive_restart,
-                p->primitive_restart_index);
-    } else {
-        gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
-                cmd->bind.index.offset, cmd->bind.index.type,
-                p->primitive_restart);
-    }
-
-    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3DPRIMITIVE(cmd, p->prim_type, true, indexCount,
-                firstIndex, instanceCount, firstInstance, 0);
-    } else {
-        gen6_3DPRIMITIVE(cmd, p->prim_type, true, indexCount,
-                firstIndex, instanceCount, firstInstance, 0);
-    }
+    cmd_draw(cmd, firstIndex, indexCount,
+            firstInstance, instanceCount, true, vertexOffset);
 }
 
 XGL_VOID XGLAPI intelCmdDrawIndirect(
