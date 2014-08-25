@@ -54,9 +54,6 @@ void intel_queue_destroy(struct intel_queue *queue);
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout);
 
-XGL_RESULT intel_queue_submit(struct intel_queue *queue,
-                              struct intel_cmd *cmd);
-
 XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
     XGL_QUEUE                                   queue,
     XGL_UINT                                    memRefCount,

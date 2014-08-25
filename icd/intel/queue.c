@@ -28,6 +28,24 @@
 #include "fence.h"
 #include "queue.h"
 
+static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
+                                  struct intel_bo *bo,
+                                  XGL_GPU_SIZE used)
+{
+    struct intel_winsys *winsys = queue->dev->winsys;
+    int err;
+
+    if (intel_debug & INTEL_DEBUG_BATCH)
+        intel_winsys_decode_bo(winsys, bo, used);
+
+    if (intel_debug & INTEL_DEBUG_NOHW)
+        err = 0;
+    else
+        err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
+
+    return (err) ? XGL_ERROR_UNKNOWN : XGL_SUCCESS;
+}
+
 XGL_RESULT intel_queue_create(struct intel_dev *dev,
                               enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret)
@@ -71,29 +89,6 @@ XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
         XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 
-XGL_RESULT intel_queue_submit(struct intel_queue *queue,
-                              struct intel_cmd *cmd)
-{
-    struct intel_winsys *winsys = queue->dev->winsys;
-    struct intel_bo *bo;
-    XGL_GPU_SIZE used;
-    int err;
-
-    bo = intel_cmd_get_batch(cmd, &used);
-
-    if (intel_debug & INTEL_DEBUG_BATCH)
-        intel_winsys_decode_bo(winsys, bo, used);
-
-    if (intel_debug & INTEL_DEBUG_NOHW)
-        err = 0;
-    else
-        err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
-
-    queue->last_submitted_cmd = cmd;
-
-    return (err) ? XGL_ERROR_UNKNOWN : XGL_SUCCESS;
-}
-
 XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
     XGL_QUEUE                                   queue,
     XGL_UINT                                    memRefCount,
@@ -128,8 +123,14 @@ XGL_RESULT XGLAPI intelQueueSubmit(
 
     for (i = 0; i < cmdBufferCount; i++) {
         struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
+        struct intel_bo *bo;
+        XGL_GPU_SIZE used;
+        XGL_RESULT ret;
 
-        ret = intel_queue_submit(queue, cmd);
+        bo = intel_cmd_get_batch(cmd, &used);
+        ret = queue_submit_bo(queue, bo, used);
+        queue->last_submitted_cmd = cmd;
+
         if (ret != XGL_SUCCESS)
             break;
     }
