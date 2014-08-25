@@ -30,6 +30,8 @@
 #include "gpu.h"
 #include "obj.h"
 
+#define INTEL_QUEUE_ATOMIC_COUNTER_COUNT 1024
+
 struct intel_cmd;
 struct intel_dev;
 

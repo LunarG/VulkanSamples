@@ -30,6 +30,7 @@
 
 #include "genhw/genhw.h"
 #include "dispatch.h"
+#include "queue.h"
 #include "gpu.h"
 
 static const char *gpu_get_name(const struct intel_gpu *gpu)
@@ -272,7 +273,7 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
     case INTEL_GPU_ENGINE_3D:
         props->queueFlags = XGL_QUEUE_GRAPHICS_BIT | XGL_QUEUE_COMPUTE_BIT;
         props->queueCount = 1;
-        props->maxAtomicCounters = 4096;
+        props->maxAtomicCounters = INTEL_QUEUE_ATOMIC_COUNTER_COUNT;
         props->supportsTimestamps = true;
         break;
     default:
