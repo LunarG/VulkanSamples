@@ -56,7 +56,7 @@ static struct intel_bo *queue_create_bo(struct intel_queue *queue,
     void *ptr;
 
     bo = intel_winsys_alloc_buffer(queue->dev->winsys,
-            "queue bo", size, INTEL_DOMAIN_CPU);
+            "queue bo", size, true);
     if (!bo)
         return NULL;
 

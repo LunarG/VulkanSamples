@@ -39,7 +39,7 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
     void *ptr;
 
     bo = intel_winsys_alloc_buffer(winsys,
-            "batch buffer", bo_size, INTEL_DOMAIN_CPU);
+            "batch buffer", bo_size, true);
     if (!bo)
         return XGL_ERROR_OUT_OF_GPU_MEMORY;
 
@@ -262,7 +262,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
 
         err = intel_bo_add_reloc(reloc->writer->bo,
                 sizeof(uint32_t) * reloc->pos, reloc->bo, reloc->val,
-                reloc->read_domains, reloc->write_domain, &presumed_offset);
+                reloc->flags, &presumed_offset);
         if (err) {
             cmd->result = XGL_ERROR_UNKNOWN;
             break;

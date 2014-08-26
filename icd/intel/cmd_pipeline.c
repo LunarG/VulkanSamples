@@ -100,8 +100,6 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
    const uint8_t cmd_len = 5;
    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, PIPE_CONTROL) |
                         (cmd_len - 2);
-   const uint32_t read_domains = INTEL_DOMAIN_INSTRUCTION;
-   const uint32_t write_domain = INTEL_DOMAIN_INSTRUCTION;
 
    CMD_ASSERT(cmd, 6, 7.5);
 
@@ -174,10 +172,12 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) bo);
    cmd_batch_write(cmd, dw0);
    cmd_batch_write(cmd, dw1);
-   if (bo)
-       cmd_batch_reloc(cmd, bo_offset, bo, read_domains, write_domain);
-   else
+   if (bo) {
+       cmd_batch_reloc(cmd, bo_offset, bo, INTEL_RELOC_GGTT |
+                                           INTEL_RELOC_WRITE);
+   } else {
        cmd_batch_write(cmd, 0);
+   }
    cmd_batch_write(cmd, 0);
    cmd_batch_write(cmd, 0);
 }
@@ -275,8 +275,8 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
 
     cmd_batch_reserve_reloc(cmd, cmd_len, 2);
     cmd_batch_write(cmd, dw0);
-    cmd_batch_reloc(cmd, offset, mem->bo, INTEL_DOMAIN_VERTEX, 0);
-    cmd_batch_reloc(cmd, end_offset, mem->bo, INTEL_DOMAIN_VERTEX, 0);
+    cmd_batch_reloc(cmd, offset, mem->bo, 0);
+    cmd_batch_reloc(cmd, end_offset, mem->bo, 0);
 }
 
 static inline void
@@ -338,8 +338,7 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
     cmd_batch_write(cmd, view->cmd[0]);
     if (view->img) {
         cmd_batch_reloc(cmd, view->cmd[1], view->img->obj.mem->bo,
-                        INTEL_DOMAIN_RENDER,
-                        INTEL_DOMAIN_RENDER);
+                        INTEL_RELOC_WRITE);
     } else {
         cmd_batch_write(cmd, 0);
     }
@@ -367,8 +366,7 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
     cmd_batch_write(cmd, view->cmd[6]);
     if (view->img) {
         cmd_batch_reloc(cmd, view->cmd[7], view->img->obj.mem->bo,
-                        INTEL_DOMAIN_RENDER,
-                        INTEL_DOMAIN_RENDER);
+                        INTEL_RELOC_WRITE);
     } else {
         cmd_batch_write(cmd, 0);
     }
@@ -392,8 +390,7 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     cmd_batch_write(cmd, view->cmd[8]);
     if (view->img) {
         cmd_batch_reloc(cmd, view->cmd[9], view->img->obj.mem->bo,
-                        INTEL_DOMAIN_RENDER,
-                        INTEL_DOMAIN_RENDER);
+                        INTEL_RELOC_WRITE);
     } else {
         cmd_batch_write(cmd, 0);
     }
@@ -761,7 +758,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
 
                 memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
                 cmd_state_reloc(cmd, 1, view->cmd[1], view->img->obj.mem->bo,
-                        INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
+                        INTEL_RELOC_WRITE);
                 cmd_state_advance(cmd, view->cmd_len);
             }
             break;
@@ -775,7 +772,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
 
                 memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
                 cmd_state_reloc(cmd, 1, view->cmd[1], view->mem->bo,
-                        INTEL_DOMAIN_RENDER, INTEL_DOMAIN_RENDER);
+                        INTEL_RELOC_WRITE);
                 cmd_state_advance(cmd, view->cmd_len);
             }
             break;

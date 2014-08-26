@@ -28,6 +28,7 @@
 #ifndef INTEL_WINSYS_H
 #define INTEL_WINSYS_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -45,14 +46,10 @@ enum intel_exec_flag {
 };
 
 /* this is compatible with i915_drm.h's definitions */
-enum intel_domain_flag {
-   INTEL_DOMAIN_CPU           = 0x00000001,
-   INTEL_DOMAIN_RENDER        = 0x00000002,
-   INTEL_DOMAIN_SAMPLER       = 0x00000004,
-   INTEL_DOMAIN_COMMAND	      = 0x00000008,
-   INTEL_DOMAIN_INSTRUCTION   = 0x00000010,
-   INTEL_DOMAIN_VERTEX        = 0x00000020,
-   INTEL_DOMAIN_GTT           = 0x00000040,
+enum intel_reloc_flag {
+   INTEL_RELOC_FENCE          = 1 << 0,
+   INTEL_RELOC_GGTT           = 1 << 1,
+   INTEL_RELOC_WRITE          = 1 << 2,
 };
 
 /* this is compatible with i915_drm.h's definitions */
@@ -74,7 +71,10 @@ struct intel_bo;
 struct intel_winsys_info {
    int devid;
 
-   int max_batch_size;
+   /* the sizes of the aperture in bytes */
+   size_t aperture_total;
+   size_t aperture_mappable;
+
    bool has_llc;
    bool has_address_swizzling;
    bool has_logical_context;
@@ -120,7 +120,7 @@ intel_winsys_read_reg(struct intel_winsys *winsys,
  * \param tiling           Tiling mode.
  * \param pitch            Pitch of the bo.
  * \param height           Height of the bo.
- * \param initial_domain   Initial (write) domain.
+ * \param cpu_init         Will be initialized by CPU.
  */
 struct intel_bo *
 intel_winsys_alloc_bo(struct intel_winsys *winsys,
@@ -128,7 +128,7 @@ intel_winsys_alloc_bo(struct intel_winsys *winsys,
                       enum intel_tiling_mode tiling,
                       unsigned long pitch,
                       unsigned long height,
-                      uint32_t initial_domain);
+                      bool cpu_init);
 
 /**
  * Allocate a linear buffer object.
@@ -137,10 +137,10 @@ static inline struct intel_bo *
 intel_winsys_alloc_buffer(struct intel_winsys *winsys,
                           const char *name,
                           unsigned long size,
-                          uint32_t initial_domain)
+                          bool cpu_init)
 {
    return intel_winsys_alloc_bo(winsys, name,
-         INTEL_TILING_NONE, size, 1, initial_domain);
+         INTEL_TILING_NONE, size, 1, cpu_init);
 }
 
 /**
@@ -224,8 +224,7 @@ intel_bo_unreference(struct intel_bo *bo);
  * sequential writes, but reads would be very slow.  Callers always have a
  * linear view of the bo.
  *
- * map_unsynchronized() is similar to map_gtt(), except that it does not
- * block.
+ * map_gtt_async() is similar to map_gtt(), except that it does not block.
  */
 void *
 intel_bo_map(struct intel_bo *bo, bool write_enable);
@@ -234,7 +233,7 @@ void *
 intel_bo_map_gtt(struct intel_bo *bo);
 
 void *
-intel_bo_map_unsynchronized(struct intel_bo *bo);
+intel_bo_map_gtt_async(struct intel_bo *bo);
 
 /**
  * Unmap \p bo.
@@ -268,8 +267,7 @@ intel_bo_pread(struct intel_bo *bo, unsigned long offset,
 int
 intel_bo_add_reloc(struct intel_bo *bo, uint32_t offset,
                    struct intel_bo *target_bo, uint32_t target_offset,
-                   uint32_t read_domains, uint32_t write_domain,
-                   uint64_t *presumed_offset);
+                   uint32_t flags, uint64_t *presumed_offset);
 
 /**
  * Return the current number of relocations.

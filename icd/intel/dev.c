@@ -99,7 +99,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
     }
 
     dev->cmd_scratch_bo = intel_winsys_alloc_buffer(dev->winsys,
-            "command buffer scratch", 4096, INTEL_DOMAIN_INSTRUCTION);
+            "command buffer scratch", 4096, false);
     if (!dev->cmd_scratch_bo) {
         intel_dev_destroy(dev);
         return XGL_ERROR_OUT_OF_GPU_MEMORY;

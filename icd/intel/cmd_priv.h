@@ -40,18 +40,7 @@ struct intel_cmd_reloc {
     uint32_t val;
     struct intel_bo *bo;
 
-    /*
-     * With application state tracking promised by XGL, we should be able to
-     * set
-     *
-     *   I915_EXEC_NO_RELOC
-     *   I915_EXEC_HANDLE_LUT
-     *   I915_EXEC_IS_PINNED
-     *
-     * once we figure them out.
-     */
-    uint16_t read_domains;
-    uint16_t write_domain;
+    uint32_t flags;
 };
 
 static inline int cmd_gen(const struct intel_cmd *cmd)
@@ -80,8 +69,7 @@ static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
                                         struct intel_cmd_writer *writer,
                                         XGL_UINT pos, uint32_t val,
                                         struct intel_bo *bo,
-                                        uint16_t read_domains,
-                                        uint16_t write_domain)
+                                        uint32_t flags)
 {
     struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
 
@@ -91,8 +79,7 @@ static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
     reloc->pos = pos;
     reloc->val = val;
     reloc->bo = bo;
-    reloc->read_domains = read_domains;
-    reloc->write_domain = write_domain;
+    reloc->flags = flags;
 
     cmd->reloc_used++;
 }
@@ -151,13 +138,11 @@ static inline void cmd_batch_write_n(struct intel_cmd *cmd,
  */
 static inline void cmd_batch_reloc(struct intel_cmd *cmd,
                                    uint32_t val, struct intel_bo *bo,
-                                   uint16_t read_domains,
-                                   uint16_t write_domain)
+                                   uint32_t flags)
 {
     struct intel_cmd_writer *writer = &cmd->batch;
 
-    cmd_writer_add_reloc(cmd, writer, writer->used, val,
-            bo, read_domains, write_domain);
+    cmd_writer_add_reloc(cmd, writer, writer->used, val, bo, flags);
 
     writer->used++;
 }
@@ -210,16 +195,13 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
     const struct intel_cmd_writer *kernel = &cmd->kernel;
 
     cmd_reserve_reloc(cmd, 5);
-    cmd_writer_add_reloc(cmd, writer, 2, 1,
-            state->bo, INTEL_DOMAIN_SAMPLER, 0);
-    cmd_writer_add_reloc(cmd, writer, 3, 1,
-            state->bo, INTEL_DOMAIN_RENDER | INTEL_DOMAIN_INSTRUCTION, 0);
-    cmd_writer_add_reloc(cmd, writer, 5, 1,
-            kernel->bo, INTEL_DOMAIN_INSTRUCTION, 0);
-    cmd_writer_add_reloc(cmd, writer, 7, 1 + (state->size << 2),
-            state->bo, INTEL_DOMAIN_RENDER | INTEL_DOMAIN_INSTRUCTION, 0);
-    cmd_writer_add_reloc(cmd, writer, 9, 1 + (kernel->size << 2),
-            kernel->bo, INTEL_DOMAIN_INSTRUCTION, 0);
+    cmd_writer_add_reloc(cmd, writer, 2, 1, state->bo, 0);
+    cmd_writer_add_reloc(cmd, writer, 3, 1, state->bo, 0);
+    cmd_writer_add_reloc(cmd, writer, 5, 1, kernel->bo, 0);
+    cmd_writer_add_reloc(cmd, writer, 7, 1 +
+            (state->size << 2), state->bo, 0);
+    cmd_writer_add_reloc(cmd, writer, 9, 1 +
+            (kernel->size << 2), kernel->bo, 0);
 
     if (cmd->batch.used & 1) {
         cmd_batch_reserve(cmd, 1);
@@ -278,13 +260,11 @@ static inline uint32_t *cmd_state_reserve_reloc(struct intel_cmd *cmd,
 static inline void cmd_state_reloc(struct intel_cmd *cmd,
                                    XGL_INT offset, uint32_t val,
                                    struct intel_bo *bo,
-                                   uint16_t read_domains,
-                                   uint16_t write_domain)
+                                   uint32_t flags)
 {
     struct intel_cmd_writer *writer = &cmd->state;
 
-    cmd_writer_add_reloc(cmd, writer, writer->used + offset, val,
-            bo, read_domains, write_domain);
+    cmd_writer_add_reloc(cmd, writer, writer->used + offset, val, bo, flags);
 }
 
 /**
