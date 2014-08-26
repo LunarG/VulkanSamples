@@ -79,8 +79,8 @@ static XGL_RESULT queue_select_pipeline(struct intel_queue *queue,
                                         int pipeline_select)
 {
     uint32_t pipeline_select_cmd[] = {
-        GEN_RENDER_CMD(SINGLE_DW, GEN6, PIPELINE_SELECT),
-        GEN_MI_CMD(MI_BATCH_BUFFER_END),
+        GEN6_RENDER_CMD(SINGLE_DW, PIPELINE_SELECT),
+        GEN6_MI_CMD(MI_BATCH_BUFFER_END),
     };
     struct intel_bo *bo;
     XGL_RESULT ret;
@@ -131,16 +131,16 @@ static XGL_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 {
     const uint32_t ctx_init_cmd[] = {
         /* STATE_SIP */
-        GEN_RENDER_CMD(COMMON, GEN6, STATE_SIP),
+        GEN6_RENDER_CMD(COMMON, STATE_SIP),
         0,
         /* PIPELINE_SELECT */
-        GEN_RENDER_CMD(SINGLE_DW, GEN6, PIPELINE_SELECT) |
+        GEN6_RENDER_CMD(SINGLE_DW, PIPELINE_SELECT) |
             GEN6_PIPELINE_SELECT_DW0_SELECT_3D,
         /* 3DSTATE_VF_STATISTICS */
-        GEN_RENDER_CMD(SINGLE_DW, GEN6, 3DSTATE_VF_STATISTICS),
+        GEN6_RENDER_CMD(SINGLE_DW, 3DSTATE_VF_STATISTICS),
         /* end */
-        GEN_MI_CMD(MI_BATCH_BUFFER_END),
-        GEN_MI_CMD(MI_NOOP),
+        GEN6_MI_CMD(MI_BATCH_BUFFER_END),
+        GEN6_MI_CMD(MI_NOOP),
     };
     struct intel_bo *bo;
     XGL_RESULT ret;

@@ -364,7 +364,7 @@ msaa_state_init(struct intel_msaa_state *state,
     STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= 6);
 
     /* 3DSTATE_MULTISAMPLE */
-    cmd = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_MULTISAMPLE);
+    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE);
     cmd_len = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 4 : 3;
 
     dw[0] = cmd | (cmd_len - 2);
@@ -385,7 +385,7 @@ msaa_state_init(struct intel_msaa_state *state,
     state->cmd_len = cmd_len + 2;
 
     /* 3DSTATE_SAMPLE_MASK */
-    cmd = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_SAMPLE_MASK);
+    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK);
     cmd_len = 2;
 
     dw[0] = cmd | (cmd_len - 2);

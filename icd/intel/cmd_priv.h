@@ -154,7 +154,7 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
 {
     /* STATE_BASE_ADDRESS */
     const uint8_t cmd_len = 10;
-    const uint32_t dw0 = GEN_RENDER_CMD(COMMON, GEN6, STATE_BASE_ADDRESS) |
+    const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
 
     /*
@@ -205,11 +205,11 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
 
     if (cmd->batch.used & 1) {
         cmd_batch_reserve(cmd, 1);
-        cmd_batch_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));
+        cmd_batch_write(cmd, GEN6_MI_CMD(MI_BATCH_BUFFER_END));
     } else {
         cmd_batch_reserve(cmd, 2);
-        cmd_batch_write(cmd, GEN_MI_CMD(MI_BATCH_BUFFER_END));
-        cmd_batch_write(cmd, GEN_MI_CMD(MI_NOOP));
+        cmd_batch_write(cmd, GEN6_MI_CMD(MI_BATCH_BUFFER_END));
+        cmd_batch_write(cmd, GEN6_MI_CMD(MI_NOOP));
     }
 }
 

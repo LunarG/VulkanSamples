@@ -49,7 +49,7 @@ static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 6);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DPRIMITIVE) |
+    dw0 = GEN6_RENDER_CMD(3D, 3DPRIMITIVE) |
           prim_type << GEN6_3DPRIM_DW0_TYPE__SHIFT |
           (cmd_len - 2);
 
@@ -78,7 +78,7 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 7, 7.5);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DPRIMITIVE) | (cmd_len - 2);
+    dw0 = GEN6_RENDER_CMD(3D, 3DPRIMITIVE) | (cmd_len - 2);
     dw1 = prim_type << GEN7_3DPRIM_DW1_TYPE__SHIFT;
 
     if (indexed)
@@ -98,7 +98,7 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
                               struct intel_bo *bo, uint32_t bo_offset)
 {
    const uint8_t cmd_len = 5;
-   const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, PIPE_CONTROL) |
+   const uint32_t dw0 = GEN6_RENDER_CMD(3D, PIPE_CONTROL) |
                         (cmd_len - 2);
 
    CMD_ASSERT(cmd, 6, 7.5);
@@ -238,7 +238,7 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
 
     /* the bit is moved to 3DSTATE_VF */
     if (cmd_gen(cmd) >= INTEL_GEN(7.5))
@@ -289,7 +289,7 @@ gen75_3DSTATE_VF(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 7.5, 7.5);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN75, 3DSTATE_VF) | (cmd_len - 2);
+    dw0 = GEN75_RENDER_CMD(3D, 3DSTATE_VF) | (cmd_len - 2);
     if (enable_cut_index)
         dw0 |=  GEN75_VF_DW0_CUT_INDEX_ENABLE;
 
@@ -302,7 +302,7 @@ static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
                                            XGL_UINT width, XGL_UINT height)
 {
     const uint8_t cmd_len = 4;
-    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_DRAWING_RECTANGLE) |
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_DRAWING_RECTANGLE) |
                          (cmd_len - 2);
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -329,8 +329,8 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
 
     dw0 = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        GEN_RENDER_CMD(3D, GEN7, 3DSTATE_DEPTH_BUFFER) :
-        GEN_RENDER_CMD(3D, GEN6, 3DSTATE_DEPTH_BUFFER);
+        GEN7_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER) :
+        GEN6_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER);
     dw0 |= (cmd_len - 2);
 
     cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
@@ -357,8 +357,8 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
 
     dw0 = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        GEN_RENDER_CMD(3D, GEN7, 3DSTATE_STENCIL_BUFFER) :
-        GEN_RENDER_CMD(3D, GEN6, 3DSTATE_STENCIL_BUFFER);
+        GEN7_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER) :
+        GEN6_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER);
     dw0 |= (cmd_len - 2);
 
     cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
@@ -381,8 +381,8 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
 
     dw0 = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        GEN_RENDER_CMD(3D, GEN7, 3DSTATE_HIER_DEPTH_BUFFER) :
-        GEN_RENDER_CMD(3D, GEN6, 3DSTATE_HIER_DEPTH_BUFFER);
+        GEN7_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER) :
+        GEN6_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER);
     dw0 |= (cmd_len - 2);
 
     cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
@@ -400,7 +400,7 @@ static void gen6_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
                                       uint32_t clear_val)
 {
     const uint8_t cmd_len = 2;
-    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_CLEAR_PARAMS) |
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) |
                          GEN6_CLEAR_PARAMS_DW0_VALID |
                          (cmd_len - 2);
 
@@ -415,7 +415,7 @@ static void gen7_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
                                       uint32_t clear_val)
 {
     const uint8_t cmd_len = 3;
-    const uint32_t dw0 = GEN_RENDER_CMD(3D, GEN7, 3DSTATE_CLEAR_PARAMS) |
+    const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) |
                          (cmd_len - 2);
 
     CMD_ASSERT(cmd, 7, 7.5);
@@ -436,7 +436,7 @@ static void gen6_3DSTATE_CC_STATE_POINTERS(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 6);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_CC_STATE_POINTERS) |
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CC_STATE_POINTERS) |
           (cmd_len - 2);
 
     cmd_batch_reserve(cmd, cmd_len);
@@ -456,7 +456,7 @@ static void gen6_3DSTATE_VIEWPORT_STATE_POINTERS(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 6);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_VIEWPORT_STATE_POINTERS) |
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VIEWPORT_STATE_POINTERS) |
           GEN6_PTR_VP_DW0_CLIP_CHANGED |
           GEN6_PTR_VP_DW0_SF_CHANGED |
           GEN6_PTR_VP_DW0_CC_CHANGED |
@@ -477,7 +477,7 @@ static void gen6_3DSTATE_SCISSOR_STATE_POINTERS(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 6);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_SCISSOR_STATE_POINTERS) |
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_SCISSOR_STATE_POINTERS) |
           (cmd_len - 2);
 
     cmd_batch_reserve(cmd, cmd_len);
@@ -495,7 +495,7 @@ static void gen6_3DSTATE_BINDING_TABLE_POINTERS(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 6);
 
-    dw0 = GEN_RENDER_CMD(3D, GEN6, 3DSTATE_BINDING_TABLE_POINTERS) |
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_BINDING_TABLE_POINTERS) |
           GEN6_PTR_BINDING_TABLE_DW0_VS_CHANGED |
           GEN6_PTR_BINDING_TABLE_DW0_GS_CHANGED |
           GEN6_PTR_BINDING_TABLE_DW0_PS_CHANGED |
