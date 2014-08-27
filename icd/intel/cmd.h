@@ -28,6 +28,7 @@
 #include "intel.h"
 #include "obj.h"
 #include "view.h"
+#include "shader.h"
 
 struct intel_pipeline;
 struct intel_pipeline_delta;
@@ -37,8 +38,14 @@ struct intel_msaa_state;
 struct intel_blend_state;
 struct intel_ds_state;
 struct intel_dset;
+struct intel_pipe_shader;
 
 struct intel_cmd_reloc;
+
+struct intel_cmd_shader {
+    struct intel_pipe_shader *shader;
+    XGL_UINT kernel_pos;
+};
 
 /*
  * States bounded to the command buffer.  We want to write states directly to
@@ -51,6 +58,12 @@ struct intel_cmd_bind {
         const struct intel_pipeline_delta *graphics_delta;
         const struct intel_pipeline_delta *compute_delta;
     } pipeline;
+
+    struct {
+        uint32_t size;
+        uint32_t used;
+        struct intel_cmd_shader *shaderList;
+    } shaderCache;
 
     struct {
         const struct intel_viewport_state *viewport;

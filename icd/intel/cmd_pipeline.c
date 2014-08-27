@@ -980,12 +980,94 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     gen6_wa_post_sync_flush(cmd);
     cmd_batch_reserve(cmd, msaa->cmd_len);
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
+
+    /* 3DSTATE_CONSTANT_GS */
+    if (cmd->bind.pipeline.graphics->active_shaders & SHADER_GEOMETRY_FLAG) {
+
+    } else {
+
+    }
+}
+
+void cmd_clear_shader_cache(struct intel_cmd *cmd)
+{
+    uint32_t i;
+    struct intel_cmd_shader *cmdShader;
+
+    for (i=0; i<cmd->bind.shaderCache.used; i++) {
+        cmdShader = &cmd->bind.shaderCache.shaderList[i];
+        cmdShader->shader = NULL;
+    }
+    cmd->bind.shaderCache.used = 0;
+}
+
+static void emit_shader(struct intel_cmd *cmd,
+                        struct intel_pipe_shader *shader)
+{
+    uint32_t i;
+    struct intel_cmd_shader *cmdShader;
+
+    for (i=0; i<cmd->bind.shaderCache.used; i++) {
+        if (cmd->bind.shaderCache.shaderList[i].shader == shader) {
+            /* shader is already part of pipeline */
+            return;
+        }
+    }
+
+    if (cmd->bind.shaderCache.used == cmd->bind.shaderCache.size) {
+        cmdShader = &cmd->bind.shaderCache.shaderList[0];
+        cmd->bind.shaderCache.size += 16;
+        cmd->bind.shaderCache.shaderList = icd_alloc(sizeof(struct intel_shader) * cmd->bind.shaderCache.size,
+                                                     sizeof(struct intel_shader *),
+                                                     XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+        if (cmd->bind.shaderCache.shaderList == NULL) {
+            cmd->bind.shaderCache.shaderList = cmdShader;
+            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            return;
+        }
+        memcpy(cmd->bind.shaderCache.shaderList,
+               cmdShader,
+               sizeof(struct intel_cmd_shader) * cmd->bind.shaderCache.used);
+        icd_free(cmdShader);
+    }
+
+    cmdShader = &cmd->bind.shaderCache.shaderList[cmd->bind.shaderCache.used];
+    cmdShader->shader = shader;
+    cmdShader->kernel_pos = cmd_kernel_copy(cmd, shader->pCode, shader->codeSize);
+    cmd->bind.shaderCache.used++;
+    return;
+}
+
+static void emit_pipeline_state(struct intel_cmd *cmd,
+                                const struct intel_pipeline *pipeline)
+{
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+
+    }
+
 }
 
 static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
-                                       const struct intel_pipeline *pipeline)
+                                       struct intel_pipeline *pipeline)
 {
     cmd->bind.pipeline.graphics = pipeline;
+    if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
+        emit_shader(cmd, &pipeline->intel_vs);
+    }
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
+        emit_shader(cmd, &pipeline->gs);
+    }
+    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
+        emit_shader(cmd, &pipeline->intel_fs);
+    }
+    if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
+        emit_shader(cmd, &pipeline->tess_control);
+    }
+    if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
+        emit_shader(cmd, &pipeline->tess_eval);
+    }
+
+    emit_pipeline_state(cmd, pipeline);
 }
 
 static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,

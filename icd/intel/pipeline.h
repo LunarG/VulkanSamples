@@ -96,6 +96,11 @@ struct intel_rmap {
 #define SHADER_FRAGMENT_FLAG          (1 << XGL_SHADER_STAGE_FRAGMENT)
 #define SHADER_COMPUTE_FLAG           (1 << XGL_SHADER_STAGE_COMPUTE)
 
+struct intel_pipe_shader {
+    void *pCode;
+    uint32_t codeSize;
+};
+
 /**
  * 3D pipeline.
  */
@@ -139,13 +144,15 @@ struct intel_pipeline {
 
     uint32_t active_shaders;
     XGL_PIPELINE_SHADER vs;
-    struct intel_rmap *vs_rmap;
     XGL_PIPELINE_SHADER fs;
+    struct intel_pipe_shader intel_vs;
+    struct intel_rmap *vs_rmap;
+    struct intel_pipe_shader intel_fs;
     struct intel_rmap *fs_rmap;
-    XGL_PIPELINE_SHADER gs;
-    XGL_PIPELINE_SHADER tess_control;
-    XGL_PIPELINE_SHADER tess_eval;
-    XGL_PIPELINE_SHADER compute;
+    struct intel_pipe_shader gs;
+    struct intel_pipe_shader tess_control;
+    struct intel_pipe_shader tess_eval;
+    struct intel_pipe_shader compute;
 
     XGL_SIZE total_size;  // FB memory app needs to allocate for this pipeline
 

@@ -69,11 +69,7 @@ XGL_RESULT XGLAPI intelCreateShader(
 
         shader->dev = dev;
 
-        /*
-         * shaders have to be aligned to 64byte boundaries for both starting
-         * offset (done when copying to a BO) and size.
-         */
-        shader->codeSize = u_align(pCreateInfo->codeSize, 64);
+        shader->codeSize = pCreateInfo->codeSize;
 
         shader->pCode = icd_alloc(pCreateInfo->codeSize, 4, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
         if (shader->pCode == NULL) {
