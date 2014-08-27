@@ -138,6 +138,7 @@ public:
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void DrawTriangleTest();
+    void WritePPM( const char *filename, int width, int height );
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -713,7 +714,59 @@ void XglRenderTest::DrawTriangleTest()
     err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
     ASSERT_XGL_SUCCESS( err );
 
+    err = xglQueueWaitIdle( m_device->m_queue );
+    ASSERT_XGL_SUCCESS( err );
+
+    WritePPM( "TriangleTest.ppm", width, height );
+
     ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+}
+
+void XglRenderTest::WritePPM( const char *filename, int width, int height )
+{
+    XGL_RESULT err;
+    int x, y;
+
+    const XGL_IMAGE_SUBRESOURCE sr = {
+        XGL_IMAGE_ASPECT_COLOR, 0, 0
+    };
+    XGL_SUBRESOURCE_LAYOUT sr_layout;
+    XGL_UINT data_size;
+
+    err = xglGetImageSubresourceInfo( m_image, &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &data_size, &sr_layout);
+    ASSERT_XGL_SUCCESS( err );
+    ASSERT_EQ(data_size, sizeof(sr_layout));
+
+    const char *ptr;
+
+    err = xglMapMemory( m_image_mem, 0, (XGL_VOID **) &ptr );
+    ASSERT_XGL_SUCCESS( err );
+
+    ptr += sr_layout.offset;
+
+    ofstream file (filename);
+    ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
+
+    file << "P6\n";
+    file << width << "\n";
+    file << height << "\n";
+    file << 255 << "\n";
+
+    for (y = 0; y < height; y++) {
+        const char *row = ptr;
+
+        for (x = 0; x < width; x++) {
+            file.write(row, 3);
+            row += 4;
+        }
+
+        ptr += sr_layout.rowPitch;
+    }
+
+    file.close();
+
+    err = xglUnmapMemory( m_image_mem );
+    ASSERT_XGL_SUCCESS( err );
 }
 
 TEST_F(XglRenderTest, TestDrawTriangle) {
