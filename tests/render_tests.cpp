@@ -157,6 +157,7 @@ protected:
     XGL_UINT32                      m_numMemRefs;
     XGL_MEMORY_REF                  m_memRefs[5];
     XGL_RASTER_STATE_OBJECT         m_stateRaster;
+    XGL_COLOR_BLEND_STATE_OBJECT    m_colorBlend;
     XGL_VIEWPORT_STATE_OBJECT       m_stateViewport;
     XGL_DEPTH_STENCIL_STATE_OBJECT  m_stateDepthStencil;
     XGL_MSAA_STATE_OBJECT           m_stateMsaa;
@@ -473,6 +474,11 @@ void XglRenderTest::DrawTriangleTest()
     err = xglCreateViewportState( device(), &viewport, &m_stateViewport );
     ASSERT_XGL_SUCCESS( err );
 
+    XGL_COLOR_BLEND_STATE_CREATE_INFO blend = {};
+    blend.sType = XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO;
+    err = xglCreateColorBlendState(device(), &blend, &m_colorBlend);
+    ASSERT_XGL_SUCCESS( err );
+
     XGL_DEPTH_STENCIL_STATE_CREATE_INFO depthStencil = {};
     depthStencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable      = XGL_FALSE;
@@ -681,6 +687,7 @@ void XglRenderTest::DrawTriangleTest()
     // set all states
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, m_stateViewport );
+    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil );
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
 
@@ -717,9 +724,19 @@ void XglRenderTest::DrawTriangleTest()
     err = xglQueueWaitIdle( m_device->m_queue );
     ASSERT_XGL_SUCCESS( err );
 
+    // Wait for work to finish before cleaning up.
+    xglDeviceWaitIdle(m_device->device());
+
     WritePPM( "TriangleTest.ppm", width, height );
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(m_cmdBuffer));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateRaster));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateViewport));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateDepthStencil));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateMsaa));
+    DestroyImage();
+    // DestroyImageView();
 }
 
 void XglRenderTest::WritePPM( const char *filename, int width, int height )
