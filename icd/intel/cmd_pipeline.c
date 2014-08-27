@@ -570,6 +570,9 @@ static XGL_UINT gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
 
 static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
 {
+    if (!cmd->bind.draw_count)
+        return;
+
     if (cmd->bind.wa_flags & GEN6_WA_POST_SYNC_FLUSH)
         return;
 
@@ -605,6 +608,9 @@ static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
 
 static void gen6_wa_ds_flush(struct intel_cmd *cmd)
 {
+    if (!cmd->bind.draw_count)
+        return;
+
     if (cmd->bind.wa_flags & GEN6_WA_DS_FLUSH)
         return;
 
@@ -1006,6 +1012,7 @@ static void cmd_draw(struct intel_cmd *cmd,
                 vertex_start, instance_count, instance_start, vertex_base);
     }
 
+    cmd->bind.draw_count++;
     /* need to re-emit all workarounds */
     cmd->bind.wa_flags = 0;
 }

@@ -157,12 +157,6 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
     const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
 
-    /*
-     * assume all workarounds have been emitted for we do not need them for a
-     * fresh batch buffer
-     */
-    cmd->bind.wa_flags = 0xffffffff;
-
     CMD_ASSERT(cmd, 6, 7.5);
 
     cmd_batch_reserve(cmd, cmd_len);

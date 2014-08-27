@@ -85,6 +85,7 @@ struct intel_cmd_bind {
         const struct intel_ds_view *ds;
     } att;
 
+    XGL_UINT draw_count;
     uint32_t wa_flags;
 };
 
