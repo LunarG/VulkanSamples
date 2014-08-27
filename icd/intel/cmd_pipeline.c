@@ -750,6 +750,117 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
     }
 }
 
+static void gen6_pcb(struct intel_cmd *cmd, int subop,
+                     const XGL_PIPELINE_SHADER *sh)
+{
+    const uint8_t cmd_len = 5;
+    const XGL_UINT alignment = 32;
+    const XGL_UINT max_size =
+        (subop == GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS) ? 1024 : 2048;
+    const XGL_UINT max_pcb = 4;
+    uint32_t pcb[4] = { 0, 0, 0, 0 };
+    XGL_FLAGS pcb_enables = 0;
+    XGL_SIZE total_size = 0;
+    uint32_t dw0;
+    XGL_UINT i;
+
+    for (i = 0; i < sh->linkConstBufferCount; i++) {
+        const XGL_LINK_CONST_BUFFER *info = &sh->pLinkConstBufferInfo[i];
+        const XGL_SIZE size = u_align(info->bufferSize, alignment);
+        void *ptr;
+
+        if (info->bufferId >= max_pcb ||
+            pcb_enables & ((1 << info->bufferId)) ||
+            total_size + info->bufferSize > max_size) {
+            cmd->result = XGL_ERROR_UNKNOWN;
+            return;
+        }
+        if (!size)
+            continue;
+
+        pcb_enables |= 1 << info->bufferId;
+        total_size += size;
+
+        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
+                alignment / sizeof(uint32_t), &pcb[info->bufferId]);
+        memcpy(ptr, info->pBufferData, info->bufferSize);
+        cmd_state_advance(cmd, size / sizeof(uint32_t));
+
+        pcb[info->bufferId] |= size / alignment - 1;
+    }
+
+    dw0 = GEN6_RENDER_TYPE_RENDER |
+          GEN6_RENDER_SUBTYPE_3D |
+          subop |
+          pcb_enables << 12 |
+          (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, pcb[0]);
+    cmd_batch_write(cmd, pcb[1]);
+    cmd_batch_write(cmd, pcb[2]);
+    cmd_batch_write(cmd, pcb[3]);
+}
+
+static void gen7_pcb(struct intel_cmd *cmd, int subop,
+                     const XGL_PIPELINE_SHADER *sh)
+{
+    const uint8_t cmd_len = 7;
+    const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
+                         GEN6_RENDER_SUBTYPE_3D |
+                         subop |
+                         (cmd_len - 2);
+    const XGL_UINT alignment = 32;
+    const XGL_UINT max_size = 2048;
+    const XGL_UINT max_pcb = 4;
+    uint16_t pcb_len[4] = { 0, 0, 0, 0 };
+    uint32_t pcb[4] = { 0, 0, 0, 0 };
+    XGL_FLAGS pcb_enables = 0;
+    XGL_SIZE total_size = 0;
+    XGL_UINT i;
+
+    for (i = 0; i < sh->linkConstBufferCount; i++) {
+        const XGL_LINK_CONST_BUFFER *info = &sh->pLinkConstBufferInfo[i];
+        const XGL_SIZE size = u_align(info->bufferSize, alignment);
+        void *ptr;
+
+        if (info->bufferId >= max_pcb ||
+            pcb_enables & ((1 << info->bufferId)) ||
+            total_size + info->bufferSize > max_size) {
+            cmd->result = XGL_ERROR_UNKNOWN;
+            return;
+        }
+        if (!size)
+            continue;
+
+        pcb_enables |= 1 << info->bufferId;
+        total_size += size;
+
+        pcb_len[info->bufferId] = size / alignment;
+
+        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
+                alignment / sizeof(uint32_t), &pcb[info->bufferId]);
+        memcpy(ptr, info->pBufferData, info->bufferSize);
+        cmd_state_advance(cmd, size / sizeof(uint32_t));
+    }
+
+    /* no holes */
+    if (!u_is_pow2(pcb_enables + 1)) {
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
+    }
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, pcb_len[1] << 16 | pcb_len[0]);
+    cmd_batch_write(cmd, pcb_len[3] << 16 | pcb_len[2]);
+    cmd_batch_write(cmd, pcb[0]);
+    cmd_batch_write(cmd, pcb[1]);
+    cmd_batch_write(cmd, pcb[2]);
+    cmd_batch_write(cmd, pcb[3]);
+}
+
 static void emit_ps_resources(struct intel_cmd *cmd,
                               const struct intel_rmap *rmap)
 {
@@ -825,9 +936,19 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_cc_states(cmd);
         gen7_viewport_states(cmd);
+
+        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
+                &cmd->bind.pipeline.graphics->vs);
+        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
+                &cmd->bind.pipeline.graphics->fs);
     } else {
         gen6_cc_states(cmd);
         gen6_viewport_states(cmd);
+
+        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
+                &cmd->bind.pipeline.graphics->vs);
+        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
+                &cmd->bind.pipeline.graphics->fs);
     }
 
     emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
