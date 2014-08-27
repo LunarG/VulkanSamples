@@ -211,7 +211,7 @@ void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
     }
 
     fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    fmt.numericFormat = XGL_NUM_FMT_UINT;
+    fmt.numericFormat = XGL_NUM_FMT_UNORM;
     // TODO: Pick known good format rather than just expect common format
     /*
      * XXX: What should happen if given NULL HANDLE for the pData argument?
@@ -585,7 +585,7 @@ void XglRenderTest::DrawTriangleTest()
         {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
             {
                 XGL_FALSE,                                  // blendEnable
-                {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UINT},    // XGL_FORMAT
+                {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM},   // XGL_FORMAT
                 0xF                                         // channelWriteMask
             }
         }
@@ -627,7 +627,7 @@ void XglRenderTest::DrawTriangleTest()
         XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
         XGL_NULL_HANDLE,
         this->m_image,
-        {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UINT},
+        {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM},
         0,
         0,
         1
