@@ -50,9 +50,6 @@ void XglDevice::init_device()
 
 void XglDevice::init_formats()
 {
-    XGL_CHANNEL_FORMAT ch;
-    XGL_NUM_FORMAT num;
-
     for (int chInt = XGL_CH_FMT_UNDEFINED; chInt < XGL_MAX_CH_FMT; chInt++) {
         for (int numInt = 0; numInt < XGL_MAX_NUM_FMT; numInt++) {
             XGL_FORMAT fmt = {};
@@ -64,13 +61,13 @@ void XglDevice::init_formats()
 
             err = xglGetFormatInfo(m_xgl_device_object, fmt,
                                    XGL_INFO_TYPE_FORMAT_PROPERTIES,
-                                   &size, &this->format_props[ch][num]);
+                                   &size, &this->format_props[chInt][numInt]);
             if (err) {
-                memset(&this->format_props[ch][num], 0,
-                       sizeof(this->format_props[ch][num]));
+                memset(&this->format_props[chInt][numInt], 0,
+                       sizeof(this->format_props[chInt][numInt]));
             }
-            else if (size != sizeof(this->format_props[ch][num])) {
-                ASSERT_EQ(size, sizeof(this->format_props[ch][num])) << "Incorrect data size";
+            else if (size != sizeof(this->format_props[chInt][numInt])) {
+                ASSERT_EQ(size, sizeof(this->format_props[chInt][numInt])) << "Incorrect data size";
             }
         }
     }
