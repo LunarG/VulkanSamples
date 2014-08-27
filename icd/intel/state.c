@@ -620,7 +620,7 @@ XGL_RESULT intel_blend_state_create(struct intel_dev *dev,
     struct intel_blend_state *state;
 
     state = (struct intel_blend_state *) intel_base_create(dev,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_MSAA_STATE,
+            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_COLOR_BLEND_STATE,
             info, 0);
     if (!state)
         return XGL_ERROR_OUT_OF_MEMORY;
