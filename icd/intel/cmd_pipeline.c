@@ -606,6 +606,26 @@ static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM, cmd->scratch_bo, 0);
 }
 
+static void gen6_wa_wm_multisample_flush(struct intel_cmd *cmd)
+{
+   CMD_ASSERT(cmd, 6, 6);
+
+   gen6_wa_post_sync_flush(cmd);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 305:
+    *
+    *     "Driver must guarentee that all the caches in the depth pipe are
+    *      flushed before this command (3DSTATE_MULTISAMPLE) is parsed. This
+    *      requires driver to send a PIPE_CONTROL with a CS stall along with a
+    *      Depth Flush prior to this command."
+    */
+   gen6_PIPE_CONTROL(cmd,
+           GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+           GEN6_PIPE_CONTROL_CS_STALL,
+           0, 0);
+}
+
 static void gen6_wa_ds_flush(struct intel_cmd *cmd)
 {
     if (!cmd->bind.draw_count)
@@ -941,7 +961,10 @@ static void emit_bounded_states(struct intel_cmd *cmd)
                 &cmd->bind.pipeline.graphics->vs);
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
+        // TODO: URB
     } else {
+        /* need multisample flush on gen6 */
+        gen6_wa_wm_multisample_flush(cmd);
         gen6_cc_states(cmd);
         gen6_viewport_states(cmd);
 
