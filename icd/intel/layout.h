@@ -33,6 +33,8 @@
 
 #define INTEL_LAYOUT_MAX_LEVELS 16
 
+struct intel_dev;
+
 enum intel_layout_walk_type {
    /*
     * Array layers of an LOD are packed together vertically.  This maps to
