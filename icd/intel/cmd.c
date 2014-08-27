@@ -325,20 +325,6 @@ XGL_RESULT XGLAPI intelResetCommandBuffer(
     return XGL_SUCCESS;
 }
 
-XGL_VOID XGLAPI intelCmdPrepareMemoryRegions(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    transitionCount,
-    const XGL_MEMORY_STATE_TRANSITION*          pStateTransitions)
-{
-}
-
-XGL_VOID XGLAPI intelCmdPrepareImages(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    transitionCount,
-    const XGL_IMAGE_STATE_TRANSITION*           pStateTransitions)
-{
-}
-
 XGL_VOID XGLAPI intelCmdCopyMemory(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              srcMem,

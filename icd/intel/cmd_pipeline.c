@@ -625,6 +625,19 @@ static void gen6_wa_ds_flush(struct intel_cmd *cmd)
     gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
 }
 
+void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
+{
+    if (!cmd->bind.draw_count)
+        return;
+
+    assert(!(pipe_control_dw0 & GEN6_PIPE_CONTROL_WRITE__MASK));
+
+    if (pipe_control_dw0 & GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH)
+        gen6_wa_post_sync_flush(cmd);
+
+    gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0);
+}
+
 static void gen6_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_blend_state *blend = cmd->bind.state.blend;
