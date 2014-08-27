@@ -138,6 +138,9 @@ static void cmd_reset(struct intel_cmd *cmd)
     cmd_writer_reset(cmd, &cmd->batch);
     cmd_writer_reset(cmd, &cmd->state);
     cmd_writer_reset(cmd, &cmd->kernel);
+
+    memset(&cmd->bind, 0, sizeof(cmd->bind));
+
     cmd->reloc_used = 0;
     cmd->result = XGL_SUCCESS;
 }
