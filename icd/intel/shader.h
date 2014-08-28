@@ -28,6 +28,11 @@
 #include "intel.h"
 #include "obj.h"
 
+enum intel_shader_use {
+    INTEL_SHADER_USE_VID        = (1 << 0),
+    INTEL_SHADER_USE_IID        = (1 << 1),
+};
+
 /* just the kernel now */
 struct intel_ir {
     void *kernel;
@@ -38,6 +43,9 @@ struct intel_shader {
     struct intel_obj obj;
 
     struct intel_ir *ir;
+    XGL_FLAGS uses;
+    XGL_UINT in_count;
+    XGL_UINT out_count;
 };
 
 static inline struct intel_shader *intel_shader(XGL_SHADER shader)
