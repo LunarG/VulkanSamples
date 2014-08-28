@@ -478,6 +478,197 @@ static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
     }
 }
 
+static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *builder,
+                                                struct intel_pipeline *p)
+{
+    const uint8_t cmd_len = 2;
+    uint32_t offset = 0;
+    uint32_t size = 8192;
+    uint32_t *dw;
+    int end;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+
+    /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 68:
+    *
+    *     "(A table that says the maximum size of each constant buffer is
+    *      16KB")
+    *
+    * From the Ivy Bridge PRM, volume 2 part 1, page 115:
+    *
+    *     "The sum of the Constant Buffer Offset and the Constant Buffer Size
+    *      may not exceed the maximum value of the Constant Buffer Size."
+    *
+    * Thus, the valid range of buffer end is [0KB, 16KB].
+    */
+    end = (offset + size) / 1024;
+    if (end > 16) {
+        assert(!"invalid constant buffer end");
+        end = 16;
+    }
+
+    /* the valid range of buffer offset is [0KB, 15KB] */
+    offset = (offset + 1023) / 1024;
+    if (offset > 15) {
+        assert(!"invalid constant buffer offset");
+        offset = 15;
+    }
+
+    if (offset > end) {
+        assert(!size);
+        offset = end;
+    }
+
+    /* the valid range of buffer size is [0KB, 15KB] */
+    size = end - offset;
+    if (size > 15) {
+        assert(!"invalid constant buffer size");
+        size = 15;
+    }
+
+    dw = pipeline_cmd_ptr(p, cmd_len * 5);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (cmd_len - 2);
+    dw[1] = offset << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+                      size << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (cmd_len - 2);
+    dw[1] = size << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+                    size << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (cmd_len - 2);
+    dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+                 0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) | (cmd_len - 2);
+    dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+                 0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (cmd_len - 2);
+    dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+                 0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 292:
+     *
+     *     "A PIPE_CONTOL command with the CS Stall bit set must be programmed
+     *      in the ring after this instruction
+     *      (3DSTATE_PUSH_CONSTANT_ALLOC_PS)."
+     */
+    p->post_pso_wa_flags |= GEN7_WA_MULTISAMPLE_FLUSH;
+    // gen7_wa_pipe_control_cs_stall(p, true, true);
+    // looks equivalent to: gen6_wa_wm_multisample_flush - this does more
+    // than the documentation seems to imply
+}
+
+static void
+gen7_emit_3dstate_constant(struct intel_pipeline_builder *builder,
+                           struct intel_pipeline *pipeline,
+                           int subop,
+                           const uint32_t *bufs, const int *sizes,
+                           int num_bufs)
+{
+    const uint8_t cmd_len = 7;
+    const uint32_t cmd = GEN6_RENDER_TYPE_RENDER |
+                         GEN6_RENDER_SUBTYPE_3D |
+                         subop |
+                         (cmd_len - 2);
+    uint32_t *dw = pipeline_cmd_ptr(pipeline, cmd_len);
+    int total_read_length, i;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+
+    /* VS, HS, DS, GS, and PS variants */
+    assert(subop >= GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS &&
+           subop <= GEN7_RENDER_OPCODE_3DSTATE_CONSTANT_DS &&
+           subop != GEN6_RENDER_OPCODE_3DSTATE_SAMPLE_MASK);
+
+    assert(num_bufs <= 4);
+
+    dw[0] = cmd;
+    dw++;
+    dw[0] = 0;
+    dw[1] = 0;
+
+    total_read_length = 0;
+    for (i = 0; i < 4; i++) {
+        int read_len;
+
+        /*
+       * From the Ivy Bridge PRM, volume 2 part 1, page 112:
+       *
+       *     "Constant buffers must be enabled in order from Constant Buffer 0
+       *      to Constant Buffer 3 within this command.  For example, it is
+       *      not allowed to enable Constant Buffer 1 by programming a
+       *      non-zero value in the VS Constant Buffer 1 Read Length without a
+       *      non-zero value in VS Constant Buffer 0 Read Length."
+       */
+        if (i >= num_bufs || !sizes[i]) {
+            for (; i < 4; i++) {
+                assert(i >= num_bufs || !sizes[i]);
+                dw[2 + i] = 0;
+            }
+            break;
+        }
+
+        /* read lengths are in 256-bit units */
+        read_len = (sizes[i] + 31) / 32;
+        /* the lower 5 bits are used for memory object control state */
+        assert(bufs[i] % 32 == 0);
+
+        dw[i / 2] |= read_len << ((i % 2) ? 16 : 0);
+        dw[2 + i] = bufs[i];
+
+        total_read_length += read_len;
+    }
+
+    /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 113:
+    *
+    *     "The sum of all four read length fields must be less than or equal
+    *      to the size of 64"
+    */
+    assert(total_read_length <= 64);
+}
+
+static void
+gen7_emit_3dstate_pointer(struct intel_pipeline_builder *builder,
+                          struct intel_pipeline *p,
+                          int subop, uint32_t pointer)
+{
+    const uint8_t cmd_len = 2;
+    const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
+                         GEN6_RENDER_SUBTYPE_3D |
+                         subop |
+                         (cmd_len - 2);
+    uint32_t *dw;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+
+    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw[0] = dw0;
+    dw[1] = pointer;
+}
+
+static void gen7_pipeline_gs(struct intel_pipeline_builder *builder,
+                             struct intel_pipeline *pipeline)
+{
+    /* 3DSTATE_CONSTANT_GS and 3DSTATE_GS */
+    gen7_emit_3dstate_constant(builder, pipeline,
+                               GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_GS,
+                               0, 0, 0);
+    // gen7_emit_3DSTATE_GS done by cmd_pipeline
+
+    /* 3DSTATE_BINDING_TABLE_POINTERS_GS */
+    // TODO: Do we want to track dirty state within a command buffer?
+    gen7_emit_3dstate_pointer(builder, pipeline,
+                              GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_GS,
+                              pipeline->gs_state.BINDING_TABLE_STATE);
+}
+
 static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
                                     struct intel_pipeline *pipeline)
 {
