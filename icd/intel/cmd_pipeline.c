@@ -33,7 +33,6 @@
 
 enum {
     GEN6_WA_POST_SYNC_FLUSH     = 1 << 0,
-    GEN6_WA_DS_FLUSH            = 1 << 1,
 };
 
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
@@ -608,6 +607,9 @@ static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
 
 static void gen6_wa_wm_multisample_flush(struct intel_cmd *cmd)
 {
+    if (!cmd->bind.draw_count)
+        return;
+
    CMD_ASSERT(cmd, 6, 6);
 
    gen6_wa_post_sync_flush(cmd);
@@ -631,12 +633,7 @@ static void gen6_wa_ds_flush(struct intel_cmd *cmd)
     if (!cmd->bind.draw_count)
         return;
 
-    if (cmd->bind.wa_flags & GEN6_WA_DS_FLUSH)
-        return;
-
     CMD_ASSERT(cmd, 6, 7.5);
-
-    cmd->bind.wa_flags |= GEN6_WA_DS_FLUSH;
 
     gen6_wa_post_sync_flush(cmd);
 
@@ -961,10 +958,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
                 &cmd->bind.pipeline.graphics->vs);
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
-        // TODO: URB
     } else {
-        /* need multisample flush on gen6 */
-        gen6_wa_wm_multisample_flush(cmd);
         gen6_cc_states(cmd);
         gen6_viewport_states(cmd);
 
@@ -976,8 +970,11 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 
     emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
 
-    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     gen6_wa_post_sync_flush(cmd);
+    /* need multisample flush on gen6 */
+    if (cmd_gen(cmd) == INTEL_GEN(6))
+        gen6_wa_wm_multisample_flush(cmd);
+    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_reserve(cmd, msaa->cmd_len);
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
 
