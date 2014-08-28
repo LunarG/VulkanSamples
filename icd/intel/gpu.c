@@ -166,6 +166,11 @@ static int devid_to_gen(int devid)
     else
         gen = -1;
 
+#ifdef INTEL_GEN_SPECIALIZED
+    if (gen != INTEL_GEN(INTEL_GEN_SPECIALIZED))
+        gen = -1;
+#endif
+
     return gen;
 }
 
