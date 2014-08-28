@@ -993,6 +993,47 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
 }
 
+static void
+gen7_emit_3DSTATE_GS(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 7;
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+    const struct intel_shader_cso *cso;
+    uint32_t dw2, dw4, dw5;
+
+    CMD_ASSERT(cmd, 7, 7);
+
+    if (cmd->bind.gs.shader == NULL) {
+        cmd_batch_reserve(cmd, cmd_len);
+        cmd_batch_write(cmd, dw0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, GEN6_GS_DW5_STATISTICS);
+        cmd_batch_write(cmd, 0);
+        return;
+    }
+
+    cso = &cmd->bind.gs.shader->cso;
+    dw2 = cso->payload[0];
+    dw4 = cso->payload[1];
+    dw5 = cso->payload[2];
+
+    // TODO: This should come from genhw.h
+# define GEN6_GS_SAMPLER_COUNT_SHIFT			27
+    dw2 |= ((cmd->bind.gs.shader->num_samplers + 3) / 4) << GEN6_GS_SAMPLER_COUNT_SHIFT;
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, cmd->bind.gs.kernel_pos);
+    cmd_batch_write(cmd, dw2);
+    cmd_batch_write(cmd, 0); /* scratch */
+    cmd_batch_write(cmd, dw4);
+    cmd_batch_write(cmd, dw5);
+    cmd_batch_write(cmd, 0);
+}
+
 static void emit_shader(struct intel_cmd *cmd,
                         const struct intel_pipe_shader *shader,
                         struct intel_cmd_shader *pCmdShader)
@@ -1078,6 +1119,8 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
         emit_shader(cmd, &pipeline->tess_eval, &cmd->bind.tess_eval);
     }
+
+    gen7_emit_3DSTATE_GS(cmd);
 
     if (pipeline->post_pso_wa_flags & GEN6_WA_POST_SYNC_FLUSH) {
         gen6_wa_post_sync_flush(cmd);
