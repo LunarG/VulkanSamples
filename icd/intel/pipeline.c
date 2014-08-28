@@ -149,36 +149,6 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
-static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
-                              XGL_SIZE *size, XGL_VOID *data)
-{
-    // struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
-    XGL_RESULT ret = XGL_SUCCESS;
-
-    switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
-
-            /*
-             * For now, space for shaders will be allocated during command
-             * buffer processing.
-             */
-            mem_req->size = 0;
-            mem_req->heapCount = 0;
-            mem_req->heaps[0] = 0;
-
-            *size = sizeof(*mem_req);
-        }
-        break;
-    default:
-        ret = intel_base_get_info(base, type, size, data);
-        break;
-    }
-
-    return ret;
-}
-
 XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     XGL_DEVICE                                  device,
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
@@ -213,7 +183,6 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
 
     pipeline->dev = dev;
     pipeline->obj.destroy = pipeline_destroy;
-    pipeline->obj.base.get_info = pipeline_get_info;
     pipeline->total_size = 0;
 
     do {
