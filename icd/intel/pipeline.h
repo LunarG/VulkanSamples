@@ -196,6 +196,8 @@ struct intel_pipeline {
         int PUSH_CONSTANT_BUFFER_size;
     } wm_state;
 
+    uint32_t pre_pso_wa_flags;
+    uint32_t post_pso_wa_flags;
     uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
     XGL_UINT cmd_len;
 };

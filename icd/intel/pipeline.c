@@ -484,7 +484,10 @@ static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
     XGL_RESULT ret;
 
     if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7)) {
+        pipeline->pre_pso_wa_flags |= GEN6_WA_GEN7_VS_FLUSH;
         builder_build_urb_alloc_gen7(builder, pipeline);
+        builder_build_push_const_alloc_gen7(builder, pipeline);
+        gen7_pipeline_gs(builder, pipeline);
     } else {
         builder_build_urb_alloc_gen6(builder, pipeline);
     }

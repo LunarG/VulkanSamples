@@ -1043,8 +1043,21 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
 {
     cmd->bind.pipeline.graphics = pipeline;
 
-    if (cmd_gen(cmd) >= INTEL_GEN(7))
+    // TODO: This probably isn't quite what we want.
+    // While this does reflect the call that was made, it would be
+    // more appropriate to indicate the behavior, ie. CS_STALL, WRITE_IMM
+    // and then issue the minimum number of pipe_control commands
+    // This sequence could do some duplicate work though we have
+    // WA_POST_SYNC_FLUSH first to try to minimize that.
+    if (pipeline->pre_pso_wa_flags & GEN6_WA_POST_SYNC_FLUSH) {
+        gen6_wa_post_sync_flush(cmd);
+    }
+    if (pipeline->pre_pso_wa_flags & GEN7_WA_MULTISAMPLE_FLUSH) {
+        gen6_wa_wm_multisample_flush(cmd);
+    }
+    if (pipeline->pre_pso_wa_flags & GEN6_WA_GEN7_VS_FLUSH) {
         gen7_wa_vs_flush(cmd);
+    }
 
     /* 3DSTATE_URB_VS and etc. */
     assert(pipeline->cmd_len);
@@ -1064,6 +1077,16 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
     }
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
         emit_shader(cmd, &pipeline->tess_eval, &cmd->bind.tess_eval);
+    }
+
+    if (pipeline->post_pso_wa_flags & GEN6_WA_POST_SYNC_FLUSH) {
+        gen6_wa_post_sync_flush(cmd);
+    }
+    if (pipeline->post_pso_wa_flags & GEN7_WA_MULTISAMPLE_FLUSH) {
+        gen6_wa_wm_multisample_flush(cmd);
+    }
+    if (pipeline->post_pso_wa_flags & GEN6_WA_GEN7_VS_FLUSH) {
+        gen7_wa_vs_flush(cmd);
     }
 }
 
