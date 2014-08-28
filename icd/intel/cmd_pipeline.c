@@ -31,10 +31,6 @@
 #include "view.h"
 #include "cmd_priv.h"
 
-enum {
-    GEN6_WA_POST_SYNC_FLUSH     = 1 << 0,
-    GEN6_WA_GEN7_VS_FLUSH       = 1 << 1,
-};
 
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              int prim_type, bool indexed,

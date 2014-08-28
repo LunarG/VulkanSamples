@@ -103,6 +103,12 @@ struct intel_pipe_shader {
 
 #define INTEL_PSO_CMD_ENTRIES   32
 
+enum {
+    GEN6_WA_POST_SYNC_FLUSH     = 1 << 0,
+    GEN6_WA_GEN7_VS_FLUSH       = 1 << 1,
+    GEN7_WA_MULTISAMPLE_FLUSH   = 1 << 2,
+};
+
 /**
  * 3D pipeline.
  */
