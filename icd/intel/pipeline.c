@@ -27,8 +27,32 @@
 #include "genhw/genhw.h"
 #include "genhw/gen_render_3d.xml.h"
 
-static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline *pipeline,
-                                       const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state)
+struct intel_pipeline_builder {
+    const struct intel_gpu *gpu;
+
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
+    XGL_PIPELINE_IA_STATE_CREATE_INFO   ia;
+    XGL_PIPELINE_DB_STATE_CREATE_INFO   db;
+    XGL_PIPELINE_CB_STATE               cb;
+    XGL_PIPELINE_RS_STATE_CREATE_INFO   rs;
+    XGL_PIPELINE_TESS_STATE_CREATE_INFO tess;
+    XGL_PIPELINE_SHADER                 vs;
+    XGL_PIPELINE_SHADER                 tcs;
+    XGL_PIPELINE_SHADER                 tes;
+    XGL_PIPELINE_SHADER                 gs;
+    XGL_PIPELINE_SHADER                 fs;
+
+    XGL_COMPUTE_PIPELINE_CREATE_INFO    compute;
+    XGL_PIPELINE_SHADER                 cs;
+};
+
+struct intel_pipeline_builder_create_info {
+    XGL_STRUCTURE_TYPE struct_type;
+    XGL_VOID *next;
+};
+
+static XGL_RESULT pipeline_ia_state(struct intel_pipeline *pipeline,
+                                    const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state)
 {
     pipeline->ia_state = *ia_state;
 
@@ -112,8 +136,8 @@ static XGL_RESULT pipeline_ia_state(struct intel_dev *dev, struct intel_pipeline
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT pipeline_rs_state(struct intel_dev *dev, struct intel_pipeline *pipeline,
-                                       const XGL_PIPELINE_RS_STATE_CREATE_INFO* rs_state)
+static XGL_RESULT pipeline_rs_state(struct intel_pipeline *pipeline,
+                                    const XGL_PIPELINE_RS_STATE_CREATE_INFO* rs_state)
 {
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
@@ -149,174 +173,94 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
-XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
-    XGL_DEVICE                                  device,
-    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    XGL_PIPELINE*                               pPipeline)
+static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
+                                  const XGL_PIPELINE_SHADER *info)
 {
-    union {
-        const void *ptr;
-        const struct {
-            XGL_STRUCTURE_TYPE struct_type;
-            XGL_VOID *next;
-        } *header;
-        const XGL_GRAPHICS_PIPELINE_CREATE_INFO* graphics_pipeline;
-        const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state;
-        const XGL_PIPELINE_DB_STATE_CREATE_INFO* db_state;
-        const XGL_PIPELINE_CB_STATE* cb_state;
-        const XGL_PIPELINE_RS_STATE_CREATE_INFO* rs_state;
-        const XGL_PIPELINE_TESS_STATE_CREATE_INFO* tess_state;
-        const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shader_state;
-    } info = { .ptr = pCreateInfo };
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_pipeline *pipeline;
-    struct intel_shader *shader;
-    const XGL_PIPELINE_SHADER* shader_state;
-    void *shaderCode;
-    XGL_RESULT result;
+    struct intel_shader *sh = intel_shader(info->shader);
+    void *kernel;
 
-    pipeline = (struct intel_pipeline *) intel_base_create(dev, sizeof(*pipeline),
-            dev->base.dbg, XGL_DBG_OBJECT_GRAPHICS_PIPELINE, pCreateInfo, 0);
-    if (!pipeline) {
+    // TODO: process shader object and include in pipeline
+    // For now that processing is simply a copy so that the app
+    // can destroy the original shader object after pipeline creation.
+    kernel = icd_alloc(sh->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+    if (!kernel)
         return XGL_ERROR_OUT_OF_MEMORY;
+
+    switch (info->stage) {
+    case XGL_SHADER_STAGE_VERTEX:
+        /*
+         * TODO: What should we do here?
+         * shader_state (XGL_PIPELINE_SHADER) contains links
+         * to application memory in the pLinkConstBufferInfo and
+         * it's pBufferData pointers. Do we need to bring all that
+         * into the driver or is it okay to rely on those references
+         * holding good data. In OpenGL we'd make a driver copy. Not
+         * as clear for XGL.
+         * For now, use the app pointers.
+         */
+        pipeline->vs = *info;
+        pipeline->intel_vs.pCode = kernel;
+        pipeline->intel_vs.codeSize = sh->ir->size;
+        pipeline->active_shaders |= SHADER_VERTEX_FLAG;
+        pipeline->vs_rmap = intel_rmap_create(pipeline->dev,
+                &info->descriptorSetMapping[0],
+                &info->dynamicMemoryViewMapping, 0);
+        if (!pipeline->vs_rmap) {
+            icd_free(kernel);
+            return XGL_ERROR_OUT_OF_MEMORY;
+        }
+        break;
+    case XGL_SHADER_STAGE_GEOMETRY:
+        pipeline->gs.pCode = kernel;
+        pipeline->gs.codeSize = sh->ir->size;
+        pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
+        break;
+    case XGL_SHADER_STAGE_FRAGMENT:
+        pipeline->fs = *info;
+        pipeline->intel_fs.pCode = kernel;
+        pipeline->intel_fs.codeSize = sh->ir->size;
+        pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
+        /* assuming one RT; need to parse the shader */
+        pipeline->fs_rmap = intel_rmap_create(pipeline->dev,
+                &info->descriptorSetMapping[0],
+                &info->dynamicMemoryViewMapping, 1);
+        if (!pipeline->fs_rmap) {
+            icd_free(kernel);
+            return XGL_ERROR_OUT_OF_MEMORY;
+        }
+        break;
+    case XGL_SHADER_STAGE_TESS_CONTROL:
+        pipeline->tess_control.pCode = kernel;
+        pipeline->tess_control.codeSize = sh->ir->size;
+        pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
+        break;
+    case XGL_SHADER_STAGE_TESS_EVALUATION:
+        pipeline->tess_eval.pCode = kernel;
+        pipeline->tess_eval.codeSize = sh->ir->size;
+        pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
+        break;
+    case XGL_SHADER_STAGE_COMPUTE:
+        pipeline->compute.pCode = kernel;
+        pipeline->compute.codeSize = sh->ir->size;
+        pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
+        break;
+    default:
+        assert(!"unknown shader stage");
+        break;
     }
 
-    pipeline->dev = dev;
-    pipeline->obj.destroy = pipeline_destroy;
-    pipeline->total_size = 0;
+    return XGL_SUCCESS;
+}
 
-    do {
-        result = XGL_SUCCESS;
-
-        switch (info.header->struct_type) {
-        case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
-            // TODO: Should not see Compute Pipeline structs processing CreateGraphicsPipeline
-            return XGL_ERROR_BAD_PIPELINE_DATA;
-
-        case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
-            if (info.graphics_pipeline->flags & XGL_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT) {
-                // TODO: process disable optimization.
-            }
-            break;
-
-        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            result = pipeline_ia_state(dev, pipeline, info.ia_state);
-            break;
-
-        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
-            pipeline->db_format = info.db_state->format;
-            break;
-
-        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-            pipeline->cb_state = *info.cb_state;
-            break;
-
-        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            result = pipeline_rs_state(dev, pipeline, info.rs_state);
-            break;
-
-        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-            pipeline->tess_state = *info.tess_state;
-            break;
-
-        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-            shader_state = &info.shader_state->shader;
-            shader = intel_shader(shader_state->shader);
-
-            // TODO: process shader object and include in pipeline
-            // For now that processing is simply a copy so that the app
-            // can destroy the original shader object after pipeline creation.
-            shaderCode = (void *) icd_alloc(shader->ir->size, 4, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-            if (!shaderCode) {
-                result = XGL_ERROR_OUT_OF_MEMORY;
-                goto error_exit;
-            }
-
-            switch (shader_state->stage) {
-            case XGL_SHADER_STAGE_VERTEX:
-                /*
-                 * TODO: What should we do here?
-                 * shader_state (XGL_PIPELINE_SHADER) contains links
-                 * to application memory in the pLinkConstBufferInfo and
-                 * it's pBufferData pointers. Do we need to bring all that
-                 * into the driver or is it okay to rely on those references
-                 * holding good data. In OpenGL we'd make a driver copy. Not
-                 * as clear for XGL.
-                 * For now, use the app pointers.
-                 */
-                pipeline->vs = *shader_state;
-                pipeline->intel_vs.pCode = shaderCode;
-                pipeline->intel_vs.codeSize = shader->ir->size;
-                pipeline->active_shaders |= SHADER_VERTEX_FLAG;
-                pipeline->vs_rmap = intel_rmap_create(dev,
-                        &shader_state->descriptorSetMapping[0],
-                        &shader_state->dynamicMemoryViewMapping, 0);
-                if (!pipeline->vs_rmap) {
-                    result = XGL_ERROR_OUT_OF_MEMORY;
-                    goto error_exit;
-                }
-                break;
-            case XGL_SHADER_STAGE_GEOMETRY:
-                pipeline->gs.pCode = shaderCode;
-                pipeline->gs.codeSize = shader->ir->size;
-                pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
-                break;
-            case XGL_SHADER_STAGE_FRAGMENT:
-                pipeline->fs = *shader_state;
-                pipeline->intel_fs.pCode = shaderCode;
-                pipeline->intel_fs.codeSize = shader->ir->size;
-                pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
-                /* assuming one RT; need to parse the shader */
-                pipeline->fs_rmap = intel_rmap_create(dev,
-                        &shader_state->descriptorSetMapping[0],
-                        &shader_state->dynamicMemoryViewMapping, 1);
-                if (!pipeline->fs_rmap) {
-                    result = XGL_ERROR_OUT_OF_MEMORY;
-                    goto error_exit;
-                }
-                break;
-            case XGL_SHADER_STAGE_TESS_CONTROL:
-                pipeline->tess_control.pCode = shaderCode;
-                pipeline->tess_control.codeSize = shader->ir->size;
-                pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
-                break;
-            case XGL_SHADER_STAGE_TESS_EVALUATION:
-                pipeline->tess_eval.pCode = shaderCode;
-                pipeline->tess_eval.codeSize = shader->ir->size;
-                pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
-                break;
-            case XGL_SHADER_STAGE_COMPUTE:
-                pipeline->compute.pCode = shaderCode;
-                pipeline->compute.codeSize = shader->ir->size;
-                pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
-                break;
-            default:
-                // TODO: Log debug message
-                result = XGL_ERROR_BAD_PIPELINE_DATA;
-                goto error_exit;
-            }
-            break;
-
-        default:
-            // TODO: Log debug message
-            result = XGL_ERROR_BAD_PIPELINE_DATA;
-            goto error_exit;
-        }
-
-        if (result != XGL_SUCCESS) {
-            // TODO: What needs to happen if pipeline build fails?
-            goto error_exit;
-        }
-        info.ptr = info.header->next;
-    } while (info.ptr != NULL);
-
+static XGL_RESULT builder_validate(const struct intel_pipeline_builder *builder,
+                                   const struct intel_pipeline *pipeline)
+{
     /*
      * Validate required elements
      */
     if (!(pipeline->active_shaders & SHADER_VERTEX_FLAG)) {
         // TODO: Log debug message: Vertex Shader required.
-        result = XGL_ERROR_BAD_PIPELINE_DATA;
-        goto error_exit;
+        return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
     /*
@@ -326,8 +270,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     if (((pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) == 0) !=
          ((pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) == 0) ) {
         // TODO: Log debug message: Both Tess control and Tess eval are required to use tessalation
-        result = XGL_ERROR_BAD_PIPELINE_DATA;
-        goto error_exit;
+        return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
     if ((pipeline->active_shaders & SHADER_COMPUTE_FLAG) &&
@@ -335,8 +278,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
                                      SHADER_TESS_EVAL_FLAG | SHADER_GEOMETRY_FLAG |
                                      SHADER_FRAGMENT_FLAG))) {
         // TODO: Log debug message: Can only specify compute shader when doing compute
-        result = XGL_ERROR_BAD_PIPELINE_DATA;
-        goto error_exit;
+        return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
     /*
@@ -346,28 +288,180 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
         (pipeline->ia_state.topology != XGL_TOPOLOGY_PATCH)) {
         // TODO: Log debug message: Invalid topology used with tessalation shader.
-        result = XGL_ERROR_BAD_PIPELINE_DATA;
-        goto error_exit;
+        return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
     if ((pipeline->ia_state.topology == XGL_TOPOLOGY_PATCH) &&
             (pipeline->active_shaders & ~(SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
         // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessalation shader.
-        result = XGL_ERROR_BAD_PIPELINE_DATA;
-        goto error_exit;
+        return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
-    /*
-     * Now compile everything into a pipeline object ready for the HW.
-     */
+    return XGL_SUCCESS;
+}
 
-    *pPipeline = pipeline;
+static XGL_RESULT builder_build(struct intel_pipeline_builder *builder,
+                                struct intel_pipeline *pipeline)
+{
+    XGL_RESULT ret;
+
+    ret = pipeline_ia_state(pipeline, &builder->ia);
+
+    if (ret == XGL_SUCCESS)
+        ret = pipeline_rs_state(pipeline, &builder->rs);
+
+    if (ret == XGL_SUCCESS && builder->vs.shader)
+        ret = pipeline_shader(pipeline, &builder->vs);
+    if (ret == XGL_SUCCESS && builder->tcs.shader)
+        ret = pipeline_shader(pipeline, &builder->tcs);
+    if (ret == XGL_SUCCESS && builder->tes.shader)
+        ret = pipeline_shader(pipeline, &builder->tes);
+    if (ret == XGL_SUCCESS && builder->gs.shader)
+        ret = pipeline_shader(pipeline, &builder->gs);
+    if (ret == XGL_SUCCESS && builder->fs.shader)
+        ret = pipeline_shader(pipeline, &builder->fs);
+
+    if (ret == XGL_SUCCESS) {
+        pipeline->db_format = builder->db.format;
+        pipeline->cb_state = builder->cb;
+        pipeline->tess_state = builder->tess;
+    }
+
+    return ret;
+}
+
+static XGL_RESULT builder_init(struct intel_pipeline_builder *builder,
+                               const struct intel_gpu *gpu,
+                               const struct intel_pipeline_builder_create_info *info)
+{
+    memset(builder, 0, sizeof(*builder));
+
+    builder->gpu = gpu;
+
+    while (info) {
+        const void *src = (const void *) info;
+        XGL_SIZE size;
+        void *dst;
+
+        switch (info->struct_type) {
+        case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
+            size = sizeof(builder->graphics);
+            dst = &builder->graphics;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
+            size = sizeof(builder->ia);
+            dst = &builder->ia;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
+            size = sizeof(builder->db);
+            dst = &builder->db;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
+            size = sizeof(builder->cb);
+            dst = &builder->cb;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
+            size = sizeof(builder->rs);
+            dst = &builder->rs;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
+            size = sizeof(builder->tess);
+            dst = &builder->tess;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
+            {
+                const XGL_PIPELINE_SHADER *shader = (const XGL_PIPELINE_SHADER *) (info + 1);
+
+                src = (const void *) shader;
+                size = sizeof(*shader);
+
+                switch (shader->stage) {
+                case XGL_SHADER_STAGE_VERTEX:
+                    dst = &builder->vs;
+                    break;
+                case XGL_SHADER_STAGE_TESS_CONTROL:
+                    dst = &builder->tcs;
+                    break;
+                case XGL_SHADER_STAGE_TESS_EVALUATION:
+                    dst = &builder->tes;
+                    break;
+                case XGL_SHADER_STAGE_GEOMETRY:
+                    dst = &builder->gs;
+                    break;
+                case XGL_SHADER_STAGE_FRAGMENT:
+                    dst = &builder->fs;
+                    break;
+                case XGL_SHADER_STAGE_COMPUTE:
+                    dst = &builder->cs;
+                    break;
+                default:
+                    return XGL_ERROR_BAD_PIPELINE_DATA;
+                    break;
+                }
+            }
+            break;
+        case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
+            size = sizeof(builder->compute);
+            dst = &builder->compute;
+            break;
+        default:
+            return XGL_ERROR_BAD_PIPELINE_DATA;
+            break;
+        }
+
+        memcpy(dst, src, size);
+
+        info = info->next;
+    }
 
     return XGL_SUCCESS;
+}
 
-error_exit:
-    pipeline_destroy(&pipeline->obj);
-    return result;
+static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
+                                           const XGL_GRAPHICS_PIPELINE_CREATE_INFO *info,
+                                           struct intel_pipeline **pipeline_ret)
+{
+    struct intel_pipeline_builder builder;
+    struct intel_pipeline *pipeline;
+    XGL_RESULT ret;
+
+    ret = builder_init(&builder, dev->gpu,
+            (const struct intel_pipeline_builder_create_info *) info);
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    pipeline = (struct intel_pipeline *)
+        intel_base_create(dev, sizeof(*pipeline), dev->base.dbg,
+                XGL_DBG_OBJECT_GRAPHICS_PIPELINE, info, 0);
+    if (!pipeline)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    pipeline->dev = dev;
+    pipeline->obj.destroy = pipeline_destroy;
+    pipeline->total_size = 0;
+
+    ret = builder_build(&builder, pipeline);
+    if (ret == XGL_SUCCESS)
+        ret = builder_validate(&builder, pipeline);
+    if (ret != XGL_SUCCESS) {
+        pipeline_destroy(&pipeline->obj);
+        return ret;
+    }
+
+    *pipeline_ret = pipeline;
+
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
+    XGL_DEVICE                                  device,
+    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
+    XGL_PIPELINE*                               pPipeline)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return graphics_pipeline_create(dev, pCreateInfo,
+            (struct intel_pipeline **) pPipeline);
 }
 
 XGL_RESULT XGLAPI intelCreateComputePipeline(
