@@ -109,12 +109,6 @@ struct intel_pipeline {
 
     struct intel_dev *dev;
 
-    struct intel_bo *workaround_bo;
-
-    uint32_t packed_sample_position_1x;
-    uint32_t packed_sample_position_4x;
-    uint32_t packed_sample_position_8x[2];
-
     bool has_gen6_wa_pipe_control;
 
     /* XGL IA_STATE */
@@ -140,7 +134,6 @@ struct intel_pipeline {
     float pointSize;
 
     XGL_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO shader_state;
 
     uint32_t active_shaders;
     XGL_PIPELINE_SHADER vs;
