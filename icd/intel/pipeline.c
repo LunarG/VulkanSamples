@@ -150,19 +150,19 @@ static void pipeline_destroy(struct intel_obj *obj)
     struct intel_pipeline *pipeline = intel_pipeline_from_obj(obj);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        icd_free(intel_shader(pipeline->intel_vs.pCode));
+        icd_free(pipeline->intel_vs.pCode);
     }
     if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
-        icd_free(intel_shader(pipeline->gs.pCode));
+        icd_free(pipeline->gs.pCode);
     }
     if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        icd_free(intel_shader(pipeline->intel_fs.pCode));
+        icd_free(pipeline->intel_fs.pCode);
     }
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        icd_free(intel_shader(pipeline->tess_control.pCode));
+        icd_free(pipeline->tess_control.pCode);
     }
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        icd_free(intel_shader(pipeline->tess_eval.pCode));
+        icd_free(pipeline->tess_eval.pCode);
     }
 
     if (pipeline->vs_rmap)
