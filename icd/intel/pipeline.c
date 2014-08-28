@@ -300,10 +300,189 @@ static XGL_RESULT builder_validate(const struct intel_pipeline_builder *builder,
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT builder_build(struct intel_pipeline_builder *builder,
-                                struct intel_pipeline *pipeline)
+static void builder_build_urb_alloc_gen6(struct intel_pipeline_builder *builder,
+                                         struct intel_pipeline *pipeline)
+{
+    const int urb_size = ((builder->gpu->gt == 2) ? 64 : 32) * 1024;
+    const struct intel_shader *vs = intel_shader(builder->vs.shader);
+    const struct intel_shader *gs = intel_shader(builder->gs.shader);
+    int vs_entry_size, gs_entry_size;
+    int vs_size, gs_size;
+
+    INTEL_GPU_ASSERT(builder->gpu, 6, 6);
+
+    vs_entry_size = ((vs->in_count >= vs->out_count) ?
+        vs->in_count : vs->out_count);
+    gs_entry_size = (gs) ? gs->out_count : 0;
+
+    /* in bytes */
+    vs_entry_size *= sizeof(float) * 4;
+    gs_entry_size *= sizeof(float) * 4;
+
+    if (gs) {
+        vs_size = urb_size / 2;
+        gs_size = vs_size;
+    } else {
+        vs_size = urb_size;
+        gs_size = 0;
+    }
+
+    /* 3DSTATE_URB */
+    {
+        const uint8_t cmd_len = 3;
+        const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_URB) |
+                             (cmd_len - 2);
+        int vs_alloc_size, gs_alloc_size;
+        int vs_entry_count, gs_entry_count;
+        uint32_t *dw;
+
+        /* in 1024-bit rows */
+        vs_alloc_size = (vs_entry_size + 128 - 1) / 128;
+        gs_alloc_size = (gs_entry_size + 128 - 1) / 128;
+
+        /* valid range is [1, 5] */
+        if (!vs_alloc_size)
+            vs_alloc_size = 1;
+        if (!gs_alloc_size)
+            gs_alloc_size = 1;
+        assert(vs_alloc_size <= 5 && gs_alloc_size <= 5);
+
+        /* valid range is [24, 256], multiples of 4 */
+        vs_entry_count = (vs_size / 128 / vs_alloc_size) & ~3;
+        if (vs_entry_count > 256)
+            vs_entry_count = 256;
+        assert(vs_entry_count >= 24);
+
+        /* valid range is [0, 256], multiples of 4 */
+        gs_entry_count = (gs_size / 128 / gs_alloc_size) & ~3;
+        if (gs_entry_count > 256)
+            gs_entry_count = 256;
+
+        STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_urb_alloc) >= cmd_len);
+        pipeline->cmd_urb_alloc_len = cmd_len;
+        dw = pipeline->cmd_urb_alloc;
+
+        dw[0] = dw0;
+        dw[1] = (vs_alloc_size - 1) << GEN6_URB_DW1_VS_ENTRY_SIZE__SHIFT |
+                vs_entry_count << GEN6_URB_DW1_VS_ENTRY_COUNT__SHIFT;
+        dw[2] = gs_entry_count << GEN6_URB_DW2_GS_ENTRY_COUNT__SHIFT |
+                (gs_alloc_size - 1) << GEN6_URB_DW2_GS_ENTRY_SIZE__SHIFT;
+    }
+}
+
+static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
+                                         struct intel_pipeline *pipeline)
+{
+    const int urb_size = ((builder->gpu->gt == 3) ? 512 :
+                          (builder->gpu->gt == 2) ? 256 : 128) * 1024;
+    const struct intel_shader *vs = intel_shader(builder->vs.shader);
+    const struct intel_shader *gs = intel_shader(builder->gs.shader);
+    /* some space is reserved for PCBs */
+    int urb_offset = ((builder->gpu->gt == 3) ? 32 : 16) * 1024;
+    int vs_entry_size, gs_entry_size;
+    int vs_size, gs_size;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
+
+    vs_entry_size = ((vs->in_count >= vs->out_count) ?
+        vs->in_count : vs->out_count);
+    gs_entry_size = (gs) ? gs->out_count : 0;
+
+    /* in bytes */
+    vs_entry_size *= sizeof(float) * 4;
+    gs_entry_size *= sizeof(float) * 4;
+
+    if (gs) {
+        vs_size = (urb_size - urb_offset) / 2;
+        gs_size = vs_size;
+    } else {
+        vs_size = urb_size - urb_offset;
+        gs_size = 0;
+    }
+
+    /* 3DSTATE_URB_* */
+    {
+        const uint8_t cmd_len = 2;
+        int vs_alloc_size, gs_alloc_size;
+        int vs_entry_count, gs_entry_count;
+        uint32_t *dw;
+
+        /* in 512-bit rows */
+        vs_alloc_size = (vs_entry_size + 64 - 1) / 64;
+        gs_alloc_size = (gs_entry_size + 64 - 1) / 64;
+
+        if (!vs_alloc_size)
+            vs_alloc_size = 1;
+        if (!gs_alloc_size)
+            gs_alloc_size = 1;
+
+        /* avoid performance decrease due to banking */
+        if (vs_alloc_size == 5)
+            vs_alloc_size = 6;
+
+        /* in multiples of 8 */
+        vs_entry_count = (vs_size / 64 / vs_alloc_size) & ~7;
+        assert(vs_entry_count >= 32);
+
+        gs_entry_count = (gs_size / 64 / gs_alloc_size) & ~7;
+
+        if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7.5)) {
+            const int max_vs_entry_count =
+                (builder->gpu->gt >= 2) ? 1644 : 640;
+            const int max_gs_entry_count =
+                (builder->gpu->gt >= 2) ? 640 : 256;
+            if (vs_entry_count >= max_vs_entry_count)
+                vs_entry_count = max_vs_entry_count;
+            if (gs_entry_count >= max_gs_entry_count)
+                gs_entry_count = max_gs_entry_count;
+        } else {
+            const int max_vs_entry_count =
+                (builder->gpu->gt == 2) ? 704 : 512;
+            const int max_gs_entry_count =
+                (builder->gpu->gt == 2) ? 320 : 192;
+            if (vs_entry_count >= max_vs_entry_count)
+                vs_entry_count = max_vs_entry_count;
+            if (gs_entry_count >= max_gs_entry_count)
+                gs_entry_count = max_gs_entry_count;
+        }
+
+        STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_urb_alloc) >= cmd_len * 4);
+        pipeline->cmd_urb_alloc_len = cmd_len * 4;
+
+        dw = pipeline->cmd_urb_alloc;
+        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (cmd_len - 2);
+        dw[1] = (urb_offset / 8192) << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
+                (vs_alloc_size - 1) << GEN7_URB_ANY_DW1_ENTRY_SIZE__SHIFT |
+                vs_entry_count;
+
+        dw += 2;
+        if (gs_size)
+            urb_offset += vs_size;
+        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_GS) | (cmd_len - 2);
+        dw[1] = (urb_offset  / 8192) << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
+                (gs_alloc_size - 1) << GEN7_URB_ANY_DW1_ENTRY_SIZE__SHIFT |
+                gs_entry_count;
+
+        dw += 2;
+        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (cmd_len - 2);
+        dw[1] = (urb_offset / 8192)  << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+
+        dw += 2;
+        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_DS) | (cmd_len - 2);
+        dw[1] = (urb_offset / 8192)  << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+    }
+}
+
+static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
+                                    struct intel_pipeline *pipeline)
 {
     XGL_RESULT ret;
+
+    if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7)) {
+        builder_build_urb_alloc_gen7(builder, pipeline);
+    } else {
+        builder_build_urb_alloc_gen6(builder, pipeline);
+    }
 
     ret = pipeline_ia_state(pipeline, &builder->ia);
 
@@ -440,7 +619,7 @@ static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
     pipeline->obj.destroy = pipeline_destroy;
     pipeline->total_size = 0;
 
-    ret = builder_build(&builder, pipeline);
+    ret = builder_build_all(&builder, pipeline);
     if (ret == XGL_SUCCESS)
         ret = builder_validate(&builder, pipeline);
     if (ret != XGL_SUCCESS) {

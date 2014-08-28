@@ -189,6 +189,9 @@ struct intel_pipeline {
         uint32_t PUSH_CONSTANT_BUFFER;
         int PUSH_CONSTANT_BUFFER_size;
     } wm_state;
+
+    uint32_t cmd_urb_alloc[8];
+    XGL_UINT cmd_urb_alloc_len;
 };
 
 static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)

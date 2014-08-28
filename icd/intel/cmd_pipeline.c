@@ -33,6 +33,7 @@
 
 enum {
     GEN6_WA_POST_SYNC_FLUSH     = 1 << 0,
+    GEN6_WA_GEN7_VS_FLUSH       = 1 << 1,
 };
 
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
@@ -642,6 +643,23 @@ static void gen6_wa_ds_flush(struct intel_cmd *cmd)
     gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
 }
 
+static void gen7_wa_vs_flush(struct intel_cmd *cmd)
+{
+    if (!cmd->bind.draw_count)
+        return;
+
+    if (cmd->bind.wa_flags & GEN6_WA_GEN7_VS_FLUSH)
+        return;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    cmd->bind.wa_flags |= GEN6_WA_GEN7_VS_FLUSH;
+
+    gen6_PIPE_CONTROL(cmd,
+            GEN6_PIPE_CONTROL_DEPTH_STALL | GEN6_PIPE_CONTROL_WRITE_IMM,
+            cmd->scratch_bo, 0);
+}
+
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
 {
     if (!cmd->bind.draw_count)
@@ -1026,6 +1044,15 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
                                        const struct intel_pipeline *pipeline)
 {
     cmd->bind.pipeline.graphics = pipeline;
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        gen7_wa_vs_flush(cmd);
+
+    /* 3DSTATE_URB_VS and etc. */
+    assert(pipeline->cmd_urb_alloc_len);
+    cmd_batch_write_n(cmd, pipeline->cmd_urb_alloc,
+            pipeline->cmd_urb_alloc_len);
+
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
         emit_shader(cmd, &pipeline->intel_vs);
     }
