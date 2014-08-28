@@ -257,7 +257,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
             // TODO: process shader object and include in pipeline
             // For now that processing is simply a copy so that the app
             // can destroy the original shader object after pipeline creation.
-            shaderCode = (void *) icd_alloc(shader->codeSize, 4, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+            shaderCode = (void *) icd_alloc(shader->ir->size, 4, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
             if (!shaderCode) {
                 result = XGL_ERROR_OUT_OF_MEMORY;
                 goto error_exit;
@@ -277,7 +277,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
                  */
                 pipeline->vs = *shader_state;
                 pipeline->intel_vs.pCode = shaderCode;
-                pipeline->intel_vs.codeSize = shader->codeSize;
+                pipeline->intel_vs.codeSize = shader->ir->size;
                 pipeline->active_shaders |= SHADER_VERTEX_FLAG;
                 pipeline->vs_rmap = intel_rmap_create(dev,
                         &shader_state->descriptorSetMapping[0],
@@ -289,13 +289,13 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
                 break;
             case XGL_SHADER_STAGE_GEOMETRY:
                 pipeline->gs.pCode = shaderCode;
-                pipeline->gs.codeSize = shader->codeSize;
+                pipeline->gs.codeSize = shader->ir->size;
                 pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
                 break;
             case XGL_SHADER_STAGE_FRAGMENT:
                 pipeline->fs = *shader_state;
                 pipeline->intel_fs.pCode = shaderCode;
-                pipeline->intel_fs.codeSize = shader->codeSize;
+                pipeline->intel_fs.codeSize = shader->ir->size;
                 pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
                 /* assuming one RT; need to parse the shader */
                 pipeline->fs_rmap = intel_rmap_create(dev,
@@ -308,17 +308,17 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
                 break;
             case XGL_SHADER_STAGE_TESS_CONTROL:
                 pipeline->tess_control.pCode = shaderCode;
-                pipeline->tess_control.codeSize = shader->codeSize;
+                pipeline->tess_control.codeSize = shader->ir->size;
                 pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
                 break;
             case XGL_SHADER_STAGE_TESS_EVALUATION:
                 pipeline->tess_eval.pCode = shaderCode;
-                pipeline->tess_eval.codeSize = shader->codeSize;
+                pipeline->tess_eval.codeSize = shader->ir->size;
                 pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
                 break;
             case XGL_SHADER_STAGE_COMPUTE:
                 pipeline->compute.pCode = shaderCode;
-                pipeline->compute.codeSize = shader->codeSize;
+                pipeline->compute.codeSize = shader->ir->size;
                 pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
                 break;
             default:

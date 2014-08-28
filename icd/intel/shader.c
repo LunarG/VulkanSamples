@@ -22,14 +22,73 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "dev.h"
 #include "shader.h"
+
+static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
+                                   const struct intel_gpu *gpu,
+                                   const struct icd_bil_header *bil,
+                                   XGL_SIZE size)
+{
+    struct intel_ir *ir;
+
+    ir = icd_alloc(sizeof(*ir), 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+    if (!ir)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    ir->size = size - sizeof(*bil);
+
+    ir->kernel = icd_alloc(ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+    if (!ir->kernel) {
+        icd_free(ir);
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
+
+    memcpy(ir->kernel, bil + 1, ir->size);
+
+    sh->ir = ir;
+
+    return XGL_SUCCESS;
+}
 
 static void shader_destroy(struct intel_obj *obj)
 {
-    struct intel_shader *shader = intel_shader_from_obj(obj);
+    struct intel_shader *sh = intel_shader_from_obj(obj);
 
-    icd_free(shader->pCode);
-    intel_base_destroy(&shader->obj.base);
+    icd_free(sh->ir);
+    intel_base_destroy(&sh->obj.base);
+}
+
+static XGL_RESULT shader_create(struct intel_dev *dev,
+                                const XGL_SHADER_CREATE_INFO *info,
+                                struct intel_shader **sh_ret)
+{
+    const struct icd_bil_header *bil =
+        (const struct icd_bil_header *) info->pCode;
+    struct intel_shader *sh;
+    XGL_RESULT ret;
+
+    if (info->codeSize < sizeof(*bil))
+        return XGL_ERROR_INVALID_MEMORY_SIZE;
+    if (bil->magic != ICD_BIL_MAGIC)
+        return XGL_ERROR_BAD_SHADER_CODE;
+
+    sh = (struct intel_shader *) intel_base_create(dev, sizeof(*sh),
+            dev->base.dbg, XGL_DBG_OBJECT_SHADER, info, 0);
+    if (!sh)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    ret = shader_parse_bil(sh, dev->gpu, bil, info->codeSize);
+    if (ret != XGL_SUCCESS) {
+        shader_destroy(&sh->obj);
+        return ret;
+    }
+
+    sh->obj.destroy = shader_destroy;
+
+    *sh_ret = sh;
+
+    return XGL_SUCCESS;
 }
 
 XGL_RESULT XGLAPI intelCreateShader(
@@ -38,54 +97,6 @@ XGL_RESULT XGLAPI intelCreateShader(
         XGL_SHADER*                                 pShader)
 {
     struct intel_dev *dev = intel_dev(device);
-    struct intel_shader *shader;
-    const struct icd_bil_header *pBIL = pCreateInfo->pCode;
 
-    *pShader = NULL;
-
-    if (pCreateInfo->codeSize == 0) {
-        return XGL_ERROR_INVALID_MEMORY_SIZE;
-    }
-
-    // FYI: for shader allocs XGL_SYSTEM_ALLOC_INTERNAL_SHADER
-
-//    typedef struct _XGL_SHADER_CREATE_INFO
-//    {
-//        XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO
-//        const XGL_VOID*                         pNext;              // Pointer to next structure
-//        XGL_SIZE                                codeSize;           // Specified in bytes
-//        const XGL_VOID*                         pCode;
-//        XGL_FLAGS                               flags;              // Reserved
-//    } XGL_SHADER_CREATE_INFO;
-
-    // TODO: really validate IL
-    if (pBIL->magic == ICD_BIL_MAGIC) {
-
-        shader = (struct intel_shader *) intel_base_create(dev, sizeof(*shader),
-                                                           dev->base.dbg, XGL_DBG_OBJECT_SHADER, pCreateInfo, 0);
-        if (!shader)
-            return XGL_ERROR_OUT_OF_MEMORY;
-
-        shader->dev = dev;
-
-        shader->codeSize = pCreateInfo->codeSize;
-
-        shader->pCode = icd_alloc(pCreateInfo->codeSize, 4, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-        if (shader->pCode == NULL) {
-            intel_base_destroy(&shader->obj.base);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-
-        shader->obj.destroy = shader_destroy;
-
-        // TODO: Shader pre-processing
-
-        memcpy(shader->pCode, pCreateInfo->pCode, pCreateInfo->codeSize);
-        *pShader = shader;
-
-        return XGL_SUCCESS;
-    }
-
-    return XGL_ERROR_BAD_SHADER_CODE;
+    return shader_create(dev, pCreateInfo, (struct intel_shader **) pShader);
 }
-
