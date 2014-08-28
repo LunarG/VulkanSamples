@@ -329,7 +329,7 @@ void XglRenderTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
 
 void XglRenderTest::CreateShader(const char *filename, XGL_SHADER *pshader)
 {
-    struct bil_header *pBIL;
+    struct icd_bil_header *pBIL;
     streampos size;
     char * memblock;
     XGL_RESULT err;
@@ -356,6 +356,12 @@ void XglRenderTest::CreateShader(const char *filename, XGL_SHADER *pshader)
     file.seekg (0, ios::beg);
     file.read (memblock, size);
     file.close();
+
+    pBIL = (struct icd_bil_header *) memblock;
+    pBIL->magic = ICD_BIL_MAGIC;
+    pBIL->version = ICD_BIL_VERSION;
+
+    pBIL->gen_magic = filename[0];
 
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
