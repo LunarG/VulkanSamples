@@ -35,6 +35,7 @@
 #include <xglDbg.h>
 
 #include "icd.h"
+#include "icd-bil.h"
 #include "icd-format.h"
 #include "icd-utils.h"
 

@@ -62,7 +62,7 @@
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
-#include "shader_il.h"
+#include "icd-bil.h"
 
 class XglTest : public ::testing::Test {
 public:
@@ -692,19 +692,19 @@ void XglTest::CreateShader(XGL_SHADER *pshader)
 {
     void *code;
     uint32_t codeSize;
-    struct bil_header *pBIL;
+    struct icd_bil_header *pBIL;
     XGL_RESULT err;
 
-    codeSize = sizeof(struct bil_header) + 100;
+    codeSize = sizeof(struct icd_bil_header) + 100;
     code = malloc(codeSize);
     ASSERT_TRUE(NULL != code) << "malloc failed!";
 
     memset(code, 0, codeSize);
 
     // Indicate that this is BIL data.
-    pBIL = (struct bil_header *) code;
-    pBIL->bil_magic = BILMagicNumber;
-    pBIL->bil_version = BILVersion;
+    pBIL = (struct icd_bil_header *) code;
+    pBIL->magic = ICD_BIL_MAGIC;
+    pBIL->version = ICD_BIL_VERSION;
 
 //    typedef struct _XGL_SHADER_CREATE_INFO
 //    {

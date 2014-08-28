@@ -22,16 +22,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef SHADER_IL_H
-#define SHADER_IL_H
+#ifndef ICD_BIL_H
+#define ICD_BIL_H
 
-const int BILMagicNumber = 0x07230203;
-const int BILVersion = 99;
+#include <stdint.h>
 
-struct bil_header {
-    uint32_t bil_magic;
-    uint32_t bil_version;
+#define ICD_BIL_MAGIC   0x07230203
+#define ICD_BIL_VERSION 99
+
+struct icd_bil_header {
+    uint32_t magic;
+    uint32_t version;
     uint32_t gen_magic;  // Generator's magic number
 };
 
-#endif // SHADER_IL_H
+#endif /* ICD_BIL_H */

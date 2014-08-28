@@ -65,7 +65,7 @@ using namespace std;
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
-#include "shader_il.h"
+#include "icd-bil.h"
 
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data

@@ -23,7 +23,6 @@
  */
 
 #include "shader.h"
-#include "shader_il.h"
 
 static void shader_destroy(struct intel_obj *obj)
 {
@@ -40,7 +39,7 @@ XGL_RESULT XGLAPI intelCreateShader(
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_shader *shader;
-    const struct bil_header *pBIL = pCreateInfo->pCode;
+    const struct icd_bil_header *pBIL = pCreateInfo->pCode;
 
     *pShader = NULL;
 
@@ -60,7 +59,7 @@ XGL_RESULT XGLAPI intelCreateShader(
 //    } XGL_SHADER_CREATE_INFO;
 
     // TODO: really validate IL
-    if (pBIL->bil_magic == BILMagicNumber) {
+    if (pBIL->magic == ICD_BIL_MAGIC) {
 
         shader = (struct intel_shader *) intel_base_create(dev, sizeof(*shader),
                                                            dev->base.dbg, XGL_DBG_OBJECT_SHADER, pCreateInfo, 0);
