@@ -115,6 +115,18 @@ static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
 
     gpu->gen_opaque = gen;
 
+    switch (intel_gpu_gen(gpu)) {
+    case INTEL_GEN(7.5):
+        gpu->gt = gen_get_hsw_gt(devid);
+        break;
+    case INTEL_GEN(7):
+        gpu->gt = gen_get_ivb_gt(devid);
+        break;
+    case INTEL_GEN(6):
+        gpu->gt = gen_get_snb_gt(devid);
+        break;
+    }
+
     /* 8192 dwords */
     gpu->max_batch_buffer_size = sizeof(uint32_t) * 8192;
 

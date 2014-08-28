@@ -49,6 +49,7 @@ struct intel_gpu {
     int devid;          /* PCI device ID */
     char *path;         /* path to the render or legacy node, or NULL */
     int gen_opaque;     /* always read with intel_gpu_gen() */
+    int gt;
 
     XGL_GPU_SIZE max_batch_buffer_size;
     XGL_UINT batch_buffer_reloc_count;
