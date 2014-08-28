@@ -994,7 +994,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 }
 
 static void emit_shader(struct intel_cmd *cmd,
-                        const struct intel_pipe_shader *shader)
+                        const struct intel_pipe_shader *shader,
+                        struct intel_cmd_shader *pCmdShader)
 {
     uint32_t i;
     struct intel_cmd_shader *cmdShader;
@@ -1032,6 +1033,7 @@ static void emit_shader(struct intel_cmd *cmd,
     cmdShader = &cmd->bind.shaderCache.shaderArray[cmd->bind.shaderCache.used];
     cmdShader->shader = shader;
     cmdShader->kernel_pos = cmd_kernel_copy(cmd, shader->pCode, shader->codeSize);
+    *pCmdShader = *cmdShader;
     cmd->bind.shaderCache.used++;
     return;
 }
@@ -1046,22 +1048,22 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
 
     /* 3DSTATE_URB_VS and etc. */
     assert(pipeline->cmd_len);
-    cmd_batch_write_n(cmd, pipeline->cmds, pipeline->cmd_len * sizeof (uint32_t));
+    cmd_batch_write_n(cmd, pipeline->cmds, pipeline->cmd_len);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        emit_shader(cmd, &pipeline->intel_vs);
+        emit_shader(cmd, &pipeline->intel_vs, &cmd->bind.vs);
     }
     if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
-        emit_shader(cmd, &pipeline->gs);
+        emit_shader(cmd, &pipeline->gs, &cmd->bind.gs);
     }
     if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        emit_shader(cmd, &pipeline->intel_fs);
+        emit_shader(cmd, &pipeline->intel_fs, &cmd->bind.fs);
     }
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        emit_shader(cmd, &pipeline->tess_control);
+        emit_shader(cmd, &pipeline->tess_control, &cmd->bind.tess_control);
     }
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        emit_shader(cmd, &pipeline->tess_eval);
+        emit_shader(cmd, &pipeline->tess_eval, &cmd->bind.tess_eval);
     }
 }
 

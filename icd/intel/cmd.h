@@ -58,6 +58,18 @@ struct intel_cmd_bind {
         const struct intel_pipeline_delta *compute_delta;
     } pipeline;
 
+    /*
+     * Currently active shaders for this command buffer.
+     * Provides data only available after shaders are bound to
+     * a command buffer, such as the kernel position in the kernel BO
+     */
+    struct intel_cmd_shader vs;
+    struct intel_cmd_shader fs;
+    struct intel_cmd_shader gs;
+    struct intel_cmd_shader tess_control;
+    struct intel_cmd_shader tess_eval;
+    struct intel_cmd_shader compute;
+
     struct {
         XGL_UINT count;
         XGL_UINT used;
