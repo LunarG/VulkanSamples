@@ -28,7 +28,6 @@
 #include "mem.h"
 #include "obj.h"
 #include "cmd_priv.h"
-#include "cmd_pipeline.h"
 
 static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
                                            struct intel_cmd_writer *writer,
@@ -136,13 +135,12 @@ static void cmd_unmap(struct intel_cmd *cmd)
 
 static void cmd_reset(struct intel_cmd *cmd)
 {
-    // Release any shaders referenced by the command buffer.
-    cmd_clear_shader_cache(cmd);
-
     cmd_writer_reset(cmd, &cmd->batch);
     cmd_writer_reset(cmd, &cmd->state);
     cmd_writer_reset(cmd, &cmd->kernel);
 
+    if (cmd->bind.shaderCache.shaderArray)
+        icd_free(cmd->bind.shaderCache.shaderArray);
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
     cmd->reloc_used = 0;
@@ -190,19 +188,6 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     cmd->pipeline_select = pipeline_select;
 
     /*
-     * Allocate space to keep track of all the shaders used by this
-     * command buffer. This will be grown dynamically if needed.
-     * Align to pointer size since this is just a list of shader pointers.
-     * TODO: Setting initial size of list to arbitrary 16, should this
-     * be configurable?
-     */
-    cmd->bind.shaderCache.shaderList = icd_alloc(sizeof(struct intel_shader) * 16,
-                                                 sizeof(struct intel_shader *),
-                                                 XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    cmd->bind.shaderCache.size = 16;
-    cmd->bind.shaderCache.used = 0;
-
-    /*
      * XXX This is not quite right.  intel_gpu sets maxMemRefsPerSubmission to
      * batch_buffer_reloc_count, but we may emit up to two relocs, for start
      * and end offsets, for each referenced memories.
@@ -223,8 +208,6 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
 void intel_cmd_destroy(struct intel_cmd *cmd)
 {
     cmd_reset(cmd);
-
-    icd_free(cmd->bind.shaderCache.shaderList);
 
     icd_free(cmd->relocs);
     intel_base_destroy(&cmd->obj.base);

@@ -28,7 +28,6 @@
 #include "intel.h"
 #include "obj.h"
 #include "view.h"
-#include "shader.h"
 
 struct intel_pipeline;
 struct intel_pipeline_delta;
@@ -43,7 +42,7 @@ struct intel_pipe_shader;
 struct intel_cmd_reloc;
 
 struct intel_cmd_shader {
-    struct intel_pipe_shader *shader;
+    const struct intel_pipe_shader *shader;
     XGL_UINT kernel_pos;
 };
 
@@ -60,9 +59,9 @@ struct intel_cmd_bind {
     } pipeline;
 
     struct {
-        uint32_t size;
-        uint32_t used;
-        struct intel_cmd_shader *shaderList;
+        XGL_UINT count;
+        XGL_UINT used;
+        struct intel_cmd_shader *shaderArray;
     } shaderCache;
 
     struct {
