@@ -101,6 +101,8 @@ struct intel_pipe_shader {
     uint32_t codeSize;
 };
 
+#define INTEL_PSO_CMD_ENTRIES   32
+
 /**
  * 3D pipeline.
  */
@@ -190,8 +192,8 @@ struct intel_pipeline {
         int PUSH_CONSTANT_BUFFER_size;
     } wm_state;
 
-    uint32_t cmd_urb_alloc[8];
-    XGL_UINT cmd_urb_alloc_len;
+    uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
+    XGL_UINT cmd_len;
 };
 
 static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)

@@ -51,6 +51,16 @@ struct intel_pipeline_builder_create_info {
     XGL_VOID *next;
 };
 
+static uint32_t *pipeline_cmd_ptr(struct intel_pipeline *pipeline, int cmd_len)
+{
+    uint32_t *ptr;
+
+    assert(pipeline->cmd_len + cmd_len < INTEL_PSO_CMD_ENTRIES);
+    ptr = &pipeline->cmds[pipeline->cmd_len];
+    pipeline->cmd_len += cmd_len;
+    return ptr;
+}
+
 static XGL_RESULT pipeline_ia_state(struct intel_pipeline *pipeline,
                                     const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state)
 {
@@ -358,9 +368,7 @@ static void builder_build_urb_alloc_gen6(struct intel_pipeline_builder *builder,
         if (gs_entry_count > 256)
             gs_entry_count = 256;
 
-        STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_urb_alloc) >= cmd_len);
-        pipeline->cmd_urb_alloc_len = cmd_len;
-        dw = pipeline->cmd_urb_alloc;
+        dw = pipeline_cmd_ptr(pipeline, cmd_len);
 
         dw[0] = dw0;
         dw[1] = (vs_alloc_size - 1) << GEN6_URB_DW1_VS_ENTRY_SIZE__SHIFT |
@@ -446,10 +454,7 @@ static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
                 gs_entry_count = max_gs_entry_count;
         }
 
-        STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_urb_alloc) >= cmd_len * 4);
-        pipeline->cmd_urb_alloc_len = cmd_len * 4;
-
-        dw = pipeline->cmd_urb_alloc;
+        dw = pipeline_cmd_ptr(pipeline, cmd_len*4);
         dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (cmd_len - 2);
         dw[1] = (urb_offset / 8192) << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
                 (vs_alloc_size - 1) << GEN7_URB_ANY_DW1_ENTRY_SIZE__SHIFT |

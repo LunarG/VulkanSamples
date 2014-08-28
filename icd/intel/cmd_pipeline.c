@@ -1049,9 +1049,8 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
         gen7_wa_vs_flush(cmd);
 
     /* 3DSTATE_URB_VS and etc. */
-    assert(pipeline->cmd_urb_alloc_len);
-    cmd_batch_write_n(cmd, pipeline->cmd_urb_alloc,
-            pipeline->cmd_urb_alloc_len);
+    assert(pipeline->cmd_len);
+    cmd_batch_write_n(cmd, pipeline->cmds, pipeline->cmd_len * sizeof (uint32_t));
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
         emit_shader(cmd, &pipeline->intel_vs);
