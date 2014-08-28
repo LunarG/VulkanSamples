@@ -155,8 +155,6 @@ struct intel_pipeline {
     struct intel_pipe_shader tess_eval;
     struct intel_pipe_shader compute;
 
-    XGL_SIZE total_size;  // FB memory app needs to allocate for this pipeline
-
     int reduced_prim;
     int so_num_vertices, so_max_vertices;
 

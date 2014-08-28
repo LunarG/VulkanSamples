@@ -622,7 +622,6 @@ static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
 
     pipeline->dev = dev;
     pipeline->obj.destroy = pipeline_destroy;
-    pipeline->total_size = 0;
 
     ret = builder_build_all(&builder, pipeline);
     if (ret == XGL_SUCCESS)
