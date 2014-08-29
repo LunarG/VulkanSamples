@@ -116,6 +116,19 @@ struct intel_pipe_shader {
     uint32_t codeSize;
 };
 
+/*
+ * On GEN6, there are
+ *
+ *  - 3DSTATE_URB (3)
+ *
+ * On GEN7, there are
+ *
+ *  - 3DSTATE_URB_x (2*4)
+ *  - 3DSTATE_PUSH_CONSTANT_ALLOC_x (2*5)
+ *  - 3DSTATE_HS (7)
+ *  - 3DSTATE_TE (4)
+ *  - 3DSTATE_DS (6)
+ */
 #define INTEL_PSO_CMD_ENTRIES   64
 
 /**
