@@ -120,11 +120,13 @@ struct intel_pipe_shader {
  * On GEN6, there are
  *
  *  - 3DSTATE_URB (3)
+ *  - 3DSTATE_VERTEX_ELEMENTS (3)
  *
  * On GEN7, there are
  *
  *  - 3DSTATE_URB_x (2*4)
  *  - 3DSTATE_PUSH_CONSTANT_ALLOC_x (2*5)
+ *  - 3DSTATE_VERTEX_ELEMENTS (3)
  *  - 3DSTATE_HS (7)
  *  - 3DSTATE_TE (4)
  *  - 3DSTATE_DS (6)
