@@ -114,6 +114,26 @@ struct intel_rmap {
 struct intel_pipe_shader {
     void *pCode;
     uint32_t codeSize;
+
+    /*
+     * must grab everything we need from shader object as that
+     * can go away after the pipeline is created
+     */
+    XGL_FLAGS uses;
+
+    XGL_UINT in_count;
+    XGL_UINT out_count;
+
+    XGL_UINT sampler_count;
+    XGL_UINT surface_count;
+
+    /*
+     * Used by 3DSTATE_VS command
+     */
+    XGL_UINT urb_grf_start;
+    XGL_UINT urb_read_length;
+
+    XGL_FLAGS barycentric_interps;
 };
 
 /*

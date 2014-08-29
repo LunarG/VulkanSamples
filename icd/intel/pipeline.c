@@ -184,6 +184,19 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
+static void intel_pipe_shader_init(struct intel_shader *sh,
+                                   struct intel_pipe_shader *pipe_sh)
+{
+    pipe_sh->in_count = sh->in_count;
+    pipe_sh->out_count = sh->out_count;
+    pipe_sh->sampler_count = sh->sampler_count;
+    pipe_sh->surface_count = sh->surface_count;
+    pipe_sh->barycentric_interps = sh->barycentric_interps;
+    pipe_sh->urb_read_length = sh->urb_read_length;
+    pipe_sh->urb_grf_start = sh->urb_grf_start;
+    pipe_sh->uses = sh->uses;
+}
+
 static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
                                   const XGL_PIPELINE_SHADER *info)
 {
@@ -196,6 +209,9 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
     kernel = icd_alloc(sh->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
     if (!kernel)
         return XGL_ERROR_OUT_OF_MEMORY;
+
+    // TODO: This should be a compile step
+    memcpy(kernel, sh->ir->kernel, sh->ir->size);
 
     switch (info->stage) {
     case XGL_SHADER_STAGE_VERTEX:
@@ -210,6 +226,12 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
          * For now, use the app pointers.
          */
         pipeline->vs = *info;
+
+       /*
+        * Grab what we need from the intel_shader object as that
+        * could go away after the pipeline is created.
+        */
+        intel_pipe_shader_init(sh, &pipeline->intel_vs);
         pipeline->intel_vs.pCode = kernel;
         pipeline->intel_vs.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_VERTEX_FLAG;
@@ -222,12 +244,14 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
         }
         break;
     case XGL_SHADER_STAGE_GEOMETRY:
+        intel_pipe_shader_init(sh, &pipeline->gs);
         pipeline->gs.pCode = kernel;
         pipeline->gs.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
         break;
     case XGL_SHADER_STAGE_FRAGMENT:
         pipeline->fs = *info;
+        intel_pipe_shader_init(sh, &pipeline->intel_fs);
         pipeline->intel_fs.pCode = kernel;
         pipeline->intel_fs.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
@@ -241,16 +265,19 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
         }
         break;
     case XGL_SHADER_STAGE_TESS_CONTROL:
+        intel_pipe_shader_init(sh, &pipeline->tess_control);
         pipeline->tess_control.pCode = kernel;
         pipeline->tess_control.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
         break;
     case XGL_SHADER_STAGE_TESS_EVALUATION:
+        intel_pipe_shader_init(sh, &pipeline->tess_eval);
         pipeline->tess_eval.pCode = kernel;
         pipeline->tess_eval.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
         break;
     case XGL_SHADER_STAGE_COMPUTE:
+        intel_pipe_shader_init(sh, &pipeline->compute);
         pipeline->compute.pCode = kernel;
         pipeline->compute.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
