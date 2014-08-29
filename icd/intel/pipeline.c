@@ -22,10 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "genhw/genhw.h"
+
+#include "cmd.h"
 #include "shader.h"
 #include "pipeline_priv.h"
-#include "genhw/genhw.h"
-#include "genhw/gen_render_3d.xml.h"
 
 struct intel_pipeline_builder {
     const struct intel_gpu *gpu;
@@ -551,14 +552,7 @@ static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *b
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (cmd_len - 2);
     dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
                  0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
-    /*
-     * From the Ivy Bridge PRM, volume 2 part 1, page 292:
-     *
-     *     "A PIPE_CONTOL command with the CS Stall bit set must be programmed
-     *      in the ring after this instruction
-     *      (3DSTATE_PUSH_CONSTANT_ALLOC_PS)."
-     */
-    p->post_pso_wa_flags |= GEN7_WA_MULTISAMPLE_FLUSH;
+
     // gen7_wa_pipe_control_cs_stall(p, true, true);
     // looks equivalent to: gen6_wa_wm_multisample_flush - this does more
     // than the documentation seems to imply
@@ -636,15 +630,23 @@ static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
     XGL_RESULT ret;
 
     if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7)) {
-        pipeline->pre_pso_wa_flags |= GEN6_WA_GEN7_VS_FLUSH;
         builder_build_urb_alloc_gen7(builder, pipeline);
         builder_build_push_const_alloc_gen7(builder, pipeline);
         gen7_pipeline_gs(builder, pipeline);
         gen7_pipeline_hs(builder, pipeline);
         gen7_pipeline_te(builder, pipeline);
         gen7_pipeline_ds(builder, pipeline);
+
+        pipeline->wa_flags = INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE |
+                             INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL |
+                             INTEL_CMD_WA_GEN7_PRE_VS_DEPTH_STALL_WRITE |
+                             INTEL_CMD_WA_GEN7_POST_COMMAND_CS_STALL |
+                             INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL;
     } else {
         builder_build_urb_alloc_gen6(builder, pipeline);
+
+        pipeline->wa_flags = INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE |
+                             INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL;
     }
 
     ret = pipeline_ia_state(pipeline, &builder->ia);

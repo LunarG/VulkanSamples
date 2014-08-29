@@ -41,6 +41,79 @@ struct intel_pipe_shader;
 
 struct intel_cmd_reloc;
 
+/*
+ * We know what workarounds are needed for intel_pipeline.  These are mostly
+ * for intel_pipeline_delta.
+ */
+enum intel_cmd_wa_flags {
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 60:
+     *
+     *     "Before any depth stall flush (including those produced by
+     *      non-pipelined state commands), software needs to first send a
+     *      PIPE_CONTROL with no bits set except Post-Sync Operation != 0."
+     */
+    INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE = 1 << 0,
+
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 274:
+     *
+     *     "A PIPE_CONTROL command, with only the Stall At Pixel Scoreboard
+     *      field set (DW1 Bit 1), must be issued prior to any change to the
+     *      value in this field (Maximum Number of Threads in 3DSTATE_WM)"
+     *
+     * From the Ivy Bridge PRM, volume 2 part 1, page 286:
+     *
+     *     "If this field (Maximum Number of Threads in 3DSTATE_PS) is changed
+     *      between 3DPRIMITIVE commands, a PIPE_CONTROL command with Stall at
+     *      Pixel Scoreboard set is required to be issued."
+     */
+    INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL = 1 << 1,
+
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 106:
+     *
+     *     "A PIPE_CONTROL with Post-Sync Operation set to 1h and a depth
+     *      stall needs to be sent just prior to any 3DSTATE_VS,
+     *      3DSTATE_URB_VS, 3DSTATE_CONSTANT_VS,
+     *      3DSTATE_BINDING_TABLE_POINTER_VS, 3DSTATE_SAMPLER_STATE_POINTER_VS
+     *      command.  Only one PIPE_CONTROL needs to be sent before any
+     *      combination of VS associated 3DSTATE."
+     */
+    INTEL_CMD_WA_GEN7_PRE_VS_DEPTH_STALL_WRITE = 1 << 2,
+
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 258:
+     *
+     *     "Due to an HW issue driver needs to send a pipe control with stall
+     *      when ever there is state change in depth bias related state"
+     *
+     * From the Ivy Bridge PRM, volume 2 part 1, page 292:
+     *
+     *     "A PIPE_CONTOL command with the CS Stall bit set must be programmed
+     *      in the ring after this instruction
+     *      (3DSTATE_PUSH_CONSTANT_ALLOC_PS)."
+     */
+    INTEL_CMD_WA_GEN7_POST_COMMAND_CS_STALL = 1 << 3,
+
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 276:
+     *
+     *     "The driver must make sure a PIPE_CONTROL with the Depth Stall
+     *      Enable bit set after all the following states are programmed:
+     *
+     *       - 3DSTATE_PS
+     *       - 3DSTATE_VIEWPORT_STATE_POINTERS_CC
+     *       - 3DSTATE_CONSTANT_PS
+     *       - 3DSTATE_BINDING_TABLE_POINTERS_PS
+     *       - 3DSTATE_SAMPLER_STATE_POINTERS_PS
+     *       - 3DSTATE_CC_STATE_POINTERS
+     *       - 3DSTATE_BLEND_STATE_POINTERS
+     *       - 3DSTATE_DEPTH_STENCIL_STATE_POINTERS"
+     */
+    INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL = 1 << 4,
+};
+
 struct intel_cmd_shader {
     const struct intel_pipe_shader *shader;
     XGL_UINT kernel_pos;

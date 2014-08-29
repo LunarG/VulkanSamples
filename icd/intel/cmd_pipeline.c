@@ -31,7 +31,6 @@
 #include "view.h"
 #include "cmd_priv.h"
 
-
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              int prim_type, bool indexed,
                              uint32_t vertex_count,
@@ -601,17 +600,17 @@ static XGL_UINT gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
     return pos;
 }
 
-static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
+static void cmd_wa_gen6_pre_depth_stall_write(struct intel_cmd *cmd)
 {
+    CMD_ASSERT(cmd, 6, 7.5);
+
     if (!cmd->bind.draw_count)
         return;
 
-    if (cmd->bind.wa_flags & GEN6_WA_POST_SYNC_FLUSH)
+    if (cmd->bind.wa_flags & INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE)
         return;
 
-    CMD_ASSERT(cmd, 6, 7.5);
-
-    cmd->bind.wa_flags |= GEN6_WA_POST_SYNC_FLUSH;
+    cmd->bind.wa_flags |= INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 60:
@@ -626,71 +625,132 @@ static void gen6_wa_post_sync_flush(struct intel_cmd *cmd)
             GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL,
             NULL, 0);
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 60:
-    *
-    *     "Before any depth stall flush (including those produced by
-    *      non-pipelined state commands), software needs to first send a
-    *      PIPE_CONTROL with no bits set except Post-Sync Operation != 0."
-    *
-    *     "Before a PIPE_CONTROL with Write Cache Flush Enable =1, a
-    *      PIPE_CONTROL with any non-zero post-sync-op is required."
-    */
-   gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM, cmd->scratch_bo, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM, cmd->scratch_bo, 0);
 }
 
-static void gen6_wa_wm_multisample_flush(struct intel_cmd *cmd)
+static void cmd_wa_gen6_pre_command_scoreboard_stall(struct intel_cmd *cmd)
 {
-    if (!cmd->bind.draw_count)
-        return;
-
-   CMD_ASSERT(cmd, 6, 6);
-
-   gen6_wa_post_sync_flush(cmd);
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 305:
-    *
-    *     "Driver must guarentee that all the caches in the depth pipe are
-    *      flushed before this command (3DSTATE_MULTISAMPLE) is parsed. This
-    *      requires driver to send a PIPE_CONTROL with a CS stall along with a
-    *      Depth Flush prior to this command."
-    */
-   gen6_PIPE_CONTROL(cmd,
-           GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-           GEN6_PIPE_CONTROL_CS_STALL,
-           0, 0);
-}
-
-static void gen6_wa_ds_flush(struct intel_cmd *cmd)
-{
-    if (!cmd->bind.draw_count)
-        return;
-
     CMD_ASSERT(cmd, 6, 7.5);
 
-    gen6_wa_post_sync_flush(cmd);
-
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0);
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
-}
-
-static void gen7_wa_vs_flush(struct intel_cmd *cmd)
-{
     if (!cmd->bind.draw_count)
         return;
 
-    if (cmd->bind.wa_flags & GEN6_WA_GEN7_VS_FLUSH)
-        return;
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL, NULL, 0);
+}
 
+static void cmd_wa_gen7_pre_vs_depth_stall_write(struct intel_cmd *cmd)
+{
     CMD_ASSERT(cmd, 7, 7.5);
 
-    cmd->bind.wa_flags |= GEN6_WA_GEN7_VS_FLUSH;
+    if (!cmd->bind.draw_count)
+        return;
+
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
 
     gen6_PIPE_CONTROL(cmd,
             GEN6_PIPE_CONTROL_DEPTH_STALL | GEN6_PIPE_CONTROL_WRITE_IMM,
             cmd->scratch_bo, 0);
+}
+
+static void cmd_wa_gen7_post_command_cs_stall(struct intel_cmd *cmd)
+{
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    if (!cmd->bind.draw_count)
+        return;
+
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 61:
+     *
+     *     "One of the following must also be set (when CS stall is set):
+     *
+     *       * Render Target Cache Flush Enable ([12] of DW1)
+     *       * Depth Cache Flush Enable ([0] of DW1)
+     *       * Stall at Pixel Scoreboard ([1] of DW1)
+     *       * Depth Stall ([13] of DW1)
+     *       * Post-Sync Operation ([13] of DW1)"
+     */
+    gen6_PIPE_CONTROL(cmd,
+            GEN6_PIPE_CONTROL_CS_STALL |
+            GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL,
+            NULL, 0);
+}
+
+static void cmd_wa_gen7_post_command_depth_stall(struct intel_cmd *cmd)
+{
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    if (!cmd->bind.draw_count)
+        return;
+
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+}
+
+static void cmd_wa_gen6_pre_multisample_depth_flush(struct intel_cmd *cmd)
+{
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    if (!cmd->bind.draw_count)
+        return;
+
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 305:
+     *
+     *     "Driver must guarentee that all the caches in the depth pipe are
+     *      flushed before this command (3DSTATE_MULTISAMPLE) is parsed. This
+     *      requires driver to send a PIPE_CONTROL with a CS stall along with
+     *      a Depth Flush prior to this command."
+     *
+     * From the Ivy Bridge PRM, volume 2 part 1, page 304:
+     *
+     *     "Driver must ierarchi that all the caches in the depth pipe are
+     *      flushed before this command (3DSTATE_MULTISAMPLE) is parsed. This
+     *      requires driver to send a PIPE_CONTROL with a CS stall along with
+     *      a Depth Flush prior to this command.
+     */
+    gen6_PIPE_CONTROL(cmd,
+            GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+            GEN6_PIPE_CONTROL_CS_STALL,
+            0, 0);
+}
+
+static void cmd_wa_gen6_pre_ds_flush(struct intel_cmd *cmd)
+{
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    if (!cmd->bind.draw_count)
+        return;
+
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 315:
+     *
+     *     "Driver must send a least one PIPE_CONTROL command with CS Stall
+     *      and a post sync operation prior to the group of depth
+     *      commands(3DSTATE_DEPTH_BUFFER, 3DSTATE_CLEAR_PARAMS,
+     *      3DSTATE_STENCIL_BUFFER, and 3DSTATE_HIER_DEPTH_BUFFER)."
+     *
+     * This workaround satifies all the conditions.
+     */
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 315:
+     *
+     *     "Restriction: Prior to changing Depth/Stencil Buffer state (i.e.,
+     *      any combination of 3DSTATE_DEPTH_BUFFER, 3DSTATE_CLEAR_PARAMS,
+     *      3DSTATE_STENCIL_BUFFER, 3DSTATE_HIER_DEPTH_BUFFER) SW must first
+     *      issue a pipelined depth stall (PIPE_CONTROL with Depth Stall bit
+     *      set), followed by a pipelined depth cache flush (PIPE_CONTROL with
+     *      Depth Flush Bit set, followed by another pipelined depth stall
+     *      (PIPE_CONTROL with Depth Stall Bit set), unless SW can otherwise
+     *      guarantee that the pipeline from WM onwards is already flushed
+     *      (e.g., via a preceding MI_FLUSH)."
+     */
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
 }
 
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
@@ -700,8 +760,14 @@ void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
 
     assert(!(pipe_control_dw0 & GEN6_PIPE_CONTROL_WRITE__MASK));
 
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 60:
+     *
+     *     "Before a PIPE_CONTROL with Write Cache Flush Enable =1, a
+     *      PIPE_CONTROL with any non-zero post-sync-op is required."
+     */
     if (pipe_control_dw0 & GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH)
-        gen6_wa_post_sync_flush(cmd);
+        cmd_wa_gen6_pre_depth_stall_write(cmd);
 
     gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0);
 }
@@ -1021,10 +1087,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 
     emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
 
-    gen6_wa_post_sync_flush(cmd);
-    /* need multisample flush on gen6 */
-    if (cmd_gen(cmd) == INTEL_GEN(6))
-        gen6_wa_wm_multisample_flush(cmd);
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+    cmd_wa_gen6_pre_multisample_depth_flush(cmd);
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_reserve(cmd, msaa->cmd_len);
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
@@ -1080,21 +1144,12 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
 {
     cmd->bind.pipeline.graphics = pipeline;
 
-    // TODO: This probably isn't quite what we want.
-    // While this does reflect the call that was made, it would be
-    // more appropriate to indicate the behavior, ie. CS_STALL, WRITE_IMM
-    // and then issue the minimum number of pipe_control commands
-    // This sequence could do some duplicate work though we have
-    // WA_POST_SYNC_FLUSH first to try to minimize that.
-    if (pipeline->pre_pso_wa_flags & GEN6_WA_POST_SYNC_FLUSH) {
-        gen6_wa_post_sync_flush(cmd);
-    }
-    if (pipeline->pre_pso_wa_flags & GEN7_WA_MULTISAMPLE_FLUSH) {
-        gen6_wa_wm_multisample_flush(cmd);
-    }
-    if (pipeline->pre_pso_wa_flags & GEN6_WA_GEN7_VS_FLUSH) {
-        gen7_wa_vs_flush(cmd);
-    }
+    if (pipeline->wa_flags & INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE)
+        cmd_wa_gen6_pre_depth_stall_write(cmd);
+    if (pipeline->wa_flags & INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL)
+        cmd_wa_gen6_pre_command_scoreboard_stall(cmd);
+    if (pipeline->wa_flags & INTEL_CMD_WA_GEN7_PRE_VS_DEPTH_STALL_WRITE)
+        cmd_wa_gen7_pre_vs_depth_stall_write(cmd);
 
     /* 3DSTATE_URB_VS and etc. */
     assert(pipeline->cmd_len);
@@ -1122,15 +1177,10 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
         gen6_3DSTATE_GS(cmd);
     }
 
-    if (pipeline->post_pso_wa_flags & GEN6_WA_POST_SYNC_FLUSH) {
-        gen6_wa_post_sync_flush(cmd);
-    }
-    if (pipeline->post_pso_wa_flags & GEN7_WA_MULTISAMPLE_FLUSH) {
-        gen6_wa_wm_multisample_flush(cmd);
-    }
-    if (pipeline->post_pso_wa_flags & GEN6_WA_GEN7_VS_FLUSH) {
-        gen7_wa_vs_flush(cmd);
-    }
+    if (pipeline->wa_flags & INTEL_CMD_WA_GEN7_POST_COMMAND_CS_STALL)
+        cmd_wa_gen7_post_command_cs_stall(cmd);
+    if (pipeline->wa_flags & INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL)
+        cmd_wa_gen7_post_command_depth_stall(cmd);
 }
 
 static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
@@ -1219,7 +1269,7 @@ static void cmd_bind_rt(struct intel_cmd *cmd,
 
     cmd->bind.att.rt_count = count;
 
-    gen6_wa_post_sync_flush(cmd);
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
     gen6_3DSTATE_DRAWING_RECTANGLE(cmd, width, height);
 }
 
@@ -1237,7 +1287,7 @@ static void cmd_bind_ds(struct intel_cmd *cmd,
         ds = &null_ds;
     }
 
-    gen6_wa_ds_flush(cmd);
+    cmd_wa_gen6_pre_ds_flush(cmd);
     gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
     gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
     gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
