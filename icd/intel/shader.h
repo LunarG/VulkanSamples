@@ -29,8 +29,13 @@
 #include "obj.h"
 
 enum intel_shader_use {
-    INTEL_SHADER_USE_VID        = (1 << 0),
-    INTEL_SHADER_USE_IID        = (1 << 1),
+    INTEL_SHADER_USE_VID                = (1 << 0),
+    INTEL_SHADER_USE_IID                = (1 << 1),
+
+    INTEL_SHADER_USE_KILL               = (1 << 2),
+    INTEL_SHADER_USE_COMPUTED_DEPTH     = (1 << 3),
+    INTEL_SHADER_USE_DEPTH              = (1 << 4),
+    INTEL_SHADER_USE_W                  = (1 << 5),
 };
 
 /* just the kernel now */
@@ -44,8 +49,16 @@ struct intel_shader {
 
     struct intel_ir *ir;
     XGL_FLAGS uses;
+
     XGL_UINT in_count;
     XGL_UINT out_count;
+
+    XGL_UINT sampler_count;
+    XGL_UINT surface_count;
+
+    XGL_UINT urb_grf_start;
+
+    XGL_FLAGS barycentric_interps;
 };
 
 static inline struct intel_shader *intel_shader(XGL_SHADER shader)
