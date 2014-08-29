@@ -295,6 +295,7 @@ static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
     cmd_batch_write(cmd, cut_index);
 }
 
+
 static void gen6_3DSTATE_GS(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 7;
@@ -1548,6 +1549,73 @@ static void emit_ps_resources(struct intel_cmd *cmd,
     }
 }
 
+// TODO: These should probably be generated
+/* DW2 */
+# define GEN6_VS_SPF_MODE				(1 << 31)
+# define GEN6_VS_VECTOR_MASK_ENABLE			(1 << 30)
+# define GEN6_VS_SAMPLER_COUNT_SHIFT			27
+# define GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT	18
+# define GEN6_VS_FLOATING_POINT_MODE_IEEE_754		(0 << 16)
+# define GEN6_VS_FLOATING_POINT_MODE_ALT		(1 << 16)
+
+static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = GEN6_3DSTATE_VS__SIZE;
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
+    uint32_t dw2, dw4, dw5;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
+     * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
+     *
+     *   [DevSNB] A pipeline flush must be programmed prior to a 3DSTATE_VS
+     *   command that causes the VS Function Enable to toggle. Pipeline
+     *   flush can be executed by sending a PIPE_CONTROL command with CS
+     *   stall bit set and a post sync operation.
+     *
+     * Although we don't disable the VS during normal drawing, BLORP sometimes
+     * disables it.  To be safe, do the flush here just in case.
+     */
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+
+    if (cmd->bind.vs.shader == NULL) {
+        cmd_batch_reserve(cmd, cmd_len);
+        cmd_batch_write(cmd, dw0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        cmd_batch_write(cmd, 0);
+        return;
+    }
+
+    /*
+     * Most of this is know at pipeline create EXCEPT the kernel address,
+     * so that's why this is in cmd_pipeline vs. pipeline.
+     */
+    dw2 = (u_align(cmd->bind.vs.shader->sampler_count, 4) / 4) << GEN6_VS_SAMPLER_COUNT_SHIFT;
+    dw4 = (1 << GEN6_VS_DW4_URB_GRF_START__SHIFT) |
+          (cmd->bind.vs.shader->urb_read_length << GEN6_VS_DW4_URB_READ_LEN__SHIFT) |
+          (0 << GEN6_VS_DW4_URB_READ_OFFSET__SHIFT);
+
+    dw5 = GEN6_VS_DW5_STATISTICS |
+          GEN6_VS_DW5_VS_ENABLE;
+    if (cmd_gen(cmd) == INTEL_GEN(7.5)) {
+        dw5 |= ((cmd->dev->gpu->max_vs_threads-1) << GEN75_VS_DW5_MAX_THREADS__SHIFT);
+    } else {
+        dw5 |= ((cmd->dev->gpu->max_vs_threads-1) << GEN6_VS_DW5_MAX_THREADS__SHIFT);
+    }
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, cmd->bind.vs.kernel_pos);
+    cmd_batch_write(cmd, dw2);
+    cmd_batch_write(cmd, 0); /* scratch */
+    cmd_batch_write(cmd, dw4);
+    cmd_batch_write(cmd, dw5);
+}
+
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
@@ -1589,6 +1657,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_reserve(cmd, msaa->cmd_len);
     cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
+
+    gen6_3DSTATE_VS(cmd);
 }
 
 static void emit_shader(struct intel_cmd *cmd,
