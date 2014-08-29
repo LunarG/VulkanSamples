@@ -293,6 +293,25 @@ static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
     cmd_batch_write(cmd, cut_index);
 }
 
+static void gen6_3DSTATE_GS(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 7;
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    assert(cmd->bind.gs.shader == NULL);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT);
+    cmd_batch_write(cmd, GEN6_GS_DW5_STATISTICS);
+    cmd_batch_write(cmd, 0);
+}
+
 static void gen7_3DSTATE_GS(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 7;
@@ -1097,7 +1116,11 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
         emit_shader(cmd, &pipeline->tess_eval, &cmd->bind.tess_eval);
     }
 
-    gen7_3DSTATE_GS(cmd);
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3DSTATE_GS(cmd);
+    } else {
+        gen6_3DSTATE_GS(cmd);
+    }
 
     if (pipeline->post_pso_wa_flags & GEN6_WA_POST_SYNC_FLUSH) {
         gen6_wa_post_sync_flush(cmd);
