@@ -540,6 +540,29 @@ static void gen6_3DSTATE_BINDING_TABLE_POINTERS(struct intel_cmd *cmd,
     cmd_batch_write(cmd, ps_pos << 2);
 }
 
+static void gen6_3DSTATE_SAMPLER_STATE_POINTERS(struct intel_cmd *cmd,
+                                                XGL_UINT vs_pos,
+                                                XGL_UINT gs_pos,
+                                                XGL_UINT ps_pos)
+{
+    const uint8_t cmd_len = 4;
+    uint32_t dw0;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLER_STATE_POINTERS) |
+          GEN6_PTR_SAMPLER_DW0_VS_CHANGED |
+          GEN6_PTR_SAMPLER_DW0_GS_CHANGED |
+          GEN6_PTR_SAMPLER_DW0_PS_CHANGED |
+          (cmd_len - 2);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, vs_pos << 2);
+    cmd_batch_write(cmd, gs_pos << 2);
+    cmd_batch_write(cmd, ps_pos << 2);
+}
+
 static void gen7_3dstate_pointer(struct intel_cmd *cmd,
                                  int subop, XGL_UINT pos)
 {
@@ -1056,8 +1079,29 @@ static void emit_ps_resources(struct intel_cmd *cmd,
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS, pos);
+
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_VS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_HS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_DS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_GS, 0);
+
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_VS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_HS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_DS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_GS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS, 0);
     } else {
         gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, pos);
+        gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd, 0, 0, 0);
     }
 }
 
