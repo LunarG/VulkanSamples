@@ -182,7 +182,7 @@ struct intel_pipe_shader {
     uint32_t codeSize;
 };
 
-#define INTEL_PSO_CMD_ENTRIES   32
+#define INTEL_PSO_CMD_ENTRIES   64
 
 enum {
     GEN6_WA_POST_SYNC_FLUSH     = 1 << 0,

@@ -669,6 +669,76 @@ static void gen7_pipeline_gs(struct intel_pipeline_builder *builder,
                               pipeline->gs_state.BINDING_TABLE_STATE);
 }
 
+static void
+gen7_emit_3DSTATE_HS(struct intel_pipeline_builder *builder,
+                     struct intel_pipeline *p)
+{
+    const uint8_t cmd_len = 7;
+    const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_HS) | (cmd_len - 2);
+    uint32_t *dw;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+
+    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw[0] = dw0;
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+    dw[5] = 0;
+    dw[6] = 0;
+}
+
+static void gen7_pipeline_hs(struct intel_pipeline_builder *builder,
+                             struct intel_pipeline *pipeline)
+{
+    /* 3DSTATE_CONSTANT_HS and 3DSTATE_HS */
+    gen7_emit_3dstate_constant(builder, pipeline,
+                               GEN7_RENDER_OPCODE_3DSTATE_CONSTANT_HS,
+                               0, 0, 0);
+    gen7_emit_3DSTATE_HS(builder, pipeline);
+
+    /* 3DSTATE_BINDING_TABLE_POINTERS_HS */
+    // TODO: Do we want to track dirty state within a command buffer?
+    gen7_emit_3dstate_pointer(builder, pipeline,
+                              GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_HS,
+                              0);
+}
+
+static void gen7_pipeline_te(struct intel_pipeline_builder *builder,
+                             struct intel_pipeline *p)
+{
+    const uint8_t cmd_len = 4;
+    const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_TE) | (cmd_len - 2);
+    uint32_t *dw;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+
+    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw[0] = dw0;
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+}
+
+static void gen7_pipeline_ds(struct intel_pipeline_builder *builder,
+                             struct intel_pipeline *p)
+{
+    const uint8_t cmd_len = 6;
+    const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_DS) | (cmd_len - 2);
+    uint32_t *dw;
+
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+
+    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw[0] = dw0;
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+    dw[5] = 0;
+}
+
 static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
                                     struct intel_pipeline *pipeline)
 {
@@ -679,6 +749,9 @@ static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
         builder_build_urb_alloc_gen7(builder, pipeline);
         builder_build_push_const_alloc_gen7(builder, pipeline);
         gen7_pipeline_gs(builder, pipeline);
+        gen7_pipeline_hs(builder, pipeline);
+        gen7_pipeline_te(builder, pipeline);
+        gen7_pipeline_ds(builder, pipeline);
     } else {
         builder_build_urb_alloc_gen6(builder, pipeline);
     }
