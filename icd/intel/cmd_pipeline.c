@@ -1197,6 +1197,7 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
 
     /* 3DSTATE_URB_VS and etc. */
     assert(pipeline->cmd_len);
+    cmd_batch_reserve(cmd, pipeline->cmd_len);
     cmd_batch_write_n(cmd, pipeline->cmds, pipeline->cmd_len);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
