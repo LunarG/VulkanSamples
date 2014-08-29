@@ -558,6 +558,40 @@ static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *b
     // than the documentation seems to imply
 }
 
+static void builder_build_vertex_elements(struct intel_pipeline_builder *builder,
+                                          struct intel_pipeline *pipeline)
+{
+    const uint8_t cmd_len = 3;
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) |
+                         (cmd_len - 2);
+    const struct intel_shader *vs = intel_shader(builder->vs.shader);
+    int comps[4] = { GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE,
+                     GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE };
+    uint32_t *dw;
+
+    INTEL_GPU_ASSERT(builder->gpu, 6, 7.5);
+
+    if (!(vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)))
+        return;
+
+    dw = pipeline_cmd_ptr(pipeline, cmd_len);
+    dw[0] = dw0;
+    dw++;
+
+    comps[0] = (vs->uses & INTEL_SHADER_USE_VID) ?
+        GEN6_VFCOMP_STORE_VID : GEN6_VFCOMP_STORE_0;
+    if (vs->uses & INTEL_SHADER_USE_IID)
+        comps[1] = GEN6_VFCOMP_STORE_IID;
+
+    /* VERTEX_ELEMENT_STATE */
+    dw[0] = GEN6_VE_STATE_DW0_VALID;
+    dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
+            comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
+            comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+            comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+}
+
+
 static void gen7_pipeline_gs(struct intel_pipeline_builder *builder,
                              struct intel_pipeline *pipeline)
 {
@@ -628,6 +662,8 @@ static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
                                     struct intel_pipeline *pipeline)
 {
     XGL_RESULT ret;
+
+    builder_build_vertex_elements(builder, pipeline);
 
     if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7)) {
         builder_build_urb_alloc_gen7(builder, pipeline);
