@@ -51,7 +51,7 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
     case 'v':
         sh->uses |= INTEL_SHADER_USE_VID;
         sh->in_count = 1;
-        sh->out_count = 1;
+        sh->out_count = 2;
         break;
     case 'w':
         sh->out_count = 1;
