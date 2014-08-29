@@ -111,73 +111,7 @@ struct intel_rmap {
 #define SHADER_FRAGMENT_FLAG          (1 << XGL_SHADER_STAGE_FRAGMENT)
 #define SHADER_COMPUTE_FLAG           (1 << XGL_SHADER_STAGE_COMPUTE)
 
-struct intel_shader_cso {
-    uint32_t payload[5];
-};
-
-/**
- * Stream output for vertex transform feedback.
- */
-struct pipe_stream_output_info
-{
-   unsigned num_outputs;
-   /** stride for an entire vertex for each buffer in dwords */
-   unsigned stride[INTEL_MAX_SO_BUFFERS];
-
-   /**
-    * Array of stream outputs, in the order they are to be written in.
-    * Selected components are tightly packed into the output buffer.
-    */
-   struct {
-      unsigned register_index:8;  /**< 0 to PIPE_MAX_SHADER_OUTPUTS */
-      unsigned start_component:2; /** 0 to 3 */
-      unsigned num_components:3;  /** 1 to 4 */
-      unsigned output_buffer:3;   /**< 0 to PIPE_MAX_SO_BUFFERS */
-      unsigned dst_offset:16;     /**< offset into the buffer in dwords */
-   } output[INTEL_MAX_SO_OUTPUTS];
-};
-
-
 struct intel_pipe_shader {
-    struct intel_shader_cso cso;
-
-    struct {
-        int semantic_names[INTEL_MAX_SHADER_INPUTS];
-        int semantic_indices[INTEL_MAX_SHADER_INPUTS];
-        int interp[INTEL_MAX_SHADER_INPUTS];
-        bool centroid[INTEL_MAX_SHADER_INPUTS];
-        int count;
-
-        int start_grf;
-        bool has_pos;
-        bool has_linear_interp;
-        int barycentric_interpolation_mode;
-        uint32_t const_interp_enable;
-        bool discard_adj;
-    } in;
-
-    struct {
-        int register_indices[INTEL_MAX_SHADER_OUTPUTS];
-        int semantic_names[INTEL_MAX_SHADER_OUTPUTS];
-        int semantic_indices[INTEL_MAX_SHADER_OUTPUTS];
-        int count;
-
-        bool has_pos;
-    } out;
-
-    bool has_kill;
-    bool dispatch_16;
-
-    bool stream_output;
-    int svbi_post_inc;
-    struct pipe_stream_output_info so_info;
-
-    /* for VS stream output / rasterizer discard */
-    int gs_offsets[3];
-    int gs_start_grf;
-
-    int num_samplers;
-
     void *pCode;
     uint32_t codeSize;
 };
