@@ -57,6 +57,8 @@ struct intel_raster_state {
 struct intel_msaa_state {
     struct intel_obj obj;
 
+    XGL_UINT sample_count;
+
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     uint32_t cmd[6];
     XGL_UINT cmd_len;

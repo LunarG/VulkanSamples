@@ -363,6 +363,10 @@ msaa_state_init(struct intel_msaa_state *state,
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
     STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= 6);
 
+    state->sample_count = info->samples;
+    if (!state->sample_count)
+        state->sample_count = 1;
+
     /* 3DSTATE_MULTISAMPLE */
     cmd = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE);
     cmd_len = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 4 : 3;
