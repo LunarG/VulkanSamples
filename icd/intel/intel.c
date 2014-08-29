@@ -42,6 +42,7 @@
 #include "gpu.h"
 #include "intel.h"
 
+static int intel_devid_override;
 int intel_debug = -1;
 
 static void intel_debug_init(void)
@@ -64,10 +65,14 @@ static void intel_debug_init(void)
         else
             len = strlen(env);
 
-        if (strncmp(env, "batch", len) == 0)
+        if (strncmp(env, "batch", len) == 0) {
             intel_debug |= INTEL_DEBUG_BATCH;
-        else if (strncmp(env, "nohw", len) == 0)
+        } else if (strncmp(env, "nohw", len) == 0) {
             intel_debug |= INTEL_DEBUG_NOHW;
+        } else if (strncmp(env, "0x", 2) == 0) {
+            intel_debug |= INTEL_DEBUG_NOHW;
+            intel_devid_override = strtol(env, NULL, 16);
+        }
 
         if (!p)
             break;
@@ -175,6 +180,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO 
         }
         close(fd);
 
+        if (intel_devid_override)
+            dev_id = intel_devid_override;
         ret = intel_gpu_add(dev_id, dnode, &gpu);
 
         udev_device_unref(device);
