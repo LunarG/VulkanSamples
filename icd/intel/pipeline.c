@@ -487,7 +487,7 @@ static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *b
     uint32_t *dw;
     int end;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
 
     /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 68:
@@ -677,7 +677,7 @@ gen7_emit_3DSTATE_HS(struct intel_pipeline_builder *builder,
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_HS) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
 
     dw = pipeline_cmd_ptr(p, cmd_len);
     dw[0] = dw0;
@@ -712,7 +712,7 @@ static void gen7_pipeline_te(struct intel_pipeline_builder *builder,
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_TE) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
 
     dw = pipeline_cmd_ptr(p, cmd_len);
     dw[0] = dw0;
@@ -728,7 +728,7 @@ static void gen7_pipeline_ds(struct intel_pipeline_builder *builder,
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_DS) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7);
+    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
 
     dw = pipeline_cmd_ptr(p, cmd_len);
     dw[0] = dw0;

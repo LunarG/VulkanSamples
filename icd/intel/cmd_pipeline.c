@@ -1001,7 +1001,7 @@ gen7_emit_3DSTATE_GS(struct intel_cmd *cmd)
     const struct intel_shader_cso *cso;
     uint32_t dw2, dw4, dw5;
 
-    CMD_ASSERT(cmd, 7, 7);
+    CMD_ASSERT(cmd, 7, 7.5);
 
     if (cmd->bind.gs.shader == NULL) {
         cmd_batch_reserve(cmd, cmd_len);
