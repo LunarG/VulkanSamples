@@ -353,6 +353,183 @@ static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
     cmd_batch_write(cmd, 0);
 }
 
+static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
+                                      uint32_t body[6])
+{
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
+    const struct intel_raster_state *raster = cmd->bind.state.raster;
+    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+    uint32_t dw1, dw2, dw3;
+    int point_width;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw1 = GEN7_SF_DW1_STATISTICS |
+          GEN7_SF_DW1_DEPTH_OFFSET_SOLID |
+          GEN7_SF_DW1_DEPTH_OFFSET_WIREFRAME |
+          GEN7_SF_DW1_DEPTH_OFFSET_POINT |
+          GEN7_SF_DW1_VIEWPORT_ENABLE |
+          raster->cmd_sf_fill;
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        int format;
+
+        switch (pipeline->db_format.channelFormat) {
+        case XGL_CH_FMT_R16:
+            format = GEN6_ZFORMAT_D16_UNORM;
+            break;
+        case XGL_CH_FMT_R32:
+        case XGL_CH_FMT_R32G8:
+            format = GEN6_ZFORMAT_D32_FLOAT;
+            break;
+        default:
+            assert(!"unknown depth format");
+            format = 0;
+            break;
+        }
+
+        dw1 |= format << GEN7_SF_DW1_DEPTH_FORMAT__SHIFT;
+    }
+
+    dw2 = raster->cmd_sf_cull;
+
+    if (msaa->sample_count > 1) {
+          dw2 |= 128 << GEN7_SF_DW2_LINE_WIDTH__SHIFT |
+                 GEN7_SF_DW2_MSRASTMODE_ON_PATTERN;
+    } else {
+          dw2 |= 0 << GEN7_SF_DW2_LINE_WIDTH__SHIFT |
+                 GEN7_SF_DW2_MSRASTMODE_OFF_PIXEL;
+    }
+
+    if (viewport->scissor_enable)
+        dw2 |= GEN7_SF_DW2_SCISSOR_ENABLE;
+
+    /* in U8.3 */
+    point_width = (int) (pipeline->pointSize * 8.0f + 0.5f);
+    point_width = U_CLAMP(point_width, 1, 2047);
+
+    dw3 = pipeline->provoking_vertex_tri << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
+          pipeline->provoking_vertex_line << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
+          pipeline->provoking_vertex_trifan << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT |
+          GEN7_SF_DW3_SUBPIXEL_8BITS |
+          GEN7_SF_DW3_USE_POINT_WIDTH |
+          point_width;
+
+    body[0] = dw1;
+    body[1] = dw2;
+    body[2] = dw3;
+    body[3] = raster->cmd_depth_offset_const;
+    body[4] = raster->cmd_depth_offset_scale;
+    body[5] = raster->cmd_depth_offset_clamp;
+}
+
+static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
+                                       uint32_t body[13])
+{
+    const struct intel_shader *vs =
+        intel_shader(cmd->bind.pipeline.graphics->vs.shader);
+    const struct intel_shader *fs =
+        intel_shader(cmd->bind.pipeline.graphics->fs.shader);
+    XGL_UINT attr_skip, attr_count;
+    XGL_UINT vue_offset, vue_len;
+    XGL_UINT i;
+    uint32_t dw1;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    /* VS outputs VUE header and position additionally */
+    assert(vs->out_count >= 2);
+    attr_skip = 2;
+    attr_count = vs->out_count - attr_skip;
+    assert(fs->in_count == attr_count);
+    assert(fs->in_count <= 32);
+
+    vue_offset = attr_skip / 2;
+    vue_len = (attr_count + 1) / 2;
+    if (!vue_len)
+        vue_len = 1;
+
+    dw1 = fs->in_count << GEN7_SBE_DW1_ATTR_COUNT__SHIFT |
+          vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT |
+          vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
+
+    body[0] = dw1;
+
+    for (i = 0; i < 8; i++) {
+        uint16_t hi, lo;
+
+        /* no attr swizzles */
+        if (i * 2 + 1 < fs->in_count) {
+            hi = i * 2 + 1;
+            lo = i * 2;
+        } else if (i * 2 < fs->in_count) {
+            hi = 0;
+            lo = i * 2;
+        } else {
+            hi = 0;
+            lo = 0;
+        }
+
+        body[1 + i] = hi << GEN7_SBE_ATTR_HIGH__SHIFT | lo;
+    }
+
+    body[9] = 0; /* point sprite enables */
+    body[10] = 0; /* constant interpolation enables */
+    body[11] = 0; /* WrapShortest enables */
+    body[12] = 0;
+}
+
+static void gen6_3DSTATE_SF(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 20;
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_SF) |
+                         (cmd_len - 2);
+    uint32_t sf[6];
+    uint32_t sbe[13];
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    gen7_fill_3DSTATE_SF_body(cmd, sf);
+    gen7_fill_3DSTATE_SBE_body(cmd, sbe);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, sbe[0]);
+    cmd_batch_write_n(cmd, sf, 6);
+    cmd_batch_write_n(cmd, &sbe[1], 12);
+}
+
+static void gen7_3DSTATE_SF(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 7;
+    uint32_t dw[7];
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) |
+            (cmd_len - 2);
+    gen7_fill_3DSTATE_SF_body(cmd, &dw[1]);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write_n(cmd, dw, cmd_len);
+}
+
+static void gen7_3DSTATE_SBE(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 14;
+    uint32_t dw[14];
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) |
+            (cmd_len - 2);
+    gen7_fill_3DSTATE_SBE_body(cmd, &dw[1]);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write_n(cmd, dw, cmd_len);
+}
+
 static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const int max_threads = (cmd->dev->gpu->gt == 2) ? 80 : 40;
@@ -1284,6 +1461,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
 
+        gen7_3DSTATE_SF(cmd);
+        gen7_3DSTATE_SBE(cmd);
         gen7_3DSTATE_WM(cmd);
         gen7_3DSTATE_PS(cmd);
     } else {
@@ -1295,6 +1474,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
 
+        gen6_3DSTATE_SF(cmd);
         gen6_3DSTATE_WM(cmd);
     }
 
