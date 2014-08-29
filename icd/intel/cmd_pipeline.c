@@ -27,6 +27,7 @@
 #include "img.h"
 #include "mem.h"
 #include "pipeline.h"
+#include "shader.h"
 #include "state.h"
 #include "view.h"
 #include "cmd_priv.h"
@@ -350,6 +351,169 @@ static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
         cmd_batch_write(cmd, 0);
     }
     cmd_batch_write(cmd, 0);
+}
+
+static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
+{
+    const int max_threads = (cmd->dev->gpu->gt == 2) ? 80 : 40;
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+    const uint8_t cmd_len = 9;
+    uint32_t dw0, dw2, dw4, dw5, dw6;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
+
+    dw2 = (fs->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+          fs->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+
+    dw4 = GEN6_WM_DW4_STATISTICS |
+          fs->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT |
+          0 << GEN6_WM_DW4_URB_GRF_START1__SHIFT |
+          0 << GEN6_WM_DW4_URB_GRF_START2__SHIFT;
+
+    dw5 = (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
+          GEN6_WM_DW5_PS_ENABLE |
+          GEN6_WM_DW5_8_PIXEL_DISPATCH;
+
+    if (fs->uses & INTEL_SHADER_USE_KILL ||
+        pipeline->cb_state.alphaToCoverageEnable)
+        dw5 |= GEN6_WM_DW5_PS_KILL;
+
+    if (fs->uses & INTEL_SHADER_USE_COMPUTED_DEPTH)
+        dw5 |= GEN6_WM_DW5_PS_COMPUTE_DEPTH;
+    if (fs->uses & INTEL_SHADER_USE_DEPTH)
+        dw5 |= GEN6_WM_DW5_PS_USE_DEPTH;
+    if (fs->uses & INTEL_SHADER_USE_W)
+        dw5 |= GEN6_WM_DW5_PS_USE_W;
+
+    if (pipeline->cb_state.dualSourceBlendEnable)
+        dw5 |= GEN6_WM_DW5_DUAL_SOURCE_BLEND;
+
+    dw6 = fs->in_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
+          GEN6_WM_DW6_POSOFFSET_NONE |
+          GEN6_WM_DW6_ZW_INTERP_PIXEL |
+          fs->barycentric_interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT |
+          GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
+
+    if (msaa->sample_count > 1) {
+        dw6 |= GEN6_WM_DW6_MSRASTMODE_ON_PATTERN |
+               GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
+    } else {
+        dw6 |= GEN6_WM_DW6_MSRASTMODE_OFF_PIXEL |
+               GEN6_WM_DW6_MSDISPMODE_PERSAMPLE;
+    }
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, cmd->bind.fs.kernel_pos << 2);
+    cmd_batch_write(cmd, dw2);
+    cmd_batch_write(cmd, 0); /* scratch */
+    cmd_batch_write(cmd, dw4);
+    cmd_batch_write(cmd, dw5);
+    cmd_batch_write(cmd, dw6);
+    cmd_batch_write(cmd, 0); /* kernel 1 */
+    cmd_batch_write(cmd, 0); /* kernel 2 */
+}
+
+static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
+{
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+    const uint8_t cmd_len = 3;
+    uint32_t dw0, dw1, dw2;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
+
+    dw1 = GEN7_WM_DW1_STATISTICS |
+          GEN7_WM_DW1_PS_ENABLE |
+          GEN7_WM_DW1_ZW_INTERP_PIXEL |
+          fs->barycentric_interps << GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT |
+          GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
+
+    if (fs->uses & INTEL_SHADER_USE_KILL ||
+        pipeline->cb_state.alphaToCoverageEnable)
+        dw1 |= GEN7_WM_DW1_PS_KILL;
+
+    if (fs->uses & INTEL_SHADER_USE_COMPUTED_DEPTH)
+        dw1 |= GEN7_WM_DW1_PSCDEPTH_ON;
+    if (fs->uses & INTEL_SHADER_USE_DEPTH)
+        dw1 |= GEN7_WM_DW1_PS_USE_DEPTH;
+    if (fs->uses & INTEL_SHADER_USE_W)
+        dw1 |= GEN7_WM_DW1_PS_USE_W;
+
+    dw2 = 0;
+
+    if (msaa->sample_count > 1) {
+        dw1 |= GEN7_WM_DW1_MSRASTMODE_ON_PATTERN;
+        dw2 |= GEN7_WM_DW2_MSDISPMODE_PERPIXEL;
+    } else {
+        dw1 |= GEN7_WM_DW1_MSRASTMODE_OFF_PIXEL;
+        dw2 |= GEN7_WM_DW2_MSDISPMODE_PERSAMPLE;
+    }
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, dw1);
+    cmd_batch_write(cmd, dw2);
+}
+
+static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
+{
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+    const uint8_t cmd_len = 8;
+    uint32_t dw0, dw2, dw4, dw5;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (cmd_len - 2);
+
+    dw2 = (fs->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+          fs->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+
+    dw4 = GEN7_PS_DW4_POSOFFSET_NONE |
+          GEN7_PS_DW4_8_PIXEL_DISPATCH;
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+        const int max_threads =
+            (cmd->dev->gpu->gt == 3) ? 408 :
+            (cmd->dev->gpu->gt == 2) ? 204 : 102;
+        dw4 |= (max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
+        dw4 |= msaa->cmd[msaa->cmd_len - 1] << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
+    } else {
+        const int max_threads = (cmd->dev->gpu->gt == 2) ? 172 : 48;
+        dw4 |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+    }
+
+    if (pipeline->fs.linkConstBufferCount)
+        dw4 |= GEN7_PS_DW4_PUSH_CONSTANT_ENABLE;
+
+    if (fs->in_count)
+        dw4 |= GEN7_PS_DW4_ATTR_ENABLE;
+
+    if (pipeline->cb_state.dualSourceBlendEnable)
+        dw4 |= GEN7_PS_DW4_DUAL_SOURCE_BLEND;
+
+    dw5 = fs->urb_grf_start << GEN7_PS_DW5_URB_GRF_START0__SHIFT |
+          0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
+          0 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, cmd->bind.fs.kernel_pos << 2);
+    cmd_batch_write(cmd, dw2);
+    cmd_batch_write(cmd, 0); /* scratch */
+    cmd_batch_write(cmd, dw4);
+    cmd_batch_write(cmd, dw5);
+    cmd_batch_write(cmd, 0); /* kernel 1 */
+    cmd_batch_write(cmd, 0); /* kernel 2 */
 }
 
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
@@ -1119,6 +1283,9 @@ static void emit_bounded_states(struct intel_cmd *cmd)
                 &cmd->bind.pipeline.graphics->vs);
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
+
+        gen7_3DSTATE_WM(cmd);
+        gen7_3DSTATE_PS(cmd);
     } else {
         gen6_cc_states(cmd);
         gen6_viewport_states(cmd);
@@ -1127,6 +1294,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
                 &cmd->bind.pipeline.graphics->vs);
         gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
+
+        gen6_3DSTATE_WM(cmd);
     }
 
     emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
