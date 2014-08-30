@@ -225,6 +225,7 @@ viewport_state_alloc_cmd(struct intel_viewport_state *state,
 {
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
+    state->viewport_count = info->viewportCount;
     state->scissor_enable = info->scissorEnable;
 
     if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {

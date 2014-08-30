@@ -33,6 +33,7 @@
 struct intel_viewport_state {
     struct intel_obj obj;
 
+    XGL_UINT viewport_count;
     bool scissor_enable;
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
     uint32_t *cmd;
