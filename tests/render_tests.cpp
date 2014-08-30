@@ -704,6 +704,10 @@ void XglRenderTest::DrawTriangleTest()
     err = xglCreateColorAttachmentView(device(), &createView, &colorView);
     ASSERT_XGL_SUCCESS(err);
 
+    XGL_QUERY_POOL query;
+    XGL_GPU_MEMORY query_mem;
+    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
+
     // Build command buffer
     err = xglBeginCommandBuffer(m_cmdBuffer, 0);
     ASSERT_XGL_SUCCESS(err);
@@ -756,8 +760,13 @@ void XglRenderTest::DrawTriangleTest()
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
+    xglCmdResetQueryPool(m_cmdBuffer, query, 0, 1);
+    xglCmdBeginQuery(m_cmdBuffer, query, 0, 0);
+
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+
+    xglCmdEndQuery(m_cmdBuffer, query, 0);
 
     // prepare the back buffer for present
 //    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
@@ -786,6 +795,18 @@ void XglRenderTest::DrawTriangleTest()
 
     // Wait for work to finish before cleaning up.
     xglDeviceWaitIdle(m_device->device());
+
+    XGL_PIPELINE_STATISTICS_DATA stats;
+    XGL_SIZE stats_size;
+    err = xglGetQueryPoolResults(query, 0, 1, &stats_size, &stats);
+    ASSERT_XGL_SUCCESS( err );
+    ASSERT_EQ(stats_size, sizeof(stats));
+
+    ASSERT_EQ(stats.vsInvocations, 3);
+    ASSERT_EQ(stats.cPrimitives, 1);
+    ASSERT_EQ(stats.cInvocations, 1);
+
+    DestroyQueryPool(query, query_mem);
 
     WritePPM( "TriangleTest.ppm", width, height );
 
