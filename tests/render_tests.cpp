@@ -130,6 +130,10 @@ public:
                      XGL_GPU_MEMORY *pMem);
     void DestroyImage();
 
+    void CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
+                         XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem);
+    void DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem);
+
     void CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
                          XGL_IMAGE_VIEW* pView);
     void DestroyImageView(XGL_IMAGE_VIEW imageView);
@@ -313,6 +317,56 @@ void XglRenderTest::DestroyImage()
     ASSERT_XGL_SUCCESS(xglFreeMemory(m_image_mem));
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_image));
+}
+
+void XglRenderTest::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
+                                    XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem)
+{
+    XGL_RESULT err;
+
+    XGL_QUERY_POOL_CREATE_INFO poolCreateInfo = {};
+    poolCreateInfo.sType = XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    poolCreateInfo.pNext = NULL;
+    poolCreateInfo.queryType = type;
+    poolCreateInfo.slots = slots;
+
+    err = xglCreateQueryPool(device(), &poolCreateInfo, pPool);
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_MEMORY_REQUIREMENTS mem_req;
+    XGL_UINT data_size;
+    err = xglGetObjectInfo(*pPool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(data_size, sizeof(mem_req));
+
+    if (!mem_req.size) {
+        *pMem = XGL_NULL_HANDLE;
+        return;
+    }
+
+    XGL_MEMORY_ALLOC_INFO mem_info;
+
+    memset(&mem_info, 0, sizeof(mem_info));
+    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.allocationSize = mem_req.size;
+    mem_info.alignment = mem_req.alignment;
+    mem_info.heapCount = mem_req.heapCount;
+    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    err = xglAllocMemory(device(), &mem_info, pMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglBindObjectMemory(*pPool, *pMem, 0);
+    ASSERT_XGL_SUCCESS(err);
+}
+
+void XglRenderTest::DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem)
+{
+    ASSERT_XGL_SUCCESS(xglBindObjectMemory(pool, XGL_NULL_HANDLE, 0));
+    ASSERT_XGL_SUCCESS(xglFreeMemory(mem));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(pool));
 }
 
 void XglRenderTest::CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
