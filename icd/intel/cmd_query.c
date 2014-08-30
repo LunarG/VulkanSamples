@@ -76,6 +76,7 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
         GEN6_REG_VS_INVOCATION_COUNT,
         GEN6_REG_GS_INVOCATION_COUNT,
         GEN6_REG_GS_PRIMITIVES_COUNT,
+        /* well, we do not enable 3DSTATE_VF_STATISTICS yet */
         GEN6_REG_IA_PRIMITIVES_COUNT,
         GEN6_REG_IA_VERTICES_COUNT,
         (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN6_REG_HS_INVOCATION_COUNT : 0,
@@ -95,6 +96,8 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
         } else {
             gen6_MI_STORE_DATA_IMM(cmd, bo, offset, 0);
         }
+
+        offset += sizeof(uint64_t);
     }
 }
 
