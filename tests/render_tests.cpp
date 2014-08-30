@@ -123,6 +123,72 @@ static const Vertex g_vbData[] =
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
 };
 
+static const uint32_t gen6_fs[] = {
+    0x00600001, 0x202003fe, 0x00000000, 0x3f800000, // mov(8)          m1<1>F          1F                              { align1 1Q };
+    0x00600001, 0x204003fe, 0x00000000, 0x00000000, // mov(8)          m2<1>F          0F                              { align1 1Q };
+    0x00600001, 0x206003fe, 0x00000000, 0x00000000, // mov(8)          m3<1>F          0F                              { align1 1Q };
+    0x00600001, 0x208003fe, 0x00000000, 0x3f800000, // mov(8)          m4<1>F          1F                              { align1 1Q };
+    0x05600032, 0x20001fc8, 0x008d0020, 0x88019400, // sendc(8)        null            m1<8,8,1>F
+                                                    // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
+};
+
+static const uint32_t gen6_vs[] = {
+    0x01600110, 0x200f1ca4, 0x00600020, 0x00000000, // cmp.z.f0(8)     null            g1<4,4,1>.xD    0D              { align16 1Q };
+    0x00670122, 0x000a108f, 0x000e0004, 0x000e0004, // (+f0.all4h) if(8) JIP: 10                                       { align16 1Q };
+    0x00600501, 0x204303fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.xyF       -1F                             { align16 NoDDClr 1Q };
+    0x00600d01, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDClr,NoDDChk 1Q };
+    0x00600901, 0x204803fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.wF        1F                              { align16 NoDDChk 1Q };
+    0x00600124, 0x0014108f, 0x006e0004, 0x006e0004, // else(8)         JIP: 20                                         { align16 1Q };
+    0x01600110, 0x200f1ca4, 0x00600020, 0x00000001, // cmp.z.f0(8)     null            g1<4,4,1>.xD    1D              { align16 1Q };
+    0x00670122, 0x000a108f, 0x000e0004, 0x000e0004, // (+f0.all4h) if(8) JIP: 10                                       { align16 1Q };
+    0x00600501, 0x204903fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.xwF       1F                              { align16 NoDDClr 1Q };
+    0x00600d01, 0x204203fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.yF        -1F                             { align16 NoDDClr,NoDDChk 1Q };
+    0x00600901, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDChk 1Q };
+    0x00600124, 0x0006108f, 0x006e0004, 0x006e0004, // else(8)         JIP: 6                                          { align16 1Q };
+    0x00600501, 0x204503fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.xzF       0F                              { align16 NoDDClr 1Q };
+    0x00600901, 0x204a03fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.ywF       1F                              { align16 NoDDChk 1Q };
+    0x00600125, 0x0002108f, 0x006e0004, 0x006e0002, // endif(8)        JIP: 2                                          { align16 1Q };
+    0x00600125, 0x0002108f, 0x006e0004, 0x006e0002, // endif(8)        JIP: 2                                          { align16 1Q };
+    0x00600101, 0x204f0062, 0x00000000, 0x00000000, // mov(8)          m2<1>UD         0x00000000UD                    { align16 1Q };
+    0x00600101, 0x206f03be, 0x006e0044, 0x00000000, // mov(8)          m3<1>F          g2<4,4,1>F                      { align16 1Q };
+    0x00600301, 0x202f0022, 0x006e0004, 0x00000000, // mov(8)          m1<1>UD         g0<4,4,1>UD                     { align16 WE_all 1Q };
+    0x06600131, 0x200f1fdc, 0x006e0024, 0x8608c400, // send(8)         null            m1<4,4,1>F
+                                                    // urb 0 urb_write interleave used complete mlen 3 rlen 0 { align16 1Q EOT };
+};
+
+static const uint32_t gen7_fs[] = {
+    0x00600001, 0x2e2003fd, 0x00000000, 0x3f800000, // mov(8)          g113<1>F        1F                              { align1 1Q };
+    0x00600001, 0x2e4003fd, 0x00000000, 0x00000000, // mov(8)          g114<1>F        0F                              { align1 1Q };
+    0x00600001, 0x2e6003fd, 0x00000000, 0x00000000, // mov(8)          g115<1>F        0F                              { align1 1Q };
+    0x00600001, 0x2e8003fd, 0x00000000, 0x3f800000, // mov(8)          g116<1>F        1F                              { align1 1Q };
+    0x05600032, 0x20001fa8, 0x008d0e20, 0x88031400, // sendc(8)        null            g113<8,8,1>F
+                                                    // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
+};
+
+static const uint32_t gen7_vs[] = {
+    0x01608110, 0x200f1ca4, 0x00600020, 0x00000000, // cmp.z.f0(8)     null            g1<4,4,1>.xD    0D              { align16 1Q switch };
+    0x00670122, 0x200f0c84, 0x000e0004, 0x001c000a, // (+f0.all4h) if(8) JIP: 10       UIP: 28                         { align16 1Q };
+    0x00600501, 0x204303fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.xyF       -1F                             { align16 NoDDClr 1Q };
+    0x00600d01, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDClr,NoDDChk 1Q };
+    0x00600901, 0x204803fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.wF        1F                              { align16 NoDDChk 1Q };
+    0x00600124, 0x200f0c84, 0x006e0004, 0x00000014, // else(8)         JIP: 20                                         { align16 1Q };
+    0x01608110, 0x200f1ca4, 0x00600020, 0x00000001, // cmp.z.f0(8)     null            g1<4,4,1>.xD    1D              { align16 1Q switch };
+    0x00670122, 0x200f0c84, 0x000e0004, 0x000e000a, // (+f0.all4h) if(8) JIP: 10       UIP: 14                         { align16 1Q };
+    0x00600501, 0x204903fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.xwF       1F                              { align16 NoDDClr 1Q };
+    0x00600d01, 0x204203fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.yF        -1F                             { align16 NoDDClr,NoDDChk 1Q };
+    0x00600901, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDChk 1Q };
+    0x00600124, 0x200f0c84, 0x006e0004, 0x00000006, // else(8)         JIP: 6                                          { align16 1Q };
+    0x00600501, 0x204503fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.xzF       0F                              { align16 NoDDClr 1Q };
+    0x00600901, 0x204a03fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.ywF       1F                              { align16 NoDDChk 1Q };
+    0x00600125, 0x200f0c84, 0x006e0004, 0x00000002, // endif(8)        JIP: 2                                          { align16 1Q };
+    0x00600125, 0x200f0c84, 0x006e0004, 0x00000002, // endif(8)        JIP: 2                                          { align16 1Q };
+    0x00600101, 0x2e4f0061, 0x00000000, 0x00000000, // mov(8)          g114<1>UD       0x00000000UD                    { align16 1Q };
+    0x00600101, 0x2e6f03bd, 0x006e0044, 0x00000000, // mov(8)          g115<1>F        g2<4,4,1>F                      { align16 1Q };
+    0x00600301, 0x2e2f0021, 0x006e0004, 0x00000000, // mov(8)          g113<1>UD       g0<4,4,1>UD                     { align16 WE_all 1Q };
+    0x00000206, 0x2e340c21, 0x00000014, 0x0000ff00, // or(1)           g113.5<1>UD     g0.5<0,1,0>UD   0x0000ff00UD    { align1 WE_all };
+    0x06600131, 0x200f1fbc, 0x006e0e24, 0x8608c000, // send(8)         null            g113<4,4,1>F
+                                                    // urb 0 write HWord interleave complete mlen 3 rlen 0 { align16 1Q EOT };
+};
 
 class XglRenderTest : public ::testing::Test {
 public:
@@ -138,7 +204,7 @@ public:
                          XGL_IMAGE_VIEW* pView);
     void DestroyImageView(XGL_IMAGE_VIEW imageView);
     XGL_DEVICE device() {return m_device->device();}
-    void CreateShader(const char *filename, XGL_SHADER *pshader);
+    void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader);
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void DrawTriangleTest();
@@ -381,41 +447,44 @@ void XglRenderTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
     ASSERT_XGL_SUCCESS(xglDestroyObject(imageView));
 }
 
-void XglRenderTest::CreateShader(const char *filename, XGL_SHADER *pshader)
+void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader)
 {
     struct icd_bil_header *pBIL;
-    streampos size;
     char * memblock;
+    const char *kernel;
+    size_t kernel_size;
     XGL_RESULT err;
 
-    //    codeSize = sizeof(struct bil_header) + 100;
-    //    code = malloc(codeSize);
-    //    ASSERT_TRUE(NULL != code) << "malloc failed!";
+    const XGL_PHYSICAL_GPU_PROPERTIES *props = &m_device->props;
+    const int gen = (strstr((const char *) props->gpuName, "Sandybridge")) ? 6 : 7;
 
-    //    memset(code, 0, codeSize);
+    if (stage == XGL_SHADER_STAGE_VERTEX) {
+        if (gen == 6) {
+            kernel = (const char *) gen6_vs;
+            kernel_size = sizeof(gen6_vs);
+        } else {
+            kernel = (const char *) gen7_vs;
+            kernel_size = sizeof(gen7_vs);
+        }
+    } else {
+        if (gen == 6) {
+            kernel = (const char *) gen6_fs;
+            kernel_size = sizeof(gen6_fs);
+        } else {
+            kernel = (const char *) gen7_fs;
+            kernel_size = sizeof(gen7_fs);
+        }
+    }
 
-    //    // Indicate that this is BIL data.
-    //    pBIL = (struct bil_header *) code;
-    //    pBIL->bil_magic = BILMagicNumber;
-    //    pBIL->bil_version = BILVersion;
-
-    // reading an entire binary file
-    ifstream file (filename, ios::in|ios::binary|ios::ate);
-    ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
-
-    size = file.tellg();
-    memblock = new char [size];
+    memblock = new char [sizeof(*pBIL) + kernel_size];
     ASSERT_TRUE(memblock != NULL) << "memory allocation failed";
-
-    file.seekg (0, ios::beg);
-    file.read (memblock, size);
-    file.close();
 
     pBIL = (struct icd_bil_header *) memblock;
     pBIL->magic = ICD_BIL_MAGIC;
     pBIL->version = ICD_BIL_VERSION;
 
-    pBIL->gen_magic = filename[0];
+    pBIL->gen_magic = (stage == XGL_SHADER_STAGE_VERTEX) ? 'v' : 'w';
+    memcpy(pBIL + 1, kernel, kernel_size);
 
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
@@ -423,7 +492,7 @@ void XglRenderTest::CreateShader(const char *filename, XGL_SHADER *pshader)
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
     createInfo.pCode = memblock;
-    createInfo.codeSize = size;
+    createInfo.codeSize = sizeof(*pBIL) + kernel_size;
     createInfo.flags = 0;
     err = xglCreateShader(device(), &createInfo, &shader);
     ASSERT_XGL_SUCCESS(err);
@@ -600,7 +669,7 @@ void XglRenderTest::DrawTriangleTest()
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
 
-    ASSERT_NO_FATAL_FAILURE(CreateShader("vs-kernel.bin", &vs));
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX, &vs));
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
@@ -612,7 +681,7 @@ void XglRenderTest::DrawTriangleTest()
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    ASSERT_NO_FATAL_FAILURE(CreateShader("wm-kernel.bin", &ps));
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT, &ps));
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
