@@ -314,10 +314,10 @@ viewport_state_init(struct intel_viewport_state *state,
 
         /* CLIP_VIEWPORT */
         dw = clip_viewport;
-        dw[0] = ((float) min_gbx - translate[0]) / fabsf(scale[0]);
-        dw[1] = ((float) max_gbx - translate[0]) / fabsf(scale[0]);
-        dw[2] = ((float) min_gby - translate[1]) / fabsf(scale[1]);
-        dw[3] = ((float) max_gby - translate[1]) / fabsf(scale[1]);
+        dw[0] = u_fui(((float) min_gbx - translate[0]) / fabsf(scale[0]));
+        dw[1] = u_fui(((float) max_gbx - translate[0]) / fabsf(scale[0]));
+        dw[2] = u_fui(((float) min_gby - translate[1]) / fabsf(scale[1]));
+        dw[3] = u_fui(((float) max_gby - translate[1]) / fabsf(scale[1]));
         clip_viewport += clip_stride;
 
         /* CC_VIEWPORT */
