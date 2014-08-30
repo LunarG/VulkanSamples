@@ -516,7 +516,7 @@ void XglRenderTest::DrawTriangleTest()
     XGL_RASTER_STATE_CREATE_INFO raster = {};
     raster.sType = XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO;
     raster.fillMode = XGL_FILL_SOLID;
-    raster.cullMode = XGL_CULL_BACK;
+    raster.cullMode = XGL_CULL_NONE;
     raster.frontFace = XGL_FRONT_FACE_CCW;
     err = xglCreateRasterState( device(), &raster, &m_stateRaster );
     ASSERT_XGL_SUCCESS(err);
