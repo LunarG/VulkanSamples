@@ -530,6 +530,57 @@ static void gen7_3DSTATE_SBE(struct intel_cmd *cmd)
     cmd_batch_write_n(cmd, dw, cmd_len);
 }
 
+static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 4;
+    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) |
+                         (cmd_len - 2);
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
+    const struct intel_raster_state *raster = cmd->bind.state.raster;
+    uint32_t dw1, dw2, dw3;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    dw1 = GEN6_CLIP_DW1_STATISTICS;
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        dw1 |= GEN7_CLIP_DW1_SUBPIXEL_8BITS |
+               GEN7_CLIP_DW1_EARLY_CULL_ENABLE |
+               raster->cmd_clip_cull;
+    }
+
+    dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
+          GEN6_CLIP_DW2_XY_TEST_ENABLE |
+          GEN6_CLIP_DW2_APIMODE_OGL |
+          pipeline->provoking_vertex_tri << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
+          pipeline->provoking_vertex_line << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
+          pipeline->provoking_vertex_trifan << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
+
+    if (pipeline->rasterizerDiscardEnable)
+        dw2 |= GEN6_CLIP_DW2_CLIPMODE_REJECT_ALL;
+    else
+        dw2 |= GEN6_CLIP_DW2_CLIPMODE_NORMAL;
+
+    if (pipeline->depthClipEnable)
+        dw2 |= GEN6_CLIP_DW2_Z_TEST_ENABLE;
+
+    if (fs->barycentric_interps & (GEN6_INTERP_NONPERSPECTIVE_PIXEL |
+                                   GEN6_INTERP_NONPERSPECTIVE_CENTROID |
+                                   GEN6_INTERP_NONPERSPECTIVE_SAMPLE))
+        dw2 |= GEN6_CLIP_DW2_NONPERSPECTIVE_BARYCENTRIC_ENABLE;
+
+    dw3 = 0x1 << GEN6_CLIP_DW3_MIN_POINT_WIDTH__SHIFT |
+          0x7ff << GEN6_CLIP_DW3_MAX_POINT_WIDTH__SHIFT |
+          (viewport->viewport_count - 1);
+
+    cmd_batch_reserve(cmd, cmd_len);
+    cmd_batch_write(cmd, dw0);
+    cmd_batch_write(cmd, dw1);
+    cmd_batch_write(cmd, dw2);
+    cmd_batch_write(cmd, dw3);
+}
+
 static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const int max_threads = (cmd->dev->gpu->gt == 2) ? 80 : 40;
@@ -1461,6 +1512,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
 
+        gen6_3DSTATE_CLIP(cmd);
         gen7_3DSTATE_SF(cmd);
         gen7_3DSTATE_SBE(cmd);
         gen7_3DSTATE_WM(cmd);
@@ -1474,6 +1526,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
 
+        gen6_3DSTATE_CLIP(cmd);
         gen6_3DSTATE_SF(cmd);
         gen6_3DSTATE_WM(cmd);
     }
