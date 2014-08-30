@@ -462,6 +462,9 @@ layout_get_valid_tilings(const struct intel_layout *layout,
    const XGL_FORMAT format = layout->format;
    unsigned valid_tilings = LAYOUT_TILING_ALL;
 
+   if (info->tiling == XGL_LINEAR_TILING)
+       valid_tilings &= LAYOUT_TILING_NONE;
+
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 318:
     *
