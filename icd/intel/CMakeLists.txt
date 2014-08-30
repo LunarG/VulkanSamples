@@ -21,6 +21,7 @@ SET(SOURCES
     cmd.c
     cmd_prepare.c
     cmd_pipeline.c
+    cmd_query.c
     dev.c
     dispatch.c
     dset.c

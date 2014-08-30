@@ -1205,6 +1205,18 @@ void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
     gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0);
 }
 
+void cmd_batch_depth_count(struct intel_cmd *cmd,
+                           struct intel_bo *bo,
+                           XGL_GPU_SIZE offset)
+{
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+
+    gen6_PIPE_CONTROL(cmd,
+            GEN6_PIPE_CONTROL_DEPTH_STALL |
+            GEN6_PIPE_CONTROL_WRITE_PS_DEPTH_COUNT,
+            bo, offset);
+}
+
 static void gen6_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_blend_state *blend = cmd->bind.state.blend;

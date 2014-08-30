@@ -448,29 +448,6 @@ XGL_VOID XGLAPI intelCmdMemoryAtomic(
 {
 }
 
-XGL_VOID XGLAPI intelCmdBeginQuery(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    slot,
-    XGL_FLAGS                                   flags)
-{
-}
-
-XGL_VOID XGLAPI intelCmdEndQuery(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    slot)
-{
-}
-
-XGL_VOID XGLAPI intelCmdResetQueryPool(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    startQuery,
-    XGL_UINT                                    queryCount)
-{
-}
-
 XGL_VOID XGLAPI intelCmdWriteTimestamp(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_TIMESTAMP_TYPE                          timestampType,
