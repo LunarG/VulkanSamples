@@ -1184,6 +1184,24 @@ void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
     if (pipe_control_dw0 & GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH)
         cmd_wa_gen6_pre_depth_stall_write(cmd);
 
+    /*
+     * From the Ivy Bridge PRM, volume 2 part 1, page 61:
+     *
+     *     "One of the following must also be set (when CS stall is set):
+     *
+     *       * Render Target Cache Flush Enable ([12] of DW1)
+     *       * Depth Cache Flush Enable ([0] of DW1)
+     *       * Stall at Pixel Scoreboard ([1] of DW1)
+     *       * Depth Stall ([13] of DW1)
+     *       * Post-Sync Operation ([13] of DW1)"
+     */
+    if ((pipe_control_dw0 & GEN6_PIPE_CONTROL_CS_STALL) &&
+        !(pipe_control_dw0 & (GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH |
+                              GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                              GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL |
+                              GEN6_PIPE_CONTROL_DEPTH_STALL)))
+        pipe_control_dw0 |= GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL;
+
     gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0);
 }
 
