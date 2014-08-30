@@ -355,7 +355,6 @@ msaa_state_init(struct intel_msaa_state *state,
                 const XGL_MSAA_STATE_CREATE_INFO *info)
 {
     /* taken from Mesa */
-    static const uint32_t brw_multisample_positions_1x_2x = 0x0088cc44;
     static const uint32_t brw_multisample_positions_4x = 0xae2ae662;
     static const uint32_t brw_multisample_positions_8x[] = { 0xdbb39d79, 0x3ff55117 };
     uint32_t cmd, cmd_len;
@@ -375,7 +374,7 @@ msaa_state_init(struct intel_msaa_state *state,
     dw[0] = cmd | (cmd_len - 2);
     if (info->samples <= 1) {
         dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
-        dw[2] = brw_multisample_positions_1x_2x;
+        dw[2] = 0;
     } else if (info->samples <= 4 || intel_gpu_gen(gpu) == INTEL_GEN(6)) {
         dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
         dw[2] = brw_multisample_positions_4x;
