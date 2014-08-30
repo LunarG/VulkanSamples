@@ -27,6 +27,7 @@
 
 #include "kmd/winsys.h"
 #include "intel.h"
+#include "obj.h"
 
 struct intel_mem {
     struct intel_base base;
