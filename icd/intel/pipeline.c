@@ -437,7 +437,7 @@ static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
 
         if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7.5)) {
             const int max_vs_entry_count =
-                (builder->gpu->gt >= 2) ? 1644 : 640;
+                (builder->gpu->gt >= 2) ? 1664 : 640;
             const int max_gs_entry_count =
                 (builder->gpu->gt >= 2) ? 640 : 256;
             if (vs_entry_count >= max_vs_entry_count)
