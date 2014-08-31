@@ -96,6 +96,7 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
    const uint8_t cmd_len = 5;
    const uint32_t dw0 = GEN6_RENDER_CMD(3D, PIPE_CONTROL) |
                         (cmd_len - 2);
+   uint32_t reloc_flags = INTEL_RELOC_WRITE;
 
    CMD_ASSERT(cmd, 6, 7.5);
 
@@ -162,18 +163,18 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
     * The kernel will add the mapping automatically (when write domain is
     * INTEL_DOMAIN_INSTRUCTION).
     */
-   if (cmd_gen(cmd) == INTEL_GEN(6) && bo)
+   if (cmd_gen(cmd) == INTEL_GEN(6) && bo) {
       bo_offset |= GEN6_PIPE_CONTROL_DW2_USE_GGTT;
+      reloc_flags |= INTEL_RELOC_GGTT;
+   }
 
    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) bo);
    cmd_batch_write(cmd, dw0);
    cmd_batch_write(cmd, dw1);
-   if (bo) {
-       cmd_batch_reloc(cmd, bo_offset, bo, INTEL_RELOC_GGTT |
-                                           INTEL_RELOC_WRITE);
-   } else {
+   if (bo)
+       cmd_batch_reloc(cmd, bo_offset, bo, reloc_flags);
+   else
        cmd_batch_write(cmd, 0);
-   }
    cmd_batch_write(cmd, 0);
    cmd_batch_write(cmd, 0);
 }
