@@ -91,7 +91,8 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
 }
 
 static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
-                              struct intel_bo *bo, uint32_t bo_offset)
+                              struct intel_bo *bo, uint32_t bo_offset,
+                              uint64_t imm)
 {
    const uint8_t cmd_len = 5;
    const uint32_t dw0 = GEN6_RENDER_CMD(3D, PIPE_CONTROL) |
@@ -175,8 +176,8 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
        cmd_batch_reloc(cmd, bo_offset, bo, reloc_flags);
    else
        cmd_batch_write(cmd, 0);
-   cmd_batch_write(cmd, 0);
-   cmd_batch_write(cmd, 0);
+   cmd_batch_write(cmd, (uint32_t) imm);
+   cmd_batch_write(cmd, (uint32_t) (imm >> 32));
 }
 
 static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
@@ -1039,9 +1040,10 @@ static void cmd_wa_gen6_pre_depth_stall_write(struct intel_cmd *cmd)
     gen6_PIPE_CONTROL(cmd,
             GEN6_PIPE_CONTROL_CS_STALL |
             GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL,
-            NULL, 0);
+            NULL, 0, 0);
 
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM, cmd->scratch_bo, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM,
+            cmd->scratch_bo, 0, 0);
 }
 
 static void cmd_wa_gen6_pre_command_scoreboard_stall(struct intel_cmd *cmd)
@@ -1051,7 +1053,8 @@ static void cmd_wa_gen6_pre_command_scoreboard_stall(struct intel_cmd *cmd)
     if (!cmd->bind.draw_count)
         return;
 
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL,
+            NULL, 0, 0);
 }
 
 static void cmd_wa_gen7_pre_vs_depth_stall_write(struct intel_cmd *cmd)
@@ -1065,7 +1068,7 @@ static void cmd_wa_gen7_pre_vs_depth_stall_write(struct intel_cmd *cmd)
 
     gen6_PIPE_CONTROL(cmd,
             GEN6_PIPE_CONTROL_DEPTH_STALL | GEN6_PIPE_CONTROL_WRITE_IMM,
-            cmd->scratch_bo, 0);
+            cmd->scratch_bo, 0, 0);
 }
 
 static void cmd_wa_gen7_post_command_cs_stall(struct intel_cmd *cmd)
@@ -1089,7 +1092,7 @@ static void cmd_wa_gen7_post_command_cs_stall(struct intel_cmd *cmd)
     gen6_PIPE_CONTROL(cmd,
             GEN6_PIPE_CONTROL_CS_STALL |
             GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL,
-            NULL, 0);
+            NULL, 0, 0);
 }
 
 static void cmd_wa_gen7_post_command_depth_stall(struct intel_cmd *cmd)
@@ -1101,7 +1104,7 @@ static void cmd_wa_gen7_post_command_depth_stall(struct intel_cmd *cmd)
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
 
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0, 0);
 }
 
 static void cmd_wa_gen6_pre_multisample_depth_flush(struct intel_cmd *cmd)
@@ -1129,7 +1132,7 @@ static void cmd_wa_gen6_pre_multisample_depth_flush(struct intel_cmd *cmd)
     gen6_PIPE_CONTROL(cmd,
             GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
             GEN6_PIPE_CONTROL_CS_STALL,
-            0, 0);
+            NULL, 0, 0);
 }
 
 static void cmd_wa_gen6_pre_ds_flush(struct intel_cmd *cmd)
@@ -1164,9 +1167,9 @@ static void cmd_wa_gen6_pre_ds_flush(struct intel_cmd *cmd)
      *      guarantee that the pipeline from WM onwards is already flushed
      *      (e.g., via a preceding MI_FLUSH)."
      */
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0);
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH, NULL, 0, 0);
+    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0, 0);
 }
 
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
@@ -1203,7 +1206,7 @@ void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
                               GEN6_PIPE_CONTROL_DEPTH_STALL)))
         pipe_control_dw0 |= GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL;
 
-    gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0);
+    gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0, 0);
 }
 
 void cmd_batch_depth_count(struct intel_cmd *cmd,
@@ -1215,7 +1218,7 @@ void cmd_batch_depth_count(struct intel_cmd *cmd,
     gen6_PIPE_CONTROL(cmd,
             GEN6_PIPE_CONTROL_DEPTH_STALL |
             GEN6_PIPE_CONTROL_WRITE_PS_DEPTH_COUNT,
-            bo, offset);
+            bo, offset, 0);
 }
 
 static void gen6_cc_states(struct intel_cmd *cmd)
