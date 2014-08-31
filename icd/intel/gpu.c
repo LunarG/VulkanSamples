@@ -404,9 +404,22 @@ XGL_RESULT XGLAPI intelGetExtensionSupport(
 }
 
 XGL_RESULT XGLAPI intelGetMultiGpuCompatibility(
-    XGL_PHYSICAL_GPU                            gpu0,
-    XGL_PHYSICAL_GPU                            gpu1,
+    XGL_PHYSICAL_GPU                            gpu0_,
+    XGL_PHYSICAL_GPU                            gpu1_,
     XGL_GPU_COMPATIBILITY_INFO*                 pInfo)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    const struct intel_gpu *gpu0 = intel_gpu(gpu0_);
+    const struct intel_gpu *gpu1 = intel_gpu(gpu1_);
+    XGL_FLAGS compat = XGL_GPU_COMPAT_IQ_MATCH_BIT |
+                       XGL_GPU_COMPAT_PEER_TRANSFER_BIT |
+                       XGL_GPU_COMPAT_SHARED_MEMORY_BIT |
+                       XGL_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT |
+                       XGL_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT;
+
+    if (intel_gpu_gen(gpu0) == intel_gpu_gen(gpu1))
+        compat |= XGL_GPU_COMPAT_ASIC_FEATURES_BIT;
+
+    pInfo->compatibilityFlags = compat;
+
+    return XGL_SUCCESS;
 }
