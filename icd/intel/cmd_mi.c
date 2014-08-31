@@ -23,6 +23,7 @@
  */
 
 #include "mem.h"
+#include "event.h"
 #include "obj.h"
 #include "query.h"
 #include "cmd_priv.h"
@@ -161,4 +162,49 @@ XGL_VOID XGLAPI intelCmdResetQueryPool(
     XGL_UINT                                    startQuery,
     XGL_UINT                                    queryCount)
 {
+    /* no-op */
+}
+
+XGL_VOID XGLAPI intelCmdSetEvent(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_EVENT                                   event_)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_event *event = intel_event(event_);
+
+    cmd_batch_immediate(cmd, event->obj.mem->bo, 0, 1);
+}
+
+XGL_VOID XGLAPI intelCmdResetEvent(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_EVENT                                   event_)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_event *event = intel_event(event_);
+
+    cmd_batch_immediate(cmd, event->obj.mem->bo, 0, 0);
+}
+
+XGL_VOID XGLAPI intelCmdWriteTimestamp(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_TIMESTAMP_TYPE                          timestampType,
+    XGL_GPU_MEMORY                              destMem,
+    XGL_GPU_SIZE                                destOffset)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_mem *mem = intel_mem(destMem);
+
+    switch (timestampType) {
+    case XGL_TIMESTAMP_TOP:
+        /* XXX we are not supposed to use two commands... */
+        gen6_MI_STORE_REGISTER_MEM(cmd, mem->bo, destOffset, GEN6_REG_TIMESTAMP);
+        gen6_MI_STORE_REGISTER_MEM(cmd, mem->bo, destOffset + 4, GEN6_REG_TIMESTAMP + 4);
+        break;
+    case XGL_TIMESTAMP_BOTTOM:
+        cmd_batch_timestamp(cmd, mem->bo, destOffset);
+        break;
+    default:
+        cmd->result = XGL_ERROR_INVALID_VALUE;
+        break;
+    }
 }

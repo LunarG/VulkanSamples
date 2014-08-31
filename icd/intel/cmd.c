@@ -427,32 +427,12 @@ XGL_VOID XGLAPI intelCmdResolveImage(
 {
 }
 
-XGL_VOID XGLAPI intelCmdSetEvent(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event)
-{
-}
-
-XGL_VOID XGLAPI intelCmdResetEvent(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event)
-{
-}
-
 XGL_VOID XGLAPI intelCmdMemoryAtomic(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              destMem,
     XGL_GPU_SIZE                                destOffset,
     XGL_UINT64                                  srcData,
     XGL_ATOMIC_OP                               atomicOp)
-{
-}
-
-XGL_VOID XGLAPI intelCmdWriteTimestamp(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_TIMESTAMP_TYPE                          timestampType,
-    XGL_GPU_MEMORY                              destMem,
-    XGL_GPU_SIZE                                destOffset)
 {
 }
 
