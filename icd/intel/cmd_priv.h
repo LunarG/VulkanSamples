@@ -213,6 +213,14 @@ void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
                            XGL_GPU_SIZE offset);
 
+void cmd_batch_timestamp(struct intel_cmd *cmd,
+                         struct intel_bo *bo,
+                         XGL_GPU_SIZE offset);
+
+void cmd_batch_immediate(struct intel_cmd *cmd,
+                         struct intel_bo *bo,
+                         XGL_GPU_SIZE offset,
+                         uint64_t val);
 /**
  * Reserve \p len DWords in the state buffer for building a hardware state.
  * The current writer position is aligned to \p alignment first.  Both the
