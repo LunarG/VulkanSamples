@@ -141,8 +141,6 @@ struct intel_pipeline {
 
     struct intel_dev *dev;
 
-    bool has_gen6_wa_pipe_control;
-
     /* XGL IA_STATE */
     XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state;
     int prim_type;
@@ -178,47 +176,6 @@ struct intel_pipeline {
     struct intel_pipe_shader tess_control;
     struct intel_pipe_shader tess_eval;
     struct intel_pipe_shader compute;
-
-    int reduced_prim;
-    int so_num_vertices, so_max_vertices;
-
-    uint32_t SF_VIEWPORT;
-    uint32_t CLIP_VIEWPORT;
-    uint32_t SF_CLIP_VIEWPORT; /* GEN7+ */
-    uint32_t CC_VIEWPORT;
-
-    uint32_t COLOR_CALC_STATE;
-    uint32_t BLEND_STATE;
-    uint32_t DEPTH_STENCIL_STATE;
-
-    uint32_t SCISSOR_RECT;
-
-    struct {
-        uint32_t BINDING_TABLE_STATE;
-        int BINDING_TABLE_STATE_size;
-        uint32_t SURFACE_STATE[INTEL_MAX_VS_SURFACES];
-        uint32_t SAMPLER_STATE;
-        uint32_t SAMPLER_BORDER_COLOR_STATE[INTEL_MAX_SAMPLERS];
-        uint32_t PUSH_CONSTANT_BUFFER;
-        int PUSH_CONSTANT_BUFFER_size;
-    } vs_state;
-
-    struct {
-        uint32_t BINDING_TABLE_STATE;
-        int BINDING_TABLE_STATE_size;
-        uint32_t SURFACE_STATE[INTEL_MAX_GS_SURFACES];
-        bool active;
-    } gs_state;
-
-    struct {
-        uint32_t BINDING_TABLE_STATE;
-        int BINDING_TABLE_STATE_size;
-        uint32_t SURFACE_STATE[INTEL_MAX_WM_SURFACES];
-        uint32_t SAMPLER_STATE;
-        uint32_t SAMPLER_BORDER_COLOR_STATE[INTEL_MAX_SAMPLERS];
-        uint32_t PUSH_CONSTANT_BUFFER;
-        int PUSH_CONSTANT_BUFFER_size;
-    } wm_state;
 
     uint32_t wa_flags;
 
