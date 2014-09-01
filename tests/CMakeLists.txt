@@ -1,3 +1,8 @@
+include (FindPkgConfig)
+
+find_package (OpenGL REQUIRED)
+find_package (GLUT REQUIRED)
+
 SET(COMMON
     common.c
     )
@@ -26,11 +31,11 @@ set_target_properties(xgl_image_tests
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_image_tests XGL gtest gtest_main)
 
-add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP})
+add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP} displayengine.cpp)
 set_target_properties(xgl_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_render_tests XGL gtest gtest_main)
+target_link_libraries(xgl_render_tests XGL gtest gtest_main ${OPENGL_gl_LIBRARY} ${GLUT_glut_LIBRARY})
 
 target_link_libraries(xglinfo XGL)
 

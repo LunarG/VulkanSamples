@@ -67,6 +67,8 @@ using namespace std;
 #include "xgldevice.h"
 #include "icd-bil.h"
 
+#include "displayengine.h"
+
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
@@ -209,6 +211,7 @@ public:
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void DrawTriangleTest();
     void WritePPM( const char *filename, int width, int height );
+    DisplayEngine m_screen;
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -261,7 +264,6 @@ protected:
     }
 };
 
-
 void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
                                 XGL_GPU_MEMORY *pMem)
 {
@@ -272,6 +274,8 @@ void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
     XGL_FORMAT_PROPERTIES image_fmt;
 
     mipCount = 0;
+
+    m_screen.Init(true, w, h);
 
     XGL_UINT _w = w;
     XGL_UINT _h = h;
@@ -878,6 +882,7 @@ void XglRenderTest::DrawTriangleTest()
     DestroyQueryPool(query, query_mem);
 
     WritePPM( "TriangleTest.ppm", width, height );
+    m_screen.Display(m_image, m_image_mem);
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_cmdBuffer));
@@ -941,6 +946,8 @@ TEST_F(XglRenderTest, TestDrawTriangle) {
 }
 
 int main(int argc, char **argv) {
+//    glutInit(argc, argv);
     ::testing::InitGoogleTest(&argc, argv);
+    glutInit(&argc, argv);
     return RUN_ALL_TESTS();
 }
