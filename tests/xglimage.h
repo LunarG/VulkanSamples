@@ -23,7 +23,7 @@
 #ifndef XGLIMAGE_H
 #define XGLIMAGE_H
 
-#include "xglgpu.h"
+#include "xgldevice.h"
 
 /**
 *******************************************************************************
@@ -37,7 +37,7 @@
 class XglImage
 {
 public:
-    XglImage();
+    XglImage(XglDevice *dev);
 
     virtual ~XglImage();
 
@@ -49,10 +49,9 @@ public:
     //        XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
     //        XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
     //    } XGL_IMAGE_USAGE_FLAGS;
-
-    XGL_RESULT init( XGL_UINT32 heap, XGL_UINT32 w, XGL_UINT32 h,
-                     XGL_FORMAT fmt, XGL_FLAGS usage, XGL_UINT32 mipCount,
-                     bool cpuAccess = false );
+public:
+    void init( XGL_UINT32 w, XGL_UINT32 h,
+                     XGL_FORMAT fmt, XGL_FLAGS usage);
 
     //    void clear( CommandBuffer*, XGL_UINT[4] );
     //    void prepare( CommandBuffer*, XGL_IMAGE_STATE );
@@ -62,11 +61,16 @@ public:
         m_imageInfo.state = state;
     }
 
+    XGL_DEVICE device() const
+    {
+        return m_device->device();
+    }
+
     XGL_IMAGE image() const
     {
         return m_image;
     }
-    XGL_COLOR_TARGET_VIEW targetView()const
+    XGL_COLOR_ATTACHMENT_VIEW targetView()const
     {
         return m_targetView;
     }
@@ -113,11 +117,13 @@ public:
         return format.channelFormat >= XGL_CH_FMT_BC1 && format.channelFormat <= XGL_CH_FMT_BC7;
     }
 
+    void WritePPM(const char *filename);
+
 protected:
-    XglGpu *m_pgpu;
+    XglDevice *m_device;
 
     XGL_IMAGE                    m_image;
-    XGL_COLOR_TARGET_VIEW        m_targetView;
+    XGL_COLOR_ATTACHMENT_VIEW    m_targetView;
     XGL_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
 
     XGL_GPU_MEMORY               m_memory;
@@ -128,6 +134,6 @@ protected:
     XGL_UINT32                   m_width;
     XGL_UINT32                   m_height;
     XGL_UINT32                   m_mipCount;
-}
+};
 
 #endif // XGLIMAGE_H
