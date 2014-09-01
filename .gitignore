@@ -1,0 +1,16 @@
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+__pycache__
+XGLConfig.h
+*.so
+*.so.*
+icd/common/icd-dispatch-entrypoints.c
+icd/common/icd-dispatch-table.h
+icd/intel/GitSHA1.c
+loader/dispatch.c
+tests/xgl_image_tests
+tests/xgl_render_tests
+tests/xglbase
+tests/xglinfo
