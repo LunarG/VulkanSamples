@@ -109,7 +109,6 @@ protected:
 void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
 {
     XGL_RESULT err;
-    XGL_IMAGE image;
     XGL_UINT mipCount;
     XGL_SIZE size;
     XGL_FORMAT fmt;
@@ -190,7 +189,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
 
     XGL_MEMORY_REQUIREMENTS mem_req;
     XGL_UINT data_size;
-    err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
@@ -213,7 +212,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     err = xglAllocMemory(device(), &mem_info, &m_image_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(image, m_image_mem, 0);
+    err = xglBindObjectMemory(m_image, m_image_mem, 0);
     ASSERT_XGL_SUCCESS(err);
 }
 
