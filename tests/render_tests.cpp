@@ -65,6 +65,7 @@ using namespace std;
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
+#include "xglimage.h"
 #include "icd-bil.h"
 
 #include "displayengine.h"
@@ -194,32 +195,21 @@ static const uint32_t gen7_vs[] = {
 
 class XglRenderTest : public ::testing::Test {
 public:
-    void CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
-                     XGL_GPU_MEMORY *pMem);
-    void DestroyImage();
-
     void CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
                          XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem);
     void DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem);
 
-    void CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
-                         XGL_IMAGE_VIEW* pView);
-    void DestroyImageView(XGL_IMAGE_VIEW imageView);
     XGL_DEVICE device() {return m_device->device();}
     void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader);
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void DrawTriangleTest();
-    void WritePPM( const char *filename, int width, int height );
     DisplayEngine m_screen;
 
 protected:
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
     XGL_UINT gpu_count;
-    XGL_IMAGE           m_image;
-    XGL_IMAGE_STATE     m_image_state;
-    XGL_GPU_MEMORY      m_image_mem;
     XGL_GPU_MEMORY      m_descriptor_set_mem;
     XGL_GPU_MEMORY      m_pipe_mem;
     XglDevice *m_device;
@@ -264,130 +254,6 @@ protected:
     }
 };
 
-void XglRenderTest::CreateImage(XGL_UINT w, XGL_UINT h, XGL_IMAGE *pImage,
-                                XGL_GPU_MEMORY *pMem)
-{
-    XGL_RESULT err;
-    XGL_UINT mipCount;
-    XGL_SIZE size;
-    XGL_FORMAT fmt;
-    XGL_FORMAT_PROPERTIES image_fmt;
-
-    mipCount = 0;
-
-    m_screen.Init(true, w, h);
-
-    XGL_UINT _w = w;
-    XGL_UINT _h = h;
-    while( ( _w > 0 ) || ( _h > 0 ) )
-    {
-        _w >>= 1;
-        _h >>= 1;
-        mipCount++;
-    }
-
-    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    fmt.numericFormat = XGL_NUM_FMT_UNORM;
-    // TODO: Pick known good format rather than just expect common format
-    /*
-     * XXX: What should happen if given NULL HANDLE for the pData argument?
-     * We're not requesting XGL_INFO_TYPE_MEMORY_REQUIREMENTS so there is
-     * an expectation that pData is a valid pointer.
-     * However, why include a returned size value? That implies that the
-     * amount of data may vary and that doesn't work well for using a
-     * fixed structure.
-     */
-
-    err = xglGetFormatInfo(this->m_device->device(), fmt,
-                           XGL_INFO_TYPE_FORMAT_PROPERTIES,
-                           &size, &image_fmt);
-    ASSERT_XGL_SUCCESS(err);
-
-    //    typedef struct _XGL_IMAGE_CREATE_INFO
-    //    {
-    //        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO
-    //        const XGL_VOID*                         pNext;                      // Pointer to next structure.
-    //        XGL_IMAGE_TYPE                          imageType;
-    //        XGL_FORMAT                              format;
-    //        XGL_EXTENT3D                            extent;
-    //        XGL_UINT                                mipLevels;
-    //        XGL_UINT                                arraySize;
-    //        XGL_UINT                                samples;
-    //        XGL_IMAGE_TILING                        tiling;
-    //        XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
-    //        XGL_FLAGS                               flags;                      // XGL_IMAGE_CREATE_FLAGS
-    //    } XGL_IMAGE_CREATE_INFO;
-
-
-    XGL_IMAGE_CREATE_INFO imageCreateInfo = {};
-    imageCreateInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = XGL_IMAGE_2D;
-    imageCreateInfo.format = fmt;
-    imageCreateInfo.arraySize = 1;
-    imageCreateInfo.extent.width = w;
-    imageCreateInfo.extent.height = h;
-    imageCreateInfo.extent.depth = 1;
-    imageCreateInfo.mipLevels = mipCount;
-    imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = XGL_LINEAR_TILING;
-
-    // Image usage flags
-    //    typedef enum _XGL_IMAGE_USAGE_FLAGS
-    //    {
-    //        XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
-    //        XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
-    //        XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
-    //        XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
-    //    } XGL_IMAGE_USAGE_FLAGS;
-    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    //    XGL_RESULT XGLAPI xglCreateImage(
-    //        XGL_DEVICE                                  device,
-    //        const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
-    //        XGL_IMAGE*                                  pImage);
-    err = xglCreateImage(device(), &imageCreateInfo, pImage);
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
-    err = xglGetObjectInfo(*pImage, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
-
-    m_image_state = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
-
-    //        XGL_RESULT XGLAPI xglAllocMemory(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    //            XGL_GPU_MEMORY*                             pMem);
-    XGL_MEMORY_ALLOC_INFO mem_info;
-
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
-    mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(device(), &mem_info, pMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglBindObjectMemory(*pImage, *pMem, 0);
-    ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderTest::DestroyImage()
-{
-    // All done with image memory, clean up
-    ASSERT_XGL_SUCCESS(xglBindObjectMemory(m_image, XGL_NULL_HANDLE, 0));
-
-    ASSERT_XGL_SUCCESS(xglFreeMemory(m_image_mem));
-
-    ASSERT_XGL_SUCCESS(xglDestroyObject(m_image));
-}
 
 void XglRenderTest::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
                                     XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem)
@@ -437,18 +303,6 @@ void XglRenderTest::DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem)
     ASSERT_XGL_SUCCESS(xglBindObjectMemory(pool, XGL_NULL_HANDLE, 0));
     ASSERT_XGL_SUCCESS(xglFreeMemory(mem));
     ASSERT_XGL_SUCCESS(xglDestroyObject(pool));
-}
-
-void XglRenderTest::CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
-                                   XGL_IMAGE_VIEW *pView)
-{
-    pCreateInfo->image = this->m_image;
-    ASSERT_XGL_SUCCESS(xglCreateImageView(device(), pCreateInfo, pView));
-}
-
-void XglRenderTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
-{
-    ASSERT_XGL_SUCCESS(xglDestroyObject(imageView));
 }
 
 void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader)
@@ -645,7 +499,15 @@ void XglRenderTest::DrawTriangleTest()
     err = xglCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
     ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
 
-    ASSERT_NO_FATAL_FAILURE(CreateImage(width, height, &m_image, &m_image_mem));
+    XglImage *renderTarget;
+    XGL_FORMAT fmt = {
+        XGL_CH_FMT_R8G8B8A8,
+        XGL_NUM_FMT_UNORM
+    };
+    ASSERT_NO_FATAL_FAILURE(m_device->CreateImage(width, height, fmt,
+                                                  XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
+                                                  XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                                  &renderTarget));
 
 #if 0
     // Create descriptor set for our one resource
@@ -753,30 +615,6 @@ void XglRenderTest::DrawTriangleTest()
     ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
     ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
 
-//    typedef struct _XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO
-//    {
-//        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
-//        XGL_VOID*                               pNext;                  // Pointer to next structure
-//        XGL_IMAGE                               image;
-//        XGL_FORMAT                              format;
-//        XGL_UINT                                mipLevel;
-//        XGL_UINT                                baseArraySlice;
-//        XGL_UINT                                arraySize;
-//    } XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
-    XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
-        XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
-        XGL_NULL_HANDLE,
-        this->m_image,
-        {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM},
-        0,
-        0,
-        1
-    };
-    XGL_COLOR_ATTACHMENT_VIEW colorView;
-
-    err = xglCreateColorAttachmentView(device(), &createView, &colorView);
-    ASSERT_XGL_SUCCESS(err);
-
     XGL_QUERY_POOL query;
     XGL_GPU_MEMORY query_mem;
     ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
@@ -795,29 +633,29 @@ void XglRenderTest::DrawTriangleTest()
 
     // prepare the whole back buffer for clear
     XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
-    transitionToClear.image = m_image;
-    transitionToClear.oldState = m_image_state;
+    transitionToClear.image = renderTarget->image();
+    transitionToClear.oldState = renderTarget->state();
     transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
     transitionToClear.subresourceRange = srRange;
     xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
-    m_image_state = ( XGL_IMAGE_STATE ) transitionToClear.newState;
+    renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
 
     // clear the back buffer to dark grey
     XGL_UINT clearColor[4] = {64, 64, 64, 0};
-    xglCmdClearColorImageRaw( m_cmdBuffer, m_image, clearColor, 1, &srRange );
+    xglCmdClearColorImageRaw( m_cmdBuffer, renderTarget->image(), clearColor, 1, &srRange );
 
     // prepare back buffer for rendering
     XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
-    transitionToRender.image = m_image;
-    transitionToRender.oldState = m_image_state;
+    transitionToRender.image = renderTarget->image();
+    transitionToRender.oldState = renderTarget->state();
     transitionToRender.newState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     transitionToRender.subresourceRange = srRange;
     xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
-    m_image_state = ( XGL_IMAGE_STATE ) transitionToRender.newState;
+    renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
 
     // bind render target
     XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
-    colorBind.view  = colorView;
+    colorBind.view  = renderTarget->targetView();
     colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
 
@@ -881,8 +719,11 @@ void XglRenderTest::DrawTriangleTest()
 
     DestroyQueryPool(query, query_mem);
 
-    WritePPM( "TriangleTest.ppm", width, height );
-    m_screen.Display(m_image, m_image_mem);
+    const ::testing::TestInfo* const test_info =
+      ::testing::UnitTest::GetInstance()->current_test_info();
+
+    renderTarget->WritePPM(test_info->test_case_name());
+//    m_screen.Display(renderTarget, m_image_mem);
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_cmdBuffer));
@@ -890,63 +731,15 @@ void XglRenderTest::DrawTriangleTest()
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateViewport));
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateDepthStencil));
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateMsaa));
-    DestroyImage();
-    // DestroyImageView();
+    free(renderTarget);
 }
 
-void XglRenderTest::WritePPM( const char *filename, int width, int height )
-{
-    XGL_RESULT err;
-    int x, y;
-
-    const XGL_IMAGE_SUBRESOURCE sr = {
-        XGL_IMAGE_ASPECT_COLOR, 0, 0
-    };
-    XGL_SUBRESOURCE_LAYOUT sr_layout;
-    XGL_UINT data_size;
-
-    err = xglGetImageSubresourceInfo( m_image, &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &data_size, &sr_layout);
-    ASSERT_XGL_SUCCESS( err );
-    ASSERT_EQ(data_size, sizeof(sr_layout));
-
-    const char *ptr;
-
-    err = xglMapMemory( m_image_mem, 0, (XGL_VOID **) &ptr );
-    ASSERT_XGL_SUCCESS( err );
-
-    ptr += sr_layout.offset;
-
-    ofstream file (filename);
-    ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
-
-    file << "P6\n";
-    file << width << "\n";
-    file << height << "\n";
-    file << 255 << "\n";
-
-    for (y = 0; y < height; y++) {
-        const char *row = ptr;
-
-        for (x = 0; x < width; x++) {
-            file.write(row, 3);
-            row += 4;
-        }
-
-        ptr += sr_layout.rowPitch;
-    }
-
-    file.close();
-
-    err = xglUnmapMemory( m_image_mem );
-    ASSERT_XGL_SUCCESS( err );
-}
 
 TEST_F(XglRenderTest, TestDrawTriangle) {
     DrawTriangleTest();
 }
 
 int main(int argc, char **argv) {
-//    glutInit(argc, argv);
     ::testing::InitGoogleTest(&argc, argv);
     glutInit(&argc, argv);
     return RUN_ALL_TESTS();
