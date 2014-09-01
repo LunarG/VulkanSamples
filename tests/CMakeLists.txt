@@ -10,6 +10,7 @@ SET(COMMON
 SET(COMMON_CPP
     xglgpu.cpp
     xgldevice.cpp
+    xglimage.cpp
    )
 
 include_directories(

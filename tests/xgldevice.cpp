@@ -1,5 +1,7 @@
-#include "gtest-1.7.0/include/gtest/gtest.h"
+
+
 #include "xgldevice.h"
+#include "xglimage.h"
 
 XglDevice::XglDevice(XGL_UINT id, XGL_PHYSICAL_GPU obj) :
     m_flags(0),
@@ -111,4 +113,16 @@ XGL_RESULT XglDevice::AllocAndBindGpuMemory(XGL_OBJECT obj, const std::string &o
     }
 
     return err;
+}
+
+void XglDevice::CreateImage(XGL_UINT32 w, XGL_UINT32 h,
+                 XGL_FORMAT fmt, XGL_FLAGS usage,
+                 XglImage **pImage)
+{
+    XglImage *new_image;
+
+    new_image = new XglImage(this);
+    new_image->init(w, h, fmt, usage);
+
+    *pImage = new_image;
 }
