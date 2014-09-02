@@ -320,13 +320,14 @@ static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
 static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
                                           const struct intel_pipeline_create_info *info)
 {
-    const int urb_size = ((info->gpu->gt == 2) ? 64 : 32) * 1024;
+    const struct intel_gpu *gpu = pipeline->dev->gpu;
+    const int urb_size = ((gpu->gt == 2) ? 64 : 32) * 1024;
     const struct intel_shader *vs = intel_shader(info->vs.shader);
     const struct intel_shader *gs = intel_shader(info->gs.shader);
     int vs_entry_size, gs_entry_size;
     int vs_size, gs_size;
 
-    INTEL_GPU_ASSERT(info->gpu, 6, 6);
+    INTEL_GPU_ASSERT(gpu, 6, 6);
 
     vs_entry_size = ((vs->in_count >= vs->out_count) ?
         vs->in_count : vs->out_count);
@@ -388,16 +389,17 @@ static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
 static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
                                           const struct intel_pipeline_create_info *info)
 {
-    const int urb_size = ((info->gpu->gt == 3) ? 512 :
-                          (info->gpu->gt == 2) ? 256 : 128) * 1024;
+    const struct intel_gpu *gpu = pipeline->dev->gpu;
+    const int urb_size = ((gpu->gt == 3) ? 512 :
+                          (gpu->gt == 2) ? 256 : 128) * 1024;
     const struct intel_shader *vs = intel_shader(info->vs.shader);
     const struct intel_shader *gs = intel_shader(info->gs.shader);
     /* some space is reserved for PCBs */
-    int urb_offset = ((info->gpu->gt == 3) ? 32 : 16) * 1024;
+    int urb_offset = ((gpu->gt == 3) ? 32 : 16) * 1024;
     int vs_entry_size, gs_entry_size;
     int vs_size, gs_size;
 
-    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(gpu, 7, 7.5);
 
     vs_entry_size = ((vs->in_count >= vs->out_count) ?
         vs->in_count : vs->out_count);
@@ -441,20 +443,20 @@ static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
 
         gs_entry_count = (gs_size / 64 / gs_alloc_size) & ~7;
 
-        if (intel_gpu_gen(info->gpu) >= INTEL_GEN(7.5)) {
+        if (intel_gpu_gen(gpu) >= INTEL_GEN(7.5)) {
             const int max_vs_entry_count =
-                (info->gpu->gt >= 2) ? 1664 : 640;
+                (gpu->gt >= 2) ? 1664 : 640;
             const int max_gs_entry_count =
-                (info->gpu->gt >= 2) ? 640 : 256;
+                (gpu->gt >= 2) ? 640 : 256;
             if (vs_entry_count >= max_vs_entry_count)
                 vs_entry_count = max_vs_entry_count;
             if (gs_entry_count >= max_gs_entry_count)
                 gs_entry_count = max_gs_entry_count;
         } else {
             const int max_vs_entry_count =
-                (info->gpu->gt == 2) ? 704 : 512;
+                (gpu->gt == 2) ? 704 : 512;
             const int max_gs_entry_count =
-                (info->gpu->gt == 2) ? 320 : 192;
+                (gpu->gt == 2) ? 320 : 192;
             if (vs_entry_count >= max_vs_entry_count)
                 vs_entry_count = max_vs_entry_count;
             if (gs_entry_count >= max_gs_entry_count)
@@ -494,7 +496,7 @@ static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline
     uint32_t *dw;
     int end;
 
-    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 7, 7.5);
 
     /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 68:
@@ -575,7 +577,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
                      GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE };
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(info->gpu, 6, 7.5);
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
     if (!(vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)))
         return;
@@ -610,7 +612,7 @@ static void pipeline_build_hs(struct intel_pipeline *pipeline,
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_HS) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 7, 7.5);
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = dw0;
@@ -629,7 +631,7 @@ static void pipeline_build_te(struct intel_pipeline *pipeline,
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_TE) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 7, 7.5);
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = dw0;
@@ -645,7 +647,7 @@ static void pipeline_build_ds(struct intel_pipeline *pipeline,
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_DS) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 7, 7.5);
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = dw0;
@@ -663,7 +665,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 
     pipeline_build_vertex_elements(pipeline, info);
 
-    if (intel_gpu_gen(info->gpu) >= INTEL_GEN(7)) {
+    if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
         pipeline_build_urb_alloc_gen7(pipeline, info);
         pipeline_build_push_const_alloc_gen7(pipeline, info);
         pipeline_build_gs(pipeline, info);
@@ -714,12 +716,9 @@ struct intel_pipeline_create_info_header {
 };
 
 static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *info,
-                                            const struct intel_gpu *gpu,
                                             const struct intel_pipeline_create_info_header *header)
 {
     memset(info, 0, sizeof(*info));
-
-    info->gpu = gpu;
 
     while (header) {
         const void *src = (const void *) header;
@@ -809,7 +808,7 @@ static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
     struct intel_pipeline *pipeline;
     XGL_RESULT ret;
 
-    ret = pipeline_create_info_init(&info, dev->gpu,
+    ret = pipeline_create_info_init(&info,
             (const struct intel_pipeline_create_info_header *) info_);
     if (ret != XGL_SUCCESS)
         return ret;

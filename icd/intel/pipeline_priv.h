@@ -32,8 +32,6 @@
 #include "pipeline.h"
 
 struct intel_pipeline_create_info {
-    const struct intel_gpu *gpu;
-
     XGL_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
     XGL_PIPELINE_IA_STATE_CREATE_INFO   ia;
     XGL_PIPELINE_DB_STATE_CREATE_INFO   db;
