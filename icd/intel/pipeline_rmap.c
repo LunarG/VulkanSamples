@@ -347,7 +347,7 @@ static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipeline_shader *tcs = &pipeline->tess_control;
+    struct intel_pipeline_shader *tcs = &pipeline->tcs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(tcs, intel_shader(info->tcs.shader));
@@ -369,7 +369,7 @@ static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipeline_shader *tes = &pipeline->tess_eval;
+    struct intel_pipeline_shader *tes = &pipeline->tes;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(tes, intel_shader(info->tes.shader));
@@ -445,7 +445,7 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipeline_shader *cs = &pipeline->compute;
+    struct intel_pipeline_shader *cs = &pipeline->cs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(cs, intel_shader(info->compute.cs.shader));
@@ -502,11 +502,11 @@ void pipeline_tear_shaders(struct intel_pipeline *pipeline)
     }
 
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        pipeline_tear_shader(&pipeline->tess_control);
+        pipeline_tear_shader(&pipeline->tcs);
     }
 
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        pipeline_tear_shader(&pipeline->tess_eval);
+        pipeline_tear_shader(&pipeline->tes);
     }
 
     if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
@@ -518,6 +518,6 @@ void pipeline_tear_shaders(struct intel_pipeline *pipeline)
     }
 
     if (pipeline->active_shaders & SHADER_COMPUTE_FLAG) {
-        pipeline_tear_shader(&pipeline->compute);
+        pipeline_tear_shader(&pipeline->cs);
     }
 }

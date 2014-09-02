@@ -1709,10 +1709,10 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
         emit_shader(cmd, &pipeline->fs, &cmd->bind.fs);
     }
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        emit_shader(cmd, &pipeline->tess_control, &cmd->bind.tess_control);
+        emit_shader(cmd, &pipeline->tcs, &cmd->bind.tcs);
     }
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        emit_shader(cmd, &pipeline->tess_eval, &cmd->bind.tess_eval);
+        emit_shader(cmd, &pipeline->tes, &cmd->bind.tes);
     }
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {

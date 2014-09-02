@@ -163,11 +163,11 @@ struct intel_pipeline {
 
     uint32_t active_shaders;
     struct intel_pipeline_shader vs;
-    struct intel_pipeline_shader tess_control;
-    struct intel_pipeline_shader tess_eval;
+    struct intel_pipeline_shader tcs;
+    struct intel_pipeline_shader tes;
     struct intel_pipeline_shader gs;
     struct intel_pipeline_shader fs;
-    struct intel_pipeline_shader compute;
+    struct intel_pipeline_shader cs;
 
     uint32_t wa_flags;
 

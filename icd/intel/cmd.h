@@ -143,9 +143,9 @@ struct intel_cmd_bind {
     struct intel_cmd_shader vs;
     struct intel_cmd_shader fs;
     struct intel_cmd_shader gs;
-    struct intel_cmd_shader tess_control;
-    struct intel_cmd_shader tess_eval;
-    struct intel_cmd_shader compute;
+    struct intel_cmd_shader tcs;
+    struct intel_cmd_shader tes;
+    struct intel_cmd_shader cs;
 
     struct {
         XGL_UINT count;
