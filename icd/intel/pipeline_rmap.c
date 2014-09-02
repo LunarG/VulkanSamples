@@ -180,10 +180,33 @@ static XGL_UINT rmap_init_counts(struct intel_rmap *rmap,
     return depth;
 }
 
-struct intel_rmap *intel_rmap_create(struct intel_dev *dev,
-                                     const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                                     const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
-                                     XGL_UINT rt_count)
+static void rmap_destroy(struct intel_rmap *rmap)
+{
+    XGL_UINT i;
+
+    for (i = 0; i < rmap->slot_count; i++) {
+        struct intel_rmap_slot *slot = &rmap->slots[i];
+
+        switch (slot->path_len) {
+        case 0:
+        case 1:
+        case INTEL_RMAP_SLOT_RT:
+        case INTEL_RMAP_SLOT_DYN:
+            break;
+        default:
+            icd_free(slot->u.path);
+            break;
+        }
+    }
+
+    icd_free(rmap->slots);
+    icd_free(rmap);
+}
+
+static struct intel_rmap *rmap_create(struct intel_dev *dev,
+                                      const XGL_DESCRIPTOR_SET_MAPPING *mapping,
+                                      const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
+                                      XGL_UINT rt_count)
 {
     struct intel_rmap *rmap;
     struct intel_rmap_slot *slot;
@@ -214,7 +237,7 @@ struct intel_rmap *intel_rmap_create(struct intel_dev *dev,
     memset(rmap->slots, 0, sizeof(rmap->slots[0]) * rmap->slot_count);
 
     if (!rmap_init_slots(rmap, mapping, depth)) {
-        intel_rmap_destroy(rmap);
+        rmap_destroy(rmap);
         return NULL;
     }
 
@@ -231,29 +254,6 @@ struct intel_rmap *intel_rmap_create(struct intel_dev *dev,
     }
 
     return rmap;
-}
-
-void intel_rmap_destroy(struct intel_rmap *rmap)
-{
-    XGL_UINT i;
-
-    for (i = 0; i < rmap->slot_count; i++) {
-        struct intel_rmap_slot *slot = &rmap->slots[i];
-
-        switch (slot->path_len) {
-        case 0:
-        case 1:
-        case INTEL_RMAP_SLOT_RT:
-        case INTEL_RMAP_SLOT_DYN:
-            break;
-        default:
-            icd_free(slot->u.path);
-            break;
-        }
-    }
-
-    icd_free(rmap->slots);
-    icd_free(rmap);
 }
 
 static void intel_pipe_shader_init(struct intel_shader *sh,
@@ -307,7 +307,7 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
         pipeline->intel_vs.pCode = kernel;
         pipeline->intel_vs.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_VERTEX_FLAG;
-        pipeline->vs_rmap = intel_rmap_create(pipeline->dev,
+        pipeline->vs_rmap = rmap_create(pipeline->dev,
                 &info->descriptorSetMapping[0],
                 &info->dynamicMemoryViewMapping, 0);
         if (!pipeline->vs_rmap) {
@@ -328,7 +328,7 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
         pipeline->intel_fs.codeSize = sh->ir->size;
         pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
         /* assuming one RT; need to parse the shader */
-        pipeline->fs_rmap = intel_rmap_create(pipeline->dev,
+        pipeline->fs_rmap = rmap_create(pipeline->dev,
                 &info->descriptorSetMapping[0],
                 &info->dynamicMemoryViewMapping, 1);
         if (!pipeline->fs_rmap) {
@@ -400,7 +400,7 @@ void pipeline_tear_shaders(struct intel_pipeline *pipeline)
     }
 
     if (pipeline->vs_rmap)
-        intel_rmap_destroy(pipeline->vs_rmap);
+        rmap_destroy(pipeline->vs_rmap);
     if (pipeline->fs_rmap)
-        intel_rmap_destroy(pipeline->fs_rmap);
+        rmap_destroy(pipeline->fs_rmap);
 }
