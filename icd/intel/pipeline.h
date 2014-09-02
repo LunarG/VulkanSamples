@@ -80,7 +80,9 @@ struct intel_rmap {
 #define SHADER_FRAGMENT_FLAG          (1 << XGL_SHADER_STAGE_FRAGMENT)
 #define SHADER_COMPUTE_FLAG           (1 << XGL_SHADER_STAGE_COMPUTE)
 
-struct intel_pipe_shader {
+struct intel_pipeline_shader {
+    /* this is not an intel_obj */
+
     void *pCode;
     uint32_t codeSize;
 
@@ -160,12 +162,12 @@ struct intel_pipeline {
     XGL_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
 
     uint32_t active_shaders;
-    struct intel_pipe_shader vs;
-    struct intel_pipe_shader tess_control;
-    struct intel_pipe_shader tess_eval;
-    struct intel_pipe_shader gs;
-    struct intel_pipe_shader fs;
-    struct intel_pipe_shader compute;
+    struct intel_pipeline_shader vs;
+    struct intel_pipeline_shader tess_control;
+    struct intel_pipeline_shader tess_eval;
+    struct intel_pipeline_shader gs;
+    struct intel_pipeline_shader fs;
+    struct intel_pipeline_shader compute;
 
     uint32_t wa_flags;
 
@@ -214,4 +216,5 @@ XGL_RESULT XGLAPI intelCreatePipelineDelta(
     XGL_PIPELINE                                p1,
     XGL_PIPELINE                                p2,
     XGL_PIPELINE_DELTA*                         delta);
-#endif // PIPELINE_H
+
+#endif /* PIPELINE_H */

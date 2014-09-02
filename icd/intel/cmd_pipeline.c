@@ -434,8 +434,8 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
 static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
                                        uint32_t body[13])
 {
-    const struct intel_pipe_shader *vs = &cmd->bind.pipeline.graphics->vs;
-    const struct intel_pipe_shader *fs = &cmd->bind.pipeline.graphics->fs;
+    const struct intel_pipeline_shader *vs = &cmd->bind.pipeline.graphics->vs;
+    const struct intel_pipeline_shader *fs = &cmd->bind.pipeline.graphics->fs;
     XGL_UINT attr_skip, attr_count;
     XGL_UINT vue_offset, vue_len;
     XGL_UINT i;
@@ -541,7 +541,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) |
                          (cmd_len - 2);
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_pipe_shader *fs = &pipeline->fs;
+    const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
     const struct intel_raster_state *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
@@ -590,7 +590,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const int max_threads = (cmd->dev->gpu->gt == 2) ? 80 : 40;
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_pipe_shader *fs = &pipeline->fs;
+    const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 9;
     uint32_t dw0, dw2, dw4, dw5, dw6;
@@ -654,7 +654,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_pipe_shader *fs = &pipeline->fs;
+    const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 3;
     uint32_t dw0, dw1, dw2;
@@ -699,7 +699,7 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
 static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_pipe_shader *fs = &pipeline->fs;
+    const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 8;
     uint32_t dw0, dw2, dw4, dw5;
@@ -1354,7 +1354,7 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
 }
 
 static void gen6_pcb(struct intel_cmd *cmd, int subop,
-                     const struct intel_pipe_shader *sh)
+                     const struct intel_pipeline_shader *sh)
 {
     const uint8_t cmd_len = 5;
     /*
@@ -1399,7 +1399,7 @@ static void gen6_pcb(struct intel_cmd *cmd, int subop,
 }
 
 static void gen7_pcb(struct intel_cmd *cmd, int subop,
-                     const struct intel_pipe_shader *sh)
+                     const struct intel_pipeline_shader *sh)
 {
     const uint8_t cmd_len = 7;
     const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
@@ -1638,7 +1638,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 }
 
 static void emit_shader(struct intel_cmd *cmd,
-                        const struct intel_pipe_shader *shader,
+                        const struct intel_pipeline_shader *shader,
                         struct intel_cmd_shader *pCmdShader)
 {
     uint32_t i;

@@ -256,7 +256,7 @@ static struct intel_rmap *rmap_create(struct intel_dev *dev,
     return rmap;
 }
 
-static XGL_RESULT pipeline_shader_copy_pcb(struct intel_pipe_shader *sh,
+static XGL_RESULT pipeline_shader_copy_pcb(struct intel_pipeline_shader *sh,
                                            const XGL_LINK_CONST_BUFFER *buffers,
                                            XGL_UINT buffer_count)
 {
@@ -290,7 +290,7 @@ static XGL_RESULT pipeline_shader_copy_pcb(struct intel_pipe_shader *sh,
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipe_shader *sh,
+static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipeline_shader *sh,
                                           const struct intel_shader *ir)
 {
     sh->pCode = icd_alloc(ir->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
@@ -316,7 +316,7 @@ static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipe_shader *sh,
 static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *vs = &pipeline->vs;
+    struct intel_pipeline_shader *vs = &pipeline->vs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(vs, intel_shader(info->vs.shader));
@@ -347,7 +347,7 @@ static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *tcs = &pipeline->tess_control;
+    struct intel_pipeline_shader *tcs = &pipeline->tess_control;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(tcs, intel_shader(info->tcs.shader));
@@ -369,7 +369,7 @@ static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *tes = &pipeline->tess_eval;
+    struct intel_pipeline_shader *tes = &pipeline->tess_eval;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(tes, intel_shader(info->tes.shader));
@@ -391,7 +391,7 @@ static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *gs = &pipeline->gs;
+    struct intel_pipeline_shader *gs = &pipeline->gs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(gs, intel_shader(info->gs.shader));
@@ -413,7 +413,7 @@ static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *fs = &pipeline->fs;
+    struct intel_pipeline_shader *fs = &pipeline->fs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(fs, intel_shader(info->fs.shader));
@@ -445,7 +445,7 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *cs = &pipeline->compute;
+    struct intel_pipeline_shader *cs = &pipeline->compute;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(cs, intel_shader(info->compute.cs.shader));
@@ -486,7 +486,7 @@ XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
     return ret;
 }
 
-static void pipeline_tear_shader(struct intel_pipe_shader *sh)
+static void pipeline_tear_shader(struct intel_pipeline_shader *sh)
 {
     icd_free(sh->pCode);
     if (sh->pcb)
