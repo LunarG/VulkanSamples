@@ -307,7 +307,6 @@ static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipeline_shader *sh,
     sh->sampler_count = ir->sampler_count;
     sh->surface_count = ir->surface_count;
     sh->urb_grf_start = ir->urb_grf_start;
-    sh->urb_read_length = ir->urb_read_length;
     sh->barycentric_interps = ir->barycentric_interps;
 
     return XGL_SUCCESS;

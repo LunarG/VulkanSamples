@@ -57,7 +57,6 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
         sh->in_count = 1;
         sh->out_count = 2;
         sh->urb_grf_start = 1;
-        sh->urb_read_length = 1;
         break;
     case 'w':
         sh->out_count = 1;

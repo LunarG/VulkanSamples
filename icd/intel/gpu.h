@@ -53,9 +53,6 @@ struct intel_gpu {
     char *path;         /* path to the render or legacy node, or NULL */
     int gen_opaque;     /* always read with intel_gpu_gen() */
     int gt;
-    int max_vs_threads;
-    int max_gs_threads;
-    int max_fs_threads;
 
     XGL_GPU_SIZE max_batch_buffer_size;
     XGL_UINT batch_buffer_reloc_count;

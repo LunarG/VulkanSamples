@@ -121,43 +121,12 @@ static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
     switch (intel_gpu_gen(gpu)) {
     case INTEL_GEN(7.5):
         gpu->gt = gen_get_hsw_gt(devid);
-        if (gpu->gt == 3) {
-            gpu->max_vs_threads = 280;
-            gpu->max_gs_threads = 256;
-            gpu->max_fs_threads = 408;
-        } else if (gpu->gt == 2){
-            gpu->max_vs_threads = 280;
-            gpu->max_gs_threads = 256;
-            gpu->max_fs_threads = 204;
-        } else {
-            gpu->max_vs_threads = 70;
-            gpu->max_gs_threads = 70;
-            gpu->max_fs_threads = 102;
-        }
         break;
     case INTEL_GEN(7):
         gpu->gt = gen_get_ivb_gt(devid);
-        if (gpu->gt == 2) {
-            gpu->max_vs_threads = 128;
-            gpu->max_gs_threads = 128;
-            gpu->max_fs_threads = 172;
-        } else {
-            gpu->max_vs_threads = 36;
-            gpu->max_gs_threads = 36;
-            gpu->max_fs_threads = 48;
-        }
         break;
     case INTEL_GEN(6):
         gpu->gt = gen_get_snb_gt(devid);
-        if (gpu->gt == 2) {
-            gpu->max_vs_threads = 60;
-            gpu->max_gs_threads = 60;
-            gpu->max_fs_threads = 80;
-        } else {
-            gpu->max_vs_threads = 24;
-            gpu->max_gs_threads = 21;
-            gpu->max_fs_threads = 40;
-        }
         break;
     }
 

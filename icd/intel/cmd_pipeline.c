@@ -1525,63 +1525,60 @@ static void emit_ps_resources(struct intel_cmd *cmd,
     }
 }
 
-// TODO: These should probably be generated
-/* DW2 */
-# define GEN6_VS_SPF_MODE				(1 << 31)
-# define GEN6_VS_VECTOR_MASK_ENABLE			(1 << 30)
-# define GEN6_VS_SAMPLER_COUNT_SHIFT			27
-# define GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT	18
-# define GEN6_VS_FLOATING_POINT_MODE_IEEE_754		(0 << 16)
-# define GEN6_VS_FLOATING_POINT_MODE_ALT		(1 << 16)
-
 static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
 {
-    const uint8_t cmd_len = GEN6_3DSTATE_VS__SIZE;
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_pipeline_shader *vs = &pipeline->vs;
+    const uint8_t cmd_len = 6;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
     uint32_t dw2, dw4, dw5;
+    int vue_read_len, max_threads;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
-     * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
-     *
-     *   [DevSNB] A pipeline flush must be programmed prior to a 3DSTATE_VS
-     *   command that causes the VS Function Enable to toggle. Pipeline
-     *   flush can be executed by sending a PIPE_CONTROL command with CS
-     *   stall bit set and a post sync operation.
-     *
-     * Although we don't disable the VS during normal drawing, BLORP sometimes
-     * disables it.  To be safe, do the flush here just in case.
-     */
-    cmd_wa_gen6_pre_depth_stall_write(cmd);
-
-    if (cmd->bind.vs.shader == NULL) {
-        cmd_batch_reserve(cmd, cmd_len);
-        cmd_batch_write(cmd, dw0);
-        cmd_batch_write(cmd, 0);
-        cmd_batch_write(cmd, 0);
-        cmd_batch_write(cmd, 0);
-        cmd_batch_write(cmd, 0);
-        cmd_batch_write(cmd, 0);
-        return;
-    }
-
     /*
-     * Most of this is know at pipeline create EXCEPT the kernel address,
-     * so that's why this is in cmd_pipeline vs. pipeline.
+     * From the Sandy Bridge PRM, volume 2 part 1, page 135:
+     *
+     *     "(Vertex URB Entry Read Length) Specifies the number of pairs of
+     *      128-bit vertex elements to be passed into the payload for each
+     *      vertex."
+     *
+     *     "It is UNDEFINED to set this field to 0 indicating no Vertex URB
+     *      data to be read and passed to the thread."
      */
-    dw2 = (u_align(cmd->bind.vs.shader->sampler_count, 4) / 4) << GEN6_VS_SAMPLER_COUNT_SHIFT;
-    dw4 = (1 << GEN6_VS_DW4_URB_GRF_START__SHIFT) |
-          (cmd->bind.vs.shader->urb_read_length << GEN6_VS_DW4_URB_READ_LEN__SHIFT) |
-          (0 << GEN6_VS_DW4_URB_READ_OFFSET__SHIFT);
+    vue_read_len = (vs->in_count + 1) / 2;
+    if (!vue_read_len)
+        vue_read_len = 1;
+
+    dw2 = (vs->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+          vs->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+
+    dw4 = vs->urb_grf_start << GEN6_VS_DW4_URB_GRF_START__SHIFT |
+          vue_read_len << GEN6_VS_DW4_URB_READ_LEN__SHIFT |
+          0 << GEN6_VS_DW4_URB_READ_OFFSET__SHIFT;
 
     dw5 = GEN6_VS_DW5_STATISTICS |
           GEN6_VS_DW5_VS_ENABLE;
-    if (cmd_gen(cmd) == INTEL_GEN(7.5)) {
-        dw5 |= ((cmd->dev->gpu->max_vs_threads-1) << GEN75_VS_DW5_MAX_THREADS__SHIFT);
-    } else {
-        dw5 |= ((cmd->dev->gpu->max_vs_threads-1) << GEN6_VS_DW5_MAX_THREADS__SHIFT);
+
+    switch (cmd_gen(cmd)) {
+    case INTEL_GEN(7.5):
+        max_threads = (cmd->dev->gpu->gt >= 2) ? 280 : 70;
+        break;
+    case INTEL_GEN(7):
+        max_threads = (cmd->dev->gpu->gt == 2) ? 128 : 36;
+        break;
+    case INTEL_GEN(6):
+        max_threads = (cmd->dev->gpu->gt == 2) ? 60 : 24;
+        break;
+    default:
+        max_threads = 1;
+        break;
     }
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
+        dw5 |= (max_threads - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
+    else
+        dw5 |= (max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
 
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
