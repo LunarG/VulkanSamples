@@ -103,6 +103,8 @@ struct intel_pipe_shader {
     XGL_UINT urb_read_length;
 
     XGL_FLAGS barycentric_interps;
+
+    struct intel_rmap *rmap;
 };
 
 /*
@@ -158,9 +160,7 @@ struct intel_pipeline {
     XGL_PIPELINE_SHADER vs;
     XGL_PIPELINE_SHADER fs;
     struct intel_pipe_shader intel_vs;
-    struct intel_rmap *vs_rmap;
     struct intel_pipe_shader intel_fs;
-    struct intel_rmap *fs_rmap;
     struct intel_pipe_shader gs;
     struct intel_pipe_shader tess_control;
     struct intel_pipe_shader tess_eval;

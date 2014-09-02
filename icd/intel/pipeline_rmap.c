@@ -256,108 +256,134 @@ static struct intel_rmap *rmap_create(struct intel_dev *dev,
     return rmap;
 }
 
-static void intel_pipe_shader_init(struct intel_shader *sh,
-                                   struct intel_pipe_shader *pipe_sh)
+static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipe_shader *sh,
+                                          const struct intel_shader *ir)
 {
-    pipe_sh->in_count = sh->in_count;
-    pipe_sh->out_count = sh->out_count;
-    pipe_sh->sampler_count = sh->sampler_count;
-    pipe_sh->surface_count = sh->surface_count;
-    pipe_sh->barycentric_interps = sh->barycentric_interps;
-    pipe_sh->urb_read_length = sh->urb_read_length;
-    pipe_sh->urb_grf_start = sh->urb_grf_start;
-    pipe_sh->uses = sh->uses;
-}
-
-static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
-                                  const XGL_PIPELINE_SHADER *info)
-{
-    struct intel_shader *sh = intel_shader(info->shader);
-    void *kernel;
-
-    // TODO: process shader object and include in pipeline
-    // For now that processing is simply a copy so that the app
-    // can destroy the original shader object after pipeline creation.
-    kernel = icd_alloc(sh->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    if (!kernel)
+    sh->pCode = icd_alloc(ir->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+    if (!sh->pCode)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    // TODO: This should be a compile step
-    memcpy(kernel, sh->ir->kernel, sh->ir->size);
+    memcpy(sh->pCode, ir->ir->kernel, ir->ir->size);
+    sh->codeSize = ir->ir->size;
 
-    switch (info->stage) {
-    case XGL_SHADER_STAGE_VERTEX:
-        /*
-         * TODO: What should we do here?
-         * shader_state (XGL_PIPELINE_SHADER) contains links
-         * to application memory in the pLinkConstBufferInfo and
-         * it's pBufferData pointers. Do we need to bring all that
-         * into the driver or is it okay to rely on those references
-         * holding good data. In OpenGL we'd make a driver copy. Not
-         * as clear for XGL.
-         * For now, use the app pointers.
-         */
-        pipeline->vs = *info;
+    sh->uses = ir->uses;
 
-       /*
-        * Grab what we need from the intel_shader object as that
-        * could go away after the pipeline is created.
-        */
-        intel_pipe_shader_init(sh, &pipeline->intel_vs);
-        pipeline->intel_vs.pCode = kernel;
-        pipeline->intel_vs.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_VERTEX_FLAG;
-        pipeline->vs_rmap = rmap_create(pipeline->dev,
-                &info->descriptorSetMapping[0],
-                &info->dynamicMemoryViewMapping, 0);
-        if (!pipeline->vs_rmap) {
-            icd_free(kernel);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-        break;
-    case XGL_SHADER_STAGE_GEOMETRY:
-        intel_pipe_shader_init(sh, &pipeline->gs);
-        pipeline->gs.pCode = kernel;
-        pipeline->gs.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
-        break;
-    case XGL_SHADER_STAGE_FRAGMENT:
-        pipeline->fs = *info;
-        intel_pipe_shader_init(sh, &pipeline->intel_fs);
-        pipeline->intel_fs.pCode = kernel;
-        pipeline->intel_fs.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
-        /* assuming one RT; need to parse the shader */
-        pipeline->fs_rmap = rmap_create(pipeline->dev,
-                &info->descriptorSetMapping[0],
-                &info->dynamicMemoryViewMapping, 1);
-        if (!pipeline->fs_rmap) {
-            icd_free(kernel);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-        break;
-    case XGL_SHADER_STAGE_TESS_CONTROL:
-        intel_pipe_shader_init(sh, &pipeline->tess_control);
-        pipeline->tess_control.pCode = kernel;
-        pipeline->tess_control.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
-        break;
-    case XGL_SHADER_STAGE_TESS_EVALUATION:
-        intel_pipe_shader_init(sh, &pipeline->tess_eval);
-        pipeline->tess_eval.pCode = kernel;
-        pipeline->tess_eval.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
-        break;
-    case XGL_SHADER_STAGE_COMPUTE:
-        intel_pipe_shader_init(sh, &pipeline->compute);
-        pipeline->compute.pCode = kernel;
-        pipeline->compute.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
-        break;
-    default:
-        assert(!"unknown shader stage");
-        break;
+    sh->in_count = ir->in_count;
+    sh->out_count = ir->out_count;
+    sh->sampler_count = ir->sampler_count;
+    sh->surface_count = ir->surface_count;
+    sh->urb_grf_start = ir->urb_grf_start;
+    sh->urb_read_length = ir->urb_read_length;
+    sh->barycentric_interps = ir->barycentric_interps;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
+                                    const struct intel_pipeline_create_info *info)
+{
+    struct intel_pipe_shader *vs = &pipeline->intel_vs;
+    XGL_RESULT ret;
+
+    ret = pipeline_shader_copy_ir(vs, intel_shader(info->vs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    vs->rmap = rmap_create(pipeline->dev,
+            &info->vs.descriptorSetMapping[0],
+            &info->vs.dynamicMemoryViewMapping, 0);
+    if (!vs->rmap) {
+        icd_free(vs->pCode);
+        return XGL_ERROR_OUT_OF_MEMORY;
     }
+
+    pipeline->vs = info->vs;
+    pipeline->active_shaders |= SHADER_VERTEX_FLAG;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
+                                     const struct intel_pipeline_create_info *info)
+{
+    struct intel_pipe_shader *tcs = &pipeline->tess_control;
+    XGL_RESULT ret;
+
+    ret = pipeline_shader_copy_ir(tcs, intel_shader(info->tcs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
+                                     const struct intel_pipeline_create_info *info)
+{
+    struct intel_pipe_shader *tes = &pipeline->tess_eval;
+    XGL_RESULT ret;
+
+    ret = pipeline_shader_copy_ir(tes, intel_shader(info->tes.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
+                                    const struct intel_pipeline_create_info *info)
+{
+    struct intel_pipe_shader *gs = &pipeline->gs;
+    XGL_RESULT ret;
+
+    ret = pipeline_shader_copy_ir(gs, intel_shader(info->gs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
+                                    const struct intel_pipeline_create_info *info)
+{
+    struct intel_pipe_shader *fs = &pipeline->intel_fs;
+    XGL_RESULT ret;
+
+    ret = pipeline_shader_copy_ir(fs, intel_shader(info->fs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    /* assuming one RT; need to parse the shader */
+    fs->rmap = rmap_create(pipeline->dev,
+            &info->fs.descriptorSetMapping[0],
+            &info->fs.dynamicMemoryViewMapping, 1);
+    if (!fs->rmap) {
+        icd_free(fs->pCode);
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
+
+    pipeline->fs = info->fs;
+    pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
+                                    const struct intel_pipeline_create_info *info)
+{
+    struct intel_pipe_shader *cs = &pipeline->compute;
+    XGL_RESULT ret;
+
+    ret = pipeline_shader_copy_ir(cs, intel_shader(info->compute.cs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
 
     return XGL_SUCCESS;
 }
@@ -368,39 +394,52 @@ XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
     XGL_RESULT ret = XGL_SUCCESS;
 
     if (ret == XGL_SUCCESS && info->vs.shader)
-        ret = pipeline_shader(pipeline, &info->vs);
+        ret = pipeline_build_vs(pipeline, info);
     if (ret == XGL_SUCCESS && info->tcs.shader)
-        ret = pipeline_shader(pipeline, &info->tcs);
+        ret = pipeline_build_tcs(pipeline, info);
     if (ret == XGL_SUCCESS && info->tes.shader)
-        ret = pipeline_shader(pipeline, &info->tes);
+        ret = pipeline_build_tes(pipeline, info);
     if (ret == XGL_SUCCESS && info->gs.shader)
-        ret = pipeline_shader(pipeline, &info->gs);
+        ret = pipeline_build_gs(pipeline, info);
     if (ret == XGL_SUCCESS && info->fs.shader)
-        ret = pipeline_shader(pipeline, &info->fs);
+        ret = pipeline_build_fs(pipeline, info);
+
+    if (ret == XGL_SUCCESS && info->compute.cs.shader)
+        ret = pipeline_build_cs(pipeline, info);
 
     return ret;
+}
+
+static void pipeline_tear_shader(struct intel_pipe_shader *sh)
+{
+    icd_free(sh->pCode);
+    if (sh->rmap)
+        rmap_destroy(sh->rmap);
 }
 
 void pipeline_tear_shaders(struct intel_pipeline *pipeline)
 {
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        icd_free(pipeline->intel_vs.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
-        icd_free(pipeline->gs.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        icd_free(pipeline->intel_fs.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        icd_free(pipeline->tess_control.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        icd_free(pipeline->tess_eval.pCode);
+        pipeline_tear_shader(&pipeline->intel_vs);
     }
 
-    if (pipeline->vs_rmap)
-        rmap_destroy(pipeline->vs_rmap);
-    if (pipeline->fs_rmap)
-        rmap_destroy(pipeline->fs_rmap);
+    if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
+        pipeline_tear_shader(&pipeline->tess_control);
+    }
+
+    if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
+        pipeline_tear_shader(&pipeline->tess_eval);
+    }
+
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
+        pipeline_tear_shader(&pipeline->gs);
+    }
+
+    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
+        pipeline_tear_shader(&pipeline->intel_fs);
+    }
+
+    if (pipeline->active_shaders & SHADER_COMPUTE_FLAG) {
+        pipeline_tear_shader(&pipeline->compute);
+    }
 }

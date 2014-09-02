@@ -1654,7 +1654,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_3DSTATE_WM(cmd);
     }
 
-    emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs_rmap);
+    emit_ps_resources(cmd, cmd->bind.pipeline.graphics->intel_fs.rmap);
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
