@@ -33,9 +33,9 @@
 #include "obj.h"
 #include "dev.h"
 
-#define INTEL_RMAP_SLOT_RT ((XGL_UINT) -1)
-#define INTEL_RMAP_SLOT_DYN ((XGL_UINT) -2)
-struct intel_rmap_slot {
+#define INTEL_PIPELINE_RMAP_SLOT_RT ((XGL_UINT) -1)
+#define INTEL_PIPELINE_RMAP_SLOT_DYN ((XGL_UINT) -2)
+struct intel_pipeline_rmap_slot {
     /*
      *
      * When path_len is 0, the slot is unused.
@@ -55,7 +55,7 @@ struct intel_rmap_slot {
 /**
  * Shader resource mapping.
  */
-struct intel_rmap {
+struct intel_pipeline_rmap {
     /* this is not an intel_obj */
 
     XGL_UINT rt_count;
@@ -69,7 +69,7 @@ struct intel_rmap {
      * uav_count slots +
      * sampler_count slots
      */
-    struct intel_rmap_slot *slots;
+    struct intel_pipeline_rmap_slot *slots;
     XGL_UINT slot_count;
 };
 
@@ -106,7 +106,7 @@ struct intel_pipeline_shader {
 
     XGL_FLAGS barycentric_interps;
 
-    struct intel_rmap *rmap;
+    struct intel_pipeline_rmap *rmap;
 
     void *pcb;
     XGL_SIZE pcb_size;

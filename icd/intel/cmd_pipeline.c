@@ -1439,7 +1439,7 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
 }
 
 static void emit_ps_resources(struct intel_cmd *cmd,
-                              const struct intel_rmap *rmap)
+                              const struct intel_pipeline_rmap *rmap)
 {
     const XGL_UINT surface_count = rmap->rt_count +
         rmap->resource_count + rmap->uav_count;
@@ -1449,14 +1449,14 @@ static void emit_ps_resources(struct intel_cmd *cmd,
     assert(surface_count <= ARRAY_SIZE(binding_table));
 
     for (i = 0; i < surface_count; i++) {
-        const struct intel_rmap_slot *slot = &rmap->slots[i];
+        const struct intel_pipeline_rmap_slot *slot = &rmap->slots[i];
         uint32_t *dw;
 
         switch (slot->path_len) {
         case 0:
             pos = 0;
             break;
-        case INTEL_RMAP_SLOT_RT:
+        case INTEL_PIPELINE_RMAP_SLOT_RT:
             {
                 const struct intel_rt_view *view = cmd->bind.att.rt[i];
 
@@ -1469,7 +1469,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
                 cmd_state_advance(cmd, view->cmd_len);
             }
             break;
-        case INTEL_RMAP_SLOT_DYN:
+        case INTEL_PIPELINE_RMAP_SLOT_DYN:
             {
                 const struct intel_mem_view *view =
                     &cmd->bind.dyn_view.graphics;

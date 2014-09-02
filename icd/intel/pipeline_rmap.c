@@ -28,14 +28,14 @@
 #include "shader.h"
 #include "pipeline_priv.h"
 
-static struct intel_rmap_slot *rmap_get_slot(struct intel_rmap *rmap,
-                                             XGL_DESCRIPTOR_SET_SLOT_TYPE type,
-                                             XGL_UINT index)
+static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap *rmap,
+                                                      XGL_DESCRIPTOR_SET_SLOT_TYPE type,
+                                                      XGL_UINT index)
 {
     const XGL_UINT resource_offset = rmap->rt_count;
     const XGL_UINT uav_offset = resource_offset + rmap->resource_count;
     const XGL_UINT sampler_offset = uav_offset + rmap->uav_count;
-    struct intel_rmap_slot *slot;
+    struct intel_pipeline_rmap_slot *slot;
 
     switch (type) {
     case XGL_SLOT_UNUSED:
@@ -59,7 +59,7 @@ static struct intel_rmap_slot *rmap_get_slot(struct intel_rmap *rmap,
     return slot;
 }
 
-static bool rmap_init_slots_with_path(struct intel_rmap *rmap,
+static bool rmap_init_slots_with_path(struct intel_pipeline_rmap *rmap,
                                       const XGL_DESCRIPTOR_SET_MAPPING *mapping,
                                       XGL_UINT *nest_path,
                                       XGL_UINT nest_level)
@@ -68,7 +68,7 @@ static bool rmap_init_slots_with_path(struct intel_rmap *rmap,
 
     for (i = 0; i < mapping->descriptorCount; i++) {
         const XGL_DESCRIPTOR_SLOT_INFO *info = &mapping->pDescriptorInfo[i];
-        struct intel_rmap_slot *slot;
+        struct intel_pipeline_rmap_slot *slot;
 
         if (info->slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET) {
             nest_path[nest_level] = i;
@@ -106,7 +106,7 @@ static bool rmap_init_slots_with_path(struct intel_rmap *rmap,
     return true;
 }
 
-static bool rmap_init_slots(struct intel_rmap *rmap,
+static bool rmap_init_slots(struct intel_pipeline_rmap *rmap,
                             const XGL_DESCRIPTOR_SET_MAPPING *mapping,
                             XGL_UINT depth)
 {
@@ -130,7 +130,7 @@ static bool rmap_init_slots(struct intel_rmap *rmap,
     return ok;
 }
 
-static void rmap_update_count(struct intel_rmap *rmap,
+static void rmap_update_count(struct intel_pipeline_rmap *rmap,
                               XGL_DESCRIPTOR_SET_SLOT_TYPE type,
                               XGL_UINT index)
 {
@@ -155,7 +155,7 @@ static void rmap_update_count(struct intel_rmap *rmap,
     }
 }
 
-static XGL_UINT rmap_init_counts(struct intel_rmap *rmap,
+static XGL_UINT rmap_init_counts(struct intel_pipeline_rmap *rmap,
                                  const XGL_DESCRIPTOR_SET_MAPPING *mapping)
 {
     XGL_UINT depth = 0;
@@ -180,18 +180,18 @@ static XGL_UINT rmap_init_counts(struct intel_rmap *rmap,
     return depth;
 }
 
-static void rmap_destroy(struct intel_rmap *rmap)
+static void rmap_destroy(struct intel_pipeline_rmap *rmap)
 {
     XGL_UINT i;
 
     for (i = 0; i < rmap->slot_count; i++) {
-        struct intel_rmap_slot *slot = &rmap->slots[i];
+        struct intel_pipeline_rmap_slot *slot = &rmap->slots[i];
 
         switch (slot->path_len) {
         case 0:
         case 1:
-        case INTEL_RMAP_SLOT_RT:
-        case INTEL_RMAP_SLOT_DYN:
+        case INTEL_PIPELINE_RMAP_SLOT_RT:
+        case INTEL_PIPELINE_RMAP_SLOT_DYN:
             break;
         default:
             icd_free(slot->u.path);
@@ -203,13 +203,13 @@ static void rmap_destroy(struct intel_rmap *rmap)
     icd_free(rmap);
 }
 
-static struct intel_rmap *rmap_create(struct intel_dev *dev,
-                                      const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                                      const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
-                                      XGL_UINT rt_count)
+static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
+                                               const XGL_DESCRIPTOR_SET_MAPPING *mapping,
+                                               const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
+                                               XGL_UINT rt_count)
 {
-    struct intel_rmap *rmap;
-    struct intel_rmap_slot *slot;
+    struct intel_pipeline_rmap *rmap;
+    struct intel_pipeline_rmap_slot *slot;
     XGL_UINT depth, rt;
 
     rmap = icd_alloc(sizeof(*rmap), 0, XGL_SYSTEM_ALLOC_INTERNAL);
@@ -244,12 +244,12 @@ static struct intel_rmap *rmap_create(struct intel_dev *dev,
     /* add RTs and the dynamic memory view */
     slot = rmap_get_slot(rmap, dyn->slotObjectType, dyn->shaderEntityIndex);
     if (slot) {
-        slot->path_len = INTEL_RMAP_SLOT_DYN;
+        slot->path_len = INTEL_PIPELINE_RMAP_SLOT_DYN;
         slot->u.index = 0;
     }
     for (rt = 0; rt < rmap->rt_count; rt++) {
         slot = &rmap->slots[rt];
-        slot->path_len = INTEL_RMAP_SLOT_RT;
+        slot->path_len = INTEL_PIPELINE_RMAP_SLOT_RT;
         slot->u.index = rt;
     }
 
