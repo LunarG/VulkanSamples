@@ -1666,7 +1666,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 }
 
 static void emit_shader(struct intel_cmd *cmd,
-                        const struct intel_pipe_shader *shader,
+                        const struct intel_pipeline_shader *shader,
                         struct intel_cmd_shader *pCmdShader)
 {
     uint32_t i;
