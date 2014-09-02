@@ -32,30 +32,6 @@
 #include "shader.h"
 #include "pipeline_priv.h"
 
-struct intel_pipeline_builder {
-    const struct intel_gpu *gpu;
-
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
-    XGL_PIPELINE_IA_STATE_CREATE_INFO   ia;
-    XGL_PIPELINE_DB_STATE_CREATE_INFO   db;
-    XGL_PIPELINE_CB_STATE               cb;
-    XGL_PIPELINE_RS_STATE_CREATE_INFO   rs;
-    XGL_PIPELINE_TESS_STATE_CREATE_INFO tess;
-    XGL_PIPELINE_SHADER                 vs;
-    XGL_PIPELINE_SHADER                 tcs;
-    XGL_PIPELINE_SHADER                 tes;
-    XGL_PIPELINE_SHADER                 gs;
-    XGL_PIPELINE_SHADER                 fs;
-
-    XGL_COMPUTE_PIPELINE_CREATE_INFO    compute;
-    XGL_PIPELINE_SHADER                 cs;
-};
-
-struct intel_pipeline_builder_create_info {
-    XGL_STRUCTURE_TYPE struct_type;
-    XGL_VOID *next;
-};
-
 static uint32_t *pipeline_cmd_ptr(struct intel_pipeline *pipeline, int cmd_len)
 {
     uint32_t *ptr;
@@ -294,8 +270,7 @@ static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT builder_validate(const struct intel_pipeline_builder *builder,
-                                   const struct intel_pipeline *pipeline)
+static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
 {
     /*
      * Validate required elements
@@ -342,16 +317,16 @@ static XGL_RESULT builder_validate(const struct intel_pipeline_builder *builder,
     return XGL_SUCCESS;
 }
 
-static void builder_build_urb_alloc_gen6(struct intel_pipeline_builder *builder,
-                                         struct intel_pipeline *pipeline)
+static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
+                                          const struct intel_pipeline_create_info *info)
 {
-    const int urb_size = ((builder->gpu->gt == 2) ? 64 : 32) * 1024;
-    const struct intel_shader *vs = intel_shader(builder->vs.shader);
-    const struct intel_shader *gs = intel_shader(builder->gs.shader);
+    const int urb_size = ((info->gpu->gt == 2) ? 64 : 32) * 1024;
+    const struct intel_shader *vs = intel_shader(info->vs.shader);
+    const struct intel_shader *gs = intel_shader(info->gs.shader);
     int vs_entry_size, gs_entry_size;
     int vs_size, gs_size;
 
-    INTEL_GPU_ASSERT(builder->gpu, 6, 6);
+    INTEL_GPU_ASSERT(info->gpu, 6, 6);
 
     vs_entry_size = ((vs->in_count >= vs->out_count) ?
         vs->in_count : vs->out_count);
@@ -410,19 +385,19 @@ static void builder_build_urb_alloc_gen6(struct intel_pipeline_builder *builder,
     }
 }
 
-static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
-                                         struct intel_pipeline *pipeline)
+static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
+                                          const struct intel_pipeline_create_info *info)
 {
-    const int urb_size = ((builder->gpu->gt == 3) ? 512 :
-                          (builder->gpu->gt == 2) ? 256 : 128) * 1024;
-    const struct intel_shader *vs = intel_shader(builder->vs.shader);
-    const struct intel_shader *gs = intel_shader(builder->gs.shader);
+    const int urb_size = ((info->gpu->gt == 3) ? 512 :
+                          (info->gpu->gt == 2) ? 256 : 128) * 1024;
+    const struct intel_shader *vs = intel_shader(info->vs.shader);
+    const struct intel_shader *gs = intel_shader(info->gs.shader);
     /* some space is reserved for PCBs */
-    int urb_offset = ((builder->gpu->gt == 3) ? 32 : 16) * 1024;
+    int urb_offset = ((info->gpu->gt == 3) ? 32 : 16) * 1024;
     int vs_entry_size, gs_entry_size;
     int vs_size, gs_size;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
 
     vs_entry_size = ((vs->in_count >= vs->out_count) ?
         vs->in_count : vs->out_count);
@@ -466,20 +441,20 @@ static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
 
         gs_entry_count = (gs_size / 64 / gs_alloc_size) & ~7;
 
-        if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7.5)) {
+        if (intel_gpu_gen(info->gpu) >= INTEL_GEN(7.5)) {
             const int max_vs_entry_count =
-                (builder->gpu->gt >= 2) ? 1664 : 640;
+                (info->gpu->gt >= 2) ? 1664 : 640;
             const int max_gs_entry_count =
-                (builder->gpu->gt >= 2) ? 640 : 256;
+                (info->gpu->gt >= 2) ? 640 : 256;
             if (vs_entry_count >= max_vs_entry_count)
                 vs_entry_count = max_vs_entry_count;
             if (gs_entry_count >= max_gs_entry_count)
                 gs_entry_count = max_gs_entry_count;
         } else {
             const int max_vs_entry_count =
-                (builder->gpu->gt == 2) ? 704 : 512;
+                (info->gpu->gt == 2) ? 704 : 512;
             const int max_gs_entry_count =
-                (builder->gpu->gt == 2) ? 320 : 192;
+                (info->gpu->gt == 2) ? 320 : 192;
             if (vs_entry_count >= max_vs_entry_count)
                 vs_entry_count = max_vs_entry_count;
             if (gs_entry_count >= max_gs_entry_count)
@@ -510,8 +485,8 @@ static void builder_build_urb_alloc_gen7(struct intel_pipeline_builder *builder,
     }
 }
 
-static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *builder,
-                                                struct intel_pipeline *p)
+static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline,
+                                                 const struct intel_pipeline_create_info *info)
 {
     const uint8_t cmd_len = 2;
     uint32_t offset = 0;
@@ -519,7 +494,7 @@ static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *b
     uint32_t *dw;
     int end;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
 
     /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 68:
@@ -559,7 +534,7 @@ static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *b
         size = 15;
     }
 
-    dw = pipeline_cmd_ptr(p, cmd_len * 5);
+    dw = pipeline_cmd_ptr(pipeline, cmd_len * 5);
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (cmd_len - 2);
     dw[1] = offset << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
                       size << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
@@ -589,18 +564,18 @@ static void builder_build_push_const_alloc_gen7(struct intel_pipeline_builder *b
     // than the documentation seems to imply
 }
 
-static void builder_build_vertex_elements(struct intel_pipeline_builder *builder,
-                                          struct intel_pipeline *pipeline)
+static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
+                                           const struct intel_pipeline_create_info *info)
 {
     const uint8_t cmd_len = 3;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) |
                          (cmd_len - 2);
-    const struct intel_shader *vs = intel_shader(builder->vs.shader);
+    const struct intel_shader *vs = intel_shader(info->vs.shader);
     int comps[4] = { GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE,
                      GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE };
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 6, 7.5);
+    INTEL_GPU_ASSERT(info->gpu, 6, 7.5);
 
     if (!(vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)))
         return;
@@ -622,24 +597,22 @@ static void builder_build_vertex_elements(struct intel_pipeline_builder *builder
             comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
 }
 
-
-static void gen7_pipeline_gs(struct intel_pipeline_builder *builder,
-                             struct intel_pipeline *pipeline)
+static void pipeline_build_gs(struct intel_pipeline *pipeline,
+                              const struct intel_pipeline_create_info *info)
 {
     // gen7_emit_3DSTATE_GS done by cmd_pipeline
 }
 
-static void
-gen7_emit_3DSTATE_HS(struct intel_pipeline_builder *builder,
-                     struct intel_pipeline *p)
+static void pipeline_build_hs(struct intel_pipeline *pipeline,
+                              const struct intel_pipeline_create_info *info)
 {
     const uint8_t cmd_len = 7;
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_HS) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
 
-    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = dw0;
     dw[1] = 0;
     dw[2] = 0;
@@ -649,38 +622,32 @@ gen7_emit_3DSTATE_HS(struct intel_pipeline_builder *builder,
     dw[6] = 0;
 }
 
-static void gen7_pipeline_hs(struct intel_pipeline_builder *builder,
-                             struct intel_pipeline *pipeline)
-{
-    gen7_emit_3DSTATE_HS(builder, pipeline);
-}
-
-static void gen7_pipeline_te(struct intel_pipeline_builder *builder,
-                             struct intel_pipeline *p)
+static void pipeline_build_te(struct intel_pipeline *pipeline,
+                              const struct intel_pipeline_create_info *info)
 {
     const uint8_t cmd_len = 4;
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_TE) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
 
-    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = dw0;
     dw[1] = 0;
     dw[2] = 0;
     dw[3] = 0;
 }
 
-static void gen7_pipeline_ds(struct intel_pipeline_builder *builder,
-                             struct intel_pipeline *p)
+static void pipeline_build_ds(struct intel_pipeline *pipeline,
+                              const struct intel_pipeline_create_info *info)
 {
     const uint8_t cmd_len = 6;
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_DS) | (cmd_len - 2);
     uint32_t *dw;
 
-    INTEL_GPU_ASSERT(builder->gpu, 7, 7.5);
+    INTEL_GPU_ASSERT(info->gpu, 7, 7.5);
 
-    dw = pipeline_cmd_ptr(p, cmd_len);
+    dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = dw0;
     dw[1] = 0;
     dw[2] = 0;
@@ -689,20 +656,20 @@ static void gen7_pipeline_ds(struct intel_pipeline_builder *builder,
     dw[5] = 0;
 }
 
-static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
-                                    struct intel_pipeline *pipeline)
+static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
+                                     const struct intel_pipeline_create_info *info)
 {
     XGL_RESULT ret;
 
-    builder_build_vertex_elements(builder, pipeline);
+    pipeline_build_vertex_elements(pipeline, info);
 
-    if (intel_gpu_gen(builder->gpu) >= INTEL_GEN(7)) {
-        builder_build_urb_alloc_gen7(builder, pipeline);
-        builder_build_push_const_alloc_gen7(builder, pipeline);
-        gen7_pipeline_gs(builder, pipeline);
-        gen7_pipeline_hs(builder, pipeline);
-        gen7_pipeline_te(builder, pipeline);
-        gen7_pipeline_ds(builder, pipeline);
+    if (intel_gpu_gen(info->gpu) >= INTEL_GEN(7)) {
+        pipeline_build_urb_alloc_gen7(pipeline, info);
+        pipeline_build_push_const_alloc_gen7(pipeline, info);
+        pipeline_build_gs(pipeline, info);
+        pipeline_build_hs(pipeline, info);
+        pipeline_build_te(pipeline, info);
+        pipeline_build_ds(pipeline, info);
 
         pipeline->wa_flags = INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE |
                              INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL |
@@ -710,100 +677,106 @@ static XGL_RESULT builder_build_all(struct intel_pipeline_builder *builder,
                              INTEL_CMD_WA_GEN7_POST_COMMAND_CS_STALL |
                              INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL;
     } else {
-        builder_build_urb_alloc_gen6(builder, pipeline);
+        pipeline_build_urb_alloc_gen6(pipeline, info);
 
         pipeline->wa_flags = INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE |
                              INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL;
     }
 
-    ret = pipeline_ia_state(pipeline, &builder->ia);
+    ret = pipeline_ia_state(pipeline, &info->ia);
 
     if (ret == XGL_SUCCESS)
-        ret = pipeline_rs_state(pipeline, &builder->rs);
+        ret = pipeline_rs_state(pipeline, &info->rs);
 
-    if (ret == XGL_SUCCESS && builder->vs.shader)
-        ret = pipeline_shader(pipeline, &builder->vs);
-    if (ret == XGL_SUCCESS && builder->tcs.shader)
-        ret = pipeline_shader(pipeline, &builder->tcs);
-    if (ret == XGL_SUCCESS && builder->tes.shader)
-        ret = pipeline_shader(pipeline, &builder->tes);
-    if (ret == XGL_SUCCESS && builder->gs.shader)
-        ret = pipeline_shader(pipeline, &builder->gs);
-    if (ret == XGL_SUCCESS && builder->fs.shader)
-        ret = pipeline_shader(pipeline, &builder->fs);
+    if (ret == XGL_SUCCESS && info->vs.shader)
+        ret = pipeline_shader(pipeline, &info->vs);
+    if (ret == XGL_SUCCESS && info->tcs.shader)
+        ret = pipeline_shader(pipeline, &info->tcs);
+    if (ret == XGL_SUCCESS && info->tes.shader)
+        ret = pipeline_shader(pipeline, &info->tes);
+    if (ret == XGL_SUCCESS && info->gs.shader)
+        ret = pipeline_shader(pipeline, &info->gs);
+    if (ret == XGL_SUCCESS && info->fs.shader)
+        ret = pipeline_shader(pipeline, &info->fs);
 
     if (ret == XGL_SUCCESS) {
-        pipeline->db_format = builder->db.format;
-        pipeline->cb_state = builder->cb;
-        pipeline->tess_state = builder->tess;
+        pipeline->db_format = info->db.format;
+        pipeline->cb_state = info->cb;
+        pipeline->tess_state = info->tess;
     }
 
     return ret;
 }
 
-static XGL_RESULT builder_init(struct intel_pipeline_builder *builder,
-                               const struct intel_gpu *gpu,
-                               const struct intel_pipeline_builder_create_info *info)
+struct intel_pipeline_create_info_header {
+    XGL_STRUCTURE_TYPE struct_type;
+    const struct intel_pipeline_create_info_header *next;
+};
+
+static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *info,
+                                            const struct intel_gpu *gpu,
+                                            const struct intel_pipeline_create_info_header *header)
 {
-    memset(builder, 0, sizeof(*builder));
+    memset(info, 0, sizeof(*info));
 
-    builder->gpu = gpu;
+    info->gpu = gpu;
 
-    while (info) {
-        const void *src = (const void *) info;
+    while (header) {
+        const void *src = (const void *) header;
         XGL_SIZE size;
         void *dst;
 
-        switch (info->struct_type) {
+        switch (header->struct_type) {
         case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
-            size = sizeof(builder->graphics);
-            dst = &builder->graphics;
+            size = sizeof(info->graphics);
+            dst = &info->graphics;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            size = sizeof(builder->ia);
-            dst = &builder->ia;
+            size = sizeof(info->ia);
+            dst = &info->ia;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
-            size = sizeof(builder->db);
-            dst = &builder->db;
+            size = sizeof(info->db);
+            dst = &info->db;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-            size = sizeof(builder->cb);
-            dst = &builder->cb;
+            size = sizeof(info->cb);
+            dst = &info->cb;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            size = sizeof(builder->rs);
-            dst = &builder->rs;
+            size = sizeof(info->rs);
+            dst = &info->rs;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-            size = sizeof(builder->tess);
-            dst = &builder->tess;
+            size = sizeof(info->tess);
+            dst = &info->tess;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
             {
-                const XGL_PIPELINE_SHADER *shader = (const XGL_PIPELINE_SHADER *) (info + 1);
+                const XGL_PIPELINE_SHADER *shader =
+                    (const XGL_PIPELINE_SHADER *) (header + 1);
 
                 src = (const void *) shader;
                 size = sizeof(*shader);
 
                 switch (shader->stage) {
                 case XGL_SHADER_STAGE_VERTEX:
-                    dst = &builder->vs;
+                    dst = &info->vs;
                     break;
                 case XGL_SHADER_STAGE_TESS_CONTROL:
-                    dst = &builder->tcs;
+                    dst = &info->tcs;
                     break;
                 case XGL_SHADER_STAGE_TESS_EVALUATION:
-                    dst = &builder->tes;
+                    dst = &info->tes;
                     break;
                 case XGL_SHADER_STAGE_GEOMETRY:
-                    dst = &builder->gs;
+                    dst = &info->gs;
                     break;
                 case XGL_SHADER_STAGE_FRAGMENT:
-                    dst = &builder->fs;
+                    dst = &info->fs;
                     break;
                 case XGL_SHADER_STAGE_COMPUTE:
-                    dst = &builder->cs;
+                    dst = &info->cs;
                     break;
                 default:
                     return XGL_ERROR_BAD_PIPELINE_DATA;
@@ -812,8 +785,8 @@ static XGL_RESULT builder_init(struct intel_pipeline_builder *builder,
             }
             break;
         case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
-            size = sizeof(builder->compute);
-            dst = &builder->compute;
+            size = sizeof(info->compute);
+            dst = &info->compute;
             break;
         default:
             return XGL_ERROR_BAD_PIPELINE_DATA;
@@ -822,37 +795,37 @@ static XGL_RESULT builder_init(struct intel_pipeline_builder *builder,
 
         memcpy(dst, src, size);
 
-        info = info->next;
+        header = header->next;
     }
 
     return XGL_SUCCESS;
 }
 
 static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
-                                           const XGL_GRAPHICS_PIPELINE_CREATE_INFO *info,
+                                           const XGL_GRAPHICS_PIPELINE_CREATE_INFO *info_,
                                            struct intel_pipeline **pipeline_ret)
 {
-    struct intel_pipeline_builder builder;
+    struct intel_pipeline_create_info info;
     struct intel_pipeline *pipeline;
     XGL_RESULT ret;
 
-    ret = builder_init(&builder, dev->gpu,
-            (const struct intel_pipeline_builder_create_info *) info);
+    ret = pipeline_create_info_init(&info, dev->gpu,
+            (const struct intel_pipeline_create_info_header *) info_);
     if (ret != XGL_SUCCESS)
         return ret;
 
     pipeline = (struct intel_pipeline *)
         intel_base_create(dev, sizeof(*pipeline), dev->base.dbg,
-                XGL_DBG_OBJECT_GRAPHICS_PIPELINE, info, 0);
+                XGL_DBG_OBJECT_GRAPHICS_PIPELINE, info_, 0);
     if (!pipeline)
         return XGL_ERROR_OUT_OF_MEMORY;
 
     pipeline->dev = dev;
     pipeline->obj.destroy = pipeline_destroy;
 
-    ret = builder_build_all(&builder, pipeline);
+    ret = pipeline_build_all(pipeline, &info);
     if (ret == XGL_SUCCESS)
-        ret = builder_validate(&builder, pipeline);
+        ret = pipeline_validate(pipeline);
     if (ret != XGL_SUCCESS) {
         pipeline_destroy(&pipeline->obj);
         return ret;
