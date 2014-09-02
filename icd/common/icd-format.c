@@ -1,5 +1,5 @@
 /*
- * Mesa 3-D graphics library
+ * XGL
  *
  * Copyright (C) 2014 LunarG, Inc.
  *

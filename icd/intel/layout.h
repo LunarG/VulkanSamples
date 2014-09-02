@@ -1,5 +1,5 @@
 /*
- * Mesa 3-D graphics library
+ * XGL
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *    Chia-I Wu <olv@lunarg.com>
+ *   Chia-I Wu <olv@lunarg.com>
  */
 
 #ifndef LAYOUT_H

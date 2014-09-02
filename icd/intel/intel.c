@@ -22,7 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *    Courtney Goeltzenleuchter <courtney@lunarg.com>
+ *   Courtney Goeltzenleuchter <courtney@lunarg.com>
+ *   Chia-I Wu <olv@lunarg.com>
  */
 
 #ifdef HAVE_CONFIG_H
