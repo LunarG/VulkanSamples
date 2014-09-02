@@ -256,6 +256,40 @@ static struct intel_rmap *rmap_create(struct intel_dev *dev,
     return rmap;
 }
 
+static XGL_RESULT pipeline_shader_copy_pcb(struct intel_pipe_shader *sh,
+                                           const XGL_LINK_CONST_BUFFER *buffers,
+                                           XGL_UINT buffer_count)
+{
+    XGL_SIZE pcb_size = 0;
+    XGL_UINT i;
+
+    /*
+     * XXX This is not enough.  We need a mapping from buffer id to pcb
+     * offset, and we need to check against hardware limits.
+     */
+    for (i = 0; i < buffer_count; i++) {
+        const XGL_LINK_CONST_BUFFER *buf = &buffers[i];
+
+        pcb_size += buf->bufferSize;
+    }
+
+    sh->pcb = icd_alloc(pcb_size, 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!sh->pcb)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    pcb_size = 0;
+    for (i = 0; i < buffer_count; i++) {
+        const XGL_LINK_CONST_BUFFER *buf = &buffers[i];
+
+        memcpy((char *) sh->pcb + pcb_size, buf->pBufferData, buf->bufferSize);
+        pcb_size += buf->bufferSize;
+    }
+
+    sh->pcb_size = pcb_size;
+
+    return XGL_SUCCESS;
+}
+
 static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipe_shader *sh,
                                           const struct intel_shader *ir)
 {
@@ -282,22 +316,29 @@ static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipe_shader *sh,
 static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *vs = &pipeline->intel_vs;
+    struct intel_pipe_shader *vs = &pipeline->vs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(vs, intel_shader(info->vs.shader));
     if (ret != XGL_SUCCESS)
         return ret;
 
+    ret = pipeline_shader_copy_pcb(vs, info->vs.pLinkConstBufferInfo,
+            info->vs.linkConstBufferCount);
+    if (ret != XGL_SUCCESS) {
+        icd_free(vs->pCode);
+        return ret;
+    }
+
     vs->rmap = rmap_create(pipeline->dev,
             &info->vs.descriptorSetMapping[0],
             &info->vs.dynamicMemoryViewMapping, 0);
     if (!vs->rmap) {
         icd_free(vs->pCode);
+        icd_free(vs->pcb);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    pipeline->vs = info->vs;
     pipeline->active_shaders |= SHADER_VERTEX_FLAG;
 
     return XGL_SUCCESS;
@@ -312,6 +353,13 @@ static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
     ret = pipeline_shader_copy_ir(tcs, intel_shader(info->tcs.shader));
     if (ret != XGL_SUCCESS)
         return ret;
+
+    ret = pipeline_shader_copy_pcb(tcs, info->tcs.pLinkConstBufferInfo,
+            info->tcs.linkConstBufferCount);
+    if (ret != XGL_SUCCESS) {
+        icd_free(tcs->pCode);
+        return ret;
+    }
 
     pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
 
@@ -328,6 +376,13 @@ static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
     if (ret != XGL_SUCCESS)
         return ret;
 
+    ret = pipeline_shader_copy_pcb(tes, info->tes.pLinkConstBufferInfo,
+            info->tes.linkConstBufferCount);
+    if (ret != XGL_SUCCESS) {
+        icd_free(tes->pCode);
+        return ret;
+    }
+
     pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
 
     return XGL_SUCCESS;
@@ -343,6 +398,13 @@ static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
     if (ret != XGL_SUCCESS)
         return ret;
 
+    ret = pipeline_shader_copy_pcb(gs, info->gs.pLinkConstBufferInfo,
+            info->gs.linkConstBufferCount);
+    if (ret != XGL_SUCCESS) {
+        icd_free(gs->pCode);
+        return ret;
+    }
+
     pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
 
     return XGL_SUCCESS;
@@ -351,23 +413,30 @@ static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
-    struct intel_pipe_shader *fs = &pipeline->intel_fs;
+    struct intel_pipe_shader *fs = &pipeline->fs;
     XGL_RESULT ret;
 
     ret = pipeline_shader_copy_ir(fs, intel_shader(info->fs.shader));
     if (ret != XGL_SUCCESS)
         return ret;
 
+    ret = pipeline_shader_copy_pcb(fs, info->fs.pLinkConstBufferInfo,
+            info->fs.linkConstBufferCount);
+    if (ret != XGL_SUCCESS) {
+        icd_free(fs->pCode);
+        return ret;
+    }
+
     /* assuming one RT; need to parse the shader */
     fs->rmap = rmap_create(pipeline->dev,
             &info->fs.descriptorSetMapping[0],
             &info->fs.dynamicMemoryViewMapping, 1);
     if (!fs->rmap) {
+        icd_free(fs->pcb);
         icd_free(fs->pCode);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    pipeline->fs = info->fs;
     pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
 
     return XGL_SUCCESS;
@@ -382,6 +451,13 @@ static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
     ret = pipeline_shader_copy_ir(cs, intel_shader(info->compute.cs.shader));
     if (ret != XGL_SUCCESS)
         return ret;
+
+    ret = pipeline_shader_copy_pcb(cs, info->compute.cs.pLinkConstBufferInfo,
+            info->compute.cs.linkConstBufferCount);
+    if (ret != XGL_SUCCESS) {
+        icd_free(cs->pCode);
+        return ret;
+    }
 
     pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
 
@@ -413,6 +489,8 @@ XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
 static void pipeline_tear_shader(struct intel_pipe_shader *sh)
 {
     icd_free(sh->pCode);
+    if (sh->pcb)
+        icd_free(sh->pcb);
     if (sh->rmap)
         rmap_destroy(sh->rmap);
 }
@@ -420,7 +498,7 @@ static void pipeline_tear_shader(struct intel_pipe_shader *sh)
 void pipeline_tear_shaders(struct intel_pipeline *pipeline)
 {
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        pipeline_tear_shader(&pipeline->intel_vs);
+        pipeline_tear_shader(&pipeline->vs);
     }
 
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
@@ -436,7 +514,7 @@ void pipeline_tear_shaders(struct intel_pipeline *pipeline)
     }
 
     if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        pipeline_tear_shader(&pipeline->intel_fs);
+        pipeline_tear_shader(&pipeline->fs);
     }
 
     if (pipeline->active_shaders & SHADER_COMPUTE_FLAG) {

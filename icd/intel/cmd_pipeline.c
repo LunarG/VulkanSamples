@@ -434,10 +434,8 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
 static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
                                        uint32_t body[13])
 {
-    const struct intel_shader *vs =
-        intel_shader(cmd->bind.pipeline.graphics->vs.shader);
-    const struct intel_shader *fs =
-        intel_shader(cmd->bind.pipeline.graphics->fs.shader);
+    const struct intel_pipe_shader *vs = &cmd->bind.pipeline.graphics->vs;
+    const struct intel_pipe_shader *fs = &cmd->bind.pipeline.graphics->fs;
     XGL_UINT attr_skip, attr_count;
     XGL_UINT vue_offset, vue_len;
     XGL_UINT i;
@@ -543,7 +541,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) |
                          (cmd_len - 2);
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_pipe_shader *fs = &pipeline->fs;
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
     const struct intel_raster_state *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
@@ -592,7 +590,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const int max_threads = (cmd->dev->gpu->gt == 2) ? 80 : 40;
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_pipe_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 9;
     uint32_t dw0, dw2, dw4, dw5, dw6;
@@ -656,7 +654,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_pipe_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 3;
     uint32_t dw0, dw1, dw2;
@@ -701,7 +699,7 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
 static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_shader *fs = intel_shader(pipeline->fs.shader);
+    const struct intel_pipe_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 8;
     uint32_t dw0, dw2, dw4, dw5;
@@ -727,7 +725,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
         dw4 |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     }
 
-    if (pipeline->fs.linkConstBufferCount)
+    if (fs->pcb_size)
         dw4 |= GEN7_PS_DW4_PUSH_CONSTANT_ENABLE;
 
     if (fs->in_count)
@@ -1356,114 +1354,88 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
 }
 
 static void gen6_pcb(struct intel_cmd *cmd, int subop,
-                     const XGL_PIPELINE_SHADER *sh)
+                     const struct intel_pipe_shader *sh)
 {
     const uint8_t cmd_len = 5;
-    const XGL_UINT alignment = 32;
-    const XGL_UINT max_size =
-        (subop == GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS) ? 1024 : 2048;
-    const XGL_UINT max_pcb = 4;
-    uint32_t pcb[4] = { 0, 0, 0, 0 };
-    XGL_FLAGS pcb_enables = 0;
-    XGL_SIZE total_size = 0;
+    /*
+     * TODO It is actually 2048 for non-VS PCB.  But we need to upload the
+     * data to multiple PCBs when the size is greater than 1024.
+     */
+    const XGL_UINT max_size = 1024;
     uint32_t dw0;
-    XGL_UINT i;
+    XGL_UINT pos;
 
-    for (i = 0; i < sh->linkConstBufferCount; i++) {
-        const XGL_LINK_CONST_BUFFER *info = &sh->pLinkConstBufferInfo[i];
-        const XGL_SIZE size = u_align(info->bufferSize, alignment);
-        void *ptr;
-
-        if (info->bufferId >= max_pcb ||
-            pcb_enables & ((1 << info->bufferId)) ||
-            total_size + info->bufferSize > max_size) {
-            cmd->result = XGL_ERROR_UNKNOWN;
-            return;
-        }
-        if (!size)
-            continue;
-
-        pcb_enables |= 1 << info->bufferId;
-        total_size += size;
-
-        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
-                alignment / sizeof(uint32_t), &pcb[info->bufferId]);
-        memcpy(ptr, info->pBufferData, info->bufferSize);
-        cmd_state_advance(cmd, size / sizeof(uint32_t));
-
-        pcb[info->bufferId] |= size / alignment - 1;
+    if (sh->pcb_size > max_size) {
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
     }
 
     dw0 = GEN6_RENDER_TYPE_RENDER |
           GEN6_RENDER_SUBTYPE_3D |
           subop |
-          pcb_enables << 12 |
           (cmd_len - 2);
+    pos = 0;
+
+    if (sh->pcb_size) {
+        const XGL_UINT alignment = 32;
+        const XGL_SIZE size = u_align(sh->pcb_size, alignment);
+        void *ptr;
+
+        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
+                alignment / sizeof(uint32_t), &pos);
+        memcpy(ptr, sh->pcb, sh->pcb_size);
+        cmd_state_advance(cmd, size / sizeof(uint32_t));
+
+        dw0 |= GEN6_PCB_ANY_DW0_PCB0_VALID;
+        pos |= size / alignment - 1;
+    }
 
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, pcb[0]);
-    cmd_batch_write(cmd, pcb[1]);
-    cmd_batch_write(cmd, pcb[2]);
-    cmd_batch_write(cmd, pcb[3]);
+    cmd_batch_write(cmd, pos);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 0);
 }
 
 static void gen7_pcb(struct intel_cmd *cmd, int subop,
-                     const XGL_PIPELINE_SHADER *sh)
+                     const struct intel_pipe_shader *sh)
 {
     const uint8_t cmd_len = 7;
     const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
                          GEN6_RENDER_SUBTYPE_3D |
                          subop |
                          (cmd_len - 2);
-    const XGL_UINT alignment = 32;
     const XGL_UINT max_size = 2048;
-    const XGL_UINT max_pcb = 4;
-    uint16_t pcb_len[4] = { 0, 0, 0, 0 };
-    uint32_t pcb[4] = { 0, 0, 0, 0 };
-    XGL_FLAGS pcb_enables = 0;
-    XGL_SIZE total_size = 0;
-    XGL_UINT i;
+    XGL_UINT pcb_len = 0;
+    XGL_UINT pos = 0;
 
-    for (i = 0; i < sh->linkConstBufferCount; i++) {
-        const XGL_LINK_CONST_BUFFER *info = &sh->pLinkConstBufferInfo[i];
-        const XGL_SIZE size = u_align(info->bufferSize, alignment);
-        void *ptr;
-
-        if (info->bufferId >= max_pcb ||
-            pcb_enables & ((1 << info->bufferId)) ||
-            total_size + info->bufferSize > max_size) {
-            cmd->result = XGL_ERROR_UNKNOWN;
-            return;
-        }
-        if (!size)
-            continue;
-
-        pcb_enables |= 1 << info->bufferId;
-        total_size += size;
-
-        pcb_len[info->bufferId] = size / alignment;
-
-        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
-                alignment / sizeof(uint32_t), &pcb[info->bufferId]);
-        memcpy(ptr, info->pBufferData, info->bufferSize);
-        cmd_state_advance(cmd, size / sizeof(uint32_t));
-    }
-
-    /* no holes */
-    if (!u_is_pow2(pcb_enables + 1)) {
+    if (sh->pcb_size > max_size) {
         cmd->result = XGL_ERROR_UNKNOWN;
         return;
     }
 
+    if (sh->pcb_size) {
+        const XGL_UINT alignment = 32;
+        const XGL_SIZE size = u_align(sh->pcb_size, alignment);
+        void *ptr;
+
+        pcb_len = size / alignment;
+
+        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
+                alignment / sizeof(uint32_t), &pos);
+        memcpy(ptr, sh->pcb, sh->pcb_size);
+        cmd_state_advance(cmd, size / sizeof(uint32_t));
+    }
+
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, pcb_len[1] << 16 | pcb_len[0]);
-    cmd_batch_write(cmd, pcb_len[3] << 16 | pcb_len[2]);
-    cmd_batch_write(cmd, pcb[0]);
-    cmd_batch_write(cmd, pcb[1]);
-    cmd_batch_write(cmd, pcb[2]);
-    cmd_batch_write(cmd, pcb[3]);
+    cmd_batch_write(cmd, pcb_len);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, pos);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 0);
+    cmd_batch_write(cmd, 0);
 }
 
 static void emit_ps_resources(struct intel_cmd *cmd,
@@ -1654,7 +1626,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_3DSTATE_WM(cmd);
     }
 
-    emit_ps_resources(cmd, cmd->bind.pipeline.graphics->intel_fs.rmap);
+    emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs.rmap);
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
@@ -1728,13 +1700,13 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
     cmd_batch_write_n(cmd, pipeline->cmds, pipeline->cmd_len);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        emit_shader(cmd, &pipeline->intel_vs, &cmd->bind.vs);
+        emit_shader(cmd, &pipeline->vs, &cmd->bind.vs);
     }
     if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
         emit_shader(cmd, &pipeline->gs, &cmd->bind.gs);
     }
     if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        emit_shader(cmd, &pipeline->intel_fs, &cmd->bind.fs);
+        emit_shader(cmd, &pipeline->fs, &cmd->bind.fs);
     }
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
         emit_shader(cmd, &pipeline->tess_control, &cmd->bind.tess_control);

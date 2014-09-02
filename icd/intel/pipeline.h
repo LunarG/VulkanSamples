@@ -105,6 +105,9 @@ struct intel_pipe_shader {
     XGL_FLAGS barycentric_interps;
 
     struct intel_rmap *rmap;
+
+    void *pcb;
+    XGL_SIZE pcb_size;
 };
 
 /*
@@ -157,13 +160,11 @@ struct intel_pipeline {
     XGL_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
 
     uint32_t active_shaders;
-    XGL_PIPELINE_SHADER vs;
-    XGL_PIPELINE_SHADER fs;
-    struct intel_pipe_shader intel_vs;
-    struct intel_pipe_shader intel_fs;
-    struct intel_pipe_shader gs;
+    struct intel_pipe_shader vs;
     struct intel_pipe_shader tess_control;
     struct intel_pipe_shader tess_eval;
+    struct intel_pipe_shader gs;
+    struct intel_pipe_shader fs;
     struct intel_pipe_shader compute;
 
     uint32_t wa_flags;
