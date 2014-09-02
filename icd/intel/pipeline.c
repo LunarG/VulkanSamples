@@ -774,9 +774,6 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
                 case XGL_SHADER_STAGE_FRAGMENT:
                     dst = &info->fs;
                     break;
-                case XGL_SHADER_STAGE_COMPUTE:
-                    dst = &info->cs;
-                    break;
                 default:
                     return XGL_ERROR_BAD_PIPELINE_DATA;
                     break;

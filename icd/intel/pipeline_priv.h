@@ -45,7 +45,6 @@ struct intel_pipeline_create_info {
     XGL_PIPELINE_SHADER                 fs;
 
     XGL_COMPUTE_PIPELINE_CREATE_INFO    compute;
-    XGL_PIPELINE_SHADER                 cs;
 };
 
 struct intel_rmap *intel_rmap_create(struct intel_dev *dev,
