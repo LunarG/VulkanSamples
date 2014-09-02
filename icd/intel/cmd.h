@@ -34,7 +34,6 @@
 #include "view.h"
 
 struct intel_pipeline;
-struct intel_pipeline_shader;
 struct intel_pipeline_delta;
 struct intel_viewport_state;
 struct intel_raster_state;
@@ -42,6 +41,7 @@ struct intel_msaa_state;
 struct intel_blend_state;
 struct intel_ds_state;
 struct intel_dset;
+struct intel_pipe_shader;
 
 struct intel_cmd_reloc;
 
@@ -119,7 +119,7 @@ enum intel_cmd_wa_flags {
 };
 
 struct intel_cmd_shader {
-    const struct intel_pipeline_shader *shader;
+    const struct intel_pipe_shader *shader;
     XGL_UINT kernel_pos;
 };
 
