@@ -27,7 +27,6 @@
  */
 
 #include "genhw/genhw.h"
-
 #include "cmd.h"
 #include "shader.h"
 #include "pipeline_priv.h"
@@ -140,134 +139,9 @@ static void pipeline_destroy(struct intel_obj *obj)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_obj(obj);
 
-    if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        icd_free(pipeline->intel_vs.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
-        icd_free(pipeline->gs.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        icd_free(pipeline->intel_fs.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        icd_free(pipeline->tess_control.pCode);
-    }
-    if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        icd_free(pipeline->tess_eval.pCode);
-    }
-
-    if (pipeline->vs_rmap)
-        intel_rmap_destroy(pipeline->vs_rmap);
-    if (pipeline->fs_rmap)
-        intel_rmap_destroy(pipeline->fs_rmap);
+    pipeline_tear_shaders(pipeline);
 
     intel_base_destroy(&pipeline->obj.base);
-}
-
-static void intel_pipe_shader_init(struct intel_shader *sh,
-                                   struct intel_pipe_shader *pipe_sh)
-{
-    pipe_sh->in_count = sh->in_count;
-    pipe_sh->out_count = sh->out_count;
-    pipe_sh->sampler_count = sh->sampler_count;
-    pipe_sh->surface_count = sh->surface_count;
-    pipe_sh->barycentric_interps = sh->barycentric_interps;
-    pipe_sh->urb_read_length = sh->urb_read_length;
-    pipe_sh->urb_grf_start = sh->urb_grf_start;
-    pipe_sh->uses = sh->uses;
-}
-
-static XGL_RESULT pipeline_shader(struct intel_pipeline *pipeline,
-                                  const XGL_PIPELINE_SHADER *info)
-{
-    struct intel_shader *sh = intel_shader(info->shader);
-    void *kernel;
-
-    // TODO: process shader object and include in pipeline
-    // For now that processing is simply a copy so that the app
-    // can destroy the original shader object after pipeline creation.
-    kernel = icd_alloc(sh->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    if (!kernel)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    // TODO: This should be a compile step
-    memcpy(kernel, sh->ir->kernel, sh->ir->size);
-
-    switch (info->stage) {
-    case XGL_SHADER_STAGE_VERTEX:
-        /*
-         * TODO: What should we do here?
-         * shader_state (XGL_PIPELINE_SHADER) contains links
-         * to application memory in the pLinkConstBufferInfo and
-         * it's pBufferData pointers. Do we need to bring all that
-         * into the driver or is it okay to rely on those references
-         * holding good data. In OpenGL we'd make a driver copy. Not
-         * as clear for XGL.
-         * For now, use the app pointers.
-         */
-        pipeline->vs = *info;
-
-       /*
-        * Grab what we need from the intel_shader object as that
-        * could go away after the pipeline is created.
-        */
-        intel_pipe_shader_init(sh, &pipeline->intel_vs);
-        pipeline->intel_vs.pCode = kernel;
-        pipeline->intel_vs.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_VERTEX_FLAG;
-        pipeline->vs_rmap = intel_rmap_create(pipeline->dev,
-                &info->descriptorSetMapping[0],
-                &info->dynamicMemoryViewMapping, 0);
-        if (!pipeline->vs_rmap) {
-            icd_free(kernel);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-        break;
-    case XGL_SHADER_STAGE_GEOMETRY:
-        intel_pipe_shader_init(sh, &pipeline->gs);
-        pipeline->gs.pCode = kernel;
-        pipeline->gs.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_GEOMETRY_FLAG;
-        break;
-    case XGL_SHADER_STAGE_FRAGMENT:
-        pipeline->fs = *info;
-        intel_pipe_shader_init(sh, &pipeline->intel_fs);
-        pipeline->intel_fs.pCode = kernel;
-        pipeline->intel_fs.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
-        /* assuming one RT; need to parse the shader */
-        pipeline->fs_rmap = intel_rmap_create(pipeline->dev,
-                &info->descriptorSetMapping[0],
-                &info->dynamicMemoryViewMapping, 1);
-        if (!pipeline->fs_rmap) {
-            icd_free(kernel);
-            return XGL_ERROR_OUT_OF_MEMORY;
-        }
-        break;
-    case XGL_SHADER_STAGE_TESS_CONTROL:
-        intel_pipe_shader_init(sh, &pipeline->tess_control);
-        pipeline->tess_control.pCode = kernel;
-        pipeline->tess_control.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_TESS_CONTROL_FLAG;
-        break;
-    case XGL_SHADER_STAGE_TESS_EVALUATION:
-        intel_pipe_shader_init(sh, &pipeline->tess_eval);
-        pipeline->tess_eval.pCode = kernel;
-        pipeline->tess_eval.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_TESS_EVAL_FLAG;
-        break;
-    case XGL_SHADER_STAGE_COMPUTE:
-        intel_pipe_shader_init(sh, &pipeline->compute);
-        pipeline->compute.pCode = kernel;
-        pipeline->compute.codeSize = sh->ir->size;
-        pipeline->active_shaders |= SHADER_COMPUTE_FLAG;
-        break;
-    default:
-        assert(!"unknown shader stage");
-        break;
-    }
-
-    return XGL_SUCCESS;
 }
 
 static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
@@ -663,6 +537,10 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 {
     XGL_RESULT ret;
 
+    ret = pipeline_build_shaders(pipeline, info);
+    if (ret != XGL_SUCCESS)
+        return ret;
+
     pipeline_build_vertex_elements(pipeline, info);
 
     if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
@@ -689,17 +567,6 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 
     if (ret == XGL_SUCCESS)
         ret = pipeline_rs_state(pipeline, &info->rs);
-
-    if (ret == XGL_SUCCESS && info->vs.shader)
-        ret = pipeline_shader(pipeline, &info->vs);
-    if (ret == XGL_SUCCESS && info->tcs.shader)
-        ret = pipeline_shader(pipeline, &info->tcs);
-    if (ret == XGL_SUCCESS && info->tes.shader)
-        ret = pipeline_shader(pipeline, &info->tes);
-    if (ret == XGL_SUCCESS && info->gs.shader)
-        ret = pipeline_shader(pipeline, &info->gs);
-    if (ret == XGL_SUCCESS && info->fs.shader)
-        ret = pipeline_shader(pipeline, &info->fs);
 
     if (ret == XGL_SUCCESS) {
         pipeline->db_format = info->db.format;

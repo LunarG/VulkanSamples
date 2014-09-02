@@ -47,6 +47,10 @@ struct intel_pipeline_create_info {
     XGL_COMPUTE_PIPELINE_CREATE_INFO    compute;
 };
 
+XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
+                                  const struct intel_pipeline_create_info *info);
+void pipeline_tear_shaders(struct intel_pipeline *pipeline);
+
 struct intel_rmap *intel_rmap_create(struct intel_dev *dev,
                                      const XGL_DESCRIPTOR_SET_MAPPING *mapping,
                                      const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
