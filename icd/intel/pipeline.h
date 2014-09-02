@@ -133,12 +133,12 @@ struct intel_pipeline {
 
     struct intel_dev *dev;
 
-    /* XGL IA_STATE */
-    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state;
+    /* XGL_PIPELINE_IA_STATE_CREATE_INFO */
+    XGL_PRIMITIVE_TOPOLOGY topology;
     int prim_type;
+    bool disable_vs_cache;
     bool primitive_restart;
     uint32_t primitive_restart_index;
-
     /* Index of provoking vertex for each prim type */
     int provoking_vertex_tri;
     int provoking_vertex_trifan;

@@ -1580,6 +1580,9 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     else
         dw5 |= (max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
 
+    if (pipeline->disable_vs_cache)
+        dw5 |= GEN6_VS_DW5_CACHE_DISABLE;
+
     cmd_batch_reserve(cmd, cmd_len);
     cmd_batch_write(cmd, dw0);
     cmd_batch_write(cmd, cmd->bind.vs.kernel_pos);

@@ -41,12 +41,13 @@ static uint32_t *pipeline_cmd_ptr(struct intel_pipeline *pipeline, int cmd_len)
     return ptr;
 }
 
-static XGL_RESULT pipeline_ia_state(struct intel_pipeline *pipeline,
-                                    const XGL_PIPELINE_IA_STATE_CREATE_INFO* ia_state)
+static XGL_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
+                                    const struct intel_pipeline_create_info* info)
 {
-    pipeline->ia_state = *ia_state;
+    pipeline->topology = info->ia.topology;
+    pipeline->disable_vs_cache = info->ia.disableVertexReuse;
 
-    if (ia_state->provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
+    if (info->ia.provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
         pipeline->provoking_vertex_tri = 0;
         pipeline->provoking_vertex_trifan = 1;
         pipeline->provoking_vertex_line = 0;
@@ -56,7 +57,7 @@ static XGL_RESULT pipeline_ia_state(struct intel_pipeline *pipeline,
         pipeline->provoking_vertex_line = 1;
     }
 
-    switch (ia_state->topology) {
+    switch (info->ia.topology) {
     case XGL_TOPOLOGY_POINT_LIST:
         pipeline->prim_type = GEN6_3DPRIM_POINTLIST;
         break;
@@ -106,21 +107,21 @@ static XGL_RESULT pipeline_ia_state(struct intel_pipeline *pipeline,
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
     case XGL_TOPOLOGY_PATCH:
-        // TODO: implement something here
+        if (!info->tess.patchControlPoints ||
+            info->tess.patchControlPoints > 32)
+            return XGL_ERROR_BAD_PIPELINE_DATA;
+        pipeline->prim_type = GEN7_3DPRIM_PATCHLIST_1 +
+            info->tess.patchControlPoints - 1;
         break;
     default:
         return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
-    if (ia_state->primitiveRestartEnable) {
+    if (info->ia.primitiveRestartEnable) {
         pipeline->primitive_restart = true;
-        pipeline->primitive_restart_index = ia_state->primitiveRestartIndex;
+        pipeline->primitive_restart_index = info->ia.primitiveRestartIndex;
     } else {
         pipeline->primitive_restart = false;
-    }
-
-    if (ia_state->disableVertexReuse) {
-        // TODO: What do we do to disable vertex reuse?
     }
 
     return XGL_SUCCESS;
@@ -177,12 +178,12 @@ static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
      * Mismatching primitive topology and tessellation fails graphics pipeline creation.
      */
     if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
-        (pipeline->ia_state.topology != XGL_TOPOLOGY_PATCH)) {
+        (pipeline->topology != XGL_TOPOLOGY_PATCH)) {
         // TODO: Log debug message: Invalid topology used with tessalation shader.
         return XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
-    if ((pipeline->ia_state.topology == XGL_TOPOLOGY_PATCH) &&
+    if ((pipeline->topology == XGL_TOPOLOGY_PATCH) &&
             (pipeline->active_shaders & ~(SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
         // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessalation shader.
         return XGL_ERROR_BAD_PIPELINE_DATA;
@@ -563,7 +564,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
                              INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL;
     }
 
-    ret = pipeline_ia_state(pipeline, &info->ia);
+    ret = pipeline_build_ia(pipeline, info);
 
     if (ret == XGL_SUCCESS)
         ret = pipeline_rs_state(pipeline, &info->rs);
