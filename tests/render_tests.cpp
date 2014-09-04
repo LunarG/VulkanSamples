@@ -68,7 +68,7 @@ using namespace std;
 #include "xglimage.h"
 #include "icd-bil.h"
 
-#include "displayengine.h"
+#include "xgltestframework.h"
 
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
@@ -193,7 +193,8 @@ static const uint32_t gen7_vs[] = {
                                                     // urb 0 write HWord interleave complete mlen 3 rlen 0 { align16 1Q EOT };
 };
 
-class XglRenderTest : public ::testing::Test {
+class XglRenderTest : public XglTestFramework
+{
 public:
     void CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
                          XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem);
@@ -204,7 +205,6 @@ public:
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void DrawTriangleTest();
-    DisplayEngine m_screen;
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -722,8 +722,9 @@ void XglRenderTest::DrawTriangleTest()
     const ::testing::TestInfo* const test_info =
       ::testing::UnitTest::GetInstance()->current_test_info();
 
-    renderTarget->WritePPM(test_info->test_case_name());
+//    renderTarget->WritePPM(test_info->test_case_name());
 //    m_screen.Display(renderTarget, m_image_mem);
+    RecordImage(renderTarget);
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_cmdBuffer));
@@ -740,7 +741,13 @@ TEST_F(XglRenderTest, TestDrawTriangle) {
 }
 
 int main(int argc, char **argv) {
+    int result;
+
     ::testing::InitGoogleTest(&argc, argv);
-    glutInit(&argc, argv);
-    return RUN_ALL_TESTS();
+    XglTestFramework::InitArgs(&argc, argv);
+
+    result = RUN_ALL_TESTS();
+
+    XglTestFramework::Finish();
+    return result;
 }
