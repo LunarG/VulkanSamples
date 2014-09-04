@@ -117,7 +117,8 @@ public:
         return format.channelFormat >= XGL_CH_FMT_BC1 && format.channelFormat <= XGL_CH_FMT_BC7;
     }
 
-    void WritePPM(const char *filename);
+    XGL_RESULT MapMemory(XGL_VOID** ptr);
+    XGL_RESULT UnmapMemory();
 
 protected:
     XglDevice *m_device;

@@ -185,55 +185,12 @@ void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglImage::WritePPM( const char *basename )
+XGL_RESULT XglImage::MapMemory(XGL_VOID** ptr)
 {
-    string filename;
-    XGL_RESULT err;
-    int x, y;
-
-    filename.append(basename);
-    filename.append(".ppm");
-
-    const XGL_IMAGE_SUBRESOURCE sr = {
-        XGL_IMAGE_ASPECT_COLOR, 0, 0
-    };
-    XGL_SUBRESOURCE_LAYOUT sr_layout;
-    XGL_UINT data_size;
-
-    err = xglGetImageSubresourceInfo( m_image, &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
-                                      &data_size, &sr_layout);
-    ASSERT_XGL_SUCCESS( err );
-    ASSERT_EQ(data_size, sizeof(sr_layout));
-
-    const char *ptr;
-
-    err = xglMapMemory( m_memory, 0, (XGL_VOID **) &ptr );
-    ASSERT_XGL_SUCCESS( err );
-
-    ptr += sr_layout.offset;
-
-    ofstream file (filename.c_str());
-    ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
-
-    file << "P6\n";
-    file << m_width << "\n";
-    file << m_height << "\n";
-    file << 255 << "\n";
-
-    for (y = 0; y < m_height; y++) {
-        const char *row = ptr;
-
-        for (x = 0; x < m_width; x++) {
-            file.write(row, 3);
-            row += 4;
-        }
-
-        ptr += sr_layout.rowPitch;
-    }
-
-    file.close();
-
-    err = xglUnmapMemory( m_memory );
-    ASSERT_XGL_SUCCESS( err );
+    return(xglMapMemory(m_memory, 0, ptr));
 }
 
+XGL_RESULT XglImage::UnmapMemory()
+{
+    return(xglUnmapMemory(m_memory));
+}
