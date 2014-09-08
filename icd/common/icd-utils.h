@@ -71,6 +71,16 @@ static inline uint32_t u_fui(float f)
     return u.ui;
 }
 
+static inline float u_uif(uint32_t ui)
+{
+    union {
+        float f;
+        uint32_t ui;
+    } u = { .ui = ui };
+
+    return u.f;
+}
+
 static inline int u_iround(float f)
 {
     if (f >= 0.0f)
