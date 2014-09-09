@@ -36,6 +36,34 @@
 #define CMD_ASSERT(cmd, min_gen, max_gen) \
     INTEL_GPU_ASSERT((cmd)->dev->gpu, (min_gen), (max_gen))
 
+enum intel_cmd_item_type {
+    /* for state buffer */
+    INTEL_CMD_ITEM_BLOB,
+    INTEL_CMD_ITEM_CLIP_VIEWPORT,
+    INTEL_CMD_ITEM_SF_VIEWPORT,
+    INTEL_CMD_ITEM_SCISSOR_RECT,
+    INTEL_CMD_ITEM_CC_VIEWPORT,
+    INTEL_CMD_ITEM_COLOR_CALC,
+    INTEL_CMD_ITEM_DEPTH_STENCIL,
+    INTEL_CMD_ITEM_BLEND,
+    INTEL_CMD_ITEM_SAMPLER,
+
+    /* for surface buffer */
+    INTEL_CMD_ITEM_SURFACE,
+    INTEL_CMD_ITEM_BINDING_TABLE,
+
+    /* for instruction buffer */
+    INTEL_CMD_ITEM_KERNEL,
+
+    INTEL_CMD_ITEM_COUNT,
+};
+
+struct intel_cmd_item {
+    enum intel_cmd_item_type type;
+    XGL_SIZE offset;
+    XGL_SIZE size;
+};
+
 struct intel_cmd_reloc {
     enum intel_cmd_writer_type which;
     XGL_SIZE offset;
@@ -65,6 +93,11 @@ static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
 void cmd_writer_grow(struct intel_cmd *cmd,
                      enum intel_cmd_writer_type which,
                      XGL_SIZE new_size);
+
+void cmd_writer_record(struct intel_cmd *cmd,
+                       enum intel_cmd_writer_type which,
+                       enum intel_cmd_item_type type,
+                       XGL_SIZE offset, XGL_SIZE size);
 
 /**
  * Return an offset to a region that is aligned to \p alignment and has at
@@ -119,6 +152,7 @@ static inline void cmd_writer_reloc(struct intel_cmd *cmd,
  * Note that \p alignment is in bytes and \p len is in DWords.
  */
 static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
+                                         enum intel_cmd_item_type item,
                                          XGL_SIZE alignment, XGL_UINT len,
                                          uint32_t **dw)
 {
@@ -134,6 +168,9 @@ static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
 
     writer->used = offset + size;
 
+    if (intel_debug & INTEL_DEBUG_BATCH)
+        cmd_writer_record(cmd, which, item, offset, size);
+
     return offset;
 }
 
@@ -141,12 +178,13 @@ static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
  * Write a dynamic state to the state buffer.
  */
 static inline uint32_t cmd_state_write(struct intel_cmd *cmd,
+                                       enum intel_cmd_item_type item,
                                        XGL_SIZE alignment, XGL_UINT len,
                                        const uint32_t *dw)
 {
     uint32_t offset, *dst;
 
-    offset = cmd_state_pointer(cmd, alignment, len, &dst);
+    offset = cmd_state_pointer(cmd, item, alignment, len, &dst);
     memcpy(dst, dw, len << 2);
 
     return offset;
@@ -159,10 +197,14 @@ static inline uint32_t cmd_state_write(struct intel_cmd *cmd,
  * Note that \p alignment is in bytes and \p len is in DWords.
  */
 static inline uint32_t cmd_surface_write(struct intel_cmd *cmd,
+                                         enum intel_cmd_item_type item,
                                          XGL_SIZE alignment, XGL_UINT len,
                                          const uint32_t *dw)
 {
-    return cmd_state_write(cmd, alignment, len, dw);
+    assert(item == INTEL_CMD_ITEM_SURFACE ||
+           item == INTEL_CMD_ITEM_BINDING_TABLE);
+
+    return cmd_state_write(cmd, item, alignment, len, dw);
 }
 
 /**
@@ -207,6 +249,9 @@ static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
     memcpy((char *) writer->ptr + offset, kernel, size);
 
     writer->used = offset + size;
+
+    if (intel_debug & INTEL_DEBUG_BATCH)
+        cmd_writer_record(cmd, which, INTEL_CMD_ITEM_KERNEL, offset, size);
 
     return offset;
 }

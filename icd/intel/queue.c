@@ -39,9 +39,6 @@ static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
     struct intel_winsys *winsys = queue->dev->winsys;
     int err;
 
-    if (intel_debug & INTEL_DEBUG_BATCH)
-        intel_winsys_decode_bo(winsys, bo, used);
-
     if (intel_debug & INTEL_DEBUG_NOHW)
         err = 0;
     else
@@ -274,6 +271,9 @@ XGL_RESULT XGLAPI intelQueueSubmit(
         bo = intel_cmd_get_batch(cmd, &used);
         ret = queue_submit_bo(queue, bo, used);
         queue->last_submitted_cmd = cmd;
+
+        if (intel_debug & INTEL_DEBUG_BATCH)
+            intel_cmd_decode(cmd);
 
         if (ret != XGL_SUCCESS)
             break;

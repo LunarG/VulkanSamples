@@ -1000,7 +1000,8 @@ static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
     STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
 
-    return cmd_state_write(cmd, cmd_align, cmd_len, state->cmd);
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLEND,
+            cmd_align, cmd_len, state->cmd);
 }
 
 static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
@@ -1012,7 +1013,8 @@ static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
     STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
 
-    return cmd_state_write(cmd, cmd_align, cmd_len, state->cmd);
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
+            cmd_align, cmd_len, state->cmd);
 }
 
 static uint32_t gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
@@ -1025,7 +1027,8 @@ static uint32_t gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    offset = cmd_state_pointer(cmd, cmd_align, cmd_len, &dw);
+    offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_COLOR_CALC,
+            cmd_align, cmd_len, &dw);
     dw[0] = stencil_ref;
     dw[1] = 0;
     dw[2] = blend_color[0];
@@ -1296,7 +1299,8 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
     if (!viewport)
         return;
 
-    offset = cmd_state_write(cmd, viewport->cmd_align * 4,
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
+            viewport->cmd_align * 4,
             viewport->cmd_len, viewport->cmd);
 
     gen6_3DSTATE_VIEWPORT_STATE_POINTERS(cmd,
@@ -1355,8 +1359,8 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
     if (!viewport)
         return;
 
-    offset = cmd_state_write(cmd, viewport->cmd_align * 4,
-            viewport->cmd_len, viewport->cmd);
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
+            viewport->cmd_align * 4, viewport->cmd_len, viewport->cmd);
 
     gen7_3dstate_pointer(cmd,
             GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
@@ -1398,7 +1402,7 @@ static void gen6_pcb(struct intel_cmd *cmd, int subop,
         const XGL_SIZE alignment = 32;
         const XGL_SIZE size = u_align(sh->pcb_size, alignment);
 
-        offset = cmd_state_pointer(cmd, alignment,
+        offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, alignment,
                 size / sizeof(uint32_t), &dw);
         memcpy(dw, sh->pcb, sh->pcb_size);
 
@@ -1437,7 +1441,7 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
 
         pcb_len = size / alignment;
 
-        offset = cmd_state_pointer(cmd, alignment,
+        offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, alignment,
                 size / sizeof(uint32_t), &dw);
         memcpy(dw, sh->pcb, sh->pcb_size);
     }
@@ -1473,7 +1477,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
             {
                 const struct intel_rt_view *view = cmd->bind.att.rt[i];
 
-                offset = cmd_surface_write(cmd,
+                offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                         GEN6_ALIGNMENT_SURFACE_STATE * 4,
                         view->cmd_len, view->cmd);
 
@@ -1487,7 +1491,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
                 const struct intel_mem_view *view =
                     &cmd->bind.dyn_view.graphics;
 
-                offset = cmd_surface_write(cmd,
+                offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                         GEN6_ALIGNMENT_SURFACE_STATE * 4,
                         view->cmd_len, view->cmd);
 
@@ -1506,7 +1510,8 @@ static void emit_ps_resources(struct intel_cmd *cmd,
         binding_table[i] = offset;
     }
 
-    offset = cmd_state_write(cmd, GEN6_ALIGNMENT_BINDING_TABLE_STATE * 4,
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
+            GEN6_ALIGNMENT_BINDING_TABLE_STATE * 4,
             surface_count, binding_table);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {

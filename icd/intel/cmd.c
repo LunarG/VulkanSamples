@@ -53,6 +53,12 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
     }
 
     writer->used = 0;
+
+    if (writer->items) {
+        icd_free(writer->items);
+        writer->item_alloc = 0;
+        writer->item_used = 0;
+    }
 }
 
 /**
@@ -65,6 +71,7 @@ static void cmd_writer_discard(struct intel_cmd *cmd,
 
     intel_bo_truncate_relocs(writer->bo, 0);
     writer->used = 0;
+    writer->item_used = 0;
 }
 
 static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
@@ -101,6 +108,7 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
     }
 
     writer->used = 0;
+    writer->item_used = 0;
 
     writer->ptr = intel_bo_map(writer->bo, true);
     if (!writer->ptr)
@@ -162,6 +170,45 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     writer->size = new_size;
     writer->bo = new_bo;
     writer->ptr = new_ptr;
+}
+
+/**
+ * Record an item for later decoding.
+ */
+void cmd_writer_record(struct intel_cmd *cmd,
+                       enum intel_cmd_writer_type which,
+                       enum intel_cmd_item_type type,
+                       XGL_SIZE offset, XGL_SIZE size)
+{
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+    struct intel_cmd_item *item;
+
+    if (writer->item_used == writer->item_alloc) {
+        const unsigned new_alloc = (writer->item_alloc) ?
+            writer->item_alloc << 1 : 256;
+        struct intel_cmd_item *items;
+
+        items = icd_alloc(sizeof(writer->items[0]) * new_alloc,
+                0, XGL_SYSTEM_ALLOC_DEBUG);
+        if (!items) {
+            writer->item_used = 0;
+            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            return;
+        }
+
+        memcpy(items, writer->items,
+                sizeof(writer->items[0]) * writer->item_alloc);
+
+        icd_free(writer->items);
+
+        writer->items = items;
+        writer->item_alloc = new_alloc;
+    }
+
+    item = &writer->items[writer->item_used++];
+    item->type = type;
+    item->offset = offset;
+    item->size = size;
 }
 
 static void cmd_writer_patch(struct intel_cmd *cmd,

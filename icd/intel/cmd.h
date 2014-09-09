@@ -43,6 +43,7 @@ struct intel_blend_state;
 struct intel_ds_state;
 struct intel_dset;
 
+struct intel_cmd_item;
 struct intel_cmd_reloc;
 
 /*
@@ -204,6 +205,11 @@ struct intel_cmd_writer {
     void *ptr;
 
     XGL_SIZE used;
+
+    /* for decoding */
+    struct intel_cmd_item *items;
+    XGL_UINT item_alloc;
+    XGL_UINT item_used;
 };
 
 struct intel_cmd {
@@ -243,6 +249,8 @@ void intel_cmd_destroy(struct intel_cmd *cmd);
 
 XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags);
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd);
+
+void intel_cmd_decode(struct intel_cmd *cmd);
 
 static inline struct intel_bo *intel_cmd_get_batch(const struct intel_cmd *cmd,
                                                    XGL_GPU_SIZE *used)

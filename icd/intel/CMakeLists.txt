@@ -19,6 +19,7 @@ include_directories (
 
 SET(SOURCES 
     cmd.c
+    cmd_decode.c
     cmd_mi.c
     cmd_prepare.c
     cmd_pipeline.c
