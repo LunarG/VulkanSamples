@@ -118,6 +118,14 @@ enum intel_cmd_wa_flags {
     INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL = 1 << 4,
 };
 
+enum intel_cmd_writer_type {
+    INTEL_CMD_WRITER_BATCH,
+    INTEL_CMD_WRITER_STATE,
+    INTEL_CMD_WRITER_INSTRUCTION,
+
+    INTEL_CMD_WRITER_COUNT,
+};
+
 struct intel_cmd_shader {
     const struct intel_pipeline_shader *shader;
     XGL_UINT kernel_pos;
@@ -211,9 +219,7 @@ struct intel_cmd {
 
     XGL_FLAGS flags;
 
-    struct intel_cmd_writer batch;
-    struct intel_cmd_writer state;
-    struct intel_cmd_writer kernel;
+    struct intel_cmd_writer writers[INTEL_CMD_WRITER_COUNT];
 
     XGL_UINT reloc_used;
     XGL_RESULT result;
@@ -242,7 +248,8 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd);
 static inline struct intel_bo *intel_cmd_get_batch(const struct intel_cmd *cmd,
                                                    XGL_GPU_SIZE *used)
 {
-    const struct intel_cmd_writer *writer = &cmd->batch;
+    const struct intel_cmd_writer *writer =
+        &cmd->writers[INTEL_CMD_WRITER_BATCH];
 
     if (used)
         *used = sizeof(uint32_t) * writer->used;
