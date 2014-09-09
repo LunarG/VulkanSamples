@@ -33,45 +33,136 @@
 #include "obj.h"
 #include "cmd_priv.h"
 
-static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
-                                           enum intel_cmd_writer_type which,
-                                           XGL_UINT size)
+/**
+ * Free all resources used by a writer.  Note that the initial size is not
+ * reset.
+ */
+static void cmd_writer_reset(struct intel_cmd *cmd,
+                             enum intel_cmd_writer_type which)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
-    struct intel_winsys *winsys = cmd->dev->winsys;
-    const XGL_GPU_SIZE bo_size = sizeof(uint32_t) * size;
-    struct intel_bo *bo;
-    void *ptr;
 
-    bo = intel_winsys_alloc_buffer(winsys,
-            "batch buffer", bo_size, true);
-    if (!bo)
-        return XGL_ERROR_OUT_OF_GPU_MEMORY;
-
-    ptr = intel_bo_map(bo, true);
-    if (!bo) {
-        intel_bo_unreference(bo);
-        return XGL_ERROR_MEMORY_MAP_FAILED;
+    if (writer->ptr) {
+        intel_bo_unmap(writer->bo);
+        writer->ptr = NULL;
     }
 
-    writer->bo = bo;
-    writer->ptr = ptr;
-    writer->size = size;
+    if (writer->bo) {
+        intel_bo_unreference(writer->bo);
+        writer->bo = NULL;
+    }
+
     writer->used = 0;
+}
+
+/**
+ * Discard everything written so far.
+ */
+static void cmd_writer_discard(struct intel_cmd *cmd,
+                               enum intel_cmd_writer_type which)
+{
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+
+    intel_bo_truncate_relocs(writer->bo, 0);
+    writer->used = 0;
+}
+
+static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
+                                        enum intel_cmd_writer_type which,
+                                        XGL_UINT size)
+{
+    static const char *writer_names[INTEL_CMD_WRITER_COUNT] = {
+        [INTEL_CMD_WRITER_BATCH] = "batch",
+        [INTEL_CMD_WRITER_INSTRUCTION] = "instruction",
+    };
+
+    return intel_winsys_alloc_buffer(winsys, writer_names[which],
+            sizeof(uint32_t) * size, true);
+}
+
+/**
+ * Allocate and map the buffer for writing.
+ */
+static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
+                                           enum intel_cmd_writer_type which)
+{
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+    struct intel_bo *bo;
+
+    bo = alloc_writer_bo(cmd->dev->winsys, which, writer->size);
+    if (bo) {
+        if (writer->bo)
+            intel_bo_unreference(writer->bo);
+        writer->bo = bo;
+    } else if (writer->bo) {
+        /* reuse the old bo */
+        cmd_writer_discard(cmd, which);
+    } else {
+        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+    }
+
+    writer->used = 0;
+
+    writer->ptr = intel_bo_map(writer->bo, true);
+    if (!writer->ptr)
+        return XGL_ERROR_UNKNOWN;
 
     return XGL_SUCCESS;
 }
 
-static void cmd_writer_copy(struct intel_cmd *cmd,
-                            enum intel_cmd_writer_type which,
-                            const uint32_t *vals, XGL_UINT len)
+/**
+ * Unmap the buffer for submission.
+ */
+static void cmd_writer_unmap(struct intel_cmd *cmd,
+                             enum intel_cmd_writer_type which)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
-    assert(writer->used + len <= writer->size);
-    memcpy((uint32_t *) writer->ptr + writer->used,
-            vals, sizeof(uint32_t) * len);
-    writer->used += len;
+    intel_bo_unmap(writer->bo);
+    writer->ptr = NULL;
+}
+
+/**
+ * Grow a mapped writer to at least \p new_size.  Failures are handled
+ * silently.
+ */
+void cmd_writer_grow(struct intel_cmd *cmd,
+                     enum intel_cmd_writer_type which,
+                     XGL_UINT new_size)
+{
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+    struct intel_bo *new_bo;
+    void *new_ptr;
+
+    if (new_size < writer->size << 1)
+        new_size = writer->size << 1;
+    /* STATE_BASE_ADDRESS requires page-aligned buffers */
+    new_size = u_align(new_size, 4096 / sizeof(uint32_t));
+
+    new_bo = alloc_writer_bo(cmd->dev->winsys, which, new_size);
+    if (!new_bo) {
+        cmd_writer_discard(cmd, which);
+        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
+        return;
+    }
+
+    /* map and copy the data over */
+    new_ptr = intel_bo_map(new_bo, true);
+    if (!new_ptr) {
+        intel_bo_unreference(new_bo);
+        cmd_writer_discard(cmd, which);
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
+    }
+
+    memcpy(new_ptr, writer->ptr, sizeof(uint32_t) * writer->used);
+
+    intel_bo_unmap(writer->bo);
+    intel_bo_unreference(writer->bo);
+
+    writer->size = new_size;
+    writer->bo = new_bo;
+    writer->ptr = new_ptr;
 }
 
 static void cmd_writer_patch(struct intel_cmd *cmd,
@@ -82,72 +173,6 @@ static void cmd_writer_patch(struct intel_cmd *cmd,
 
     assert(pos < writer->used);
     ((uint32_t *) writer->ptr)[pos] = val;
-}
-
-void cmd_writer_grow(struct intel_cmd *cmd,
-                     enum intel_cmd_writer_type which)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[which];
-    const XGL_UINT size = writer->size << 1;
-    const XGL_UINT old_used = writer->used;
-    struct intel_bo *old_bo = writer->bo;
-    void *old_ptr = writer->ptr;
-
-    if (size >= writer->size &&
-        cmd_writer_alloc_and_map(cmd, which, size) == XGL_SUCCESS) {
-        cmd_writer_copy(cmd, which, (const uint32_t *) old_ptr, old_used);
-
-        intel_bo_unmap(old_bo);
-        intel_bo_unreference(old_bo);
-    } else {
-        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                "failed to grow command buffer of size %u", writer->size);
-
-        /* wrap it and fail silently */
-        writer->used = 0;
-        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
-    }
-}
-
-static void cmd_writer_unmap(struct intel_cmd *cmd,
-                             enum intel_cmd_writer_type which)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[which];
-
-    intel_bo_unmap(writer->bo);
-    writer->ptr = NULL;
-}
-
-static void cmd_writer_free(struct intel_cmd *cmd,
-                            enum intel_cmd_writer_type which)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[which];
-
-    intel_bo_unreference(writer->bo);
-    writer->bo = NULL;
-}
-
-static void cmd_writer_reset(struct intel_cmd *cmd,
-                             enum intel_cmd_writer_type which)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[which];
-
-    /* do not reset writer->size as we want to know how big it has grown to */
-    writer->used = 0;
-
-    if (writer->ptr)
-        cmd_writer_unmap(cmd, which);
-    if (writer->bo)
-        cmd_writer_free(cmd, which);
-}
-
-static void cmd_unmap(struct intel_cmd *cmd)
-{
-    XGL_UINT i;
-
-    for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
-        cmd_writer_unmap(cmd, i);
 }
 
 static void cmd_reset(struct intel_cmd *cmd)
@@ -258,7 +283,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
     }
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++) {
-        ret = cmd_writer_alloc_and_map(cmd, i, cmd->writers[i].size);
+        ret = cmd_writer_alloc_and_map(cmd, i);
         if (ret != XGL_SUCCESS) {
             cmd_reset(cmd);
             return  ret;
@@ -297,7 +322,8 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
                 (uint32_t) presumed_offset);
     }
 
-    cmd_unmap(cmd);
+    for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
+        cmd_writer_unmap(cmd, i);
 
     if (cmd->result != XGL_SUCCESS)
         return cmd->result;

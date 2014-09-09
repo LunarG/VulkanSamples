@@ -63,7 +63,8 @@ static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
 }
 
 void cmd_writer_grow(struct intel_cmd *cmd,
-                     enum intel_cmd_writer_type which);
+                     enum intel_cmd_writer_type which,
+                     XGL_UINT new_size);
 
 /**
  * Add a reloc at \p pos.  No error checking.
@@ -95,7 +96,7 @@ static inline void cmd_batch_reserve(struct intel_cmd *cmd, XGL_UINT len)
     struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
 
     if (writer->used + len > writer->size)
-        cmd_writer_grow(cmd, INTEL_CMD_WRITER_BATCH);
+        cmd_writer_grow(cmd, INTEL_CMD_WRITER_BATCH, 0);
     assert(writer->used + len <= writer->size);
 }
 
@@ -247,7 +248,7 @@ static inline uint32_t *cmd_state_reserve(struct intel_cmd *cmd, XGL_UINT len,
     aligned = u_align(writer->used, alignment);
 
     if (aligned + len > writer->size)
-        cmd_writer_grow(cmd, INTEL_CMD_WRITER_STATE);
+        cmd_writer_grow(cmd, INTEL_CMD_WRITER_STATE, 0);
     assert(aligned + len <= writer->size);
 
     writer->used = aligned;
@@ -336,7 +337,7 @@ static inline XGL_UINT cmd_kernel_copy(struct intel_cmd *cmd,
 
     kernel_pos = u_align(writer->used, kernel_align);
     if (kernel_pos + kernel_len + prefetch_len > writer->size)
-        cmd_writer_grow(cmd, INTEL_CMD_WRITER_INSTRUCTION);
+        cmd_writer_grow(cmd, INTEL_CMD_WRITER_INSTRUCTION, 0);
     assert(kernel_pos + kernel_len + prefetch_len <= writer->size);
 
     memcpy(&((uint32_t *) writer->ptr)[kernel_pos], kernel, size);
