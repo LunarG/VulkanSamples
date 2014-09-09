@@ -200,7 +200,7 @@ struct intel_cmd_bind {
 
 struct intel_cmd_writer {
     struct intel_bo *bo;
-    void *ptr_opaque;
+    void *ptr;
 
     /* in DWords */
     XGL_UINT size;

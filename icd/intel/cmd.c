@@ -55,7 +55,7 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
     }
 
     writer->bo = bo;
-    writer->ptr_opaque = ptr;
+    writer->ptr = ptr;
     writer->size = size;
     writer->used = 0;
 
@@ -69,7 +69,7 @@ static void cmd_writer_copy(struct intel_cmd *cmd,
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
     assert(writer->used + len <= writer->size);
-    memcpy((uint32_t *) writer->ptr_opaque + writer->used,
+    memcpy((uint32_t *) writer->ptr + writer->used,
             vals, sizeof(uint32_t) * len);
     writer->used += len;
 }
@@ -81,7 +81,7 @@ static void cmd_writer_patch(struct intel_cmd *cmd,
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
     assert(pos < writer->used);
-    ((uint32_t *) writer->ptr_opaque)[pos] = val;
+    ((uint32_t *) writer->ptr)[pos] = val;
 }
 
 void cmd_writer_grow(struct intel_cmd *cmd,
@@ -91,7 +91,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     const XGL_UINT size = writer->size << 1;
     const XGL_UINT old_used = writer->used;
     struct intel_bo *old_bo = writer->bo;
-    void *old_ptr = writer->ptr_opaque;
+    void *old_ptr = writer->ptr;
 
     if (size >= writer->size &&
         cmd_writer_alloc_and_map(cmd, which, size) == XGL_SUCCESS) {
@@ -116,7 +116,7 @@ static void cmd_writer_unmap(struct intel_cmd *cmd,
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
     intel_bo_unmap(writer->bo);
-    writer->ptr_opaque = NULL;
+    writer->ptr = NULL;
 }
 
 static void cmd_writer_free(struct intel_cmd *cmd,
@@ -136,7 +136,7 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
     /* do not reset writer->size as we want to know how big it has grown to */
     writer->used = 0;
 
-    if (writer->ptr_opaque)
+    if (writer->ptr)
         cmd_writer_unmap(cmd, which);
     if (writer->bo)
         cmd_writer_free(cmd, which);

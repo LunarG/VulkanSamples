@@ -118,7 +118,7 @@ static inline void cmd_batch_write(struct intel_cmd *cmd, uint32_t val)
     struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
 
     assert(writer->used < writer->size);
-    ((uint32_t *) writer->ptr_opaque)[writer->used++] = val;
+    ((uint32_t *) writer->ptr)[writer->used++] = val;
 }
 
 /**
@@ -131,7 +131,7 @@ static inline void cmd_batch_write_n(struct intel_cmd *cmd,
 
     assert(writer->used + len <= writer->size);
 
-    memcpy((uint32_t *) writer->ptr_opaque + writer->used,
+    memcpy((uint32_t *) writer->ptr + writer->used,
             vals, sizeof(uint32_t) * len);
     writer->used += len;
 }
@@ -253,7 +253,7 @@ static inline uint32_t *cmd_state_reserve(struct intel_cmd *cmd, XGL_UINT len,
     writer->used = aligned;
     *pos = aligned;
 
-    return &((uint32_t *) writer->ptr_opaque)[writer->used];
+    return &((uint32_t *) writer->ptr)[writer->used];
 }
 
 /**
@@ -339,7 +339,7 @@ static inline XGL_UINT cmd_kernel_copy(struct intel_cmd *cmd,
         cmd_writer_grow(cmd, INTEL_CMD_WRITER_INSTRUCTION);
     assert(kernel_pos + kernel_len + prefetch_len <= writer->size);
 
-    memcpy(&((uint32_t *) writer->ptr_opaque)[kernel_pos], kernel, size);
+    memcpy(&((uint32_t *) writer->ptr)[kernel_pos], kernel, size);
     writer->used = kernel_pos + kernel_len;
 
     return kernel_pos;
