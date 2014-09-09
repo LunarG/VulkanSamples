@@ -128,7 +128,7 @@ enum intel_cmd_writer_type {
 
 struct intel_cmd_shader {
     const struct intel_pipeline_shader *shader;
-    XGL_UINT kernel_pos;
+    uint32_t kernel_offset;
 };
 
 /*
@@ -199,12 +199,11 @@ struct intel_cmd_bind {
 };
 
 struct intel_cmd_writer {
+    XGL_SIZE size;
     struct intel_bo *bo;
     void *ptr;
 
-    /* in DWords */
-    XGL_UINT size;
-    XGL_UINT used;
+    XGL_SIZE used;
 };
 
 struct intel_cmd {
@@ -252,7 +251,7 @@ static inline struct intel_bo *intel_cmd_get_batch(const struct intel_cmd *cmd,
         &cmd->writers[INTEL_CMD_WRITER_BATCH];
 
     if (used)
-        *used = sizeof(uint32_t) * writer->used;
+        *used = writer->used;
 
     return writer->bo;
 }

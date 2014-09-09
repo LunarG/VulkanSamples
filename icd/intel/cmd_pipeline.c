@@ -45,7 +45,7 @@ static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              uint32_t vertex_base)
 {
     const uint8_t cmd_len = 6;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
@@ -56,13 +56,13 @@ static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
     if (indexed)
         dw0 |= GEN6_3DPRIM_DW0_ACCESS_RANDOM;
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, vertex_count);
-    cmd_batch_write(cmd, vertex_start);
-    cmd_batch_write(cmd, instance_count);
-    cmd_batch_write(cmd, instance_start);
-    cmd_batch_write(cmd, vertex_base);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = vertex_count;
+    dw[2] = vertex_start;
+    dw[3] = instance_count;
+    dw[4] = instance_start;
+    dw[5] = vertex_base;
 }
 
 static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
@@ -74,7 +74,7 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
                              uint32_t vertex_base)
 {
     const uint8_t cmd_len = 7;
-    uint32_t dw0, dw1;
+    uint32_t dw0, dw1, *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
@@ -84,14 +84,14 @@ static void gen7_3DPRIMITIVE(struct intel_cmd *cmd,
     if (indexed)
         dw1 |= GEN7_3DPRIM_DW1_ACCESS_RANDOM;
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, dw1);
-    cmd_batch_write(cmd, vertex_count);
-    cmd_batch_write(cmd, vertex_start);
-    cmd_batch_write(cmd, instance_count);
-    cmd_batch_write(cmd, instance_start);
-    cmd_batch_write(cmd, vertex_base);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = dw1;
+    dw[2] = vertex_count;
+    dw[3] = vertex_start;
+    dw[4] = instance_count;
+    dw[5] = instance_start;
+    dw[6] = vertex_base;
 }
 
 static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
@@ -102,6 +102,8 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
    const uint32_t dw0 = GEN6_RENDER_CMD(3D, PIPE_CONTROL) |
                         (cmd_len - 2);
    uint32_t reloc_flags = INTEL_RELOC_WRITE;
+   uint32_t *dw;
+   XGL_UINT pos;
 
    CMD_ASSERT(cmd, 6, 7.5);
 
@@ -173,15 +175,17 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
       reloc_flags |= INTEL_RELOC_GGTT;
    }
 
-   cmd_batch_reserve_reloc(cmd, cmd_len, (bool) bo);
-   cmd_batch_write(cmd, dw0);
-   cmd_batch_write(cmd, dw1);
-   if (bo)
-       cmd_batch_reloc(cmd, bo_offset, bo, reloc_flags);
-   else
-       cmd_batch_write(cmd, 0);
-   cmd_batch_write(cmd, (uint32_t) imm);
-   cmd_batch_write(cmd, (uint32_t) (imm >> 32));
+   pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+   dw[0] = dw0;
+   dw[1] = dw1;
+   dw[2] = 0;
+   dw[3] = (uint32_t) imm;
+   dw[4] = (uint32_t) (imm >> 32);
+
+   if (bo) {
+       cmd_reserve_reloc(cmd, 1);
+       cmd_batch_reloc(cmd, pos + 2, bo, bo_offset, reloc_flags);
+   }
 }
 
 static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
@@ -235,8 +239,9 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
                                       bool enable_cut_index)
 {
     const uint8_t cmd_len = 3;
-    uint32_t dw0, end_offset;
+    uint32_t dw0, end_offset, *dw;
     unsigned offset_align;
+    XGL_UINT pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -275,10 +280,12 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
     /* aligned and inclusive */
     end_offset = mem->size - (mem->size % offset_align) - 1;
 
-    cmd_batch_reserve_reloc(cmd, cmd_len, 2);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_reloc(cmd, offset, mem->bo, 0);
-    cmd_batch_reloc(cmd, end_offset, mem->bo, 0);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+
+    cmd_reserve_reloc(cmd, 2);
+    cmd_batch_reloc(cmd, pos + 1, mem->bo, offset, 0);
+    cmd_batch_reloc(cmd, pos + 2, mem->bo, end_offset, 0);
 }
 
 static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
@@ -286,7 +293,7 @@ static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
                              uint32_t cut_index)
 {
     const uint8_t cmd_len = 2;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 7.5, 7.5);
 
@@ -294,9 +301,9 @@ static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
     if (enable_cut_index)
         dw0 |=  GEN75_VF_DW0_CUT_INDEX_ENABLE;
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, cut_index);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = cut_index;
 }
 
 
@@ -304,38 +311,40 @@ static void gen6_3DSTATE_GS(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 7;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
     assert(cmd->bind.gs.shader == NULL);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT);
-    cmd_batch_write(cmd, GEN6_GS_DW5_STATISTICS);
-    cmd_batch_write(cmd, 0);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT;
+    dw[5] = GEN6_GS_DW5_STATISTICS;
+    dw[6] = 0;
 }
 
 static void gen7_3DSTATE_GS(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 7;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
     assert(cmd->bind.gs.shader == NULL);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, GEN6_GS_DW5_STATISTICS);
-    cmd_batch_write(cmd, 0);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+    dw[5] = GEN6_GS_DW5_STATISTICS;
+    dw[6] = 0;
 }
 
 static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
@@ -344,20 +353,23 @@ static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
     const uint8_t cmd_len = 4;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_DRAWING_RECTANGLE) |
                          (cmd_len - 2);
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+
     if (width && height) {
-        cmd_batch_write(cmd, 0);
-        cmd_batch_write(cmd, (height - 1) << 16 |
-                             (width - 1));
+        dw[1] = 0;
+        dw[2] = (height - 1) << 16 |
+                (width - 1);
     } else {
-        cmd_batch_write(cmd, 1);
-        cmd_batch_write(cmd, 0);
+        dw[1] = 1;
+        dw[2] = 0;
     }
-    cmd_batch_write(cmd, 0);
+
+    dw[3] = 0;
 }
 
 static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
@@ -492,47 +504,44 @@ static void gen6_3DSTATE_SF(struct intel_cmd *cmd)
                          (cmd_len - 2);
     uint32_t sf[6];
     uint32_t sbe[13];
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
     gen7_fill_3DSTATE_SF_body(cmd, sf);
     gen7_fill_3DSTATE_SBE_body(cmd, sbe);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, sbe[0]);
-    cmd_batch_write_n(cmd, sf, 6);
-    cmd_batch_write_n(cmd, &sbe[1], 12);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = sbe[0];
+    memcpy(&dw[2], sf, sizeof(sf));
+    memcpy(&dw[8], &sbe[1], sizeof(sbe) - sizeof(sbe[0]));
 }
 
 static void gen7_3DSTATE_SF(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 7;
-    uint32_t dw[7];
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
+    cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) |
             (cmd_len - 2);
     gen7_fill_3DSTATE_SF_body(cmd, &dw[1]);
-
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write_n(cmd, dw, cmd_len);
 }
 
 static void gen7_3DSTATE_SBE(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 14;
-    uint32_t dw[14];
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
+    cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) |
             (cmd_len - 2);
     gen7_fill_3DSTATE_SBE_body(cmd, &dw[1]);
-
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write_n(cmd, dw, cmd_len);
 }
 
 static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
@@ -544,7 +553,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
     const struct intel_raster_state *raster = cmd->bind.state.raster;
-    uint32_t dw1, dw2, dw3;
+    uint32_t dw1, dw2, dw3, *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -579,11 +588,11 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
           0x7ff << GEN6_CLIP_DW3_MAX_POINT_WIDTH__SHIFT |
           (viewport->viewport_count - 1);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, dw1);
-    cmd_batch_write(cmd, dw2);
-    cmd_batch_write(cmd, dw3);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = dw1;
+    dw[2] = dw2;
+    dw[3] = dw3;
 }
 
 static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
@@ -593,7 +602,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 9;
-    uint32_t dw0, dw2, dw4, dw5, dw6;
+    uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
@@ -639,16 +648,16 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
                GEN6_WM_DW6_MSDISPMODE_PERSAMPLE;
     }
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, cmd->bind.fs.kernel_pos << 2);
-    cmd_batch_write(cmd, dw2);
-    cmd_batch_write(cmd, 0); /* scratch */
-    cmd_batch_write(cmd, dw4);
-    cmd_batch_write(cmd, dw5);
-    cmd_batch_write(cmd, dw6);
-    cmd_batch_write(cmd, 0); /* kernel 1 */
-    cmd_batch_write(cmd, 0); /* kernel 2 */
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = cmd->bind.fs.kernel_offset;
+    dw[2] = dw2;
+    dw[3] = 0; /* scratch */
+    dw[4] = dw4;
+    dw[5] = dw5;
+    dw[6] = dw6;
+    dw[7] = 0; /* kernel 1 */
+    dw[8] = 0; /* kernel 2 */
 }
 
 static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
@@ -657,7 +666,7 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 3;
-    uint32_t dw0, dw1, dw2;
+    uint32_t dw0, dw1, dw2, *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
@@ -690,10 +699,10 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
         dw2 |= GEN7_WM_DW2_MSDISPMODE_PERSAMPLE;
     }
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, dw1);
-    cmd_batch_write(cmd, dw2);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = dw1;
+    dw[2] = dw2;
 }
 
 static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
@@ -702,7 +711,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 8;
-    uint32_t dw0, dw2, dw4, dw5;
+    uint32_t dw0, dw2, dw4, dw5, *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
@@ -738,22 +747,23 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
           0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
           0 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, cmd->bind.fs.kernel_pos << 2);
-    cmd_batch_write(cmd, dw2);
-    cmd_batch_write(cmd, 0); /* scratch */
-    cmd_batch_write(cmd, dw4);
-    cmd_batch_write(cmd, dw5);
-    cmd_batch_write(cmd, 0); /* kernel 1 */
-    cmd_batch_write(cmd, 0); /* kernel 2 */
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = cmd->bind.fs.kernel_offset;
+    dw[2] = dw2;
+    dw[3] = 0; /* scratch */
+    dw[4] = dw4;
+    dw[5] = dw5;
+    dw[6] = 0; /* kernel 1 */
+    dw[7] = 0; /* kernel 2 */
 }
 
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
                                       const struct intel_ds_view *view)
 {
     const uint8_t cmd_len = 7;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
+    XGL_UINT pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -762,26 +772,28 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
         GEN6_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER);
     dw0 |= (cmd_len - 2);
 
-    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, view->cmd[0]);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = view->cmd[0];
+    dw[2] = 0;
+    dw[3] = view->cmd[2];
+    dw[4] = view->cmd[3];
+    dw[5] = view->cmd[4];
+    dw[6] = view->cmd[5];
+
     if (view->img) {
-        cmd_batch_reloc(cmd, view->cmd[1], view->img->obj.mem->bo,
-                        INTEL_RELOC_WRITE);
-    } else {
-        cmd_batch_write(cmd, 0);
+        cmd_reserve_reloc(cmd, 1);
+        cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
+                view->cmd[1], INTEL_RELOC_WRITE);
     }
-    cmd_batch_write(cmd, view->cmd[2]);
-    cmd_batch_write(cmd, view->cmd[3]);
-    cmd_batch_write(cmd, view->cmd[4]);
-    cmd_batch_write(cmd, view->cmd[5]);
 }
 
 static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
                                         const struct intel_ds_view *view)
 {
     const uint8_t cmd_len = 3;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
+    XGL_UINT pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -790,14 +802,15 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
         GEN6_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER);
     dw0 |= (cmd_len - 2);
 
-    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, view->cmd[6]);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = view->cmd[6];
+    dw[2] = 0;
+
     if (view->img) {
-        cmd_batch_reloc(cmd, view->cmd[7], view->img->obj.mem->bo,
-                        INTEL_RELOC_WRITE);
-    } else {
-        cmd_batch_write(cmd, 0);
+        cmd_reserve_reloc(cmd, 1);
+        cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
+                view->cmd[7], INTEL_RELOC_WRITE);
     }
 }
 
@@ -805,7 +818,8 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
                                            const struct intel_ds_view *view)
 {
     const uint8_t cmd_len = 3;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
+    XGL_UINT pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -814,14 +828,15 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
         GEN6_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER);
     dw0 |= (cmd_len - 2);
 
-    cmd_batch_reserve_reloc(cmd, cmd_len, (bool) view->img);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, view->cmd[8]);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = view->cmd[8];
+    dw[2] = 0;
+
     if (view->img) {
-        cmd_batch_reloc(cmd, view->cmd[9], view->img->obj.mem->bo,
-                        INTEL_RELOC_WRITE);
-    } else {
-        cmd_batch_write(cmd, 0);
+        cmd_reserve_reloc(cmd, 1);
+        cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
+                view->cmd[9], INTEL_RELOC_WRITE);
     }
 }
 
@@ -832,12 +847,13 @@ static void gen6_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) |
                          GEN6_CLEAR_PARAMS_DW0_VALID |
                          (cmd_len - 2);
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, clear_val);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = clear_val;
 }
 
 static void gen7_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
@@ -846,42 +862,43 @@ static void gen7_3DSTATE_CLEAR_PARAMS(struct intel_cmd *cmd,
     const uint8_t cmd_len = 3;
     const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) |
                          (cmd_len - 2);
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, clear_val);
-    cmd_batch_write(cmd, 1);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = clear_val;
+    dw[2] = 1;
 }
 
 static void gen6_3DSTATE_CC_STATE_POINTERS(struct intel_cmd *cmd,
-                                           XGL_UINT blend_pos,
-                                           XGL_UINT ds_pos,
-                                           XGL_UINT cc_pos)
+                                           uint32_t blend_offset,
+                                           uint32_t ds_offset,
+                                           uint32_t cc_offset)
 {
     const uint8_t cmd_len = 4;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
     dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CC_STATE_POINTERS) |
           (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, (blend_pos << 2) | 1);
-    cmd_batch_write(cmd, (ds_pos << 2) | 1);
-    cmd_batch_write(cmd, (cc_pos << 2) | 1);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = blend_offset | 1;
+    dw[2] = ds_offset | 1;
+    dw[3] = cc_offset | 1;
 }
 
 static void gen6_3DSTATE_VIEWPORT_STATE_POINTERS(struct intel_cmd *cmd,
-                                                 XGL_UINT clip_pos,
-                                                 XGL_UINT sf_pos,
-                                                 XGL_UINT cc_pos)
+                                                 uint32_t clip_offset,
+                                                 uint32_t sf_offset,
+                                                 uint32_t cc_offset)
 {
     const uint8_t cmd_len = 4;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
@@ -891,36 +908,36 @@ static void gen6_3DSTATE_VIEWPORT_STATE_POINTERS(struct intel_cmd *cmd,
           GEN6_PTR_VP_DW0_CC_CHANGED |
           (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, clip_pos << 2);
-    cmd_batch_write(cmd, sf_pos << 2);
-    cmd_batch_write(cmd, cc_pos << 2);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = clip_offset;
+    dw[2] = sf_offset;
+    dw[3] = cc_offset;
 }
 
 static void gen6_3DSTATE_SCISSOR_STATE_POINTERS(struct intel_cmd *cmd,
-                                                XGL_UINT scissor_pos)
+                                                uint32_t scissor_offset)
 {
     const uint8_t cmd_len = 2;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
     dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_SCISSOR_STATE_POINTERS) |
           (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, scissor_pos << 2);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = scissor_offset;
 }
 
 static void gen6_3DSTATE_BINDING_TABLE_POINTERS(struct intel_cmd *cmd,
-                                                XGL_UINT vs_pos,
-                                                XGL_UINT gs_pos,
-                                                XGL_UINT ps_pos)
+                                                uint32_t vs_offset,
+                                                uint32_t gs_offset,
+                                                uint32_t ps_offset)
 {
     const uint8_t cmd_len = 4;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
@@ -930,20 +947,20 @@ static void gen6_3DSTATE_BINDING_TABLE_POINTERS(struct intel_cmd *cmd,
           GEN6_PTR_BINDING_TABLE_DW0_PS_CHANGED |
           (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, vs_pos << 2);
-    cmd_batch_write(cmd, gs_pos << 2);
-    cmd_batch_write(cmd, ps_pos << 2);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = vs_offset;
+    dw[2] = gs_offset;
+    dw[3] = ps_offset;
 }
 
 static void gen6_3DSTATE_SAMPLER_STATE_POINTERS(struct intel_cmd *cmd,
-                                                XGL_UINT vs_pos,
-                                                XGL_UINT gs_pos,
-                                                XGL_UINT ps_pos)
+                                                uint32_t vs_offset,
+                                                uint32_t gs_offset,
+                                                uint32_t ps_offset)
 {
     const uint8_t cmd_len = 4;
-    uint32_t dw0;
+    uint32_t dw0, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
@@ -953,71 +970,70 @@ static void gen6_3DSTATE_SAMPLER_STATE_POINTERS(struct intel_cmd *cmd,
           GEN6_PTR_SAMPLER_DW0_PS_CHANGED |
           (cmd_len - 2);
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, vs_pos << 2);
-    cmd_batch_write(cmd, gs_pos << 2);
-    cmd_batch_write(cmd, ps_pos << 2);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = vs_offset;
+    dw[2] = gs_offset;
+    dw[3] = ps_offset;
 }
 
 static void gen7_3dstate_pointer(struct intel_cmd *cmd,
-                                 int subop, XGL_UINT pos)
+                                 int subop, uint32_t offset)
 {
     const uint8_t cmd_len = 2;
     const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
                          GEN6_RENDER_SUBTYPE_3D |
                          subop | (cmd_len - 2);
+    uint32_t *dw;
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, pos << 2);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = offset;
 }
 
-static XGL_UINT gen6_BLEND_STATE(struct intel_cmd *cmd,
+static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd,
                                  const struct intel_blend_state *state)
 {
-    const uint8_t cmd_align = GEN6_ALIGNMENT_BLEND_STATE;
+    const uint8_t cmd_align = GEN6_ALIGNMENT_BLEND_STATE * 4;
     const uint8_t cmd_len = XGL_MAX_COLOR_ATTACHMENTS * 2;
 
     CMD_ASSERT(cmd, 6, 7.5);
     STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
 
-    return cmd_state_copy(cmd, state->cmd, cmd_len, cmd_align);
+    return cmd_state_write(cmd, cmd_align, cmd_len, state->cmd);
 }
 
-static XGL_UINT gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
+static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
                                          const struct intel_ds_state *state)
 {
-    const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
+    const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE * 4;
     const uint8_t cmd_len = 3;
 
     CMD_ASSERT(cmd, 6, 7.5);
     STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
 
-    return cmd_state_copy(cmd, state->cmd, cmd_len, cmd_align);
+    return cmd_state_write(cmd, cmd_align, cmd_len, state->cmd);
 }
 
-static XGL_UINT gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
+static uint32_t gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
                                       uint32_t stencil_ref,
                                       const uint32_t blend_color[4])
 {
-    const uint8_t cmd_align = GEN6_ALIGNMENT_COLOR_CALC_STATE;
+    const uint8_t cmd_align = GEN6_ALIGNMENT_COLOR_CALC_STATE * 4;
     const uint8_t cmd_len = 6;
-    XGL_UINT pos;
-    uint32_t *dw;
+    uint32_t offset, *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    dw = cmd_state_reserve(cmd, cmd_len, cmd_align, &pos);
+    offset = cmd_state_pointer(cmd, cmd_align, cmd_len, &dw);
     dw[0] = stencil_ref;
     dw[1] = 0;
     dw[2] = blend_color[0];
     dw[3] = blend_color[1];
     dw[4] = blend_color[2];
     dw[5] = blend_color[3];
-    cmd_state_advance(cmd, cmd_len);
 
-    return pos;
+    return offset;
 }
 
 static void cmd_wa_gen6_pre_depth_stall_write(struct intel_cmd *cmd)
@@ -1245,53 +1261,53 @@ static void gen6_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_blend_state *blend = cmd->bind.state.blend;
     const struct intel_ds_state *ds = cmd->bind.state.ds;
-    XGL_UINT blend_pos, ds_pos, cc_pos;
+    uint32_t blend_offset, ds_offset, cc_offset;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
 
     CMD_ASSERT(cmd, 6, 6);
 
     if (blend) {
-        blend_pos = gen6_BLEND_STATE(cmd, blend);
+        blend_offset = gen6_BLEND_STATE(cmd, blend);
         memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
     } else {
-        blend_pos = 0;
+        blend_offset = 0;
         memset(blend_color, 0, sizeof(blend_color));
     }
 
     if (ds) {
-        ds_pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
+        ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
         stencil_ref = ds->cmd_stencil_ref;
     } else {
-        ds_pos = 0;
+        ds_offset = 0;
         stencil_ref = 0;
     }
 
-    cc_pos = gen6_COLOR_CALC_STATE(cmd, stencil_ref, blend_color);
+    cc_offset = gen6_COLOR_CALC_STATE(cmd, stencil_ref, blend_color);
 
-    gen6_3DSTATE_CC_STATE_POINTERS(cmd, blend_pos, ds_pos, cc_pos);
+    gen6_3DSTATE_CC_STATE_POINTERS(cmd, blend_offset, ds_offset, cc_offset);
 }
 
 static void gen6_viewport_states(struct intel_cmd *cmd)
 {
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
-    XGL_UINT pos;
+    uint32_t offset;
 
     if (!viewport)
         return;
 
-    pos = cmd_state_copy(cmd, viewport->cmd, viewport->cmd_len,
-            viewport->cmd_align);
+    offset = cmd_state_write(cmd, viewport->cmd_align * 4,
+            viewport->cmd_len, viewport->cmd);
 
     gen6_3DSTATE_VIEWPORT_STATE_POINTERS(cmd,
-            pos + viewport->cmd_clip_offset,
-            pos,
-            pos + viewport->cmd_cc_offset);
+            offset + (viewport->cmd_clip_offset << 2),
+            offset,
+            offset + (viewport->cmd_cc_offset << 2));
 
-    pos = (viewport->scissor_enable) ?
-        pos + viewport->cmd_scissor_rect_offset : 0;
+    offset = (viewport->scissor_enable) ?
+        offset + (viewport->cmd_scissor_rect_offset << 2) : 0;
 
-    gen6_3DSTATE_SCISSOR_STATE_POINTERS(cmd, pos);
+    gen6_3DSTATE_SCISSOR_STATE_POINTERS(cmd, offset);
 }
 
 static void gen7_cc_states(struct intel_cmd *cmd)
@@ -1300,7 +1316,7 @@ static void gen7_cc_states(struct intel_cmd *cmd)
     const struct intel_ds_state *ds = cmd->bind.state.ds;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
-    XGL_UINT pos;
+    uint32_t offset;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
@@ -1308,9 +1324,9 @@ static void gen7_cc_states(struct intel_cmd *cmd)
         return;
 
     if (blend) {
-        pos = gen6_BLEND_STATE(cmd, blend);
+        offset = gen6_BLEND_STATE(cmd, blend);
         gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, pos);
+                GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, offset);
 
         memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
     } else {
@@ -1318,38 +1334,41 @@ static void gen7_cc_states(struct intel_cmd *cmd)
     }
 
     if (ds) {
-        pos = gen6_DEPTH_STENCIL_STATE(cmd, ds);
+        offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
         gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS, pos);
+                GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
+                offset);
     } else {
         stencil_ref = 0;
     }
 
-    pos = gen6_COLOR_CALC_STATE(cmd, stencil_ref, blend_color);
+    offset = gen6_COLOR_CALC_STATE(cmd, stencil_ref, blend_color);
     gen7_3dstate_pointer(cmd,
-            GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, pos);
+            GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, offset);
 }
 
 static void gen7_viewport_states(struct intel_cmd *cmd)
 {
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
-    XGL_UINT pos;
+    uint32_t offset;
 
     if (!viewport)
         return;
 
-    pos = cmd_state_copy(cmd, viewport->cmd, viewport->cmd_len,
-            viewport->cmd_align);
+    offset = cmd_state_write(cmd, viewport->cmd_align * 4,
+            viewport->cmd_len, viewport->cmd);
 
     gen7_3dstate_pointer(cmd,
-            GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP, pos);
+            GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
+            offset);
     gen7_3dstate_pointer(cmd,
             GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
-            pos + viewport->cmd_cc_offset);
+            offset + (viewport->cmd_cc_offset << 2));
+
     if (viewport->scissor_enable) {
         gen7_3dstate_pointer(cmd,
                 GEN6_RENDER_OPCODE_3DSTATE_SCISSOR_STATE_POINTERS,
-                pos + viewport->cmd_scissor_rect_offset);
+                offset + (viewport->cmd_scissor_rect_offset << 2));
     }
 }
 
@@ -1362,8 +1381,7 @@ static void gen6_pcb(struct intel_cmd *cmd, int subop,
      * data to multiple PCBs when the size is greater than 1024.
      */
     const XGL_UINT max_size = 1024;
-    uint32_t dw0;
-    XGL_UINT pos;
+    uint32_t offset, dw0, *dw;
 
     if (sh->pcb_size > max_size) {
         cmd->result = XGL_ERROR_UNKNOWN;
@@ -1374,28 +1392,26 @@ static void gen6_pcb(struct intel_cmd *cmd, int subop,
           GEN6_RENDER_SUBTYPE_3D |
           subop |
           (cmd_len - 2);
-    pos = 0;
+    offset = 0;
 
     if (sh->pcb_size) {
-        const XGL_UINT alignment = 32;
+        const XGL_SIZE alignment = 32;
         const XGL_SIZE size = u_align(sh->pcb_size, alignment);
-        void *ptr;
 
-        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
-                alignment / sizeof(uint32_t), &pos);
-        memcpy(ptr, sh->pcb, sh->pcb_size);
-        cmd_state_advance(cmd, size / sizeof(uint32_t));
+        offset = cmd_state_pointer(cmd, alignment,
+                size / sizeof(uint32_t), &dw);
+        memcpy(dw, sh->pcb, sh->pcb_size);
 
         dw0 |= GEN6_PCB_ANY_DW0_PCB0_VALID;
-        pos |= size / alignment - 1;
+        offset |= size / alignment - 1;
     }
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, pos);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = offset;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
 }
 
 static void gen7_pcb(struct intel_cmd *cmd, int subop,
@@ -1408,7 +1424,7 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
                          (cmd_len - 2);
     const XGL_UINT max_size = 2048;
     XGL_UINT pcb_len = 0;
-    XGL_UINT pos = 0;
+    uint32_t offset = 0, *dw;
 
     if (sh->pcb_size > max_size) {
         cmd->result = XGL_ERROR_UNKNOWN;
@@ -1416,26 +1432,24 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
     }
 
     if (sh->pcb_size) {
-        const XGL_UINT alignment = 32;
+        const XGL_SIZE alignment = 32;
         const XGL_SIZE size = u_align(sh->pcb_size, alignment);
-        void *ptr;
 
         pcb_len = size / alignment;
 
-        ptr = cmd_state_reserve(cmd, size / sizeof(uint32_t),
-                alignment / sizeof(uint32_t), &pos);
-        memcpy(ptr, sh->pcb, sh->pcb_size);
-        cmd_state_advance(cmd, size / sizeof(uint32_t));
+        offset = cmd_state_pointer(cmd, alignment,
+                size / sizeof(uint32_t), &dw);
+        memcpy(dw, sh->pcb, sh->pcb_size);
     }
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, pcb_len);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, pos);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_write(cmd, 0);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = pcb_len;
+    dw[2] = 0;
+    dw[3] = offset;
+    dw[4] = 0;
+    dw[5] = 0;
+    dw[6] = 0;
 }
 
 static void emit_ps_resources(struct intel_cmd *cmd,
@@ -1443,30 +1457,29 @@ static void emit_ps_resources(struct intel_cmd *cmd,
 {
     const XGL_UINT surface_count = rmap->rt_count +
         rmap->resource_count + rmap->uav_count;
-    uint32_t binding_table[256];
-    XGL_UINT pos, i;
+    uint32_t binding_table[256], offset;
+    XGL_UINT i;
 
     assert(surface_count <= ARRAY_SIZE(binding_table));
 
     for (i = 0; i < surface_count; i++) {
         const struct intel_pipeline_rmap_slot *slot = &rmap->slots[i];
-        uint32_t *dw;
 
         switch (slot->path_len) {
         case 0:
-            pos = 0;
+            offset = 0;
             break;
         case INTEL_PIPELINE_RMAP_SLOT_RT:
             {
                 const struct intel_rt_view *view = cmd->bind.att.rt[i];
 
-                dw = cmd_state_reserve_reloc(cmd, view->cmd_len, 1,
-                        GEN6_ALIGNMENT_SURFACE_STATE, &pos);
+                offset = cmd_surface_write(cmd,
+                        GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                        view->cmd_len, view->cmd);
 
-                memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
-                cmd_state_reloc(cmd, 1, view->cmd[1], view->img->obj.mem->bo,
-                        INTEL_RELOC_WRITE);
-                cmd_state_advance(cmd, view->cmd_len);
+                cmd_reserve_reloc(cmd, 1);
+                cmd_surface_reloc(cmd, offset, 1, view->img->obj.mem->bo,
+                        view->cmd[1], INTEL_RELOC_WRITE);
             }
             break;
         case INTEL_PIPELINE_RMAP_SLOT_DYN:
@@ -1474,13 +1487,13 @@ static void emit_ps_resources(struct intel_cmd *cmd,
                 const struct intel_mem_view *view =
                     &cmd->bind.dyn_view.graphics;
 
-                dw = cmd_state_reserve_reloc(cmd, view->cmd_len, 1,
-                        GEN6_ALIGNMENT_SURFACE_STATE, &pos);
+                offset = cmd_surface_write(cmd,
+                        GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                        view->cmd_len, view->cmd);
 
-                memcpy(dw, view->cmd, sizeof(uint32_t) * view->cmd_len);
-                cmd_state_reloc(cmd, 1, view->cmd[1], view->mem->bo,
-                        INTEL_RELOC_WRITE);
-                cmd_state_advance(cmd, view->cmd_len);
+                cmd_reserve_reloc(cmd, 1);
+                cmd_surface_reloc(cmd, offset, 1, view->mem->bo,
+                        view->cmd[1], INTEL_RELOC_WRITE);
             }
             break;
         case 1:
@@ -1490,15 +1503,15 @@ static void emit_ps_resources(struct intel_cmd *cmd,
             break;
         }
 
-        binding_table[i] = pos << 2;
+        binding_table[i] = offset;
     }
 
-    pos = cmd_state_copy(cmd, binding_table, surface_count,
-            GEN6_ALIGNMENT_BINDING_TABLE_STATE);
+    offset = cmd_state_write(cmd, GEN6_ALIGNMENT_BINDING_TABLE_STATE * 4,
+            surface_count, binding_table);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS, pos);
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS, offset);
 
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_VS, 0);
@@ -1520,7 +1533,7 @@ static void emit_ps_resources(struct intel_cmd *cmd,
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS, 0);
     } else {
-        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, pos);
+        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
         gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd, 0, 0, 0);
     }
 }
@@ -1531,7 +1544,7 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *vs = &pipeline->vs;
     const uint8_t cmd_len = 6;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
-    uint32_t dw2, dw4, dw5;
+    uint32_t dw2, dw4, dw5, *dw;
     int vue_read_len, max_threads;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -1583,13 +1596,13 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     if (pipeline->disable_vs_cache)
         dw5 |= GEN6_VS_DW5_CACHE_DISABLE;
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, cmd->bind.vs.kernel_pos);
-    cmd_batch_write(cmd, dw2);
-    cmd_batch_write(cmd, 0); /* scratch */
-    cmd_batch_write(cmd, dw4);
-    cmd_batch_write(cmd, dw5);
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = cmd->bind.vs.kernel_offset;
+    dw[2] = dw2;
+    dw[3] = 0; /* scratch */
+    dw[4] = dw4;
+    dw[5] = dw5;
 }
 
 static void emit_bounded_states(struct intel_cmd *cmd)
@@ -1630,9 +1643,9 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
+
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
-    cmd_batch_reserve(cmd, msaa->cmd_len);
-    cmd_batch_write_n(cmd, msaa->cmd, msaa->cmd_len);
+    cmd_batch_write(cmd, msaa->cmd_len, msaa->cmd);
 
     gen6_3DSTATE_VS(cmd);
 }
@@ -1676,7 +1689,8 @@ static void emit_shader(struct intel_cmd *cmd,
 
     cmdShader = &cmd->bind.shaderCache.shaderArray[cmd->bind.shaderCache.used];
     cmdShader->shader = shader;
-    cmdShader->kernel_pos = cmd_kernel_copy(cmd, shader->pCode, shader->codeSize);
+    cmdShader->kernel_offset =
+        cmd_instruction_write(cmd, shader->codeSize, shader->pCode);
     *pCmdShader = *cmdShader;
     cmd->bind.shaderCache.used++;
     return;
@@ -1696,8 +1710,7 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
 
     /* 3DSTATE_URB_VS and etc. */
     assert(pipeline->cmd_len);
-    cmd_batch_reserve(cmd, pipeline->cmd_len);
-    cmd_batch_write_n(cmd, pipeline->cmds, pipeline->cmd_len);
+    cmd_batch_write(cmd, pipeline->cmd_len, pipeline->cmds);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
         emit_shader(cmd, &pipeline->vs, &cmd->bind.vs);

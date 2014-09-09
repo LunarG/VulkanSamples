@@ -69,15 +69,14 @@ static void cmd_writer_discard(struct intel_cmd *cmd,
 
 static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
                                         enum intel_cmd_writer_type which,
-                                        XGL_UINT size)
+                                        XGL_SIZE size)
 {
     static const char *writer_names[INTEL_CMD_WRITER_COUNT] = {
         [INTEL_CMD_WRITER_BATCH] = "batch",
         [INTEL_CMD_WRITER_INSTRUCTION] = "instruction",
     };
 
-    return intel_winsys_alloc_buffer(winsys, writer_names[which],
-            sizeof(uint32_t) * size, true);
+    return intel_winsys_alloc_buffer(winsys, writer_names[which], size, true);
 }
 
 /**
@@ -128,7 +127,7 @@ static void cmd_writer_unmap(struct intel_cmd *cmd,
  */
 void cmd_writer_grow(struct intel_cmd *cmd,
                      enum intel_cmd_writer_type which,
-                     XGL_UINT new_size)
+                     XGL_SIZE new_size)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
     struct intel_bo *new_bo;
@@ -137,7 +136,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     if (new_size < writer->size << 1)
         new_size = writer->size << 1;
     /* STATE_BASE_ADDRESS requires page-aligned buffers */
-    new_size = u_align(new_size, 4096 / sizeof(uint32_t));
+    new_size = u_align(new_size, 4096);
 
     new_bo = alloc_writer_bo(cmd->dev->winsys, which, new_size);
     if (!new_bo) {
@@ -155,7 +154,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
         return;
     }
 
-    memcpy(new_ptr, writer->ptr, sizeof(uint32_t) * writer->used);
+    memcpy(new_ptr, writer->ptr, writer->used);
 
     intel_bo_unmap(writer->bo);
     intel_bo_unreference(writer->bo);
@@ -167,12 +166,12 @@ void cmd_writer_grow(struct intel_cmd *cmd,
 
 static void cmd_writer_patch(struct intel_cmd *cmd,
                              enum intel_cmd_writer_type which,
-                             XGL_UINT pos, uint32_t val)
+                             XGL_SIZE offset, uint32_t val)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
-    assert(pos < writer->used);
-    ((uint32_t *) writer->ptr)[pos] = val;
+    assert(offset + sizeof(val) <= writer->used);
+    *((uint32_t *) ((char *) writer->ptr + offset)) = val;
 }
 
 static void cmd_reset(struct intel_cmd *cmd)
@@ -269,8 +268,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
     }
 
     if (!cmd->writers[INTEL_CMD_WRITER_BATCH].size) {
-        const XGL_UINT size =
-            cmd->dev->gpu->max_batch_buffer_size / sizeof(uint32_t) / 2;
+        const XGL_UINT size = cmd->dev->gpu->max_batch_buffer_size / 2;
         XGL_UINT divider = 1;
 
         if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
@@ -278,8 +276,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
 
         cmd->writers[INTEL_CMD_WRITER_BATCH].size = size / divider;
         cmd->writers[INTEL_CMD_WRITER_STATE].size = size / divider;
-        cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].size =
-            16384 / sizeof(uint32_t) / divider;
+        cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].size = 16384 / divider;
     }
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++) {
@@ -309,8 +306,8 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         uint64_t presumed_offset;
         int err;
 
-        err = intel_bo_add_reloc(writer->bo,
-                sizeof(uint32_t) * reloc->pos, reloc->bo, reloc->val,
+        err = intel_bo_add_reloc(writer->bo, reloc->offset,
+                reloc->bo, reloc->bo_offset,
                 reloc->flags, &presumed_offset);
         if (err) {
             cmd->result = XGL_ERROR_UNKNOWN;
@@ -318,7 +315,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         }
 
         assert(presumed_offset == (uint64_t) (uint32_t) presumed_offset);
-        cmd_writer_patch(cmd, reloc->which, reloc->pos,
+        cmd_writer_patch(cmd, reloc->which, reloc->offset,
                 (uint32_t) presumed_offset);
     }
 

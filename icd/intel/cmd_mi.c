@@ -40,16 +40,20 @@ static void gen6_MI_STORE_REGISTER_MEM(struct intel_cmd *cmd,
     uint32_t dw0 = GEN6_MI_CMD(MI_STORE_REGISTER_MEM) |
                    (cmd_len - 2);
     uint32_t reloc_flags = INTEL_RELOC_WRITE;
+    uint32_t *dw;
+    XGL_UINT pos;
 
     if (cmd_gen(cmd) == INTEL_GEN(6)) {
         dw0 |= GEN6_MI_STORE_REGISTER_MEM_DW0_USE_GGTT;
         reloc_flags |= INTEL_RELOC_GGTT;
     }
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, reg);
-    cmd_batch_reloc(cmd, offset, bo, reloc_flags);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = reg;
+
+    cmd_reserve_reloc(cmd, 1);
+    cmd_batch_reloc(cmd, pos + 2, bo, offset, reloc_flags);
 }
 
 static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
@@ -61,18 +65,22 @@ static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
     uint32_t dw0 = GEN6_MI_CMD(MI_STORE_DATA_IMM) |
                    (cmd_len - 2);
     uint32_t reloc_flags = INTEL_RELOC_WRITE;
+    uint32_t *dw;
+    XGL_UINT pos;
 
     if (cmd_gen(cmd) == INTEL_GEN(6)) {
         dw0 |= GEN6_MI_STORE_DATA_IMM_DW0_USE_GGTT;
         reloc_flags |= INTEL_RELOC_GGTT;
     }
 
-    cmd_batch_reserve(cmd, cmd_len);
-    cmd_batch_write(cmd, dw0);
-    cmd_batch_write(cmd, 0);
-    cmd_batch_reloc(cmd, offset, bo, reloc_flags);
-    cmd_batch_write(cmd, (uint32_t) val);
-    cmd_batch_write(cmd, (uint32_t) (val >> 32));
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw[0] = dw0;
+    dw[1] = 0;
+    dw[3] = (uint32_t) val;
+    dw[4] = (uint32_t) (val >> 32);
+
+    cmd_reserve_reloc(cmd, 1);
+    cmd_batch_reloc(cmd, pos + 2, bo, offset, reloc_flags);
 }
 
 static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,

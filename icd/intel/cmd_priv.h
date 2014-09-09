@@ -38,10 +38,10 @@
 
 struct intel_cmd_reloc {
     enum intel_cmd_writer_type which;
-    XGL_UINT pos;
+    XGL_SIZE offset;
 
-    uint32_t val;
     struct intel_bo *bo;
+    uint32_t bo_offset;
 
     uint32_t flags;
 };
@@ -64,92 +64,205 @@ static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
 
 void cmd_writer_grow(struct intel_cmd *cmd,
                      enum intel_cmd_writer_type which,
-                     XGL_UINT new_size);
+                     XGL_SIZE new_size);
+
+/**
+ * Return an offset to a region that is aligned to \p alignment and has at
+ * least \p size bytes.
+ */
+static inline XGL_SIZE cmd_writer_reserve(struct intel_cmd *cmd,
+                                          enum intel_cmd_writer_type which,
+                                          XGL_SIZE alignment, XGL_SIZE size)
+{
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+    XGL_SIZE offset;
+
+    assert(alignment && u_is_pow2(alignment));
+    offset = u_align(writer->used, alignment);
+
+    if (offset + size > writer->size) {
+        cmd_writer_grow(cmd, which, offset + size);
+        /* align again in case of errors */
+        offset = u_align(writer->used, alignment);
+
+        assert(offset + size <= writer->size);
+    }
+
+    return offset;
+}
 
 /**
  * Add a reloc at \p pos.  No error checking.
  */
-static inline void cmd_writer_add_reloc(struct intel_cmd *cmd,
-                                        enum intel_cmd_writer_type which,
-                                        XGL_UINT pos, uint32_t val,
-                                        struct intel_bo *bo,
-                                        uint32_t flags)
+static inline void cmd_writer_reloc(struct intel_cmd *cmd,
+                                    enum intel_cmd_writer_type which,
+                                    XGL_SIZE offset, struct intel_bo *bo,
+                                    uint32_t bo_offset, uint32_t flags)
 {
     struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
 
     assert(cmd->reloc_used < cmd->reloc_count);
 
     reloc->which = which;
-    reloc->pos = pos;
-    reloc->val = val;
+    reloc->offset = offset;
     reloc->bo = bo;
+    reloc->bo_offset = bo_offset;
     reloc->flags = flags;
 
     cmd->reloc_used++;
 }
 
 /**
- * Reserve \p len DWords in the batch buffer for building a hardware command.
+ * Reserve a region from the state buffer.  Both the offset, in bytes, and the
+ * pointer to the reserved region are returned.
+ *
+ * Note that \p alignment is in bytes and \p len is in DWords.
  */
-static inline void cmd_batch_reserve(struct intel_cmd *cmd, XGL_UINT len)
+static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
+                                         XGL_SIZE alignment, XGL_UINT len,
+                                         uint32_t **dw)
 {
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
+    const XGL_SIZE size = len << 2;
+    const XGL_SIZE offset = cmd_writer_reserve(cmd, which, alignment, size);
+    struct intel_cmd_writer *writer = &cmd->writers[which];
 
-    if (writer->used + len > writer->size)
-        cmd_writer_grow(cmd, INTEL_CMD_WRITER_BATCH, 0);
-    assert(writer->used + len <= writer->size);
+    /* all states are at least aligned to 32-bytes */
+    assert(alignment % 32 == 0);
+
+    *dw = (uint32_t *) ((char *) writer->ptr + offset);
+
+    writer->used = offset + size;
+
+    return offset;
 }
 
 /**
- * Reserve \p len DWords in the batch buffer and \p reloc_len relocs for
- * building a hardware command.
+ * Write a dynamic state to the state buffer.
  */
-static inline void cmd_batch_reserve_reloc(struct intel_cmd *cmd,
-                                           XGL_UINT len, XGL_UINT reloc_len)
+static inline uint32_t cmd_state_write(struct intel_cmd *cmd,
+                                       XGL_SIZE alignment, XGL_UINT len,
+                                       const uint32_t *dw)
 {
-    cmd_reserve_reloc(cmd, reloc_len);
-    cmd_batch_reserve(cmd, len);
+    uint32_t offset, *dst;
+
+    offset = cmd_state_pointer(cmd, alignment, len, &dst);
+    memcpy(dst, dw, len << 2);
+
+    return offset;
 }
 
 /**
- * Add a DWord to the hardware command being built.  No error checking.
+ * Write a surface state to the surface buffer.  The offset, in bytes, of the
+ * state is returned.
+ *
+ * Note that \p alignment is in bytes and \p len is in DWords.
  */
-static inline void cmd_batch_write(struct intel_cmd *cmd, uint32_t val)
+static inline uint32_t cmd_surface_write(struct intel_cmd *cmd,
+                                         XGL_SIZE alignment, XGL_UINT len,
+                                         const uint32_t *dw)
 {
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
-
-    assert(writer->used < writer->size);
-    ((uint32_t *) writer->ptr)[writer->used++] = val;
+    return cmd_state_write(cmd, alignment, len, dw);
 }
 
 /**
- * Add \p len DWords to the hardware command being built.  No error checking.
+ * Add a relocation entry for a DWord of a surface state.
  */
-static inline void cmd_batch_write_n(struct intel_cmd *cmd,
-                                     const uint32_t *vals, XGL_UINT len)
+static inline void cmd_surface_reloc(struct intel_cmd *cmd,
+                                     uint32_t offset, XGL_UINT dw_index,
+                                     struct intel_bo *bo,
+                                     uint32_t bo_offset, uint32_t reloc_flags)
 {
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
 
-    assert(writer->used + len <= writer->size);
-
-    memcpy((uint32_t *) writer->ptr + writer->used,
-            vals, sizeof(uint32_t) * len);
-    writer->used += len;
+    cmd_writer_reloc(cmd, which, offset + (dw_index << 2),
+            bo, bo_offset, reloc_flags);
 }
 
 /**
- * Add a reloc to the hardware command being built.  No error checking.
+ * Write a kernel to the instruction buffer.  The offset, in bytes, of the
+ * kernel is returned.
  */
-static inline void cmd_batch_reloc(struct intel_cmd *cmd,
-                                   uint32_t val, struct intel_bo *bo,
-                                   uint32_t flags)
+static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
+                                             XGL_SIZE size,
+                                             const void *kernel)
 {
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_INSTRUCTION;
+    /*
+     * From the Sandy Bridge PRM, volume 4 part 2, page 112:
+     *
+     *     "Due to prefetch of the instruction stream, the EUs may attempt to
+     *      access up to 8 instructions (128 bytes) beyond the end of the
+     *      kernel program - possibly into the next memory page.  Although
+     *      these instructions will not be executed, software must account for
+     *      the prefetch in order to avoid invalid page access faults."
+     */
+    const XGL_SIZE reserved_size = size + 128;
+    /* kernels are aligned to 64 bytes */
+    const XGL_SIZE alignment = 64;
+    const XGL_SIZE offset = cmd_writer_reserve(cmd,
+            which, alignment, reserved_size);
+    struct intel_cmd_writer *writer = &cmd->writers[which];
 
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_BATCH,
-            writer->used, val, bo, flags);
+    memcpy((char *) writer->ptr + offset, kernel, size);
 
-    writer->used++;
+    writer->used = offset + size;
+
+    return offset;
+}
+
+/**
+ * Reserve a region from the batch buffer.  Both the offset, in DWords, and
+ * the pointer to the reserved region are returned.
+ *
+ * Note that \p len is in DWords.
+ */
+static inline XGL_UINT cmd_batch_pointer(struct intel_cmd *cmd,
+                                         XGL_UINT len, uint32_t **dw)
+{
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_BATCH;
+    /*
+     * We know the batch bo is always aligned.  Using 1 here should allow the
+     * compiler to optimize away aligning.
+     */
+    const XGL_SIZE alignment = 1;
+    const XGL_SIZE size = len << 2;
+    const XGL_SIZE offset = cmd_writer_reserve(cmd, which, alignment, size);
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+
+    assert(offset % 4 == 0);
+    *dw = (uint32_t *) ((char *) writer->ptr + offset);
+
+    writer->used = offset + size;
+
+    return offset >> 2;
+}
+
+/**
+ * Write a command to the batch buffer.
+ */
+static inline XGL_UINT cmd_batch_write(struct intel_cmd *cmd,
+                                       XGL_UINT len, const uint32_t *dw)
+{
+    XGL_UINT pos;
+    uint32_t *dst;
+
+    pos = cmd_batch_pointer(cmd, len, &dst);
+    memcpy(dst, dw, len << 2);
+
+    return pos;
+}
+
+/**
+ * Add a relocation entry for a DWord of a command.
+ */
+static inline void cmd_batch_reloc(struct intel_cmd *cmd, XGL_UINT pos,
+                                   struct intel_bo *bo,
+                                   uint32_t bo_offset, uint32_t reloc_flags)
+{
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_BATCH;
+
+    cmd_writer_reloc(cmd, which, pos << 2, bo, bo_offset, reloc_flags);
 }
 
 /**
@@ -161,27 +274,28 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
     const uint8_t cmd_len = 10;
     const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
+    XGL_UINT pos;
+    uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    cmd_batch_reserve(cmd, cmd_len);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
 
     /* relocs are not added until cmd_batch_end() */
-    assert(cmd->writers[INTEL_CMD_WRITER_BATCH].used == 0);
+    assert(!pos);
 
-    cmd_batch_write(cmd, dw0);
-
+    dw[0] = dw0;
     /* start offsets */
-    cmd_batch_write(cmd, 1);
-    cmd_batch_write(cmd, 1);
-    cmd_batch_write(cmd, 1);
-    cmd_batch_write(cmd, 1);
-    cmd_batch_write(cmd, 1);
+    dw[1] = 1;
+    dw[2] = 1;
+    dw[3] = 1;
+    dw[4] = 1;
+    dw[5] = 1;
     /* end offsets */
-    cmd_batch_write(cmd, 1);
-    cmd_batch_write(cmd, 1 + 0xfffff000);
-    cmd_batch_write(cmd, 1 + 0xfffff000);
-    cmd_batch_write(cmd, 1);
+    dw[6] = 1;
+    dw[7] = 1 + 0xfffff000;
+    dw[8] = 1 + 0xfffff000;
+    dw[9] = 1;
 }
 
 /**
@@ -194,26 +308,22 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
         &cmd->writers[INTEL_CMD_WRITER_STATE];
     const struct intel_cmd_writer *inst =
         &cmd->writers[INTEL_CMD_WRITER_INSTRUCTION];
+    uint32_t *dw;
 
     cmd_reserve_reloc(cmd, 5);
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_BATCH,
-            2, 1, state->bo, 0);
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_BATCH,
-            3, 1, state->bo, 0);
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_BATCH,
-            5, 1, inst->bo, 0);
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_BATCH,
-            7, 1 + (state->size << 2), state->bo, 0);
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_BATCH,
-            9, 1 + (inst->size << 2), inst->bo, 0);
+    cmd_batch_reloc(cmd, 2, state->bo, 1, 0);
+    cmd_batch_reloc(cmd, 3, state->bo, 1, 0);
+    cmd_batch_reloc(cmd, 5, inst->bo, 1, 0);
+    cmd_batch_reloc(cmd, 7, state->bo, 1 + (state->size << 2), 0);
+    cmd_batch_reloc(cmd, 9, inst->bo, 1 + (inst->size << 2), 0);
 
-    if (writer->used & 1) {
-        cmd_batch_reserve(cmd, 1);
-        cmd_batch_write(cmd, GEN6_MI_CMD(MI_BATCH_BUFFER_END));
+    if (writer->used & 0x7) {
+        cmd_batch_pointer(cmd, 1, &dw);
+        dw[0] = GEN6_MI_CMD(MI_BATCH_BUFFER_END);
     } else {
-        cmd_batch_reserve(cmd, 2);
-        cmd_batch_write(cmd, GEN6_MI_CMD(MI_BATCH_BUFFER_END));
-        cmd_batch_write(cmd, GEN6_MI_CMD(MI_NOOP));
+        cmd_batch_pointer(cmd, 2, &dw);
+        dw[0] = GEN6_MI_CMD(MI_BATCH_BUFFER_END);
+        dw[1] = GEN6_MI_CMD(MI_NOOP);
     }
 }
 
@@ -231,119 +341,5 @@ void cmd_batch_immediate(struct intel_cmd *cmd,
                          struct intel_bo *bo,
                          XGL_GPU_SIZE offset,
                          uint64_t val);
-/**
- * Reserve \p len DWords in the state buffer for building a hardware state.
- * The current writer position is aligned to \p alignment first.  Both the
- * pointer to the reserved region and the aligned position are returned.
- *
- * Note that the returned pointer is only valid until the next reserve call.
- */
-static inline uint32_t *cmd_state_reserve(struct intel_cmd *cmd, XGL_UINT len,
-                                          XGL_UINT alignment, XGL_UINT *pos)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_STATE];
-    XGL_UINT aligned;
-
-    assert(alignment && u_is_pow2(alignment));
-    aligned = u_align(writer->used, alignment);
-
-    if (aligned + len > writer->size)
-        cmd_writer_grow(cmd, INTEL_CMD_WRITER_STATE, 0);
-    assert(aligned + len <= writer->size);
-
-    writer->used = aligned;
-    *pos = aligned;
-
-    return &((uint32_t *) writer->ptr)[writer->used];
-}
-
-/**
- * Similar to \p cmd_state_reserve, except that \p reloc_len relocs are also
- * reserved.
- */
-static inline uint32_t *cmd_state_reserve_reloc(struct intel_cmd *cmd,
-                                                XGL_UINT len,
-                                                XGL_UINT reloc_len,
-                                                XGL_UINT alignment,
-                                                XGL_UINT *pos)
-{
-    cmd_reserve_reloc(cmd, reloc_len);
-    return cmd_state_reserve(cmd, len, alignment, pos);
-}
-
-/**
- * Add a reloc at \p offset, relative to the current writer position.  No
- * error checking.
- */
-static inline void cmd_state_reloc(struct intel_cmd *cmd,
-                                   XGL_INT offset, uint32_t val,
-                                   struct intel_bo *bo,
-                                   uint32_t flags)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_STATE];
-
-    cmd_writer_add_reloc(cmd, INTEL_CMD_WRITER_STATE,
-            writer->used + offset, val, bo, flags);
-}
-
-/**
- * Advance the writer position of the state buffer.  No error checking.
- */
-static inline void cmd_state_advance(struct intel_cmd *cmd, XGL_UINT len)
-{
-    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_STATE];
-
-    assert(writer->used + len <= writer->size);
-    writer->used += len;
-}
-
-/**
- * A convenient function to copy a hardware state of \p len DWords into the
- * state buffer.  The position of the state is returned.
- */
-static inline XGL_UINT cmd_state_copy(struct intel_cmd *cmd,
-                                      const uint32_t *vals, XGL_UINT len,
-                                      XGL_UINT alignment)
-{
-    uint32_t *dst;
-    XGL_UINT pos;
-
-    dst = cmd_state_reserve(cmd, len, alignment, &pos);
-    memcpy(dst, vals, sizeof(uint32_t) * len);
-    cmd_state_advance(cmd, len);
-
-    return pos;
-}
-
-static inline XGL_UINT cmd_kernel_copy(struct intel_cmd *cmd,
-                                       const void *kernel, XGL_SIZE size)
-{
-    /*
-     * From the Sandy Bridge PRM, volume 4 part 2, page 112:
-     *
-     *     "Due to prefetch of the instruction stream, the EUs may attempt to
-     *      access up to 8 instructions (128 bytes) beyond the end of the
-     *      kernel program - possibly into the next memory page.  Although
-     *      these instructions will not be executed, software must account for
-     *      the prefetch in order to avoid invalid page access faults."
-     */
-    const XGL_UINT prefetch_len = 128 / sizeof(uint32_t);
-    /* kernels are aligned to 64-byte */
-    const XGL_UINT kernel_align = 64 / sizeof(uint32_t);
-    const XGL_UINT kernel_len = ((size + 3) & ~3) / sizeof(uint32_t);
-    struct intel_cmd_writer *writer =
-        &cmd->writers[INTEL_CMD_WRITER_INSTRUCTION];
-    XGL_UINT kernel_pos;
-
-    kernel_pos = u_align(writer->used, kernel_align);
-    if (kernel_pos + kernel_len + prefetch_len > writer->size)
-        cmd_writer_grow(cmd, INTEL_CMD_WRITER_INSTRUCTION, 0);
-    assert(kernel_pos + kernel_len + prefetch_len <= writer->size);
-
-    memcpy(&((uint32_t *) writer->ptr)[kernel_pos], kernel, size);
-    writer->used = kernel_pos + kernel_len;
-
-    return kernel_pos;
-}
 
 #endif /* CMD_PRIV_H */
