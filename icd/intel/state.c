@@ -232,28 +232,22 @@ viewport_state_alloc_cmd(struct intel_viewport_state *state,
     state->scissor_enable = info->scissorEnable;
 
     if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
-        state->cmd_align = GEN7_ALIGNMENT_SF_CLIP_VIEWPORT;
         state->cmd_len = 16 * info->viewportCount;
 
-        state->cmd_clip_offset = 8;
+        state->cmd_clip_pos = 8;
     } else {
-        state->cmd_align = GEN6_ALIGNMENT_SF_VIEWPORT;
         state->cmd_len = 8 * info->viewportCount;
 
-        state->cmd_clip_offset =
-            u_align(state->cmd_len, GEN6_ALIGNMENT_CLIP_VIEWPORT);
-        state->cmd_len = state->cmd_clip_offset + 4 * info->viewportCount;
+        state->cmd_clip_pos = state->cmd_len;
+        state->cmd_len += 4 * info->viewportCount;
     }
 
-    state->cmd_cc_offset =
-        u_align(state->cmd_len, GEN6_ALIGNMENT_CC_VIEWPORT);
-    state->cmd_len = state->cmd_cc_offset + 2 * info->viewportCount;
+    state->cmd_cc_pos = state->cmd_len;
+    state->cmd_len += 2 * info->viewportCount;
 
     if (state->scissor_enable) {
-        state->cmd_scissor_rect_offset =
-            u_align(state->cmd_len, GEN6_ALIGNMENT_SCISSOR_RECT);
-        state->cmd_len = state->cmd_scissor_rect_offset +
-            2 * info->viewportCount;
+        state->cmd_scissor_rect_pos = state->cmd_len;
+        state->cmd_len += 2 * info->viewportCount;
     }
 
     state->cmd = icd_alloc(sizeof(uint32_t) * state->cmd_len,
@@ -282,9 +276,9 @@ viewport_state_init(struct intel_viewport_state *state,
         return ret;
 
     sf_viewport = state->cmd;
-    clip_viewport = state->cmd + state->cmd_clip_offset;
-    cc_viewport = state->cmd + state->cmd_cc_offset;
-    scissor_rect = state->cmd + state->cmd_scissor_rect_offset;
+    clip_viewport = state->cmd + state->cmd_clip_pos;
+    cc_viewport = state->cmd + state->cmd_cc_pos;
+    scissor_rect = state->cmd + state->cmd_scissor_rect_pos;
 
     for (i = 0; i < info->viewportCount; i++) {
         const XGL_VIEWPORT *viewport = &info->viewports[i];

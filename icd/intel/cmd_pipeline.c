@@ -1294,24 +1294,38 @@ static void gen6_cc_states(struct intel_cmd *cmd)
 static void gen6_viewport_states(struct intel_cmd *cmd)
 {
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
-    uint32_t offset;
+    uint32_t sf_offset, clip_offset, cc_offset, scissor_offset;
 
     if (!viewport)
         return;
 
-    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
-            viewport->cmd_align * 4,
-            viewport->cmd_len, viewport->cmd);
+    assert(viewport->cmd_len == (8 + 4 + 2 + 2 * viewport->scissor_enable) *
+            viewport->viewport_count);
+
+    sf_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
+            GEN6_ALIGNMENT_SF_VIEWPORT * 4, 8 * viewport->viewport_count,
+            viewport->cmd);
+
+    clip_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_CLIP_VIEWPORT,
+            GEN6_ALIGNMENT_CLIP_VIEWPORT * 4, 4 * viewport->viewport_count,
+            &viewport->cmd[viewport->cmd_clip_pos]);
+
+    cc_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
+            GEN6_ALIGNMENT_SF_VIEWPORT * 4, 2 * viewport->viewport_count,
+            &viewport->cmd[viewport->cmd_cc_pos]);
+
+    if (viewport->scissor_enable) {
+        scissor_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
+                GEN6_ALIGNMENT_SCISSOR_RECT * 4, 2 * viewport->viewport_count,
+                &viewport->cmd[viewport->cmd_scissor_rect_pos]);
+    } else {
+        scissor_offset = 0;
+    }
 
     gen6_3DSTATE_VIEWPORT_STATE_POINTERS(cmd,
-            offset + (viewport->cmd_clip_offset << 2),
-            offset,
-            offset + (viewport->cmd_cc_offset << 2));
+            clip_offset, sf_offset, cc_offset);
 
-    offset = (viewport->scissor_enable) ?
-        offset + (viewport->cmd_scissor_rect_offset << 2) : 0;
-
-    gen6_3DSTATE_SCISSOR_STATE_POINTERS(cmd, offset);
+    gen6_3DSTATE_SCISSOR_STATE_POINTERS(cmd, scissor_offset);
 }
 
 static void gen7_cc_states(struct intel_cmd *cmd)
@@ -1359,20 +1373,30 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
     if (!viewport)
         return;
 
-    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
-            viewport->cmd_align * 4, viewport->cmd_len, viewport->cmd);
+    assert(viewport->cmd_len == (16 + 2 + 2 * viewport->scissor_enable) *
+            viewport->viewport_count);
 
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
+            GEN7_ALIGNMENT_SF_CLIP_VIEWPORT * 4, 16 * viewport->viewport_count,
+            viewport->cmd);
     gen7_3dstate_pointer(cmd,
             GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
             offset);
+
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
+            GEN6_ALIGNMENT_CC_VIEWPORT * 4, 2 * viewport->viewport_count,
+            &viewport->cmd[viewport->cmd_cc_pos]);
     gen7_3dstate_pointer(cmd,
             GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
-            offset + (viewport->cmd_cc_offset << 2));
+            offset);
 
     if (viewport->scissor_enable) {
+        offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
+                GEN6_ALIGNMENT_SCISSOR_RECT * 4, 2 * viewport->viewport_count,
+                &viewport->cmd[viewport->cmd_scissor_rect_pos]);
         gen7_3dstate_pointer(cmd,
                 GEN6_RENDER_OPCODE_3DSTATE_SCISSOR_STATE_POINTERS,
-                offset + (viewport->cmd_scissor_rect_offset << 2));
+                offset);
     }
 }
 
