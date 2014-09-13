@@ -33,9 +33,11 @@ class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
         self.protos = ()
+        self.headers = ()
 
     def run(self):
         self.protos = xgl.core
+        self.headers = xgl.core_headers
         print(self.generate())
 
     def generate(self):
@@ -84,7 +86,7 @@ class Subcommand(object):
  */"""
 
     def generate_header(self):
-        pass
+        return "\n".join(["#include <" + h + ">" for h in self.headers])
 
     def generate_body(self):
         pass
@@ -140,20 +142,6 @@ class LoaderSubcommand(Subcommand):
         return "\n\n".join(body)
 
 class IcdDispatchTableSubcommand(Subcommand):
-    def generate_header(self):
-        return "\n".join([
-            "#include <xgl.h>",
-            "#include <xglDbg.h>"])
-
-    def generate_body(self):
-        return self._generate_icd_dispatch_table()
-
-class IcdDispatchTableSubcommand(Subcommand):
-    def generate_header(self):
-        return "\n".join([
-            "#include <xgl.h>",
-            "#include <xglDbg.h>"])
-
     def generate_body(self):
         return self._generate_icd_dispatch_table()
 

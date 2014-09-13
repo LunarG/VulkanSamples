@@ -696,8 +696,11 @@ core = (
         (Param("XGL_CMD_BUFFER", "cmdBuffer"))),
 )
 
+core_headers = ("xgl.h", "xglDbg.h")
+
 # the dispatch table defined for ICDs
 # XXX figure out the real order
+# XXX this is not extensible
 icd_dispatch_table = (
     "InitAndEnumerateGpus",
     "GetGpuInfo",
