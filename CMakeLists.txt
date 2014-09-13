@@ -3,19 +3,10 @@
 # to the root binary directory of the project as ${XGL_BINARY_DIR}. 
 cmake_minimum_required (VERSION 2.6) 
 project (XGL) 
-set (XGL_VERSION_MAJOR 0)
-set (XGL_VERSION_MINOR 1)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
 # Header file for CMake settings
-configure_file (
-   "${PROJECT_SOURCE_DIR}/include/XGLConfig.h.in"
-   "${PROJECT_BINARY_DIR}/XGLConfig.h"
-   )
-
-include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/include")
-
 
 include(FindPkgConfig)
 pkg_check_modules(LIBDRM REQUIRED libdrm)
