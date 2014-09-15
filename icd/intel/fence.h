@@ -33,11 +33,17 @@
 
 struct intel_cmd;
 struct intel_dev;
+struct intel_wsi_x11;
 
 struct intel_fence {
     struct intel_obj obj;
 
     struct intel_cmd *cmd;
+
+#ifdef ENABLE_WSI_X11
+    struct intel_wsi_x11 *x11;
+    uint32_t x11_serial;
+#endif
 };
 
 static inline struct intel_fence *intel_fence(XGL_FENCE fence)
@@ -60,7 +66,23 @@ XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
 static inline void intel_fence_set_cmd(struct intel_fence *fence,
                                        struct intel_cmd *cmd)
 {
+#ifdef ENABLE_WSI_X11
+    fence->x11 = NULL;
+#endif
+
     fence->cmd = cmd;
+}
+
+static inline void intel_fence_set_x11(struct intel_fence *fence,
+                                       struct intel_wsi_x11 *x11,
+                                       uint32_t serial)
+{
+    fence->cmd = NULL;
+
+#ifdef ENABLE_WSI_X11
+    fence->x11 = x11;
+    fence->x11_serial = serial;
+#endif
 }
 
 XGL_RESULT XGLAPI intelCreateFence(

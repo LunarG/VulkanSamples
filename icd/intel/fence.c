@@ -28,6 +28,7 @@
 #include "kmd/winsys.h"
 #include "cmd.h"
 #include "dev.h"
+#include "wsi_x11.h"
 #include "fence.h"
 
 static void fence_destroy(struct intel_obj *obj)
@@ -62,16 +63,21 @@ void intel_fence_destroy(struct intel_fence *fence)
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
-    struct intel_bo *bo = (fence->cmd) ?
-        intel_cmd_get_batch(fence->cmd, NULL) : NULL;
-    int err;
+    if (fence->cmd) {
+        struct intel_bo *bo = intel_cmd_get_batch(fence->cmd, NULL);
 
-    if (!bo)
-        return XGL_ERROR_UNAVAILABLE;
+        return (intel_bo_wait(bo, timeout_ns)) ? XGL_NOT_READY : XGL_SUCCESS;
+    }
 
-    err = intel_bo_wait(bo, timeout_ns);
+#ifdef ENABLE_WSI_X11
+    if (fence->x11) {
+        const bool wait = (timeout_ns != 0);
 
-    return (err) ? XGL_NOT_READY : XGL_SUCCESS;
+        return intel_wsi_x11_wait(fence->x11, fence->x11_serial, wait);
+    }
+#endif
+
+    return XGL_ERROR_UNAVAILABLE;
 }
 
 XGL_RESULT XGLAPI intelCreateFence(

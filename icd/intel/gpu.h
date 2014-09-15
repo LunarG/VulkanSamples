@@ -34,12 +34,21 @@
        assert(intel_gpu_gen(gpu) >= INTEL_GEN(min_gen) && \
               intel_gpu_gen(gpu) <= INTEL_GEN(max_gen))
 
+enum intel_ext_type {
+    INTEL_EXT_WSI_X11,
+
+    INTEL_EXT_COUNT,
+    INTEL_EXT_INVALID = INTEL_EXT_COUNT,
+};
+
 enum intel_gpu_engine_type {
     /* TODO BLT support */
     INTEL_GPU_ENGINE_3D,
 
     INTEL_GPU_ENGINE_COUNT
 };
+
+struct intel_wsi_x11;
 
 /*
  * intel_gpu is the only object that does not inherit from intel_base.
@@ -65,6 +74,10 @@ struct intel_gpu {
      */
     int primary_fd_internal;
     int render_fd_internal;
+
+#ifdef ENABLE_WSI_X11
+    struct intel_wsi_x11 *x11;
+#endif
 
     int device_fd;
 };
@@ -100,10 +113,14 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props);
 
+void intel_gpu_associate_x11(struct intel_gpu *gpu,
+                             struct intel_wsi_x11 *x11,
+                             int fd);
 XGL_RESULT intel_gpu_open(struct intel_gpu *gpu);
 void intel_gpu_close(struct intel_gpu *gpu);
 
-bool intel_gpu_has_extension(const struct intel_gpu *gpu, const char *ext);
+enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
+                                               const char *ext);
 
 XGL_RESULT XGLAPI intelGetGpuInfo(
     XGL_PHYSICAL_GPU                            gpu,

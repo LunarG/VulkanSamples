@@ -57,6 +57,8 @@ struct intel_dev_dbg {
 struct intel_dev {
     struct intel_base base;
 
+    bool exts[INTEL_EXT_COUNT];
+
     struct intel_gpu *gpu;
     struct intel_winsys *winsys;
     struct intel_bo *cmd_scratch_bo;

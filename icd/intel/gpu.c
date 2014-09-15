@@ -35,6 +35,15 @@
 #include "dispatch.h"
 #include "queue.h"
 #include "gpu.h"
+#include "wsi_x11.h"
+
+static struct intel_gpu *intel_gpus;
+
+static const char *intel_gpu_exts[INTEL_EXT_COUNT] = {
+#ifdef ENABLE_WSI_X11
+    [INTEL_EXT_WSI_X11] = "XGL_WSI_X11",
+#endif
+};
 
 static int gpu_open_primary_node(struct intel_gpu *gpu)
 {
@@ -44,10 +53,8 @@ static int gpu_open_primary_node(struct intel_gpu *gpu)
 
 static void gpu_close_primary_node(struct intel_gpu *gpu)
 {
-    if (gpu->primary_fd_internal >= 0) {
-        close(gpu->primary_fd_internal);
+    if (gpu->primary_fd_internal >= 0)
         gpu->primary_fd_internal = -1;
-    }
 }
 
 static int gpu_open_render_node(struct intel_gpu *gpu)
@@ -173,11 +180,15 @@ static struct intel_gpu *gpu_create(int gen, int devid,
 static void gpu_destroy(struct intel_gpu *gpu)
 {
     intel_gpu_close(gpu);
+
+#ifdef ENABLE_WSI_X11
+    if (gpu->x11)
+        intel_wsi_x11_destroy(gpu->x11);
+#endif
+
     icd_free(gpu->primary_node);
     icd_free(gpu);
 }
-
-static struct intel_gpu *intel_gpus;
 
 /**
  * Return true if \p gpu is a valid intel_gpu.
@@ -343,6 +354,16 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
     props->supportsPinning = false;
 }
 
+void intel_gpu_associate_x11(struct intel_gpu *gpu,
+                             struct intel_wsi_x11 *x11,
+                             int fd)
+{
+#ifdef ENABLE_WSI_X11
+    gpu->x11 = x11;
+    gpu->primary_fd_internal = fd;
+#endif
+}
+
 XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
 {
     gpu->device_fd = gpu_open_primary_node(gpu);
@@ -359,9 +380,19 @@ void intel_gpu_close(struct intel_gpu *gpu)
     gpu->device_fd = -1;
 }
 
-bool intel_gpu_has_extension(const struct intel_gpu *gpu, const char *ext)
+enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
+                                               const char *ext)
 {
-    return false;
+    enum intel_ext_type type;
+
+    for (type = 0; type < ARRAY_SIZE(intel_gpu_exts); type++) {
+        if (intel_gpu_exts[type] && strcmp(intel_gpu_exts[type], ext) == 0)
+            break;
+    }
+
+    assert(type < INTEL_EXT_COUNT || type == INTEL_EXT_INVALID);
+
+    return type;
 }
 
 XGL_RESULT XGLAPI intelGetGpuInfo(
@@ -431,8 +462,10 @@ XGL_RESULT XGLAPI intelGetExtensionSupport(
     const XGL_CHAR*                             pExtName)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
+    const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
+            (const char *) pExtName);
 
-    return (intel_gpu_has_extension(gpu, (const char *) pExtName)) ?
+    return (ext != INTEL_EXT_INVALID) ?
         XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;
 }
 

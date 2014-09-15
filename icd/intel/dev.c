@@ -71,10 +71,8 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
                             struct intel_dev **dev_ret)
 {
     struct intel_dev *dev;
+    XGL_UINT i;
     XGL_RESULT ret;
-
-    if (info->extensionCount)
-        return XGL_ERROR_INVALID_EXTENSION;
 
     if (gpu->device_fd >= 0)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
@@ -84,6 +82,16 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
             XGL_DBG_OBJECT_DEVICE, info, sizeof(struct intel_dev_dbg));
     if (!dev)
         return XGL_ERROR_OUT_OF_MEMORY;
+
+    for (i = 0; i < info->extensionCount; i++) {
+        const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
+                (const char *) info->ppEnabledExtensionNames[i]);
+
+        if (ext == INTEL_EXT_INVALID)
+            return XGL_ERROR_INVALID_EXTENSION;
+
+        dev->exts[ext] = true;
+    }
 
     dev->gpu = gpu;
 
