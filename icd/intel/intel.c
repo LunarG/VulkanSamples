@@ -102,14 +102,15 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     count = 0;
     dev = devices;
     while (dev) {
-        const char *devnode;
+        const char *primary_node, *render_node;
         struct intel_gpu *gpu;
 
-        devnode = icd_drm_get_devnode(dev, ICD_DRM_MINOR_RENDER);
-        if (!devnode)
+        primary_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_LEGACY);
+        render_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_RENDER);
+        if (!primary_node || !render_node)
             continue;
 
-        ret = intel_gpu_add(dev->devid, devnode, &gpu);
+        ret = intel_gpu_add(dev->devid, primary_node, render_node, &gpu);
         if (ret == XGL_SUCCESS) {
             pGpus[count++] = (XGL_PHYSICAL_GPU) gpu;
             if (count >= maxGpus)

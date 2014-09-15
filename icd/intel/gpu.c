@@ -36,6 +36,41 @@
 #include "queue.h"
 #include "gpu.h"
 
+static int gpu_open_primary_node(struct intel_gpu *gpu)
+{
+    /* cannot not open gpu->primary_node directly */
+    return gpu->primary_fd_internal;
+}
+
+static void gpu_close_primary_node(struct intel_gpu *gpu)
+{
+    if (gpu->primary_fd_internal >= 0) {
+        close(gpu->primary_fd_internal);
+        gpu->primary_fd_internal = -1;
+    }
+}
+
+static int gpu_open_render_node(struct intel_gpu *gpu)
+{
+    if (gpu->render_fd_internal < 0 && gpu->render_node) {
+        gpu->render_fd_internal = open(gpu->render_node, O_RDWR);
+        if (gpu->render_fd_internal < 0) {
+            icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0,
+                    0, "failed to open %s", gpu->render_node);
+        }
+    }
+
+    return gpu->render_fd_internal;
+}
+
+static void gpu_close_render_node(struct intel_gpu *gpu)
+{
+    if (gpu->render_fd_internal >= 0) {
+        close(gpu->render_fd_internal);
+        gpu->render_fd_internal = -1;
+    }
+}
+
 static const char *gpu_get_name(const struct intel_gpu *gpu)
 {
     const char *name = NULL;
@@ -71,31 +106,12 @@ static const char *gpu_get_name(const struct intel_gpu *gpu)
     return name;
 }
 
-static int gpu_open_internal(struct intel_gpu *gpu)
-{
-    if (gpu->fd_internal < 0) {
-        gpu->fd_internal = open(gpu->path, O_RDWR);
-        if (gpu->fd_internal < 0) {
-            icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0,
-                    0, "failed to open %s", gpu->path);
-        }
-    }
-
-    return gpu->fd_internal;
-}
-
-static void gpu_close_internal(struct intel_gpu *gpu)
-{
-    if (gpu->fd_internal >= 0) {
-        close(gpu->fd_internal);
-        gpu->fd_internal = -1;
-    }
-}
-
-static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
+static struct intel_gpu *gpu_create(int gen, int devid,
+                                    const char *primary_node,
+                                    const char *render_node)
 {
     struct intel_gpu *gpu;
-    size_t path_len;
+    size_t primary_len, render_len;
 
     gpu = icd_alloc(sizeof(*gpu), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!gpu)
@@ -108,13 +124,22 @@ static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
 
     gpu->devid = devid;
 
-    path_len = strlen(path);
-    gpu->path = icd_alloc(path_len + 1, 0, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!gpu->path) {
+    primary_len = strlen(primary_node);
+    render_len = (render_node) ? strlen(render_node) : 0;
+
+    gpu->primary_node = icd_alloc(primary_len + 1 +
+            ((render_len) ? (render_len + 1) : 0), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!gpu->primary_node) {
         icd_free(gpu);
         return NULL;
     }
-    memcpy(gpu->path, path, path_len + 1);
+
+    memcpy(gpu->primary_node, primary_node, primary_len + 1);
+
+    if (render_node) {
+        gpu->render_node = gpu->primary_node + primary_len + 1;
+        memcpy(gpu->render_node, render_node, render_len + 1);
+    }
 
     gpu->gen_opaque = gen;
 
@@ -137,16 +162,18 @@ static struct intel_gpu *gpu_create(int gen, int devid, const char *path)
     gpu->batch_buffer_reloc_count =
         gpu->max_batch_buffer_size / sizeof(uint32_t) / 2 - 2;
 
-    gpu->fd_internal = -1;
-    gpu->fd = -1;
+    gpu->primary_fd_internal = -1;
+    gpu->render_fd_internal = -1;
+
+    gpu->device_fd = -1;
 
     return gpu;
 }
 
 static void gpu_destroy(struct intel_gpu *gpu)
 {
-    gpu_close_internal(gpu);
-    icd_free(gpu->path);
+    intel_gpu_close(gpu);
+    icd_free(gpu->primary_node);
     icd_free(gpu);
 }
 
@@ -189,8 +216,8 @@ static int devid_to_gen(int devid)
     return gen;
 }
 
-XGL_RESULT intel_gpu_add(int devid, const char *path,
-                         struct intel_gpu **gpu_ret)
+XGL_RESULT intel_gpu_add(int devid, const char *primary_node,
+                         const char *render_node, struct intel_gpu **gpu_ret)
 {
     const int gen = devid_to_gen(devid);
     struct intel_gpu *gpu;
@@ -201,7 +228,7 @@ XGL_RESULT intel_gpu_add(int devid, const char *path,
         return XGL_ERROR_INITIALIZATION_FAILED;
     }
 
-    gpu = gpu_create(gen, devid, path);
+    gpu = gpu_create(gen, devid, primary_node, render_node);
     if (!gpu)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -318,15 +345,18 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
 
 XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
 {
-    gpu->fd = gpu_open_internal(gpu);
+    gpu->device_fd = gpu_open_primary_node(gpu);
+    if (gpu->device_fd < 0)
+        gpu->device_fd = gpu_open_render_node(gpu);
 
-    return (gpu->fd >= 0) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+    return (gpu->device_fd >= 0) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 
 void intel_gpu_close(struct intel_gpu *gpu)
 {
-    gpu->fd = -1;
-    gpu_close_internal(gpu);
+    gpu_close_primary_node(gpu);
+    gpu_close_render_node(gpu);
+    gpu->device_fd = -1;
 }
 
 bool intel_gpu_has_extension(const struct intel_gpu *gpu, const char *ext)

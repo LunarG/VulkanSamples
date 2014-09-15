@@ -50,20 +50,23 @@ struct intel_gpu {
     struct intel_gpu *next;
 
     int devid;          /* PCI device ID */
-    char *path;         /* path to the render or legacy node, or NULL */
-    int gen_opaque;     /* always read with intel_gpu_gen() */
+    char *primary_node; /* path to the primary node */
+    char *render_node;  /* path to the render node */
+    int gen_opaque;     /* always read this with intel_gpu_gen() */
     int gt;
 
     XGL_GPU_SIZE max_batch_buffer_size;
     XGL_UINT batch_buffer_reloc_count;
 
     /*
-     * The enabled hardware features could be limited by the kernel.  This
-     * mutable internal fd allows us to talk to the kernel when we need to.
+     * The enabled hardware features could be limited by the kernel.  These
+     * mutable fds allows us to talk to the kernel before the device is
+     * created.
      */
-    int fd_internal;
+    int primary_fd_internal;
+    int render_fd_internal;
 
-    int fd;
+    int device_fd;
 };
 
 static inline struct intel_gpu *intel_gpu(XGL_PHYSICAL_GPU gpu)
@@ -82,8 +85,8 @@ static inline int intel_gpu_gen(const struct intel_gpu *gpu)
 
 bool intel_gpu_is_valid(const struct intel_gpu *gpu);
 
-XGL_RESULT intel_gpu_add(int devid, const char *path,
-                         struct intel_gpu **gpu_ret);
+XGL_RESULT intel_gpu_add(int devid, const char *primary_node,
+                         const char *render_node, struct intel_gpu **gpu_ret);
 void intel_gpu_remove_all(void);
 struct intel_gpu *intel_gpu_get_list(void);
 

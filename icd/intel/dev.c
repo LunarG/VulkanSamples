@@ -76,7 +76,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
     if (info->extensionCount)
         return XGL_ERROR_INVALID_EXTENSION;
 
-    if (gpu->fd >= 0)
+    if (gpu->device_fd >= 0)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
 
     dev = (struct intel_dev *) intel_base_create(NULL, sizeof(*dev),
@@ -93,10 +93,10 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return ret;
     }
 
-    dev->winsys = intel_winsys_create_for_fd(gpu->fd);
+    dev->winsys = intel_winsys_create_for_fd(gpu->device_fd);
     if (!dev->winsys) {
         icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
-                0, 0, "failed to create device winsys for %s", gpu->path);
+                0, 0, "failed to create device winsys");
         intel_dev_destroy(dev);
         return XGL_ERROR_UNKNOWN;
     }
@@ -153,7 +153,7 @@ void intel_dev_destroy(struct intel_dev *dev)
     if (dev->winsys)
         intel_winsys_destroy(dev->winsys);
 
-    if (dev->gpu->fd >= 0)
+    if (dev->gpu->device_fd >= 0)
         intel_gpu_close(dev->gpu);
 
     intel_base_destroy(&dev->base);
