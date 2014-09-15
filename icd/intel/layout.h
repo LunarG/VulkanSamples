@@ -125,7 +125,8 @@ struct intel_layout {
 
 void intel_layout_init(struct intel_layout *layout,
                        const struct intel_dev *dev,
-                       const XGL_IMAGE_CREATE_INFO *info);
+                       const XGL_IMAGE_CREATE_INFO *info,
+                       bool scanout);
 
 bool
 intel_layout_update_for_imported_bo(struct intel_layout *layout,

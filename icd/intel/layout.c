@@ -45,6 +45,7 @@ enum {
 struct intel_layout_params {
    const struct intel_gpu *gpu;
    const XGL_IMAGE_CREATE_INFO *info;
+   bool scanout;
 
    bool compressed;
 
@@ -461,6 +462,15 @@ layout_get_valid_tilings(const struct intel_layout *layout,
    const XGL_IMAGE_CREATE_INFO *info = params->info;
    const XGL_FORMAT format = layout->format;
    unsigned valid_tilings = LAYOUT_TILING_ALL;
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 2, page 32:
+    *
+    *     "Display/Overlay   Y-Major not supported.
+    *                        X-Major required for Async Flips"
+    */
+   if (params->scanout)
+       valid_tilings &= LAYOUT_TILING_X;
 
    if (info->tiling == XGL_LINEAR_TILING)
        valid_tilings &= LAYOUT_TILING_NONE;
@@ -1255,13 +1265,15 @@ layout_calculate_mcs_size(struct intel_layout *layout,
  */
 void intel_layout_init(struct intel_layout *layout,
                        const struct intel_dev *dev,
-                       const XGL_IMAGE_CREATE_INFO *info)
+                       const XGL_IMAGE_CREATE_INFO *info,
+                       bool scanout)
 {
    struct intel_layout_params params;
 
    memset(&params, 0, sizeof(params));
    params.gpu = dev->gpu;
    params.info = info;
+   params.scanout = scanout;
 
    /* note that there are dependencies between these functions */
    layout_init_aux(layout, &params);

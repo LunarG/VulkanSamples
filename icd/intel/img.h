@@ -67,6 +67,7 @@ static inline struct intel_img *intel_img_from_obj(struct intel_obj *obj)
 
 XGL_RESULT intel_img_create(struct intel_dev *dev,
                             const XGL_IMAGE_CREATE_INFO *info,
+                            bool scanout,
                             struct intel_img **img_ret);
 
 void intel_img_destroy(struct intel_img *img);

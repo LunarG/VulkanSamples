@@ -75,6 +75,7 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
 
 XGL_RESULT intel_img_create(struct intel_dev *dev,
                             const XGL_IMAGE_CREATE_INFO *info,
+                            bool scanout,
                             struct intel_img **img_ret)
 {
     struct intel_img *img;
@@ -91,7 +92,7 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     img->depth = info->extent.depth;
     img->array_size = info->arraySize;
     img->samples = info->samples;
-    intel_layout_init(layout, dev, info);
+    intel_layout_init(layout, dev, info, scanout);
 
     if (layout->bo_stride > intel_max_resource_size / layout->bo_height) {
         intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
@@ -122,7 +123,7 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
         s8_info.format.channelFormat = XGL_CH_FMT_R8;
         assert(info->format.numericFormat == XGL_NUM_FMT_DS);
 
-        intel_layout_init(img->s8_layout, dev, &s8_info);
+        intel_layout_init(img->s8_layout, dev, &s8_info, scanout);
 
         img->s8_offset = u_align(img->total_size, 4096);
         img->total_size = img->s8_offset +
@@ -161,7 +162,8 @@ XGL_RESULT XGLAPI intelCreateImage(
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_img_create(dev, pCreateInfo, (struct intel_img **) pImage);
+    return intel_img_create(dev, pCreateInfo, false,
+            (struct intel_img **) pImage);
 }
 
 XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
