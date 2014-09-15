@@ -26,8 +26,9 @@
  */
 
 #include "dispatch.h"
-#include "gpu.h"
 #include "dev.h"
+#include "gpu.h"
+#include "mem.h"
 #include "obj.h"
 
 /**
@@ -344,13 +345,13 @@ XGL_RESULT XGLAPI intelGetObjectInfo(
 
 XGL_RESULT XGLAPI intelBindObjectMemory(
     XGL_OBJECT                                  object,
-    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                offset)
 {
     struct intel_obj *obj = intel_obj(object);
+    struct intel_mem *mem = intel_mem(mem_);
 
-    obj->mem = mem;
-    obj->offset = offset;
+    intel_obj_bind_mem(obj, mem, offset);
 
     return XGL_SUCCESS;
 }

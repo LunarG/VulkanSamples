@@ -79,6 +79,14 @@ static inline struct intel_obj *intel_obj(XGL_OBJECT obj)
     return (struct intel_obj *) obj;
 }
 
+static inline void intel_obj_bind_mem(struct intel_obj *obj,
+                                      struct intel_mem *mem,
+                                      XGL_GPU_SIZE offset)
+{
+    obj->mem = mem;
+    obj->offset = offset;
+}
+
 bool intel_base_is_valid(const struct intel_base *base);
 
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
