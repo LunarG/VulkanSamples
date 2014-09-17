@@ -155,6 +155,11 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
 
 static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
+    XGL_RESULT err;
+    XGL_SIZE size;
+    XGL_PHYSICAL_GPU_PROPERTIES props;
+    int gen;
+
     static const uint32_t gen6_vs[] = {
         0x07230203, 99, 'v',
         0x01600110, 0x200f1ca4, 0x00600020, 0x00000000, // cmp.z.f0(8)     null            g1<4,4,1>.xD    0D              { align16 1Q };
@@ -180,11 +185,54 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
                                                         // urb 0 urb_write interleave used complete mlen 3 rlen 0 { align16 1Q EOT };
     };
 
-    return demo_prepare_shader(demo, (const void *) gen6_vs, sizeof(gen6_vs));
+    static const uint32_t gen7_vs[] = {
+        0x07230203, 99, 'v',
+        0x01608110, 0x200f1ca4, 0x00600020, 0x00000000, // cmp.z.f0(8)     null            g1<4,4,1>.xD    0D              { align16 1Q switch };
+        0x00670122, 0x200f0c84, 0x000e0004, 0x001c000a, // (+f0.all4h) if(8) JIP: 10       UIP: 28                         { align16 1Q };
+        0x00600501, 0x204303fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.xyF       -1F                             { align16 NoDDClr 1Q };
+        0x00600d01, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDClr,NoDDChk 1Q };
+        0x00600901, 0x204803fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.wF        1F                              { align16 NoDDChk 1Q };
+        0x00600124, 0x200f0c84, 0x006e0004, 0x00000014, // else(8)         JIP: 20                                         { align16 1Q };
+        0x01608110, 0x200f1ca4, 0x00600020, 0x00000001, // cmp.z.f0(8)     null            g1<4,4,1>.xD    1D              { align16 1Q switch };
+        0x00670122, 0x200f0c84, 0x000e0004, 0x000e000a, // (+f0.all4h) if(8) JIP: 10       UIP: 14                         { align16 1Q };
+        0x00600501, 0x204903fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.xwF       1F                              { align16 NoDDClr 1Q };
+        0x00600d01, 0x204203fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.yF        -1F                             { align16 NoDDClr,NoDDChk 1Q };
+        0x00600901, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDChk 1Q };
+        0x00600124, 0x200f0c84, 0x006e0004, 0x00000006, // else(8)         JIP: 6                                          { align16 1Q };
+        0x00600501, 0x204503fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.xzF       0F                              { align16 NoDDClr 1Q };
+        0x00600901, 0x204a03fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.ywF       1F                              { align16 NoDDChk 1Q };
+        0x00600125, 0x200f0c84, 0x006e0004, 0x00000002, // endif(8)        JIP: 2                                          { align16 1Q };
+        0x00600125, 0x200f0c84, 0x006e0004, 0x00000002, // endif(8)        JIP: 2                                          { align16 1Q };
+        0x00600101, 0x2e4f0061, 0x00000000, 0x00000000, // mov(8)          g114<1>UD       0x00000000UD                    { align16 1Q };
+        0x00600101, 0x2e6f03bd, 0x006e0044, 0x00000000, // mov(8)          g115<1>F        g2<4,4,1>F                      { align16 1Q };
+        0x00600301, 0x2e2f0021, 0x006e0004, 0x00000000, // mov(8)          g113<1>UD       g0<4,4,1>UD                     { align16 WE_all 1Q };
+        0x00000206, 0x2e340c21, 0x00000014, 0x0000ff00, // or(1)           g113.5<1>UD     g0.5<0,1,0>UD   0x0000ff00UD    { align1 WE_all };
+        0x06600131, 0x200f1fbc, 0x006e0e24, 0x8608c000, // send(8)         null            g113<4,4,1>F
+                                                        // urb 0 write HWord interleave complete mlen 3 rlen 0 { align16 1Q EOT };
+    };
+
+
+    err = xglGetGpuInfo(demo->gpu,
+                        XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+                        &size, &props);
+    assert(!err);
+    assert(size == sizeof(props));
+
+    gen = (strstr((const char *) props.gpuName, "Sandybridge")) ? 6 : 7;
+
+    if (gen == 6) {
+        return demo_prepare_shader(demo, (const void *) gen6_vs, sizeof(gen6_vs));
+    }
+    return demo_prepare_shader(demo, (const void *) gen7_vs, sizeof(gen7_vs));
 }
 
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
+    XGL_RESULT err;
+    XGL_SIZE size;
+    XGL_PHYSICAL_GPU_PROPERTIES props;
+    int gen;
+
     static const uint32_t gen6_fs[] = {
         0x07230203, 99, 'w',
         0x00600001, 0x202003fe, 0x00000000, 0x3f800000, // mov(8)          m1<1>F          1F                              { align1 1Q };
@@ -195,7 +243,28 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
                                                         // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
     };
 
-    return demo_prepare_shader(demo, (const void *) gen6_fs, sizeof(gen6_fs));
+    static const uint32_t gen7_fs[] = {
+        0x07230203, 99, 'w',
+        0x00600001, 0x2e2003fd, 0x00000000, 0x3f800000, // mov(8)          g113<1>F        1F                              { align1 1Q };
+        0x00600001, 0x2e4003fd, 0x00000000, 0x00000000, // mov(8)          g114<1>F        0F                              { align1 1Q };
+        0x00600001, 0x2e6003fd, 0x00000000, 0x00000000, // mov(8)          g115<1>F        0F                              { align1 1Q };
+        0x00600001, 0x2e8003fd, 0x00000000, 0x3f800000, // mov(8)          g116<1>F        1F                              { align1 1Q };
+        0x05600032, 0x20001fa8, 0x008d0e20, 0x88031400, // sendc(8)        null            g113<8,8,1>F
+                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
+    };
+
+    err = xglGetGpuInfo(demo->gpu,
+                        XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+                        &size, &props);
+    assert(!err);
+    assert(size == sizeof(props));
+
+    gen = (strstr((const char *) props.gpuName, "Sandybridge")) ? 6 : 7;
+
+    if (gen == 6) {
+        return demo_prepare_shader(demo, (const void *) gen6_fs, sizeof(gen6_fs));
+    }
+    return demo_prepare_shader(demo, (const void *) gen7_fs, sizeof(gen7_fs));
 }
 
 static void demo_prepare_pipeline(struct demo *demo)
