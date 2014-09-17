@@ -1,21 +1,227 @@
 # Create the i965 XGL DRI library
+add_definitions(-D_GNU_SOURCE -DHAVE_PTHREAD)
+add_definitions(-DUSE_LUNARGLASS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
+
+# Hard code our LunarGLASS and glslang paths for now
+SET(GLSLANG_PREFIX_REL ../../../glslang)
+SET(LUNARGLASS_PREFIX_REL ../../../LunarGLASS)
+
+get_filename_component(GLSLANG_PREFIX ${GLSLANG_PREFIX_REL} ABSOLUTE)
+get_filename_component(LUNARGLASS_PREFIX ${LUNARGLASS_PREFIX_REL} ABSOLUTE)
+
+# LunarG TODO:  Get the llvm-config flags hooked up correctly and remove extra definitions from above
+
+#execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --cxxflags OUTPUT_VARIABLE LLVM_CXX_CONFIG_ALL)
+#string(REPLACE "-Woverloaded-virtual" "" LLVM_CXX_CONFIG_1 ${LLVM_CXX_CONFIG_ALL})
+#string(REPLACE "-fvisibility-inlines-hidden" "" LLVM_CXX_CONFIG ${LLVM_CXX_CONFIG_1})
+
+#message(STATUS "llvm-config results")
+#message(STATUS ${LLVM_CXX_CONFIG})
+
+#set_target_properties($<TARGET_OBJECTS:icd>
+#      PROPERTIES
+#      COMPILE_FLAGS "${LLVM_CXX_CONFIG}")
+
+execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --libs engine bitwriter OUTPUT_VARIABLE LLVM_LIBS_ALL_1)
+string(REPLACE "\n" "" LLVM_LIBS_ALL ${LLVM_LIBS_ALL_1})
+#message(STATUS "llvm-config --libs results")
+#message(STATUS ${LLVM_LIBS_ALL})
+#message(STATUS "end results")
+#cmake_policy(SET CMP0004 OLD)
+
+SET(COMPILER_LINK_DIRS
+    ${GLSLANG_PREFIX}/build/install/lib
+    ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib
+    ${LUNARGLASS_PREFIX}/build/Core
+    ${LUNARGLASS_PREFIX}/build/Frontends/glslang
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Transforms
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Immutable
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Analysis
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Util
+)
 
 pkg_check_modules(DRM REQUIRED libdrm libdrm_intel)
 
-include_directories (
-	${ICD_INCLUDE_DIRS}
-	${DRM_INCLUDE_DIRS}
+link_directories (
+    ${ICD_LIBRARY_DIRS}
+    ${DRM_LIBRARY_DIRS}
+    ${COMPILER_LINK_DIRS}
 )
 
-link_directories (
-	${ICD_LIBRARY_DIRS}
-	${DRM_LIBRARY_DIRS}
+SET(COMPILER_LIBS
+   glslangFrontend
+   core
+   LLVMipo
+   glslang
+   OGLCompiler
+   ${LLVM_LIBS_ALL}
 )
 
 link_libraries (
-	${ICD_LIBRARIES}
-	${DRM_LIBRARIES}
-	m
+    ${ICD_LIBRARIES}
+    ${DRM_LIBRARIES}
+    ${COMPILER_LIBS}
+    m
+)
+
+SET(COMPILER_INCLUDE_DIRS
+    ${GLSLANG_PREFIX}
+    ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/include
+    ${LUNARGLASS_PREFIX}
+    compiler/mesa-utils/include
+    compiler/mesa-utils/src/glsl
+    compiler/mesa-utils/src/mesa
+    compiler/mesa-utils/src/mapi
+)
+
+include_directories (
+    ${ICD_INCLUDE_DIRS}
+    ${DRM_INCLUDE_DIRS}
+    ${COMPILER_INCLUDE_DIRS}
+)
+
+
+SET(COMPILER_SOURCES
+    compiler/shader/ast_array_index.cpp
+    compiler/shader/ast_expr.cpp
+    compiler/shader/ast_function.cpp
+    compiler/shader/ast_to_hir.cpp
+    compiler/shader/ast_type.cpp
+    compiler/shader/builtin_functions.cpp
+    compiler/shader/builtin_types.cpp
+    compiler/shader/builtin_variables.cpp
+    compiler/shader/ir.cpp
+    compiler/shader/ir_basic_block.cpp
+    compiler/shader/ir_builder.cpp
+    compiler/shader/ir_clone.cpp
+    compiler/shader/ir_constant_expression.cpp
+    compiler/shader/ir_deserializer.cpp
+    compiler/shader/ir_equals.cpp
+    compiler/shader/ir_expression_flattening.cpp
+    compiler/shader/ir_function_can_inline.cpp
+    compiler/shader/ir_function.cpp
+    compiler/shader/ir_function_detect_recursion.cpp
+    compiler/shader/ir_hierarchical_visitor.cpp
+    compiler/shader/ir_hv_accept.cpp
+    compiler/shader/ir_import_prototypes.cpp
+    compiler/shader/ir_print_visitor.cpp
+    compiler/shader/ir_reader.cpp
+    compiler/shader/ir_rvalue_visitor.cpp
+    compiler/shader/ir_serialize.cpp
+    compiler/shader/ir_set_program_inouts.cpp
+    compiler/shader/ir_validate.cpp
+    compiler/shader/ir_variable_refcount.cpp
+    compiler/shader/link_atomics.cpp
+    compiler/shader/linker.cpp
+    compiler/shader/link_functions.cpp
+    compiler/shader/link_interface_blocks.cpp
+    compiler/shader/link_uniform_block_active_visitor.cpp
+    compiler/shader/link_uniform_blocks.cpp
+    compiler/shader/link_uniform_initializers.cpp
+    compiler/shader/link_uniforms.cpp
+    compiler/shader/link_varyings.cpp
+    compiler/shader/loop_analysis.cpp
+    compiler/shader/loop_controls.cpp
+    compiler/shader/loop_unroll.cpp
+    compiler/shader/lower_clip_distance.cpp
+    compiler/shader/lower_discard.cpp
+    compiler/shader/lower_discard_flow.cpp
+    compiler/shader/lower_if_to_cond_assign.cpp
+    compiler/shader/lower_instructions.cpp
+    compiler/shader/lower_jumps.cpp
+    compiler/shader/lower_mat_op_to_vec.cpp
+    compiler/shader/lower_named_interface_blocks.cpp
+    compiler/shader/lower_noise.cpp
+    compiler/shader/lower_offset_array.cpp
+    compiler/shader/lower_output_reads.cpp
+    compiler/shader/lower_packed_varyings.cpp
+    compiler/shader/lower_packing_builtins.cpp
+    compiler/shader/lower_texture_projection.cpp
+    compiler/shader/lower_ubo_reference.cpp
+    compiler/shader/lower_variable_index_to_cond_assign.cpp
+    compiler/shader/lower_vec_index_to_cond_assign.cpp
+    compiler/shader/lower_vec_index_to_swizzle.cpp
+    compiler/shader/lower_vector.cpp
+    compiler/shader/lower_vector_insert.cpp
+    compiler/shader/opt_algebraic.cpp
+    compiler/shader/opt_array_splitting.cpp
+    compiler/shader/opt_constant_folding.cpp
+    compiler/shader/opt_constant_propagation.cpp
+    compiler/shader/opt_constant_variable.cpp
+    compiler/shader/opt_copy_propagation.cpp
+    compiler/shader/opt_copy_propagation_elements.cpp
+    compiler/shader/opt_cse.cpp
+    compiler/shader/opt_dead_builtin_varyings.cpp
+    compiler/shader/opt_dead_code.cpp
+    compiler/shader/opt_dead_code_local.cpp
+    compiler/shader/opt_dead_functions.cpp
+    compiler/shader/opt_flatten_nested_if_blocks.cpp
+    compiler/shader/opt_flip_matrices.cpp
+    compiler/shader/opt_function_inlining.cpp
+    compiler/shader/opt_if_simplification.cpp
+    compiler/shader/opt_noop_swizzle.cpp
+    compiler/shader/opt_redundant_jumps.cpp
+    compiler/shader/opt_structure_splitting.cpp
+    compiler/shader/opt_swizzle_swizzle.cpp
+    compiler/shader/opt_tree_grafting.cpp
+    compiler/shader/opt_vectorize.cpp
+    compiler/shader/s_expression.cpp
+#    compiler/shader/shader_deserialize.cpp
+#    compiler/shader/shader_serialize.cpp
+#    compiler/shader/standalone_scaffolding.cpp
+    compiler/shader/strtod.cpp
+
+    compiler/mesa-utils/src/glsl/ralloc.c
+    compiler/mesa-utils/src/mesa/program/program.c
+#    compiler/mesa-utils/src/mesa/program/prog_execute.c
+    # compiler/mesa-utils/src/mesa/program/prog_noise.c
+    # compiler/mesa-utils/src/mesa/program/prog_statevars.c
+    # compiler/mesa-utils/src/mesa/program/prog_opt_constant_fold.c
+    compiler/mesa-utils/src/mesa/program/symbol_table.c
+    compiler/mesa-utils/src/mesa/program/prog_cache.c
+    compiler/mesa-utils/src/mesa/program/prog_instruction.c
+    # compiler/mesa-utils/src/mesa/program/prog_optimize.c
+    # compiler/mesa-utils/src/mesa/program/arbprogparse.c
+    compiler/mesa-utils/src/mesa/program/prog_hash_table.c
+    compiler/mesa-utils/src/mesa/program/prog_parameter.c
+    # compiler/mesa-utils/src/mesa/program/prog_diskcache.c
+    # compiler/mesa-utils/src/mesa/program/program_parse.tab.c
+    # compiler/mesa-utils/src/mesa/program/programopt.c
+    # compiler/mesa-utils/src/mesa/program/prog_print.c
+    # compiler/mesa-utils/src/mesa/program/program_parse_extra.c
+    # compiler/mesa-utils/src/mesa/program/prog_parameter_layout.c
+    # compiler/mesa-utils/src/mesa/program/register_allocate.c
+    # compiler/mesa-utils/src/mesa/math/m_matrix.c
+    # compiler/mesa-utils/src/mesa/main/enums.c
+    # compiler/mesa-utils/src/mesa/main/imports.c
+    compiler/mesa-utils/src/mesa/main/hash.c
+    compiler/mesa-utils/src/mesa/main/hash_table.c
+    # compiler/mesa-utils/src/mesa/main/errors.c
+    # compiler/mesa-utils/src/mesa/main/formats.c
+
+    compiler/mesa-utils/src/mesa/main/errors.c
+    # compiler/mesa-utils/src/mesa/main/context.c
+    compiler/mesa-utils/src/mesa/main/enums.c
+    compiler/mesa-utils/src/mesa/main/imports.c
+    compiler/mesa-utils/src/mesa/main/version.c
+
+    compiler/shader/glsl_glass_manager.cpp
+    compiler/shader/glsl_glass_backend_translator.cpp
+    compiler/shader/glsl_glass_backend.cpp
+
+    compiler/shader/glsl_parser_extras.cpp
+    compiler/shader/ossource.cpp
+    compiler/shader/standalone_scaffolding.cpp
+    compiler/shader/glsl_types.cpp
+    compiler/shader/glsl_symbol_table.cpp
+    compiler/shader/hir_field_selection.cpp
+
+
+    )
+
+SET(STANDALONE_COMPILER_SOURCES
+    compiler/shader/main.cpp
+    ${COMPILER_SOURCES}
 )
 
 SET(SOURCES 
@@ -46,6 +252,7 @@ SET(SOURCES
     state.c
     view.c
     kmd/winsys_drm.c
+    ${COMPILER_SOURCES}
     )
 
 pkg_check_modules(DRI3 xcb xcb-dri3 xcb-present)
@@ -61,3 +268,7 @@ add_library(XGL_i965 SHARED
    ${SOURCES}
    $<TARGET_OBJECTS:icd>
    )
+
+add_executable(xglCompiler
+   ${STANDALONE_COMPILER_SOURCES}
+)

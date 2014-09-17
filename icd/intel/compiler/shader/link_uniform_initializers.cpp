@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "main/core.h"
+#include "libfns.h" // LunarG ADD:
 #include "ir.h"
 #include "linker.h"
 #include "ir_uniform.h"

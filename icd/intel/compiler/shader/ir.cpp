@@ -21,10 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <string.h>
-#include "main/core.h" /* for MAX2 */
 #include "ir.h"
 #include "ir_visitor.h"
 #include "glsl_types.h"
+#include "libfns.h"
 
 ir_rvalue::ir_rvalue()
 {

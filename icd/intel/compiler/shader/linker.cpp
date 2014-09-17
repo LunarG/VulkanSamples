@@ -64,7 +64,7 @@
  * \author Ian Romanick <ian.d.romanick@intel.com>
  */
 
-#include "main/core.h"
+#include "libfns.h" // LunarG ADD:
 #include "glsl_symbol_table.h"
 #include "glsl_parser_extras.h"
 #include "ir.h"

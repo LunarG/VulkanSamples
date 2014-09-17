@@ -37,7 +37,7 @@
  * from the GLSL IR.
  */
 
-#include "main/core.h" /* for struct gl_program */
+#include "libfns.h" // LunarG ADD:
 #include "ir.h"
 #include "ir_visitor.h"
 #include "glsl_types.h"

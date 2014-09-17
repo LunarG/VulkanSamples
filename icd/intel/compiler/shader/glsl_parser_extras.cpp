@@ -35,7 +35,7 @@
 #endif // USE_LUNARGLASS
 
 extern "C" {
-#include "main/core.h" /* for struct gl_context */
+#include "libfns.h" // LunarG ADD:
 #include "main/context.h"
 #include "main/shaderobj.h"
 #include "program/prog_diskcache.h"
@@ -44,7 +44,7 @@ extern "C" {
 #include "ralloc.h"
 #include "ast.h"
 #include "glsl_parser_extras.h"
-#include "glsl_parser.h"
+//#include "glsl_parser.h"
 #include "ir_optimization.h"
 #include "loop_analysis.h"
 #include "threadpool.h"
@@ -1738,8 +1738,8 @@ _mesa_glsl_compile_shader_classic(struct gl_context *ctx, struct gl_shader *shad
                                   bool dump_ast, bool dump_hir)
 {
    /* Search program disk cache if active. */
-   if (ctx->BinaryShaderCacheActive && mesa_shader_diskcache_find(ctx, shader) == 0)
-      return;
+//   if (ctx->BinaryShaderCacheActive && mesa_shader_diskcache_find(ctx, shader) == 0)
+//      return;
 
    struct _mesa_glsl_parse_state *state =
       new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
@@ -1807,8 +1807,8 @@ _mesa_glsl_compile_shader_classic(struct gl_context *ctx, struct gl_shader *shad
    /* Retain any live IR, but trash the rest. */
    reparent_ir(shader->ir, shader->ir);
 
-   if (ctx->BinaryShaderCacheActive && shader->CompileStatus)
-      mesa_shader_diskcache_cache(ctx, shader);
+//   if (ctx->BinaryShaderCacheActive && shader->CompileStatus)
+//      mesa_shader_diskcache_cache(ctx, shader);
 
    ralloc_free(state);
 }
@@ -1818,8 +1818,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir)
 {
    /* Search program disk cache if active. */
-   if (ctx->BinaryShaderCacheActive && mesa_shader_diskcache_find(ctx, shader) == 0)
-      return;
+//   if (ctx->BinaryShaderCacheActive && mesa_shader_diskcache_find(ctx, shader) == 0)
+//      return;
 
 #ifdef USE_LUNARGLASS
    // Temporary shader source blacklist, until a source of falling back into SIMD8 can be fixed.
@@ -1837,8 +1837,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    }
 #endif // USE_LUNARGLASS
 
-   if (ctx->BinaryShaderCacheActive && shader->CompileStatus)
-      mesa_shader_diskcache_cache(ctx, shader);
+//   if (ctx->BinaryShaderCacheActive && shader->CompileStatus)
+//      mesa_shader_diskcache_cache(ctx, shader);
 }
 
 } /* extern "C" */

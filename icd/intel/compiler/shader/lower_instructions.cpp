@@ -106,7 +106,7 @@
  *
  */
 
-#include "main/core.h" /* for M_LOG2E */
+#include "libfns.h" // LunarG ADD:
 #include "glsl_types.h"
 #include "ir.h"
 #include "ir_builder.h"

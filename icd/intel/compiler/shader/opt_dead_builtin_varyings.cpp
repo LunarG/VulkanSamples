@@ -46,7 +46,7 @@
  * The same is done for the gl_FragData fragment shader output.
  */
 
-#include "main/core.h" /* for snprintf and ARRAY_SIZE */
+#include "libfns.h" // LunarG ADD:
 #include "ir.h"
 #include "ir_rvalue_visitor.h"
 #include "ir_optimization.h"

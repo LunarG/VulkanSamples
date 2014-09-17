@@ -33,23 +33,23 @@
 #include <string.h>
 #include "ralloc.h"
 
-void
-_mesa_warning(struct gl_context *ctx, const char *fmt, ...)
-{
-    va_list vargs;
-    (void) ctx;
+//void
+//_mesa_warning(struct gl_context *ctx, const char *fmt, ...)
+//{
+//    va_list vargs;
+//    (void) ctx;
 
-    va_start(vargs, fmt);
+//    va_start(vargs, fmt);
 
-    /* This output is not thread-safe, but that's good enough for the
-     * standalone compiler.
-     */
-    fprintf(stderr, "Mesa warning: ");
-    vfprintf(stderr, fmt, vargs);
-    fprintf(stderr, "\n");
+//    /* This output is not thread-safe, but that's good enough for the
+//     * standalone compiler.
+//     */
+//    fprintf(stderr, "Mesa warning: ");
+//    vfprintf(stderr, fmt, vargs);
+//    fprintf(stderr, "\n");
 
-    va_end(vargs);
-}
+//    va_end(vargs);
+//}
 
 void
 _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
@@ -59,11 +59,11 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
    *ptr = sh;
 }
 
-void
-_mesa_shader_debug(struct gl_context *, GLenum, GLuint *id,
-                   const char *, int)
-{
-}
+//void
+//_mesa_shader_debug(struct gl_context *, GLenum, GLuint *id,
+//                   const char *, int)
+//{
+//}
 
 struct gl_shader *
 _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)

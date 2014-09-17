@@ -26,7 +26,7 @@
 #ifndef S_EXPRESSION_H
 #define S_EXPRESSION_H
 
-#include "main/core.h" /* for Elements */
+#include "libfns.h" // LunarG ADD:
 #include "strtod.h"
 #include "list.h"
 

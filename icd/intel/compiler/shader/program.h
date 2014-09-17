@@ -22,7 +22,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "main/core.h"
+#include "libfns.h"  // LunarG ADD:
 
 #ifdef __cplusplus
 extern "C" {
