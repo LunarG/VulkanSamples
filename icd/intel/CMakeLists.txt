@@ -46,11 +46,6 @@ SET(SOURCES
     kmd/winsys_drm.c
     )
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.c.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.c" @ONLY)
-
-list(APPEND SOURCES "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.c" GitSHA1.h)
-
 add_library(XGL_i965 SHARED
    ${SOURCES}
    $<TARGET_OBJECTS:icd>

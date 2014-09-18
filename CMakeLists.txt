@@ -25,10 +25,6 @@ if (CMAKE_COMPILER_IS_GNUCC)
     endif()
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
-include(GetGitRevisionDescription)
-get_git_head_revision(GIT_REFSPEC GIT_SHA1)
-
 # loader: Generic XGL ICD loader
 # icd: Device dependent (DD) XGL components
 # tests: XGL tests
