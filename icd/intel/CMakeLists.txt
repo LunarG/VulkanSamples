@@ -1,20 +1,21 @@
 # Create the i965 XGL DRI library
 
+pkg_check_modules(DRM REQUIRED libdrm libdrm_intel)
+
+include_directories (
+	${ICD_INCLUDE_DIRS}
+	${DRM_INCLUDE_DIRS}
+)
+
 link_directories (
-    ${LIBDRM_LIBRARY_DIRS}
-    ${LIBDRM_INTEL_LIBRARY_DIRS}
+	${ICD_LIBRARY_DIRS}
+	${DRM_LIBRARY_DIRS}
 )
 
 link_libraries (
-   ${LIBDRM_LIBRARIES}
-   ${LIBDRM_INTEL_LIBRARIES}
-   udev
-   m
-)
-
-include_directories (
-    ${LIBDRM_INCLUDE_DIRS}
-    ${LIBDRM_INTEL_INCLUDE_DIRS}
+	${ICD_LIBRARIES}
+	${DRM_LIBRARIES}
+	m
 )
 
 SET(SOURCES 
@@ -50,5 +51,3 @@ add_library(XGL_i965 SHARED
    ${SOURCES}
    $<TARGET_OBJECTS:icd>
    )
-
-# set_target_properties(i915_xgl PROPERTIES PREFIX "")

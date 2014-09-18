@@ -9,5 +9,25 @@ add_custom_command(OUTPUT icd-dispatch-entrypoints.c
 	           DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py
 	                   ${PROJECT_SOURCE_DIR}/xgl.py)
 
-add_library(icd OBJECT icd.c icd-dispatch-entrypoints.c icd-dispatch-table.h icd-enumerate-drm.c icd-format.c icd-utils.c)
+set(ICD_SOURCES
+	icd.c
+	icd-dispatch-entrypoints.c
+	icd-dispatch-table.h
+	icd-format.c
+	icd-utils.c)
+
+set(ICD_REQUIRED_MODULES)
+
+if (UNIX)
+	set(ICD_REQUIRED_MODULES ${ICD_REQUIRED_MODULES} libudev)
+	set(ICD_SOURCES ${ICD_SOURCES} icd-enumerate-drm.c)
+endif()
+
+pkg_check_modules(ICD REQUIRED ${ICD_REQUIRED_MODULES})
+
+include_directories(
+	${ICD_INCLUDE_DIRS}
+)
+
+add_library(icd OBJECT ${ICD_SOURCES})
 set_target_properties(icd PROPERTIES POSITION_INDEPENDENT_CODE ON)
