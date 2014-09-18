@@ -336,9 +336,12 @@ intel_winsys_export_handle(struct intel_winsys *winsys,
       break;
    case INTEL_WINSYS_HANDLE_FD:
       {
+         uint32_t real_tiling = tiling;
          int fd;
 
-         err = drm_intel_bo_gem_export_to_prime(gem_bo(bo), &fd);
+         err = drm_intel_bo_set_tiling(gem_bo(bo), &real_tiling, pitch);
+         if (!err)
+             err = drm_intel_bo_gem_export_to_prime(gem_bo(bo), &fd);
          if (!err)
             handle->handle = fd;
       }
