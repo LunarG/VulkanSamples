@@ -1,6 +1,5 @@
 # Create the i965 XGL DRI library
 add_definitions(-D_GNU_SOURCE -DHAVE_PTHREAD)
-add_definitions(-DUSE_LUNARGLASS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
 
 # Hard code our LunarGLASS and glslang paths for now
 SET(GLSLANG_PREFIX_REL ../../../glslang)
@@ -11,26 +10,33 @@ get_filename_component(LUNARGLASS_PREFIX ${LUNARGLASS_PREFIX_REL} ABSOLUTE)
 
 # LunarG TODO:  Get the llvm-config flags hooked up correctly and remove extra definitions from above
 
-#execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --cxxflags OUTPUT_VARIABLE LLVM_CXX_CONFIG_ALL)
-#string(REPLACE "-Woverloaded-virtual" "" LLVM_CXX_CONFIG_1 ${LLVM_CXX_CONFIG_ALL})
-#string(REPLACE "-fvisibility-inlines-hidden" "" LLVM_CXX_CONFIG ${LLVM_CXX_CONFIG_1})
-
-#message(STATUS "llvm-config results")
-#message(STATUS ${LLVM_CXX_CONFIG})
-
-#set_target_properties($<TARGET_OBJECTS:icd>
-#      PROPERTIES
-#      COMPILE_FLAGS "${LLVM_CXX_CONFIG}")
-
 execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --libs engine bitwriter
   OUTPUT_VARIABLE LLVM_LIBS_ALL_1
   RESULT_VARIABLE LLVM_LIBS_RESULT)
 
-if(NOT ${LLVM_LIBS_RESULT} EQUAL 0)
-  message(FATAL_ERROR "llvm-config failed.")
+if(NOT "${LLVM_LIBS_RESULT}" EQUAL "0")
+  message(FATAL_ERROR "llvm-config failed: " ${LLVM_LIBS_RESULT})
 endif()
 
 string(REPLACE "\n" "" LLVM_LIBS_ALL ${LLVM_LIBS_ALL_1})
+
+execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --cxxflags | tr -d '\n'
+  OUTPUT_VARIABLE LLVM_CXX_CONFIG_ALL
+  RESULT_VARIABLE LLVM_CXX_CONFIG_RESULT)
+
+# if(NOT "${LLVM_CXX_CONFIG_RESULT}" EQUAL "0")
+#   message(FATAL_ERROR "llvm-config failed: " ${LLVM_CXX_CONFIG_RESULT})
+# endif()
+
+string(REPLACE "-Woverloaded-virtual" "" LLVM_CXX_CONFIG_1 ${LLVM_CXX_CONFIG_ALL})
+string(REPLACE "-fvisibility-inlines-hidden" "" LLVM_CXX_CONFIG ${LLVM_CXX_CONFIG_1})
+
+message(STATUS "llvm-config results")
+message(STATUS ${LLVM_CXX_CONFIG})
+
+set_target_properties(icd
+      PROPERTIES
+      COMPILE_FLAGS "${LLVM_CXX_CONFIG}")
 
 SET(COMPILER_LINK_DIRS
     ${GLSLANG_PREFIX}/build/install/lib
