@@ -28,6 +28,7 @@
 
 #include "dev.h"
 #include "shader.h"
+#include "compiler/shader/compiler_interface.h"
 
 static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
                                    const struct intel_gpu *gpu,
@@ -49,6 +50,19 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
     }
 
     memcpy(ir->kernel, bil + 1, ir->size);
+
+    //
+    // TEMPORARY CODE TO INVOKE COMPILER
+    //
+
+    // invoke our program creation as well
+    ir->shader_program = shader_create_program(sh, bil);
+    if (!ir->shader_program)
+        return XGL_ERROR_BAD_SHADER_CODE;
+
+    //
+    // END TEMPORARY CODE
+    //
 
     sh->ir = ir;
     switch (bil->gen_magic) {
@@ -74,6 +88,7 @@ static void shader_destroy(struct intel_obj *obj)
 {
     struct intel_shader *sh = intel_shader_from_obj(obj);
 
+    shader_destroy_program(sh->ir->shader_program);
     icd_free(sh->ir);
     intel_base_destroy(&sh->obj.base);
 }

@@ -40,8 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef USE_LUNARGLASS
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch"
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
@@ -70,5 +68,3 @@ protected:
 Manager* getManager(const EShLanguage);
 
 } // namespace gla
-
-#endif // USE_LUNARGLASS

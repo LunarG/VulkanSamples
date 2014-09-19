@@ -21,6 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "icd-utils.h" // LunarG: ADD
 #include "ir_print_visitor.h"
 #include "glsl_types.h"
 #include "glsl_parser_extras.h"

@@ -47,6 +47,7 @@
  */
 
 #include "libfns.h" // LunarG ADD:
+#include "icd-utils.h" // LunarG: ADD
 #include "ir.h"
 #include "ir_rvalue_visitor.h"
 #include "ir_optimization.h"

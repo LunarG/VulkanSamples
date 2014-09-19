@@ -22,6 +22,7 @@
  */
 
 #include "libfns.h" // LunarG ADD:
+#include "icd-utils.h" // LunarG: ADD
 #include "ir.h"
 #include "linker.h"
 #include "ir_uniform.h"

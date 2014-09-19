@@ -40,8 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef USE_LUNARGLASS
-
 #include "Core/Backend.h"
 #include "glslang/Public/ShaderLang.h"
 
@@ -145,5 +143,3 @@ BackEnd* GetMesaGlassBackEnd(const EShLanguage);
 void ReleaseMesaGlassBackEnd(BackEnd*);
 
 } // namespace gla
-
-# endif // USE_LUNARGLASS

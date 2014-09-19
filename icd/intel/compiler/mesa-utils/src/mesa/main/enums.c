@@ -25,6 +25,7 @@
  * SOFTWARE.
  */
 
+#include "icd-utils.h" // LunarG: ADD
 #include "main/glheader.h"
 #include "main/enums.h"
 #include "main/imports.h"

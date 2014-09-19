@@ -31,6 +31,7 @@
 
 #include "intel.h"
 #include "obj.h"
+#include "compiler/mesa-utils/src/mesa/main/mtypes.h"
 
 enum intel_shader_use {
     INTEL_SHADER_USE_VID                = (1 << 0),
@@ -42,10 +43,10 @@ enum intel_shader_use {
     INTEL_SHADER_USE_W                  = (1 << 5),
 };
 
-/* just the kernel now */
 struct intel_ir {
     void *kernel;
     XGL_SIZE size;
+    struct gl_shader_program *shader_program;
 };
 
 struct intel_shader {

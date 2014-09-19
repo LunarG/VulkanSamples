@@ -59,6 +59,14 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
    *ptr = sh;
 }
 
+void
+_mesa_reference_program(struct gl_context *ctx, struct gl_program **ptr,
+                       struct gl_program *prog)
+{
+   (void) ctx;
+   *ptr = prog;
+}
+
 //void
 //_mesa_shader_debug(struct gl_context *, GLenum, GLuint *id,
 //                   const char *, int)
@@ -82,6 +90,15 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
    }
    return shader;
 }
+
+void _mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
+{
+   free((void *)sh->Source);
+   free(sh->Label);
+   _mesa_reference_program(ctx, &sh->Program, NULL);
+   ralloc_free(sh);
+}
+
 
 void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
 {

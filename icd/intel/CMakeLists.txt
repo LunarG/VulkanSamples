@@ -1,5 +1,9 @@
 # Create the i965 XGL DRI library
+
+# Mesa required defines
 add_definitions(-D_GNU_SOURCE -DHAVE_PTHREAD)
+# LLVM required defines
+add_definitions(-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
 
 # Hard code our LunarGLASS and glslang paths for now
 SET(GLSLANG_PREFIX_REL ../../../glslang)
@@ -14,25 +18,29 @@ execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/us
   OUTPUT_VARIABLE LLVM_LIBS_ALL_1
   RESULT_VARIABLE LLVM_LIBS_RESULT)
 
+string(REPLACE "\n" "" LLVM_LIBS_ALL ${LLVM_LIBS_ALL_1})
+message(STATUS "llvm-config lib results")
+message(STATUS ${LLVM_LIBS_ALL})
+
 if(NOT "${LLVM_LIBS_RESULT}" EQUAL "0")
   message(FATAL_ERROR "llvm-config failed: " ${LLVM_LIBS_RESULT})
 endif()
 
-string(REPLACE "\n" "" LLVM_LIBS_ALL ${LLVM_LIBS_ALL_1})
 
-execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --cxxflags | tr -d '\n'
-  OUTPUT_VARIABLE LLVM_CXX_CONFIG_ALL
+execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --cxxflags
+  OUTPUT_VARIABLE LLVM_CXX_CONFIG_ALL_1
   RESULT_VARIABLE LLVM_CXX_CONFIG_RESULT)
+
+string(REPLACE "\n" "" LLVM_CXX_CONFIG_ALL ${LLVM_CXX_CONFIG_ALL_1})
+string(REPLACE "-Woverloaded-virtual" "" LLVM_CXX_CONFIG_1 ${LLVM_CXX_CONFIG_ALL})
+string(REPLACE "-fvisibility-inlines-hidden" "" LLVM_CXX_CONFIG ${LLVM_CXX_CONFIG_1})
+message(STATUS "llvm-config cxxflags results")
+message(STATUS ${LLVM_CXX_CONFIG})
 
 # if(NOT "${LLVM_CXX_CONFIG_RESULT}" EQUAL "0")
 #   message(FATAL_ERROR "llvm-config failed: " ${LLVM_CXX_CONFIG_RESULT})
 # endif()
 
-string(REPLACE "-Woverloaded-virtual" "" LLVM_CXX_CONFIG_1 ${LLVM_CXX_CONFIG_ALL})
-string(REPLACE "-fvisibility-inlines-hidden" "" LLVM_CXX_CONFIG ${LLVM_CXX_CONFIG_1})
-
-message(STATUS "llvm-config results")
-message(STATUS ${LLVM_CXX_CONFIG})
 
 set_target_properties(icd
       PROPERTIES
@@ -79,6 +87,7 @@ SET(COMPILER_INCLUDE_DIRS
     ${GLSLANG_PREFIX}
     ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/include
     ${LUNARGLASS_PREFIX}
+    ${CMAKE_CURRENT_SOURCE_DIR}
     compiler/mesa-utils/include
     compiler/mesa-utils/src/glsl
     compiler/mesa-utils/src/mesa
@@ -216,6 +225,8 @@ SET(COMPILER_SOURCES
     compiler/mesa-utils/src/mesa/main/imports.c
     compiler/mesa-utils/src/mesa/main/version.c
 
+    #compiler/mesa-utils/src/mesa/main/shaderobj.c
+
     compiler/shader/glsl_glass_manager.cpp
     compiler/shader/glsl_glass_backend_translator.cpp
     compiler/shader/glsl_glass_backend.cpp
@@ -226,6 +237,8 @@ SET(COMPILER_SOURCES
     compiler/shader/glsl_types.cpp
     compiler/shader/glsl_symbol_table.cpp
     compiler/shader/hir_field_selection.cpp
+
+    compiler/shader/compiler_interface.cpp
 
 
     )

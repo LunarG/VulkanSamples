@@ -29,6 +29,7 @@
  */
 
 
+#include "icd-utils.h" // LunarG: ADD
 #include "main/mtypes.h"
 #include "glsl_symbol_table.h"
 #include "glsl_parser_extras.h"

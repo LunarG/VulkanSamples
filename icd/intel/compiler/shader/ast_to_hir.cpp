@@ -50,6 +50,7 @@
  */
 
 #include "libfns.h" // LunarG ADD:
+#include "icd-utils.h" // LunarG ADD:
 #include "glsl_symbol_table.h"
 #include "glsl_parser_extras.h"
 #include "ast.h"

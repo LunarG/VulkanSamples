@@ -29,6 +29,7 @@
  */
 
 
+#include "icd-utils.h" // LunarG: ADD
 #include "main/glheader.h"
 #include "main/context.h"
 #include "main/hash.h"

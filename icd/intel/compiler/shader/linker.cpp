@@ -74,9 +74,9 @@
 #include "link_varyings.h"
 #include "ir_optimization.h"
 #include "ir_rvalue_visitor.h"
+#include "standalone_scaffolding.h" // LunarG ADD:
 
 extern "C" {
-#include "main/shaderobj.h"
 #include "main/enums.h"
 }
 
@@ -1255,8 +1255,8 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
                       "layout qualifiers for gl_FragCoord\n");
       }
 
-      /* Update the linked shader state.  Note that uses_gl_fragcoord should
-       * accumulate the results.  The other values should replace.  If there
+      /* Update the linked shader state.  Note that uses_gl_fragcoord should
+       * accumulate the results.  The other values should replace.  If there
        * are multiple redeclarations, all the fields except uses_gl_fragcoord
        * are already known to be the same.
        */

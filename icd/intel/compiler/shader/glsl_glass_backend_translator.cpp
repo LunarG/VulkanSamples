@@ -40,8 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef USE_LUNARGLASS
-
 // LunarGLASS includes
 #include "Core/Revision.h"
 #include "Core/Exceptions.h"
@@ -3685,5 +3683,3 @@ void ReleaseMesaGlassTranslator(BackEndTranslator* target)
 }
 
 } // namespace gla
-
-#endif // USE_LUNARGLASS

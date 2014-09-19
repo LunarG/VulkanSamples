@@ -36,8 +36,6 @@
 // This file contains the Linux-specific functions
 //
 
-#ifdef USE_LUNARGLASS
-
 #include "glslang/OSDependent/Linux/osinclude.h"
 #include "glsl_parser_extras.h"
 
@@ -176,5 +174,3 @@ void OS_DumpMemoryCounters()
 }
 
 } // end namespace glslang
-
-#endif

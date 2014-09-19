@@ -40,8 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef USE_LUNARGLASS
-
 #include "glsl_glass_manager.h"
 #include "glsl_glass_backend.h"
 #include "glsl_glass_backend_translator.h"
@@ -99,5 +97,3 @@ gla::MesaGlassTranslator* gla::MesaGlassManager::getBackendTranslator()
    // get them from our factory, which only makes MesaGlassTranslators.
    return static_cast<gla::MesaGlassTranslator*>(backEndTranslator);
 }
-
-#endif // USE_LUNARGLASS

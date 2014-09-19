@@ -25,17 +25,16 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef USE_LUNARGLASS
 // These #includes MUST be provided before glext.h, which pollutes the global namespace.
 #include "glslang/Include/ShHandle.h"
 #include "glslang/Public/ShaderLang.h"
 #include "Frontends/glslang/GlslangToTop.h"
 #include "glsl_glass_manager.h"
 #include "glsl_glass_backend_translator.h"
-#endif // USE_LUNARGLASS
 
 extern "C" {
 #include "libfns.h" // LunarG ADD:
+#include "icd-utils.h"  // LunarG ADD:
 #include "main/context.h"
 #include "main/shaderobj.h"
 #include "program/prog_diskcache.h"
@@ -1473,8 +1472,6 @@ set_shader_inout_layout(struct gl_shader *shader,
 
 extern "C" {
 
-#ifdef USE_LUNARGLASS
-
 void _mesa_glslang_generate_resources(struct gl_context *ctx,
                                       TBuiltInResource& resources)
 {
@@ -1733,25 +1730,11 @@ _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader
    delete manager;
 }
 
-#endif  // USE_LUNARGLASS
-
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir)
 {
-#ifdef USE_LUNARGLASS
-   // Temporary shader source blacklist, until a source of falling back into SIMD8 can be fixed.
-   const bool blacklist =
-      (strstr(shader->Source, "963210701942") != 0) ||
-      (strstr(shader->Source, "GL_ARB_texture_multisample") != 0);
-   
-   if (!blacklist && _mesa_use_glass(ctx)) {
-       _mesa_glsl_compile_shader_glass(ctx, shader, dump_ast, dump_hir);
-   } else {
-#endif // USE_LUNARGLASS
-#ifdef USE_LUNARGLASS
-   }
-#endif // USE_LUNARGLASS
+   _mesa_glsl_compile_shader_glass(ctx, shader, dump_ast, dump_hir);
 }
 
 } /* extern "C" */
@@ -1843,12 +1826,15 @@ extern "C" {
 void
 _mesa_create_shader_compiler(void)
 {
-#ifdef USE_LUNARGLASS
+   static bool initialized;
+
    // Initialize glslang and LunarGlass
-   glslang::InitializeProcess();
-   gla::Manager::startMultithreaded();
-   gla::MesaGlassTranslator::initSamplerTypes(); 
-#endif // USE_LUNARGLASS
+   if (!initialized) {
+      glslang::InitializeProcess();
+      gla::Manager::startMultithreaded();
+      gla::MesaGlassTranslator::initSamplerTypes();
+      initialized = true;
+   }
 }
 
 /**

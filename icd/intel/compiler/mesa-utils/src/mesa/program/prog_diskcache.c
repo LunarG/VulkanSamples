@@ -25,10 +25,7 @@
 #include <sys/stat.h>
 #include "shader_cache.h"
 #include "prog_diskcache.h"
-
-#ifdef USE_LUNARGLASS
 #include "glsl_parser_extras.h"
-#endif
 
 #ifndef _WIN32
 #include <dirent.h>
@@ -265,11 +262,9 @@ mesa_program_diskcache_cache(struct gl_context *ctx, struct gl_shader_program *p
    if (!key)
       return -1;
 
-#ifdef USE_LUNARGLASS
    /* Glassy vs. Opaque compiled shaders */
    if (_mesa_use_glass(ctx))
        ralloc_strcat(&key, ".g");
-#endif
 
    char *shader_path =
       ralloc_asprintf(NULL, "%s/%s.bin", ctx->BinaryProgramCachePath, key);
@@ -377,11 +372,9 @@ mesa_program_diskcache_find(struct gl_context *ctx, struct gl_shader_program *pr
    if (!key)
       return -1;
 
-#ifdef USE_LUNARGLASS
    /* Glassy vs. Opaque compiled shaders */
    if (_mesa_use_glass(ctx))
        ralloc_strcat(&key, ".g");
-#endif
 
 
    char *shader_path =
@@ -587,11 +580,9 @@ mesa_shader_diskcache_cache(struct gl_context *ctx, struct gl_shader *shader)
    if (!key)
       return -1;
 
-#ifdef USE_LUNARGLASS
    /* Glassy vs. Opaque compiled shaders */
    if (_mesa_use_glass(ctx))
       ralloc_strcat(&key, ".g");
-#endif
 
    char *shader_path =
       ralloc_asprintf(NULL, "%s/%s.bin", ctx->BinaryShaderCachePath, key);
@@ -650,12 +641,9 @@ mesa_shader_diskcache_find(struct gl_context *ctx, struct gl_shader *shader)
    if (!key)
       return -1;
 
-#ifdef USE_LUNARGLASS
    /* Glassy vs. Opaque compiled shaders */
    if (_mesa_use_glass(ctx))
       ralloc_strcat(&key, ".g");
-#endif
-
 
    char *shader_path =
       ralloc_asprintf(NULL, "%s/%s.bin", ctx->BinaryShaderCachePath, key);

@@ -20,6 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include "icd-utils.h" // LunarG ADD:
 #include <gtest/gtest.h>
 #include "main/compiler.h"
 #include "main/mtypes.h"

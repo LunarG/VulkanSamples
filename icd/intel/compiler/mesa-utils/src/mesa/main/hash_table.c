@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "icd-utils.h" // LunarG: ADD
 #include "main/hash_table.h"
 #include "main/macros.h"
 #include "ralloc.h"

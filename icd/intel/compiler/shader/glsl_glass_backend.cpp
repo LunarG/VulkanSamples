@@ -40,8 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef USE_LUNARGLASS
-
 #include "glsl_glass_backend.h"
 
 namespace gla {
@@ -60,6 +58,3 @@ void ReleaseMesaGlassBackEnd(BackEnd* backEnd)
 }
 
 } // namespace gla
-
-#endif // USE_LUNARGLASS
-

@@ -40,9 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#ifdef USE_LUNARGLASS
-
 #include "Core/PrivateManager.h"
 #include "Core/Backend.h"
 #include "list.h"
@@ -427,5 +424,3 @@ namespace gla {
         gl_context*              ctx;
     }; // class MesaGlassTranslator
 } // namespace gla
-
-#endif // USE_LUNARGLASS
