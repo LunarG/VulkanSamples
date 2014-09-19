@@ -34,7 +34,7 @@
 #include "main/hash.h"
 #include "main/macros.h"
 #include "program.h"
-#include "prog_cache.h"
+//#include "prog_cache.h"
 #include "prog_parameter.h"
 #include "prog_instruction.h"
 
@@ -88,19 +88,19 @@ _mesa_init_program(struct gl_context *ctx)
    _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current,
                             ctx->Shared->DefaultVertexProgram);
    assert(ctx->VertexProgram.Current);
-   ctx->VertexProgram.Cache = _mesa_new_program_cache();
+//   ctx->VertexProgram.Cache = _mesa_new_program_cache();
 
    ctx->FragmentProgram.Enabled = GL_FALSE;
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current,
                             ctx->Shared->DefaultFragmentProgram);
    assert(ctx->FragmentProgram.Current);
-   ctx->FragmentProgram.Cache = _mesa_new_program_cache();
+//   ctx->FragmentProgram.Cache = _mesa_new_program_cache();
 
    ctx->GeometryProgram.Enabled = GL_FALSE;
    /* right now by default we don't have a geometry program */
    _mesa_reference_geomprog(ctx, &ctx->GeometryProgram.Current,
                             NULL);
-   ctx->GeometryProgram.Cache = _mesa_new_program_cache();
+//   ctx->GeometryProgram.Cache = _mesa_new_program_cache();
 
    /* XXX probably move this stuff */
    ctx->ATIFragmentShader.Enabled = GL_FALSE;
@@ -117,11 +117,11 @@ void
 _mesa_free_program_data(struct gl_context *ctx)
 {
    _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current, NULL);
-   _mesa_delete_program_cache(ctx, ctx->VertexProgram.Cache);
+//   _mesa_delete_program_cache(ctx, ctx->VertexProgram.Cache);
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current, NULL);
-   _mesa_delete_shader_cache(ctx, ctx->FragmentProgram.Cache);
+//   _mesa_delete_shader_cache(ctx, ctx->FragmentProgram.Cache);
    _mesa_reference_geomprog(ctx, &ctx->GeometryProgram.Current, NULL);
-   _mesa_delete_program_cache(ctx, ctx->GeometryProgram.Cache);
+//   _mesa_delete_program_cache(ctx, ctx->GeometryProgram.Cache);
 
    /* XXX probably move this stuff */
    if (ctx->ATIFragmentShader.Current) {
@@ -375,7 +375,7 @@ _mesa_delete_program(struct gl_context *ctx, struct gl_program *prog)
       _mesa_free_instructions(prog->Instructions, prog->NumInstructions);
    }
    if (prog->Parameters) {
-      _mesa_free_parameter_list(prog->Parameters);
+       _mesa_free_parameter_list(prog->Parameters);
    }
 
    free(prog);

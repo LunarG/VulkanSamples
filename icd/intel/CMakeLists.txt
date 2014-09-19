@@ -62,6 +62,8 @@ link_libraries (
     ${DRM_LIBRARIES}
     ${COMPILER_LIBS}
     m
+    pthread
+    dl
 )
 
 SET(COMPILER_INCLUDE_DIRS
@@ -175,10 +177,10 @@ SET(COMPILER_SOURCES
     compiler/mesa-utils/src/mesa/program/program.c
 #    compiler/mesa-utils/src/mesa/program/prog_execute.c
     # compiler/mesa-utils/src/mesa/program/prog_noise.c
-    # compiler/mesa-utils/src/mesa/program/prog_statevars.c
+    compiler/mesa-utils/src/mesa/program/prog_statevars.c
     # compiler/mesa-utils/src/mesa/program/prog_opt_constant_fold.c
     compiler/mesa-utils/src/mesa/program/symbol_table.c
-    compiler/mesa-utils/src/mesa/program/prog_cache.c
+#    compiler/mesa-utils/src/mesa/program/prog_cache.c
     compiler/mesa-utils/src/mesa/program/prog_instruction.c
     # compiler/mesa-utils/src/mesa/program/prog_optimize.c
     # compiler/mesa-utils/src/mesa/program/arbprogparse.c

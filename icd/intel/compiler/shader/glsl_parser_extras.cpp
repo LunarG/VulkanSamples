@@ -1734,93 +1734,9 @@ _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader
 #endif  // USE_LUNARGLASS
 
 void
-_mesa_glsl_compile_shader_classic(struct gl_context *ctx, struct gl_shader *shader,
-                                  bool dump_ast, bool dump_hir)
-{
-   /* Search program disk cache if active. */
-//   if (ctx->BinaryShaderCacheActive && mesa_shader_diskcache_find(ctx, shader) == 0)
-//      return;
-
-   struct _mesa_glsl_parse_state *state =
-      new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
-   const char *source = shader->Source;
-
-   state->error = glcpp_preprocess(state, &source, &state->info_log,
-                             &ctx->Extensions, ctx);
-
-   if (!state->error) {
-     _mesa_glsl_lexer_ctor(state, source);
-     _mesa_glsl_parse(state);
-     _mesa_glsl_lexer_dtor(state);
-   }
-
-   if (dump_ast) {
-      foreach_list_const(n, &state->translation_unit) {
-         ast_node *ast = exec_node_data(ast_node, n, link);
-         ast->print();
-      }
-      printf("\n\n");
-   }
-
-   ralloc_free(shader->ir);
-   shader->ir = new(shader) exec_list;
-   if (!state->error && !state->translation_unit.is_empty())
-      _mesa_ast_to_hir(shader->ir, state);
-
-   if (!state->error) {
-      validate_ir_tree(shader->ir);
-
-      /* Print out the unoptimized IR. */
-      if (dump_hir) {
-         _mesa_print_ir(stdout, shader->ir, state);
-      }
-   }
-
-
-   if (!state->error && !shader->ir->is_empty()) {
-      struct gl_shader_compiler_options *options =
-         &ctx->ShaderCompilerOptions[shader->Stage];
-
-      /* Do some optimization at compile time to reduce shader IR size
-       * and reduce later work if the same shader is linked multiple times
-       */
-      while (do_common_optimization(shader->ir, false, false, options,
-                                    ctx->Const.NativeIntegers))
-         ;
-
-      validate_ir_tree(shader->ir);
-   }
-
-   if (shader->InfoLog)
-      ralloc_free(shader->InfoLog);
-
-   shader->symbols = state->symbols;
-   shader->CompileStatus = !state->error;
-   shader->InfoLog = state->info_log;
-   shader->Version = state->language_version;
-   shader->IsES = state->es_shader;
-   shader->uses_builtin_functions = state->uses_builtin_functions;
-
-   if (!state->error)
-      set_shader_inout_layout(shader, state);
-
-   /* Retain any live IR, but trash the rest. */
-   reparent_ir(shader->ir, shader->ir);
-
-//   if (ctx->BinaryShaderCacheActive && shader->CompileStatus)
-//      mesa_shader_diskcache_cache(ctx, shader);
-
-   ralloc_free(state);
-}
-
-void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir)
 {
-   /* Search program disk cache if active. */
-//   if (ctx->BinaryShaderCacheActive && mesa_shader_diskcache_find(ctx, shader) == 0)
-//      return;
-
 #ifdef USE_LUNARGLASS
    // Temporary shader source blacklist, until a source of falling back into SIMD8 can be fixed.
    const bool blacklist =
@@ -1831,14 +1747,9 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
        _mesa_glsl_compile_shader_glass(ctx, shader, dump_ast, dump_hir);
    } else {
 #endif // USE_LUNARGLASS
-      _mesa_glsl_compile_shader_classic(ctx, shader, dump_ast, dump_hir);
-      
 #ifdef USE_LUNARGLASS
    }
 #endif // USE_LUNARGLASS
-
-//   if (ctx->BinaryShaderCacheActive && shader->CompileStatus)
-//      mesa_shader_diskcache_cache(ctx, shader);
 }
 
 } /* extern "C" */
@@ -1948,7 +1859,7 @@ _mesa_create_shader_compiler(void)
 void
 _mesa_destroy_shader_compiler(void)
 {
-   _mesa_glsl_destroy_threadpool();
+//   _mesa_glsl_destroy_threadpool();
 
    _mesa_destroy_shader_compiler_caches();
 
@@ -1963,7 +1874,7 @@ _mesa_destroy_shader_compiler(void)
 void
 _mesa_destroy_shader_compiler_caches(void)
 {
-   _mesa_glsl_wait_threadpool();
+//   _mesa_glsl_wait_threadpool();
    _mesa_glsl_release_builtin_functions();
 }
 
