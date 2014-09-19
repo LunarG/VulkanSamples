@@ -22,12 +22,15 @@ get_filename_component(LUNARGLASS_PREFIX ${LUNARGLASS_PREFIX_REL} ABSOLUTE)
 #      PROPERTIES
 #      COMPILE_FLAGS "${LLVM_CXX_CONFIG}")
 
-execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --libs engine bitwriter OUTPUT_VARIABLE LLVM_LIBS_ALL_1)
+execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --libs engine bitwriter
+  OUTPUT_VARIABLE LLVM_LIBS_ALL_1
+  RESULT_VARIABLE LLVM_LIBS_RESULT)
+
+if(NOT ${LLVM_LIBS_RESULT} EQUAL 0)
+  message(FATAL_ERROR "llvm-config failed.")
+endif()
+
 string(REPLACE "\n" "" LLVM_LIBS_ALL ${LLVM_LIBS_ALL_1})
-#message(STATUS "llvm-config --libs results")
-#message(STATUS ${LLVM_LIBS_ALL})
-#message(STATUS "end results")
-#cmake_policy(SET CMP0004 OLD)
 
 SET(COMPILER_LINK_DIRS
     ${GLSLANG_PREFIX}/build/install/lib
