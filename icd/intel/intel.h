@@ -36,6 +36,7 @@
 
 #include <xgl.h>
 #include <xglDbg.h>
+#include <xglWsiX11Ext.h>
 
 #include "icd.h"
 #include "icd-bil.h"

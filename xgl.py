@@ -698,6 +698,30 @@ core = (
 
 core_headers = ("xgl.h", "xglDbg.h")
 
+ext_wsi_x11 = (
+    Proto("XGL_RESULT", "WsiX11AssociateConnection",
+        (Param("XGL_PHYSICAL_GPU", "gpu"),
+         Param("const XGL_WSI_X11_CONNECTION_INFO*", "pConnectionInfo"))),
+
+    Proto("XGL_RESULT", "WsiX11GetMSC",
+        (Param("XGL_DEVICE", "device"),
+         Param("xcb_randr_crtc_t", "crtc"),
+         Param("XGL_UINT64*", "pMsc"))),
+
+    Proto("XGL_RESULT", "WsiX11CreatePresentableImage",
+        (Param("XGL_DEVICE", "device"),
+         Param("const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO*", "pCreateInfo"),
+         Param("XGL_IMAGE*", "pImage"),
+         Param("XGL_GPU_MEMORY*", "pMem"))),
+
+    Proto("XGL_RESULT", "WsiX11QueuePresent",
+        (Param("XGL_QUEUE", "queue"),
+         Param("const XGL_WSI_X11_PRESENT_INFO*", "pPresentInfo"),
+         Param("XGL_FENCE", "fence"))),
+)
+
+ext_wsi_x11_headers = ("xglWsiX11Ext.h",)
+
 # the dispatch table defined for ICDs
 # XXX figure out the real order
 # XXX this is not extensible
@@ -816,6 +840,11 @@ icd_dispatch_table = (
     "DbgSetDeviceOption",
     "CmdDbgMarkerBegin",
     "CmdDbgMarkerEnd",
+
+    "WsiX11AssociateConnection",
+    "WsiX11GetMSC",
+    "WsiX11CreatePresentableImage",
+    "WsiX11QueuePresent",
 )
 
 def is_dispatchable(proto):

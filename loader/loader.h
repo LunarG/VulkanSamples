@@ -30,6 +30,7 @@
 
 #include <xgl.h>
 #include <xglDbg.h>
+#include <xglWsiX11Ext.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define LOADER_EXPORT __attribute__((visibility("default")))

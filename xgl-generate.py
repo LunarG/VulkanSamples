@@ -36,8 +36,8 @@ class Subcommand(object):
         self.headers = ()
 
     def run(self):
-        self.protos = xgl.core
-        self.headers = xgl.core_headers
+        self.protos = xgl.core + xgl.ext_wsi_x11
+        self.headers = xgl.core_headers + xgl.ext_wsi_x11_headers
         print(self.generate())
 
     def generate(self):

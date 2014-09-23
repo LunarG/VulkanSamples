@@ -45,6 +45,37 @@
 #include "view.h"
 #include "dispatch.h"
 
+static XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
+    XGL_PHYSICAL_GPU                            gpu,
+    const XGL_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+static XGL_RESULT XGLAPI intelWsiX11GetMSC(
+    XGL_DEVICE                                  device,
+    xcb_randr_crtc_t                            crtc,
+    XGL_UINT64*                                 pMsc)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+static XGL_RESULT XGLAPI intelWsiX11CreatePresentableImage(
+    XGL_DEVICE                                  device,
+    const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
+    XGL_IMAGE*                                  pImage,
+    XGL_GPU_MEMORY*                             pMem)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
+
+static XGL_RESULT XGLAPI intelWsiX11QueuePresent(
+    XGL_QUEUE                                   queue,
+    const XGL_WSI_X11_PRESENT_INFO*             pPresentInfo,
+    XGL_FENCE                                   fence)
+{
+    return XGL_ERROR_UNAVAILABLE;
+}
 
 static const struct icd_dispatch_table intel_normal_dispatch_table = {
     .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
@@ -278,6 +309,10 @@ static const struct icd_dispatch_table intel_debug_dispatch_table = {
     .DbgSetDeviceOption = intelDbgSetDeviceOption,
     .CmdDbgMarkerBegin = intelCmdDbgMarkerBegin,
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,
+    .WsiX11AssociateConnection = intelWsiX11AssociateConnection,
+    .WsiX11GetMSC = intelWsiX11GetMSC,
+    .WsiX11CreatePresentableImage = intelWsiX11CreatePresentableImage,
+    .WsiX11QueuePresent = intelWsiX11QueuePresent,
 };
 
 const struct icd_dispatch_table *intel_dispatch_get(bool debug)
