@@ -55,7 +55,6 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
                               struct intel_fence **fence_ret);
 void intel_fence_destroy(struct intel_fence *fence);
 
-XGL_RESULT intel_fence_get_status(struct intel_fence *fence);
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
 
 static inline void intel_fence_set_cmd(struct intel_fence *fence,

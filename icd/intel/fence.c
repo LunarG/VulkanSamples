@@ -60,17 +60,6 @@ void intel_fence_destroy(struct intel_fence *fence)
     intel_base_destroy(&fence->obj.base);
 }
 
-XGL_RESULT intel_fence_get_status(struct intel_fence *fence)
-{
-    struct intel_bo *bo = (fence->cmd) ?
-        intel_cmd_get_batch(fence->cmd, NULL) : NULL;
-
-    if (!bo)
-        return XGL_ERROR_UNAVAILABLE;
-
-    return (intel_bo_is_busy(bo)) ? XGL_NOT_READY : XGL_SUCCESS;
-}
-
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
     struct intel_bo *bo = (fence->cmd) ?
@@ -101,7 +90,7 @@ XGL_RESULT XGLAPI intelGetFenceStatus(
 {
     struct intel_fence *fence = intel_fence(fence_);
 
-    return intel_fence_get_status(fence);
+    return intel_fence_wait(fence, 0);
 }
 
 XGL_RESULT XGLAPI intelWaitForFences(
