@@ -47,7 +47,7 @@ SET(SOURCES
     kmd/winsys_drm.c
     )
 
-pkg_check_modules(DRI3 xcb-dri3 xcb-present)
+pkg_check_modules(DRI3 xcb xcb-dri3 xcb-present)
 if (DRI3_FOUND)
 	add_definitions(-DENABLE_WSI_X11)
 	include_directories(${DRI3_INCLUDE_DIRS})
