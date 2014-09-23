@@ -27,6 +27,7 @@
 
 #include "shader.h"
 #include "pipeline_priv.h"
+#include "compiler/pipeline/pipeline_compiler_interface.h"
 
 static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap *rmap,
                                                       XGL_DESCRIPTOR_SET_SLOT_TYPE type,
@@ -373,6 +374,23 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
         return ret;
 
     assert(!info->fs.linkConstBufferCount);
+
+
+    // Right here, lower the IR to ISA using NOS
+    // This must be after assignment of pipeline constant
+    // buffer, but before the ISA copy (which can eventually
+    // go away)
+
+    ret = intel_pipeline_shader_compile(fs, intel_shader(info->fs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    // continue to copy the ISA out of kernel* until the above call
+    // is hooked up completely
+
+    ret = pipeline_shader_copy_ir(fs, intel_shader(info->fs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
 
     /* assuming one RT; need to parse the shader */
     fs->rmap = rmap_create(pipeline->dev,

@@ -25,28 +25,22 @@
  *   LunarG
  */
 
-#ifndef COMPILER_INTERFACE_H
-#define COMPILER_INTERFACE_H
+#ifndef PIPELINE_COMPILER_INTERFACE_H
+#define PIPELINE_COMPILER_INTERFACE_H
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
 struct intel_shader;
-struct icd_bil_header;
-struct gl_context;
-struct gl_shader_program;
+struct intel_pipeline_shader;
 
-void initialize_mesa_context_to_defaults(struct gl_context *ctx);
-
-struct gl_shader_program *shader_create_program(struct intel_shader *sh,
-                                                const struct icd_bil_header *bil);
-
-void shader_destroy_program(struct gl_shader_program *shader_program);
+XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
+                                         const struct intel_shader *xps);
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-#endif /* COMPILER_INTERFACE_H */
+#endif /* PIPELINE_COMPILER_INTERFACE_H */

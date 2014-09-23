@@ -29,12 +29,10 @@
 #include "shader.h"
 #include "compiler_interface.h"
 #include "compiler/mesa-utils/src/glsl/ralloc.h"
-#include "compiler/shader/glsl_parser_extras.h"
+#include "compiler/mesa-utils/src/glsl/glsl_parser_extras.h"
 #include "compiler/shader/program.h"
 #include "compiler/mesa-utils/src/mesa/main/context.h"
 #include "compiler/shader/standalone_scaffolding.h"
-
-namespace {
 
 void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 {
@@ -138,8 +136,6 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
    ctx->Driver.DeleteShader = _mesa_delete_shader;
 }
 
-} // namespace
-
 
 extern "C" {
 
@@ -241,9 +237,6 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
     if (strlen(shader_program->InfoLog) > 0)
         printf("Info log for linking:\n%s\n", shader_program->InfoLog);
 
-    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++)
-       ralloc_free(shader_program->_LinkedShaders[i]);
-
     _mesa_destroy_shader_compiler();
 
     return shader_program;
@@ -252,6 +245,9 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
 
 void shader_destroy_program(struct gl_shader_program *shader_program)
 {
+    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++)
+       ralloc_free(shader_program->_LinkedShaders[i]);
+
     ralloc_free(shader_program);
 }
 

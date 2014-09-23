@@ -634,6 +634,12 @@ struct gl_tex_env_combine_state
 /** Non-identity texture matrix for texture unit? */
 #define ENABLE_TEXMAT(unit) (1 << (unit))
 
+/**
+ * Data structure representing a single clip plane (e.g. one of the elements
+ * of the ctx->Transform.EyeUserPlane or ctx->Transform._ClipUserPlane array).
+ */
+typedef GLfloat gl_clip_plane[4];
+
 typedef enum {
    MAP_USER,
    MAP_INTERNAL,

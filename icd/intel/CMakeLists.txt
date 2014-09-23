@@ -88,9 +88,12 @@ SET(COMPILER_INCLUDE_DIRS
     ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/include
     ${LUNARGLASS_PREFIX}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    compiler/shader
     compiler/mesa-utils/include
+    compiler/mesa-utils/src
     compiler/mesa-utils/src/glsl
     compiler/mesa-utils/src/mesa
+    compiler/mesa-utils/src/mesa/program
     compiler/mesa-utils/src/mapi
 )
 
@@ -210,7 +213,7 @@ SET(COMPILER_SOURCES
     # compiler/mesa-utils/src/mesa/program/prog_print.c
     # compiler/mesa-utils/src/mesa/program/program_parse_extra.c
     # compiler/mesa-utils/src/mesa/program/prog_parameter_layout.c
-    # compiler/mesa-utils/src/mesa/program/register_allocate.c
+     compiler/mesa-utils/src/mesa/program/register_allocate.c
     # compiler/mesa-utils/src/mesa/math/m_matrix.c
     # compiler/mesa-utils/src/mesa/main/enums.c
     # compiler/mesa-utils/src/mesa/main/imports.c
@@ -240,7 +243,39 @@ SET(COMPILER_SOURCES
 
     compiler/shader/compiler_interface.cpp
 
+    # File required for backend compiler
+    compiler/pipeline/pipeline_compiler_interface.cpp
+    compiler/pipeline/brw_shader.cpp
+    compiler/pipeline/brw_fs.cpp
+    compiler/pipeline/brw_fs_visitor.cpp
+    compiler/pipeline/brw_fs_live_variables.cpp
+    compiler/pipeline/brw_cfg.cpp
+    compiler/pipeline/brw_fs_cse.cpp
+    compiler/pipeline/brw_fs_copy_propagation.cpp
+    compiler/pipeline/brw_fs_peephole_predicated_break.cpp
+    compiler/pipeline/brw_fs_dead_code_eliminate.cpp
+    compiler/pipeline/brw_fs_sel_peephole.cpp
+    compiler/pipeline/brw_dead_control_flow.cpp
+    compiler/pipeline/brw_fs_saturate_propagation.cpp
+    compiler/pipeline/brw_fs_register_coalesce.cpp
+    compiler/pipeline/brw_schedule_instructions.cpp
+    compiler/pipeline/brw_fs_reg_allocate.cpp
+    compiler/pipeline/brw_fs_generator.cpp
+    compiler/pipeline/brw_lower_texture_gradients.cpp
+    compiler/pipeline/brw_cubemap_normalize.cpp
+    compiler/pipeline/brw_lower_unnormalized_offset.cpp
+    compiler/pipeline/brw_fs_channel_expressions.cpp
+    compiler/pipeline/brw_fs_vector_splitting.cpp
 
+    #compiler/pipeline/brw_vs.c
+    compiler/pipeline/brw_disasm.c
+    compiler/pipeline/brw_device_info.c
+    compiler/pipeline/brw_eu.c
+    compiler/pipeline/brw_program.c
+    compiler/pipeline/brw_wm.c
+    compiler/pipeline/brw_eu_emit.c
+    compiler/pipeline/brw_eu_compact.c
+    compiler/pipeline/intel_debug.c
     )
 
 SET(STANDALONE_COMPILER_SOURCES
