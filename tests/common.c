@@ -36,7 +36,7 @@ void app_dev_init_formats(struct app_dev *dev)
                 .numericFormat = num,
             };
             XGL_RESULT err;
-            XGL_SIZE size;
+            XGL_SIZE size = sizeof(dev->format_props[ch][num]);
 
             err = xglGetFormatInfo(dev->obj, fmt,
                                    XGL_INFO_TYPE_FORMAT_PROPERTIES,
@@ -75,7 +75,6 @@ void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     /* enable all extensions */
     info.extensionCount = gpu->extension_count;
     info.ppEnabledExtensionNames = gpu->extensions;
-
     dev->gpu = gpu;
     err = xglCreateDevice(gpu->obj, &info, &dev->obj);
     if (err)
