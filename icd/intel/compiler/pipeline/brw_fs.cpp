@@ -3386,18 +3386,9 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
       return false;
    }
 
-   if (brw->ctx.Const.DeferLinkProgram) {
-      brw_shader_program_save_wm_compile(prog, c);
-   }
-   else {
-      uint32_t old_prog_offset = brw->wm.base.prog_offset;
-      struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
-
-//      brw_wm_upload_compile(brw, c);
-
-      brw->wm.base.prog_offset = old_prog_offset;
-      brw->wm.prog_data = old_prog_data;
-   }
+   // Rather than defer or upload to cache, hand off
+   // the compile results back to the brw_context
+   brw_shader_program_save_wm_compile(brw->shader_prog, c);
 
    brw_wm_clear_compile(brw, c);
 

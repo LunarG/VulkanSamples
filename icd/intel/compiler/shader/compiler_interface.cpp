@@ -33,6 +33,8 @@
 #include "compiler/shader/program.h"
 #include "compiler/mesa-utils/src/mesa/main/context.h"
 #include "compiler/shader/standalone_scaffolding.h"
+#include "compiler/pipeline/brw_wm.h"
+#include "compiler/pipeline/brw_shader.h"
 
 void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 {
@@ -150,12 +152,10 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
     _mesa_create_shader_compiler();
     initialize_mesa_context_to_defaults(ctx);
 
-    struct gl_shader_program *shader_program;
-
-    shader_program = rzalloc (NULL, struct gl_shader_program);
+    struct gl_shader_program *shader_program = brw_new_shader_program(ctx, 0);
     assert(shader_program != NULL);
-    shader_program->InfoLog = ralloc_strdup(shader_program, "");
 
+    shader_program->InfoLog = ralloc_strdup(shader_program, "");
     shader_program->Shaders =
     reralloc(shader_program, shader_program->Shaders,
         struct gl_shader *, shader_program->NumShaders + 1);

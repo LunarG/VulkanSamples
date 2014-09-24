@@ -27,12 +27,15 @@
 
 #include "xgl.h"  // for XGL_RESULT
 #include "shader.h"
+#include "pipeline.h"
 #include "compiler/shader/compiler_interface.h"
 #include "compiler/pipeline/pipeline_compiler_interface.h"
 #include "compiler/pipeline/brw_context.h"
 #include "compiler/pipeline/brw_shader.h"
 #include "compiler/mesa-utils/src/mesa/main/context.h"
+#include "compiler/mesa-utils/src/glsl/ralloc.h"
 #include "compiler/pipeline/brw_device_info.h"
+#include "compiler/pipeline/brw_wm.h"
 
 
 void initialize_brw_context(struct brw_context *brw)
@@ -86,6 +89,14 @@ void initialize_brw_context(struct brw_context *brw)
     //brw->intelScreen->vec4_reg_set
     //brw->intelScreen->wm_reg_sets
 
+
+    brw->shader_prog = brw_new_shader_program(&brw->ctx, 0);
+}
+
+static inline void pipeline_destroy_compile(struct brw_context *brw) {
+    delete brw->intelScreen->devinfo;
+    delete brw->intelScreen;
+    ralloc_free(brw->shader_prog);
 }
 
 extern "C" {
@@ -94,38 +105,57 @@ extern "C" {
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_shader *shader)
 {
-    // first take at standalone backend compile
-    switch(shader->ir->shader_program->Shaders[0]->Type) {
-    case GL_FRAGMENT_SHADER:
+    XGL_RESULT status = XGL_SUCCESS;
+
+    // create a brw_context
+    struct brw_context local_brw;
+    struct brw_context *brw = &local_brw;
+
+    // allocate sub structures on the stack
+    initialize_brw_context(brw);
+
+    // LunarG : TODO - should this have been set for us somewhere?
+    shader->ir->shader_program->Type =
+            shader->ir->shader_program->Shaders[0]->Stage;
+
+    if (brw_link_shader(&brw->ctx, shader->ir->shader_program)) {
+
+        // first take at standalone backend compile
+        switch(shader->ir->shader_program->Shaders[0]->Type) {
+        case GL_FRAGMENT_SHADER:
         {
-
-            // create a brw_context
-            struct brw_context local_brw;
-            struct brw_context *brw = &local_brw;
-
-            initialize_brw_context(brw);
-
-            // LunarG : TODO - should this have been set for us somewhere?
-            shader->ir->shader_program->Type =
-                    shader->ir->shader_program->Shaders[0]->Stage;
-
-            brw_link_shader(&brw->ctx, shader->ir->shader_program);
-            //brw_fs_precompile(ctx, shader->ir->shader_program);
+            // Start pulling bits out of our compile result.
+            // see upload_ps_state() for references about what I believe each of these values are
+            // Note that they will currently be overwritten by pipeline_shader_copy_ir
+            // to allow the triangle to continue rendering
+            // I would prefer to find a way to pull this data out without exposing
+            // the internals of the compiler, but it hasn't presented itself yet
+            struct brw_wm_prog_data *data = get_wm_prog_data(brw->shader_prog);
+            pipe_shader->pCode = (void*)get_wm_program(brw->shader_prog);
+            pipe_shader->codeSize = get_wm_program_size(brw->shader_prog);
+            pipe_shader->out_count;  // this appears to not be hooked up for FS
+            pipe_shader->surface_count = data->base.binding_table.size_bytes / 4;
+            pipe_shader->urb_grf_start = data->first_curbe_grf;
         }
 
-        break;
+            break;
 
-    case GL_VERTEX_SHADER:
-    case GL_GEOMETRY_SHADER:
-    case GL_COMPUTE_SHADER:
-    default:
+        case GL_VERTEX_SHADER:
+        case GL_GEOMETRY_SHADER:
+        case GL_COMPUTE_SHADER:
+        default:
+            assert(0);
+            status = XGL_ERROR_BAD_PIPELINE_DATA;
+        }
+    } else {
         assert(0);
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        status = XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
-    return XGL_SUCCESS;
+    pipeline_destroy_compile(brw);
+
+    return status;
 }
 
-// note - free ctx, brw_context, devinfo, and screen
 
 } // extern "C"

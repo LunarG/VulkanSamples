@@ -73,6 +73,24 @@ brw_shader_program(struct gl_shader_program *prog)
    return (struct brw_shader_program *) prog;
 }
 
+struct brw_wm_prog_data *get_wm_prog_data(struct gl_shader_program *prog)
+{
+   struct brw_shader_program *brw_prog = (struct brw_shader_program *) prog;
+   return &brw_prog->wm.data;
+}
+
+const unsigned *get_wm_program(struct gl_shader_program *prog)
+{
+    struct brw_shader_program *brw_prog = (struct brw_shader_program *) prog;
+    return brw_prog->wm.program;
+}
+
+unsigned get_wm_program_size(struct gl_shader_program *prog)
+{
+    struct brw_shader_program *brw_prog = (struct brw_shader_program *) prog;
+    return brw_prog->wm.program_size;
+}
+
 struct gl_shader *
 brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
 {
@@ -83,7 +101,8 @@ brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
       shader->base.Type = type;
       shader->base.Stage = _mesa_shader_enum_to_shader_stage(type);
       shader->base.Name = name;
-//      _mesa_init_shader(ctx, &shader->base);
+      // LunarG: Removed
+      //_mesa_init_shader(ctx, &shader->base);
    }
 
    return &shader->base;

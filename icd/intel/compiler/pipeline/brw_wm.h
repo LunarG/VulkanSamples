@@ -135,9 +135,11 @@ const unsigned *brw_wm_fs_emit(struct brw_context *brw,
                                unsigned *final_assembly_size);
 
 void brw_notify_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
+// LunarG : TODO - find a way to call these as they were
 //GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
 struct gl_shader *brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type);
-struct gl_shader_program *brw_new_shader_program(struct gl_context *ctx, GLuint name);
+// LunarG : TODO - find a way to call these as they were
+//struct gl_shader_program *brw_new_shader_program(struct gl_context *ctx, GLuint name);
 
 bool brw_color_buffer_write_enabled(struct brw_context *brw);
 void brw_wm_debug_recompile(struct brw_context *brw,

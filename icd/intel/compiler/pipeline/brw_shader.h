@@ -139,8 +139,6 @@ struct brw_vs_compile;
 struct brw_gs_compile;
 struct brw_wm_compile;
 
-GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
-
 const struct brw_shader_program_precompile_key *
 brw_shader_program_get_precompile_key(struct gl_shader_program *shader_prog);
 
@@ -167,6 +165,15 @@ brw_shader_program_restore_gs_compile(struct gl_shader_program *shader_prog,
 bool
 brw_shader_program_restore_wm_compile(struct gl_shader_program *shader_prog,
                                       struct brw_wm_compile *c);
+
+// LunarG : ADD
+// Exposing some functions that were abstracted away, would be good to put them back
+struct gl_shader_program *brw_new_shader_program(struct gl_context *ctx, GLuint name);
+struct brw_shader_program *get_brw_shader_program(struct gl_shader_program *prog);
+GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
+struct brw_wm_prog_data *get_wm_prog_data(struct gl_shader_program *prog);
+const unsigned *get_wm_program(struct gl_shader_program *prog);
+unsigned get_wm_program_size(struct gl_shader_program *prog);
 
 #ifdef __cplusplus
 }

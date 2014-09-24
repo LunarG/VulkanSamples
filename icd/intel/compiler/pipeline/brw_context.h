@@ -1149,6 +1149,10 @@ struct brw_context
    } shader_time;
 
    struct intel_screen *intelScreen;
+
+   // LunarG : ADD
+   // Give us a place to store our compile results
+   struct gl_shader_program *shader_prog;
 };
 
 
