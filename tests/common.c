@@ -168,13 +168,14 @@ void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
 
     gpu->id = id;
     gpu->obj = obj;
-
+    size = sizeof(gpu->props);
     err = xglGetGpuInfo(gpu->obj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
                         &size, &gpu->props);
     if (err || size != sizeof(gpu->props))
         ERR_EXIT(err);
 
+    size = sizeof(gpu->perf);
     err = xglGetGpuInfo(gpu->obj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
                         &size, &gpu->perf);
@@ -191,6 +192,7 @@ void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
 
     gpu->queue_props =
             malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
+    size = sizeof(gpu->queue_props[0]) * gpu->queue_count;
     if (!gpu->queue_props)
         ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
     err = xglGetGpuInfo(gpu->obj,
@@ -200,6 +202,7 @@ void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
         ERR_EXIT(err);
 
     /* set up queue requests */
+    size = sizeof(*gpu->queue_reqs) * gpu->queue_count;
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
     if (!gpu->queue_reqs)
         ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
