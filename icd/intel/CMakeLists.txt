@@ -267,7 +267,6 @@ SET(COMPILER_SOURCES
     compiler/pipeline/brw_fs_channel_expressions.cpp
     compiler/pipeline/brw_fs_vector_splitting.cpp
 
-    #compiler/pipeline/brw_vs.c
     compiler/pipeline/brw_disasm.c
     compiler/pipeline/brw_device_info.c
     compiler/pipeline/brw_eu.c
@@ -276,6 +275,16 @@ SET(COMPILER_SOURCES
     compiler/pipeline/brw_eu_emit.c
     compiler/pipeline/brw_eu_compact.c
     compiler/pipeline/intel_debug.c
+
+    compiler/pipeline/brw_vs.c
+    compiler/pipeline/brw_vec4.cpp
+    compiler/pipeline/brw_vec4_visitor.cpp
+    compiler/pipeline/brw_vec4_vs_visitor.cpp
+    compiler/pipeline/brw_vec4_live_variables.cpp
+    compiler/pipeline/brw_vec4_copy_propagation.cpp
+    compiler/pipeline/brw_vec4_reg_allocate.cpp
+    compiler/pipeline/brw_vec4_generator.cpp
+    compiler/pipeline/gen8_vec4_generator.cpp
     )
 
 SET(STANDALONE_COMPILER_SOURCES

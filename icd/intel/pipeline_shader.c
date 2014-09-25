@@ -268,8 +268,6 @@ static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
 static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipeline_shader *sh,
                                           const struct intel_shader *ir)
 {
-
-
     sh->pCode = icd_alloc(ir->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
     if (!sh->pCode)
         return XGL_ERROR_OUT_OF_MEMORY;
@@ -300,6 +298,12 @@ static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
         return ret;
 
     assert(!info->vs.linkConstBufferCount);
+
+    // Right here, lower the IR to ISA using NOS
+    // This must be after assignment of pipeline constant buffer
+    ret = intel_pipeline_shader_compile(vs, intel_shader(info->vs.shader));
+    if (ret != XGL_SUCCESS)
+        return ret;
 
     vs->rmap = rmap_create(pipeline->dev,
             &info->vs.descriptorSetMapping[0],
@@ -377,12 +381,8 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
 
     assert(!info->fs.linkConstBufferCount);
 
-
     // Right here, lower the IR to ISA using NOS
-    // This must be after assignment of pipeline constant
-    // buffer, but before the ISA copy (which can eventually
-    // go away)
-
+    // This must be after assignment of pipeline constant buffer
     ret = intel_pipeline_shader_compile(fs, intel_shader(info->fs.shader));
     if (ret != XGL_SUCCESS)
         return ret;

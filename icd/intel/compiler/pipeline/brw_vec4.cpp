@@ -1721,11 +1721,12 @@ vec4_visitor::run()
    /* Generate VS IR for main().  (the visitor only descends into
     * functions called "main").
     */
-   if (shader) {
+//   if (shader) {
+      assert(shader);
       visit_instructions(shader->base.ir);
-   } else {
-      emit_program_code();
-   }
+//   } else {
+//      emit_program_code();
+//   }
    base_ir = NULL;
 
    if (key->userclip_active && !prog->UsesClipDistanceOut)
@@ -1824,11 +1825,11 @@ brw_vs_emit(struct brw_context *brw,
    bool start_busy = false;
    double start_time = 0;
 
-   if (unlikely(brw->perf_debug)) {
-      start_busy = (brw->batch.last_bo &&
-                    drm_intel_bo_busy(brw->batch.last_bo));
-      start_time = get_time();
-   }
+//   if (unlikely(brw->perf_debug)) {
+//      start_busy = (brw->batch.last_bo &&
+//                    drm_intel_bo_busy(brw->batch.last_bo));
+//      start_time = get_time();
+//   }
 
    struct brw_shader *shader = NULL;
    if (prog)
@@ -1861,16 +1862,16 @@ brw_vs_emit(struct brw_context *brw,
       assembly = g.generate_assembly(&v.instructions, final_assembly_size);
    }
 
-   if (unlikely(brw->perf_debug) && shader) {
-      if (shader->compiled_once) {
-         brw_vs_debug_recompile(brw, prog, &c->key);
-      }
-      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
-         perf_debug("VS compile took %.03f ms and stalled the GPU\n",
-                    (get_time() - start_time) * 1000);
-      }
-      shader->compiled_once = true;
-   }
+//   if (unlikely(brw->perf_debug) && shader) {
+//      if (shader->compiled_once) {
+//         brw_vs_debug_recompile(brw, prog, &c->key);
+//      }
+//      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
+//         perf_debug("VS compile took %.03f ms and stalled the GPU\n",
+//                    (get_time() - start_time) * 1000);
+//      }
+//      shader->compiled_once = true;
+//   }
 
    return assembly;
 }

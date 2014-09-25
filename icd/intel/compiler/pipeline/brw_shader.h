@@ -174,7 +174,9 @@ GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog
 struct brw_wm_prog_data *get_wm_prog_data(struct gl_shader_program *prog);
 const unsigned *get_wm_program(struct gl_shader_program *prog);
 unsigned get_wm_program_size(struct gl_shader_program *prog);
-
+struct brw_vs_prog_data *get_vs_prog_data(struct gl_shader_program *prog);
+const unsigned *get_vs_program(struct gl_shader_program *prog);
+unsigned get_vs_program_size(struct gl_shader_program *prog);
 #ifdef __cplusplus
 }
 #endif

@@ -33,7 +33,7 @@
 #include "intel_debug.h"
 //#include "utils.h"  // LunarG :
 
-uint64_t INTEL_DEBUG = DEBUG_WM | DEBUG_NO16;
+uint64_t INTEL_DEBUG = DEBUG_WM | DEBUG_NO16 | DEBUG_VS;
 
 //static const struct dri_debug_control debug_control[] = {
 //   { "tex",   DEBUG_TEXTURE},

@@ -78,17 +78,17 @@ struct gl_program *brwNewProgram( struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
 
    switch (target) {
-//   case GL_VERTEX_PROGRAM_ARB: {
-//      struct brw_vertex_program *prog = CALLOC_STRUCT(brw_vertex_program);
-//      if (prog) {
-//     prog->id = get_new_program_id(brw->intelScreen);
+   case GL_VERTEX_PROGRAM_ARB: {
+       struct brw_vertex_program *prog = CALLOC_STRUCT(brw_vertex_program);
+       if (prog) {
+           prog->id = get_new_program_id(brw->intelScreen);
 
-//     return _mesa_init_vertex_program( ctx, &prog->program,
-//                         target, id );
-//      }
-//      else
-//     return NULL;
-//   }
+           return _mesa_init_vertex_program( ctx, &prog->program,
+                                             target, id );
+       }
+       else
+           return NULL;
+   }
 
    case GL_FRAGMENT_PROGRAM_ARB: {
       struct brw_fragment_program *prog = CALLOC_STRUCT(brw_fragment_program);

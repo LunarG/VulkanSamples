@@ -728,48 +728,47 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be,
    return benefit;
 }
 
-// LunarG : TODO - turn on for next stage (VS)
-//class vec4_instruction_scheduler : public instruction_scheduler
-//{
-//public:
-//   vec4_instruction_scheduler(vec4_visitor *v, int grf_count, int allocatable_grfs,
-//                              instruction_scheduler_mode mode);
-//   void calculate_deps(bool bu);
-//   schedule_node *choose_instruction_to_schedule_td();
-//   schedule_node *choose_instruction_to_schedule_bu();
-//   int issue_time(backend_instruction *inst);
-//   vec4_visitor *v;
+class vec4_instruction_scheduler : public instruction_scheduler
+{
+public:
+   vec4_instruction_scheduler(vec4_visitor *v, int grf_count, int allocatable_grfs,
+                              instruction_scheduler_mode mode);
+   void calculate_deps(bool bu);
+   schedule_node *choose_instruction_to_schedule_td();
+   schedule_node *choose_instruction_to_schedule_bu();
+   int issue_time(backend_instruction *inst);
+   vec4_visitor *v;
 
-//   void count_remaining_grf_uses(backend_instruction *inst);
-//   void update_register_pressure(backend_instruction *inst, bool bu);
-//   float get_register_pressure_benefit(backend_instruction *inst, bool bu);
-//   bool is_partially_scheduled(backend_instruction *inst) { return false; }
-//   bool consumes_dst(backend_instruction *prev, backend_instruction *curr) { return false; }
-//};
+   void count_remaining_grf_uses(backend_instruction *inst);
+   void update_register_pressure(backend_instruction *inst, bool bu);
+   float get_register_pressure_benefit(backend_instruction *inst, bool bu);
+   bool is_partially_scheduled(backend_instruction *inst) { return false; }
+   bool consumes_dst(backend_instruction *prev, backend_instruction *curr) { return false; }
+};
 
-//vec4_instruction_scheduler::vec4_instruction_scheduler(vec4_visitor *v,
-//                                                       int grf_count, int allocatable_grfs,
-//                                                       instruction_scheduler_mode mode)
-//   : instruction_scheduler(v, grf_count, allocatable_grfs, mode),
-//     v(v)
-//{
-//}
+vec4_instruction_scheduler::vec4_instruction_scheduler(vec4_visitor *v,
+                                                       int grf_count, int allocatable_grfs,
+                                                       instruction_scheduler_mode mode)
+   : instruction_scheduler(v, grf_count, allocatable_grfs, mode),
+     v(v)
+{
+}
 
-//void
-//vec4_instruction_scheduler::count_remaining_grf_uses(backend_instruction *be)
-//{
-//}
+void
+vec4_instruction_scheduler::count_remaining_grf_uses(backend_instruction *be)
+{
+}
 
-//void
-//vec4_instruction_scheduler::update_register_pressure(backend_instruction *be, bool bu)
-//{
-//}
+void
+vec4_instruction_scheduler::update_register_pressure(backend_instruction *be, bool bu)
+{
+}
 
-//float
-//vec4_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be, bool bu)
-//{
-//   return 0.0f;
-//}
+float
+vec4_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be, bool bu)
+{
+   return 0.0f;
+}
 
 schedule_node::schedule_node(backend_instruction *inst,
                              instruction_scheduler *sched)
@@ -1312,214 +1311,213 @@ fs_instruction_scheduler::calculate_deps(bool bu)
    }
 }
 
-// LunarG : TODO - turn on for next stage (VS)
-//void
-//vec4_instruction_scheduler::calculate_deps(bool bu)
-//{
-//   const bool gen6plus = v->brw->gen >= 6;
+void
+vec4_instruction_scheduler::calculate_deps(bool bu)
+{
+   const bool gen6plus = v->brw->gen >= 6;
 
-//   schedule_node *last_grf_write[grf_count];
-//   schedule_node *last_mrf_write[BRW_MAX_MRF];
-//   schedule_node *last_conditional_mod = NULL;
-//   schedule_node *last_accumulator_write = NULL;
-//   /* Fixed HW registers are assumed to be separate from the virtual
-//    * GRFs, so they can be tracked separately.  We don't really write
-//    * to fixed GRFs much, so don't bother tracking them on a more
-//    * granular level.
-//    */
-//   schedule_node *last_fixed_grf_write = NULL;
+   schedule_node *last_grf_write[grf_count];
+   schedule_node *last_mrf_write[BRW_MAX_MRF];
+   schedule_node *last_conditional_mod = NULL;
+   schedule_node *last_accumulator_write = NULL;
+   /* Fixed HW registers are assumed to be separate from the virtual
+    * GRFs, so they can be tracked separately.  We don't really write
+    * to fixed GRFs much, so don't bother tracking them on a more
+    * granular level.
+    */
+   schedule_node *last_fixed_grf_write = NULL;
 
-//   /* The last instruction always needs to still be the last instruction.
-//    * Either it's flow control (IF, ELSE, ENDIF, DO, WHILE) and scheduling
-//    * other things after it would disturb the basic block, or it's the EOT
-//    * URB_WRITE and we should do a better job at dead code eliminating
-//    * anything that could have been scheduled after it.
-//    */
-//   schedule_node *last = (schedule_node *)instructions.get_tail();
-//   add_barrier_deps(bu, last);
+   /* The last instruction always needs to still be the last instruction.
+    * Either it's flow control (IF, ELSE, ENDIF, DO, WHILE) and scheduling
+    * other things after it would disturb the basic block, or it's the EOT
+    * URB_WRITE and we should do a better job at dead code eliminating
+    * anything that could have been scheduled after it.
+    */
+   schedule_node *last = (schedule_node *)instructions.get_tail();
+   add_barrier_deps(bu, last);
 
-//   memset(last_grf_write, 0, sizeof(last_grf_write));
-//   memset(last_mrf_write, 0, sizeof(last_mrf_write));
+   memset(last_grf_write, 0, sizeof(last_grf_write));
+   memset(last_mrf_write, 0, sizeof(last_mrf_write));
 
-//   /* top-to-bottom dependencies: RAW and WAW. */
-//   foreach_list(node, &instructions) {
-//      schedule_node *n = (schedule_node *)node;
-//      vec4_instruction *inst = (vec4_instruction *)n->inst;
+   /* top-to-bottom dependencies: RAW and WAW. */
+   foreach_list(node, &instructions) {
+      schedule_node *n = (schedule_node *)node;
+      vec4_instruction *inst = (vec4_instruction *)n->inst;
 
-//      if (inst->has_side_effects())
-//         add_barrier_deps(bu, n);
+      if (inst->has_side_effects())
+         add_barrier_deps(bu, n);
 
-//      /* read-after-write deps. */
-//      for (int i = 0; i < 3; i++) {
-//         if (inst->src[i].file == GRF) {
-//            add_dep(bu, last_grf_write[inst->src[i].reg], n);
-//         } else if (inst->src[i].file == HW_REG &&
-//                    (inst->src[i].fixed_hw_reg.file ==
-//                     BRW_GENERAL_REGISTER_FILE)) {
-//            add_dep(bu, last_fixed_grf_write, n);
-//         } else if (inst->src[i].is_accumulator() && gen6plus) {
-//            assert(last_accumulator_write);
-//            add_dep(bu, last_accumulator_write, n);
-//         } else if (inst->src[i].file != BAD_FILE &&
-//                    inst->src[i].file != IMM &&
-//                    inst->src[i].file != UNIFORM) {
-//            /* No reads from MRF, and ATTR is already translated away */
-//            assert(inst->src[i].file != MRF &&
-//                   inst->src[i].file != ATTR);
-//            add_barrier_deps(bu, n);
-//         }
-//      }
+      /* read-after-write deps. */
+      for (int i = 0; i < 3; i++) {
+         if (inst->src[i].file == GRF) {
+            add_dep(bu, last_grf_write[inst->src[i].reg], n);
+         } else if (inst->src[i].file == HW_REG &&
+                    (inst->src[i].fixed_hw_reg.file ==
+                     BRW_GENERAL_REGISTER_FILE)) {
+            add_dep(bu, last_fixed_grf_write, n);
+         } else if (inst->src[i].is_accumulator() && gen6plus) {
+            assert(last_accumulator_write);
+            add_dep(bu, last_accumulator_write, n);
+         } else if (inst->src[i].file != BAD_FILE &&
+                    inst->src[i].file != IMM &&
+                    inst->src[i].file != UNIFORM) {
+            /* No reads from MRF, and ATTR is already translated away */
+            assert(inst->src[i].file != MRF &&
+                   inst->src[i].file != ATTR);
+            add_barrier_deps(bu, n);
+         }
+      }
 
-//      for (int i = 0; i < inst->mlen; i++) {
-//         /* It looks like the MRF regs are released in the send
-//          * instruction once it's sent, not when the result comes
-//          * back.
-//          */
-//         add_dep(bu, last_mrf_write[inst->base_mrf + i], n);
-//      }
+      for (int i = 0; i < inst->mlen; i++) {
+         /* It looks like the MRF regs are released in the send
+          * instruction once it's sent, not when the result comes
+          * back.
+          */
+         add_dep(bu, last_mrf_write[inst->base_mrf + i], n);
+      }
 
-//      if (inst->reads_flag()) {
-//         assert(last_conditional_mod);
-//         add_dep(bu, last_conditional_mod, n);
-//      }
+      if (inst->reads_flag()) {
+         assert(last_conditional_mod);
+         add_dep(bu, last_conditional_mod, n);
+      }
 
-//      if (inst->reads_accumulator_implicitly()) {
-//         if (gen6plus) {
-//            assert(last_accumulator_write);
-//            add_dep(bu, last_accumulator_write, n);
-//         } else {
-//            add_barrier_deps(bu, n);
-//         }
-//      }
+      if (inst->reads_accumulator_implicitly()) {
+         if (gen6plus) {
+            assert(last_accumulator_write);
+            add_dep(bu, last_accumulator_write, n);
+         } else {
+            add_barrier_deps(bu, n);
+         }
+      }
 
-//      /* write-after-write deps. */
-//      if (inst->dst.file == GRF) {
-//         add_dep(bu, last_grf_write[inst->dst.reg], n);
-//         last_grf_write[inst->dst.reg] = n;
-//      } else if (inst->dst.file == MRF) {
-//         add_dep(bu, last_mrf_write[inst->dst.reg], n);
-//         last_mrf_write[inst->dst.reg] = n;
-//     } else if (inst->dst.file == HW_REG &&
-//                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
-//         last_fixed_grf_write = n;
-//      } else if (inst->dst.is_accumulator() && gen6plus) {
-//         add_dep(bu, last_accumulator_write, n);
-//         last_accumulator_write = n;
-//      } else if (inst->dst.file != BAD_FILE) {
-//         add_barrier_deps(bu, n);
-//      }
+      /* write-after-write deps. */
+      if (inst->dst.file == GRF) {
+         add_dep(bu, last_grf_write[inst->dst.reg], n);
+         last_grf_write[inst->dst.reg] = n;
+      } else if (inst->dst.file == MRF) {
+         add_dep(bu, last_mrf_write[inst->dst.reg], n);
+         last_mrf_write[inst->dst.reg] = n;
+     } else if (inst->dst.file == HW_REG &&
+                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+         last_fixed_grf_write = n;
+      } else if (inst->dst.is_accumulator() && gen6plus) {
+         add_dep(bu, last_accumulator_write, n);
+         last_accumulator_write = n;
+      } else if (inst->dst.file != BAD_FILE) {
+         add_barrier_deps(bu, n);
+      }
 
-//      if (inst->mlen > 0) {
-//         for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
-//            add_dep(bu, last_mrf_write[inst->base_mrf + i], n);
-//            last_mrf_write[inst->base_mrf + i] = n;
-//         }
-//      }
+      if (inst->mlen > 0) {
+         for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
+            add_dep(bu, last_mrf_write[inst->base_mrf + i], n);
+            last_mrf_write[inst->base_mrf + i] = n;
+         }
+      }
 
-//      if (inst->writes_flag()) {
-//         add_dep(bu, last_conditional_mod, n, 0, 0);
-//         last_conditional_mod = n;
-//      }
+      if (inst->writes_flag()) {
+         add_dep(bu, last_conditional_mod, n, 0, 0);
+         last_conditional_mod = n;
+      }
 
-//      if (inst->writes_accumulator) {
-//         if (gen6plus) {
-//            add_dep(bu, last_accumulator_write, n);
-//            last_accumulator_write = n;
-//         } else {
-//            add_barrier_deps(bu, n);
-//         }
-//      }
-//   }
+      if (inst->writes_accumulator) {
+         if (gen6plus) {
+            add_dep(bu, last_accumulator_write, n);
+            last_accumulator_write = n;
+         } else {
+            add_barrier_deps(bu, n);
+         }
+      }
+   }
 
-//   /* bottom-to-top dependencies: WAR */
-//   memset(last_grf_write, 0, sizeof(last_grf_write));
-//   memset(last_mrf_write, 0, sizeof(last_mrf_write));
-//   last_conditional_mod = NULL;
-//   last_accumulator_write = NULL;
-//   last_fixed_grf_write = NULL;
+   /* bottom-to-top dependencies: WAR */
+   memset(last_grf_write, 0, sizeof(last_grf_write));
+   memset(last_mrf_write, 0, sizeof(last_mrf_write));
+   last_conditional_mod = NULL;
+   last_accumulator_write = NULL;
+   last_fixed_grf_write = NULL;
 
-//   exec_node *node;
-//   exec_node *prev;
-//   for (node = instructions.get_tail(), prev = node->prev;
-//        !node->is_head_sentinel();
-//        node = prev, prev = node->prev) {
-//      schedule_node *n = (schedule_node *)node;
-//      vec4_instruction *inst = (vec4_instruction *)n->inst;
+   exec_node *node;
+   exec_node *prev;
+   for (node = instructions.get_tail(), prev = node->prev;
+        !node->is_head_sentinel();
+        node = prev, prev = node->prev) {
+      schedule_node *n = (schedule_node *)node;
+      vec4_instruction *inst = (vec4_instruction *)n->inst;
 
-//      /* write-after-read deps. */
-//      for (int i = 0; i < 3; i++) {
-//         if (inst->src[i].file == GRF) {
-//            add_dep(bu, n, last_grf_write[inst->src[i].reg]);
-//         } else if (inst->src[i].file == HW_REG &&
-//                    (inst->src[i].fixed_hw_reg.file ==
-//                     BRW_GENERAL_REGISTER_FILE)) {
-//            add_dep(bu, n, last_fixed_grf_write);
-//         } else if (inst->src[i].is_accumulator() && gen6plus) {
-//            add_dep(bu, n, last_accumulator_write);
-//         } else if (inst->src[i].file != BAD_FILE &&
-//                    inst->src[i].file != IMM &&
-//                    inst->src[i].file != UNIFORM) {
-//            assert(inst->src[i].file != MRF &&
-//                   inst->src[i].file != ATTR);
-//            add_barrier_deps(bu, n);
-//         }
-//      }
+      /* write-after-read deps. */
+      for (int i = 0; i < 3; i++) {
+         if (inst->src[i].file == GRF) {
+            add_dep(bu, n, last_grf_write[inst->src[i].reg]);
+         } else if (inst->src[i].file == HW_REG &&
+                    (inst->src[i].fixed_hw_reg.file ==
+                     BRW_GENERAL_REGISTER_FILE)) {
+            add_dep(bu, n, last_fixed_grf_write);
+         } else if (inst->src[i].is_accumulator() && gen6plus) {
+            add_dep(bu, n, last_accumulator_write);
+         } else if (inst->src[i].file != BAD_FILE &&
+                    inst->src[i].file != IMM &&
+                    inst->src[i].file != UNIFORM) {
+            assert(inst->src[i].file != MRF &&
+                   inst->src[i].file != ATTR);
+            add_barrier_deps(bu, n);
+         }
+      }
 
-//      for (int i = 0; i < inst->mlen; i++) {
-//         /* It looks like the MRF regs are released in the send
-//          * instruction once it's sent, not when the result comes
-//          * back.
-//          */
-//         add_dep(bu, n, last_mrf_write[inst->base_mrf + i], 2, 2);
-//      }
+      for (int i = 0; i < inst->mlen; i++) {
+         /* It looks like the MRF regs are released in the send
+          * instruction once it's sent, not when the result comes
+          * back.
+          */
+         add_dep(bu, n, last_mrf_write[inst->base_mrf + i], 2, 2);
+      }
 
-//      if (inst->reads_flag()) {
-//         add_dep(bu, n, last_conditional_mod);
-//      }
+      if (inst->reads_flag()) {
+         add_dep(bu, n, last_conditional_mod);
+      }
 
-//      if (inst->reads_accumulator_implicitly()) {
-//         if (gen6plus) {
-//            add_dep(bu, n, last_accumulator_write);
-//         } else {
-//            add_barrier_deps(bu, n);
-//         }
-//      }
+      if (inst->reads_accumulator_implicitly()) {
+         if (gen6plus) {
+            add_dep(bu, n, last_accumulator_write);
+         } else {
+            add_barrier_deps(bu, n);
+         }
+      }
 
-//      /* Update the things this instruction wrote, so earlier reads
-//       * can mark this as WAR dependency.
-//       */
-//      if (inst->dst.file == GRF) {
-//         last_grf_write[inst->dst.reg] = n;
-//      } else if (inst->dst.file == MRF) {
-//         last_mrf_write[inst->dst.reg] = n;
-//      } else if (inst->dst.file == HW_REG &&
-//                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
-//         last_fixed_grf_write = n;
-//      } else if (inst->dst.is_accumulator() && gen6plus) {
-//         last_accumulator_write = n;
-//      } else if (inst->dst.file != BAD_FILE) {
-//         add_barrier_deps(bu, n);
-//      }
+      /* Update the things this instruction wrote, so earlier reads
+       * can mark this as WAR dependency.
+       */
+      if (inst->dst.file == GRF) {
+         last_grf_write[inst->dst.reg] = n;
+      } else if (inst->dst.file == MRF) {
+         last_mrf_write[inst->dst.reg] = n;
+      } else if (inst->dst.file == HW_REG &&
+                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+         last_fixed_grf_write = n;
+      } else if (inst->dst.is_accumulator() && gen6plus) {
+         last_accumulator_write = n;
+      } else if (inst->dst.file != BAD_FILE) {
+         add_barrier_deps(bu, n);
+      }
 
-//      if (inst->mlen > 0) {
-//         for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
-//            last_mrf_write[inst->base_mrf + i] = n;
-//         }
-//      }
+      if (inst->mlen > 0) {
+         for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
+            last_mrf_write[inst->base_mrf + i] = n;
+         }
+      }
 
-//      if (inst->writes_flag()) {
-//         last_conditional_mod = n;
-//      }
+      if (inst->writes_flag()) {
+         last_conditional_mod = n;
+      }
 
-//      if (inst->writes_accumulator) {
-//         if (gen6plus) {
-//            last_accumulator_write = n;
-//         } else {
-//            add_barrier_deps(bu, n);
-//         }
-//      }
-//   }
-//}
+      if (inst->writes_accumulator) {
+         if (gen6plus) {
+            last_accumulator_write = n;
+         } else {
+            add_barrier_deps(bu, n);
+         }
+      }
+   }
+}
 
 schedule_node *
 fs_instruction_scheduler::choose_instruction_to_schedule_bu()
@@ -1807,33 +1805,32 @@ fs_instruction_scheduler::choose_instruction_to_schedule_td()
    return chosen;
 }
 
-// LunarG : TODO - turn on for next stage (VS)
-//schedule_node *
-//vec4_instruction_scheduler::choose_instruction_to_schedule_bu()
-//{
-//   return choose_instruction_to_schedule_td();   // TODO: ...
-//}
+schedule_node *
+vec4_instruction_scheduler::choose_instruction_to_schedule_bu()
+{
+   return choose_instruction_to_schedule_td();   // TODO: ...
+}
 
-//schedule_node *
-//vec4_instruction_scheduler::choose_instruction_to_schedule_td()
-//{
-//   schedule_node *chosen = NULL;
-//   int chosen_time = 0;
+schedule_node *
+vec4_instruction_scheduler::choose_instruction_to_schedule_td()
+{
+   schedule_node *chosen = NULL;
+   int chosen_time = 0;
 
-//   /* Of the instructions ready to execute or the closest to being ready,
-//    * choose the oldest one.
-//    */
-//   foreach_list(node, &instructions) {
-//      schedule_node *n = (schedule_node *)node;
+   /* Of the instructions ready to execute or the closest to being ready,
+    * choose the oldest one.
+    */
+   foreach_list(node, &instructions) {
+      schedule_node *n = (schedule_node *)node;
 
-//      if (!chosen || n->unblocked_time < chosen_time) {
-//         chosen = n;
-//         chosen_time = n->unblocked_time;
-//      }
-//   }
+      if (!chosen || n->unblocked_time < chosen_time) {
+         chosen = n;
+         chosen_time = n->unblocked_time;
+      }
+   }
 
-//   return chosen;
-//}
+   return chosen;
+}
 
 int
 fs_instruction_scheduler::issue_time(backend_instruction *inst)
@@ -1844,13 +1841,12 @@ fs_instruction_scheduler::issue_time(backend_instruction *inst)
       return 2;
 }
 
-// LunarG : TODO - turn on for next stage (VS)
-//int
-//vec4_instruction_scheduler::issue_time(backend_instruction *inst)
-//{
-//   /* We always execute as two vec4s in parallel. */
-//   return 2;
-//}
+int
+vec4_instruction_scheduler::issue_time(backend_instruction *inst)
+{
+   /* We always execute as two vec4s in parallel. */
+   return 2;
+}
 
 void
 instruction_scheduler::schedule_instructions_bu(backend_instruction *next_block_header,
@@ -2347,28 +2343,27 @@ fs_visitor::schedule_instructions(instruction_scheduler_mode mode)
    return sched.ptime * (dispatch_width == 16 ? 1 : 2);
 }
 
-// LunarG : TODO - turn on for next stage (VS)
-//int
-//vec4_visitor::opt_schedule_instructions(instruction_scheduler_mode mode)
-//{
-//   vec4_instruction_scheduler sched(this, prog_data->total_grf, max_grf, mode);
+int
+vec4_visitor::opt_schedule_instructions(instruction_scheduler_mode mode)
+{
+   vec4_instruction_scheduler sched(this, prog_data->total_grf, max_grf, mode);
 
-//   calculate_live_intervals();
-//   sched.run_td(&instructions);
+   calculate_live_intervals();
+   sched.run_td(&instructions);
 
-//   if (unlikely(debug_flag)) {
-//      fprintf(stderr, "vec4 estimated execution time: %d cycles\n", sched.ptime);
-//   }
+   if (unlikely(debug_flag)) {
+      fprintf(stderr, "vec4 estimated execution time: %d cycles\n", sched.ptime);
+   }
 
-//   if (debug) {
-//      invalidate_live_intervals();
-//      calculate_live_intervals();
+   if (debug) {
+      invalidate_live_intervals();
+      calculate_live_intervals();
 
-//      fprintf(stderr, "\nInstructions after scheduling (reg_alloc)\n");
-//      dump_instructions();
-//   }
+      fprintf(stderr, "\nInstructions after scheduling (reg_alloc)\n");
+      dump_instructions();
+   }
 
-//   invalidate_live_intervals();
+   invalidate_live_intervals();
 
-//   return sched.ptime;
-//}
+   return sched.ptime;
+}

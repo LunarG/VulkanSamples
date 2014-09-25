@@ -91,6 +91,24 @@ unsigned get_wm_program_size(struct gl_shader_program *prog)
     return brw_prog->wm.program_size;
 }
 
+struct brw_vs_prog_data *get_vs_prog_data(struct gl_shader_program *prog)
+{
+   struct brw_shader_program *brw_prog = (struct brw_shader_program *) prog;
+   return &brw_prog->vs.data;
+}
+
+const unsigned *get_vs_program(struct gl_shader_program *prog)
+{
+    struct brw_shader_program *brw_prog = (struct brw_shader_program *) prog;
+    return brw_prog->vs.program;
+}
+
+unsigned get_vs_program_size(struct gl_shader_program *prog)
+{
+    struct brw_shader_program *brw_prog = (struct brw_shader_program *) prog;
+    return brw_prog->vs.program_size;
+}
+
 struct gl_shader *
 brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
 {
@@ -287,10 +305,10 @@ brw_shader_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
 //           return false;
 //       break;
 
-//   case MESA_SHADER_VERTEX:
-//       if (!brw_vs_precompile(ctx, prog))
-//           return false;
-//       break;
+   case MESA_SHADER_VERTEX:
+       if (!brw_vs_precompile(ctx, prog))
+           return false;
+       break;
 
     default:
        assert(0);

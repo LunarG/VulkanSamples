@@ -306,25 +306,25 @@ brw_vs_do_compile(struct brw_context *brw,
    return true;
 }
 
-static void
-brw_vs_upload_compile(struct brw_context *brw, const struct brw_vs_compile *c)
-{
-   /* Scratch space is used for register spilling */
-   if (c->prog_data.base.total_scratch) {
-      perf_debug("Vertex shader triggered register spilling.  "
-                 "Try reducing the number of live vec4 values to "
-                 "improve performance.\n");
+//static void
+//brw_vs_upload_compile(struct brw_context *brw, const struct brw_vs_compile *c)
+//{
+//   /* Scratch space is used for register spilling */
+//   if (c->prog_data.base.total_scratch) {
+//      perf_debug("Vertex shader triggered register spilling.  "
+//                 "Try reducing the number of live vec4 values to "
+//                 "improve performance.\n");
 
-      brw_get_scratch_bo(brw, &brw->vs.base.scratch_bo,
-            c->prog_data.base.total_scratch * brw->max_vs_threads);
-   }
+//      brw_get_scratch_bo(brw, &brw->vs.base.scratch_bo,
+//            c->prog_data.base.total_scratch * brw->max_vs_threads);
+//   }
 
-   brw_upload_cache(&brw->cache, BRW_VS_PROG,
-            &c->key, sizeof(c->key),
-            c->base.program, c->base.program_size,
-            &c->prog_data, sizeof(c->prog_data),
-            &brw->vs.base.prog_offset, &brw->vs.prog_data);
-}
+//   brw_upload_cache(&brw->cache, BRW_VS_PROG,
+//            &c->key, sizeof(c->key),
+//            c->base.program, c->base.program_size,
+//            &c->prog_data, sizeof(c->prog_data),
+//            &brw->vs.base.prog_offset, &brw->vs.prog_data);
+//}
 
 static void
 brw_vs_clear_compile(struct brw_context *brw,
@@ -333,228 +333,228 @@ brw_vs_clear_compile(struct brw_context *brw,
    ralloc_free(c->base.mem_ctx);
 }
 
-static bool
-do_vs_prog(struct brw_context *brw,
-	   struct gl_shader_program *prog,
-	   struct brw_vertex_program *vp,
-	   struct brw_vs_prog_key *key)
-{
-   struct brw_vs_compile c;
+//static bool
+//do_vs_prog(struct brw_context *brw,
+//	   struct gl_shader_program *prog,
+//	   struct brw_vertex_program *vp,
+//	   struct brw_vs_prog_key *key)
+//{
+//   struct brw_vs_compile c;
 
-   brw_vs_init_compile(brw, prog, vp, key, &c);
+//   brw_vs_init_compile(brw, prog, vp, key, &c);
 
-   if (!prog || !brw_shader_program_restore_vs_compile(prog, &c)) {
-      if (!brw_vs_do_compile(brw, &c)) {
-         brw_vs_clear_compile(brw, &c);
-         return false;
-      }
-   }
+//   if (!prog || !brw_shader_program_restore_vs_compile(prog, &c)) {
+//      if (!brw_vs_do_compile(brw, &c)) {
+//         brw_vs_clear_compile(brw, &c);
+//         return false;
+//      }
+//   }
 
-   brw_vs_upload_compile(brw, &c);
-   brw_vs_clear_compile(brw, &c);
+//   brw_vs_upload_compile(brw, &c);
+//   brw_vs_clear_compile(brw, &c);
 
-   return true;
-}
+//   return true;
+//}
 
-static bool
-key_debug(struct brw_context *brw, const char *name, int a, int b)
-{
-   if (a != b) {
-      perf_debug("  %s %d->%d\n", name, a, b);
-      return true;
-   }
-   return false;
-}
+//static bool
+//key_debug(struct brw_context *brw, const char *name, int a, int b)
+//{
+//   if (a != b) {
+//      perf_debug("  %s %d->%d\n", name, a, b);
+//      return true;
+//   }
+//   return false;
+//}
 
-void
-brw_vs_debug_recompile(struct brw_context *brw,
-                       struct gl_shader_program *prog,
-                       const struct brw_vs_prog_key *key)
-{
-   struct brw_cache_item *c = NULL;
-   const struct brw_vs_prog_key *old_key = NULL;
-   bool found = false;
+//void
+//brw_vs_debug_recompile(struct brw_context *brw,
+//                       struct gl_shader_program *prog,
+//                       const struct brw_vs_prog_key *key)
+//{
+//   struct brw_cache_item *c = NULL;
+//   const struct brw_vs_prog_key *old_key = NULL;
+//   bool found = false;
 
-   perf_debug("Recompiling vertex shader for program %d\n", prog->Name);
+//   perf_debug("Recompiling vertex shader for program %d\n", prog->Name);
 
-   for (unsigned int i = 0; i < brw->cache.size; i++) {
-      for (c = brw->cache.items[i]; c; c = c->next) {
-         if (c->cache_id == BRW_VS_PROG) {
-            old_key = c->key;
+//   for (unsigned int i = 0; i < brw->cache.size; i++) {
+//      for (c = brw->cache.items[i]; c; c = c->next) {
+//         if (c->cache_id == BRW_VS_PROG) {
+//            old_key = c->key;
 
-            if (old_key->base.program_string_id == key->base.program_string_id)
-               break;
-         }
-      }
-      if (c)
-         break;
-   }
+//            if (old_key->base.program_string_id == key->base.program_string_id)
+//               break;
+//         }
+//      }
+//      if (c)
+//         break;
+//   }
 
-   if (!c) {
-      perf_debug("  Didn't find previous compile in the shader cache for "
-                 "debug\n");
-      return;
-   }
+//   if (!c) {
+//      perf_debug("  Didn't find previous compile in the shader cache for "
+//                 "debug\n");
+//      return;
+//   }
 
-   for (unsigned int i = 0; i < VERT_ATTRIB_MAX; i++) {
-      found |= key_debug(brw, "Vertex attrib w/a flags",
-                         old_key->gl_attrib_wa_flags[i],
-                         key->gl_attrib_wa_flags[i]);
-   }
+//   for (unsigned int i = 0; i < VERT_ATTRIB_MAX; i++) {
+//      found |= key_debug(brw, "Vertex attrib w/a flags",
+//                         old_key->gl_attrib_wa_flags[i],
+//                         key->gl_attrib_wa_flags[i]);
+//   }
 
-   found |= key_debug(brw, "user clip flags",
-                      old_key->base.userclip_active, key->base.userclip_active);
+//   found |= key_debug(brw, "user clip flags",
+//                      old_key->base.userclip_active, key->base.userclip_active);
 
-   found |= key_debug(brw, "user clipping planes as push constants",
-                      old_key->base.nr_userclip_plane_consts,
-                      key->base.nr_userclip_plane_consts);
+//   found |= key_debug(brw, "user clipping planes as push constants",
+//                      old_key->base.nr_userclip_plane_consts,
+//                      key->base.nr_userclip_plane_consts);
 
-   found |= key_debug(brw, "copy edgeflag",
-                      old_key->copy_edgeflag, key->copy_edgeflag);
-   found |= key_debug(brw, "PointCoord replace",
-                      old_key->point_coord_replace, key->point_coord_replace);
-   found |= key_debug(brw, "vertex color clamping",
-                      old_key->base.clamp_vertex_color, key->base.clamp_vertex_color);
+//   found |= key_debug(brw, "copy edgeflag",
+//                      old_key->copy_edgeflag, key->copy_edgeflag);
+//   found |= key_debug(brw, "PointCoord replace",
+//                      old_key->point_coord_replace, key->point_coord_replace);
+//   found |= key_debug(brw, "vertex color clamping",
+//                      old_key->base.clamp_vertex_color, key->base.clamp_vertex_color);
 
-   found |= brw_debug_recompile_sampler_key(brw, &old_key->base.tex,
-                                            &key->base.tex);
+//   found |= brw_debug_recompile_sampler_key(brw, &old_key->base.tex,
+//                                            &key->base.tex);
 
-   if (!found) {
-      perf_debug("  Something else\n");
-   }
-}
+//   if (!found) {
+//      perf_debug("  Something else\n");
+//   }
+//}
+
+// LunarG : TODO - user clip planes?
+//void
+//brw_setup_vec4_key_clip_info(struct brw_context *brw,
+//                             struct brw_vec4_prog_key *key,
+//                             bool program_uses_clip_distance)
+//{
+//   struct gl_context *ctx = &brw->ctx;
+
+//   key->userclip_active = (ctx->Transform.ClipPlanesEnabled != 0);
+//   if (key->userclip_active && !program_uses_clip_distance) {
+//      key->nr_userclip_plane_consts
+//         = _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
+//   }
+//}
 
 
-void
-brw_setup_vec4_key_clip_info(struct brw_context *brw,
-                             struct brw_vec4_prog_key *key,
-                             bool program_uses_clip_distance)
-{
-   struct gl_context *ctx = &brw->ctx;
+//static void brw_upload_vs_prog(struct brw_context *brw)
+//{
+//   struct gl_context *ctx = &brw->ctx;
+//   struct brw_vs_prog_key key;
+//   /* BRW_NEW_VERTEX_PROGRAM */
+//   struct brw_vertex_program *vp =
+//      (struct brw_vertex_program *)brw->vertex_program;
+//   struct gl_program *prog = (struct gl_program *) brw->vertex_program;
+//   int i;
 
-   key->userclip_active = (ctx->Transform.ClipPlanesEnabled != 0);
-   if (key->userclip_active && !program_uses_clip_distance) {
-      key->nr_userclip_plane_consts
-         = _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
-   }
-}
+//   memset(&key, 0, sizeof(key));
 
+//   /* Just upload the program verbatim for now.  Always send it all
+//    * the inputs it asks for, whether they are varying or not.
+//    */
+//   key.base.program_string_id = vp->id;
+//   brw_setup_vec4_key_clip_info(brw, &key.base,
+//                                vp->program.Base.UsesClipDistanceOut);
 
-static void brw_upload_vs_prog(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct brw_vs_prog_key key;
-   /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_vertex_program *vp =
-      (struct brw_vertex_program *)brw->vertex_program;
-   struct gl_program *prog = (struct gl_program *) brw->vertex_program;
-   int i;
+//   /* _NEW_POLYGON */
+//   if (brw->gen < 6) {
+//      key.copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
+//                           ctx->Polygon.BackMode != GL_FILL);
+//   }
 
-   memset(&key, 0, sizeof(key));
+//   /* _NEW_LIGHT | _NEW_BUFFERS */
+//   key.base.clamp_vertex_color = ctx->Light._ClampVertexColor;
 
-   /* Just upload the program verbatim for now.  Always send it all
-    * the inputs it asks for, whether they are varying or not.
-    */
-   key.base.program_string_id = vp->id;
-   brw_setup_vec4_key_clip_info(brw, &key.base,
-                                vp->program.Base.UsesClipDistanceOut);
+//   /* _NEW_POINT */
+//   if (brw->gen < 6 && ctx->Point.PointSprite) {
+//      for (i = 0; i < 8; i++) {
+//	 if (ctx->Point.CoordReplace[i])
+//	    key.point_coord_replace |= (1 << i);
+//      }
+//   }
 
-   /* _NEW_POLYGON */
-   if (brw->gen < 6) {
-      key.copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
-                           ctx->Polygon.BackMode != GL_FILL);
-   }
+//   /* _NEW_TEXTURE */
+//   brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
+//                                      &key.base.tex);
 
-   /* _NEW_LIGHT | _NEW_BUFFERS */
-   key.base.clamp_vertex_color = ctx->Light._ClampVertexColor;
+//   /* BRW_NEW_VERTICES */
+//   if (brw->gen < 8 && !brw->is_haswell) {
+//      /* Prior to Haswell, the hardware can't natively support GL_FIXED or
+//       * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
+//       */
+//      for (i = 0; i < VERT_ATTRIB_MAX; i++) {
+//         if (!(vp->program.Base.InputsRead & BITFIELD64_BIT(i)))
+//            continue;
 
-   /* _NEW_POINT */
-   if (brw->gen < 6 && ctx->Point.PointSprite) {
-      for (i = 0; i < 8; i++) {
-	 if (ctx->Point.CoordReplace[i])
-	    key.point_coord_replace |= (1 << i);
-      }
-   }
+//         uint8_t wa_flags = 0;
 
-   /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
-                                      &key.base.tex);
+//         switch (brw->vb.inputs[i].glarray->Type) {
 
-   /* BRW_NEW_VERTICES */
-   if (brw->gen < 8 && !brw->is_haswell) {
-      /* Prior to Haswell, the hardware can't natively support GL_FIXED or
-       * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
-       */
-      for (i = 0; i < VERT_ATTRIB_MAX; i++) {
-         if (!(vp->program.Base.InputsRead & BITFIELD64_BIT(i)))
-            continue;
+//         case GL_FIXED:
+//            wa_flags = brw->vb.inputs[i].glarray->Size;
+//            break;
 
-         uint8_t wa_flags = 0;
+//         case GL_INT_2_10_10_10_REV:
+//            wa_flags |= BRW_ATTRIB_WA_SIGN;
+//            /* fallthough */
 
-         switch (brw->vb.inputs[i].glarray->Type) {
+//         case GL_UNSIGNED_INT_2_10_10_10_REV:
+//            if (brw->vb.inputs[i].glarray->Format == GL_BGRA)
+//               wa_flags |= BRW_ATTRIB_WA_BGRA;
 
-         case GL_FIXED:
-            wa_flags = brw->vb.inputs[i].glarray->Size;
-            break;
+//            if (brw->vb.inputs[i].glarray->Normalized)
+//               wa_flags |= BRW_ATTRIB_WA_NORMALIZE;
+//            else if (!brw->vb.inputs[i].glarray->Integer)
+//               wa_flags |= BRW_ATTRIB_WA_SCALE;
 
-         case GL_INT_2_10_10_10_REV:
-            wa_flags |= BRW_ATTRIB_WA_SIGN;
-            /* fallthough */
+//            break;
+//         }
 
-         case GL_UNSIGNED_INT_2_10_10_10_REV:
-            if (brw->vb.inputs[i].glarray->Format == GL_BGRA)
-               wa_flags |= BRW_ATTRIB_WA_BGRA;
+//         key.gl_attrib_wa_flags[i] = wa_flags;
+//      }
+//   }
 
-            if (brw->vb.inputs[i].glarray->Normalized)
-               wa_flags |= BRW_ATTRIB_WA_NORMALIZE;
-            else if (!brw->vb.inputs[i].glarray->Integer)
-               wa_flags |= BRW_ATTRIB_WA_SCALE;
+//   if (!brw_search_cache(&brw->cache, BRW_VS_PROG,
+//			 &key, sizeof(key),
+//			 &brw->vs.base.prog_offset, &brw->vs.prog_data)) {
+//      bool success =
+//         do_vs_prog(brw, ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX], vp,
+//                    &key);
+//      (void) success;
+//      assert(success);
+//   }
+//   brw->vs.base.prog_data = &brw->vs.prog_data->base.base;
 
-            break;
-         }
+//   if (memcmp(&brw->vs.prog_data->base.vue_map, &brw->vue_map_geom_out,
+//              sizeof(brw->vue_map_geom_out)) != 0) {
+//      brw->vue_map_vs = brw->vs.prog_data->base.vue_map;
+//      brw->state.dirty.brw |= BRW_NEW_VUE_MAP_VS;
+//      if (brw->gen < 7) {
+//         /* No geometry shader support, so the VS VUE map is the VUE map for
+//          * the output of the "geometry" portion of the pipeline.
+//          */
+//         brw->vue_map_geom_out = brw->vue_map_vs;
+//         brw->state.dirty.brw |= BRW_NEW_VUE_MAP_GEOM_OUT;
+//      }
+//   }
+//}
 
-         key.gl_attrib_wa_flags[i] = wa_flags;
-      }
-   }
-
-   if (!brw_search_cache(&brw->cache, BRW_VS_PROG,
-			 &key, sizeof(key),
-			 &brw->vs.base.prog_offset, &brw->vs.prog_data)) {
-      bool success =
-         do_vs_prog(brw, ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX], vp,
-                    &key);
-      (void) success;
-      assert(success);
-   }
-   brw->vs.base.prog_data = &brw->vs.prog_data->base.base;
-
-   if (memcmp(&brw->vs.prog_data->base.vue_map, &brw->vue_map_geom_out,
-              sizeof(brw->vue_map_geom_out)) != 0) {
-      brw->vue_map_vs = brw->vs.prog_data->base.vue_map;
-      brw->state.dirty.brw |= BRW_NEW_VUE_MAP_VS;
-      if (brw->gen < 7) {
-         /* No geometry shader support, so the VS VUE map is the VUE map for
-          * the output of the "geometry" portion of the pipeline.
-          */
-         brw->vue_map_geom_out = brw->vue_map_vs;
-         brw->state.dirty.brw |= BRW_NEW_VUE_MAP_GEOM_OUT;
-      }
-   }
-}
-
-/* See brw_vs.c:
- */
-const struct brw_tracked_state brw_vs_prog = {
-   .dirty = {
-      .mesa  = (_NEW_TRANSFORM | _NEW_POLYGON | _NEW_POINT | _NEW_LIGHT |
-		_NEW_TEXTURE |
-		_NEW_BUFFERS),
-      .brw   = (BRW_NEW_VERTEX_PROGRAM |
-		BRW_NEW_VERTICES),
-      .cache = 0
-   },
-   .emit = brw_upload_vs_prog
-};
+///* See brw_vs.c:
+// */
+//const struct brw_tracked_state brw_vs_prog = {
+//   .dirty = {
+//      .mesa  = (_NEW_TRANSFORM | _NEW_POLYGON | _NEW_POINT | _NEW_LIGHT |
+//		_NEW_TEXTURE |
+//		_NEW_BUFFERS),
+//      .brw   = (BRW_NEW_VERTEX_PROGRAM |
+//		BRW_NEW_VERTICES),
+//      .cache = 0
+//   },
+//   .emit = brw_upload_vs_prog
+//};
 
 bool
 brw_vs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
@@ -581,18 +581,9 @@ brw_vs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
       return false;
    }
 
-   if (brw->ctx.Const.DeferLinkProgram) {
-      brw_shader_program_save_vs_compile(prog, &c);
-   }
-   else {
-      uint32_t old_prog_offset = brw->vs.base.prog_offset;
-      struct brw_vs_prog_data *old_prog_data = brw->vs.prog_data;
-
-      brw_vs_upload_compile(brw, &c);
-
-      brw->vs.base.prog_offset = old_prog_offset;
-      brw->vs.prog_data = old_prog_data;
-   }
+   // Rather than defer or upload to cache, hand off
+   // the compile results back to the brw_context
+   brw_shader_program_save_vs_compile(brw->shader_prog, &c);
 
    return true;
 }

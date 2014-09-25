@@ -175,17 +175,17 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
                 "#version 130\n"
                 "void main() {\n"
                 "   vec2 vertices[3];"
-                "      vertices[0] = vec2(-1.0, -1.0);\n"
-                "      vertices[1] = vec2( 1.0, -1.0);\n"
-                "      vertices[2] = vec2( 0.0,  1.0);\n"
-                "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+                "      vertices[0] = vec2(-0.5, -0.5);\n"
+                "      vertices[1] = vec2( 0.5, -0.5);\n"
+                "      vertices[2] = vec2( 0.5,  0.5);\n"
+                "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
                 "}\n";
         break;
     case 'w':
         shader_program->Shaders[0]->Source =
                 "#version 130\n"
                 "void main() {\n"
-                "   gl_FragColor = vec4(0.0,0.0,1.0,1.0);\n"
+                "   gl_FragColor = vec4(0.0,1.0,0.0,1.0);\n"
                 "}\n";
         break;
     default:

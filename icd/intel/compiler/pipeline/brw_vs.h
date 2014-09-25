@@ -115,7 +115,7 @@ protected:
    virtual dst_reg *make_reg_for_system_value(ir_variable *ir);
    virtual void setup_payload();
    virtual void emit_prolog();
-   virtual void emit_program_code();
+   //virtual void emit_program_code();
    virtual void emit_thread_end();
    virtual void emit_urb_write_header(int mrf);
    virtual vec4_instruction *emit_urb_write_opcode(bool complete);
