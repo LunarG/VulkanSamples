@@ -185,7 +185,7 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
         shader_program->Shaders[0]->Source =
                 "#version 130\n"
                 "void main() {\n"
-                "   gl_FragColor = vec4(1.0,0.0,0.0,1.0);\n"
+                "   gl_FragColor = vec4(0.0,0.0,1.0,1.0);\n"
                 "}\n";
         break;
     default:
