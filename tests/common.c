@@ -90,6 +90,7 @@ void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
 
     for (i = 0; i < dev->heap_count; i++) {
+        size = sizeof(dev->heap_props[0]);
         err = xglGetMemoryHeapInfo(dev->obj, i,
                                    XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES,
                                    &size, &dev->heap_props[i]);
@@ -210,6 +211,7 @@ void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
     }
 
+    size = sizeof(gpu->memory_props);
     err = xglGetGpuInfo(gpu->obj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
                         &size, &gpu->memory_props);

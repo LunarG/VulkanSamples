@@ -270,7 +270,7 @@ void XglRenderTest::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
+    XGL_UINT data_size = sizeof(mem_req);
     err = xglGetObjectInfo(*pPool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
@@ -708,7 +708,7 @@ void XglRenderTest::DrawTriangleTest()
     xglDeviceWaitIdle(m_device->device());
 
     XGL_PIPELINE_STATISTICS_DATA stats;
-    XGL_SIZE stats_size;
+    XGL_SIZE stats_size = sizeof(stats);
     err = xglGetQueryPoolResults(query, 0, 1, &stats_size, &stats);
     ASSERT_XGL_SUCCESS( err );
     ASSERT_EQ(stats_size, sizeof(stats));

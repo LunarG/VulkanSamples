@@ -103,7 +103,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
         XGL_IMAGE_ASPECT_COLOR, 0, 0
     };
     XGL_SUBRESOURCE_LAYOUT sr_layout;
-    XGL_UINT data_size;
+    XGL_UINT data_size = sizeof(sr_layout);
 
     err = xglGetImageSubresourceInfo( image->image(), &sr,
                                       XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
@@ -167,7 +167,7 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
         XGL_IMAGE_ASPECT_COLOR, 0, 0
     };
     XGL_SUBRESOURCE_LAYOUT sr_layout;
-    XGL_UINT data_size;
+    XGL_UINT data_size = sizeof(sr_layout);
 
     if (!m_show_images) return;
 

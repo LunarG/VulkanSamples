@@ -20,12 +20,14 @@ void XglGpu::init_gpu()
     XGL_RESULT err;
     XGL_SIZE size;
 
+    size = sizeof(this->props);
     err = xglGetGpuInfo(this->gpuObj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
                         &size, &this->props);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(size, sizeof(this->props));
 
+    size = sizeof(this->perf);
     err = xglGetGpuInfo(this->gpuObj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
                         &size, &this->perf);
@@ -43,6 +45,7 @@ void XglGpu::init_gpu()
     this->queue_props = new XGL_PHYSICAL_GPU_QUEUE_PROPERTIES [this->queue_count];
     ASSERT_TRUE(NULL != this->queue_props) << "Out of memory";
 
+    size = this->queue_count*sizeof(this->queue_props[0]);
     err = xglGetGpuInfo(this->gpuObj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &size, this->queue_props);
@@ -59,6 +62,7 @@ void XglGpu::init_gpu()
         this->queue_reqs[i].queueCount = this->queue_props[i].queueCount;
     }
 
+    size = sizeof(this->memory_props);
     err = xglGetGpuInfo(this->gpuObj,
                         XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
                         &size, &this->memory_props);

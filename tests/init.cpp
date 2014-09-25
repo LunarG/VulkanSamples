@@ -167,8 +167,8 @@ TEST_F(XglTest, AllocMemory) {
 TEST_F(XglTest, Event) {
     XGL_EVENT_CREATE_INFO event_info;
     XGL_EVENT event;
-    XGL_UINT data_size;
     XGL_MEMORY_REQUIREMENTS mem_req;
+    XGL_UINT data_size = sizeof(mem_req);
     XGL_RESULT err;
 
     //        typedef struct _XGL_EVENT_CREATE_INFO
@@ -315,6 +315,7 @@ TEST_F(XglTest, Query) {
     err = xglCreateQueryPool(device(), &query_info, &query_pool);
     ASSERT_XGL_SUCCESS(err);
 
+    data_size = sizeof(mem_req);
     err = xglGetObjectInfo(query_pool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
@@ -482,6 +483,7 @@ void XglTest::CreateImageTest()
      * fixed structure.
      */
 
+    size = sizeof(image_fmt);
     err = xglGetFormatInfo(device(), fmt,
                            XGL_INFO_TYPE_FORMAT_PROPERTIES,
                            &size, &image_fmt);
@@ -569,7 +571,7 @@ void XglTest::CreateImageTest()
     while( ( _w > 0 ) || ( _h > 0 ) )
     {
         XGL_SUBRESOURCE_LAYOUT layout = {};
-
+        data_size = sizeof(layout);
         err = xglGetImageSubresourceInfo(image, &subresource, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
                                          &data_size, &layout);
         ASSERT_XGL_SUCCESS(err);
@@ -584,6 +586,7 @@ void XglTest::CreateImageTest()
     }
 
     XGL_MEMORY_REQUIREMENTS mem_req;
+    data_size = sizeof(mem_req);
     err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);

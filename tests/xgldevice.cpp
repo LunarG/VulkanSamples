@@ -40,6 +40,7 @@ void XglDevice::init_device()
 
     this->heap_props = new XGL_MEMORY_HEAP_PROPERTIES [this->heap_count];
     ASSERT_TRUE(NULL != this->heap_props) << "Out of memory";
+    size = sizeof(this->heap_props[0]);
 
     for (i = 0; i < this->heap_count; i++) {
         err = xglGetMemoryHeapInfo(m_xgl_device_object, i,
@@ -60,7 +61,7 @@ void XglDevice::init_formats()
 
             fmt.channelFormat = static_cast<XGL_CHANNEL_FORMAT>(chInt);
             fmt.numericFormat = static_cast<XGL_NUM_FORMAT>(numInt);
-
+            size = sizeof(this->format_props[chInt][numInt]);
             err = xglGetFormatInfo(m_xgl_device_object, fmt,
                                    XGL_INFO_TYPE_FORMAT_PROPERTIES,
                                    &size, &this->format_props[chInt][numInt]);
@@ -88,7 +89,7 @@ XGL_RESULT XglDevice::AllocAndBindGpuMemory(XGL_OBJECT obj, const std::string &o
 {
     XGL_RESULT err;
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
+    XGL_UINT data_size = sizeof(mem_req);
     err = xglGetObjectInfo(obj, XGL_INFO_TYPE_MEMORY_REQUIREMENTS, &data_size, &mem_req);
     if (err != XGL_SUCCESS) return err;
 

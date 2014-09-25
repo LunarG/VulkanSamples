@@ -59,7 +59,7 @@ void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
 {
     XGL_RESULT err;
     XGL_UINT mipCount;
-    XGL_SIZE size;
+    XGL_SIZE size = sizeof(XGL_FORMAT_PROPERTIES);
     XGL_FORMAT_PROPERTIES image_fmt;
 
     mipCount = 0;
@@ -142,7 +142,7 @@ void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
+    XGL_UINT data_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);

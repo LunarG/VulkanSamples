@@ -136,7 +136,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
      * amount of data may vary and that doesn't work well for using a
      * fixed structure.
      */
-
+    size = sizeof(image_fmt);
     err = xglGetFormatInfo(this->device(), fmt,
                            XGL_INFO_TYPE_FORMAT_PROPERTIES,
                            &size, &image_fmt);
@@ -188,7 +188,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size;
+    XGL_UINT data_size = sizeof(mem_req);
     err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
