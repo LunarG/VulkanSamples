@@ -328,6 +328,6 @@ add_library(XGL_i965 SHARED
    $<TARGET_OBJECTS:icd>
    )
 
-add_executable(xglCompiler
-   ${STANDALONE_COMPILER_SOURCES}
-)
+#add_executable(xglCompiler
+#   ${STANDALONE_COMPILER_SOURCES}
+#)
