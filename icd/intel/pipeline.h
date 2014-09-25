@@ -88,9 +88,6 @@ struct intel_pipeline_shader {
     void *pCode;
     uint32_t codeSize;
 
-    // Begin result of backend compile
-
-
     /*
      * must grab everything we need from shader object as that
      * can go away after the pipeline is created
