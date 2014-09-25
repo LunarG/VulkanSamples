@@ -70,9 +70,17 @@ void icd_clear_msg_callbacks(void);
 XGL_RESULT icd_set_allocator(const XGL_ALLOC_CALLBACKS *alloc_cb);
 int icd_get_allocator_id(void);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void *icd_alloc(XGL_SIZE size, XGL_SIZE alignment,
                 XGL_SYSTEM_ALLOC_TYPE type);
 
 void icd_free(void *mem);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ICD_H */
