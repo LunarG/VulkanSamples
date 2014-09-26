@@ -26,6 +26,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
 #ifndef ETIME
@@ -417,7 +418,7 @@ intel_winsys_decode_bo(struct intel_winsys *winsys,
          ptr, gem_bo(bo)->offset64, used);
 
    drm_intel_decode(decode);
-
+   free(decode);
    intel_bo_unmap(bo);
 }
 
