@@ -173,6 +173,8 @@ struct icd_drm_device *icd_drm_enumerate(int vendor_id)
                 udev_list_entry_get_name(entry), vendor_id);
     }
 
+    free(e);
+    free(udev);
     return devices;
 }
 
