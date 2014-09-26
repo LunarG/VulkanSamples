@@ -171,38 +171,36 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
     // instead we are just plopping down our glsl
     switch(bil->gen_magic) {
     case 'v':
-        shader_program->Shaders[0]->Source =
-                "#version 130\n"
+        shader->Type = GL_VERTEX_SHADER;
+        shader->Source =
+                "#version 330\n"
+                "out vec4 color;\n"
+                "out vec4 scale;\n"
                 "void main() {\n"
                 "   vec2 vertices[3];"
                 "      vertices[0] = vec2(-0.5, -0.5);\n"
                 "      vertices[1] = vec2( 0.5, -0.5);\n"
                 "      vertices[2] = vec2( 0.5,  0.5);\n"
+                "   vec4 colors[3];\n"
+                "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+                "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+                "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+                "   color = colors[int(mod(gl_VertexID, 3))];\n"
+                "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
                 "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
                 "}\n";
         break;
     case 'w':
-        shader_program->Shaders[0]->Source =
+        shader->Type = GL_FRAGMENT_SHADER;
+        shader->Source =
                 "#version 130\n"
+                "in vec4 color;\n"
+                "in vec4 scale;\n"
                 "void main() {\n"
-                "   gl_FragColor = vec4(0.0,1.0,0.0,1.0);\n"
+                "   gl_FragColor = color * scale;\n"
                 "}\n";
         break;
     default:
-        assert(0);
-        break;
-    }
-
-    switch(bil->gen_magic) {
-    case 'v':
-        shader->Type = GL_VERTEX_SHADER;
-        break;
-    case 'w':
-        shader->Type = GL_FRAGMENT_SHADER;
-        break;
-    default:
-        //shader->Type = GL_GEOMETRY_SHADER;
-        //shader->Type = GL_COMPUTE_SHADER;
         assert(0);
         break;
     }
@@ -211,6 +209,7 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
         new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
 
     shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);
+    shader_program->Type = shader->Stage;
 
     bool dump_ast = false;
     bool dump_hir = true;

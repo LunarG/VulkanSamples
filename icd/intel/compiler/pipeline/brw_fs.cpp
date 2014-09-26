@@ -1514,91 +1514,90 @@ fs_visitor::assign_curb_setup()
    }
 }
 
-// LunarG: TODO - add URB support
-//void
-//fs_visitor::calculate_urb_setup()
-//{
-//   for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
-//      c->prog_data.urb_setup[i] = -1;
-//   }
+void
+fs_visitor::calculate_urb_setup()
+{
+   for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
+      c->prog_data.urb_setup[i] = -1;
+   }
 
-//   int urb_next = 0;
-//   /* Figure out where each of the incoming setup attributes lands. */
-//   if (brw->gen >= 6) {
-//      if (_mesa_bitcount_64(fp->Base.InputsRead &
-//                            BRW_FS_VARYING_INPUT_MASK) <= 16) {
-//         /* The SF/SBE pipeline stage can do arbitrary rearrangement of the
-//          * first 16 varying inputs, so we can put them wherever we want.
-//          * Just put them in order.
-//          *
-//          * This is useful because it means that (a) inputs not used by the
-//          * fragment shader won't take up valuable register space, and (b) we
-//          * won't have to recompile the fragment shader if it gets paired with
-//          * a different vertex (or geometry) shader.
-//          */
-//         for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
-//            if (fp->Base.InputsRead & BRW_FS_VARYING_INPUT_MASK &
-//                BITFIELD64_BIT(i)) {
-//               c->prog_data.urb_setup[i] = urb_next++;
-//            }
-//         }
-//      } else {
-//         /* We have enough input varyings that the SF/SBE pipeline stage can't
-//          * arbitrarily rearrange them to suit our whim; we have to put them
-//          * in an order that matches the output of the previous pipeline stage
-//          * (geometry or vertex shader).
-//          */
-//         struct brw_vue_map prev_stage_vue_map;
-//         brw_compute_vue_map(brw, &prev_stage_vue_map,
-//                             c->key.input_slots_valid);
-//         int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
-//         assert(prev_stage_vue_map.num_slots <= first_slot + 32);
-//         for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
-//              slot++) {
-//            int varying = prev_stage_vue_map.slot_to_varying[slot];
-//            /* Note that varying == BRW_VARYING_SLOT_COUNT when a slot is
-//             * unused.
-//             */
-//            if (varying != BRW_VARYING_SLOT_COUNT &&
-//                (fp->Base.InputsRead & BRW_FS_VARYING_INPUT_MASK &
-//                 BITFIELD64_BIT(varying))) {
-//               c->prog_data.urb_setup[varying] = slot - first_slot;
-//            }
-//         }
-//         urb_next = prev_stage_vue_map.num_slots - first_slot;
-//      }
-//   } else {
-//      /* FINISHME: The sf doesn't map VS->FS inputs for us very well. */
-//      for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
-//         /* Point size is packed into the header, not as a general attribute */
-//         if (i == VARYING_SLOT_PSIZ)
-//            continue;
+   int urb_next = 0;
+   /* Figure out where each of the incoming setup attributes lands. */
+   if (brw->gen >= 6) {
+      if (_mesa_bitcount_64(fp->Base.InputsRead &
+                            BRW_FS_VARYING_INPUT_MASK) <= 16) {
+         /* The SF/SBE pipeline stage can do arbitrary rearrangement of the
+          * first 16 varying inputs, so we can put them wherever we want.
+          * Just put them in order.
+          *
+          * This is useful because it means that (a) inputs not used by the
+          * fragment shader won't take up valuable register space, and (b) we
+          * won't have to recompile the fragment shader if it gets paired with
+          * a different vertex (or geometry) shader.
+          */
+         for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
+            if (fp->Base.InputsRead & BRW_FS_VARYING_INPUT_MASK &
+                BITFIELD64_BIT(i)) {
+               c->prog_data.urb_setup[i] = urb_next++;
+            }
+         }
+      } else {
+         /* We have enough input varyings that the SF/SBE pipeline stage can't
+          * arbitrarily rearrange them to suit our whim; we have to put them
+          * in an order that matches the output of the previous pipeline stage
+          * (geometry or vertex shader).
+          */
+         struct brw_vue_map prev_stage_vue_map;
+         brw_compute_vue_map(brw, &prev_stage_vue_map,
+                             c->key.input_slots_valid);
+         int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
+         assert(prev_stage_vue_map.num_slots <= first_slot + 32);
+         for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
+              slot++) {
+            int varying = prev_stage_vue_map.slot_to_varying[slot];
+            /* Note that varying == BRW_VARYING_SLOT_COUNT when a slot is
+             * unused.
+             */
+            if (varying != BRW_VARYING_SLOT_COUNT &&
+                (fp->Base.InputsRead & BRW_FS_VARYING_INPUT_MASK &
+                 BITFIELD64_BIT(varying))) {
+               c->prog_data.urb_setup[varying] = slot - first_slot;
+            }
+         }
+         urb_next = prev_stage_vue_map.num_slots - first_slot;
+      }
+   } else {
+      /* FINISHME: The sf doesn't map VS->FS inputs for us very well. */
+      for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
+         /* Point size is packed into the header, not as a general attribute */
+         if (i == VARYING_SLOT_PSIZ)
+            continue;
 
-//	 if (c->key.input_slots_valid & BITFIELD64_BIT(i)) {
-//	    /* The back color slot is skipped when the front color is
-//	     * also written to.  In addition, some slots can be
-//	     * written in the vertex shader and not read in the
-//	     * fragment shader.  So the register number must always be
-//	     * incremented, mapped or not.
-//	     */
-//	    if (_mesa_varying_slot_in_fs((gl_varying_slot) i))
-//	       c->prog_data.urb_setup[i] = urb_next;
-//            urb_next++;
-//	 }
-//      }
+	 if (c->key.input_slots_valid & BITFIELD64_BIT(i)) {
+		/* The back color slot is skipped when the front color is
+		 * also written to.  In addition, some slots can be
+		 * written in the vertex shader and not read in the
+		 * fragment shader.  So the register number must always be
+		 * incremented, mapped or not.
+		 */
+		if (_mesa_varying_slot_in_fs((gl_varying_slot) i))
+		   c->prog_data.urb_setup[i] = urb_next;
+			urb_next++;
+	 }
+	  }
 
-//      /*
-//       * It's a FS only attribute, and we did interpolation for this attribute
-//       * in SF thread. So, count it here, too.
-//       *
-//       * See compile_sf_prog() for more info.
-//       */
-//      if (fp->Base.InputsRead & BITFIELD64_BIT(VARYING_SLOT_PNTC))
-//         c->prog_data.urb_setup[VARYING_SLOT_PNTC] = urb_next++;
-//   }
+      /*
+       * It's a FS only attribute, and we did interpolation for this attribute
+       * in SF thread. So, count it here, too.
+       *
+       * See compile_sf_prog() for more info.
+       */
+      if (fp->Base.InputsRead & BITFIELD64_BIT(VARYING_SLOT_PNTC))
+         c->prog_data.urb_setup[VARYING_SLOT_PNTC] = urb_next++;
+   }
 
-//   c->prog_data.num_varying_inputs = urb_next;
-//}
+   c->prog_data.num_varying_inputs = urb_next;
+}
 
 void
 fs_visitor::assign_urb_setup()
@@ -3068,8 +3067,8 @@ fs_visitor::run()
 //      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
 //         emit_shader_time_begin();
 
-      // LunarG: TODO - add URB support
-      // calculate_urb_setup();
+
+       calculate_urb_setup();
       if (fp->Base.InputsRead > 0) {
          if (brw->gen < 6)
             emit_interpolation_setup_gen4();
