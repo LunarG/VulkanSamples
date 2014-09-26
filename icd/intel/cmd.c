@@ -56,6 +56,7 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
 
     if (writer->items) {
         icd_free(writer->items);
+        writer->items = NULL;
         writer->item_alloc = 0;
         writer->item_used = 0;
     }
