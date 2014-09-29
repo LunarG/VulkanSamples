@@ -36,6 +36,99 @@
 #include "compiler/pipeline/brw_wm.h"
 #include "compiler/pipeline/brw_shader.h"
 
+/**
+ * Init vertex/fragment/geometry program limits.
+ * Base on init_program_limits()
+ */
+void init_mesa_program_limits(struct gl_context *ctx, gl_shader_stage stage,
+                              struct gl_program_constants *prog)
+{
+    prog->MaxInstructions = MAX_PROGRAM_INSTRUCTIONS;
+    prog->MaxAluInstructions = MAX_PROGRAM_INSTRUCTIONS;
+    prog->MaxTexInstructions = MAX_PROGRAM_INSTRUCTIONS;
+    prog->MaxTexIndirections = MAX_PROGRAM_INSTRUCTIONS;
+    prog->MaxTemps = MAX_PROGRAM_TEMPS;
+    prog->MaxEnvParams = MAX_PROGRAM_ENV_PARAMS;
+    prog->MaxLocalParams = MAX_PROGRAM_LOCAL_PARAMS;
+    prog->MaxAddressOffset = MAX_PROGRAM_LOCAL_PARAMS;
+
+    switch (stage) {
+    case MESA_SHADER_VERTEX:
+        prog->MaxParameters = MAX_VERTEX_PROGRAM_PARAMS;
+        prog->MaxAttribs = MAX_VERTEX_GENERIC_ATTRIBS;
+        prog->MaxAddressRegs = MAX_VERTEX_PROGRAM_ADDRESS_REGS;
+        prog->MaxUniformComponents = 4 * MAX_UNIFORMS;
+        prog->MaxInputComponents = 0; /* value not used */
+        prog->MaxOutputComponents = 16 * 4; /* old limit not to break tnl and swrast */
+        break;
+    case MESA_SHADER_FRAGMENT:
+        prog->MaxParameters = MAX_NV_FRAGMENT_PROGRAM_PARAMS;
+        prog->MaxAttribs = MAX_NV_FRAGMENT_PROGRAM_INPUTS;
+        prog->MaxAddressRegs = MAX_FRAGMENT_PROGRAM_ADDRESS_REGS;
+        prog->MaxUniformComponents = 4 * MAX_UNIFORMS;
+        prog->MaxInputComponents = 16 * 4; /* old limit not to break tnl and swrast */
+        prog->MaxOutputComponents = 0; /* value not used */
+        break;
+    case MESA_SHADER_GEOMETRY:
+        prog->MaxParameters = MAX_VERTEX_PROGRAM_PARAMS;
+        prog->MaxAttribs = MAX_VERTEX_GENERIC_ATTRIBS;
+        prog->MaxAddressRegs = MAX_VERTEX_PROGRAM_ADDRESS_REGS;
+        prog->MaxUniformComponents = 4 * MAX_UNIFORMS;
+        prog->MaxInputComponents = 16 * 4; /* old limit not to break tnl and swrast */
+        prog->MaxOutputComponents = 16 * 4; /* old limit not to break tnl and swrast */
+        break;
+    case MESA_SHADER_COMPUTE:
+        prog->MaxParameters = 0; /* not meaningful for compute shaders */
+        prog->MaxAttribs = 0; /* not meaningful for compute shaders */
+        prog->MaxAddressRegs = 0; /* not meaningful for compute shaders */
+        prog->MaxUniformComponents = 4 * MAX_UNIFORMS;
+        prog->MaxInputComponents = 0; /* not meaningful for compute shaders */
+        prog->MaxOutputComponents = 0; /* not meaningful for compute shaders */
+        break;
+    default:
+        assert(0 && "Bad shader stage in init_program_limits()");
+    }
+
+    /* Set the native limits to zero.  This implies that there is no native
+        * support for shaders.  Let the drivers fill in the actual values.
+        */
+    prog->MaxNativeInstructions = 0;
+    prog->MaxNativeAluInstructions = 0;
+    prog->MaxNativeTexInstructions = 0;
+    prog->MaxNativeTexIndirections = 0;
+    prog->MaxNativeAttribs = 0;
+    prog->MaxNativeTemps = 0;
+    prog->MaxNativeAddressRegs = 0;
+    prog->MaxNativeParameters = 0;
+
+    /* Set GLSL datatype range/precision info assuming IEEE float values.
+        * Drivers should override these defaults as needed.
+        */
+    prog->MediumFloat.RangeMin = 127;
+    prog->MediumFloat.RangeMax = 127;
+    prog->MediumFloat.Precision = 23;
+    prog->LowFloat = prog->HighFloat = prog->MediumFloat;
+
+    /* Assume ints are stored as floats for now, since this is the least-common
+        * denominator.  The OpenGL ES spec implies (page 132) that the precision
+        * of integer types should be 0.  Practically speaking, IEEE
+        * single-precision floating point values can only store integers in the
+        * range [-0x01000000, 0x01000000] without loss of precision.
+        */
+    prog->MediumInt.RangeMin = 24;
+    prog->MediumInt.RangeMax = 24;
+    prog->MediumInt.Precision = 0;
+    prog->LowInt = prog->HighInt = prog->MediumInt;
+
+    prog->MaxUniformBlocks = 12;
+    prog->MaxCombinedUniformComponents = (prog->MaxUniformComponents +
+                                          ctx->Const.MaxUniformBlockSize / 4 *
+                                          prog->MaxUniformBlocks);
+
+    prog->MaxAtomicBuffers = 0;
+    prog->MaxAtomicCounters = 0;
+}
+
 void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 {
    memset(ctx, 0, sizeof(*ctx));
@@ -80,6 +173,12 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
    ctx->Const.MaxComputeWorkGroupSize[1] = 1024;
    ctx->Const.MaxComputeWorkGroupSize[2] = 64;
    ctx->Const.MaxComputeWorkGroupInvocations = 1024;
+
+   init_mesa_program_limits(ctx, MESA_SHADER_VERTEX,   &ctx->Const.Program[MESA_SHADER_VERTEX]);
+   init_mesa_program_limits(ctx, MESA_SHADER_GEOMETRY, &ctx->Const.Program[MESA_SHADER_GEOMETRY]);
+   init_mesa_program_limits(ctx, MESA_SHADER_FRAGMENT, &ctx->Const.Program[MESA_SHADER_FRAGMENT]);
+   init_mesa_program_limits(ctx, MESA_SHADER_COMPUTE,  &ctx->Const.Program[MESA_SHADER_COMPUTE]);
+
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 16;
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents = 1024;
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxInputComponents = 0; /* not used */
@@ -119,7 +218,6 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 
    ctx->Const.MaxGeometryOutputVertices = 256;
    ctx->Const.MaxGeometryTotalOutputComponents = 1024;
-
 
    /* Set up default shader compiler options. */
    struct gl_shader_compiler_options options;

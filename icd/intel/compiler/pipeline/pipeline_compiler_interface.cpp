@@ -116,7 +116,6 @@ static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
 {
     fprintf(fp, "\n=== begin brw_wm_prog_data ===\n");
 
-    //brw_stage_prog_data base;
     fprintf(fp, "data->base.binding_table.size_bytes = %u\n",
                  data->base.binding_table.size_bytes);
     fprintf(fp, "data->base.binding_table.pull_constants_start = %u\n",
