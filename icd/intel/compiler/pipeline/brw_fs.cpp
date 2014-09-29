@@ -1920,7 +1920,8 @@ fs_visitor::assign_constant_locations()
     * Just demote the end of the list.  We could probably do better
     * here, demoting things that are rarely used in the program first.
     */
-   unsigned int max_push_components = 16 * 8;
+   // LunarG : TODO - turning off push constants for bring up
+   unsigned int max_push_components = 0;//16 * 8;
    unsigned int num_push_constants = 0;
 
    push_constant_loc = ralloc_array(mem_ctx, int, uniforms);
