@@ -234,7 +234,6 @@ protected:
 
     XGL_SAMPLER m_sampler;
 
-
     XGL_GPU_MEMORY m_vtxBufferMem;
     XGL_GPU_MEMORY m_constantBufferMem;
     XGL_UINT32                      m_numMemRefs;
@@ -637,7 +636,6 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
-    //XGL_PIPELINE pipeline;
 
     // create a raster state (solid, back-face culling)
     XGL_RASTER_STATE_CREATE_INFO raster = {};
@@ -892,8 +890,10 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = &db_state;
     info.flags = 0;
-
     err = xglCreateGraphicsPipeline(device(), &info, pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(*pipeline, "Pipeline", &m_pipe_mem);
     ASSERT_XGL_SUCCESS(err);
 }
 
@@ -963,11 +963,8 @@ void XglRenderTest::DrawTriangleTest()
     XGL_SHADER vs, ps;
     XGL_RESULT err;
     int width = 256, height = 256;
-    CreateDefaultPipeline(&pipeline, &vs, &ps, width, height);
-    //ASSERT_XGL_SUCCESS(err);
 
-    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
-    ASSERT_XGL_SUCCESS(err);
+    ASSERT_NO_FATAL_FAILURE(CreateDefaultPipeline(&pipeline, &vs, &ps, width, height));
 
     /*
      * Shaders are now part of the pipeline, don't need these anymore
@@ -988,6 +985,27 @@ void XglRenderTest::DrawTriangleTest()
                                                   XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
                                                   XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                                                   &renderTarget));
+
+    const int constantCount = 4;
+    const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
+    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
+
+    // Create descriptor set for a uniform resource
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = 1;
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the constant buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
     // Build command buffer
     err = xglBeginCommandBuffer(m_cmdBuffer, 0);
