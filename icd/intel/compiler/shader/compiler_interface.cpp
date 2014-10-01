@@ -291,11 +291,12 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
     case 'w':
         shader->Type = GL_FRAGMENT_SHADER;
         shader->Source =
-                "#version 130\n"
+                "#version 430\n"
                 "in vec4 color;\n"
                 "in vec4 scale;\n"
+                "layout(location = 0) uniform vec4 foo;\n"
                 "void main() {\n"
-                "   gl_FragColor = color * scale;\n"
+                "   gl_FragColor = color * scale + foo;\n"
                 "}\n";
         break;
     default:

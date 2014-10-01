@@ -208,6 +208,7 @@ public:
     void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader);
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
+    void InitConstantBuffer( int constantCount, int constantSize, const void* data );
     void DrawTriangleTest();
     void DrawRotatedTriangleTest();
 
@@ -221,7 +222,9 @@ protected:
     XGL_CMD_BUFFER m_cmdBuffer;
     XGL_UINT32 m_numVertices;
     XGL_MEMORY_VIEW_ATTACH_INFO m_vtxBufferView;
+    XGL_MEMORY_VIEW_ATTACH_INFO m_constantBufferView;
     XGL_GPU_MEMORY m_vtxBufferMem;
+    XGL_GPU_MEMORY m_constantBufferMem;
     XGL_UINT32                      m_numMemRefs;
     XGL_MEMORY_REF                  m_memRefs[5];
     XGL_RASTER_STATE_OBJECT         m_stateRaster;
@@ -244,6 +247,9 @@ protected:
 
         memset(&m_vtxBufferView, 0, sizeof(m_vtxBufferView));
         m_vtxBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
+
+        memset(&m_constantBufferView, 0, sizeof(m_constantBufferView));
+        m_constantBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
 
         err = xglInitAndEnumerateGpus(&app_info, NULL,
                                       MAX_GPUS, &this->gpu_count, objs);
@@ -435,6 +441,42 @@ void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
     ASSERT_XGL_SUCCESS(err);
 }
 
+void XglRenderTest::InitConstantBuffer(int constantCount, int constantSize, const void* data)
+{
+    XGL_RESULT err = XGL_SUCCESS;
+
+    XGL_MEMORY_ALLOC_INFO alloc_info = {};
+    XGL_UINT8 *pData;
+
+    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.allocationSize = constantCount * constantSize;
+    alloc_info.alignment = 0;
+    alloc_info.heapCount = 1;
+    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
+
+    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
+    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+
+    err = xglAllocMemory(device(), &alloc_info, &m_constantBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData, data, alloc_info.allocationSize);
+
+    err = xglUnmapMemory(m_constantBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    // set up the memory view for the constant buffer
+    this->m_constantBufferView.stride = 1;
+    this->m_constantBufferView.range  = 16;
+    this->m_constantBufferView.offset = 0;
+    this->m_constantBufferView.mem    = m_constantBufferMem;
+    this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
+}
+
 void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps, int width, int height)
 {
     XGL_RESULT err;
@@ -529,6 +571,27 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
 
+    const int constantCount = 4;
+    const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
+    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
+
+    // Create descriptor set for a uniform resource
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = 1;
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the constant buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX, vs));
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -551,6 +614,15 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     // TODO: Do we need a descriptor set mapping for fragment?
     for (unsigned int i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)
         ps_stage.shader.descriptorSetMapping[i].descriptorCount = 0;
+
+    const int slots = 1;
+    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    slotInfo[0].shaderEntityIndex = 0;
+    slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+
+    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
+
     ps_stage.shader.linkConstBufferCount = 0;
     ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
@@ -705,6 +777,7 @@ void XglRenderTest::DrawTriangleTest()
     GenerateBindStateAndPipelineCmds(&pipeline);
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
     xglCmdResetQueryPool(m_cmdBuffer, query, 0, 1);
