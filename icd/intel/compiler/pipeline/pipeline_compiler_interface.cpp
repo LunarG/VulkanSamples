@@ -136,9 +136,32 @@ static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
     fprintf(fp, "data->base.nr_pull_params = %u\n",
                  data->base.nr_pull_params);
 
-    // invalid pointers
-    //data->base.param;
-    //data->base.pull_param;
+    fprintf(fp, "== push constants: ==\n");
+    fprintf(fp, "data->base.nr_params = %u\n",
+                 data->base.nr_params);
+
+    for (int i = 0; i < data->base.nr_params; ++i) {
+        fprintf(fp, "data->base.param = %p\n",
+                     data->base.param);
+        fprintf(fp, "*data->base.param = %p\n",
+                     *data->base.param);
+        fprintf(fp, "**data->base.param = %f\n",
+                     **data->base.param);
+    }
+
+    fprintf(fp, "== pull constants: ==\n");
+    fprintf(fp, "data->base.nr_pull_params = %u\n",
+                 data->base.nr_pull_params);
+
+    for (int i = 0; i < data->base.nr_pull_params; ++i) {
+        fprintf(fp, "data->base.pull_param = %p\n",
+                     data->base.pull_param);
+        fprintf(fp, "*data->base.pull_param = %p\n",
+                     *data->base.pull_param);
+        fprintf(fp, "**data->base.pull_param = %f\n",
+                     **data->base.pull_param);
+    }
+
 
     fprintf(fp, "data->curb_read_length = %u\n",
                  data->curb_read_length);
