@@ -337,6 +337,7 @@ void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
 {
     XGL_RESULT err;
     std::vector<unsigned int> bil;
+
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
 
@@ -761,6 +762,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      vertices[2] = vec2( 0.0,  1.0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
+
     static const char *vertShader2 =
             "#version 130\n"
             "out vec4 color;\n"
