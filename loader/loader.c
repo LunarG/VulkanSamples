@@ -303,6 +303,7 @@ static void loader_icd_scan(void)
     DIR *sysdir;
     struct dirent *dent;
     char icd_library[1024];
+    char path[1024];
     int len;
 
     libPaths = NULL;
@@ -321,6 +322,8 @@ static void loader_icd_scan(void)
        }
        else {
           len = next - p;
+          sprintf(path, "%.*s", (len > sizeof(path) - 1) ? (int) sizeof(path) - 1 : len, p);
+          p = path;
           next++;
        }
 
