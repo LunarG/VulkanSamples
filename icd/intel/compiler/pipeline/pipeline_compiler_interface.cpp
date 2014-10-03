@@ -112,56 +112,102 @@ static void hexdump(FILE *fp, void *ptr, int buflen) {
   fflush(fp);
 }
 
-static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
+static void base_prog_dump(FILE *fp, struct brw_stage_prog_data* base)
 {
-    fprintf(fp, "\n=== begin brw_wm_prog_data ===\n");
-
     fprintf(fp, "data->base.binding_table.size_bytes = %u\n",
-                 data->base.binding_table.size_bytes);
+                 base->binding_table.size_bytes);
     fprintf(fp, "data->base.binding_table.pull_constants_start = %u\n",
-                 data->base.binding_table.pull_constants_start);
+                 base->binding_table.pull_constants_start);
     fprintf(fp, "data->base.binding_table.texture_start = %u\n",
-                 data->base.binding_table.texture_start);
+                 base->binding_table.texture_start);
     fprintf(fp, "data->base.binding_table.gather_texture_start = %u\n",
-                 data->base.binding_table.gather_texture_start);
+                 base->binding_table.gather_texture_start);
     fprintf(fp, "data->base.binding_table.ubo_start = %u\n",
-                 data->base.binding_table.ubo_start);
+                 base->binding_table.ubo_start);
     fprintf(fp, "data->base.binding_table.abo_start = %u\n",
-                 data->base.binding_table.abo_start);
+                 base->binding_table.abo_start);
     fprintf(fp, "data->base.binding_table.shader_time_start = %u\n",
-                 data->base.binding_table.shader_time_start);
+                 base->binding_table.shader_time_start);
 
     fprintf(fp, "data->base.nr_params = %u\n",
-                 data->base.nr_params);
+                 base->nr_params);
     fprintf(fp, "data->base.nr_pull_params = %u\n",
-                 data->base.nr_pull_params);
+                 base->nr_pull_params);
 
     fprintf(fp, "== push constants: ==\n");
     fprintf(fp, "data->base.nr_params = %u\n",
-                 data->base.nr_params);
+                 base->nr_params);
 
-    for (int i = 0; i < data->base.nr_params; ++i) {
+    for (int i = 0; i < base->nr_params; ++i) {
         fprintf(fp, "data->base.param = %p\n",
-                     data->base.param);
+                     base->param);
         fprintf(fp, "*data->base.param = %p\n",
-                     *data->base.param);
+                     *base->param);
         fprintf(fp, "**data->base.param = %f\n",
-                     **data->base.param);
+                     **base->param);
     }
 
     fprintf(fp, "== pull constants: ==\n");
     fprintf(fp, "data->base.nr_pull_params = %u\n",
-                 data->base.nr_pull_params);
+                 base->nr_pull_params);
 
-    for (int i = 0; i < data->base.nr_pull_params; ++i) {
+    for (int i = 0; i < base->nr_pull_params; ++i) {
         fprintf(fp, "data->base.pull_param = %p\n",
-                     data->base.pull_param);
+                     base->pull_param);
         fprintf(fp, "*data->base.pull_param = %p\n",
-                     *data->base.pull_param);
+                     *base->pull_param);
         fprintf(fp, "**data->base.pull_param = %f\n",
-                     **data->base.pull_param);
+                     **base->pull_param);
     }
+}
 
+static void vs_data_dump(FILE *fp, struct brw_vs_prog_data *data)
+{
+    fprintf(fp, "\n=== begin brw_vs_prog_data ===\n");
+
+    base_prog_dump(fp, &data->base.base);
+
+    fprintf(fp, "data->base.vue_map.slots_valid = 0x%" PRIX64 "\n",
+                 data->base.vue_map.slots_valid);
+
+    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i)
+        fprintf(fp, "data->base.vue_map.varying_to_slot[%i] = %i\n", i,
+               (int) data->base.vue_map.varying_to_slot[i]);
+
+    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i)
+        fprintf(fp, "data->base.vue_map.slot_to_varying[%i] = %i\n", i,
+               (int) data->base.vue_map.slot_to_varying[i]);
+
+    fprintf(fp, "data->base.vue_map.num_slots = %i\n",
+                 data->base.vue_map.num_slots);
+    fprintf(fp, "data->base.dispatch_grf_start_reg = %u\n",
+                 data->base.dispatch_grf_start_reg);
+    fprintf(fp, "data->base.curb_read_length = %u\n",
+                 data->base.curb_read_length);
+    fprintf(fp, "data->base.urb_read_length = %u\n",
+                 data->base.urb_read_length);
+    fprintf(fp, "data->base.total_grf = %u\n",
+                 data->base.total_grf);
+    fprintf(fp, "data->base.total_scratch = %u\n",
+                 data->base.total_scratch);
+    fprintf(fp, "data->base.urb_entry_size = %u\n",
+                 data->base.urb_entry_size);
+
+    fprintf(fp, "data->inputs_read = 0x%" PRIX64 "\n",
+                 data->inputs_read);
+    fprintf(fp, "data->uses_vertexid = %s\n",
+                 data->uses_vertexid ? "true" : "false");
+
+    fprintf(fp, "=== end brw_vs_prog_data ===\n");
+
+    fflush(fp);
+}
+
+static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
+{
+    fprintf(fp, "\n=== begin brw_wm_prog_data ===\n");
+
+    base_prog_dump(fp, &data->base);
 
     fprintf(fp, "data->curb_read_length = %u\n",
                  data->curb_read_length);
@@ -239,6 +285,8 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             memcpy(pipe_shader->pCode, get_vs_program(brw->shader_prog), pipe_shader->codeSize);
 
             struct brw_vs_prog_data *data = get_vs_prog_data(brw->shader_prog);
+
+            vs_data_dump(stdout, data);
 
             if (data->uses_vertexid)
                 pipe_shader->uses |= INTEL_SHADER_USE_VID;
