@@ -14,8 +14,17 @@ SET(COMMON_CPP
     xgltestframework.cpp
    )
 
+# Expect libraries to be in either the build (release build) or dbuild (debug) directories
+if(EXISTS ${GLSLANG_PREFIX}/build/install/lib)
+    set(GLSLANG_BUILD ${GLSLANG_PREFIX}/build)
+elseif(EXISTS ${GLSLANG_PREFIX}/dbuild/install/lib)
+    set(GLSLANG_BUILD ${GLSLANG_PREFIX}/dbuild)
+else()
+    message(FATAL_ERROR "Necessary glslang libraries cannot be found: " ${GLSLANG_PREFIX})
+endif()
+
 link_directories(
-   "${PROJECT_SOURCE_DIR}/../glslang/dbuild/install/lib"
+   "${GLSLANG_BUILD}/install/lib"
    )
 
 
@@ -31,9 +40,9 @@ set(TEST_LIBRARIES
 include_directories(
     "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
     "${PROJECT_SOURCE_DIR}/icd/common"
-    "${PROJECT_SOURCE_DIR}/../glslang/glslang/Include"
-    "${PROJECT_SOURCE_DIR}/../glslang/glslang/Public"
-    "${PROJECT_SOURCE_DIR}/../glslang/BIL"
+    "${GLSLANG_PREFIX}/glslang/Include"
+    "${GLSLANG_PREFIX}/glslang/Public"
+    "${GLSLANG_PREFIX}/BIL"
     )
 
 
