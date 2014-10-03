@@ -25,6 +25,8 @@
 
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "xglimage.h"
+#include "ShaderLang.h"
+#include "GLSL450Lib.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -56,6 +58,7 @@ class XglTestFramework : public ::testing::Test
 {
 public:
     XglTestFramework();
+    ~XglTestFramework();
 
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
@@ -63,8 +66,23 @@ public:
     void WritePPM( const char *basename, XglImage *image );
     void Show(const char *comment, XglImage *image);
     void RecordImage(XglImage *image);
+    bool GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
+                   const char *pshader,
+                   std::vector<unsigned int> &bil);
 
 private:
+    int m_compile_options;
+    int m_num_shader_strings;
+    TBuiltInResource Resources;
+    int ShInitialize();
+    void SetMessageOptions(EShMessages& messages);
+    void ProcessConfigFile();
+    char** ReadFileData(const char* fileName);
+    void FreeFileData(char** data);
+    EShLanguage FindLanguage(const std::string& name);
+    EShLanguage FindLanguage(const XGL_PIPELINE_SHADER_STAGE shader_type);
+    std::string ConfigFile;
+    bool SetConfigFile(const std::string& name);
     static void Reshape( int w, int h );
     static void Display();
     static void Key(unsigned char key, int x, int y);

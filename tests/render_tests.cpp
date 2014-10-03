@@ -205,7 +205,7 @@ public:
     void GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
 
     XGL_DEVICE device() {return m_device->device();}
-    void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader);
+    void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, const char *shader_code, XGL_SHADER *pshader);
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitConstantBuffer( int constantCount, int constantSize, const void* data );
@@ -317,52 +317,26 @@ void XglRenderTest::DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem)
     ASSERT_XGL_SUCCESS(xglDestroyObject(pool));
 }
 
-void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader)
+void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
+                                 const char *shader_code,
+                                 XGL_SHADER *pshader)
 {
     struct icd_bil_header *pBIL;
     char * memblock;
     const char *kernel;
     size_t kernel_size;
     XGL_RESULT err;
+    std::vector<unsigned int> bil;
 
-    const XGL_PHYSICAL_GPU_PROPERTIES *props = &m_device->props;
-    const int gen = (strstr((const char *) props->gpuName, "Sandybridge")) ? 6 : 7;
-
-    if (stage == XGL_SHADER_STAGE_VERTEX) {
-        if (gen == 6) {
-            kernel = (const char *) gen6_vs;
-            kernel_size = sizeof(gen6_vs);
-        } else {
-            kernel = (const char *) gen7_vs;
-            kernel_size = sizeof(gen7_vs);
-        }
-    } else {
-        if (gen == 6) {
-            kernel = (const char *) gen6_fs;
-            kernel_size = sizeof(gen6_fs);
-        } else {
-            kernel = (const char *) gen7_fs;
-            kernel_size = sizeof(gen7_fs);
-        }
-    }
-
-    memblock = new char [sizeof(*pBIL) + kernel_size];
-    ASSERT_TRUE(memblock != NULL) << "memory allocation failed";
-
-    pBIL = (struct icd_bil_header *) memblock;
-    pBIL->magic = ICD_BIL_MAGIC;
-    pBIL->version = ICD_BIL_VERSION;
-
-    pBIL->gen_magic = (stage == XGL_SHADER_STAGE_VERTEX) ? 'v' : 'w';
-    memcpy(pBIL + 1, kernel, kernel_size);
+    GLSLtoBIL(stage, shader_code, bil);
 
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
 
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
-    createInfo.pCode = memblock;
-    createInfo.codeSize = sizeof(*pBIL) + kernel_size;
+    createInfo.pCode = bil.data();
+    createInfo.codeSize = bil.size() * sizeof(unsigned int);
     createInfo.flags = 0;
     err = xglCreateShader(device(), &createInfo, &shader);
     ASSERT_XGL_SUCCESS(err);
@@ -592,7 +566,18 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX, vs));
+    static const char *vertShaderText =
+            "#version 130\n"
+            "vec2 vertices[3];\n"
+            "void main() {\n"
+            "      vertices[0] = vec2(-1.0, -1.0);\n"
+            "      vertices[1] = vec2( 1.0, -1.0);\n"
+            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, vs));
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
@@ -605,7 +590,15 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT, ps));
+    static const char *fragShaderText =
+       "#version 130\n"
+       "uniform vec4 foo;\n"
+       "void main() {\n"
+       "   gl_FragColor = foo;\n"
+       "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, ps));
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
