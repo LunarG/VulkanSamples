@@ -62,6 +62,7 @@
 using namespace std;
 
 #include <xgl.h>
+#include <xglIntelExt.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
@@ -321,27 +322,30 @@ void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
                                  const char *shader_code,
                                  XGL_SHADER *pshader)
 {
-    struct icd_bil_header *pBIL;
-    char * memblock;
-    const char *kernel;
-    size_t kernel_size;
     XGL_RESULT err;
     std::vector<unsigned int> bil;
-
-    GLSLtoBIL(stage, shader_code, bil);
-
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
 
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
-    createInfo.pCode = bil.data();
-    createInfo.codeSize = bil.size() * sizeof(unsigned int);
-    createInfo.flags = 0;
+
+    if (this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
+        // Driver has extended CreateShader to process GLSL
+        createInfo.sType = (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+        createInfo.pCode = shader_code;
+        createInfo.codeSize = strlen(shader_code);
+        createInfo.flags = 0;
+    } else {
+        // Use Reference GLSL to BIL compiler
+        GLSLtoBIL(stage, shader_code, bil);
+        createInfo.pCode = bil.data();
+        createInfo.codeSize = bil.size() * sizeof(unsigned int);
+        createInfo.flags = 0;
+    }
+
     err = xglCreateShader(device(), &createInfo, &shader);
     ASSERT_XGL_SUCCESS(err);
-
-    delete[] memblock;
 
     *pshader = shader;
 }

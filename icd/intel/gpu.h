@@ -36,6 +36,7 @@
 
 enum intel_ext_type {
     INTEL_EXT_WSI_X11,
+    INTEL_EXT_COMPILE_GLSL,
 
     INTEL_EXT_COUNT,
     INTEL_EXT_INVALID = INTEL_EXT_COUNT,

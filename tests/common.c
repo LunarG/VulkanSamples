@@ -112,6 +112,7 @@ void app_gpu_init_extensions(struct app_gpu *gpu)
 
     static const XGL_CHAR *known_extensions[] = {
         (const XGL_CHAR *) "some_extension",
+        (const XGL_CHAR *) "XGL_COMPILE_GLSL",
     };
 
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {

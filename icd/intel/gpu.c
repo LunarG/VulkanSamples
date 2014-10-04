@@ -44,6 +44,7 @@ static const char *intel_gpu_exts[INTEL_EXT_COUNT] = {
 #ifdef ENABLE_WSI_X11
     [INTEL_EXT_WSI_X11] = "XGL_WSI_X11",
 #endif
+    [INTEL_EXT_COMPILE_GLSL] = "XGL_COMPILE_GLSL",
 };
 
 static int gpu_open_primary_node(struct intel_gpu *gpu)

@@ -102,10 +102,15 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     struct intel_shader *sh;
     XGL_RESULT ret;
 
-    if (info->codeSize < sizeof(*bil))
-        return XGL_ERROR_INVALID_MEMORY_SIZE;
-    if (bil->magic != ICD_BIL_MAGIC)
-        return XGL_ERROR_BAD_SHADER_CODE;
+    if (dev->exts[INTEL_EXT_COMPILE_GLSL] &&
+        info->sType == (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO) {
+        // use GLSL compiler extension
+    } else {
+        if (info->codeSize < sizeof(*bil))
+            return XGL_ERROR_INVALID_MEMORY_SIZE;
+        if (bil->magic != ICD_BIL_MAGIC)
+            return XGL_ERROR_BAD_SHADER_CODE;
+    }
 
     sh = (struct intel_shader *) intel_base_create(dev, sizeof(*sh),
             dev->base.dbg, XGL_DBG_OBJECT_SHADER, info, 0);
@@ -126,6 +131,16 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
 }
 
 XGL_RESULT XGLAPI intelCreateShader(
+        XGL_DEVICE                                  device,
+        const XGL_SHADER_CREATE_INFO*               pCreateInfo,
+        XGL_SHADER*                                 pShader)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return shader_create(dev, pCreateInfo, (struct intel_shader **) pShader);
+}
+
+XGL_RESULT XGLAPI intelCreateShaderfromGLSL(
         XGL_DEVICE                                  device,
         const XGL_SHADER_CREATE_INFO*               pCreateInfo,
         XGL_SHADER*                                 pShader)

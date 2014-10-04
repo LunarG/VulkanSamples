@@ -242,6 +242,20 @@ static void app_gpu_dump_perf(const struct app_gpu *gpu)
     printf("\tpixelsPerClock = %f\n",   perf->pixelsPerClock);
 }
 
+static void app_gpu_dump_extensions(const struct app_gpu *gpu)
+{
+    int i;
+    printf("Extensions");
+    printf("\tcount = %d\n",            gpu->extension_count);
+    printf("\t");
+    for (i=0; i< gpu->extension_count; i++) {
+        if (i>0)
+            printf(", "); // separator between extension names
+        printf("%s",                    gpu->extensions[i]);
+    }
+    printf("\n");
+}
+
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, XGL_UINT id)
 {
     const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
@@ -275,6 +289,8 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
     printf("GPU%u\n", gpu->id);
     app_gpu_dump_props(gpu);
+    printf("\n");
+    app_gpu_dump_extensions(gpu);
     printf("\n");
     app_gpu_dump_perf(gpu);
     printf("\n");

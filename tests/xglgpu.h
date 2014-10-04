@@ -16,6 +16,7 @@ public:
     void init_gpu();
     void init_extensions();
     void init_formats();
+    bool extension_exist(const char *ext_name);
 
     // Do we want to hide/abstract this data?
 // private:
