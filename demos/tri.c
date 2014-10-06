@@ -10,6 +10,7 @@
 #include <xglWsiX11Ext.h>
 
 #define DEMO_BUFFER_COUNT 2
+#define DEMO_TEXTURE_COUNT 1
 
 struct demo {
     xcb_connection_t *connection;
@@ -28,6 +29,16 @@ struct demo {
 
         XGL_COLOR_ATTACHMENT_VIEW view;
     } buffers[DEMO_BUFFER_COUNT];
+
+    struct {
+        XGL_SAMPLER sampler;
+
+        XGL_IMAGE image;
+        XGL_GPU_MEMORY mem;
+        XGL_IMAGE_VIEW view;
+    } textures[DEMO_TEXTURE_COUNT];
+
+    XGL_DESCRIPTOR_SET dset;
 
     XGL_PIPELINE pipeline;
 
@@ -60,6 +71,8 @@ static void demo_draw_build_cmd(struct demo *demo)
 
     xglCmdBindPipeline(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
+    xglCmdBindDescriptorSet(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
+            0, demo->dset, 0);
 
     xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_VIEWPORT, demo->viewport);
     xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_RASTER, demo->raster);
@@ -131,6 +144,172 @@ static void demo_prepare_buffers(struct demo *demo)
                 &color_attachment_view, &demo->buffers[i].view);
         assert(!err);
     }
+}
+
+static void demo_prepare_textures(struct demo *demo)
+{
+    const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
+    const XGL_INT tex_width = 2;
+    const XGL_INT tex_height = 2;
+    const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
+        { 0xffff0000, 0xff00ff00 },
+    };
+    XGL_RESULT err;
+    XGL_UINT i;
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        const XGL_SAMPLER_CREATE_INFO sampler = {
+            .sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .pNext = NULL,
+            .magFilter = XGL_TEX_FILTER_NEAREST,
+            .minFilter = XGL_TEX_FILTER_NEAREST,
+            .mipMode = XGL_TEX_MIPMAP_BASE,
+            .addressU = XGL_TEX_ADDRESS_WRAP,
+            .addressV = XGL_TEX_ADDRESS_WRAP,
+            .addressW = XGL_TEX_ADDRESS_WRAP,
+            .mipLodBias = 0.0f,
+            .maxAnisotropy = 0,
+            .compareFunc = XGL_COMPARE_NEVER,
+            .minLod = 0.0f,
+            .maxLod = 0.0f,
+            .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
+        };
+        const XGL_IMAGE_CREATE_INFO image = {
+            .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .pNext = NULL,
+            .imageType = XGL_IMAGE_2D,
+            .format = tex_format,
+            .extent = { tex_width, tex_height, 1 },
+            .mipLevels = 1,
+            .arraySize = 1,
+            .samples = 1,
+            .tiling = XGL_LINEAR_TILING,
+            .usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT,
+            .flags = 0,
+        };
+        XGL_MEMORY_ALLOC_INFO mem_alloc = {
+            .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+            .pNext = NULL,
+            .allocationSize = 0,
+            .alignment = 0,
+            .flags = 0,
+            .heapCount = 0,
+            .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
+        };
+        XGL_IMAGE_VIEW_CREATE_INFO view = {
+            .sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = NULL,
+            .image = XGL_NULL_HANDLE,
+            .viewType = XGL_IMAGE_VIEW_2D,
+            .format = image.format,
+            .channels = { XGL_CHANNEL_SWIZZLE_R,
+                          XGL_CHANNEL_SWIZZLE_G,
+                          XGL_CHANNEL_SWIZZLE_B,
+                          XGL_CHANNEL_SWIZZLE_A, },
+            .subresourceRange = { XGL_IMAGE_ASPECT_COLOR, 0, 1, 0, 1 },
+            .minLod = 0.0f,
+        };
+        XGL_MEMORY_REQUIREMENTS mem_reqs;
+        XGL_SIZE mem_reqs_size;
+
+        /* create sampler */
+        err = xglCreateSampler(demo->device, &sampler,
+                &demo->textures[i].sampler);
+        assert(!err);
+
+        /* create image */
+        err = xglCreateImage(demo->device, &image,
+                &demo->textures[i].image);
+        assert(!err);
+
+        err = xglGetObjectInfo(demo->textures[i].image,
+                XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                &mem_reqs_size, &mem_reqs);
+        assert(!err && mem_reqs_size == sizeof(mem_reqs));
+
+        mem_alloc.allocationSize = mem_reqs.size;
+        mem_alloc.alignment = mem_reqs.alignment;
+        mem_alloc.heapCount = mem_reqs.heapCount;
+        memcpy(mem_alloc.heaps, mem_reqs.heaps,
+                sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+
+        /* allocate memory */
+        err = xglAllocMemory(demo->device, &mem_alloc,
+                &demo->textures[i].mem);
+        assert(!err);
+
+        /* bind memory */
+        err = xglBindObjectMemory(demo->textures[i].image,
+                demo->textures[i].mem, 0);
+        assert(!err);
+
+        /* create image view */
+        view.image = demo->textures[i].image;
+        err = xglCreateImageView(demo->device, &view,
+                &demo->textures[i].view);
+        assert(!err);
+    }
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        const XGL_IMAGE_SUBRESOURCE subres = {
+            .aspect = XGL_IMAGE_ASPECT_COLOR,
+            .mipLevel = 0,
+            .arraySlice = 0,
+        };
+        XGL_SUBRESOURCE_LAYOUT layout;
+        XGL_SIZE layout_size;
+        XGL_VOID *data;
+        XGL_INT x, y;
+
+        err = xglGetImageSubresourceInfo(demo->textures[i].image, &subres,
+                XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
+        assert(!err && layout_size == sizeof(layout));
+
+        err = xglMapMemory(demo->textures[i].mem, 0, &data);
+        assert(!err);
+
+        for (y = 0; y < tex_height; y++) {
+            uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
+            for (x = 0; x < tex_width; x++)
+                row[x] = tex_colors[i][(x & 1) ^ (y & 1)];
+        }
+
+        err = xglUnmapMemory(demo->textures[i].mem);
+        assert(!err);
+    }
+}
+
+static void demo_prepare_descriptor_set(struct demo *demo)
+{
+    const XGL_DESCRIPTOR_SET_CREATE_INFO descriptor_set = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO,
+        .pNext = NULL,
+        .slots = DEMO_TEXTURE_COUNT * 2,
+    };
+    XGL_RESULT err;
+    XGL_UINT i;
+
+    err = xglCreateDescriptorSet(demo->device, &descriptor_set, &demo->dset);
+    assert(!err);
+
+    xglBeginDescriptorSetUpdate(demo->dset);
+    xglClearDescriptorSetSlots(demo->dset, 0, DEMO_TEXTURE_COUNT * 2);
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        const XGL_IMAGE_VIEW_ATTACH_INFO image_view = {
+            .sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO,
+            .pNext = NULL,
+            .view = demo->textures[i].view,
+            .state = XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY,
+        };
+
+        xglAttachSamplerDescriptors(demo->dset, 2 * i, 1,
+                &demo->textures[i].sampler);
+        xglAttachImageViewDescriptors(demo->dset, 2 * i + 1, 1,
+                &image_view);
+    }
+
+    xglEndDescriptorSetUpdate(demo->dset);
 }
 
 static XGL_SHADER demo_prepare_shader(struct demo *demo,
@@ -276,7 +455,9 @@ static void demo_prepare_pipeline(struct demo *demo)
     XGL_PIPELINE_DB_STATE_CREATE_INFO db;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fs;
+    XGL_DESCRIPTOR_SLOT_INFO fs_slots[DEMO_TEXTURE_COUNT * 2];
     XGL_RESULT err;
+    XGL_UINT i;
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -305,6 +486,15 @@ static void demo_prepare_pipeline(struct demo *demo)
     fs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fs.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     fs.shader.shader = demo_prepare_fs(demo);
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        fs_slots[2 * i].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
+        fs_slots[2 * i].shaderEntityIndex = i;
+        fs_slots[2 * i + 1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+        fs_slots[2 * i + 1].shaderEntityIndex = i;
+    }
+    fs.shader.descriptorSetMapping[0].descriptorCount = DEMO_TEXTURE_COUNT * 2;
+    fs.shader.descriptorSetMapping[0].pDescriptorInfo = fs_slots;
 
     pipeline.pNext = (const XGL_VOID *) &ia;
     ia.pNext = (const XGL_VOID *) &rs;
@@ -381,6 +571,8 @@ static void demo_prepare(struct demo *demo)
     XGL_RESULT err;
 
     demo_prepare_buffers(demo);
+    demo_prepare_textures(demo);
+    demo_prepare_descriptor_set(demo);
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
@@ -544,6 +736,15 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->depth_stencil);
 
     xglDestroyObject(demo->pipeline);
+
+    xglDestroyObject(demo->dset);
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        xglDestroyObject(demo->textures[i].view);
+        xglDestroyObject(demo->textures[i].image);
+        xglFreeMemory(demo->textures[i].mem);
+        xglDestroyObject(demo->textures[i].sampler);
+    }
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         xglDestroyObject(demo->buffers[i].view);
