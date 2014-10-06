@@ -268,8 +268,8 @@ static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
     const struct intel_gpu *gpu = pipeline->dev->gpu;
     const int urb_size = ((gpu->gt == 3) ? 512 :
                           (gpu->gt == 2) ? 256 : 128) * 1024;
-    const struct intel_shader *vs = intel_shader(info->vs.shader);
-    const struct intel_shader *gs = intel_shader(info->gs.shader);
+    const struct intel_pipeline_shader *vs = &pipeline->vs;
+    const struct intel_pipeline_shader *gs = &pipeline->gs;
     /* some space is reserved for PCBs */
     int urb_offset = ((gpu->gt == 3) ? 32 : 16) * 1024;
     int vs_entry_size, gs_entry_size;
@@ -445,7 +445,7 @@ static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline
 static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
                                            const struct intel_pipeline_create_info *info)
 {
-    const struct intel_shader *vs = intel_shader(info->vs.shader);
+    const struct intel_pipeline_shader *vs = &pipeline->vs;
     uint8_t cmd_len;
     uint32_t *dw;
     XGL_UINT i;
