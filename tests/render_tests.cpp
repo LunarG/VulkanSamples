@@ -331,9 +331,13 @@ void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
     createInfo.pNext = NULL;
 
     if (this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
+        XGL_INTEL_COMPILE_GLSL glsl_header;
+
+        glsl_header.stage = stage;
+        glsl_header.pCode = shader_code;
         // Driver has extended CreateShader to process GLSL
         createInfo.sType = (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        createInfo.pCode = shader_code;
+        createInfo.pCode = &glsl_header;
         createInfo.codeSize = strlen(shader_code);
         createInfo.flags = 0;
     } else {
@@ -579,9 +583,27 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      vertices[2] = vec2( 0.0,  1.0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
+    static const char *vertShader2 =
+            "#version 330\n"
+            "out vec4 color;\n"
+            "out vec4 scale;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "   color = colors[int(mod(gl_VertexID, 3))];\n"
+            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
+            "}\n";
+
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
-                                         vertShaderText, vs));
+                                         vertShader2, vs));
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
@@ -600,9 +622,17 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
        "void main() {\n"
        "   gl_FragColor = foo;\n"
        "}\n";
+    static const char *fragShader2 =
+            "#version 430\n"
+            "in vec4 color;\n"
+            "in vec4 scale;\n"
+            "layout(location = 0) uniform vec4 foo;\n"
+            "void main() {\n"
+            "   gl_FragColor = color * scale + foo;\n"
+            "}\n";
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
-                                         fragShaderText, ps));
+                                         fragShader2, ps));
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
