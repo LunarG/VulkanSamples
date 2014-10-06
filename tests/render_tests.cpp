@@ -210,6 +210,8 @@ public:
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitConstantBuffer( int constantCount, int constantSize, const void* data );
+    void InitTexture();
+    void InitSampler();
     void DrawTriangleTest();
     void DrawRotatedTriangleTest();
 
@@ -224,6 +226,15 @@ protected:
     XGL_UINT32 m_numVertices;
     XGL_MEMORY_VIEW_ATTACH_INFO m_vtxBufferView;
     XGL_MEMORY_VIEW_ATTACH_INFO m_constantBufferView;
+
+    XGL_IMAGE m_texture;
+    XGL_IMAGE_VIEW m_textureView;
+    XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
+    XGL_GPU_MEMORY m_textureMem;
+
+    XGL_SAMPLER m_sampler;
+
+
     XGL_GPU_MEMORY m_vtxBufferMem;
     XGL_GPU_MEMORY m_constantBufferMem;
     XGL_UINT32                      m_numMemRefs;
@@ -251,6 +262,9 @@ protected:
 
         memset(&m_constantBufferView, 0, sizeof(m_constantBufferView));
         m_constantBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
+
+        memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
+        m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
 
         err = xglInitAndEnumerateGpus(&app_info, NULL,
                                       MAX_GPUS, &this->gpu_count, objs);
@@ -459,6 +473,145 @@ void XglRenderTest::InitConstantBuffer(int constantCount, int constantSize, cons
     this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
 }
 
+void XglRenderTest::InitTexture()
+{
+    XGL_RESULT err;
+    XGL_UINT mipCount;
+    XGL_SIZE size;
+    XGL_FORMAT fmt;
+    XGL_FORMAT_PROPERTIES image_fmt;
+
+    // size of LunarG image
+    XGL_UINT w = 300;
+    XGL_UINT h = 280;
+
+    mipCount = 0;
+
+    XGL_UINT _w = w;
+    XGL_UINT _h = h;
+    while( ( _w > 0 ) || ( _h > 0 ) )
+    {
+        _w >>= 1;
+        _h >>= 1;
+        mipCount++;
+    }
+
+    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    fmt.numericFormat = XGL_NUM_FMT_UNORM;
+
+    size = sizeof(image_fmt);
+    err = xglGetFormatInfo(this->device(), fmt,
+                           XGL_INFO_TYPE_FORMAT_PROPERTIES,
+                           &size, &image_fmt);
+    ASSERT_XGL_SUCCESS(err);
+
+
+    XGL_IMAGE_CREATE_INFO imageCreateInfo = {};
+    imageCreateInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = XGL_IMAGE_2D;
+    imageCreateInfo.format = fmt;
+    imageCreateInfo.arraySize = 1;
+    imageCreateInfo.extent.width = w;
+    imageCreateInfo.extent.height = h;
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels = mipCount;
+    imageCreateInfo.samples = 1;
+    imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    err = xglCreateImage(device(), &imageCreateInfo, &m_texture);
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_MEMORY_REQUIREMENTS mem_req;
+    XGL_UINT data_size = sizeof(mem_req);
+    err = xglGetObjectInfo(m_texture, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(data_size, sizeof(mem_req));
+    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
+
+    XGL_MEMORY_ALLOC_INFO mem_info;
+
+    memset(&mem_info, 0, sizeof(mem_info));
+    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.allocationSize = mem_req.size;
+    mem_info.alignment = mem_req.alignment;
+    mem_info.heapCount = mem_req.heapCount;
+    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    err = xglAllocMemory(device(), &mem_info, &m_textureMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_UINT8 *pData;
+    const int texture_size = 300*280*4; // RGBA_UNORM
+    char data[texture_size];
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; j += 4) {
+            // grey
+            data[i + j + 0] = 0x80;
+            data[i + j + 1] = 0x80;
+            data[i + j + 2] = 0x80;
+            data[i + j + 3] = 0xFF;
+        }
+    }
+
+    err = xglMapMemory(m_textureMem, 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData, data, texture_size);
+
+    err = xglUnmapMemory(m_textureMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglBindObjectMemory(m_texture, m_textureMem, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
+    viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.viewType = XGL_IMAGE_VIEW_2D;
+    viewInfo.format = fmt;
+    viewInfo.image = m_texture;
+
+    viewInfo.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    viewInfo.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    viewInfo.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    viewInfo.channels.a = XGL_CHANNEL_SWIZZLE_A;
+
+    viewInfo.subresourceRange.baseArraySlice = 0;
+    viewInfo.subresourceRange.arraySize = 1;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.mipLevels = 1;
+    viewInfo.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+
+    ASSERT_XGL_SUCCESS(xglCreateImageView(device(), &viewInfo, &m_textureView));
+
+    m_textureViewInfo.view = m_textureView;
+}
+
+void XglRenderTest::InitSampler()
+{
+    XGL_RESULT err;
+
+    XGL_SAMPLER_CREATE_INFO samplerCreateInfo = {};
+    samplerCreateInfo.sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = XGL_TEX_FILTER_NEAREST;
+    samplerCreateInfo.minFilter = XGL_TEX_FILTER_NEAREST;
+    samplerCreateInfo.mipMode = XGL_TEX_MIPMAP_BASE;
+    samplerCreateInfo.addressU = XGL_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressV = XGL_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressW = XGL_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.mipLodBias = 0.0;
+    samplerCreateInfo.maxAnisotropy = 0.0;
+    samplerCreateInfo.compareFunc = XGL_COMPARE_NEVER;
+    samplerCreateInfo.minLod = 0.0;
+    samplerCreateInfo.maxLod = 0.0;
+    samplerCreateInfo.borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE;
+
+    err = xglCreateSampler(device(),&samplerCreateInfo, &m_sampler);
+    ASSERT_XGL_SUCCESS(err);
+}
+
 void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps, int width, int height)
 {
     XGL_RESULT err;
@@ -596,10 +749,11 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[gl_VertexID % 3];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   color = colors[int(mod(gl_VertexID, 3))];\n"
+            "   scale = vec4(0.5, 0.5, 0.5, 1.0);\n"
+            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
             "}\n";
+
 
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
