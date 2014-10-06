@@ -30,6 +30,44 @@
 #include "shader.h"
 #include "compiler/shader/compiler_interface.h"
 
+static XGL_RESULT shader_parse_glsl(struct intel_shader *sh,
+                                   const struct intel_gpu *gpu,
+                                   const XGL_INTEL_COMPILE_GLSL *glsl_header,
+                                   XGL_SIZE size)
+{
+    struct intel_ir *ir;
+
+    ir = icd_alloc(sizeof(*ir), 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+    if (!ir)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    // invoke our program creation as well
+    ir->shader_program = shader_create_program(sh, glsl_header);
+    if (!ir->shader_program)
+        return XGL_ERROR_BAD_SHADER_CODE;
+
+    // TODO: set necessary shader information. This should really
+    // happen as result of create_program call.
+    sh->ir = ir;
+    switch (glsl_header->stage) {
+    case XGL_SHADER_STAGE_VERTEX:
+        sh->uses |= INTEL_SHADER_USE_VID;
+        sh->in_count = 1;
+        sh->out_count = 2;
+        sh->urb_grf_start = 1;
+        break;
+    case XGL_SHADER_STAGE_FRAGMENT:
+        sh->out_count = 1;
+        sh->surface_count = 1;
+        sh->urb_grf_start = 2;
+        break;
+    default:
+        break;
+    }
+
+    return XGL_SUCCESS;
+}
+
 static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
                                    const struct intel_gpu *gpu,
                                    const struct icd_bil_header *bil,
@@ -49,20 +87,7 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    memcpy(ir->kernel, bil + 1, ir->size);
-
-    //
-    // TEMPORARY CODE TO INVOKE COMPILER
-    //
-
-    // invoke our program creation as well
-    ir->shader_program = shader_create_program(sh, bil);
-    if (!ir->shader_program)
-        return XGL_ERROR_BAD_SHADER_CODE;
-
-    //
-    // END TEMPORARY CODE
-    //
+    // TODO: Translate BIL header to internal-IR
 
     sh->ir = ir;
     switch (bil->gen_magic) {
@@ -110,8 +135,11 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     if (dev->exts[INTEL_EXT_COMPILE_GLSL] &&
         info->sType == (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO) {
         // use GLSL compiler extension
-
-
+        ret = shader_parse_glsl(sh, dev->gpu, info->pCode, info->codeSize);
+        if (ret != XGL_SUCCESS) {
+            shader_destroy(&sh->obj);
+            return ret;
+        }
     } else {
         if (info->codeSize < sizeof(*bil))
             return XGL_ERROR_INVALID_MEMORY_SIZE;

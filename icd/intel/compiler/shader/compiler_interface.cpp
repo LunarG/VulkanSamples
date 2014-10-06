@@ -242,7 +242,7 @@ extern "C" {
 // invoke front end compiler to generate an independently linked
 // program object that contains Mesa HIR
 struct gl_shader_program *shader_create_program(struct intel_shader *sh,
-                                                const struct icd_bil_header *bil)
+                                                const XGL_INTEL_COMPILE_GLSL *glsl_header)
 {
     struct gl_context local_ctx;
     struct gl_context *ctx = &local_ctx;
@@ -264,50 +264,27 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
     shader_program->Shaders[shader_program->NumShaders] = shader;
     shader_program->NumShaders++;
 
+    shader->Source = glsl_header->pCode;
 
     // We should parse the glsl text out of bil right now, but
     // instead we are just plopping down our glsl
-    switch(bil->gen_magic) {
-    case 'v':
+    switch(glsl_header->stage) {
+    case XGL_SHADER_STAGE_VERTEX:
         shader->Type = GL_VERTEX_SHADER;
-        shader->Source =
-                "#version 330\n"
-                "out vec4 color;\n"
-                "out vec4 scale;\n"
-                "void main() {\n"
-                "   vec2 vertices[3];"
-                "      vertices[0] = vec2(-0.5, -0.5);\n"
-                "      vertices[1] = vec2( 0.5, -0.5);\n"
-                "      vertices[2] = vec2( 0.5,  0.5);\n"
-                "   vec4 colors[3];\n"
-                "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-                "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-                "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-                "   color = colors[int(mod(gl_VertexID, 3))];\n"
-                "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-                "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
-                "}\n";
         break;
-    case 'w':
+    case XGL_SHADER_STAGE_FRAGMENT:
         shader->Type = GL_FRAGMENT_SHADER;
-        shader->Source =
-                "#version 430\n"
-                "in vec4 color;\n"
-                "in vec4 scale;\n"
-                "layout(location = 0) uniform vec4 foo;\n"
-                "void main() {\n"
-                "   gl_FragColor = color * scale + foo;\n"
-                "}\n";
         break;
     default:
         assert(0);
         break;
     }
 
+    shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);
+
     struct _mesa_glsl_parse_state *state =
         new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
 
-    shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);
     shader_program->Type = shader->Stage;
 
     bool dump_ast = false;

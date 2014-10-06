@@ -41,7 +41,7 @@ struct gl_shader_program;
 void initialize_mesa_context_to_defaults(struct gl_context *ctx);
 
 struct gl_shader_program *shader_create_program(struct intel_shader *sh,
-                                                const struct icd_bil_header *bil);
+                                                const XGL_INTEL_COMPILE_GLSL *glsl_header);
 
 void shader_destroy_program(struct gl_shader_program *shader_program);
 
