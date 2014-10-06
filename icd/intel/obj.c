@@ -154,7 +154,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         break;
     case XGL_DBG_OBJECT_SHADER:
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO ||
-               (dbg->dev->exts[INTEL_EXT_WSI_X11] &&
+               (dbg->dev->exts[INTEL_EXT_COMPILE_GLSL] &&
                 ((XGL_INTEL_STRUCTURE_TYPE)info.header->struct_type == XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO)));
         shallow_copy = sizeof(XGL_SHADER_CREATE_INFO);
         break;
