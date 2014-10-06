@@ -286,7 +286,10 @@ typedef enum _XGL_DESCRIPTOR_SET_SLOT_TYPE
     XGL_SLOT_SHADER_RESOURCE                                = 0x00000001,
     XGL_SLOT_SHADER_UAV                                     = 0x00000002,
     XGL_SLOT_SHADER_SAMPLER                                 = 0x00000003,
-    XGL_SLOT_NEXT_DESCRIPTOR_SET                            = 0x00000004,
+// IMG CHANGE BEGIN - support for vertex input description
+    XGL_SLOT_VERTEX_INPUT                                   = 0x00000004,
+    XGL_SLOT_NEXT_DESCRIPTOR_SET                            = 0x00000005,
+// IMG CHANGE END
 
     XGL_DESCRIPTOR_SET_SLOT_TYPE_BEGIN_RANGE                = XGL_SLOT_UNUSED,
     XGL_DESCRIPTOR_SET_SLOT_TYPE_END_RANGE                  = XGL_SLOT_NEXT_DESCRIPTOR_SET,
@@ -768,7 +771,11 @@ typedef enum _XGL_CHANNEL_FORMAT
     XGL_CH_FMT_BC6U                                         = 28,
     XGL_CH_FMT_BC6S                                         = 29,
     XGL_CH_FMT_BC7                                          = 30,
-    XGL_MAX_CH_FMT                                          = XGL_CH_FMT_BC7,
+// IMG CHANGE BEGIN - support for vertex input description
+    XGL_CH_FMT_R8G8B8                                       = 31,
+    XGL_CH_FMT_R16G16B16                                    = 32,
+    XGL_MAX_CH_FMT                                          = XGL_CH_FMT_R16G16B16,
+// IMG CHANGE END
     XGL_MAX_ENUM(_XGL_CHANNEL_FORMAT)
 } XGL_CHANNEL_FORMAT;
 
@@ -796,6 +803,16 @@ typedef enum _XGL_PROVOKING_VERTEX_CONVENTION
     XGL_NUM_PROVOKING_VERTEX_CONVENTIONS                    = (XGL_PROVOKING_VERTEX_END_RANGE - XGL_PROVOKING_VERTEX_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_PROVOKING_VERTEX_CONVENTION)
 } XGL_PROVOKING_VERTEX_CONVENTION;
+
+// IMG CHANGE BEGIN - support for vertex input description
+typedef enum _XGL_VERTEX_INPUT_STEP_RATE
+{
+    XGL_VERTEX_INPUT_STEP_RATE_VERTEX     = 0x0,
+    XGL_VERTEX_INPUT_STEP_RATE_INSTANCE   = 0x1,
+    XGL_VERTEX_INPUT_STEP_RATE_DRAW       = 0x2,
+    XGL_MAX_ENUM(_XGL_VERTEX_INPUT_STEP_RATE)
+} XGL_VERTEX_INPUT_STEP_RATE;
+// IMG CHANGE END
 
 typedef struct _XGL_FORMAT
 {
@@ -851,6 +868,9 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO        = 31,
     XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO      = 32,
     XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO                    = 33,
+// IMG CHANGE BEGIN - support for vertex input description
+    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 34,
+// IMG CHANGE END
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1405,6 +1425,77 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
     XGL_PIPELINE_SHADER                     cs;
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
 } XGL_COMPUTE_PIPELINE_CREATE_INFO;
+
+// IMG CHANGE BEGIN - support for vertex input description
+
+// Example descriptor set mapping:
+//
+// {
+//     .descriptorCount = 4;
+//     .pDescriptorInfo[0] =
+//     {
+//         .slotObjectType = XGL_SLOT_VERTEX_INPUT;
+//         .shaderEntityIndex = 2;  // describes XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO.pVertexBindingDescriptions[2]
+//     }
+//     .pDescriptorInfo[1] =
+//     {
+//         .slotObjectType = XGL_SLOT_UNUSED;
+//         .shaderEntityIndex = 0;
+//     }
+//     .pDescriptorInfo[2] =
+//     {
+//         .slotObjectType = XGL_SLOT_VERTEX_INPUT;
+//         .shaderEntityIndex = 0;  // describes XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO.pVertexBindingDescriptions[0]
+//     }
+//     .pDescriptorInfo[3] =
+//     {
+//         .slotObjectType = XGL_SLOT_VERTEX_INPUT;
+//         .shaderEntityIndex = 1;  // describes XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO.pVertexBindingDescriptions[1]
+//     }
+// }
+//
+// The shader inputs are mapped to pVertexAttributeDescriptions using a decoration in the BIL.
+//
+//
+// Formats allowed for attributes (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION.format) will be detailed in
+// a table in the specification.
+//
+//
+// Queryable limits:
+//
+// XGL_VERTEX_INPUT_BINDING_DESCRIPTION.strideInBytes
+// XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION.offsetInBytes
+//
+//
+
+typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
+{
+    XGL_UINT                                strideInBytes;  // Distance between vertices in bytes (0 = no advancement)
+
+    XGL_VERTEX_INPUT_STEP_RATE              stepRate;       // Rate at which binding is incremented
+} XGL_VERTEX_INPUT_BINDING_DESCRIPTION;
+
+typedef struct _XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION
+{
+    XGL_UINT                                binding;        // index into vertexBindingDescriptions
+
+    XGL_FORMAT                              format;	        // format of source data
+
+    XGL_UINT                                offsetInBytes;  // Offset of first element in bytes from base of vertex
+} XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION;
+
+typedef struct _XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;          // Should be XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
+    XGL_VOID*                               pNext;          // Pointer to next structure
+
+    XGL_UINT                                bindingCount;   // number of bindings
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
+
+    XGL_UINT                                attributeCount; // number of attributes
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
+} XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+// IMG CHANGE END
 
 typedef struct _XGL_PIPELINE_IA_STATE_CREATE_INFO
 {
