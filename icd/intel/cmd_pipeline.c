@@ -31,6 +31,7 @@
 #include "img.h"
 #include "mem.h"
 #include "pipeline.h"
+#include "sampler.h"
 #include "shader.h"
 #include "state.h"
 #include "view.h"
@@ -1480,13 +1481,111 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
     dw[6] = 0;
 }
 
-static void emit_ps_resources(struct intel_cmd *cmd,
-                              const struct intel_pipeline_rmap *rmap)
+static void emit_ps_samplers(struct intel_cmd *cmd,
+                             const struct intel_pipeline_rmap *rmap)
+{
+    const XGL_UINT border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
+    const XGL_UINT border_stride =
+        u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR);
+    const XGL_UINT surface_count = rmap->rt_count +
+        rmap->resource_count + rmap->uav_count;
+    uint32_t border_offset, *border_dw, sampler_offset, *sampler_dw;
+    XGL_UINT i;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    border_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB,
+            GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR * 4,
+            border_stride * rmap->sampler_count, &border_dw);
+
+    sampler_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_SAMPLER,
+            GEN6_ALIGNMENT_SAMPLER_STATE * 4,
+            4 * rmap->sampler_count, &sampler_dw);
+
+    for (i = 0; i < rmap->sampler_count; i++) {
+        const struct intel_pipeline_rmap_slot *slot =
+            &rmap->slots[surface_count + i];
+        const struct intel_sampler *sampler;
+
+        switch (slot->path_len) {
+        case 0:
+            sampler = NULL;
+            break;
+        case INTEL_PIPELINE_RMAP_SLOT_RT:
+        case INTEL_PIPELINE_RMAP_SLOT_DYN:
+            assert(!"unexpected rmap slot type");
+            sampler = NULL;
+            break;
+        case 1:
+            {
+                const struct intel_dset *dset = cmd->bind.dset.graphics;
+                const XGL_UINT slot_offset = cmd->bind.dset.graphics_offset;
+                const struct intel_dset_slot *dset_slot =
+                    &dset->slots[slot_offset + slot->u.index];
+
+                switch (dset_slot->type) {
+                case INTEL_DSET_SLOT_SAMPLER:
+                    sampler = dset_slot->u.sampler;
+                    break;
+                default:
+                    assert(!"unexpected dset slot type");
+                    sampler = NULL;
+                    break;
+                }
+            }
+            break;
+        default:
+            assert(!"nested descriptor set unsupported");
+            sampler = NULL;
+            break;
+        }
+
+        if (sampler) {
+            memcpy(border_dw, &sampler->cmd[3], border_len * 4);
+
+            sampler_dw[0] = sampler->cmd[0];
+            sampler_dw[1] = sampler->cmd[1];
+            sampler_dw[2] = border_offset;
+            sampler_dw[3] = sampler->cmd[2];
+        } else {
+            sampler_dw[0] = GEN6_SAMPLER_DW0_DISABLE;
+            sampler_dw[1] = 0;
+            sampler_dw[2] = 0;
+            sampler_dw[3] = 0;
+        }
+
+        border_offset += border_stride * 4;
+        border_dw += border_stride;
+        sampler_dw += 4;
+    }
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS,
+                sampler_offset);
+
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_VS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_HS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_DS, 0);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_GS, 0);
+    } else {
+        gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd, 0, 0, sampler_offset);
+    }
+}
+
+static void emit_ps_binding_table(struct intel_cmd *cmd,
+                                  const struct intel_pipeline_rmap *rmap)
 {
     const XGL_UINT surface_count = rmap->rt_count +
         rmap->resource_count + rmap->uav_count;
     uint32_t binding_table[256], offset;
     XGL_UINT i;
+
+    CMD_ASSERT(cmd, 6, 7.5);
 
     assert(surface_count <= ARRAY_SIZE(binding_table));
 
@@ -1525,9 +1624,43 @@ static void emit_ps_resources(struct intel_cmd *cmd,
             }
             break;
         case 1:
+            {
+                const struct intel_dset *dset = cmd->bind.dset.graphics;
+                const XGL_UINT slot_offset = cmd->bind.dset.graphics_offset;
+                const struct intel_dset_slot *dset_slot =
+                    &dset->slots[slot_offset + slot->u.index];
+
+                switch (dset_slot->type) {
+                case INTEL_DSET_SLOT_IMG_VIEW:
+                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                            GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                            dset_slot->u.img_view->cmd_len,
+                            dset_slot->u.img_view->cmd);
+
+                    cmd_reserve_reloc(cmd, 1);
+                    cmd_surface_reloc(cmd, offset, 1,
+                            dset_slot->u.img_view->img->obj.mem->bo,
+                            dset_slot->u.img_view->cmd[1], 0);
+                    break;
+                case INTEL_DSET_SLOT_MEM_VIEW:
+                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                            GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                            dset_slot->u.mem_view.cmd_len,
+                            dset_slot->u.mem_view.cmd);
+
+                    cmd_reserve_reloc(cmd, 1);
+                    cmd_surface_reloc(cmd, offset, 1,
+                            dset_slot->u.mem_view.mem->bo,
+                            dset_slot->u.mem_view.cmd[1], 0);
+                    break;
+                default:
+                    assert(!"unexpected dset slot type");
+                    break;
+                }
+            }
+            break;
         default:
-            /* TODO */
-            assert(!"no dset support");
+            assert(!"nested descriptor set unsupported");
             break;
         }
 
@@ -1550,20 +1683,8 @@ static void emit_ps_resources(struct intel_cmd *cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_DS, 0);
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_GS, 0);
-
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_VS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_HS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_DS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_GS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS, 0);
     } else {
         gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
-        gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd, 0, 0, 0);
     }
 }
 
@@ -1668,7 +1789,8 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_3DSTATE_WM(cmd);
     }
 
-    emit_ps_resources(cmd, cmd->bind.pipeline.graphics->fs.rmap);
+    emit_ps_binding_table(cmd, cmd->bind.pipeline.graphics->fs.rmap);
+    emit_ps_samplers(cmd, cmd->bind.pipeline.graphics->fs.rmap);
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
