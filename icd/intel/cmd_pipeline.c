@@ -36,6 +36,7 @@
 #include "state.h"
 #include "view.h"
 #include "cmd_priv.h"
+#include "sampler.h"
 
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              int prim_type, bool indexed,
@@ -1604,6 +1605,13 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                     cmd_surface_reloc(cmd, offset, 1,
                             dset_slot->u.mem_view.mem->bo,
                             dset_slot->u.mem_view.cmd[1], 0);
+                    break;
+                case INTEL_DSET_SLOT_SAMPLER:
+                    assert(0 == cmd->bind.dset.graphics_offset);
+
+                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                                               GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                                               16, dset_slot->u.sampler->cmd);
                     break;
                 default:
                     assert(!"unexpected dset slot type");

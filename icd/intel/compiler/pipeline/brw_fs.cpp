@@ -3391,6 +3391,9 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
    // the compile results back to the brw_context
    brw_shader_program_save_wm_compile(brw->shader_prog, c);
 
+   // populate some other fields that would normally happen at draw time
+   brw->wm.base.sampler_count = _mesa_fls(fp->Base.SamplersUsed);
+
    brw_wm_clear_compile(brw, c);
 
    return true;

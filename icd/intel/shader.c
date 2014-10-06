@@ -90,21 +90,6 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
     // TODO: Translate BIL header to internal-IR
 
     sh->ir = ir;
-    switch (bil->gen_magic) {
-    case 'v':
-        sh->uses |= INTEL_SHADER_USE_VID;
-        sh->in_count = 1;
-        sh->out_count = 2;
-        sh->urb_grf_start = 1;
-        break;
-    case 'w':
-        sh->out_count = 1;
-        sh->surface_count = 1;
-        sh->urb_grf_start = 2;
-        break;
-    default:
-        break;
-    }
 
     return XGL_SUCCESS;
 }
