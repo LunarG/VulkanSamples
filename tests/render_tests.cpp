@@ -482,8 +482,8 @@ void XglRenderTest::InitTexture()
     XGL_FORMAT_PROPERTIES image_fmt;
 
     // size of LunarG image
-    XGL_UINT w = 300;
-    XGL_UINT h = 280;
+    XGL_UINT w = 16;
+    XGL_UINT h = 16;
 
     mipCount = 0;
 
@@ -517,7 +517,7 @@ void XglRenderTest::InitTexture()
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
     imageCreateInfo.tiling = XGL_LINEAR_TILING;
-    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
 
     err = xglCreateImage(device(), &imageCreateInfo, &m_texture);
     ASSERT_XGL_SUCCESS(err);
@@ -544,15 +544,15 @@ void XglRenderTest::InitTexture()
     ASSERT_XGL_SUCCESS(err);
 
     XGL_UINT8 *pData;
-    const int texture_size = 300*280*4; // RGBA_UNORM
+    const int texture_size = w*h*4; // RGBA_UNORM
     char data[texture_size];
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; j += 4) {
-            // grey
-            data[i + j + 0] = 0x80;
-            data[i + j + 1] = 0x80;
-            data[i + j + 2] = 0x80;
-            data[i + j + 3] = 0xFF;
+            // purple
+            data[i * w + j + 0] = 0xFF;
+            data[i * w + j + 1] = 0x00;
+            data[i * w + j + 2] = 0xFF;
+            data[i * w + j + 3] = 0xFF;
         }
     }
 
@@ -707,15 +707,19 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
 #endif
 
     const int constantCount = 4;
-    const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
+    const float constants[constantCount] = { 0.0, 0.0, 0.0, 0.0 };
     InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
 
-    // Create descriptor set for a uniform resource
+    // Create a texture too
+    InitTexture();
+    InitSampler();
+
+    // Create descriptor set for a uniform resource, texture, and sampler
     XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
     descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-    descriptorInfo.slots = 1;
+    descriptorInfo.slots = 3;
 
-    // create a descriptor set with a single slot
+    // create a descriptor set with multiple slots
     err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
     ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
 
@@ -723,8 +727,12 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
 
     // write the constant buffer view to the descriptor set
+    // the order here matters... i.e. swapping the texture with uniform breaks the test...
+    // we need to understand how to support any order of declaration, probably via intel_shader
     xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
+    xglAttachImageViewDescriptors( m_rsrcDescSet, 0, 1, &m_textureViewInfo );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 1, 1, &m_constantBufferView );
+    xglAttachSamplerDescriptors(m_rsrcDescSet, 2, 1, &m_sampler);
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
     static const char *vertShaderText =
@@ -740,6 +748,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "#version 130\n"
             "out vec4 color;\n"
             "out vec4 scale;\n"
+            "out vec2 samplePos;\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -750,11 +759,14 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
             "   color = colors[int(mod(gl_VertexID, 3))];\n"
-            "   scale = vec4(0.5, 0.5, 0.5, 1.0);\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 1.0, 0.0);\n"
+            "      positions[2] = vec2( 1.0, 1.0);\n"
+            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
+            "   samplePos = vec2(0.0, 0.0);//positions[int(mod(gl_VertexID, 3))];\n"
             "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
             "}\n";
-
-
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
                                          vertShader2, vs));
@@ -778,13 +790,16 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
        "   gl_FragColor = color * scale;\n"
        "}\n";
     static const char *fragShader2 =
-            "#version 430\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "layout(location = 0) uniform vec4 foo;\n"
-            "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
+       "#version 430\n"
+       "in vec4 color;\n"
+       "in vec4 scale;\n"
+       "in vec2 samplePos;\n"
+       "uniform sampler2D surface;\n"
+       "layout(location = 0) uniform vec4 foo;\n"
+       "void main() {\n"
+       "   vec4 texColor = textureLod(surface, samplePos, 0.0);\n"
+       "   gl_FragColor = color * scale * foo + texColor;\n"
+       "}\n";
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
                                          fragShaderText, ps));
@@ -797,13 +812,18 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     for (unsigned int i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)
         ps_stage.shader.descriptorSetMapping[i].descriptorCount = 0;
 
-    const int slots = 1;
+    const int slots = 3;
+    assert(slots == descriptorInfo.slots);
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
     slotInfo[0].shaderEntityIndex = 0;
     slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    slotInfo[1].shaderEntityIndex = 1;
+    slotInfo[1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    slotInfo[2].shaderEntityIndex = 0;
+    slotInfo[2].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
 
     ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
-    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 1;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = descriptorInfo.slots;
 
     ps_stage.shader.linkConstBufferCount = 0;
     ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
