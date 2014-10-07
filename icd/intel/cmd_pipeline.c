@@ -735,9 +735,6 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
         dw4 |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     }
 
-    if (fs->pcb_size)
-        dw4 |= GEN7_PS_DW4_PUSH_CONSTANT_ENABLE;
-
     if (fs->in_count)
         dw4 |= GEN7_PS_DW4_ATTR_ENABLE;
 
@@ -1405,39 +1402,14 @@ static void gen6_pcb(struct intel_cmd *cmd, int subop,
                      const struct intel_pipeline_shader *sh)
 {
     const uint8_t cmd_len = 5;
-    /*
-     * TODO It is actually 2048 for non-VS PCB.  But we need to upload the
-     * data to multiple PCBs when the size is greater than 1024.
-     */
-    const XGL_UINT max_size = 1024;
-    uint32_t offset, dw0, *dw;
-
-    if (sh->pcb_size > max_size) {
-        cmd->result = XGL_ERROR_UNKNOWN;
-        return;
-    }
-
-    dw0 = GEN6_RENDER_TYPE_RENDER |
-          GEN6_RENDER_SUBTYPE_3D |
-          subop |
-          (cmd_len - 2);
-    offset = 0;
-
-    if (sh->pcb_size) {
-        const XGL_SIZE alignment = 32;
-        const XGL_SIZE size = u_align(sh->pcb_size, alignment);
-
-        offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, alignment,
-                size / sizeof(uint32_t), &dw);
-        memcpy(dw, sh->pcb, sh->pcb_size);
-
-        dw0 |= GEN6_PCB_ANY_DW0_PCB0_VALID;
-        offset |= size / alignment - 1;
-    }
+    uint32_t *dw;
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
-    dw[0] = dw0;
-    dw[1] = offset;
+
+    dw[0] = GEN6_RENDER_TYPE_RENDER |
+            GEN6_RENDER_SUBTYPE_3D |
+            subop | (cmd_len - 2);
+    dw[1] = 0;
     dw[2] = 0;
     dw[3] = 0;
     dw[4] = 0;
@@ -1447,35 +1419,16 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
                      const struct intel_pipeline_shader *sh)
 {
     const uint8_t cmd_len = 7;
-    const uint32_t dw0 = GEN6_RENDER_TYPE_RENDER |
-                         GEN6_RENDER_SUBTYPE_3D |
-                         subop |
-                         (cmd_len - 2);
-    const XGL_UINT max_size = 2048;
-    XGL_UINT pcb_len = 0;
-    uint32_t offset = 0, *dw;
-
-    if (sh->pcb_size > max_size) {
-        cmd->result = XGL_ERROR_UNKNOWN;
-        return;
-    }
-
-    if (sh->pcb_size) {
-        const XGL_SIZE alignment = 32;
-        const XGL_SIZE size = u_align(sh->pcb_size, alignment);
-
-        pcb_len = size / alignment;
-
-        offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, alignment,
-                size / sizeof(uint32_t), &dw);
-        memcpy(dw, sh->pcb, sh->pcb_size);
-    }
+    uint32_t *dw;
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
-    dw[0] = dw0;
-    dw[1] = pcb_len;
+
+    dw[0] = GEN6_RENDER_TYPE_RENDER |
+            GEN6_RENDER_SUBTYPE_3D |
+            subop | (cmd_len - 2);
+    dw[1] = 0;
     dw[2] = 0;
-    dw[3] = offset;
+    dw[3] = 0;
     dw[4] = 0;
     dw[5] = 0;
     dw[6] = 0;

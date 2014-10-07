@@ -103,9 +103,6 @@ struct intel_pipeline_shader {
     XGL_FLAGS barycentric_interps;
 
     struct intel_pipeline_rmap *rmap;
-
-    void *pcb;
-    XGL_SIZE pcb_size;
 };
 
 /*
