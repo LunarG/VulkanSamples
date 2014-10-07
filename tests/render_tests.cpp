@@ -618,9 +618,10 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
 
     static const char *fragShaderText =
        "#version 130\n"
-       "uniform vec4 foo;\n"
+       "in vec4 color;\n"
+       "in vec4 scale;\n"
        "void main() {\n"
-       "   gl_FragColor = foo;\n"
+       "   gl_FragColor = color * scale;\n"
        "}\n";
     static const char *fragShader2 =
             "#version 430\n"
@@ -632,7 +633,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
-                                         fragShader2, ps));
+                                         fragShaderText, ps));
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;

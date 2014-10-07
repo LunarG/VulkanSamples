@@ -132,7 +132,7 @@ public:
    // Ask LunarGlass for mat*vec & vec*mat intrinsics
    bool useColumnBasedMatrixIntrinsics() { return true; }
 
-//   bool useLogicalIo() { return true; }
+   bool useLogicalIo() { return true; }
 
 private:
    const EShLanguage language;
