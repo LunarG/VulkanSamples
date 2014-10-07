@@ -31,6 +31,14 @@ struct demo {
     } buffers[DEMO_BUFFER_COUNT];
 
     struct {
+        XGL_FORMAT format;
+
+        XGL_IMAGE image;
+        XGL_GPU_MEMORY mem;
+        XGL_DEPTH_STENCIL_VIEW view;
+    } depth;
+
+    struct {
         XGL_SAMPLER sampler;
 
         XGL_IMAGE image;
@@ -67,6 +75,11 @@ static void demo_draw_build_cmd(struct demo *demo)
         .view = demo->buffers[demo->current_buffer].view,
         .colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
     };
+    const XGL_DEPTH_STENCIL_BIND_INFO depth_stencil = {
+        .view = demo->depth.view,
+        .depthState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
+        .stencilState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
+    };
     XGL_RESULT err;
 
     err = xglBeginCommandBuffer(demo->cmd,
@@ -87,7 +100,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
-    xglCmdBindAttachments(demo->cmd, 1, &color_attachment, NULL);
+    xglCmdBindAttachments(demo->cmd, 1, &color_attachment, &depth_stencil);
 
     xglCmdDraw(demo->cmd, 0, 3, 0, 1);
 
@@ -147,6 +160,104 @@ static void demo_prepare_buffers(struct demo *demo)
 
         err = xglCreateColorAttachmentView(demo->device,
                 &color_attachment_view, &demo->buffers[i].view);
+        assert(!err);
+    }
+}
+
+static void demo_prepare_depth(struct demo *demo)
+{
+    const XGL_FORMAT depth_format = { XGL_CH_FMT_R16, XGL_NUM_FMT_DS };
+    const uint16_t depth_value = (uint16_t) (0.5f * 65535);
+    const XGL_IMAGE_CREATE_INFO image = {
+        .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = NULL,
+        .imageType = XGL_IMAGE_2D,
+        .format = depth_format,
+        .extent = { demo->width, demo->height, 1 },
+        .mipLevels = 1,
+        .arraySize = 1,
+        .samples = 1,
+        .tiling = XGL_OPTIMAL_TILING,
+        .usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT,
+        .flags = 0,
+    };
+    XGL_MEMORY_ALLOC_INFO mem_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext = NULL,
+        .allocationSize = 0,
+        .alignment = 0,
+        .flags = 0,
+        .heapCount = 0,
+        .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
+    };
+    XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view = {
+        .sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
+        .pNext = NULL,
+        .image = XGL_NULL_HANDLE,
+        .mipLevel = 0,
+        .baseArraySlice = 0,
+        .arraySize = 1,
+        .flags = 0,
+    };
+    XGL_MEMORY_REQUIREMENTS mem_reqs;
+    XGL_SIZE mem_reqs_size;
+    XGL_RESULT err;
+
+    demo->depth.format = depth_format;
+
+    /* create image */
+    err = xglCreateImage(demo->device, &image,
+            &demo->depth.image);
+    assert(!err);
+
+    err = xglGetObjectInfo(demo->depth.image,
+            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+            &mem_reqs_size, &mem_reqs);
+    assert(!err && mem_reqs_size == sizeof(mem_reqs));
+
+    mem_alloc.allocationSize = mem_reqs.size;
+    mem_alloc.alignment = mem_reqs.alignment;
+    mem_alloc.heapCount = mem_reqs.heapCount;
+    memcpy(mem_alloc.heaps, mem_reqs.heaps,
+            sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+
+    /* allocate memory */
+    err = xglAllocMemory(demo->device, &mem_alloc,
+            &demo->depth.mem);
+    assert(!err);
+
+    /* bind memory */
+    err = xglBindObjectMemory(demo->depth.image,
+            demo->depth.mem, 0);
+    assert(!err);
+
+    /* create image view */
+    view.image = demo->depth.image;
+    err = xglCreateDepthStencilView(demo->device, &view,
+            &demo->depth.view);
+    assert(!err);
+
+    /* clear the buffer */
+    {
+        const XGL_INT tw = 128 / sizeof(uint16_t);
+        const XGL_INT th = 32;
+        XGL_INT i, j, w, h;
+        XGL_VOID *data;
+
+        w = (demo->width + tw - 1) / tw;
+        h = (demo->height + th - 1) / th;
+
+        err = xglMapMemory(demo->depth.mem, 0, &data);
+        assert(!err);
+
+        for (i = 0; i < w * h; i++) {
+            uint16_t *tile = (uint16_t *) ((char *) data + 4096 * i);
+
+            for (j = 0; j < 2048; j++)
+                tile[j] = depth_value;
+        }
+
+        err = xglUnmapMemory(demo->depth.mem);
         assert(!err);
     }
 }
@@ -529,6 +640,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&db, 0, sizeof(db));
     db.sType = XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO;
+    db.format = demo->depth.format;
 
     memset(&vs_slots, 0, sizeof(vs_slots));
     vs_slots[2 * DEMO_TEXTURE_COUNT].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
@@ -586,6 +698,8 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     viewport.scissorEnable = XGL_FALSE;
     viewport.viewports[0].width = (XGL_FLOAT) demo->width;
     viewport.viewports[0].height = (XGL_FLOAT) demo->height;
+    viewport.viewports[0].minDepth = (XGL_FLOAT) 0.0f;
+    viewport.viewports[0].maxDepth = (XGL_FLOAT) 1.0f;
 
     memset(&raster, 0, sizeof(raster));
     raster.sType = XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO;
@@ -603,6 +717,10 @@ static void demo_prepare_dynamic_states(struct demo *demo)
 
     memset(&depth_stencil, 0, sizeof(depth_stencil));
     depth_stencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil.depthTestEnable = XGL_TRUE;
+    depth_stencil.depthWriteEnable = XGL_TRUE;
+    depth_stencil.depthFunc = XGL_COMPARE_GREATER;
+    depth_stencil.depthBoundsEnable = XGL_FALSE;
 
     err = xglCreateViewportState(demo->device, &viewport, &demo->viewport);
     assert(!err);
@@ -633,9 +751,11 @@ static void demo_prepare(struct demo *demo)
     XGL_RESULT err;
 
     demo_prepare_buffers(demo);
+    demo_prepare_depth(demo);
     demo_prepare_textures(demo);
     demo_prepare_vertices(demo);
     demo_prepare_descriptor_set(demo);
+
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
@@ -810,6 +930,10 @@ static void demo_cleanup(struct demo *demo)
         xglFreeMemory(demo->textures[i].mem);
         xglDestroyObject(demo->textures[i].sampler);
     }
+
+    xglDestroyObject(demo->depth.view);
+    xglDestroyObject(demo->depth.image);
+    xglFreeMemory(demo->depth.mem);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         xglDestroyObject(demo->buffers[i].view);
