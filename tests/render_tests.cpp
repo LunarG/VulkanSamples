@@ -475,116 +475,135 @@ void XglRenderTest::InitConstantBuffer(int constantCount, int constantSize, cons
 
 void XglRenderTest::InitTexture()
 {
+#define DEMO_TEXTURE_COUNT 1
+
+    const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
+    const XGL_INT tex_width = 16;
+    const XGL_INT tex_height = 16;
+    const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
+        { 0xffff0000, 0xff00ff00 },
+    };
     XGL_RESULT err;
-    XGL_UINT mipCount;
-    XGL_SIZE size;
-    XGL_FORMAT fmt;
-    XGL_FORMAT_PROPERTIES image_fmt;
+    XGL_UINT i;
 
-    // size of LunarG image
-    XGL_UINT w = 16;
-    XGL_UINT h = 16;
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        const XGL_SAMPLER_CREATE_INFO sampler = {
+            .sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .pNext = NULL,
+            .magFilter = XGL_TEX_FILTER_NEAREST,
+            .minFilter = XGL_TEX_FILTER_NEAREST,
+            .mipMode = XGL_TEX_MIPMAP_BASE,
+            .addressU = XGL_TEX_ADDRESS_WRAP,
+            .addressV = XGL_TEX_ADDRESS_WRAP,
+            .addressW = XGL_TEX_ADDRESS_WRAP,
+            .mipLodBias = 0.0f,
+            .maxAnisotropy = 0,
+            .compareFunc = XGL_COMPARE_NEVER,
+            .minLod = 0.0f,
+            .maxLod = 0.0f,
+            .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
+        };
+        const XGL_IMAGE_CREATE_INFO image = {
+            .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .pNext = NULL,
+            .imageType = XGL_IMAGE_2D,
+            .format = tex_format,
+            .extent = { tex_width, tex_height, 1 },
+            .mipLevels = 1,
+            .arraySize = 1,
+            .samples = 1,
+            .tiling = XGL_LINEAR_TILING,
+            .usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT,
+            .flags = 0,
+        };
+        XGL_MEMORY_ALLOC_INFO mem_alloc;
+            mem_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+            mem_alloc.pNext = NULL;
+            mem_alloc.allocationSize = 0;
+            mem_alloc.alignment = 0;
+            mem_alloc.flags = 0;
+            mem_alloc.heapCount = 0;
+            mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+        XGL_IMAGE_VIEW_CREATE_INFO view;
+            view.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            view.pNext = NULL;
+            view.image = XGL_NULL_HANDLE;
+            view.viewType = XGL_IMAGE_VIEW_2D;
+            view.format = image.format;
+            view.channels.r = XGL_CHANNEL_SWIZZLE_R;
+            view.channels.g = XGL_CHANNEL_SWIZZLE_G;
+            view.channels.b = XGL_CHANNEL_SWIZZLE_B;
+            view.channels.a = XGL_CHANNEL_SWIZZLE_A;
+            view.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+            view.subresourceRange.baseMipLevel = 0;
+            view.subresourceRange.mipLevels = 1;
+            view.subresourceRange.baseArraySlice = 0;
+            view.subresourceRange.arraySize = 1;
+            view.minLod = 0.0f;
 
-    mipCount = 0;
+        XGL_MEMORY_REQUIREMENTS mem_reqs;
+        XGL_SIZE mem_reqs_size;
 
-    XGL_UINT _w = w;
-    XGL_UINT _h = h;
-    while( ( _w > 0 ) || ( _h > 0 ) )
-    {
-        _w >>= 1;
-        _h >>= 1;
-        mipCount++;
+        /* create sampler */
+        err = xglCreateSampler(device(), &sampler, &m_sampler);
+        assert(!err);
+
+        /* create image */
+        err = xglCreateImage(device(), &image, &m_texture);
+        assert(!err);
+
+        err = xglGetObjectInfo(m_texture,
+                XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                &mem_reqs_size, &mem_reqs);
+        assert(!err && mem_reqs_size == sizeof(mem_reqs));
+
+        mem_alloc.allocationSize = mem_reqs.size;
+        mem_alloc.alignment = mem_reqs.alignment;
+        mem_alloc.heapCount = mem_reqs.heapCount;
+        memcpy(mem_alloc.heaps, mem_reqs.heaps,
+                sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+
+        /* allocate memory */
+        err = xglAllocMemory(device(), &mem_alloc, &m_textureMem);
+        assert(!err);
+
+        /* bind memory */
+        err = xglBindObjectMemory(m_texture, m_textureMem, 0);
+        assert(!err);
+
+        /* create image view */
+        view.image = m_texture;
+        err = xglCreateImageView(device(), &view, &m_textureView);
+        assert(!err);
     }
 
-    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    fmt.numericFormat = XGL_NUM_FMT_UNORM;
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        const XGL_IMAGE_SUBRESOURCE subres = {
+            .aspect = XGL_IMAGE_ASPECT_COLOR,
+            .mipLevel = 0,
+            .arraySlice = 0,
+        };
+        XGL_SUBRESOURCE_LAYOUT layout;
+        XGL_SIZE layout_size;
+        XGL_VOID *data;
+        XGL_INT x, y;
 
-    size = sizeof(image_fmt);
-    err = xglGetFormatInfo(this->device(), fmt,
-                           XGL_INFO_TYPE_FORMAT_PROPERTIES,
-                           &size, &image_fmt);
-    ASSERT_XGL_SUCCESS(err);
+        err = xglGetImageSubresourceInfo(m_texture, &subres,
+                XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
+        assert(!err && layout_size == sizeof(layout));
 
+        err = xglMapMemory(m_textureMem, 0, &data);
+        assert(!err);
 
-    XGL_IMAGE_CREATE_INFO imageCreateInfo = {};
-    imageCreateInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = XGL_IMAGE_2D;
-    imageCreateInfo.format = fmt;
-    imageCreateInfo.arraySize = 1;
-    imageCreateInfo.extent.width = w;
-    imageCreateInfo.extent.height = h;
-    imageCreateInfo.extent.depth = 1;
-    imageCreateInfo.mipLevels = mipCount;
-    imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = XGL_LINEAR_TILING;
-    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
-
-    err = xglCreateImage(device(), &imageCreateInfo, &m_texture);
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
-    err = xglGetObjectInfo(m_texture, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
-
-    XGL_MEMORY_ALLOC_INFO mem_info;
-
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
-    mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(device(), &mem_info, &m_textureMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_UINT8 *pData;
-    const int texture_size = w*h*4; // RGBA_UNORM
-    char data[texture_size];
-    for (int i = 0; i < h; ++i) {
-        for (int j = 0; j < w; j += 4) {
-            // purple
-            data[i * w + j + 0] = 0xFF;
-            data[i * w + j + 1] = 0x00;
-            data[i * w + j + 2] = 0xFF;
-            data[i * w + j + 3] = 0xFF;
+        for (y = 0; y < tex_height; y++) {
+            uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
+            for (x = 0; x < tex_width; x++)
+                row[x] = tex_colors[i][(x & 1) ^ (y & 1)];
         }
+
+        err = xglUnmapMemory(m_textureMem);
+        assert(!err);
     }
-
-    err = xglMapMemory(m_textureMem, 0, (XGL_VOID **) &pData);
-    ASSERT_XGL_SUCCESS(err);
-
-    memcpy(pData, data, texture_size);
-
-    err = xglUnmapMemory(m_textureMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglBindObjectMemory(m_texture, m_textureMem, 0);
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
-    viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.viewType = XGL_IMAGE_VIEW_2D;
-    viewInfo.format = fmt;
-    viewInfo.image = m_texture;
-
-    viewInfo.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    viewInfo.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    viewInfo.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    viewInfo.channels.a = XGL_CHANNEL_SWIZZLE_A;
-
-    viewInfo.subresourceRange.baseArraySlice = 0;
-    viewInfo.subresourceRange.arraySize = 1;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.mipLevels = 1;
-    viewInfo.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-
-    ASSERT_XGL_SUCCESS(xglCreateImageView(device(), &viewInfo, &m_textureView));
 
     m_textureViewInfo.view = m_textureView;
 }
@@ -745,7 +764,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
     static const char *vertShader2 =
-            "#version 130\n"
+            "#version 330\n"
             "out vec4 color;\n"
             "out vec4 scale;\n"
             "out vec2 samplePos;\n"
@@ -764,7 +783,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      positions[1] = vec2( 1.0, 0.0);\n"
             "      positions[2] = vec2( 1.0, 1.0);\n"
             "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   samplePos = vec2(0.0, 0.0);//positions[int(mod(gl_VertexID, 3))];\n"
+            "   samplePos = positions[int(mod(gl_VertexID, 3))];\n"
             "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
             "}\n";
 
