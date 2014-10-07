@@ -999,6 +999,54 @@ void XglRenderTest::DrawTriangleTest()
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
     xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+}
+
+void XglRenderTest::DrawRotatedTriangleTest()
+{
+    // TODO : This test will pass a matrix into VS to affect triangle orientation.
+}
+
+void XglRenderTest::DrawTriangleTest()
+{
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
+    int width = 256, height = 256;
+    CreateDefaultPipeline(&pipeline, &vs, &ps, width, height);
+    //ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
+    ASSERT_XGL_SUCCESS(err);
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    XGL_QUERY_POOL query;
+    XGL_GPU_MEMORY query_mem;
+    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
+
+    XglImage *renderTarget;
+    XGL_FORMAT fmt = {
+        XGL_CH_FMT_R8G8B8A8,
+        XGL_NUM_FMT_UNORM
+    };
+    ASSERT_NO_FATAL_FAILURE(m_device->CreateImage(width, height, fmt,
+                                                  XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
+                                                  XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                                  &renderTarget));
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds(renderTarget);
+    GenerateBindRenderTargetCmd(renderTarget);
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
+//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
     xglCmdResetQueryPool(m_cmdBuffer, query, 0, 1);
