@@ -456,6 +456,7 @@ static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
     assert(vs->out_count >= 2);
     attr_skip = 2;
     attr_count = vs->out_count - attr_skip;
+    printf("%d %d\n", fs->in_count, attr_count);
     assert(fs->in_count == attr_count);
     assert(fs->in_count <= 32);
 

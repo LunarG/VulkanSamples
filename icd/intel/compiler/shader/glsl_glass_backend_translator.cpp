@@ -934,7 +934,13 @@ void MesaGlassTranslator::addGlobal(const llvm::GlobalVariable* global)
    const std::string&     name     = global->getName();
 
    // Remember the ir_variable_mode for this declaration
-   globalVarModeMap[name] = irMode;
+   if (globalVarModeMap.find(name) == globalVarModeMap.end()) {
+      globalVarModeMap[name] = irMode;
+   } else {
+      // If it already existed in the map, it's due to an IO declaration,
+      // and we don't want to step on that, so bail out.
+      return;
+   }
 
    // interface block members are hoisted to global scope in HIR.  Thus, we do
    // not add globals for them.
@@ -985,7 +991,8 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
    const ir_variable_mode irVarMode       = VariableQualifierToIR(qualifier);
 
    // Register name -> metadata mapping for this declaration
-   typenameMdMap[name] = mdNode;
+   typenameMdMap[name]    = mdNode;
+   globalVarModeMap[name] = irVarMode;
 
    // Because of short circuit evaluation, this is safe
    const bool isPerVertex = irInterfaceType->name && strcmp(irInterfaceType->name, "gl_PerVertex") == 0;
@@ -2498,8 +2505,8 @@ MesaGlassTranslator::emitIRIOIntrinsic(const llvm::IntrinsicInst* llvmInst, bool
    ioVar->data.used          = true;
 
    if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
-      ioVar->data.location          = layoutLocation;
       ioVar->data.explicit_location = true;
+      ioVar->data.location          = layoutLocation;
    }
 
    ioVar->data.index         = slotOffset;

@@ -584,7 +584,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
     static const char *vertShader2 =
-            "#version 330\n"
+            "#version 130\n"
             "out vec4 color;\n"
             "out vec4 scale;\n"
             "void main() {\n"
@@ -596,9 +596,9 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[int(mod(gl_VertexID, 3))];\n"
+            "   color = colors[gl_VertexID % 3];\n"
             "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
 

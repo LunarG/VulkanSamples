@@ -29,6 +29,8 @@
 #include "glslang/Include/ShHandle.h"
 #include "glslang/Public/ShaderLang.h"
 #include "Frontends/glslang/GlslangToTop.h"
+#include "Frontends/Bil/BilToTop.h"
+#include "BIL/GlslangToBil.h"
 #include "glsl_glass_manager.h"
 #include "glsl_glass_backend_translator.h"
 
@@ -1582,6 +1584,8 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
    }
 }
 
+//#define USEBIL
+
 void
 _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader,
                                 bool dump_ast, bool dump_hir)
@@ -1645,10 +1649,16 @@ _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader
          if (! intermediate)
             continue;
 
+#ifdef USEBIL
+         std::vector<unsigned int> bil;
+         glslang::GlslangToBil(*intermediate, bil);
+         gla::BilToTop(bil, *manager);
+#else // USEBIL
          // Translate glslang to top.  TODO: move to encapsulation function
          TranslateGlslangToTop(*intermediate, *manager);
+#endif // USEBIL
 
-         if (dump_hir && false)
+         if (dump_hir)
             manager->dump("\nTop IR:\n");
 
          // Top IR to bottom IR

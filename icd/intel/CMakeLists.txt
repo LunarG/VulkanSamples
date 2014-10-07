@@ -58,12 +58,13 @@ set_target_properties(icd
 SET(COMPILER_LINK_DIRS
     ${GLSLANG_BUILD}/install/lib
     ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib
-    ${LUNARGLASS_BUILD}/Core
-    ${LUNARGLASS_BUILD}/Frontends/glslang
-    ${LUNARGLASS_BUILD}/Core/Passes/Transforms
-    ${LUNARGLASS_BUILD}/Core/Passes/Immutable
-    ${LUNARGLASS_BUILD}/Core/Passes/Analysis
-    ${LUNARGLASS_BUILD}/Core/Passes/Util
+    ${LUNARGLASS_PREFIX}/build/Core
+    ${LUNARGLASS_PREFIX}/build/Frontends/glslang
+    ${LUNARGLASS_PREFIX}/build/Frontends/Bil
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Transforms
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Immutable
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Analysis
+    ${LUNARGLASS_PREFIX}/build/Core/Passes/Util
 )
 
 pkg_check_modules(DRM REQUIRED libdrm libdrm_intel)
@@ -76,9 +77,11 @@ link_directories (
 
 SET(COMPILER_LIBS
    glslangFrontend
+   BilFrontend
    core
    LLVMipo
    glslang
+   BIL
    OGLCompiler
    ${LLVM_LIBS_ALL}
 )
