@@ -124,7 +124,7 @@ struct intel_layout {
 };
 
 void intel_layout_init(struct intel_layout *layout,
-                       const struct intel_dev *dev,
+                       struct intel_dev *dev,
                        const XGL_IMAGE_CREATE_INFO *info,
                        bool scanout);
 

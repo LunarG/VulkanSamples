@@ -43,6 +43,8 @@ enum {
 };
 
 struct intel_layout_params {
+   struct intel_dev *dev;
+
    const struct intel_gpu *gpu;
    const XGL_IMAGE_CREATE_INFO *info;
    bool scanout;
@@ -778,6 +780,13 @@ layout_want_hiz(const struct intel_layout *layout,
        info->mipLevels > 1)
       return false;
 
+   if (true) {
+       intel_dev_log(params->dev, XGL_DBG_MSG_PERF_WARNING,
+               XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+               "HiZ disabled");
+       return false;
+   }
+
    return true;
 }
 
@@ -1264,13 +1273,14 @@ layout_calculate_mcs_size(struct intel_layout *layout,
  * Initialize the layout.  Callers should zero-initialize \p layout first.
  */
 void intel_layout_init(struct intel_layout *layout,
-                       const struct intel_dev *dev,
+                       struct intel_dev *dev,
                        const XGL_IMAGE_CREATE_INFO *info,
                        bool scanout)
 {
    struct intel_layout_params params;
 
    memset(&params, 0, sizeof(params));
+   params.dev = dev;
    params.gpu = dev->gpu;
    params.info = info;
    params.scanout = scanout;
