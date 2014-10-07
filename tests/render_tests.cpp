@@ -764,7 +764,7 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
     static const char *vertShader2 =
-            "#version 330\n"
+            "#version 130\n"
             "out vec4 color;\n"
             "out vec4 scale;\n"
             "out vec2 samplePos;\n"
@@ -777,14 +777,14 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
             "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[int(mod(gl_VertexID, 3))];\n"
+            "   color = colors[gl_VertexID % 3];\n"
             "   vec2 positions[3];"
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 1.0, 0.0);\n"
             "      positions[2] = vec2( 1.0, 1.0);\n"
             "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   samplePos = positions[int(mod(gl_VertexID, 3))];\n"
-            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
+            "   samplePos = positions[gl_VertexID % 3];\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
