@@ -36,7 +36,6 @@
 #include "state.h"
 #include "view.h"
 #include "cmd_priv.h"
-#include "sampler.h"
 
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              int prim_type, bool indexed,
