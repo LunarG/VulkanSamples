@@ -199,12 +199,17 @@ public:
     void CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
                          XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem);
     void DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem);
+    void CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps, int width, int height);
+    void GenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
+    void GenerateBindRenderTargetCmd(XglImage *renderTarget);
+    void GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
 
     XGL_DEVICE device() {return m_device->device();}
     void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, XGL_SHADER *pshader);
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void DrawTriangleTest();
+    void DrawRotatedTriangleTest();
 
 protected:
     XGL_APPLICATION_INFO app_info;
@@ -429,15 +434,13 @@ void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglRenderTest::DrawTriangleTest()
+void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps, int width, int height)
 {
     XGL_RESULT err;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
-    XGL_SHADER vs, ps;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
-    XGL_PIPELINE pipeline;
-    int width = 256, height = 256;
+    //XGL_PIPELINE pipeline;
 
     // create a raster state (solid, back-face culling)
     XGL_RASTER_STATE_CREATE_INFO raster = {};
@@ -499,16 +502,6 @@ void XglRenderTest::DrawTriangleTest()
     err = xglCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
     ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
 
-    XglImage *renderTarget;
-    XGL_FORMAT fmt = {
-        XGL_CH_FMT_R8G8B8A8,
-        XGL_NUM_FMT_UNORM
-    };
-    ASSERT_NO_FATAL_FAILURE(m_device->CreateImage(width, height, fmt,
-                                                  XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
-                                                  XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                                  &renderTarget));
-
 #if 0
     // Create descriptor set for our one resource
     XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
@@ -535,24 +528,24 @@ void XglRenderTest::DrawTriangleTest()
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
 
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX, &vs));
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX, vs));
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
-    vs_stage.shader.shader = vs;
+    vs_stage.shader.shader = *vs;
     vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
     vs_stage.shader.linkConstBufferCount = 0;
     vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT, &ps));
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT, ps));
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
-    ps_stage.shader.shader = ps;
+    ps_stage.shader.shader = *ps;
     // TODO: Do we need a descriptor set mapping for fragment?
     ps_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
     ps_stage.shader.linkConstBufferCount = 0;
@@ -603,26 +596,13 @@ void XglRenderTest::DrawTriangleTest()
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = &db_state;
     info.flags = 0;
-    err = xglCreateGraphicsPipeline(device(), &info, &pipeline);
+
+    err = xglCreateGraphicsPipeline(device(), &info, pipeline);
     ASSERT_XGL_SUCCESS(err);
+}
 
-    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
-    ASSERT_XGL_SUCCESS(err);
-
-    /*
-     * Shaders are now part of the pipeline, don't need these anymore
-     */
-    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
-
-    XGL_QUERY_POOL query;
-    XGL_GPU_MEMORY query_mem;
-    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
-
-    // Build command buffer
-    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
-    ASSERT_XGL_SUCCESS(err);
-
+void XglRenderTest::GenerateClearAndPrepareBufferCmds(XglImage *renderTarget)
+{
     // whatever we want to do, we do it to the whole buffer
     XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
     srRange.aspect = XGL_IMAGE_ASPECT_COLOR;
@@ -652,13 +632,19 @@ void XglRenderTest::DrawTriangleTest()
     transitionToRender.subresourceRange = srRange;
     xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
     renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
+}
 
+void XglRenderTest::GenerateBindRenderTargetCmd(XglImage *renderTarget)
+{
     // bind render target
     XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
     colorBind.view  = renderTarget->targetView();
     colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
+}
 
+void XglRenderTest::GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline)
+{
     // set all states
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, m_stateViewport );
@@ -667,7 +653,54 @@ void XglRenderTest::DrawTriangleTest()
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
 
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
-    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, *pipeline );
+}
+
+void XglRenderTest::DrawRotatedTriangleTest()
+{
+    // TODO : This test will pass a matrix into VS to affect triangle orientation.
+}
+
+void XglRenderTest::DrawTriangleTest()
+{
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
+    int width = 256, height = 256;
+    CreateDefaultPipeline(&pipeline, &vs, &ps, width, height);
+    //ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
+    ASSERT_XGL_SUCCESS(err);
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    XGL_QUERY_POOL query;
+    XGL_GPU_MEMORY query_mem;
+    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
+
+    XglImage *renderTarget;
+    XGL_FORMAT fmt = {
+        XGL_CH_FMT_R8G8B8A8,
+        XGL_NUM_FMT_UNORM
+    };
+    ASSERT_NO_FATAL_FAILURE(m_device->CreateImage(width, height, fmt,
+                                                  XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
+                                                  XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                                  &renderTarget));
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds(renderTarget);
+    GenerateBindRenderTargetCmd(renderTarget);
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
@@ -738,6 +771,10 @@ void XglRenderTest::DrawTriangleTest()
 
 TEST_F(XglRenderTest, TestDrawTriangle) {
     DrawTriangleTest();
+}
+
+TEST_F(XglRenderTest, TestDrawRotatedTriangle) {
+    DrawRotatedTriangleTest();
 }
 
 int main(int argc, char **argv) {
