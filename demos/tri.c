@@ -49,6 +49,10 @@ struct demo {
     struct {
         XGL_GPU_MEMORY mem;
         XGL_MEMORY_VIEW_ATTACH_INFO view;
+
+        XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
+        XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_bindings[1];
+        XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrs[2];
     } vertices;
 
     XGL_DESCRIPTOR_SET dset;
@@ -438,6 +442,26 @@ static void demo_prepare_vertices(struct demo *demo)
     demo->vertices.view.format.channelFormat = XGL_CH_FMT_UNDEFINED;
     demo->vertices.view.format.numericFormat = XGL_NUM_FMT_UNDEFINED;
     demo->vertices.view.state = XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY;
+
+    demo->vertices.vi.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+    demo->vertices.vi.pNext = NULL;
+    demo->vertices.vi.bindingCount = 1;
+    demo->vertices.vi.pVertexBindingDescriptions = demo->vertices.vi_bindings;
+    demo->vertices.vi.attributeCount = 2;
+    demo->vertices.vi.pVertexAttributeDescriptions = demo->vertices.vi_attrs;
+
+    demo->vertices.vi_bindings[0].strideInBytes = sizeof(vb[0]);
+    demo->vertices.vi_bindings[0].stepRate = XGL_VERTEX_INPUT_STEP_RATE_VERTEX;
+
+    demo->vertices.vi_attrs[0].binding = 0;
+    demo->vertices.vi_attrs[0].format.channelFormat = XGL_CH_FMT_R32G32B32;
+    demo->vertices.vi_attrs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    demo->vertices.vi_attrs[0].offsetInBytes = 0;
+
+    demo->vertices.vi_attrs[1].binding = 0;
+    demo->vertices.vi_attrs[1].format.channelFormat = XGL_CH_FMT_R32G32;
+    demo->vertices.vi_attrs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    demo->vertices.vi_attrs[1].offsetInBytes = sizeof(float) * 3;
 }
 
 static void demo_prepare_descriptor_set(struct demo *demo)
@@ -612,6 +636,7 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
 static void demo_prepare_pipeline(struct demo *demo)
 {
     XGL_GRAPHICS_PIPELINE_CREATE_INFO pipeline;
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
     XGL_PIPELINE_IA_STATE_CREATE_INFO ia;
     XGL_PIPELINE_RS_STATE_CREATE_INFO rs;
     XGL_PIPELINE_CB_STATE cb;
@@ -625,6 +650,8 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+    vi = demo->vertices.vi;
 
     memset(&ia, 0, sizeof(ia));
     ia.sType = XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
@@ -643,7 +670,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     db.format = demo->depth.format;
 
     memset(&vs_slots, 0, sizeof(vs_slots));
-    vs_slots[2 * DEMO_TEXTURE_COUNT].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    vs_slots[2 * DEMO_TEXTURE_COUNT].slotObjectType = XGL_SLOT_VERTEX_INPUT;
     vs_slots[2 * DEMO_TEXTURE_COUNT].shaderEntityIndex = 0;
 
     memset(&fs_slots, 0, sizeof(fs_slots));
@@ -670,7 +697,8 @@ static void demo_prepare_pipeline(struct demo *demo)
         DEMO_TEXTURE_COUNT * 2 + 1;
     fs.shader.descriptorSetMapping[0].pDescriptorInfo = fs_slots;
 
-    pipeline.pNext = (const XGL_VOID *) &ia;
+    pipeline.pNext = (const XGL_VOID *) &vi;
+    vi.pNext = (XGL_VOID *) &ia;
     ia.pNext = (const XGL_VOID *) &rs;
     rs.pNext = (const XGL_VOID *) &cb;
     cb.pNext = (const XGL_VOID *) &db;
