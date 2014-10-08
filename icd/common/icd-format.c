@@ -29,41 +29,47 @@
 
 static const struct icd_format_info {
     XGL_SIZE size;
+    XGL_UINT channel_count;
 } icd_format_table[XGL_MAX_CH_FMT + 1] = {
-    [XGL_CH_FMT_UNDEFINED]      = { 0 },
-    [XGL_CH_FMT_R4G4]           = { 1 },
-    [XGL_CH_FMT_R4G4B4A4]       = { 2 },
-    [XGL_CH_FMT_R5G6B5]         = { 2 },
-    [XGL_CH_FMT_B5G6R5]         = { 2 },
-    [XGL_CH_FMT_R5G5B5A1]       = { 2 },
-    [XGL_CH_FMT_R8]             = { 1 },
-    [XGL_CH_FMT_R8G8]           = { 2 },
-    [XGL_CH_FMT_R8G8B8A8]       = { 4 },
-    [XGL_CH_FMT_B8G8R8A8]       = { 4 },
-    [XGL_CH_FMT_R10G11B11]      = { 4 },
-    [XGL_CH_FMT_R11G11B10]      = { 4 },
-    [XGL_CH_FMT_R10G10B10A2]    = { 4 },
-    [XGL_CH_FMT_R16]            = { 2 },
-    [XGL_CH_FMT_R16G16]         = { 4 },
-    [XGL_CH_FMT_R16G16B16A16]   = { 8 },
-    [XGL_CH_FMT_R32]            = { 4 },
-    [XGL_CH_FMT_R32G32]         = { 8 },
-    [XGL_CH_FMT_R32G32B32]      = { 12 },
-    [XGL_CH_FMT_R32G32B32A32]   = { 16 },
-    [XGL_CH_FMT_R16G8]          = { 3 },
-    [XGL_CH_FMT_R32G8]          = { 5 },
-    [XGL_CH_FMT_R9G9B9E5]       = { 4 },
-    [XGL_CH_FMT_BC1]            = { 8 },
-    [XGL_CH_FMT_BC2]            = { 16 },
-    [XGL_CH_FMT_BC3]            = { 16 },
-    [XGL_CH_FMT_BC4]            = { 8 },
-    [XGL_CH_FMT_BC5]            = { 16 },
-    [XGL_CH_FMT_BC6U]           = { 16 },
-    [XGL_CH_FMT_BC6S]           = { 16 },
-    [XGL_CH_FMT_BC7]            = { 16 },
+    [XGL_CH_FMT_UNDEFINED]      = { 0,  0 },
+    [XGL_CH_FMT_R4G4]           = { 1,  2 },
+    [XGL_CH_FMT_R4G4B4A4]       = { 2,  4 },
+    [XGL_CH_FMT_R5G6B5]         = { 2,  3 },
+    [XGL_CH_FMT_B5G6R5]         = { 2,  3 },
+    [XGL_CH_FMT_R5G5B5A1]       = { 2,  4 },
+    [XGL_CH_FMT_R8]             = { 1,  1 },
+    [XGL_CH_FMT_R8G8]           = { 2,  2 },
+    [XGL_CH_FMT_R8G8B8A8]       = { 4,  4 },
+    [XGL_CH_FMT_B8G8R8A8]       = { 4,  4 },
+    [XGL_CH_FMT_R10G11B11]      = { 4,  3 },
+    [XGL_CH_FMT_R11G11B10]      = { 4,  3 },
+    [XGL_CH_FMT_R10G10B10A2]    = { 4,  4 },
+    [XGL_CH_FMT_R16]            = { 2,  1 },
+    [XGL_CH_FMT_R16G16]         = { 4,  2 },
+    [XGL_CH_FMT_R16G16B16A16]   = { 8,  4 },
+    [XGL_CH_FMT_R32]            = { 4,  1 },
+    [XGL_CH_FMT_R32G32]         = { 8,  2 },
+    [XGL_CH_FMT_R32G32B32]      = { 12, 3 },
+    [XGL_CH_FMT_R32G32B32A32]   = { 16, 4 },
+    [XGL_CH_FMT_R16G8]          = { 3,  2 },
+    [XGL_CH_FMT_R32G8]          = { 5,  2 },
+    [XGL_CH_FMT_R9G9B9E5]       = { 4,  3 },
+    [XGL_CH_FMT_BC1]            = { 8,  4 },
+    [XGL_CH_FMT_BC2]            = { 16, 4 },
+    [XGL_CH_FMT_BC3]            = { 16, 4 },
+    [XGL_CH_FMT_BC4]            = { 8,  4 },
+    [XGL_CH_FMT_BC5]            = { 16, 4 },
+    [XGL_CH_FMT_BC6U]           = { 16, 4 },
+    [XGL_CH_FMT_BC6S]           = { 16, 4 },
+    [XGL_CH_FMT_BC7]            = { 16, 4 },
 };
 
 unsigned int icd_format_get_size(XGL_FORMAT format)
 {
     return icd_format_table[format.channelFormat].size;
+}
+
+unsigned int icd_format_get_channel_count(XGL_FORMAT format)
+{
+    return icd_format_table[format.channelFormat].channel_count;
 }
