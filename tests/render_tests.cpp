@@ -1174,6 +1174,8 @@ int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     XglTestFramework::InitArgs(&argc, argv);
 
+    ::testing::Environment* const xgl_test_env = ::testing::AddGlobalTestEnvironment(new TestEnvironment);
+
     result = RUN_ALL_TESTS();
 
     XglTestFramework::Finish();

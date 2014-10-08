@@ -102,4 +102,12 @@ private:
     static int          m_height;           // Window height
 };
 
+class TestEnvironment : public ::testing::Environment
+{
+ public:
+  void SetUp();
+
+  void TearDown();
+};
+
 #endif // XGLTESTFRAMEWORK_H

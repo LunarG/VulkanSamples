@@ -73,19 +73,30 @@ int fopen_s(
 
 #endif
 
+// Set up environment for GLSL compiler
+// Must be done once per process
+void TestEnvironment::SetUp()
+{
+    // Initialize GLSL to BIL compiler utility
+    glslang::InitializeProcess();
+}
+
+void TestEnvironment::TearDown()
+{
+    glslang::FinalizeProcess();
+}
+
 XglTestFramework::XglTestFramework() :
     m_glut_initialized( false ),
     m_compile_options( 0 ),
     m_num_shader_strings( 0 )
 {
-    // Initialize GLSL to BIL compiler utility
-//    ShInitialize();
-    glslang::InitializeProcess();
+
 }
 
 XglTestFramework::~XglTestFramework()
 {
-    glslang::FinalizeProcess();
+
 }
 
 // Define all the static elements
