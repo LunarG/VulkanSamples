@@ -33,6 +33,7 @@
 
 struct intel_pipeline_create_info {
     XGL_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
     XGL_PIPELINE_IA_STATE_CREATE_INFO   ia;
     XGL_PIPELINE_DB_STATE_CREATE_INFO   db;
     XGL_PIPELINE_CB_STATE               cb;

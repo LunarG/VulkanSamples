@@ -28,6 +28,7 @@
 
 #include "genhw/genhw.h"
 #include "cmd.h"
+#include "format.h"
 #include "shader.h"
 #include "pipeline_priv.h"
 
@@ -444,34 +445,80 @@ static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline
 static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
                                            const struct intel_pipeline_create_info *info)
 {
-    const uint8_t cmd_len = 3;
-    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) |
-                         (cmd_len - 2);
     const struct intel_shader *vs = intel_shader(info->vs.shader);
-    int comps[4] = { GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE,
-                     GEN6_VFCOMP_NOSTORE, GEN6_VFCOMP_NOSTORE };
+    uint8_t cmd_len;
     uint32_t *dw;
+    XGL_UINT i;
+    int comps[4];
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    if (!(vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)))
+    cmd_len = 1 + 2 * info->vi.attributeCount;
+    if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID))
+        cmd_len += 2;
+
+    if (cmd_len == 1)
         return;
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len);
-    dw[0] = dw0;
+
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) |
+            (cmd_len - 2);
     dw++;
 
-    comps[0] = (vs->uses & INTEL_SHADER_USE_VID) ?
-        GEN6_VFCOMP_STORE_VID : GEN6_VFCOMP_STORE_0;
-    if (vs->uses & INTEL_SHADER_USE_IID)
-        comps[1] = GEN6_VFCOMP_STORE_IID;
+    if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)) {
+        comps[0] = (vs->uses & INTEL_SHADER_USE_VID) ?
+            GEN6_VFCOMP_STORE_VID : GEN6_VFCOMP_STORE_0;
+        comps[1] = (vs->uses & INTEL_SHADER_USE_IID) ?
+            GEN6_VFCOMP_STORE_IID : GEN6_VFCOMP_NOSTORE;
+        comps[2] = GEN6_VFCOMP_NOSTORE;
+        comps[3] = GEN6_VFCOMP_NOSTORE;
+
+        dw[0] = GEN6_VE_STATE_DW0_VALID;
+        dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
+                comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
+                comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+                comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+
+        dw += 2;
+    }
 
     /* VERTEX_ELEMENT_STATE */
-    dw[0] = GEN6_VE_STATE_DW0_VALID;
-    dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-            comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-            comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-            comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+    for (i = 0; i < info->vi.attributeCount; i++) {
+        const XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr =
+            &info->vi.pVertexAttributeDescriptions[i];
+        const int format =
+            intel_format_translate_color(pipeline->dev->gpu, attr->format);
+
+        comps[0] = GEN6_VFCOMP_STORE_0;
+        comps[1] = GEN6_VFCOMP_STORE_0;
+        comps[2] = GEN6_VFCOMP_STORE_0;
+        comps[3] = icd_format_is_int(attr->format) ?
+            GEN6_VFCOMP_STORE_1_INT : GEN6_VFCOMP_STORE_1_FP;
+
+        switch (icd_format_get_channel_count(attr->format)) {
+        case 4: comps[3] = GEN6_VFCOMP_STORE_SRC; /* fall through */
+        case 3: comps[2] = GEN6_VFCOMP_STORE_SRC; /* fall through */
+        case 2: comps[1] = GEN6_VFCOMP_STORE_SRC; /* fall through */
+        case 1: comps[0] = GEN6_VFCOMP_STORE_SRC; break;
+        default:
+            break;
+        }
+
+        assert(attr->offsetInBytes <= 2047);
+
+        dw[0] = attr->binding << GEN6_VE_STATE_DW0_VB_INDEX__SHIFT |
+                GEN6_VE_STATE_DW0_VALID |
+                format << GEN6_VE_STATE_DW0_FORMAT__SHIFT |
+                attr->offsetInBytes;
+
+        dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
+                comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
+                comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+                comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+
+        dw += 2;
+    }
 }
 
 static void pipeline_build_gs(struct intel_pipeline *pipeline,
@@ -542,6 +589,14 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
     if (ret != XGL_SUCCESS)
         return ret;
 
+    if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
+        info->vi.attributeCount > ARRAY_SIZE(pipeline->vb))
+        return XGL_ERROR_BAD_PIPELINE_DATA;
+
+    pipeline->vb_count = info->vi.bindingCount;
+    memcpy(pipeline->vb, info->vi.pVertexBindingDescriptions,
+            sizeof(pipeline->vb[0]) * pipeline->vb_count);
+
     pipeline_build_vertex_elements(pipeline, info);
 
     if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
@@ -597,6 +652,10 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
         case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
             size = sizeof(info->graphics);
             dst = &info->graphics;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+            size = sizeof(info->vi);
+            dst = &info->vi;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
             size = sizeof(info->ia);

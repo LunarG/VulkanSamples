@@ -1641,6 +1641,91 @@ static void emit_ps_binding_table(struct intel_cmd *cmd,
     }
 }
 
+static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
+{
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_pipeline_rmap *rmap = pipeline->vs.rmap;
+    const struct intel_dset *dset = cmd->bind.dset.graphics;
+    const uint8_t cmd_len = 1 + 4 * pipeline->vb_count;
+    uint32_t *dw;
+    XGL_UINT pos, i;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    if (!pipeline->vb_count)
+        return;
+
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_BUFFERS) | (cmd_len - 2);
+    dw++;
+    pos++;
+
+    for (i = 0; i < pipeline->vb_count; i++) {
+        const XGL_UINT vb_offset = rmap->rt_count + rmap->resource_count +
+            rmap->uav_count + rmap->sampler_count;
+        const struct intel_pipeline_rmap_slot *slot = (i < rmap->vb_count) ?
+            &rmap->slots[vb_offset + i] : NULL;
+        struct intel_mem_view *view = NULL;
+
+        if (slot) {
+            switch (slot->path_len) {
+            case 1:
+                view = (dset->slots[slot->u.index].type ==
+                        INTEL_DSET_SLOT_MEM_VIEW) ?
+                    &dset->slots[slot->u.index].u.mem_view : NULL;
+                break;
+            default:
+                break;
+            }
+        }
+
+        assert(pipeline->vb[i].strideInBytes <= 2048);
+
+        dw[0] = i << GEN6_VB_STATE_DW0_INDEX__SHIFT |
+                pipeline->vb[i].strideInBytes;
+
+        if (cmd_gen(cmd) >= INTEL_GEN(7))
+            dw[0] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+
+        switch (pipeline->vb[i].stepRate) {
+        case XGL_VERTEX_INPUT_STEP_RATE_VERTEX:
+            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_VERTEXDATA;
+            dw[3] = 0;
+            break;
+        case XGL_VERTEX_INPUT_STEP_RATE_INSTANCE:
+            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_INSTANCEDATA;
+            dw[3] = 1;
+            break;
+        case XGL_VERTEX_INPUT_STEP_RATE_DRAW:
+            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_INSTANCEDATA;
+            dw[3] = 0;
+            break;
+        default:
+            assert(!"unknown step rate");
+            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_VERTEXDATA;
+            dw[3] = 0;
+            break;
+        }
+
+        if (view) {
+            const uint32_t begin = view->cmd[1];
+            const uint32_t end = view->mem->size - 1;
+
+            cmd_reserve_reloc(cmd, 2);
+            cmd_batch_reloc(cmd, pos + 1, view->mem->bo, begin, 0);
+            cmd_batch_reloc(cmd, pos + 2, view->mem->bo, end, 0);
+        } else {
+            dw[0] |= GEN6_VB_STATE_DW0_IS_NULL;
+            dw[1] = 0;
+            dw[2] = 0;
+        }
+
+        dw += 4;
+        pos += 4;
+    }
+}
+
 static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
@@ -1751,6 +1836,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
     cmd_batch_write(cmd, msaa->cmd_len, msaa->cmd);
 
+    gen6_3DSTATE_VERTEX_BUFFERS(cmd);
     gen6_3DSTATE_VS(cmd);
 }
 

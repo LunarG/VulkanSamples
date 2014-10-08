@@ -62,12 +62,14 @@ struct intel_pipeline_rmap {
     XGL_UINT resource_count;
     XGL_UINT uav_count;
     XGL_UINT sampler_count;
+    XGL_UINT vb_count;
 
     /*
      * rt_count slots +
      * resource_count slots +
      * uav_count slots +
-     * sampler_count slots
+     * sampler_count slots +
+     * vb_count slots
      */
     struct intel_pipeline_rmap_slot *slots;
     XGL_UINT slot_count;
@@ -109,18 +111,18 @@ struct intel_pipeline_shader {
  * On GEN6, there are
  *
  *  - 3DSTATE_URB (3)
- *  - 3DSTATE_VERTEX_ELEMENTS (3)
+ *  - 3DSTATE_VERTEX_ELEMENTS (1+2*34)
  *
  * On GEN7, there are
  *
  *  - 3DSTATE_URB_x (2*4)
  *  - 3DSTATE_PUSH_CONSTANT_ALLOC_x (2*5)
- *  - 3DSTATE_VERTEX_ELEMENTS (3)
+ *  - 3DSTATE_VERTEX_ELEMENTS (1+2*34)
  *  - 3DSTATE_HS (7)
  *  - 3DSTATE_TE (4)
  *  - 3DSTATE_DS (6)
  */
-#define INTEL_PSO_CMD_ENTRIES   64
+#define INTEL_PSO_CMD_ENTRIES   128
 
 /**
  * 3D pipeline.
@@ -129,6 +131,9 @@ struct intel_pipeline {
     struct intel_obj obj;
 
     struct intel_dev *dev;
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vb[33];
+    XGL_UINT vb_count;
 
     /* XGL_PIPELINE_IA_STATE_CREATE_INFO */
     XGL_PRIMITIVE_TOPOLOGY topology;
