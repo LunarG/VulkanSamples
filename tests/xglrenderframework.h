@@ -48,6 +48,8 @@ public:
     void InitViewport(float width, float height);
     void InitRenderTarget();
     void InitFramework();
+    void ShutdownFramework();
+    void InitState();
     void CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps);
     void GenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
     void GenerateBindRenderTargetCmd(XglImage *renderTarget);

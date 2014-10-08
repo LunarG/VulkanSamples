@@ -69,7 +69,7 @@ using namespace std;
 #include "xglimage.h"
 #include "icd-bil.h"
 
-#include "xgltestframework.h"
+#include "xglrenderframework.h"
 
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
@@ -194,39 +194,19 @@ static const uint32_t gen7_vs[] = {
                                                     // urb 0 write HWord interleave complete mlen 3 rlen 0 { align16 1Q EOT };
 };
 
-class XglRenderTest : public XglTestFramework
+class XglRenderTest : public XglRenderFramework
 {
 public:
-    void CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
-                         XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem);
-    void DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem);
-    void CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps, int width, int height);
-    void GenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
-    void GenerateBindRenderTargetCmd(XglImage *renderTarget);
-    void GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
-
-    XGL_DEVICE device() {return m_device->device();}
-    void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, const char *shader_code, XGL_SHADER *pshader);
-    void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
-    void InitConstantBuffer( int constantCount, int constantSize, const void* data );
     void InitTexture();
     void InitSampler();
     void DrawTriangleTest();
     void DrawRotatedTriangleTest();
+    void NewGenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
+    void NewGenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
+
 
 protected:
-    XGL_APPLICATION_INFO app_info;
-    XGL_PHYSICAL_GPU objs[MAX_GPUS];
-    XGL_UINT gpu_count;
-    XGL_GPU_MEMORY      m_descriptor_set_mem;
-    XGL_GPU_MEMORY      m_pipe_mem;
-    XglDevice *m_device;
-    XGL_CMD_BUFFER m_cmdBuffer;
-    XGL_UINT32 m_numVertices;
-    XGL_MEMORY_VIEW_ATTACH_INFO m_vtxBufferView;
-    XGL_MEMORY_VIEW_ATTACH_INFO m_constantBufferView;
-
     XGL_IMAGE m_texture;
     XGL_IMAGE_VIEW m_textureView;
     XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
@@ -234,19 +214,28 @@ protected:
 
     XGL_SAMPLER m_sampler;
 
-    XGL_GPU_MEMORY m_vtxBufferMem;
-    XGL_GPU_MEMORY m_constantBufferMem;
-    XGL_UINT32                      m_numMemRefs;
-    XGL_MEMORY_REF                  m_memRefs[5];
-    XGL_RASTER_STATE_OBJECT         m_stateRaster;
-    XGL_COLOR_BLEND_STATE_OBJECT    m_colorBlend;
-    XGL_VIEWPORT_STATE_OBJECT       m_stateViewport;
-    XGL_DEPTH_STENCIL_STATE_OBJECT  m_stateDepthStencil;
-    XGL_MSAA_STATE_OBJECT           m_stateMsaa;
-    XGL_DESCRIPTOR_SET              m_rsrcDescSet;
+//    XGL_APPLICATION_INFO app_info;
+//    XGL_PHYSICAL_GPU objs[MAX_GPUS];
+//    XGL_UINT gpu_count;
+//    XGL_GPU_MEMORY      m_descriptor_set_mem;
+//    XGL_GPU_MEMORY      m_pipe_mem;
+//    XglDevice *m_device;
+//    XGL_CMD_BUFFER m_cmdBuffer;
+//    XGL_UINT32 m_numVertices;
+//    XGL_MEMORY_VIEW_ATTACH_INFO m_vtxBufferView;
+//    XGL_MEMORY_VIEW_ATTACH_INFO m_constantBufferView;
+//    XGL_GPU_MEMORY m_vtxBufferMem;
+//    XGL_GPU_MEMORY m_constantBufferMem;
+//    XGL_UINT32                      m_numMemRefs;
+//    XGL_MEMORY_REF                  m_memRefs[5];
+//    XGL_RASTER_STATE_OBJECT         m_stateRaster;
+//    XGL_COLOR_BLEND_STATE_OBJECT    m_colorBlend;
+//    XGL_VIEWPORT_STATE_OBJECT       m_stateViewport;
+//    XGL_DEPTH_STENCIL_STATE_OBJECT  m_stateDepthStencil;
+//    XGL_MSAA_STATE_OBJECT           m_stateMsaa;
+//    XGL_DESCRIPTOR_SET              m_rsrcDescSet;
 
     virtual void SetUp() {
-        XGL_RESULT err;
 
         this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -256,117 +245,17 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
-        memset(&m_vtxBufferView, 0, sizeof(m_vtxBufferView));
-        m_vtxBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-
-        memset(&m_constantBufferView, 0, sizeof(m_constantBufferView));
-        m_constantBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-
         memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
         m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
 
-        err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                      MAX_GPUS, &this->gpu_count, objs);
-        ASSERT_XGL_SUCCESS(err);
-        ASSERT_GE(1, this->gpu_count) << "No GPU available";
-
-        m_device = new XglDevice(0, objs[0]);
-        m_device->get_device_queue();
+        InitFramework();
     }
 
     virtual void TearDown() {
-        m_device->destroy_device();
-        xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
+        // Clean up resources before we reset
+        ShutdownFramework();
     }
 };
-
-
-void XglRenderTest::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
-                                    XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem)
-{
-    XGL_RESULT err;
-
-    XGL_QUERY_POOL_CREATE_INFO poolCreateInfo = {};
-    poolCreateInfo.sType = XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    poolCreateInfo.pNext = NULL;
-    poolCreateInfo.queryType = type;
-    poolCreateInfo.slots = slots;
-
-    err = xglCreateQueryPool(device(), &poolCreateInfo, pPool);
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
-    err = xglGetObjectInfo(*pPool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-
-    if (!mem_req.size) {
-        *pMem = XGL_NULL_HANDLE;
-        return;
-    }
-
-    XGL_MEMORY_ALLOC_INFO mem_info;
-
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
-    mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(device(), &mem_info, pMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglBindObjectMemory(*pPool, *pMem, 0);
-    ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderTest::DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem)
-{
-    ASSERT_XGL_SUCCESS(xglBindObjectMemory(pool, XGL_NULL_HANDLE, 0));
-    ASSERT_XGL_SUCCESS(xglFreeMemory(mem));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(pool));
-}
-
-void XglRenderTest::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
-                                 const char *shader_code,
-                                 XGL_SHADER *pshader)
-{
-    XGL_RESULT err;
-    std::vector<unsigned int> bil;
-
-    XGL_SHADER_CREATE_INFO createInfo;
-    XGL_SHADER shader;
-
-    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
-
-    if (this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
-        XGL_INTEL_COMPILE_GLSL glsl_header;
-
-        glsl_header.stage = stage;
-        glsl_header.pCode = shader_code;
-        // Driver has extended CreateShader to process GLSL
-        createInfo.sType = (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        createInfo.pCode = &glsl_header;
-        createInfo.codeSize = strlen(shader_code);
-        createInfo.flags = 0;
-    } else {
-        // Use Reference GLSL to BIL compiler
-        GLSLtoBIL(stage, shader_code, bil);
-        createInfo.pCode = bil.data();
-        createInfo.codeSize = bil.size() * sizeof(unsigned int);
-        createInfo.flags = 0;
-    }
-
-    err = xglCreateShader(device(), &createInfo, &shader);
-    ASSERT_XGL_SUCCESS(err);
-
-    *pshader = shader;
-}
 
 // this function will create the vertex buffer and fill it with the mesh data
 void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
@@ -435,42 +324,6 @@ void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
     // submit the command buffer to the universal queue
     err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
     ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderTest::InitConstantBuffer(int constantCount, int constantSize, const void* data)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-
-    XGL_MEMORY_ALLOC_INFO alloc_info = {};
-    XGL_UINT8 *pData;
-
-    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = constantCount * constantSize;
-    alloc_info.alignment = 0;
-    alloc_info.heapCount = 1;
-    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
-
-    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
-    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    err = xglAllocMemory(device(), &alloc_info, &m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
-    ASSERT_XGL_SUCCESS(err);
-
-    memcpy(pData, data, alloc_info.allocationSize);
-
-    err = xglUnmapMemory(m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    // set up the memory view for the constant buffer
-    this->m_constantBufferView.stride = 1;
-    this->m_constantBufferView.range  = 16;
-    this->m_constantBufferView.offset = 0;
-    this->m_constantBufferView.mem    = m_constantBufferMem;
-    this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
 }
 
 void XglRenderTest::InitTexture()
@@ -631,301 +484,7 @@ void XglRenderTest::InitSampler()
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps, int width, int height)
-{
-    XGL_RESULT err;
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
-
-    // create a raster state (solid, back-face culling)
-    XGL_RASTER_STATE_CREATE_INFO raster = {};
-    raster.sType = XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO;
-    raster.fillMode = XGL_FILL_SOLID;
-    raster.cullMode = XGL_CULL_NONE;
-    raster.frontFace = XGL_FRONT_FACE_CCW;
-    err = xglCreateRasterState( device(), &raster, &m_stateRaster );
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_VIEWPORT_STATE_CREATE_INFO viewport = {};
-    viewport.viewportCount         = 1;
-    viewport.scissorEnable         = XGL_FALSE;
-    viewport.viewports[0].originX  = 0;
-    viewport.viewports[0].originY  = 0;
-    viewport.viewports[0].width    = 1.f * width;
-    viewport.viewports[0].height   = 1.f * height;
-    viewport.viewports[0].minDepth = 0.f;
-    viewport.viewports[0].maxDepth = 1.f;
-
-    err = xglCreateViewportState( device(), &viewport, &m_stateViewport );
-    ASSERT_XGL_SUCCESS( err );
-
-    XGL_COLOR_BLEND_STATE_CREATE_INFO blend = {};
-    blend.sType = XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO;
-    err = xglCreateColorBlendState(device(), &blend, &m_colorBlend);
-    ASSERT_XGL_SUCCESS( err );
-
-    XGL_DEPTH_STENCIL_STATE_CREATE_INFO depthStencil = {};
-    depthStencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable      = XGL_FALSE;
-    depthStencil.depthWriteEnable = XGL_FALSE;
-    depthStencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
-    depthStencil.depthBoundsEnable = XGL_FALSE;
-    depthStencil.minDepth = 0.f;
-    depthStencil.maxDepth = 1.f;
-    depthStencil.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilRef = 0x00;
-    depthStencil.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    depthStencil.front = depthStencil.back;
-
-    err = xglCreateDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
-    ASSERT_XGL_SUCCESS( err );
-
-    XGL_MSAA_STATE_CREATE_INFO msaa = {};
-    msaa.sType = XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO;
-    msaa.sampleMask = 1;
-    msaa.samples = 1;
-
-    err = xglCreateMsaaState( device(), &msaa, &m_stateMsaa );
-    ASSERT_XGL_SUCCESS( err );
-
-    XGL_CMD_BUFFER_CREATE_INFO cmdInfo = {};
-
-    cmdInfo.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    cmdInfo.queueType = XGL_QUEUE_TYPE_GRAPHICS;
-    err = xglCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
-    ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
-
-#if 0
-    // Create descriptor set for our one resource
-    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
-    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-    descriptorInfo.slots = 1; // Vertex buffer only
-
-    // create a descriptor set with a single slot
-    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
-    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
-
-    // bind memory to the descriptor set
-    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
-
-    // set up the memory view for the vertex buffer
-    this->m_vtxBufferView.stride = vbStride;
-    this->m_vtxBufferView.range  = numVertices * vbStride;
-    this->m_vtxBufferView.offset = 0;
-    this->m_vtxBufferView.mem    = m_vtxBufferMem;
-    this->m_vtxBufferView.format.channelFormat = XGL_CH_FMT_UNDEFINED;
-    this->m_vtxBufferView.format.numericFormat = XGL_NUM_FMT_UNDEFINED;
-    // write the vertex buffer view to the descriptor set
-    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
-    xglEndDescriptorSetUpdate( m_rsrcDescSet );
-#endif
-
-    const int constantCount = 4;
-    const float constants[constantCount] = { 0.0, 0.0, 0.0, 0.0 };
-    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
-
-    // Create a texture too
-    InitTexture();
-    InitSampler();
-
-    // Create descriptor set for a uniform resource, texture, and sampler
-    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
-    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-    descriptorInfo.slots = 3;
-
-    // create a descriptor set with multiple slots
-    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
-    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
-
-    // bind memory to the descriptor set
-    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
-
-    // write the constant buffer view to the descriptor set
-    // the order here matters... i.e. swapping the texture with uniform breaks the test...
-    // we need to understand how to support any order of declaration, probably via intel_shader
-    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachImageViewDescriptors( m_rsrcDescSet, 0, 1, &m_textureViewInfo );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 1, 1, &m_constantBufferView );
-    xglAttachSamplerDescriptors(m_rsrcDescSet, 2, 1, &m_sampler);
-    xglEndDescriptorSetUpdate( m_rsrcDescSet );
-
-    static const char *vertShaderText =
-            "#version 130\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-    static const char *vertShader2 =
-            "#version 330\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[int(mod(gl_VertexID, 3))];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
-            "}\n";
-
-
-    static const char *vertShader2 =
-            "#version 130\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "out vec2 samplePos;\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[gl_VertexID % 3];\n"
-            "   vec2 positions[3];"
-            "      positions[0] = vec2( 0.0, 0.0);\n"
-            "      positions[1] = vec2( 1.0, 0.0);\n"
-            "      positions[2] = vec2( 1.0, 1.0);\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   samplePos = positions[gl_VertexID % 3];\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
-                                         vertShader2, vs));
-
-    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vs_stage.pNext = XGL_NULL_HANDLE;
-    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
-    vs_stage.shader.shader = *vs;
-    for (unsigned int i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)
-        vs_stage.shader.descriptorSetMapping[i].descriptorCount = 0;
-    vs_stage.shader.linkConstBufferCount = 0;
-    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
-    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
-    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
-
-    static const char *fragShaderText =
-       "#version 130\n"
-       "in vec4 color;\n"
-       "in vec4 scale;\n"
-       "void main() {\n"
-       "   gl_FragColor = color * scale;\n"
-       "}\n";
-    static const char *fragShader2 =
-       "#version 430\n"
-       "in vec4 color;\n"
-       "in vec4 scale;\n"
-       "in vec2 samplePos;\n"
-       "uniform sampler2D surface;\n"
-       "layout(location = 0) uniform vec4 foo;\n"
-       "void main() {\n"
-       "   vec4 texColor = textureLod(surface, samplePos, 0.0);\n"
-       "   gl_FragColor = color * scale * foo + texColor;\n"
-       "}\n";
-    static const char *fragShader2 =
-            "#version 430\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "layout(location = 0) uniform vec4 foo;\n"
-            "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
-
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
-                                         fragShader2, ps));
-
-    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ps_stage.pNext = &vs_stage;
-    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
-    ps_stage.shader.shader = *ps;
-    // TODO: Do we need a descriptor set mapping for fragment?
-    for (unsigned int i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)
-        ps_stage.shader.descriptorSetMapping[i].descriptorCount = 0;
-
-    const int slots = 3;
-    assert(slots == descriptorInfo.slots);
-    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
-    slotInfo[0].shaderEntityIndex = 0;
-    slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
-    slotInfo[1].shaderEntityIndex = 1;
-    slotInfo[1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
-    slotInfo[2].shaderEntityIndex = 0;
-    slotInfo[2].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
-
-    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
-    ps_stage.shader.descriptorSetMapping[0].descriptorCount = descriptorInfo.slots;
-
-    ps_stage.shader.linkConstBufferCount = 0;
-    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
-    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
-    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
-
-    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
-        &ps_stage,                                         // pNext
-        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
-        XGL_FALSE,                                         // disableVertexReuse
-        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
-        XGL_FALSE,                                         // primitiveRestartEnable
-        0                                                  // primitiveRestartIndex
-    };
-
-    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
-        &ia_state,
-        XGL_FALSE,                                          // depthClipEnable
-        XGL_FALSE,                                          // rasterizerDiscardEnable
-        1.0                                                 // pointSize
-    };
-
-    XGL_PIPELINE_CB_STATE cb_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
-        &rs_state,
-        XGL_FALSE,                                          // alphaToCoverageEnable
-        XGL_FALSE,                                          // dualSourceBlendEnable
-        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
-        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
-            {
-                XGL_FALSE,                                  // blendEnable
-                {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM},   // XGL_FORMAT
-                0xF                                         // channelWriteMask
-            }
-        }
-    };
-
-    // TODO: Should take depth buffer format from queried formats
-    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
-        &cb_state,
-        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
-    };
-
-    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.pNext = &db_state;
-    info.flags = 0;
-    err = xglCreateGraphicsPipeline(device(), &info, pipeline);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = m_device->AllocAndBindGpuMemory(*pipeline, "Pipeline", &m_pipe_mem);
-    ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderTest::GenerateClearAndPrepareBufferCmds(XglImage *renderTarget)
+void XglRenderTest::NewGenerateClearAndPrepareBufferCmds(XglImage *renderTarget)
 {
     // whatever we want to do, we do it to the whole buffer
     XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
@@ -958,16 +517,7 @@ void XglRenderTest::GenerateClearAndPrepareBufferCmds(XglImage *renderTarget)
     renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
 }
 
-void XglRenderTest::GenerateBindRenderTargetCmd(XglImage *renderTarget)
-{
-    // bind render target
-    XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
-    colorBind.view  = renderTarget->targetView();
-    colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
-    xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
-}
-
-void XglRenderTest::GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline)
+void XglRenderTest::NewGenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline)
 {
     // set all states
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
@@ -992,7 +542,9 @@ void XglRenderTest::DrawTriangleTest()
     XGL_RESULT err;
     int width = 256, height = 256;
 
-    ASSERT_NO_FATAL_FAILURE(CreateDefaultPipeline(&pipeline, &vs, &ps, width, height));
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport(256.0, 256.0));
+    ASSERT_NO_FATAL_FAILURE(CreateDefaultPipeline(&pipeline, &vs, &ps));
 
     /*
      * Shaders are now part of the pipeline, don't need these anymore
@@ -1088,9 +640,9 @@ void XglRenderTest::DrawTriangleTest()
     err = xglBeginCommandBuffer(m_cmdBuffer, 0);
     ASSERT_XGL_SUCCESS(err);
 
-    GenerateClearAndPrepareBufferCmds(renderTarget);
+    NewGenerateClearAndPrepareBufferCmds(renderTarget);
     GenerateBindRenderTargetCmd(renderTarget);
-    GenerateBindStateAndPipelineCmds(&pipeline);
+    NewGenerateBindStateAndPipelineCmds(&pipeline);
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
@@ -1150,12 +702,6 @@ void XglRenderTest::DrawTriangleTest()
 //    m_screen.Display(renderTarget, m_image_mem);
     RecordImage(renderTarget);
 
-    ASSERT_XGL_SUCCESS(xglDestroyObject(pipeline));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(m_cmdBuffer));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateRaster));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateViewport));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateDepthStencil));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(m_stateMsaa));
     free(renderTarget);
 }
 

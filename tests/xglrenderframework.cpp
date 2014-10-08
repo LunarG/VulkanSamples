@@ -28,7 +28,13 @@
 #include "xglrenderframework.h"
 #include "xglIntelExt.h"
 
-XglRenderFramework::XglRenderFramework()
+XglRenderFramework::XglRenderFramework() :
+    m_colorBlend( XGL_NULL_HANDLE ),
+    m_stateMsaa( XGL_NULL_HANDLE ),
+    m_stateDepthStencil( XGL_NULL_HANDLE ),
+    m_stateRaster( XGL_NULL_HANDLE ),
+    m_cmdBuffer( XGL_NULL_HANDLE ),
+    m_stateViewport( XGL_NULL_HANDLE )
 {
     m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
     m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
@@ -36,11 +42,35 @@ XglRenderFramework::XglRenderFramework()
 
 XglRenderFramework::~XglRenderFramework()
 {
-    xglDestroyObject(m_colorBlend);
-    xglDestroyObject(m_stateMsaa);
-    xglDestroyObject(m_stateDepthStencil);
-    xglDestroyObject(m_stateRaster);
-    xglDestroyObject(m_cmdBuffer);
+
+}
+
+void XglRenderFramework::InitFramework()
+{
+    XGL_RESULT err;
+
+    memset(&m_vtxBufferView, 0, sizeof(m_vtxBufferView));
+    m_vtxBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
+
+    memset(&m_constantBufferView, 0, sizeof(m_constantBufferView));
+    m_constantBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
+
+    err = xglInitAndEnumerateGpus(&app_info, NULL,
+                                  MAX_GPUS, &this->gpu_count, objs);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_GE(1, this->gpu_count) << "No GPU available";
+
+    m_device = new XglDevice(0, objs[0]);
+    m_device->get_device_queue();
+}
+
+void XglRenderFramework::ShutdownFramework()
+{
+    if (m_colorBlend) xglDestroyObject(m_colorBlend);
+    if (m_stateMsaa) xglDestroyObject(m_stateMsaa);
+    if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
+    if (m_stateRaster) xglDestroyObject(m_stateRaster);
+    if (m_cmdBuffer) xglDestroyObject(m_cmdBuffer);
 
     if (m_stateViewport) {
         xglDestroyObject(m_stateViewport);
@@ -51,9 +81,12 @@ XglRenderFramework::~XglRenderFramework()
 //        m_renderTarget->
 //        xglDestroyObject(*m_renderTarget);
     }
+
+    // reset the driver
+    xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
 }
 
-void XglRenderFramework::InitFramework()
+void XglRenderFramework::InitState()
 {
     XGL_RESULT err;
 
