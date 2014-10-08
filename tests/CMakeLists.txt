@@ -66,6 +66,12 @@ set_target_properties(xgl_render_tests
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
+add_executable(xgl_base_render_test base_render_test.cpp ${COMMON_CPP} displayengine.cpp)
+set_target_properties(xgl_base_render_test
+   PROPERTIES
+   COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
+target_link_libraries(xgl_base_render_test XGL gtest gtest_main ${TEST_LIBRARIES})
+
 target_link_libraries(xglinfo XGL)
 
 add_subdirectory(gtest-1.7.0)
