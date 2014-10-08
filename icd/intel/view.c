@@ -475,6 +475,7 @@ static void surface_state_buf_gen6(const struct intel_gpu *gpu,
                                    bool is_rt, bool render_cache_rw,
                                    uint32_t dw[6])
 {
+   const bool typed = !icd_format_is_undef(elem_format);
    const int elem_size = icd_format_get_size(elem_format);
    int width, height, depth, pitch;
    int surface_format, num_entries;
@@ -486,7 +487,8 @@ static void surface_state_buf_gen6(const struct intel_gpu *gpu,
     * structure in a buffer.
     */
 
-   surface_format = intel_format_translate_color(gpu, elem_format);
+   surface_format = (typed) ?
+       intel_format_translate_color(gpu, elem_format) : GEN6_FORMAT_RAW;
 
    num_entries = size / struct_size;
    /* see if there is enough space to fit another element */
