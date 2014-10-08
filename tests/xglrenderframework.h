@@ -46,13 +46,14 @@ public:
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitConstantBuffer( int constantCount, int constantSize, const void* data );
     void InitViewport(float width, float height);
+    void InitViewport();
     void InitRenderTarget();
     void InitFramework();
     void ShutdownFramework();
     void InitState();
-    void CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps);
-    void GenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
-    void GenerateBindRenderTargetCmd(XglImage *renderTarget);
+    void CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
+    void GenerateClearAndPrepareBufferCmds();
+    void GenerateBindRenderTargetCmd();
     void GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
 
 protected:

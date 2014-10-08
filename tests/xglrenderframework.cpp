@@ -34,7 +34,9 @@ XglRenderFramework::XglRenderFramework() :
     m_stateDepthStencil( XGL_NULL_HANDLE ),
     m_stateRaster( XGL_NULL_HANDLE ),
     m_cmdBuffer( XGL_NULL_HANDLE ),
-    m_stateViewport( XGL_NULL_HANDLE )
+    m_stateViewport( XGL_NULL_HANDLE ),
+    m_width( 256.0 ),                   // default window width
+    m_height( 256.0 )                   // default window height
 {
     m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
     m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
@@ -284,6 +286,11 @@ void XglRenderFramework::InitViewport(float width, float height)
     m_height = height;
 }
 
+void XglRenderFramework::InitViewport()
+{
+    InitViewport(m_width, m_height);
+}
+
 void XglRenderFramework::InitRenderTarget()
 {
     m_device->CreateImage(m_width, m_height, m_render_target_fmt,
@@ -292,7 +299,7 @@ void XglRenderFramework::InitRenderTarget()
                           &m_renderTarget);
 }
 
-void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs, XGL_SHADER* ps)
+void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
 {
     XGL_RESULT err;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
@@ -346,69 +353,20 @@ void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADE
     xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
-    static const char *vertShaderText =
-            "#version 130\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-    static const char *vertShader2 =
-            "#version 330\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[int(mod(gl_VertexID, 3))];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
-            "}\n";
-
-
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
-                                         vertShader2, vs));
-
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
-    vs_stage.shader.shader = *vs;
+    vs_stage.shader.shader = vs;
     vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
     vs_stage.shader.linkConstBufferCount = 0;
     vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    static const char *fragShaderText =
-       "#version 130\n"
-       "uniform vec4 foo;\n"
-       "void main() {\n"
-       "   gl_FragColor = foo;\n"
-       "}\n";
-    static const char *fragShader2 =
-            "#version 430\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "layout(location = 0) uniform vec4 foo;\n"
-            "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
-
-    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
-                                         fragShader2, ps));
-
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
-    ps_stage.shader.shader = *ps;
+    ps_stage.shader.shader = ps;
 
     const int slots = 1;
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
@@ -473,11 +431,11 @@ void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADE
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglRenderFramework::GenerateBindRenderTargetCmd(XglImage *renderTarget)
+void XglRenderFramework::GenerateBindRenderTargetCmd()
 {
     // bind render target
     XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
-    colorBind.view  = renderTarget->targetView();
+    colorBind.view  = m_renderTarget->targetView();
     colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
 }
@@ -493,9 +451,12 @@ void XglRenderFramework::GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline
 
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
     xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, *pipeline );
+
+    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
+    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 }
 
-void XglRenderFramework::GenerateClearAndPrepareBufferCmds(XglImage *renderTarget)
+void XglRenderFramework::GenerateClearAndPrepareBufferCmds()
 {
     // whatever we want to do, we do it to the whole buffer
     XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
@@ -526,20 +487,4 @@ void XglRenderFramework::GenerateClearAndPrepareBufferCmds(XglImage *renderTarge
     transitionToRender.subresourceRange = srRange;
     xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
     m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
-
-    // bind render target
-    XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
-    colorBind.view  = m_renderTarget->targetView();
-    colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
-    xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
-
-    // set all states
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, m_stateViewport );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
-
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
-    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 }

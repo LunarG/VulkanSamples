@@ -95,7 +95,7 @@ private:
     static std::list<XglTestImageRecord>::iterator m_display_image;
     static int          m_display_image_idx;
 
-    bool                m_glut_initialized;
+    static bool         m_glut_initialized;
     static int          m_window;
     static int          m_width;            // Window width
     static int          m_height;           // Window height

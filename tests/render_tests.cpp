@@ -200,7 +200,7 @@ public:
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitTexture();
     void InitSampler();
-    void DrawTriangleTest();
+    void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawRotatedTriangleTest();
     void NewGenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
     void NewGenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
@@ -239,7 +239,7 @@ protected:
 
         this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = (const XGL_CHAR *) "base";
+        this->app_info.pAppName = (const XGL_CHAR *) "render_tests";
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = (const XGL_CHAR *) "unittest";
         this->app_info.engineVersion = 1;
@@ -484,67 +484,27 @@ void XglRenderTest::InitSampler()
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglRenderTest::NewGenerateClearAndPrepareBufferCmds(XglImage *renderTarget)
-{
-    // whatever we want to do, we do it to the whole buffer
-    XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
-    srRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-    srRange.baseMipLevel = 0;
-    srRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
-    srRange.baseArraySlice = 0;
-    srRange.arraySize = XGL_LAST_MIP_OR_SLICE;
-
-    // prepare the whole back buffer for clear
-    XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
-    transitionToClear.image = renderTarget->image();
-    transitionToClear.oldState = renderTarget->state();
-    transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
-    transitionToClear.subresourceRange = srRange;
-    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
-    renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
-
-    // clear the back buffer to dark grey
-    XGL_UINT clearColor[4] = {64, 64, 64, 0};
-    xglCmdClearColorImageRaw( m_cmdBuffer, renderTarget->image(), clearColor, 1, &srRange );
-
-    // prepare back buffer for rendering
-    XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
-    transitionToRender.image = renderTarget->image();
-    transitionToRender.oldState = renderTarget->state();
-    transitionToRender.newState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
-    transitionToRender.subresourceRange = srRange;
-    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
-    renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
-}
-
-void XglRenderTest::NewGenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline)
-{
-    // set all states
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, m_stateViewport );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
-
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
-    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, *pipeline );
-}
-
 void XglRenderTest::DrawRotatedTriangleTest()
 {
     // TODO : This test will pass a matrix into VS to affect triangle orientation.
 }
 
-void XglRenderTest::DrawTriangleTest()
+void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fragShaderText)
 {
     XGL_PIPELINE pipeline;
     XGL_SHADER vs, ps;
     XGL_RESULT err;
-    int width = 256, height = 256;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitViewport(256.0, 256.0));
-    ASSERT_NO_FATAL_FAILURE(CreateDefaultPipeline(&pipeline, &vs, &ps));
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, &vs));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, &ps));
+
+    ASSERT_NO_FATAL_FAILURE(CreateDefaultPipeline(&pipeline, vs, ps));
 
     /*
      * Shaders are now part of the pipeline, don't need these anymore
@@ -552,19 +512,7 @@ void XglRenderTest::DrawTriangleTest()
     ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
     ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
 
-    XGL_QUERY_POOL query;
-    XGL_GPU_MEMORY query_mem;
-    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
-
-    XglImage *renderTarget;
-    XGL_FORMAT fmt = {
-        XGL_CH_FMT_R8G8B8A8,
-        XGL_NUM_FMT_UNORM
-    };
-    ASSERT_NO_FATAL_FAILURE(m_device->CreateImage(width, height, fmt,
-                                                  XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
-                                                  XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                                  &renderTarget));
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     const int constantCount = 4;
     const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
@@ -591,69 +539,15 @@ void XglRenderTest::DrawTriangleTest()
     err = xglBeginCommandBuffer(m_cmdBuffer, 0);
     ASSERT_XGL_SUCCESS(err);
 
-    GenerateClearAndPrepareBufferCmds(renderTarget);
-    GenerateBindRenderTargetCmd(renderTarget);
+    GenerateClearAndPrepareBufferCmds();
+    GenerateBindRenderTargetCmd();
     GenerateBindStateAndPipelineCmds(&pipeline);
-
-//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
-    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
-}
-
-void XglRenderTest::DrawRotatedTriangleTest()
-{
-    // TODO : This test will pass a matrix into VS to affect triangle orientation.
-}
-
-void XglRenderTest::DrawTriangleTest()
-{
-    XGL_PIPELINE pipeline;
-    XGL_SHADER vs, ps;
-    XGL_RESULT err;
-    int width = 256, height = 256;
-    CreateDefaultPipeline(&pipeline, &vs, &ps, width, height);
-    //ASSERT_XGL_SUCCESS(err);
-
-    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
-    ASSERT_XGL_SUCCESS(err);
-
-    /*
-     * Shaders are now part of the pipeline, don't need these anymore
-     */
-    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
-
-    XGL_QUERY_POOL query;
-    XGL_GPU_MEMORY query_mem;
-    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
-
-    XglImage *renderTarget;
-    XGL_FORMAT fmt = {
-        XGL_CH_FMT_R8G8B8A8,
-        XGL_NUM_FMT_UNORM
-    };
-    ASSERT_NO_FATAL_FAILURE(m_device->CreateImage(width, height, fmt,
-                                                  XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
-                                                  XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                                  &renderTarget));
-
-    // Build command buffer
-    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
-    ASSERT_XGL_SUCCESS(err);
-
-    NewGenerateClearAndPrepareBufferCmds(renderTarget);
-    GenerateBindRenderTargetCmd(renderTarget);
-    NewGenerateBindStateAndPipelineCmds(&pipeline);
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
-    xglCmdResetQueryPool(m_cmdBuffer, query, 0, 1);
-    xglCmdBeginQuery(m_cmdBuffer, query, 0, 0);
-
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
-
-    xglCmdEndQuery(m_cmdBuffer, query, 0);
 
     // prepare the back buffer for present
 //    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
@@ -683,31 +577,59 @@ void XglRenderTest::DrawTriangleTest()
     // Wait for work to finish before cleaning up.
     xglDeviceWaitIdle(m_device->device());
 
-    XGL_PIPELINE_STATISTICS_DATA stats;
-    XGL_SIZE stats_size = sizeof(stats);
-    err = xglGetQueryPoolResults(query, 0, 1, &stats_size, &stats);
-    ASSERT_XGL_SUCCESS( err );
-    ASSERT_EQ(stats_size, sizeof(stats));
+    RecordImage(m_renderTarget);
 
-    ASSERT_EQ(stats.vsInvocations, 3);
-    ASSERT_EQ(stats.cPrimitives, 1);
-    ASSERT_EQ(stats.cInvocations, 1);
-
-    DestroyQueryPool(query, query_mem);
-
-    const ::testing::TestInfo* const test_info =
-      ::testing::UnitTest::GetInstance()->current_test_info();
-
-//    renderTarget->WritePPM(test_info->test_case_name());
-//    m_screen.Display(renderTarget, m_image_mem);
-    RecordImage(renderTarget);
-
-    free(renderTarget);
 }
 
 
-TEST_F(XglRenderTest, TestDrawTriangle) {
-    DrawTriangleTest();
+TEST_F(XglRenderTest, TestDrawTriangle1) {
+    static const char *vertShaderText =
+            "#version 130\n"
+            "vec2 vertices[3];\n"
+            "void main() {\n"
+            "      vertices[0] = vec2(-1.0, -1.0);\n"
+            "      vertices[1] = vec2( 1.0, -1.0);\n"
+            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+       "#version 130\n"
+       "uniform vec4 foo;\n"
+       "void main() {\n"
+       "   gl_FragColor = foo;\n"
+       "}\n";
+    DrawTriangleTest(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, TestDrawTriangle2) {
+    static const char *vertShaderText =
+            "#version 330\n"
+            "out vec4 color;\n"
+            "out vec4 scale;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "   color = colors[int(mod(gl_VertexID, 3))];\n"
+            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 430\n"
+            "in vec4 color;\n"
+            "in vec4 scale;\n"
+            "layout(location = 0) uniform vec4 foo;\n"
+            "void main() {\n"
+            "   gl_FragColor = color * scale + foo;\n"
+            "}\n";
+    DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
 TEST_F(XglRenderTest, TestDrawRotatedTriangle) {

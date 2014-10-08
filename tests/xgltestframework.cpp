@@ -87,7 +87,6 @@ void TestEnvironment::TearDown()
 }
 
 XglTestFramework::XglTestFramework() :
-    m_glut_initialized( false ),
     m_compile_options( 0 ),
     m_num_shader_strings( 0 )
 {
@@ -105,6 +104,7 @@ bool XglTestFramework::m_save_images = false;
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
 int XglTestFramework::m_window = 0;
+bool XglTestFramework::m_glut_initialized = false;
 std::list<XglTestImageRecord> XglTestFramework::m_images;
 std::list<XglTestImageRecord>::iterator XglTestFramework::m_display_image;
 int m_display_image_idx = 0;
@@ -165,7 +165,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
 {
     string filename;
     XGL_RESULT err;
-    int x, y;
+        int x, y;
 
     filename.append(basename);
     filename.append(".ppm");
@@ -267,7 +267,8 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
     m_images.push_back(record);
     m_display_image = --m_images.end();
 
-    Display();
+//    Display();
+    glutPostRedisplay();
 
     err = image->UnmapMemory();
     ASSERT_XGL_SUCCESS( err );
@@ -279,11 +280,11 @@ void XglTestFramework::RecordImage(XglImage *image)
       ::testing::UnitTest::GetInstance()->current_test_info();
 
     if (m_save_images) {
-        WritePPM(test_info->test_case_name(), image);
+        WritePPM(test_info->name(), image);
     }
 
     if (m_show_images) {
-        Show(test_info->test_case_name(), image);
+        Show(test_info->name(), image);
     }
 }
 
@@ -347,6 +348,7 @@ void XglTestFramework::Finish()
     glutKeyboardFunc( Key );
     glutSpecialFunc( SpecialKey );
     glutDisplayFunc( Display );
+    glutIdleFunc(NULL);
 
     glutMainLoop();
 }
