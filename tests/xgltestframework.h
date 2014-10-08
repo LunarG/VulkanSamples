@@ -74,7 +74,6 @@ private:
     int m_compile_options;
     int m_num_shader_strings;
     TBuiltInResource Resources;
-    int ShInitialize();
     void SetMessageOptions(EShMessages& messages);
     void ProcessConfigFile();
     char** ReadFileData(const char* fileName);

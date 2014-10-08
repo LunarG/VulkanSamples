@@ -352,24 +352,6 @@ void XglTestFramework::Finish()
 }
 
 //
-// ShInitialize() should be called exactly once per process, not per thread.
-//
-//int XglTestFramework::ShInitialize()
-//{
-//    glslang::InitGlobalLock();
-
-//    if (! InitProcess())
-//        return 0;
-
-//    if (! PerProcessGPA)
-//        PerProcessGPA = new TPoolAllocator();
-
-//    glslang::TScanContext::fillInKeywordMap();
-
-//    return 1;
-//}
-
-//
 // These are the default resources for TBuiltInResources, used for both
 //  - parsing this string for the case where the user didn't supply one
 //  - dumping out a template for user construction of a config file
