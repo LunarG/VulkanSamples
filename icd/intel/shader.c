@@ -41,6 +41,8 @@ static XGL_RESULT shader_parse_glsl(struct intel_shader *sh,
     if (!ir)
         return XGL_ERROR_OUT_OF_MEMORY;
 
+    ir->size = size;
+
     // invoke our program creation as well
     ir->shader_program = shader_create_program(sh, glsl_header);
     if (!ir->shader_program)
