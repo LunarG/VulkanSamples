@@ -514,7 +514,8 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
 }
 
 
-TEST_F(XglRenderTest, TestDrawTriangle1) {
+TEST_F(XglRenderTest, TestDrawTriangle1)
+{
     static const char *vertShaderText =
             "#version 130\n"
             "vec2 vertices[3];\n"
@@ -534,8 +535,9 @@ TEST_F(XglRenderTest, TestDrawTriangle1) {
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TestDrawTriangle2) {
-#if 1
+TEST_F(XglRenderTest, TestDrawTriangle2)
+{
+
     static const char *vertShaderText =
             "#version 130\n"
             "out vec4 color;\n"
@@ -563,8 +565,12 @@ TEST_F(XglRenderTest, TestDrawTriangle2) {
             "void main() {\n"
             "   gl_FragColor = color * scale + foo;\n"
             "}\n";
-#endif
-#if 0
+
+    DrawTriangleTest(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, TestDrawTriangle3)
+{
     static const char *vertShaderText =
             "#version 130\n"
             "void main() {\n"
@@ -584,7 +590,6 @@ TEST_F(XglRenderTest, TestDrawTriangle2) {
             "void main() {\n"
             "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
             "}\n";
-#endif
 
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
