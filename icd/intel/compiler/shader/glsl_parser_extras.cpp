@@ -1587,9 +1587,11 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
 #define NOT_USEBIL
 
 void
-_mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader,
-                                bool dump_ast, bool dump_hir)
+_mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
+                          bool dump_ast, bool dump_hir)
 {
+   static const unsigned int bilMagic = 0x07230203;
+
    const char* infoLog = "";
 
    _mesa_glsl_parse_state *state =
@@ -1609,14 +1611,17 @@ _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader
    manager->options.optimizations.flattenHoistThreshold = 25;
    manager->options.optimizations.reassociate = ctx->Const.GlassEnableReassociation;
 
-   glslang::TShader*  glslang_shader = new glslang::TShader(glslang_stage);
-   glslang::TProgram* glslang_program = new glslang::TProgram;
+   const bool useBIL = ((unsigned int *)shader->Source)[0] == bilMagic;
 
-   if (glslang_shader == 0 || glslang_program == 0)
+   glslang::TShader*  glslang_shader = useBIL ? 0 : new glslang::TShader(glslang_stage);
+   glslang::TProgram* glslang_program = useBIL ? 0 : new glslang::TProgram;
+
+   if (!useBIL && (glslang_shader == 0 || glslang_program == 0))
       state->error = true;
 
    // Set the shader source into the TShader object
-   glslang_shader->setStrings(&shader->Source, 1);
+   if (!useBIL)
+       glslang_shader->setStrings(&shader->Source, 1);
 
    // glslang message reporting level
    const EShMessages messages = EShMessages(EShMsgDefault | EShMsgRelaxedErrors);
@@ -1627,36 +1632,44 @@ _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader
 
    const int defaultVersion = state->es_shader ? 100 : 110;
 
-   if (!state->error) {
+   if (!useBIL && !state->error) {
       if (!glslang_shader->parse(&resources, defaultVersion, false, messages)) {
          state->error = true;
          infoLog = glslang_shader->getInfoLog();
       }
    }
 
-   if (!state->error)
+   if (!useBIL && !state->error)
       glslang_program->addShader(glslang_shader);
 
    // Run glslang linking step
-   if (!state->error && !glslang_program->link(messages)) {
+   if (!useBIL && !state->error && !glslang_program->link(messages)) {
       state->error = true;
       infoLog = glslang_program->getInfoLog();
    }
 
    if (!state->error) {
       for (int stage = 0; stage < EShLangCount; ++stage) {
-         glslang::TIntermediate* intermediate = glslang_program->getIntermediate((EShLanguage)stage);
-         if (! intermediate)
-            continue;
+         if (!useBIL) {
+            glslang::TIntermediate* intermediate = glslang_program->getIntermediate((EShLanguage)stage);
+            if (! intermediate)
+               continue;
+            TranslateGlslangToTop(*intermediate, *manager);
+         } else {
+            // Verify that the BIL really is BIL
+            if (((unsigned int *)shader->Source)[0] == bilMagic) {
+               std::vector<unsigned int> bil;
 
-#ifdef USEBIL
-         std::vector<unsigned int> bil;
-         glslang::GlslangToBil(*intermediate, bil);
-         gla::BilToTop(bil, *manager);
-#else // USEBIL
-         // Translate glslang to top.  TODO: move to encapsulation function
-         TranslateGlslangToTop(*intermediate, *manager);
-#endif // USEBIL
+               int size = 0;
+               bil.reserve(size);
+               for (int x=0; x<size; ++x)
+                  bil.push_back(((unsigned int *)shader->Source)[x]);
+
+               gla::BilToTop(bil, *manager);
+            } else {
+               state->error = true;
+            }
+         }
 
          if (dump_hir)
             manager->dump("\nTop IR:\n");
@@ -1738,13 +1751,6 @@ _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader
    delete glslang_program;
    delete glslang_shader;
    delete manager;
-}
-
-void
-_mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
-                          bool dump_ast, bool dump_hir)
-{
-   _mesa_glsl_compile_shader_glass(ctx, shader, dump_ast, dump_hir);
 }
 
 } /* extern "C" */

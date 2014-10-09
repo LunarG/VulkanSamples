@@ -51,21 +51,6 @@ static XGL_RESULT shader_parse_glsl(struct intel_shader *sh,
     // TODO: set necessary shader information. This should really
     // happen as result of create_program call.
     sh->ir = ir;
-    switch (glsl_header->stage) {
-    case XGL_SHADER_STAGE_VERTEX:
-        sh->uses |= INTEL_SHADER_USE_VID;
-        sh->in_count = 1;
-        sh->out_count = 2;
-        sh->urb_grf_start = 1;
-        break;
-    case XGL_SHADER_STAGE_FRAGMENT:
-        sh->out_count = 1;
-        sh->surface_count = 1;
-        sh->urb_grf_start = 2;
-        break;
-    default:
-        break;
-    }
 
     return XGL_SUCCESS;
 }
