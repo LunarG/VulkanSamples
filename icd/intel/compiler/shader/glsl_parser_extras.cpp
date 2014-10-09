@@ -1584,7 +1584,7 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
    }
 }
 
-#define USEBIL
+#define NOT_USEBIL
 
 void
 _mesa_glsl_compile_shader_glass(struct gl_context *ctx, struct gl_shader *shader,
