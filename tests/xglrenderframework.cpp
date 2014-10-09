@@ -332,27 +332,6 @@ void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADE
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
 
-    const int constantCount = 4;
-    const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
-    ASSERT_NO_FATAL_FAILURE(InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants));
-
-    // Create descriptor set for a uniform resource
-    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
-    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-    descriptorInfo.slots = 1;
-
-    // create a descriptor set with a single slot
-    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
-    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
-
-    // bind memory to the descriptor set
-    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
-
-    // write the constant buffer view to the descriptor set
-    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
-    xglEndDescriptorSetUpdate( m_rsrcDescSet );
-
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
