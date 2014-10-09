@@ -242,7 +242,7 @@ void XglRenderFramework::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    if (this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
+    if (!this->m_use_bil && this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
         XGL_INTEL_COMPILE_GLSL glsl_header;
 
         glsl_header.stage = stage;

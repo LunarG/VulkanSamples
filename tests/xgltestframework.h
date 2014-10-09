@@ -69,6 +69,7 @@ public:
     bool GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &bil);
+    static bool         m_use_bil;
 
 private:
     int m_compile_options;
@@ -91,6 +92,7 @@ private:
 
     static bool         m_show_images;
     static bool         m_save_images;
+
     static std::list<XglTestImageRecord> m_images;
     static std::list<XglTestImageRecord>::iterator m_display_image;
     static int          m_display_image_idx;
