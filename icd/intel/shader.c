@@ -85,7 +85,9 @@ static void shader_destroy(struct intel_obj *obj)
 {
     struct intel_shader *sh = intel_shader_from_obj(obj);
 
-    shader_destroy_program(sh->ir->shader_program);
+    if (sh->ir) {
+        shader_destroy_program(sh->ir->shader_program);
+    }
     icd_free(sh->ir);
     intel_base_destroy(&sh->obj.base);
 }
