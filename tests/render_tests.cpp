@@ -137,9 +137,6 @@ public:
     void InitSampler();
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawRotatedTriangleTest();
-    void NewGenerateClearAndPrepareBufferCmds(XglImage *renderTarget);
-    void NewGenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
-
 
 protected:
     XGL_IMAGE m_texture;
@@ -538,42 +535,58 @@ TEST_F(XglRenderTest, TestDrawTriangle1) {
 }
 
 TEST_F(XglRenderTest, TestDrawTriangle2) {
-//    static const char *vertShaderText =
-//            "#version 130\n"
-//            "void main() {\n"
-//            "   vec2 vertices[3];"
-//            "      vertices[0] = vec2(-0.5, -0.5);\n"
-//            "      vertices[1] = vec2( 0.5, -0.5);\n"
-//            "      vertices[2] = vec2( 0.5,  0.5);\n"
-//            "   vec4 colors[3];\n"
-//            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-//            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-//            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-//            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-//            "}\n";
-
-//    static const char *fragShaderText =
-//            "#version 130\n"
-//            "void main() {\n"
-//            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
-//            "}\n";
+#if 1
     static const char *vertShaderText =
             "#version 130\n"
+            "out vec4 color;\n"
+            "out vec4 scale;\n"
             "vec2 vertices[3];\n"
             "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "vec2 vertices[3];\n"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "   color = colors[gl_VertexID % 3];\n"
+            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
-       "#version 130\n"
-       "uniform vec4 foo;\n"
-       "void main() {\n"
-       "   gl_FragColor = foo;\n"
-       "}\n";
-//    DrawTriangleTest(vertShaderText, fragShaderText);
+            "#version 130\n"
+            "in vec4 color;\n"
+            "in vec4 scale;\n"
+            "uniform vec4 foo;\n"
+            "void main() {\n"
+            "   gl_FragColor = color * scale + foo;\n"
+            "}\n";
+#endif
+#if 0
+    static const char *vertShaderText =
+            "#version 130\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 130\n"
+            "void main() {\n"
+            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
+            "}\n";
+#endif
+
+    DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
 TEST_F(XglRenderTest, TestDrawRotatedTriangle) {
