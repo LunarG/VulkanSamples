@@ -1008,7 +1008,7 @@ void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, cons
 
 }
 
-TEST_F(XglRenderTest, TestDrawTriangle1)
+TEST_F(XglRenderTest, GreenTriangle)
 {
     static const char *vertShaderText =
             "#version 130\n"
@@ -1052,7 +1052,7 @@ TEST_F(XglRenderTest, BIL_GreenTriangle)
     XglTestFramework::m_use_bil = saved_use_bil;
 }
 
-TEST_F(XglRenderTest, TestDrawTriangle2)
+TEST_F(XglRenderTest, TriangleFragUniform)
 {
 
     static const char *vertShaderText =
@@ -1086,7 +1086,7 @@ TEST_F(XglRenderTest, TestDrawTriangle2)
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TestDrawTriangle3)
+TEST_F(XglRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =
             "#version 130\n"
@@ -1111,11 +1111,11 @@ TEST_F(XglRenderTest, TestDrawTriangle3)
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TestDrawRotatedTriangle) {
+TEST_F(XglRenderTest, RotatedTriangle) {
     DrawRotatedTriangleTest();
 }
 
-TEST_F(XglRenderTest, TestDrawTriangleTwoFSUniforms)
+TEST_F(XglRenderTest, TriangleTwoFSUniforms)
 {
     static const char *vertShaderText =
             "#version 130\n"
@@ -1159,7 +1159,7 @@ TEST_F(XglRenderTest, TestDrawTriangleTwoFSUniforms)
     DrawTriangleTwoUniformsFS(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TestDrawTriangleWithVertexFetch)
+TEST_F(XglRenderTest, TriangleWithVertexFetch)
 {
     static const char *vertShaderText =
             "#version 130\n"
@@ -1184,7 +1184,7 @@ TEST_F(XglRenderTest, TestDrawTriangleWithVertexFetch)
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TestDrawTriangleVSUniform)
+TEST_F(XglRenderTest, TriangleVSUniform)
 {
     static const char *vertShaderText =
             "#version 130\n"
