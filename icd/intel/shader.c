@@ -30,32 +30,7 @@
 #include "shader.h"
 #include "compiler/shader/compiler_interface.h"
 
-static XGL_RESULT shader_parse_glsl(struct intel_shader *sh,
-                                   const struct intel_gpu *gpu,
-                                   const XGL_INTEL_COMPILE_GLSL *glsl_header,
-                                   XGL_SIZE size)
-{
-    struct intel_ir *ir;
-
-    ir = icd_alloc(sizeof(*ir), 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    if (!ir)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    ir->size = size;
-
-    // invoke our program creation as well
-    ir->shader_program = shader_create_program_glsl(sh, glsl_header);
-    if (!ir->shader_program)
-        return XGL_ERROR_BAD_SHADER_CODE;
-
-    // TODO: set necessary shader information. This should really
-    // happen as result of create_program call.
-    sh->ir = ir;
-
-    return XGL_SUCCESS;
-}
-
-static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
+static XGL_RESULT shader_parse(struct intel_shader *sh,
                                    const struct intel_gpu *gpu,
                                    const struct icd_bil_header *bil,
                                    XGL_SIZE size)
@@ -69,7 +44,7 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
     ir->size = size - sizeof(*bil);
 
     // invoke our program creation as well
-    ir->shader_program = shader_create_program_bil(sh, bil, size);
+    ir->shader_program = shader_create_program(sh, bil, size);
     if (!ir->shader_program)
         return XGL_ERROR_BAD_SHADER_CODE;
 
@@ -105,27 +80,18 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     if (!sh)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    if (dev->exts[INTEL_EXT_COMPILE_GLSL] &&
-        info->sType == (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO) {
-        // use GLSL compiler extension
-        ret = shader_parse_glsl(sh, dev->gpu, info->pCode, info->codeSize);
-        if (ret != XGL_SUCCESS) {
-            shader_destroy(&sh->obj);
-            return ret;
-        }
-    } else {
-        if (info->codeSize < sizeof(*bil))
-            return XGL_ERROR_INVALID_MEMORY_SIZE;
-        if (bil->magic != ICD_BIL_MAGIC)
-            return XGL_ERROR_BAD_SHADER_CODE;
+    if (info->codeSize < sizeof(*bil))
+        return XGL_ERROR_INVALID_MEMORY_SIZE;
+    if (bil->magic != ICD_BIL_MAGIC)
+        return XGL_ERROR_BAD_SHADER_CODE;
 
 
-        ret = shader_parse_bil(sh, dev->gpu, bil, info->codeSize);
-        if (ret != XGL_SUCCESS) {
-            shader_destroy(&sh->obj);
-            return ret;
-        }
+    ret = shader_parse(sh, dev->gpu, bil, info->codeSize);
+    if (ret != XGL_SUCCESS) {
+        shader_destroy(&sh->obj);
+        return ret;
     }
+
 
     sh->obj.destroy = shader_destroy;
 

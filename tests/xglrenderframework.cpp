@@ -26,7 +26,6 @@
  */
 
 #include "xglrenderframework.h"
-#include "xglIntelExt.h"
 
 XglRenderFramework::XglRenderFramework() :
     m_colorBlend( XGL_NULL_HANDLE ),
@@ -234,33 +233,43 @@ void XglRenderFramework::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
                                       const char *shader_code,
                                       XGL_SHADER *pshader)
 {
-    XGL_RESULT err;
+    XGL_RESULT err = XGL_SUCCESS;
     std::vector<unsigned int> bil;
     XGL_SHADER_CREATE_INFO createInfo;
+    size_t shader_len;
     XGL_SHADER shader;
 
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    if (!this->m_use_bil && this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
-        XGL_INTEL_COMPILE_GLSL glsl_header;
-
-        glsl_header.stage = stage;
-        glsl_header.pCode = shader_code;
-        // Driver has extended CreateShader to process GLSL
-        createInfo.sType = (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        createInfo.pCode = &glsl_header;
-        createInfo.codeSize = strlen(shader_code);
+    if (!this->m_use_bil) {
+        shader_len = strlen(shader_code);
+        createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+        createInfo.pCode = malloc(createInfo.codeSize);
         createInfo.flags = 0;
-    } else {
+
+        /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
+        ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+        ((uint32_t *) createInfo.pCode)[1] = 0;
+        ((uint32_t *) createInfo.pCode)[2] = stage;
+        memcpy(((uint32_t *) createInfo.pCode + 3), shader_code, shader_len + 1);
+
+        err = xglCreateShader(device(), &createInfo, &shader);
+        if (err) {
+            free((void *) createInfo.pCode);
+        }
+    }
+
+    // Only use BIL if GLSL compile fails or it's requested via m_use_bil
+    if (this->m_use_bil || err) {
         // Use Reference GLSL to BIL compiler
         GLSLtoBIL(stage, shader_code, bil);
         createInfo.pCode = bil.data();
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;
+        err = xglCreateShader(device(), &createInfo, &shader);
     }
 
-    err = xglCreateShader(device(), &createInfo, &shader);
     ASSERT_XGL_SUCCESS(err);
 
     *pshader = shader;

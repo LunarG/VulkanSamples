@@ -242,12 +242,17 @@ extern "C" {
 
 // invoke front end compiler to generate an independently linked
 // program object that contains Mesa HIR
-struct gl_shader_program *shader_create_program_bil(struct intel_shader *sh,
-                                                    const icd_bil_header *bil,
+struct gl_shader_program *shader_create_program(struct intel_shader *sh,
+                                                    const void *code,
                                                     XGL_SIZE size)
 {
+    struct icd_bil_header header;
     struct gl_context local_ctx;
     struct gl_context *ctx = &local_ctx;
+
+    memcpy(&header, code, sizeof(header));
+    if (header.magic != ICD_BIL_MAGIC)
+        return NULL;
 
     _mesa_create_shader_compiler();
     initialize_mesa_context_to_defaults(ctx);
@@ -266,116 +271,55 @@ struct gl_shader_program *shader_create_program_bil(struct intel_shader *sh,
     shader_program->Shaders[shader_program->NumShaders] = shader;
     shader_program->NumShaders++;
 
-    shader->Source = (const GLchar*)bil;
-    shader->Size   = size / sizeof(unsigned);  // size in BIL words
+    if (header.version == 0) {
+        // version 0 means we really have GLSL Source
+        shader->Source = (const char *) code + sizeof(header);
 
-    glbil::ExecutionModel executionModel = glbil::ModelVertex;
-
-    unsigned bilWord = 5;
-
-    while (bilWord < size) {
-        const unsigned      opWord = ((unsigned int*)bil)[bilWord];
-        const glbil::OpCode op     = glbil::OpCode((opWord & 0xffff));
-
-        if (op == glbil::OpEntryPoint) {
-            executionModel = glbil::ExecutionModel(((unsigned int*)bil)[bilWord+1]);
+        switch(header.gen_magic) {
+        case XGL_SHADER_STAGE_VERTEX:
+            shader->Type = GL_VERTEX_SHADER;
+            break;
+        case XGL_SHADER_STAGE_FRAGMENT:
+            shader->Type = GL_FRAGMENT_SHADER;
+            break;
+        default:
+            assert(0);
             break;
         }
+    } else {
 
-        bilWord += (opWord & 0xffff0000) >> 16;
-    }
+        shader->Source = (const GLchar*)code;
+        shader->Size   = size / sizeof(unsigned);  // size in BIL words
 
-    // We should parse the glsl text out of bil right now, but
-    // instead we are just plopping down our glsl
-    switch(executionModel) {
-    case glbil::ModelVertex:
-        shader->Type = GL_VERTEX_SHADER;
-        break;
-    case glbil::ModelFragment:
-        shader->Type = GL_FRAGMENT_SHADER;
-        break;
-    default:
-        assert(0);
-        break;
-    }
+        glbil::ExecutionModel executionModel = glbil::ModelVertex;
 
-    shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);
+        unsigned bilWord = 5;
 
-    struct _mesa_glsl_parse_state *state =
-        new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
+        while (bilWord < size) {
+            const unsigned      opWord = ((unsigned int*)code)[bilWord];
+            const glbil::OpCode op     = glbil::OpCode((opWord & 0xffff));
 
-    shader_program->Type = shader->Stage;
+            if (op == glbil::OpEntryPoint) {
+                executionModel = glbil::ExecutionModel(((unsigned int*)code)[bilWord+1]);
+                break;
+            }
 
-    bool dump_ast = false;
-    bool dump_hir = true;
-    bool do_link  = true;
+            bilWord += (opWord & 0xffff0000) >> 16;
+        }
 
-    _mesa_glsl_compile_shader(ctx, shader, dump_ast, dump_hir);
-
-    if (strlen(shader->InfoLog) > 0)
-        printf("Info log:\n%s\n", shader->InfoLog);
-
-    if (!shader->CompileStatus)
-        return NULL;
-
-    assert(shader_program->NumShaders == 1);
-
-    // for XGL, we are independently compiling and linking individual
-    // shaders, which matches this frontend's concept of SSO
-    shader_program->SeparateShader = true;
-
-    link_shaders(ctx, shader_program);
-    if (!shader_program->LinkStatus)
-        return NULL;
-
-    if (strlen(shader_program->InfoLog) > 0)
-        printf("Info log for linking:\n%s\n", shader_program->InfoLog);
-
-    _mesa_destroy_shader_compiler();
-
-    return shader_program;
-}
-
-
-// invoke front end compiler to generate an independently linked
-// program object that contains Mesa HIR
-struct gl_shader_program *shader_create_program_glsl(struct intel_shader *sh,
-                                                     const XGL_INTEL_COMPILE_GLSL *glsl_header)
-{
-    struct gl_context local_ctx;
-    struct gl_context *ctx = &local_ctx;
-
-    _mesa_create_shader_compiler();
-    initialize_mesa_context_to_defaults(ctx);
-
-    struct gl_shader_program *shader_program = brw_new_shader_program(ctx, 0);
-    assert(shader_program != NULL);
-
-    shader_program->InfoLog = ralloc_strdup(shader_program, "");
-    shader_program->Shaders =
-    reralloc(shader_program, shader_program->Shaders,
-        struct gl_shader *, shader_program->NumShaders + 1);
-    assert(shader_program->Shaders != NULL);
-
-    struct gl_shader *shader = rzalloc(shader_program, struct gl_shader);
-
-    shader_program->Shaders[shader_program->NumShaders] = shader;
-    shader_program->NumShaders++;
-
-    shader->Source = glsl_header->pCode;
-
-    // We should parse the glsl text out of bil right now, but
-    // instead we are just plopping down our glsl
-    switch(glsl_header->stage) {
-    case XGL_SHADER_STAGE_VERTEX:
-        shader->Type = GL_VERTEX_SHADER;
-        break;
-    case XGL_SHADER_STAGE_FRAGMENT:
-        shader->Type = GL_FRAGMENT_SHADER;
-        break;
-    default:
-        assert(0);
-        break;
+        // We should parse the glsl text out of bil right now, but
+        // instead we are just plopping down our glsl
+        switch(executionModel) {
+        case glbil::ModelVertex:
+            shader->Type = GL_VERTEX_SHADER;
+            break;
+        case glbil::ModelFragment:
+            shader->Type = GL_FRAGMENT_SHADER;
+            break;
+        default:
+            assert(0);
+            break;
+        }
     }
 
     shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);

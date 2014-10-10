@@ -64,7 +64,6 @@
 using namespace std;
 
 #include <xgl.h>
-#include <xglIntelExt.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
@@ -440,6 +439,7 @@ void XglRenderTest::DrawTriangleTest()
     std::vector<unsigned int> bil;
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
+    size_t shader_len;
     XGL_IMAGE                    m_image;
     XGL_COLOR_ATTACHMENT_VIEW    m_targetView;
     XGL_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
@@ -563,46 +563,32 @@ void XglRenderTest::DrawTriangleTest()
             "      vertices[2] = vec2( 0.0,  1.0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
-    static const char *vertShader2 =
-            "#version 330\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[int(mod(gl_VertexID, 3))];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[int(mod(gl_VertexID, 3))], 0.0, 1.0);\n"
-            "}\n";
 
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    if (this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
-        XGL_INTEL_COMPILE_GLSL glsl_header;
+    shader_len = strlen(vertShaderText);
+    createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+    createInfo.pCode = malloc(createInfo.codeSize);
+    createInfo.flags = 0;
 
-        glsl_header.stage = XGL_SHADER_STAGE_VERTEX;
-        glsl_header.pCode = vertShader2;
-        // Driver has extended CreateShader to process GLSL
-        createInfo.sType = (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        createInfo.pCode = &glsl_header;
-        createInfo.codeSize = strlen(vertShader2);
-        createInfo.flags = 0;
-    } else {
+    /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
+    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+    ((uint32_t *) createInfo.pCode)[1] = 0;
+    ((uint32_t *) createInfo.pCode)[2] = XGL_SHADER_STAGE_VERTEX;
+    memcpy(((uint32_t *) createInfo.pCode + 3), vertShaderText, shader_len + 1);
+
+    err = xglCreateShader(device(), &createInfo, &shader);
+    if (err) {
+        free((void *) createInfo.pCode);
+
         // Use Reference GLSL to BIL compiler
-        GLSLtoBIL(XGL_SHADER_STAGE_VERTEX, vertShader2, bil);
+        GLSLtoBIL(XGL_SHADER_STAGE_VERTEX, vertShaderText, bil);
         createInfo.pCode = bil.data();
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;
+        err = xglCreateShader(device(), &createInfo, &shader);
     }
-
-    err = xglCreateShader(device(), &createInfo, &vs);
     ASSERT_XGL_SUCCESS(err);
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -621,37 +607,32 @@ void XglRenderTest::DrawTriangleTest()
        "void main() {\n"
        "   gl_FragColor = foo;\n"
        "}\n";
-    static const char *fragShader2 =
-            "#version 430\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "layout(location = 0) uniform vec4 foo;\n"
-            "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
 
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    if (this->m_device->extension_exist("XGL_COMPILE_GLSL")) {
-        XGL_INTEL_COMPILE_GLSL glsl_header;
+    shader_len = strlen(fragShaderText);
+    createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+    createInfo.pCode = malloc(createInfo.codeSize);
+    createInfo.flags = 0;
 
-        glsl_header.stage = XGL_SHADER_STAGE_FRAGMENT;
-        glsl_header.pCode = fragShader2;
-        // Driver has extended CreateShader to process GLSL
-        createInfo.sType = (XGL_STRUCTURE_TYPE) XGL_INTEL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        createInfo.pCode = &glsl_header;
-        createInfo.codeSize = strlen(fragShader2);
-        createInfo.flags = 0;
-    } else {
+    /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
+    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+    ((uint32_t *) createInfo.pCode)[1] = 0;
+    ((uint32_t *) createInfo.pCode)[2] = XGL_SHADER_STAGE_VERTEX;
+    memcpy(((uint32_t *) createInfo.pCode + 3), fragShaderText, shader_len + 1);
+
+    err = xglCreateShader(device(), &createInfo, &ps);
+    if (err) {
+        free((void *) createInfo.pCode);
+
         // Use Reference GLSL to BIL compiler
-        GLSLtoBIL(XGL_SHADER_STAGE_FRAGMENT, fragShader2, bil);
+        GLSLtoBIL(XGL_SHADER_STAGE_VERTEX, fragShaderText, bil);
         createInfo.pCode = bil.data();
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;
+        err = xglCreateShader(device(), &createInfo, &ps);
     }
-
-    err = xglCreateShader(device(), &createInfo, &ps);
     ASSERT_XGL_SUCCESS(err);
 
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

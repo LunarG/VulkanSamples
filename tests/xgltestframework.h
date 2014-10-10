@@ -27,6 +27,7 @@
 #include "xglimage.h"
 #include "ShaderLang.h"
 #include "GLSL450Lib.h"
+#include "icd-bil.h"
 
 #include <stdlib.h>
 #include <stdio.h>
