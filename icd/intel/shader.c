@@ -44,7 +44,7 @@ static XGL_RESULT shader_parse_glsl(struct intel_shader *sh,
     ir->size = size;
 
     // invoke our program creation as well
-    ir->shader_program = shader_create_program(sh, glsl_header);
+    ir->shader_program = shader_create_program_glsl(sh, glsl_header);
     if (!ir->shader_program)
         return XGL_ERROR_BAD_SHADER_CODE;
 
@@ -68,14 +68,13 @@ static XGL_RESULT shader_parse_bil(struct intel_shader *sh,
 
     ir->size = size - sizeof(*bil);
 
-    ir->kernel = icd_alloc(ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    if (!ir->kernel) {
-        icd_free(ir);
-        return XGL_ERROR_OUT_OF_MEMORY;
-    }
+    // invoke our program creation as well
+    ir->shader_program = shader_create_program_bil(sh, bil, size);
+    if (!ir->shader_program)
+        return XGL_ERROR_BAD_SHADER_CODE;
 
-    // TODO: Translate BIL header to internal-IR
-
+    // TODO: set necessary shader information. This should really
+    // happen as result of create_program call.
     sh->ir = ir;
 
     return XGL_SUCCESS;

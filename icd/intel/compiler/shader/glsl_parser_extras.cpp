@@ -49,6 +49,7 @@ extern "C" {
 #include "ir_optimization.h"
 #include "loop_analysis.h"
 #include "threadpool.h"
+#include "BIL/Bil.h"
 
 
 /**
@@ -1584,14 +1585,10 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
    }
 }
 
-#define NOT_USEBIL
-
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir)
 {
-   static const unsigned int bilMagic = 0x07230203;
-
    const char* infoLog = "";
 
    _mesa_glsl_parse_state *state =
@@ -1611,7 +1608,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    manager->options.optimizations.flattenHoistThreshold = 25;
    manager->options.optimizations.reassociate = ctx->Const.GlassEnableReassociation;
 
-   const bool useBIL = ((unsigned int *)shader->Source)[0] == bilMagic;
+   const bool useBIL = ((unsigned int *)shader->Source)[0] == glbil::MagicNumber;
 
    glslang::TShader*  glslang_shader = useBIL ? 0 : new glslang::TShader(glslang_stage);
    glslang::TProgram* glslang_program = useBIL ? 0 : new glslang::TProgram;
@@ -1649,37 +1646,36 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    }
 
    if (!state->error) {
-      for (int stage = 0; stage < EShLangCount; ++stage) {
-         if (!useBIL) {
-            glslang::TIntermediate* intermediate = glslang_program->getIntermediate((EShLanguage)stage);
-            if (! intermediate)
-               continue;
-            TranslateGlslangToTop(*intermediate, *manager);
-         } else {
-            // Verify that the BIL really is BIL
-            if (((unsigned int *)shader->Source)[0] == bilMagic) {
+       if (!useBIL) {
+           for (int stage = 0; stage < EShLangCount; ++stage) {
+               glslang::TIntermediate* intermediate = glslang_program->getIntermediate((EShLanguage)stage);
+               if (! intermediate)
+                   continue;
+               TranslateGlslangToTop(*intermediate, *manager);
+           }
+       } else {
+           // Verify that the BIL really is BIL
+           if (((unsigned int *)shader->Source)[0] == glbil::MagicNumber) {
                std::vector<unsigned int> bil;
 
-               int size = 0;
-               bil.reserve(size);
-               for (int x=0; x<size; ++x)
-                  bil.push_back(((unsigned int *)shader->Source)[x]);
+               bil.reserve(shader->Size);
+               for (int x=0; x<shader->Size; ++x)
+                   bil.push_back(((unsigned int *)shader->Source)[x]);
 
                gla::BilToTop(bil, *manager);
-            } else {
+           } else {
                state->error = true;
-            }
-         }
+           }
+       }
 
-         if (dump_hir)
-            manager->dump("\nTop IR:\n");
+       if (dump_hir)
+           manager->dump("\nTop IR:\n");
 
-         // Top IR to bottom IR
-         manager->translateTopToBottom();
+       // Top IR to bottom IR
+       manager->translateTopToBottom();
 
-         if (dump_hir)
-            manager->dump("\n\nBottom IR:\n");
-      }
+       if (dump_hir)
+           manager->dump("\n\nBottom IR:\n");
    }
 
    if (!state->error) {

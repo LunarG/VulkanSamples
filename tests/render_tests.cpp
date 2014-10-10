@@ -825,9 +825,8 @@ TEST_F(XglRenderTest, TestDrawTriangle1)
 
     static const char *fragShaderText =
        "#version 130\n"
-       "uniform vec4 foo;\n"
        "void main() {\n"
-       "   gl_FragColor = foo;\n"
+       "   gl_FragColor = vec4(0,1,0,1);\n"
        "}\n";
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
