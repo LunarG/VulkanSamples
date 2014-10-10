@@ -137,6 +137,9 @@ public:
     void InitSampler();
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
+    void DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText);
+
+    void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void DrawRotatedTriangleTest();
 
 
@@ -610,6 +613,204 @@ void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const 
 
 }
 
+void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
+{
+    XGL_RESULT err;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
+
+
+    // Create descriptor set for our one resource
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = 1; // Vertex buffer only
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the vertex buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
+    const int slots = 1;
+    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    slotInfo[0].shaderEntityIndex = 0;
+    slotInfo[0].slotObjectType = XGL_SLOT_VERTEX_INPUT;
+
+    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vs_stage.pNext = XGL_NULL_HANDLE;
+    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
+    vs_stage.shader.shader = vs;
+    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = slots;
+    vs_stage.shader.linkConstBufferCount = 0;
+    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ps_stage.pNext = &vs_stage;
+    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
+    ps_stage.shader.shader = ps;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    ps_stage.shader.linkConstBufferCount = 0;
+    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+        sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+    };
+
+    // this is the current description of g_vbData
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO, // sType;
+        &ps_stage,                                            // pNext;
+        1,                                                    // bindingCount
+        &vi_binding,                                          // pVertexBindingDescriptions;
+        2,                                                    // attributeCount; // number of attributes
+        vi_attribs                                            // pVertexAttributeDescriptions;
+    };
+
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
+        &vi_state,                                         // pNext
+        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
+        XGL_FALSE,                                         // disableVertexReuse
+        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
+        XGL_FALSE,                                         // primitiveRestartEnable
+        0                                                  // primitiveRestartIndex
+    };
+
+    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+        &ia_state,
+        XGL_FALSE,                                          // depthClipEnable
+        XGL_FALSE,                                          // rasterizerDiscardEnable
+        1.0                                                 // pointSize
+    };
+
+    XGL_PIPELINE_CB_STATE cb_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+        &rs_state,
+        XGL_FALSE,                                          // alphaToCoverageEnable
+        XGL_FALSE,                                          // dualSourceBlendEnable
+        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
+        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
+            {
+                XGL_FALSE,                                  // blendEnable
+                m_render_target_fmt,                        // XGL_FORMAT
+                0xF                                         // channelWriteMask
+            }
+        }
+    };
+
+    // TODO: Should take depth buffer format from queried formats
+    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+        &cb_state,
+        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
+    };
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = &db_state;
+    info.flags = 0;
+    err = xglCreateGraphicsPipeline(device(), &info, pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(*pipeline, "Pipeline", &m_pipe_mem);
+    ASSERT_XGL_SUCCESS(err);
+}
+
+void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText)
+{
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitMesh(sizeof(g_vbData)/sizeof(g_vbData[0]), sizeof(g_vbData[0]), g_vbData));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, &vs));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, &ps));
+
+    ASSERT_NO_FATAL_FAILURE(CreatePipelineWithVertexFetch(&pipeline, vs, ps));
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds();
+    GenerateBindRenderTargetCmd();
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
+//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+//    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
+
+    // render the cube
+    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+
+    // prepare the back buffer for present
+//    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
+//    transitionToPresent.image = m_image;
+//    transitionToPresent.oldState = m_image_state;
+//    transitionToPresent.newState = m_display.fullscreen ? XGL_WSI_WIN_PRESENT_SOURCE_FLIP : XGL_WSI_WIN_PRESENT_SOURCE_BLT;
+//    transitionToPresent.subresourceRange = srRange;
+//    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToPresent );
+//    m_image_state = ( XGL_IMAGE_STATE ) transitionToPresent.newState;
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 0;
+//    m_memRefs[0].flags = 0;
+//    m_memRefs[0].mem = m_vtxBufferMemory;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS( err );
+
+    err = xglQueueWaitIdle( m_device->m_queue );
+    ASSERT_XGL_SUCCESS( err );
+
+    // Wait for work to finish before cleaning up.
+    xglDeviceWaitIdle(m_device->device());
+
+    RecordImage(m_renderTarget);
+
+}
+
 //TEST_F(XglRenderTest, TestDrawTriangle1)
 //{
 //    static const char *vertShaderText =
@@ -694,48 +895,73 @@ void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const 
 //    DrawRotatedTriangleTest();
 //}
 
-TEST_F(XglRenderTest, TestDrawTriangleTwoFSUniforms)
+//TEST_F(XglRenderTest, TestDrawTriangleTwoFSUniforms)
+//{
+//    static const char *vertShaderText =
+//            "#version 130\n"
+//            "out vec4 color;\n"
+//            "out vec4 scale;\n"
+//            "out vec2 samplePos;\n"
+//            "void main() {\n"
+//            "   vec2 vertices[3];"
+//            "      vertices[0] = vec2(-0.5, -0.5);\n"
+//            "      vertices[1] = vec2( 0.5, -0.5);\n"
+//            "      vertices[2] = vec2( 0.5,  0.5);\n"
+//            "   vec4 colors[3];\n"
+//            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+//            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+//            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+//            "   color = colors[gl_VertexID % 3];\n"
+//            "   vec2 positions[3];"
+//            "      positions[0] = vec2( 0.0, 0.0);\n"
+//            "      positions[1] = vec2( 1.0, 0.0);\n"
+//            "      positions[2] = vec2( 1.0, 1.0);\n"
+//            "   scale = vec4(0.0, 0.0, 0.0, 0.0);\n"
+//            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+//            "}\n";
+
+
+//    static const char *fragShaderText =
+//            "#version 430\n"
+//            "in vec4 color;\n"
+//            "in vec4 scale;\n"
+//            "uniform vec4 foo;\n"
+//            "uniform vec4 bar;\n"
+//            "void main() {\n"
+//            // by default, with no location or blocks
+//            // the compiler will read them from buffer
+//            // in reverse order of first use in shader
+//            // The buffer contains red, followed by blue,
+//            // so foo should be blue, bar should be red
+//            "   gl_FragColor = color * scale * foo * bar + foo;\n"
+//            "}\n";
+
+//    DrawTriangleTwoUniformsFS(vertShaderText, fragShaderText);
+//}
+
+TEST_F(XglRenderTest, TestDrawTriangleWithVertexFetch)
 {
     static const char *vertShaderText =
             "#version 130\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "out vec2 samplePos;\n"
+            //XYZ1( -1, -1, -1 )
+            "in vec4 pos;\n"
+            //XYZ1( 0.f, 0.f, 0.f )
+            "in vec4 inColor;\n"
+            "out vec4 outColor;\n"
             "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[gl_VertexID % 3];\n"
-            "   vec2 positions[3];"
-            "      positions[0] = vec2( 0.0, 0.0);\n"
-            "      positions[1] = vec2( 1.0, 0.0);\n"
-            "      positions[2] = vec2( 1.0, 1.0);\n"
-            "   scale = vec4(0.0, 0.0, 0.0, 0.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "    outColor = inColor;\n"
+            "   gl_Position = pos;\n"
             "}\n";
 
 
     static const char *fragShaderText =
             "#version 430\n"
             "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "uniform vec4 foo;\n"
-            "uniform vec4 bar;\n"
             "void main() {\n"
-            // by default, with no location or blocks
-            // the compiler will read them from buffer
-            // in reverse order of first use in shader
-            // The buffer contains red, followed by blue,
-            // so foo should be blue, bar should be red
-            "   gl_FragColor = color * scale * foo * bar + foo;\n"
+            "   gl_FragColor = color;\n"
             "}\n";
 
-    DrawTriangleTwoUniformsFS(vertShaderText, fragShaderText);
+    DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
 int main(int argc, char **argv) {
