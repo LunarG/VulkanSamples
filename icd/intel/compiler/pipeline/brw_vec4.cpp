@@ -719,7 +719,8 @@ vec4_visitor::move_push_constants_to_pull_constants()
    /* Only allow 32 registers (256 uniform components) as push constants,
     * which is the limit on gen6.
     */
-   int max_uniform_components = 32 * 8;
+   // LunarG : TODO - turning off push constants for bring up
+   int max_uniform_components = 0;//32 * 8;
    if (this->uniforms * 4 <= max_uniform_components)
       return;
 
