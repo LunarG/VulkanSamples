@@ -136,7 +136,9 @@ public:
     void InitTexture();
     void InitSampler();
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
+    void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
     void DrawRotatedTriangleTest();
+
 
 protected:
     XGL_IMAGE m_texture;
@@ -513,66 +515,192 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
 
 }
 
-
-TEST_F(XglRenderTest, TestDrawTriangle1)
+void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText)
 {
-    static const char *vertShaderText =
-            "#version 130\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
 
-    static const char *fragShaderText =
-       "#version 130\n"
-       "uniform vec4 foo;\n"
-       "void main() {\n"
-       "   gl_FragColor = foo;\n"
-       "}\n";
-    DrawTriangleTest(vertShaderText, fragShaderText);
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, &vs));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, &ps));
+
+    ASSERT_NO_FATAL_FAILURE(CreateDefaultPipeline(&pipeline, vs, ps));
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const int constantCount = 8;
+    const float constants[constantCount] =  { 1.0, 0.0, 0.0, 1.0,
+                                              0.0, 0.0, 1.0, 1.0 };
+
+    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
+
+    // Create descriptor set for a uniform resource
+    const int slotCount = 1;
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = slotCount;
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the constant buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds();
+    GenerateBindRenderTargetCmd();
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
+//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+//    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
+
+    // render the cube
+    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+
+    // prepare the back buffer for present
+//    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
+//    transitionToPresent.image = m_image;
+//    transitionToPresent.oldState = m_image_state;
+//    transitionToPresent.newState = m_display.fullscreen ? XGL_WSI_WIN_PRESENT_SOURCE_FLIP : XGL_WSI_WIN_PRESENT_SOURCE_BLT;
+//    transitionToPresent.subresourceRange = srRange;
+//    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToPresent );
+//    m_image_state = ( XGL_IMAGE_STATE ) transitionToPresent.newState;
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 0;
+//    m_memRefs[0].flags = 0;
+//    m_memRefs[0].mem = m_vtxBufferMemory;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS( err );
+
+    err = xglQueueWaitIdle( m_device->m_queue );
+    ASSERT_XGL_SUCCESS( err );
+
+    // Wait for work to finish before cleaning up.
+    xglDeviceWaitIdle(m_device->device());
+
+    RecordImage(m_renderTarget);
+
 }
 
-TEST_F(XglRenderTest, TestDrawTriangle2)
-{
+//TEST_F(XglRenderTest, TestDrawTriangle1)
+//{
+//    static const char *vertShaderText =
+//            "#version 130\n"
+//            "vec2 vertices[3];\n"
+//            "void main() {\n"
+//            "      vertices[0] = vec2(-1.0, -1.0);\n"
+//            "      vertices[1] = vec2( 1.0, -1.0);\n"
+//            "      vertices[2] = vec2( 0.0,  1.0);\n"
+//            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+//            "}\n";
 
+//    static const char *fragShaderText =
+//       "#version 130\n"
+//       "uniform vec4 foo;\n"
+//       "void main() {\n"
+//       "   gl_FragColor = foo;\n"
+//       "}\n";
+//    DrawTriangleTest(vertShaderText, fragShaderText);
+//}
+
+//TEST_F(XglRenderTest, TestDrawTriangle2)
+//{
+
+//    static const char *vertShaderText =
+//            "#version 130\n"
+//            "out vec4 color;\n"
+//            "out vec4 scale;\n"
+//            "vec2 vertices[3];\n"
+//            "void main() {\n"
+//            "vec2 vertices[3];\n"
+//            "      vertices[0] = vec2(-0.5, -0.5);\n"
+//            "      vertices[1] = vec2( 0.5, -0.5);\n"
+//            "      vertices[2] = vec2( 0.5,  0.5);\n"
+//            "vec4 colors[3];\n"
+//            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+//            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+//            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+//            "   color = colors[gl_VertexID % 3];\n"
+//            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
+//            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+//            "}\n";
+
+//    static const char *fragShaderText =
+//            "#version 130\n"
+//            "in vec4 color;\n"
+//            "in vec4 scale;\n"
+//            "uniform vec4 foo;\n"
+//            "void main() {\n"
+//            "   gl_FragColor = color * scale + foo;\n"
+//            "}\n";
+
+//    DrawTriangleTest(vertShaderText, fragShaderText);
+//}
+
+//TEST_F(XglRenderTest, TestDrawTriangle3)
+//{
+//    static const char *vertShaderText =
+//            "#version 130\n"
+//            "void main() {\n"
+//            "   vec2 vertices[3];"
+//            "      vertices[0] = vec2(-0.5, -0.5);\n"
+//            "      vertices[1] = vec2( 0.5, -0.5);\n"
+//            "      vertices[2] = vec2( 0.5,  0.5);\n"
+//            "   vec4 colors[3];\n"
+//            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+//            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+//            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+//            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+//            "}\n";
+
+//    static const char *fragShaderText =
+//            "#version 130\n"
+//            "void main() {\n"
+//            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
+//            "}\n";
+
+//    DrawTriangleTest(vertShaderText, fragShaderText);
+//}
+
+//TEST_F(XglRenderTest, TestDrawRotatedTriangle) {
+//    DrawRotatedTriangleTest();
+//}
+
+TEST_F(XglRenderTest, TestDrawTriangleTwoFSUniforms)
+{
     static const char *vertShaderText =
             "#version 130\n"
             "out vec4 color;\n"
             "out vec4 scale;\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "vec2 vertices[3];\n"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[gl_VertexID % 3];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
-    static const char *fragShaderText =
-            "#version 130\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "uniform vec4 foo;\n"
-            "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
-
-    DrawTriangleTest(vertShaderText, fragShaderText);
-}
-
-TEST_F(XglRenderTest, TestDrawTriangle3)
-{
-    static const char *vertShaderText =
-            "#version 130\n"
+            "out vec2 samplePos;\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -582,20 +710,32 @@ TEST_F(XglRenderTest, TestDrawTriangle3)
             "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "   color = colors[gl_VertexID % 3];\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 1.0, 0.0);\n"
+            "      positions[2] = vec2( 1.0, 1.0);\n"
+            "   scale = vec4(0.0, 0.0, 0.0, 0.0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
+
     static const char *fragShaderText =
-            "#version 130\n"
+            "#version 430\n"
+            "in vec4 color;\n"
+            "in vec4 scale;\n"
+            "uniform vec4 foo;\n"
+            "uniform vec4 bar;\n"
             "void main() {\n"
-            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
+            // by default, with no location or blocks
+            // the compiler will read them from buffer
+            // in reverse order of first use in shader
+            // The buffer contains red, followed by blue,
+            // so foo should be blue, bar should be red
+            "   gl_FragColor = color * scale * foo * bar + foo;\n"
             "}\n";
 
-    DrawTriangleTest(vertShaderText, fragShaderText);
-}
-
-TEST_F(XglRenderTest, TestDrawRotatedTriangle) {
-    DrawRotatedTriangleTest();
+    DrawTriangleTwoUniformsFS(vertShaderText, fragShaderText);
 }
 
 int main(int argc, char **argv) {

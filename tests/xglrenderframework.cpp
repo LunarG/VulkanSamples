@@ -173,7 +173,7 @@ void XglRenderFramework::InitConstantBuffer(int constantCount, int constantSize,
 
     // set up the memory view for the constant buffer
     this->m_constantBufferView.stride = 1;
-    this->m_constantBufferView.range  = 16;
+    this->m_constantBufferView.range  = constantCount * constantSize;
     this->m_constantBufferView.offset = 0;
     this->m_constantBufferView.mem    = m_constantBufferMem;
     this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
