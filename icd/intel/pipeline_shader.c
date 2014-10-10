@@ -265,43 +265,18 @@ static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
     return rmap;
 }
 
-static XGL_RESULT pipeline_shader_copy_ir(struct intel_pipeline_shader *sh,
-                                          const struct intel_shader *ir)
-{
-    sh->pCode = icd_alloc(ir->ir->size, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    if (!sh->pCode)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    memcpy(sh->pCode, ir->ir->kernel, ir->ir->size);
-    sh->codeSize = ir->ir->size;
-
-    sh->uses = ir->uses;
-
-    sh->in_count = ir->in_count;
-    sh->out_count = ir->out_count;
-    sh->sampler_count = ir->sampler_count;
-    sh->surface_count = ir->surface_count;
-    sh->urb_grf_start = ir->urb_grf_start;
-    sh->barycentric_interps = ir->barycentric_interps;
-
-    return XGL_SUCCESS;
-}
-
 static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
     struct intel_pipeline_shader *vs = &pipeline->vs;
     XGL_RESULT ret;
 
-    ret = pipeline_shader_copy_ir(vs, intel_shader(info->vs.shader));
-    if (ret != XGL_SUCCESS)
-        return ret;
-
     assert(!info->vs.linkConstBufferCount);
 
     // Right here, lower the IR to ISA using NOS
     // This must be after assignment of pipeline constant buffer
-    ret = intel_pipeline_shader_compile(vs, intel_shader(info->vs.shader));
+    ret = intel_pipeline_shader_compile(vs,
+            intel_shader(info->vs.shader)->ir);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -324,7 +299,8 @@ static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *tcs = &pipeline->tcs;
     XGL_RESULT ret;
 
-    ret = pipeline_shader_copy_ir(tcs, intel_shader(info->tcs.shader));
+    ret = intel_pipeline_shader_compile(tcs,
+            intel_shader(info->tcs.shader)->ir);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -341,7 +317,8 @@ static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *tes = &pipeline->tes;
     XGL_RESULT ret;
 
-    ret = pipeline_shader_copy_ir(tes, intel_shader(info->tes.shader));
+    ret = intel_pipeline_shader_compile(tes,
+            intel_shader(info->tes.shader)->ir);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -358,7 +335,8 @@ static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *gs = &pipeline->gs;
     XGL_RESULT ret;
 
-    ret = pipeline_shader_copy_ir(gs, intel_shader(info->gs.shader));
+    ret = intel_pipeline_shader_compile(gs,
+            intel_shader(info->gs.shader)->ir);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -375,15 +353,12 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *fs = &pipeline->fs;
     XGL_RESULT ret;
 
-    ret = pipeline_shader_copy_ir(fs, intel_shader(info->fs.shader));
-    if (ret != XGL_SUCCESS)
-        return ret;
-
     assert(!info->fs.linkConstBufferCount);
 
     // Right here, lower the IR to ISA using NOS
     // This must be after assignment of pipeline constant buffer
-    ret = intel_pipeline_shader_compile(fs, intel_shader(info->fs.shader));
+    ret = intel_pipeline_shader_compile(fs,
+            intel_shader(info->fs.shader)->ir);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -407,7 +382,8 @@ static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *cs = &pipeline->cs;
     XGL_RESULT ret;
 
-    ret = pipeline_shader_copy_ir(cs, intel_shader(info->compute.cs.shader));
+    ret = intel_pipeline_shader_compile(cs,
+            intel_shader(info->compute.cs.shader)->ir);
     if (ret != XGL_SUCCESS)
         return ret;
 

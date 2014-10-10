@@ -26,7 +26,7 @@
  */
 
 #include "icd-bil.h"
-#include "shader.h"
+#include "pipeline.h"
 #include "compiler_interface.h"
 #include "compiler/mesa-utils/src/glsl/ralloc.h"
 #include "compiler/mesa-utils/src/glsl/glsl_parser_extras.h"
@@ -242,9 +242,8 @@ extern "C" {
 
 // invoke front end compiler to generate an independently linked
 // program object that contains Mesa HIR
-struct gl_shader_program *shader_create_program(struct intel_shader *sh,
-                                                    const void *code,
-                                                    XGL_SIZE size)
+struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
+                                  const void *code, XGL_SIZE size)
 {
     struct icd_bil_header header;
     struct gl_context local_ctx;
@@ -356,16 +355,18 @@ struct gl_shader_program *shader_create_program(struct intel_shader *sh,
 
     _mesa_destroy_shader_compiler();
 
-    return shader_program;
+    return (struct intel_ir *) shader_program;
 }
 
 
-void shader_destroy_program(struct gl_shader_program *shader_program)
+void shader_destroy_ir(struct intel_ir *ir)
 {
-    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++)
-       ralloc_free(shader_program->_LinkedShaders[i]);
+    struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
 
-    ralloc_free(shader_program);
+    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++)
+       ralloc_free(sh_prog->_LinkedShaders[i]);
+
+    ralloc_free(sh_prog);
 }
 
 } // extern "C"

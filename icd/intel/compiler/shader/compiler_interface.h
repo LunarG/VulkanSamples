@@ -28,23 +28,20 @@
 #ifndef COMPILER_INTERFACE_H
 #define COMPILER_INTERFACE_H
 
+#include <icd.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-struct intel_shader;
-struct icd_bil_header;
 struct gl_context;
-struct gl_shader_program;
 
 void initialize_mesa_context_to_defaults(struct gl_context *ctx);
 
-struct gl_shader_program *shader_create_program(struct intel_shader *sh,
-                                                    const void *code,
-                                                    XGL_SIZE size);
+struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
+                                  const void *code, XGL_SIZE size);
 
-void shader_destroy_program(struct gl_shader_program *shader_program);
+void shader_destroy_ir(struct intel_ir *ir);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -26,6 +26,7 @@
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
+#include <stdio.h> /* for printf */
 #include "genhw/genhw.h"
 #include "dset.h"
 #include "img.h"

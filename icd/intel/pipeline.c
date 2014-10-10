@@ -198,8 +198,8 @@ static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
 {
     const struct intel_gpu *gpu = pipeline->dev->gpu;
     const int urb_size = ((gpu->gt == 2) ? 64 : 32) * 1024;
-    const struct intel_shader *vs = intel_shader(info->vs.shader);
-    const struct intel_shader *gs = intel_shader(info->gs.shader);
+    const struct intel_pipeline_shader *vs = &pipeline->vs;
+    const struct intel_pipeline_shader *gs = &pipeline->gs;
     int vs_entry_size, gs_entry_size;
     int vs_size, gs_size;
 
@@ -213,7 +213,7 @@ static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
     vs_entry_size *= sizeof(float) * 4;
     gs_entry_size *= sizeof(float) * 4;
 
-    if (gs) {
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
         vs_size = urb_size / 2;
         gs_size = vs_size;
     } else {
@@ -285,7 +285,7 @@ static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
     vs_entry_size *= sizeof(float) * 4;
     gs_entry_size *= sizeof(float) * 4;
 
-    if (gs) {
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
         vs_size = (urb_size - urb_offset) / 2;
         gs_size = vs_size;
     } else {

@@ -33,6 +33,16 @@
 #include "obj.h"
 #include "dev.h"
 
+enum intel_pipeline_shader_use {
+    INTEL_SHADER_USE_VID                = (1 << 0),
+    INTEL_SHADER_USE_IID                = (1 << 1),
+
+    INTEL_SHADER_USE_KILL               = (1 << 2),
+    INTEL_SHADER_USE_COMPUTED_DEPTH     = (1 << 3),
+    INTEL_SHADER_USE_DEPTH              = (1 << 4),
+    INTEL_SHADER_USE_W                  = (1 << 5),
+};
+
 #define INTEL_PIPELINE_RMAP_SLOT_RT ((XGL_UINT) -1)
 #define INTEL_PIPELINE_RMAP_SLOT_DYN ((XGL_UINT) -2)
 struct intel_pipeline_rmap_slot {

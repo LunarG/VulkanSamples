@@ -30,39 +30,12 @@
 #include "shader.h"
 #include "compiler/shader/compiler_interface.h"
 
-static XGL_RESULT shader_parse(struct intel_shader *sh,
-                                   const struct intel_gpu *gpu,
-                                   const struct icd_bil_header *bil,
-                                   XGL_SIZE size)
-{
-    struct intel_ir *ir;
-
-    ir = icd_alloc(sizeof(*ir), 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
-    if (!ir)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    ir->size = size - sizeof(*bil);
-
-    // invoke our program creation as well
-    ir->shader_program = shader_create_program(sh, bil, size);
-    if (!ir->shader_program)
-        return XGL_ERROR_BAD_SHADER_CODE;
-
-    // TODO: set necessary shader information. This should really
-    // happen as result of create_program call.
-    sh->ir = ir;
-
-    return XGL_SUCCESS;
-}
-
 static void shader_destroy(struct intel_obj *obj)
 {
     struct intel_shader *sh = intel_shader_from_obj(obj);
 
-    if (sh->ir) {
-        shader_destroy_program(sh->ir->shader_program);
-    }
-    icd_free(sh->ir);
+    if (sh->ir)
+        shader_destroy_ir(sh->ir);
     intel_base_destroy(&sh->obj.base);
 }
 
@@ -73,7 +46,6 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     const struct icd_bil_header *bil =
         (const struct icd_bil_header *) info->pCode;
     struct intel_shader *sh;
-    XGL_RESULT ret;
 
     sh = (struct intel_shader *) intel_base_create(dev, sizeof(*sh),
             dev->base.dbg, XGL_DBG_OBJECT_SHADER, info, 0);
@@ -85,13 +57,11 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     if (bil->magic != ICD_BIL_MAGIC)
         return XGL_ERROR_BAD_SHADER_CODE;
 
-
-    ret = shader_parse(sh, dev->gpu, bil, info->codeSize);
-    if (ret != XGL_SUCCESS) {
+    sh->ir = shader_create_ir(dev->gpu, info->pCode, info->codeSize);
+    if (!sh->ir) {
         shader_destroy(&sh->obj);
-        return ret;
+        return XGL_ERROR_UNKNOWN;
     }
-
 
     sh->obj.destroy = shader_destroy;
 
