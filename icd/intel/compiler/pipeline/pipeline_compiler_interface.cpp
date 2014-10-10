@@ -296,6 +296,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             pipe_shader->in_count = data->base.urb_read_length;// = 1;
             pipe_shader->out_count = data->base.vue_map.num_slots;// = 2;
             pipe_shader->urb_grf_start = data->base.dispatch_grf_start_reg;// = 1;
+            pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
             printf("out_count: %d\n", pipe_shader->out_count);
 
             // The following continue to match what is baked in to test case
