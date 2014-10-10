@@ -641,15 +641,10 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     const int constantCount = 16;
-    const float constants[constantCount] = { 1.0, 0.0, 0.0, 0.0,
-                                             0.0, 1.0, 0.0, 0.0,
+    const float constants[constantCount] = { 0.0, -1.0, 0.0, 0.0,
+                                             1.0, 0.0, 0.0, 0.0,
                                              0.0, 0.0, 1.0, 0.0,
-                                             0.0, 0.0, 0.0, 1.0};
-//    const float constants[constantCount] = { 0.0, 0.0, 0.0, 1.0,
-//                                             0.0, 0.0, 1.0, 0.0,
-//                                             0.0, 1.0, 0.0, 0.0,
-//                                             1.0, 0.0, 0.0, 0.0 };
-
+                                             0.0, 0.0, 0.0, 1.0 };
 
     InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
 
@@ -1194,31 +1189,18 @@ TEST_F(XglRenderTest, TestDrawTriangleVSUniform)
     static const char *vertShaderText =
             "#version 130\n"
             "uniform mat4 mvp;\n"
-            "out vec4 matrix0;\n"
-            "out vec4 matrix1;\n"
-            "out vec4 matrix2;\n"
-            "out vec4 matrix3;\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   matrix0 = mvp[0];\n"
-            "   matrix1 = mvp[1];\n"
-            "   matrix2 = mvp[2];\n"
-            "   matrix3 = mvp[3];\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0) * mvp;\n"
             "}\n";
 
     static const char *fragShaderText =
             "#version 430\n"
-            "in vec4 matrix0;\n"
-            "in vec4 matrix1;\n"
-            "in vec4 matrix2;\n"
-            "in vec4 matrix3;\n"
             "void main() {\n"
-            //"   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "   gl_FragColor = matrix0 + matrix1 + matrix2 + matrix3;\n"
+            "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "}\n";
 
     DrawTriangleVSUniform(vertShaderText, fragShaderText);
