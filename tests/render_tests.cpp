@@ -777,7 +777,7 @@ void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, cons
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
     // render the cube
-    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+    xglCmdDraw( m_cmdBuffer, 0, 6, 0, 1 );
 
     // prepare the back buffer for present
 //    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
