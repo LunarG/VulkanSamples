@@ -831,6 +831,30 @@ TEST_F(XglRenderTest, TestDrawTriangle1)
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
+TEST_F(XglRenderTest, BIL_GreenTriangle)
+{
+    bool saved_use_bil = XglTestFramework::m_use_bil;
+
+    static const char *vertShaderText =
+            "#version 130\n"
+            "vec2 vertices[3];\n"
+            "void main() {\n"
+            "      vertices[0] = vec2(-1.0, -1.0);\n"
+            "      vertices[1] = vec2( 1.0, -1.0);\n"
+            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+       "#version 130\n"
+       "void main() {\n"
+       "   gl_FragColor = vec4(0,1,0,1);\n"
+       "}\n";
+    XglTestFramework::m_use_bil = true;
+    DrawTriangleTest(vertShaderText, fragShaderText);
+    XglTestFramework::m_use_bil = saved_use_bil;
+}
+
 TEST_F(XglRenderTest, TestDrawTriangle2)
 {
 
