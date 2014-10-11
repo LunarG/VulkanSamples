@@ -2,6 +2,9 @@ include (FindPkgConfig)
 
 find_package (OpenGL REQUIRED)
 find_package (GLUT REQUIRED)
+if(NOT EXISTS /usr/include/glm/glm.hpp)
+    message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
+endif()
 
 SET(COMMON
     common.c

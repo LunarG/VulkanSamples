@@ -67,6 +67,10 @@ using namespace std;
 #include "xglimage.h"
 #include "icd-bil.h"
 
+#define GLM_FORCE_RADIANS
+#include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "xglrenderframework.h"
 
 #undef ASSERT_NO_FATAL_FAILURE
@@ -137,7 +141,7 @@ public:
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText);
-    void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText);
+    void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText, const glm::mat4 matrix);
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
@@ -615,11 +619,13 @@ void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const 
 }
 
 
-void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText)
+void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText,
+                                          const glm::mat4 matrix)
 {
     XGL_PIPELINE pipeline;
     XGL_SHADER vs, ps;
     XGL_RESULT err;
+    glm::mat4 MVP;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -640,13 +646,10 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    const int constantCount = 16;
-    const float constants[constantCount] = { 0.0, -1.0, 0.0, 0.0,
-                                             1.0, 0.0, 0.0, 0.0,
-                                             0.0, 0.0, 1.0, 0.0,
-                                             0.0, 0.0, 0.0, 1.0 };
+    const int matrixSize = 16;
+    MVP = matrix;
 
-    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
+    InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
 
     // Create descriptor set for a uniform resource
     const int slotCount = 1;
@@ -709,7 +712,6 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
     xglDeviceWaitIdle(m_device->device());
 
     RecordImage(m_renderTarget);
-
 }
 
 void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
@@ -1203,7 +1205,12 @@ TEST_F(XglRenderTest, TriangleVSUniform)
             "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "}\n";
 
-    DrawTriangleVSUniform(vertShaderText, fragShaderText);
+    // Create identity matrix
+    glm::mat4 Model      = glm::mat4(1.0f);
+    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
+
+    Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
 }
 
 int main(int argc, char **argv) {

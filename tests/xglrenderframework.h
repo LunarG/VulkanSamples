@@ -45,6 +45,7 @@ public:
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitConstantBuffer( int constantCount, int constantSize, const void* data );
+    void UpdateConstantBuffer(const void* data);
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();

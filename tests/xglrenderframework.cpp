@@ -179,6 +179,24 @@ void XglRenderFramework::InitConstantBuffer(int constantCount, int constantSize,
     this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
 }
 
+/*
+ * Update existing constant value with new data of exactly
+ * the same size.
+ */
+void XglRenderFramework::UpdateConstantBuffer(const void* data)
+{
+    XGL_RESULT err = XGL_SUCCESS;
+    XGL_UINT8 *pData;
+
+    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData + this->m_constantBufferView.offset, data, this->m_constantBufferView.range);
+
+    err = xglUnmapMemory(m_constantBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+}
+
 void XglRenderFramework::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
                                          XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem)
 {
