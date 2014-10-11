@@ -79,13 +79,3 @@ XGL_RESULT XGLAPI intelCreateShader(
 
     return shader_create(dev, pCreateInfo, (struct intel_shader **) pShader);
 }
-
-XGL_RESULT XGLAPI intelCreateShaderfromGLSL(
-        XGL_DEVICE                                  device,
-        const XGL_SHADER_CREATE_INFO*               pCreateInfo,
-        XGL_SHADER*                                 pShader)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return shader_create(dev, pCreateInfo, (struct intel_shader **) pShader);
-}
