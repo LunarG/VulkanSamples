@@ -25,6 +25,7 @@
  *   LunarG
  */
 
+#include "gpu.h"
 #include "shader.h"
 #include "pipeline.h"
 #include "compiler/shader/compiler_interface.h"
@@ -37,7 +38,8 @@
 #include "compiler/pipeline/brw_wm.h"
 
 
-void initialize_brw_context(struct brw_context *brw)
+static void initialize_brw_context(struct brw_context *brw,
+                                   const struct intel_gpu *gpu)
 {
 
     // create a stripped down context for compilation
@@ -47,11 +49,23 @@ void initialize_brw_context(struct brw_context *brw)
     // init the things pulled from DRI in brwCreateContext
     //
     struct brw_device_info *devInfo = rzalloc(brw, struct brw_device_info);
-    devInfo->gen = 7;
-    devInfo->gt = 3;
-    devInfo->is_g4x = false;
-    devInfo->is_baytrail = false;
-    devInfo->is_haswell = true;
+    switch (intel_gpu_gen(gpu)) {
+    case INTEL_GEN(7.5):
+        devInfo->gen = 7;
+        devInfo->is_haswell = true;
+        break;
+    case INTEL_GEN(7):
+        devInfo->gen = 7;
+        break;
+    case INTEL_GEN(6):
+        devInfo->gen = 6;
+        break;
+    default:
+        assert(!"unsupported GEN");
+        break;
+    }
+
+    devInfo->gt = gpu->gt;
     devInfo->has_llc = true;
     devInfo->has_pln = true;
     devInfo->has_compr4 = true;
@@ -253,6 +267,7 @@ extern "C" {
 
 // invoke backend compiler to generate ISA and supporting data structures
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
+                                         const struct intel_gpu *gpu,
                                          const struct intel_ir *ir)
 {
     /* XXX how about constness? */
@@ -263,7 +278,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     struct brw_context *brw = rzalloc(NULL, struct brw_context);
 
     // allocate sub structures on the stack
-    initialize_brw_context(brw);
+    initialize_brw_context(brw, gpu);
 
     // LunarG : TODO - should this have been set for us somewhere?
     sh_prog->Type = sh_prog->Shaders[0]->Stage;

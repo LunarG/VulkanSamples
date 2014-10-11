@@ -33,10 +33,12 @@
 extern "C" {
 #endif
 
+struct intel_gpu;
 struct intel_ir;
 struct intel_pipeline_shader;
 
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
+                                         const struct intel_gpu *gpu,
                                          const struct intel_ir *ir);
 
 #ifdef __cplusplus
