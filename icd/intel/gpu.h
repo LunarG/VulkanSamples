@@ -48,6 +48,7 @@ enum intel_gpu_engine_type {
     INTEL_GPU_ENGINE_COUNT
 };
 
+struct intel_winsys;
 struct intel_wsi_x11;
 
 /*
@@ -79,7 +80,7 @@ struct intel_gpu {
     struct intel_wsi_x11 *x11;
 #endif
 
-    int device_fd;
+    struct intel_winsys *winsys;
 };
 
 static inline struct intel_gpu *intel_gpu(XGL_PHYSICAL_GPU gpu)

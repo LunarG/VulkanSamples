@@ -32,6 +32,7 @@
 #include <unistd.h>
 
 #include "genhw/genhw.h"
+#include "kmd/winsys.h"
 #include "dispatch.h"
 #include "queue.h"
 #include "gpu.h"
@@ -171,8 +172,6 @@ static struct intel_gpu *gpu_create(int gen, int devid,
 
     gpu->primary_fd_internal = -1;
     gpu->render_fd_internal = -1;
-
-    gpu->device_fd = -1;
 
     return gpu;
 }
@@ -366,18 +365,36 @@ void intel_gpu_associate_x11(struct intel_gpu *gpu,
 
 XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
 {
-    gpu->device_fd = gpu_open_primary_node(gpu);
-    if (gpu->device_fd < 0)
-        gpu->device_fd = gpu_open_render_node(gpu);
+    int fd;
 
-    return (gpu->device_fd >= 0) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+    assert(!gpu->winsys);
+
+    fd = gpu_open_primary_node(gpu);
+    if (fd < 0)
+        fd = gpu_open_render_node(gpu);
+    if (fd < 0)
+        return XGL_ERROR_UNKNOWN;
+
+    gpu->winsys = intel_winsys_create_for_fd(fd);
+    if (!gpu->winsys) {
+        icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
+                0, 0, "failed to create GPU winsys");
+        intel_gpu_close(gpu);
+        return XGL_ERROR_UNKNOWN;
+    }
+
+    return XGL_SUCCESS;
 }
 
 void intel_gpu_close(struct intel_gpu *gpu)
 {
+    if (gpu->winsys) {
+        intel_winsys_destroy(gpu->winsys);
+        gpu->winsys = NULL;
+    }
+
     gpu_close_primary_node(gpu);
     gpu_close_render_node(gpu);
-    gpu->device_fd = -1;
 }
 
 enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,

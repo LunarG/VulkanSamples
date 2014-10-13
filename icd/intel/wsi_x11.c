@@ -456,7 +456,7 @@ XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
     if (gpu->x11)
         return XGL_SUCCESS;
 
-    if (gpu->device_fd >= 0)
+    if (gpu->winsys)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
 
     if (!wsi_x11_has_dri3_and_present(pConnectionInfo->pConnection))

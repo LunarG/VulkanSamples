@@ -74,7 +74,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
     XGL_UINT i;
     XGL_RESULT ret;
 
-    if (gpu->device_fd >= 0)
+    if (gpu->winsys)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
 
     dev = (struct intel_dev *) intel_base_create(NULL, sizeof(*dev),
@@ -101,13 +101,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return ret;
     }
 
-    dev->winsys = intel_winsys_create_for_fd(gpu->device_fd);
-    if (!dev->winsys) {
-        icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
-                0, 0, "failed to create device winsys");
-        intel_dev_destroy(dev);
-        return XGL_ERROR_UNKNOWN;
-    }
+    dev->winsys = gpu->winsys;
 
     dev->cmd_scratch_bo = intel_winsys_alloc_buffer(dev->winsys,
             "command buffer scratch", 4096, false);
@@ -145,6 +139,7 @@ static void dev_clear_msg_filters(struct intel_dev *dev)
 
 void intel_dev_destroy(struct intel_dev *dev)
 {
+    struct intel_gpu *gpu = dev->gpu;
     XGL_UINT i;
 
     if (dev->base.dbg)
@@ -158,13 +153,10 @@ void intel_dev_destroy(struct intel_dev *dev)
     if (dev->cmd_scratch_bo)
         intel_bo_unreference(dev->cmd_scratch_bo);
 
-    if (dev->winsys)
-        intel_winsys_destroy(dev->winsys);
-
-    if (dev->gpu->device_fd >= 0)
-        intel_gpu_close(dev->gpu);
-
     intel_base_destroy(&dev->base);
+
+    if (gpu->winsys)
+        intel_gpu_close(dev->gpu);
 }
 
 void intel_dev_get_heap_props(const struct intel_dev *dev,
