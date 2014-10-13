@@ -525,6 +525,7 @@ static void cmd_writer_decode_items(struct intel_cmd *cmd,
     }
 
     intel_bo_unmap(writer->bo);
+    writer->ptr = NULL;
 }
 
 static void cmd_writer_decode(struct intel_cmd *cmd,
