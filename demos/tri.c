@@ -9,6 +9,8 @@
 #include <xglDbg.h>
 #include <xglWsiX11Ext.h>
 
+#include "icd-bil.h"
+
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
 
@@ -500,137 +502,66 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 }
 
 static XGL_SHADER demo_prepare_shader(struct demo *demo,
+                                      XGL_PIPELINE_SHADER_STAGE stage,
                                       const void *code,
                                       XGL_SIZE size)
 {
-    const XGL_SHADER_CREATE_INFO info = {
-        .sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .codeSize = size,
-        .pCode = (const XGL_VOID *) code,
-        .flags = 0,
-    };
+    XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
     XGL_RESULT err;
 
-    err = xglCreateShader(demo->device, &info, &shader);
-    assert(!err);
+    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    createInfo.pNext = NULL;
+
+    // Create fake BIL structure to feed GLSL
+    // to the driver "under the covers"
+    createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
+    createInfo.pCode = malloc(createInfo.codeSize);
+    createInfo.flags = 0;
+
+    /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
+    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+    ((uint32_t *) createInfo.pCode)[1] = 0;
+    ((uint32_t *) createInfo.pCode)[2] = stage;
+    memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
+
+    err = xglCreateShader(demo->device, &createInfo, &shader);
+    if (err) {
+        free((void *) createInfo.pCode);
+    }
 
     return shader;
 }
 
 static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
-    XGL_RESULT err;
-    XGL_SIZE size;
-    XGL_PHYSICAL_GPU_PROPERTIES props;
-    int gen;
+    static const char *vertShaderText =
+            "#version 130\n"
+            "uniform mat4 mvp;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0) * mvp;\n"
+            "}\n";
 
-    static const uint32_t gen6_vs[] = {
-        0x07230203, 99, 'v',
-        0x01600110, 0x200f1ca4, 0x00600020, 0x00000000, // cmp.z.f0(8)     null            g1<4,4,1>.xD    0D              { align16 1Q };
-        0x00670122, 0x000a108f, 0x000e0004, 0x000e0004, // (+f0.all4h) if(8) JIP: 10                                       { align16 1Q };
-        0x00600501, 0x204303fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.xyF       -1F                             { align16 NoDDClr 1Q };
-        0x00600d01, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDClr,NoDDChk 1Q };
-        0x00600901, 0x204803fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.wF        1F                              { align16 NoDDChk 1Q };
-        0x00600124, 0x0014108f, 0x006e0004, 0x006e0004, // else(8)         JIP: 20                                         { align16 1Q };
-        0x01600110, 0x200f1ca4, 0x00600020, 0x00000001, // cmp.z.f0(8)     null            g1<4,4,1>.xD    1D              { align16 1Q };
-        0x00670122, 0x000a108f, 0x000e0004, 0x000e0004, // (+f0.all4h) if(8) JIP: 10                                       { align16 1Q };
-        0x00600501, 0x204903fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.xwF       1F                              { align16 NoDDClr 1Q };
-        0x00600d01, 0x204203fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.yF        -1F                             { align16 NoDDClr,NoDDChk 1Q };
-        0x00600901, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDChk 1Q };
-        0x00600124, 0x0006108f, 0x006e0004, 0x006e0004, // else(8)         JIP: 6                                          { align16 1Q };
-        0x00600501, 0x204503fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.xzF       0F                              { align16 NoDDClr 1Q };
-        0x00600901, 0x204a03fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.ywF       1F                              { align16 NoDDChk 1Q };
-        0x00600125, 0x0002108f, 0x006e0004, 0x006e0002, // endif(8)        JIP: 2                                          { align16 1Q };
-        0x00600125, 0x0002108f, 0x006e0004, 0x006e0002, // endif(8)        JIP: 2                                          { align16 1Q };
-        0x00600101, 0x204f0062, 0x00000000, 0x00000000, // mov(8)          m2<1>UD         0x00000000UD                    { align16 1Q };
-        0x00600101, 0x206f03be, 0x006e0044, 0x00000000, // mov(8)          m3<1>F          g2<4,4,1>F                      { align16 1Q };
-        0x00600301, 0x202f0022, 0x006e0004, 0x00000000, // mov(8)          m1<1>UD         g0<4,4,1>UD                     { align16 WE_all 1Q };
-        0x06600131, 0x200f1fdc, 0x006e0024, 0x8608c400, // send(8)         null            m1<4,4,1>F
-                                                        // urb 0 urb_write interleave used complete mlen 3 rlen 0 { align16 1Q EOT };
-    };
-
-    static const uint32_t gen7_vs[] = {
-        0x07230203, 99, 'v',
-        0x01608110, 0x200f1ca4, 0x00600020, 0x00000000, // cmp.z.f0(8)     null            g1<4,4,1>.xD    0D              { align16 1Q switch };
-        0x00670122, 0x200f0c84, 0x000e0004, 0x001c000a, // (+f0.all4h) if(8) JIP: 10       UIP: 28                         { align16 1Q };
-        0x00600501, 0x204303fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.xyF       -1F                             { align16 NoDDClr 1Q };
-        0x00600d01, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDClr,NoDDChk 1Q };
-        0x00600901, 0x204803fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.wF        1F                              { align16 NoDDChk 1Q };
-        0x00600124, 0x200f0c84, 0x006e0004, 0x00000014, // else(8)         JIP: 20                                         { align16 1Q };
-        0x01608110, 0x200f1ca4, 0x00600020, 0x00000001, // cmp.z.f0(8)     null            g1<4,4,1>.xD    1D              { align16 1Q switch };
-        0x00670122, 0x200f0c84, 0x000e0004, 0x000e000a, // (+f0.all4h) if(8) JIP: 10       UIP: 14                         { align16 1Q };
-        0x00600501, 0x204903fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.xwF       1F                              { align16 NoDDClr 1Q };
-        0x00600d01, 0x204203fd, 0x00000000, 0xbf800000, // mov(8)          g2<1>.yF        -1F                             { align16 NoDDClr,NoDDChk 1Q };
-        0x00600901, 0x204403fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.zF        0F                              { align16 NoDDChk 1Q };
-        0x00600124, 0x200f0c84, 0x006e0004, 0x00000006, // else(8)         JIP: 6                                          { align16 1Q };
-        0x00600501, 0x204503fd, 0x00000000, 0x00000000, // mov(8)          g2<1>.xzF       0F                              { align16 NoDDClr 1Q };
-        0x00600901, 0x204a03fd, 0x00000000, 0x3f800000, // mov(8)          g2<1>.ywF       1F                              { align16 NoDDChk 1Q };
-        0x00600125, 0x200f0c84, 0x006e0004, 0x00000002, // endif(8)        JIP: 2                                          { align16 1Q };
-        0x00600125, 0x200f0c84, 0x006e0004, 0x00000002, // endif(8)        JIP: 2                                          { align16 1Q };
-        0x00600101, 0x2e4f0061, 0x00000000, 0x00000000, // mov(8)          g114<1>UD       0x00000000UD                    { align16 1Q };
-        0x00600101, 0x2e6f03bd, 0x006e0044, 0x00000000, // mov(8)          g115<1>F        g2<4,4,1>F                      { align16 1Q };
-        0x00600301, 0x2e2f0021, 0x006e0004, 0x00000000, // mov(8)          g113<1>UD       g0<4,4,1>UD                     { align16 WE_all 1Q };
-        0x00000206, 0x2e340c21, 0x00000014, 0x0000ff00, // or(1)           g113.5<1>UD     g0.5<0,1,0>UD   0x0000ff00UD    { align1 WE_all };
-        0x06600131, 0x200f1fbc, 0x006e0e24, 0x8608c000, // send(8)         null            g113<4,4,1>F
-                                                        // urb 0 write HWord interleave complete mlen 3 rlen 0 { align16 1Q EOT };
-    };
-
-
-    err = xglGetGpuInfo(demo->gpu,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
-                        &size, &props);
-    assert(!err);
-    assert(size == sizeof(props));
-
-    gen = (strstr((const char *) props.gpuName, "Sandybridge")) ? 6 : 7;
-
-    if (gen == 6) {
-        return demo_prepare_shader(demo, (const void *) gen6_vs, sizeof(gen6_vs));
-    }
-    return demo_prepare_shader(demo, (const void *) gen7_vs, sizeof(gen7_vs));
+    return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
+                               (const void *) vertShaderText,
+                               strlen(vertShaderText));
 }
 
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
-    XGL_RESULT err;
-    XGL_SIZE size;
-    XGL_PHYSICAL_GPU_PROPERTIES props;
-    int gen;
+    static const char *fragShaderText =
+            "#version 430\n"
+            "void main() {\n"
+            "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "}\n";
 
-    static const uint32_t gen6_fs[] = {
-        0x07230203, 99, 'w',
-        0x00600001, 0x202003fe, 0x00000000, 0x3f800000, // mov(8)          m1<1>F          1F                              { align1 1Q };
-        0x00600001, 0x204003fe, 0x00000000, 0x00000000, // mov(8)          m2<1>F          0F                              { align1 1Q };
-        0x00600001, 0x206003fe, 0x00000000, 0x00000000, // mov(8)          m3<1>F          0F                              { align1 1Q };
-        0x00600001, 0x208003fe, 0x00000000, 0x3f800000, // mov(8)          m4<1>F          1F                              { align1 1Q };
-        0x05600032, 0x20001fc8, 0x008d0020, 0x88019400, // sendc(8)        null            m1<8,8,1>F
-                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
-    };
-
-    static const uint32_t gen7_fs[] = {
-        0x07230203, 99, 'w',
-        0x00600001, 0x2e2003fd, 0x00000000, 0x3f800000, // mov(8)          g113<1>F        1F                              { align1 1Q };
-        0x00600001, 0x2e4003fd, 0x00000000, 0x00000000, // mov(8)          g114<1>F        0F                              { align1 1Q };
-        0x00600001, 0x2e6003fd, 0x00000000, 0x00000000, // mov(8)          g115<1>F        0F                              { align1 1Q };
-        0x00600001, 0x2e8003fd, 0x00000000, 0x3f800000, // mov(8)          g116<1>F        1F                              { align1 1Q };
-        0x05600032, 0x20001fa8, 0x008d0e20, 0x88031400, // sendc(8)        null            g113<8,8,1>F
-                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
-    };
-
-    err = xglGetGpuInfo(demo->gpu,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
-                        &size, &props);
-    assert(!err);
-    assert(size == sizeof(props));
-
-    gen = (strstr((const char *) props.gpuName, "Sandybridge")) ? 6 : 7;
-
-    if (gen == 6) {
-        return demo_prepare_shader(demo, (const void *) gen6_fs, sizeof(gen6_fs));
-    }
-    return demo_prepare_shader(demo, (const void *) gen7_fs, sizeof(gen7_fs));
+    return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
+                               (const void *) fragShaderText,
+                               strlen(fragShaderText));
 }
 
 static void demo_prepare_pipeline(struct demo *demo)
