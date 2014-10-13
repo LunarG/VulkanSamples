@@ -53,13 +53,15 @@ static void intel_debug_init(void)
         else
             len = strlen(env);
 
-        if (strncmp(env, "batch", len) == 0) {
-            intel_debug |= INTEL_DEBUG_BATCH;
-        } else if (strncmp(env, "nohw", len) == 0) {
-            intel_debug |= INTEL_DEBUG_NOHW;
-        } else if (strncmp(env, "0x", 2) == 0) {
-            intel_debug |= INTEL_DEBUG_NOHW;
-            intel_devid_override = strtol(env, NULL, 16);
+        if (len > 0) {
+            if (strncmp(env, "batch", len) == 0) {
+                intel_debug |= INTEL_DEBUG_BATCH;
+            } else if (strncmp(env, "nohw", len) == 0) {
+                intel_debug |= INTEL_DEBUG_NOHW;
+            } else if (strncmp(env, "0x", 2) == 0) {
+                intel_debug |= INTEL_DEBUG_NOHW;
+                intel_devid_override = strtol(env, NULL, 16);
+            }
         }
 
         if (!p)
