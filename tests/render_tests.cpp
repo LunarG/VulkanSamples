@@ -141,7 +141,7 @@ public:
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText);
-    void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText, const glm::mat4 matrix);
+    void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText);
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
@@ -619,13 +619,16 @@ void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const 
 }
 
 
-void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText,
-                                          const glm::mat4 matrix)
+void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText)
 {
     XGL_PIPELINE pipeline;
     XGL_SHADER vs, ps;
     XGL_RESULT err;
     glm::mat4 MVP;
+    int i;
+
+    // Create identity matrix
+    glm::mat4 Model      = glm::mat4(1.0f);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -646,8 +649,8 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    const int matrixSize = 4;
-    MVP = matrix;
+    const int matrixSize = 16;
+    MVP = Model;
 
     InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
 
@@ -712,6 +715,30 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
     xglDeviceWaitIdle(m_device->device());
 
     RecordImage(m_renderTarget);
+
+    for (i = 0; i < 8; i++) {
+        XGL_UINT8 *pData;
+        err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
+        ASSERT_XGL_SUCCESS(err);
+
+        MVP = glm::rotate(MVP, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+        memcpy(pData, (const void*) &MVP[0][0], matrixSize);
+
+        err = xglUnmapMemory(m_constantBufferMem);
+        ASSERT_XGL_SUCCESS(err);
+
+        // submit the command buffer to the universal queue
+        err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+        ASSERT_XGL_SUCCESS( err );
+
+        err = xglQueueWaitIdle( m_device->m_queue );
+        ASSERT_XGL_SUCCESS( err );
+
+        // Wait for work to finish before cleaning up.
+        xglDeviceWaitIdle(m_device->device());
+
+        RecordImage(m_renderTarget);
+    }
 }
 
 void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
@@ -1207,10 +1234,10 @@ TEST_F(XglRenderTest, TriangleVSUniform)
 
     // Create identity matrix
     glm::mat4 Model      = glm::mat4(1.0f);
-    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
+    DrawTriangleVSUniform(vertShaderText, fragShaderText);
 
-    Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
+//    Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+//    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
 }
 
 int main(int argc, char **argv) {
