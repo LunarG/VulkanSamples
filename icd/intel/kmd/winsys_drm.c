@@ -556,9 +556,13 @@ intel_bo_has_reloc(struct intel_bo *bo, struct intel_bo *target_bo)
 int
 intel_bo_wait(struct intel_bo *bo, int64_t timeout)
 {
-   int err;
+   int err = 0;
 
-   err = drm_intel_gem_bo_wait(gem_bo(bo), timeout);
+   if (timeout >= 0)
+       err = drm_intel_gem_bo_wait(gem_bo(bo), timeout);
+   else
+       drm_intel_bo_wait_rendering(gem_bo(bo));
+
    /* consider the bo idle on errors */
    if (err && err != -ETIME)
       err = 0;
