@@ -411,8 +411,8 @@ void XglRenderTest::InitConstantBuffer(int constantCount, int constantSize, cons
     ASSERT_XGL_SUCCESS(err);
 
     // set up the memory view for the constant buffer
-    this->m_constantBufferView.stride = 1;
-    this->m_constantBufferView.range  = 16;
+    this->m_constantBufferView.stride = 16;
+    this->m_constantBufferView.range  = alloc_info.allocationSize;
     this->m_constantBufferView.offset = 0;
     this->m_constantBufferView.mem    = m_constantBufferMem;
     this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
@@ -602,11 +602,10 @@ void XglRenderTest::DrawTriangleTest()
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
     static const char *fragShaderText =
-       "#version 130\n"
-       "uniform vec4 foo;\n"
-       "void main() {\n"
-       "   gl_FragColor = foo;\n"
-       "}\n";
+            "#version 130\n"
+            "void main() {\n"
+            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
+            "}\n";
 
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
@@ -619,7 +618,7 @@ void XglRenderTest::DrawTriangleTest()
     /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
     ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
     ((uint32_t *) createInfo.pCode)[1] = 0;
-    ((uint32_t *) createInfo.pCode)[2] = XGL_SHADER_STAGE_VERTEX;
+    ((uint32_t *) createInfo.pCode)[2] = XGL_SHADER_STAGE_FRAGMENT;
     memcpy(((uint32_t *) createInfo.pCode + 3), fragShaderText, shader_len + 1);
 
     err = xglCreateShader(device(), &createInfo, &ps);
@@ -627,7 +626,7 @@ void XglRenderTest::DrawTriangleTest()
         free((void *) createInfo.pCode);
 
         // Use Reference GLSL to BIL compiler
-        GLSLtoBIL(XGL_SHADER_STAGE_VERTEX, fragShaderText, bil);
+        GLSLtoBIL(XGL_SHADER_STAGE_FRAGMENT, fragShaderText, bil);
         createInfo.pCode = bil.data();
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;

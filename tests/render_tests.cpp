@@ -646,7 +646,7 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    const int matrixSize = 16;
+    const int matrixSize = 4;
     MVP = matrix;
 
     InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
