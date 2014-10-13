@@ -1519,15 +1519,18 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
     return sampler_offset;
 }
 
-static void emit_ps_binding_table(struct intel_cmd *cmd,
-                                  const struct intel_pipeline_rmap *rmap)
+static uint32_t emit_binding_table(struct intel_cmd *cmd,
+                                   const struct intel_pipeline_rmap *rmap)
 {
-    const XGL_UINT surface_count = rmap->rt_count +
-        rmap->resource_count + rmap->uav_count;
     uint32_t binding_table[256], offset;
-    XGL_UINT i;
+    XGL_UINT surface_count, i;
 
     CMD_ASSERT(cmd, 6, 7.5);
+
+    surface_count = (rmap) ?
+        rmap->rt_count + rmap->resource_count + rmap->uav_count : 0;
+    if (!surface_count)
+        return 0;
 
     assert(surface_count <= ARRAY_SIZE(binding_table));
 
@@ -1609,25 +1612,9 @@ static void emit_ps_binding_table(struct intel_cmd *cmd,
         binding_table[i] = offset;
     }
 
-    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
             GEN6_ALIGNMENT_BINDING_TABLE_STATE * 4,
             surface_count, binding_table);
-
-    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS, offset);
-
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_VS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_HS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_DS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_GS, 0);
-    } else {
-        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
-    }
 }
 
 static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
@@ -1785,9 +1772,18 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
 static void emit_shader_resources(struct intel_cmd *cmd)
 {
     /* five HW shader stages */
-    uint32_t samplers[5];
+    uint32_t binding_tables[5], samplers[5];
 
-    emit_ps_binding_table(cmd, cmd->bind.pipeline.graphics->fs.rmap);
+    binding_tables[0] = emit_binding_table(cmd,
+            cmd->bind.pipeline.graphics->vs.rmap);
+    binding_tables[1] = emit_binding_table(cmd,
+            cmd->bind.pipeline.graphics->tcs.rmap);
+    binding_tables[2] = emit_binding_table(cmd,
+            cmd->bind.pipeline.graphics->tes.rmap);
+    binding_tables[3] = emit_binding_table(cmd,
+            cmd->bind.pipeline.graphics->gs.rmap);
+    binding_tables[4] = emit_binding_table(cmd,
+            cmd->bind.pipeline.graphics->fs.rmap);
 
     samplers[0] = emit_samplers(cmd, cmd->bind.pipeline.graphics->vs.rmap);
     samplers[1] = emit_samplers(cmd, cmd->bind.pipeline.graphics->tcs.rmap);
@@ -1796,6 +1792,22 @@ static void emit_shader_resources(struct intel_cmd *cmd)
     samplers[4] = emit_samplers(cmd, cmd->bind.pipeline.graphics->fs.rmap);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_VS,
+                binding_tables[0]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_HS,
+                binding_tables[1]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_DS,
+                binding_tables[2]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_GS,
+                binding_tables[3]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS,
+                binding_tables[4]);
+
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_VS,
                 samplers[0]);
@@ -1812,6 +1824,10 @@ static void emit_shader_resources(struct intel_cmd *cmd)
                 GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS,
                 samplers[4]);
     } else {
+        assert(!binding_tables[1] && !binding_tables[2]);
+        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd,
+                binding_tables[0], binding_tables[3], binding_tables[4]);
+
         assert(!samplers[1] && !samplers[2]);
         gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd,
                 samplers[0], samplers[3], samplers[4]);
