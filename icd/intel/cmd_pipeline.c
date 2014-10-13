@@ -1434,18 +1434,22 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
     dw[6] = 0;
 }
 
-static void emit_ps_samplers(struct intel_cmd *cmd,
-                             const struct intel_pipeline_rmap *rmap)
+static uint32_t emit_samplers(struct intel_cmd *cmd,
+                              const struct intel_pipeline_rmap *rmap)
 {
     const XGL_UINT border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
     const XGL_UINT border_stride =
         u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR);
-    const XGL_UINT surface_count = rmap->rt_count +
-        rmap->resource_count + rmap->uav_count;
     uint32_t border_offset, *border_dw, sampler_offset, *sampler_dw;
+    XGL_UINT surface_count;
     XGL_UINT i;
 
     CMD_ASSERT(cmd, 6, 7.5);
+
+    if (!rmap || !rmap->sampler_count)
+        return 0;
+
+    surface_count = rmap->rt_count + rmap->resource_count + rmap->uav_count;
 
     border_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB,
             GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR * 4,
@@ -1512,22 +1516,7 @@ static void emit_ps_samplers(struct intel_cmd *cmd,
         sampler_dw += 4;
     }
 
-    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS,
-                sampler_offset);
-
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_VS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_HS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_DS, 0);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_GS, 0);
-    } else {
-        gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd, 0, 0, sampler_offset);
-    }
+    return sampler_offset;
 }
 
 static void emit_ps_binding_table(struct intel_cmd *cmd,
@@ -1793,6 +1782,42 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     dw[5] = dw5;
 }
 
+static void emit_shader_resources(struct intel_cmd *cmd)
+{
+    /* five HW shader stages */
+    uint32_t samplers[5];
+
+    emit_ps_binding_table(cmd, cmd->bind.pipeline.graphics->fs.rmap);
+
+    samplers[0] = emit_samplers(cmd, cmd->bind.pipeline.graphics->vs.rmap);
+    samplers[1] = emit_samplers(cmd, cmd->bind.pipeline.graphics->tcs.rmap);
+    samplers[2] = emit_samplers(cmd, cmd->bind.pipeline.graphics->tes.rmap);
+    samplers[3] = emit_samplers(cmd, cmd->bind.pipeline.graphics->gs.rmap);
+    samplers[4] = emit_samplers(cmd, cmd->bind.pipeline.graphics->fs.rmap);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                samplers[0]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_HS,
+                samplers[1]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_DS,
+                samplers[2]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_GS,
+                samplers[3]);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS,
+                samplers[4]);
+    } else {
+        assert(!samplers[1] && !samplers[2]);
+        gen6_3DSTATE_SAMPLER_STATE_POINTERS(cmd,
+                samplers[0], samplers[3], samplers[4]);
+    }
+}
+
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
@@ -1827,8 +1852,7 @@ static void emit_bounded_states(struct intel_cmd *cmd)
         gen6_3DSTATE_WM(cmd);
     }
 
-    emit_ps_binding_table(cmd, cmd->bind.pipeline.graphics->fs.rmap);
-    emit_ps_samplers(cmd, cmd->bind.pipeline.graphics->fs.rmap);
+    emit_shader_resources(cmd);
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
