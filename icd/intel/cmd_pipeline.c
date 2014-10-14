@@ -1862,52 +1862,6 @@ static void emit_ds(struct intel_cmd *cmd)
         gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
 }
 
-static void emit_bounded_states(struct intel_cmd *cmd)
-{
-    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
-
-    /* TODO more states */
-
-    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_cc_states(cmd);
-        gen7_viewport_states(cmd);
-
-        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
-                &cmd->bind.pipeline.graphics->vs);
-        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
-                &cmd->bind.pipeline.graphics->fs);
-
-        gen6_3DSTATE_CLIP(cmd);
-        gen7_3DSTATE_SF(cmd);
-        gen7_3DSTATE_SBE(cmd);
-        gen7_3DSTATE_WM(cmd);
-        gen7_3DSTATE_PS(cmd);
-    } else {
-        gen6_cc_states(cmd);
-        gen6_viewport_states(cmd);
-
-        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
-                &cmd->bind.pipeline.graphics->vs);
-        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
-                &cmd->bind.pipeline.graphics->fs);
-
-        gen6_3DSTATE_CLIP(cmd);
-        gen6_3DSTATE_SF(cmd);
-        gen6_3DSTATE_WM(cmd);
-    }
-
-    emit_shader_resources(cmd);
-
-    cmd_wa_gen6_pre_depth_stall_write(cmd);
-    cmd_wa_gen6_pre_multisample_depth_flush(cmd);
-
-    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
-    cmd_batch_write(cmd, msaa->cmd_len, msaa->cmd);
-
-    gen6_3DSTATE_VERTEX_BUFFERS(cmd);
-    gen6_3DSTATE_VS(cmd);
-}
-
 static void emit_shader(struct intel_cmd *cmd,
                         const struct intel_pipeline_shader *shader,
                         struct intel_cmd_shader *pCmdShader)
@@ -1954,10 +1908,9 @@ static void emit_shader(struct intel_cmd *cmd,
     return;
 }
 
-static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
-                                       const struct intel_pipeline *pipeline)
+static void emit_graphics_pipeline(struct intel_cmd *cmd)
 {
-    cmd->bind.pipeline.graphics = pipeline;
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
 
     if (pipeline->wa_flags & INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE)
         cmd_wa_gen6_pre_depth_stall_write(cmd);
@@ -1996,6 +1949,61 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
         cmd_wa_gen7_post_command_cs_stall(cmd);
     if (pipeline->wa_flags & INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL)
         cmd_wa_gen7_post_command_depth_stall(cmd);
+}
+
+static void emit_bounded_states(struct intel_cmd *cmd)
+{
+    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+
+    emit_graphics_pipeline(cmd);
+
+    emit_rt(cmd);
+    emit_ds(cmd);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_cc_states(cmd);
+        gen7_viewport_states(cmd);
+
+        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
+                &cmd->bind.pipeline.graphics->vs);
+        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
+                &cmd->bind.pipeline.graphics->fs);
+
+        gen6_3DSTATE_CLIP(cmd);
+        gen7_3DSTATE_SF(cmd);
+        gen7_3DSTATE_SBE(cmd);
+        gen7_3DSTATE_WM(cmd);
+        gen7_3DSTATE_PS(cmd);
+    } else {
+        gen6_cc_states(cmd);
+        gen6_viewport_states(cmd);
+
+        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
+                &cmd->bind.pipeline.graphics->vs);
+        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
+                &cmd->bind.pipeline.graphics->fs);
+
+        gen6_3DSTATE_CLIP(cmd);
+        gen6_3DSTATE_SF(cmd);
+        gen6_3DSTATE_WM(cmd);
+    }
+
+    emit_shader_resources(cmd);
+
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+    cmd_wa_gen6_pre_multisample_depth_flush(cmd);
+
+    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
+    cmd_batch_write(cmd, msaa->cmd_len, msaa->cmd);
+
+    gen6_3DSTATE_VERTEX_BUFFERS(cmd);
+    gen6_3DSTATE_VS(cmd);
+}
+
+static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
+                                       const struct intel_pipeline *pipeline)
+{
+    cmd->bind.pipeline.graphics = pipeline;
 }
 
 static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
@@ -2048,13 +2056,9 @@ static void cmd_bind_index_data(struct intel_cmd *cmd,
                                 const struct intel_mem *mem,
                                 XGL_GPU_SIZE offset, XGL_INDEX_TYPE type)
 {
-    if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
-        gen6_3DSTATE_INDEX_BUFFER(cmd, mem, offset, type, false);
-    } else {
-        cmd->bind.index.mem = mem;
-        cmd->bind.index.offset = offset;
-        cmd->bind.index.type = type;
-    }
+    cmd->bind.index.mem = mem;
+    cmd->bind.index.offset = offset;
+    cmd->bind.index.type = type;
 }
 
 static void cmd_bind_attachments(struct intel_cmd *cmd,
@@ -2101,9 +2105,6 @@ static void cmd_bind_attachments(struct intel_cmd *cmd,
 
     cmd->bind.att.width = width;
     cmd->bind.att.height = height;
-
-    emit_rt(cmd);
-    emit_ds(cmd);
 }
 
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
@@ -2155,6 +2156,9 @@ static void cmd_draw(struct intel_cmd *cmd,
         if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
             gen75_3DSTATE_VF(cmd, p->primitive_restart,
                     p->primitive_restart_index);
+            gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
+                    cmd->bind.index.offset, cmd->bind.index.type,
+                    false);
         } else {
             gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
                     cmd->bind.index.offset, cmd->bind.index.type,
