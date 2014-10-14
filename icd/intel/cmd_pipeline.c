@@ -1834,6 +1834,34 @@ static void emit_shader_resources(struct intel_cmd *cmd)
     }
 }
 
+static void emit_rt(struct intel_cmd *cmd)
+{
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, cmd->bind.att.width,
+            cmd->bind.att.height);
+}
+
+static void emit_ds(struct intel_cmd *cmd)
+{
+    const struct intel_ds_view *ds = cmd->bind.att.ds;
+
+    if (!ds) {
+        /* all zeros */
+        static const struct intel_ds_view null_ds;
+        ds = &null_ds;
+    }
+
+    cmd_wa_gen6_pre_ds_flush(cmd);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
+    else
+        gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
+}
+
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
@@ -2029,15 +2057,16 @@ static void cmd_bind_index_data(struct intel_cmd *cmd,
     }
 }
 
-static void cmd_bind_rt(struct intel_cmd *cmd,
-                        const XGL_COLOR_ATTACHMENT_BIND_INFO *attachments,
-                        XGL_UINT count)
+static void cmd_bind_attachments(struct intel_cmd *cmd,
+                                 XGL_UINT rt_count,
+                                 const XGL_COLOR_ATTACHMENT_BIND_INFO *rt_info,
+                                 const XGL_DEPTH_STENCIL_BIND_INFO *ds_info)
 {
     XGL_UINT width = 0, height = 0;
     XGL_UINT i;
 
-    for (i = 0; i < count; i++) {
-        const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &attachments[i];
+    for (i = 0; i < rt_count; i++) {
+        const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &rt_info[i];
         const struct intel_rt_view *rt = intel_rt_view(att->view);
         const struct intel_layout *layout = &rt->img->layout;
 
@@ -2054,35 +2083,27 @@ static void cmd_bind_rt(struct intel_cmd *cmd,
         cmd->bind.att.rt[i] = rt;
     }
 
-    cmd->bind.att.rt_count = count;
+    cmd->bind.att.rt_count = rt_count;
 
-    cmd_wa_gen6_pre_depth_stall_write(cmd);
-    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, width, height);
-}
+    if (ds_info) {
+        const struct intel_layout *layout;
 
-static void cmd_bind_ds(struct intel_cmd *cmd,
-                        const XGL_DEPTH_STENCIL_BIND_INFO *info)
-{
-    const struct intel_ds_view *ds;
+        cmd->bind.att.ds = intel_ds_view(ds_info->view);
+        layout = &cmd->bind.att.ds->img->layout;
 
-    if (info) {
-        cmd->bind.att.ds = intel_ds_view(info->view);
-        ds = cmd->bind.att.ds;
+        if (width > layout->width0)
+            width = layout->width0;
+        if (height > layout->height0)
+            height = layout->height0;
     } else {
-        /* all zeros */
-        static const struct intel_ds_view null_ds;
-        ds = &null_ds;
+        cmd->bind.att.ds = NULL;
     }
 
-    cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+    cmd->bind.att.width = width;
+    cmd->bind.att.height = height;
 
-    if (cmd_gen(cmd) >= INTEL_GEN(7))
-        gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
-    else
-        gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
+    emit_rt(cmd);
+    emit_ds(cmd);
 }
 
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
@@ -2295,8 +2316,8 @@ XGL_VOID XGLAPI intelCmdBindAttachments(
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd_bind_rt(cmd, pColorAttachments, colorAttachmentCount);
-    cmd_bind_ds(cmd, pDepthStencilAttachment);
+    cmd_bind_attachments(cmd, colorAttachmentCount, pColorAttachments,
+            pDepthStencilAttachment);
 }
 
 XGL_VOID XGLAPI intelCmdDraw(

@@ -193,6 +193,8 @@ struct intel_cmd_bind {
         XGL_UINT rt_count;
 
         const struct intel_ds_view *ds;
+
+        XGL_UINT width, height;
     } att;
 
     XGL_UINT draw_count;
