@@ -220,6 +220,12 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
    ctx->Const.MaxGeometryOutputVertices = 256;
    ctx->Const.MaxGeometryTotalOutputComponents = 1024;
 
+   /** GL_ARB_uniform_buffer_object */
+   ctx->Const.MaxCombinedUniformBlocks = 36;
+   ctx->Const.MaxUniformBufferBindings = 36;
+   ctx->Const.MaxUniformBlockSize = 16384;
+   ctx->Const.UniformBufferOffsetAlignment = 1;
+
    /* Set up default shader compiler options. */
    struct gl_shader_compiler_options options;
    memset(&options, 0, sizeof(options));
