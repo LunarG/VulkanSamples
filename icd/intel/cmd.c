@@ -229,8 +229,9 @@ static void cmd_reset(struct intel_cmd *cmd)
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
         cmd_writer_reset(cmd, i);
 
-    if (cmd->bind.shaderCache.shaderArray)
-        icd_free(cmd->bind.shaderCache.shaderArray);
+    if (cmd->bind.shader_cache.entries)
+        icd_free(cmd->bind.shader_cache.entries);
+
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
     cmd->reloc_used = 0;

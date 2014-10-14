@@ -316,8 +316,6 @@ static void gen6_3DSTATE_GS(struct intel_cmd *cmd)
 
     CMD_ASSERT(cmd, 6, 6);
 
-    assert(cmd->bind.gs.shader == NULL);
-
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
     dw[1] = 0;
@@ -335,8 +333,6 @@ static void gen7_3DSTATE_GS(struct intel_cmd *cmd)
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
-
-    assert(cmd->bind.gs.shader == NULL);
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
@@ -651,7 +647,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = cmd->bind.fs.kernel_offset;
+    dw[1] = cmd->bind.pipeline.fs_offset;
     dw[2] = dw2;
     dw[3] = 0; /* scratch */
     dw[4] = dw4;
@@ -747,7 +743,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = cmd->bind.fs.kernel_offset;
+    dw[1] = cmd->bind.pipeline.fs_offset;
     dw[2] = dw2;
     dw[3] = 0; /* scratch */
     dw[4] = dw4;
@@ -1762,7 +1758,7 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = cmd->bind.vs.kernel_offset;
+    dw[1] = cmd->bind.pipeline.vs_offset;
     dw[2] = dw2;
     dw[3] = 0; /* scratch */
     dw[4] = dw4;
@@ -1862,50 +1858,48 @@ static void emit_ds(struct intel_cmd *cmd)
         gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
 }
 
-static void emit_shader(struct intel_cmd *cmd,
-                        const struct intel_pipeline_shader *shader,
-                        struct intel_cmd_shader *pCmdShader)
+static uint32_t emit_shader(struct intel_cmd *cmd,
+                            const struct intel_pipeline_shader *shader)
 {
-    uint32_t i;
-    struct intel_cmd_shader *cmdShader;
+    struct intel_cmd_shader_cache *cache = &cmd->bind.shader_cache;
+    uint32_t offset;
+    XGL_UINT i;
 
-    for (i=0; i<cmd->bind.shaderCache.used; i++) {
-        if (cmd->bind.shaderCache.shaderArray[i].shader == shader) {
-            /* shader is already part of pipeline */
-            return;
+    /* see if the shader is already in the cache */
+    for (i = 0; i < cache->used; i++) {
+        if (cache->entries[i].shader == (const void *) shader)
+            return cache->entries[i].kernel_offset;
+    }
+
+    offset = cmd_instruction_write(cmd, shader->codeSize, shader->pCode);
+
+    /* grow the cache if full */
+    if (cache->used >= cache->count) {
+        const XGL_UINT count = cache->count + 16;
+        void *entries;
+
+        entries = icd_alloc(sizeof(cache->entries[0]) * count, 0,
+                XGL_SYSTEM_ALLOC_INTERNAL);
+        if (entries) {
+            if (cache->entries) {
+                memcpy(entries, cache->entries,
+                        sizeof(cache->entries[0]) * cache->used);
+                icd_free(cache->entries);
+            }
+
+            cache->entries = entries;
+            cache->count = count;
         }
     }
 
-    if (cmd->bind.shaderCache.used == cmd->bind.shaderCache.count) {
-        const XGL_UINT new_count = cmd->bind.shaderCache.count + 16;
-
-        cmdShader = cmd->bind.shaderCache.shaderArray;
-
-        cmd->bind.shaderCache.shaderArray =
-            icd_alloc(sizeof(*cmdShader) * new_count,
-                    0, XGL_SYSTEM_ALLOC_INTERNAL);
-        if (cmd->bind.shaderCache.shaderArray == NULL) {
-            cmd->bind.shaderCache.shaderArray = cmdShader;
-            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
-            return;
-        }
-
-        if (cmdShader) {
-            memcpy(cmd->bind.shaderCache.shaderArray, cmdShader,
-                    sizeof(*cmdShader) * cmd->bind.shaderCache.used);
-            icd_free(cmdShader);
-        }
-
-        cmd->bind.shaderCache.count = new_count;
+    /* add the shader to the cache */
+    if (cache->used < cache->count) {
+        cache->entries[cache->used].shader = (const void *) shader;
+        cache->entries[cache->used].kernel_offset = offset;
+        cache->used++;
     }
 
-    cmdShader = &cmd->bind.shaderCache.shaderArray[cmd->bind.shaderCache.used];
-    cmdShader->shader = shader;
-    cmdShader->kernel_offset =
-        cmd_instruction_write(cmd, shader->codeSize, shader->pCode);
-    *pCmdShader = *cmdShader;
-    cmd->bind.shaderCache.used++;
-    return;
+    return offset;
 }
 
 static void emit_graphics_pipeline(struct intel_cmd *cmd)
@@ -1924,19 +1918,19 @@ static void emit_graphics_pipeline(struct intel_cmd *cmd)
     cmd_batch_write(cmd, pipeline->cmd_len, pipeline->cmds);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        emit_shader(cmd, &pipeline->vs, &cmd->bind.vs);
-    }
-    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
-        emit_shader(cmd, &pipeline->gs, &cmd->bind.gs);
-    }
-    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        emit_shader(cmd, &pipeline->fs, &cmd->bind.fs);
+        cmd->bind.pipeline.vs_offset = emit_shader(cmd, &pipeline->vs);
     }
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        emit_shader(cmd, &pipeline->tcs, &cmd->bind.tcs);
+        cmd->bind.pipeline.tcs_offset = emit_shader(cmd, &pipeline->tcs);
     }
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        emit_shader(cmd, &pipeline->tes, &cmd->bind.tes);
+        cmd->bind.pipeline.tes_offset = emit_shader(cmd, &pipeline->tes);
+    }
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
+        cmd->bind.pipeline.gs_offset = emit_shader(cmd, &pipeline->gs);
+    }
+    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
+        cmd->bind.pipeline.fs_offset = emit_shader(cmd, &pipeline->fs);
     }
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {

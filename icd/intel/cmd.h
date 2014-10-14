@@ -127,9 +127,14 @@ enum intel_cmd_writer_type {
     INTEL_CMD_WRITER_COUNT,
 };
 
-struct intel_cmd_shader {
-    const struct intel_pipeline_shader *shader;
-    uint32_t kernel_offset;
+struct intel_cmd_shader_cache {
+    struct {
+        const void *shader;
+        uint32_t kernel_offset;
+    } *entries;
+
+    XGL_UINT count;
+    XGL_UINT used;
 };
 
 /*
@@ -137,30 +142,21 @@ struct intel_cmd_shader {
  * the command buffer when possible, and reduce this struct.
  */
 struct intel_cmd_bind {
+    struct intel_cmd_shader_cache shader_cache;
+
     struct {
         const struct intel_pipeline *graphics;
         const struct intel_pipeline *compute;
         const struct intel_pipeline_delta *graphics_delta;
         const struct intel_pipeline_delta *compute_delta;
+
+        uint32_t vs_offset;
+        uint32_t tcs_offset;
+        uint32_t tes_offset;
+        uint32_t gs_offset;
+        uint32_t fs_offset;
+        uint32_t cs_offset;
     } pipeline;
-
-    /*
-     * Currently active shaders for this command buffer.
-     * Provides data only available after shaders are bound to
-     * a command buffer, such as the kernel position in the kernel BO
-     */
-    struct intel_cmd_shader vs;
-    struct intel_cmd_shader fs;
-    struct intel_cmd_shader gs;
-    struct intel_cmd_shader tcs;
-    struct intel_cmd_shader tes;
-    struct intel_cmd_shader cs;
-
-    struct {
-        XGL_UINT count;
-        XGL_UINT used;
-        struct intel_cmd_shader *shaderArray;
-    } shaderCache;
 
     struct {
         const struct intel_viewport_state *viewport;
