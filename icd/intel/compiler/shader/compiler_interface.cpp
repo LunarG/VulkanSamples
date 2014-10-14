@@ -337,8 +337,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
     if (strlen(shader->InfoLog) > 0)
         printf("Info log:\n%s\n", shader->InfoLog);
 
-    if (!shader->CompileStatus)
+    if (!shader->CompileStatus) {
+        _mesa_destroy_shader_compiler();
         return NULL;
+    }
 
     assert(shader_program->NumShaders == 1);
 
@@ -347,11 +349,14 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
     shader_program->SeparateShader = true;
 
     link_shaders(ctx, shader_program);
-    if (!shader_program->LinkStatus)
-        return NULL;
 
     if (strlen(shader_program->InfoLog) > 0)
         printf("Info log for linking:\n%s\n", shader_program->InfoLog);
+
+    if (!shader_program->LinkStatus) {
+        _mesa_destroy_shader_compiler();
+        return NULL;
+    }
 
     _mesa_destroy_shader_compiler();
 
