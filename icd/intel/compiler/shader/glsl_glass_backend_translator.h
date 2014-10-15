@@ -40,6 +40,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #include "Core/PrivateManager.h"
 #include "Core/Backend.h"
 #include "list.h"
@@ -222,8 +223,6 @@ namespace gla {
 
         // IR intrinsics
         inline void emitIRIntrinsic(const llvm::IntrinsicInst*);
-        // IR IO intrinsics
-        inline void emitIRIOIntrinsic(const llvm::IntrinsicInst*, bool input);
 
         // Track maximum array value used
         inline void trackMaxArrayElement(ir_rvalue* deref, int index) const;
@@ -306,6 +305,8 @@ namespace gla {
         // raw add instruction: don't add map entry, just append to inst list
         inline void addIRInstruction(ir_instruction*, bool global = false);
 
+        inline void emitIRIOIntrinsic(const llvm::IntrinsicInst* llvmInst, bool input);
+
         // Return ref count of an rvalue
         inline unsigned getRefCount(const llvm::Value*) const;
 
@@ -331,6 +332,8 @@ namespace gla {
 
         // Add error message
         void error(const char* msg) const;
+
+        void setIoParameters(ir_variable* ioVar, const llvm::MDNode*);
 
         // Data ----------------------------------------------------------------
 
@@ -424,3 +427,4 @@ namespace gla {
         gl_context*              ctx;
     }; // class MesaGlassTranslator
 } // namespace gla
+

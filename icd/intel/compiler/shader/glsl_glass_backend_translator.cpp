@@ -999,7 +999,7 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
 
    // Mesa hoists interface block members to top level IO
    if (isPerVertex) {
-      anonBlocks.insert(irInterfaceType->name);
+      anonBlocks.insert(name);
       return;
    }
 
@@ -2729,8 +2729,7 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
 {
    const llvm::GetElementPtrInst* gepInst = getGepAsInst(llvmInst->getOperand(0));
    const llvm::MDNode*            mdNode  = llvmInst->getMetadata(UniformMdName);
-
-   llvm::StringRef name;
+   std::string                    name;
 
    // If this load doesn't have a metadata node, try to find one we've created
    // during variable declarations.  We use rendezvous-by-name to that end.
@@ -2747,9 +2746,6 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    // Look up the ir_variable_mode we remembered during the global declaration
    const ir_variable_mode irMode = ir_variable_mode(globalVarModeMap[name]);
 
-   if (mdNode && !mdNode->getOperand(0)->getName().empty())
-      name = mdNode->getOperand(0)->getName();
-
    // Handle types for both GEP chain loads and non-GEPs.
    const llvm::Type* srcType =
       (gepInst ? gepInst->getPointerOperand() : llvmInst->getOperand(0))->getType();
@@ -2760,11 +2756,12 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    const glsl_type* irType = llvmTypeToHirType(srcType, mdNode, llvmInst);
 
    ir_rvalue* load;
+   ir_variable* ioVar = 0;
+   ir_rvalue* aggregate = 0;
 
    // Handle GEP traversal
    if (gepInst) {
       const llvm::Value* gepSrc = gepInst->getPointerOperand();
-      ir_rvalue* aggregate;
 
       // TODO: For globals, do we really have to look this up from the
       // global decl?  The global decl can't put any llvm::Value in the map,
@@ -2782,6 +2779,14 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    } else {
       load = newIRVariableDeref(irType, name, irMode);
    }
+
+   if (load->as_dereference_variable()) {
+      ioVar = load->as_dereference_variable()->variable_referenced();
+   } else if (aggregate) {
+      ioVar = aggregate->as_dereference_variable()->variable_referenced();
+   }
+
+   setIoParameters(ioVar, mdNode);
 
    // Handle type overriding
    if (typeOverride)
@@ -2957,15 +2962,6 @@ MesaGlassTranslator::emitIRMatMul(const llvm::Instruction* llvmInst, int numCols
 inline void MesaGlassTranslator::emitIRIntrinsic(const llvm::IntrinsicInst* llvmInst)
 {
    switch (llvmInst->getIntrinsicID()) {
-   // Handle WriteData ------------------------------------------------------------------------
-   case llvm::Intrinsic::gla_writeData:                         // fall through
-   case llvm::Intrinsic::gla_fWriteData:                        return emitIRIOIntrinsic(llvmInst, false);
-
-   // Handle ReadData -------------------------------------------------------------------------
-   case llvm::Intrinsic::gla_readData:                          // fall through
-   case llvm::Intrinsic::gla_fReadData:                         // ...
-   case llvm::Intrinsic::gla_fReadInterpolant:                  return emitIRIOIntrinsic(llvmInst, true);
-
    case llvm::Intrinsic::invariant_end:                         return;  // ignore LLVM hints
    case llvm::Intrinsic::invariant_start:                       return;  // ignore LLVM hints
    case llvm::Intrinsic::lifetime_end:                          return;  // ignore LLVM hints
@@ -3337,6 +3333,39 @@ inline void MesaGlassTranslator::emitIRLoad(const llvm::Instruction* llvmInst)
 
 /**
  * -----------------------------------------------------------------------------
+ * Set IO variable parameters (locations, interp modes, pixel origins, etc)
+ * -----------------------------------------------------------------------------
+ */
+void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode)
+{
+   if (ioVar && mdNode) {
+      std::string         name;
+      llvm::Type*         mdType;
+      EMdInputOutput      mdQual;
+      EMdPrecision        mdPrecision;
+      EMdTypeLayout       mdLayout;
+      int                 layoutLocation;
+      const llvm::MDNode* mdAggregate;
+      const llvm::MDNode* dummySampler;
+      int                 interpMode;
+      // Glean information from metadata for intrinsic
+      gla::CrackIOMd(mdNode, name, mdQual, mdType, mdLayout, mdPrecision, layoutLocation, dummySampler, mdAggregate, interpMode);
+
+      // ioVar->data.index         = slotOffset;
+      ioVar->data.used = true;
+      ioVar->data.origin_upper_left    = state->fs_origin_upper_left;
+      ioVar->data.pixel_center_integer = state->fs_pixel_center_integer;
+
+      if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
+         ioVar->data.explicit_location = true;
+         ioVar->data.location          = layoutLocation;
+      }
+   }
+}
+
+
+/**
+ * -----------------------------------------------------------------------------
  * Store, potentially to GEP chain offset
  * -----------------------------------------------------------------------------
  */
@@ -3345,10 +3374,21 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
    const llvm::Value*             src     = llvmInst->getOperand(0);
    const llvm::Value*             dst     = llvmInst->getOperand(1);
    const llvm::GetElementPtrInst* gepInst = getGepAsInst(dst);
+   const llvm::MDNode*            mdNode;
+   std::string                    name;
+
+   if (gepInst)
+      name = gepInst->getOperand(0)->getName();
+   else 
+      name = llvmInst->getOperand(0)->getName();
+
+   mdNode = typenameMdMap[name];
 
    assert(llvm::isa<llvm::PointerType>(dst->getType()));
 
    ir_rvalue* irDst;
+   ir_variable* ioVar = 0;
+   ir_rvalue* aggregate = 0;
 
    if (gepInst) {
       const llvm::MDNode* mdNode;
@@ -3376,7 +3416,8 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
          valueMap.insert(tValueMap::value_type(gepSrc, irDst)).first;
       }
 
-      irDst = traverseGEP(gepInst, getIRValue(gepSrc), 0);
+      aggregate = getIRValue(gepSrc);
+      irDst = traverseGEP(gepInst, aggregate, 0);
    } else {
       const glsl_type* irType = llvmTypeToHirType(dst->getType()->getContainedType(0), 0, llvmInst);
 
@@ -3385,6 +3426,14 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
 
       irDst = newIRVariableDeref(irType, name, irMode);
    }
+
+   if (irDst->as_dereference_variable()) {
+      ioVar = irDst->as_dereference_variable()->variable_referenced();
+   } else if (aggregate) {
+      ioVar = aggregate->as_dereference_variable()->variable_referenced();
+   }
+
+   setIoParameters(ioVar, mdNode);
 
    addIRInstruction(llvmInst, fixIRLValue(irDst, getIRValue(src)));
 }
@@ -3480,7 +3529,14 @@ ir_rvalue* MesaGlassTranslator::dereferenceGep(const llvm::Type*& type, ir_rvalu
          }
 
          const char *field_name = ralloc_strdup(shader, aggregate->type->fields.structure[index].name);
-         return new(shader) ir_dereference_record(aggregate, field_name);
+
+         // interface block members are hoisted to global scope in HIR
+         if (anonBlocks.find(aggregate->type->name) != anonBlocks.end()) {
+            const ir_variable_mode irMode = ir_variable_mode(globalVarModeMap[aggregate->type->name]);
+            return newIRVariableDeref(llvmTypeToHirType(type), field_name, irMode);
+         } else {
+            return new(shader) ir_dereference_record(aggregate, field_name);
+         }
       }
       // fall through to error case if it wasn't an array or a struct
 
