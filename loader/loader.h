@@ -31,7 +31,7 @@
 #include <xgl.h>
 #include <xglDbg.h>
 #include <xglWsiX11Ext.h>
-
+#include <xglLayer.h>
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define LOADER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -40,4 +40,6 @@
 #  define LOADER_EXPORT
 #endif
 
+extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu);
+#define MAX_LAYER_LIBRARIES 16
 #endif /* LOADER_H */

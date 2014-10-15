@@ -32,6 +32,7 @@
 
 #include <xgl.h>
 #include <xglDbg.h>
+#include <xglLayer.h>
 
 #include "icd-dispatch-table.h"
 

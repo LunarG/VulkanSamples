@@ -29,6 +29,7 @@
 #include "icd-enumerate-drm.h"
 #include "gpu.h"
 #include "intel.h"
+#include "dispatch.h"
 
 static int intel_devid_override;
 int intel_debug = -1;
@@ -71,6 +72,10 @@ static void intel_debug_init(void)
 
         env = p + 1;
     }
+}
+ICD_EXPORT void * xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
+{
+    return intelGetProcAddr(gpu, pName);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(

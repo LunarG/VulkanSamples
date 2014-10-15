@@ -87,6 +87,10 @@ class Proto(object):
 
 # XGL core API
 core = (
+    Proto("void *", "GetProcAddr",
+        (Param("XGL_PHYSICAL_GPU", "gpu"),
+         Param("const XGL_CHAR*", "pName"))),
+
     Proto("XGL_RESULT", "InitAndEnumerateGpus",
         (Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
          Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),
@@ -726,6 +730,7 @@ ext_wsi_x11_headers = ("xglWsiX11Ext.h",)
 # XXX figure out the real order
 # XXX this is not extensible
 icd_dispatch_table = (
+    "GetProcAddr",
     "InitAndEnumerateGpus",
     "GetGpuInfo",
     "CreateDevice",
@@ -847,14 +852,18 @@ icd_dispatch_table = (
     "WsiX11QueuePresent",
 )
 
+def is_name_dispatchable(name):
+    return name not in (
+        "GetProcAddr",
+        "InitAndEnumerateGpus",
+        "DbgRegisterMsgCallback",
+        "DbgUnregisterMsgCallback",
+        "DbgSetGlobalOption")
+
 def is_dispatchable(proto):
     """Return true if the prototype is dispatchable.
 
     That is, return true when the prototype takes a XGL_PHYSICAL_GPU or
     XGL_BASE_OBJECT.
     """
-    return proto.name not in (
-        "InitAndEnumerateGpus",
-        "DbgRegisterMsgCallback",
-        "DbgUnregisterMsgCallback",
-        "DbgSetGlobalOption")
+    return is_name_dispatchable(proto.name)
