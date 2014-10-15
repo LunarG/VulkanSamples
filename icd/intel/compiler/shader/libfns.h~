@@ -1,6 +1,0 @@
-// LunarG ADD:
-template<typename T>
-T MAX2(const T& a, const T& b) { return a > b ? a : b; }
-template<typename T>
-T MIN2(const T& a, const T& b) { return a < b ? a : b; }
-
