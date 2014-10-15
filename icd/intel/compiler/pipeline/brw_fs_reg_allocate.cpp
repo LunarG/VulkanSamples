@@ -277,125 +277,6 @@ fs_visitor::assign_regs_trivial()
 
 }
 
-static void
-brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
-{
-   const struct brw_device_info *devinfo = screen->devinfo;
-   int base_reg_count = BRW_MAX_GRF / reg_width;
-   int index = reg_width - 1;
-
-   /* The registers used to make up almost all values handled in the compiler
-    * are a scalar value occupying a single register (or 2 registers in the
-    * case of SIMD16, which is handled by dividing base_reg_count by 2 and
-    * multiplying allocated register numbers by 2).  Things that were
-    * aggregates of scalar values at the GLSL level were split to scalar
-    * values by split_virtual_grfs().
-    *
-    * However, texture SEND messages return a series of contiguous registers
-    * to write into.  We currently always ask for 4 registers, but we may
-    * convert that to use less some day.
-    *
-    * Additionally, on gen5 we need aligned pairs of registers for the PLN
-    * instruction, and on gen4 we need 8 contiguous regs for workaround simd16
-    * texturing.
-    *
-    * So we have a need for classes for 1, 2, 4, and 8 registers currently,
-    * and we add in '3' to make indexing the array easier for the common case
-    * (since we'll probably want it for texturing later).
-    *
-    * And, on gen7 and newer, we do texturing SEND messages from GRFs, which
-    * means that we may need any size up to the sampler message size limit (11
-    * regs).
-    */
-   int class_count;
-   int class_sizes[BRW_MAX_MRF];
-
-   if (devinfo->gen >= 7) {
-      for (class_count = 0; class_count < MAX_SAMPLER_MESSAGE_SIZE;
-           class_count++)
-         class_sizes[class_count] = class_count + 1;
-   } else {
-      for (class_count = 0; class_count < 4; class_count++)
-         class_sizes[class_count] = class_count + 1;
-      class_sizes[class_count++] = 8;
-   }
-
-   /* Compute the total number of registers across all classes. */
-   int ra_reg_count = 0;
-   for (int i = 0; i < class_count; i++) {
-      ra_reg_count += base_reg_count - (class_sizes[i] - 1);
-   }
-
-   uint8_t *ra_reg_to_grf = ralloc_array(screen, uint8_t, ra_reg_count);
-   struct ra_regs *regs = ra_alloc_reg_set(screen, ra_reg_count);
-   if (devinfo->gen >= 6)
-      ra_set_allocate_round_robin(regs);
-   int *classes = ralloc_array(screen, int, class_count);
-   int aligned_pairs_class = -1;
-
-   /* Now, add the registers to their classes, and add the conflicts
-    * between them and the base GRF registers (and also each other).
-    */
-   int reg = 0;
-   int pairs_base_reg = 0;
-   int pairs_reg_count = 0;
-   for (int i = 0; i < class_count; i++) {
-      int class_reg_count = base_reg_count - (class_sizes[i] - 1);
-      classes[i] = ra_alloc_reg_class(regs);
-
-      /* Save this off for the aligned pair class at the end. */
-      if (class_sizes[i] == 2) {
-     pairs_base_reg = reg;
-     pairs_reg_count = class_reg_count;
-      }
-
-	  for (int j = 0; j < class_reg_count; j++) {
-	 ra_class_add_reg(regs, classes[i], reg);
-
-	 ra_reg_to_grf[reg] = j;
-
-	 for (int base_reg = j;
-		  base_reg < j + class_sizes[i];
-		  base_reg++) {
-		ra_add_transitive_reg_conflict(regs, base_reg, reg);
-	 }
-
-     reg++;
-      }
-   }
-   assert(reg == ra_reg_count);
-
-   /* Add a special class for aligned pairs, which we'll put delta_x/y
-    * in on gen5 so that we can do PLN.
-    */
-   if (devinfo->has_pln && reg_width == 1 && devinfo->gen < 6) {
-      aligned_pairs_class = ra_alloc_reg_class(regs);
-
-	  for (int i = 0; i < pairs_reg_count; i++) {
-	 if ((ra_reg_to_grf[pairs_base_reg + i] & 1) == 0) {
-		ra_class_add_reg(regs, aligned_pairs_class, pairs_base_reg + i);
-	 }
-	  }
-   }
-
-   ra_set_finalize(regs, NULL);
-
-   screen->wm_reg_sets[index].regs = regs;
-   for (unsigned i = 0; i < ARRAY_SIZE(screen->wm_reg_sets[index].classes); i++)
-      screen->wm_reg_sets[index].classes[i] = -1;
-   for (int i = 0; i < class_count; i++)
-      screen->wm_reg_sets[index].classes[class_sizes[i] - 1] = classes[i];
-   screen->wm_reg_sets[index].ra_reg_to_grf = ra_reg_to_grf;
-   screen->wm_reg_sets[index].aligned_pairs_class = aligned_pairs_class;
-}
-
-void
-brw_fs_alloc_reg_sets(struct intel_screen *screen)
-{
-   brw_alloc_reg_set(screen, 1);
-   brw_alloc_reg_set(screen, 2);
-}
-
 int
 count_to_loop_end(fs_inst *do_inst)
 {
@@ -437,8 +318,7 @@ count_to_loop_end(fs_inst *do_inst)
  * (note that in SIMD16, a node is two registers).
  */
 void
-fs_visitor::setup_payload_interference(struct ra_graph *g,
-                                       int* payload_last_use_ip,
+fs_visitor::setup_payload_interference(int* payload_last_use_ip,
                                        int* mrf_first_use_ip,
                                        int payload_node_count,
                                        int mrf_node_count,
@@ -563,33 +443,6 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
 
       ip++;
    }
-
-   if (g) {
-      for (int i = 0; i < payload_node_count; i++) {
-         /* Mark the payload node as interfering with any virtual grf that is
-          * live between the start of the program and our last use of the payload
-          * node.
-          */
-         for (int j = 0; j < this->virtual_grf_count; j++) {
-            /* Note that we use a <= comparison, unlike virtual_grf_interferes(),
-             * in order to not have to worry about the uniform issue described in
-             * calculate_live_intervals().
-             */
-            if (this->virtual_grf_start[j] <= payload_last_use_ip[i]) {
-               ra_add_node_interference(g, first_payload_node + i, j);
-            }
-         }
-      }
-
-      for (int i = 0; i < payload_node_count; i++) {
-         /* Mark each payload node as being allocated to its physical register.
-          *
-          * The alternative would be to have per-physical-register classes, which
-          * would just be silly.
-          */
-         ra_set_node_reg(g, first_payload_node + i, i);
-      }
-   }
 }
 
 /**
@@ -630,40 +483,8 @@ fs_visitor::get_used_mrfs(bool *mrf_used)
    }
 }
 
-/**
- * Sets interference between virtual GRFs and usage of the high GRFs for SEND
- * messages (treated as MRFs in code generation).
- */
-void
-fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
-{
-   int reg_width = dispatch_width / 8;
-
-   bool mrf_used[BRW_MAX_MRF];
-   get_used_mrfs(mrf_used);
-
-   for (int i = 0; i < BRW_MAX_MRF; i++) {
-      /* Mark each MRF reg node as being allocated to its physical register.
-       *
-       * The alternative would be to have per-physical-register classes, which
-       * would just be silly.
-       */
-      ra_set_node_reg(g, first_mrf_node + i,
-                      (GEN7_MRF_HACK_START + i) / reg_width);
-
-      /* Since we don't have any live/dead analysis on the MRFs, just mark all
-       * that are used as conflicting with all virtual GRFs.
-       */
-      if (mrf_used[i]) {
-         for (int j = 0; j < this->virtual_grf_count; j++) {
-            ra_add_node_interference(g, first_mrf_node + i, j);
-         }
-      }
-   }
-}
-
 bool
-fs_visitor::assign_regs_glassy(bool allow_spilling)
+fs_visitor::assign_regs(bool allow_spilling)
 {
    /* Most of this allocation was written for a reg_width of 1
     * (dispatch_width == 8).  In extending to SIMD16, the code was
@@ -695,7 +516,7 @@ fs_visitor::assign_regs_glassy(bool allow_spilling)
 
    const int incoming_pressure = debug ? calculate_register_pressure(extra_regs) : 0;
 
-   setup_payload_interference(0, payload_last_use_ip, mrf_first_use_ip,
+   setup_payload_interference(payload_last_use_ip, mrf_first_use_ip,
                               payload_node_count, mrf_hack_node_count, first_payload_node);
 
    igraph_t igraph(node_count, BRW_MAX_GRF / reg_width, virtual_grf_count, virtual_grf_sizes);
@@ -788,12 +609,6 @@ fs_visitor::assign_regs_glassy(bool allow_spilling)
    }
 
    return true;
-}
-
-bool
-fs_visitor::assign_regs(bool allow_spilling)
-{
-    return assign_regs_glassy(allow_spilling);
 }
 
 void
@@ -891,22 +706,6 @@ fs_visitor::choose_spill_reg(float* spill_costs, bool* no_spill)
 	 break;
       }
    }
-}
-
-int
-fs_visitor::choose_spill_reg(struct ra_graph *g)
-{
-   float spill_costs[this->virtual_grf_count];
-   bool no_spill[this->virtual_grf_count];
-
-   choose_spill_reg(spill_costs, no_spill);
-
-   for (int i = 0; i < this->virtual_grf_count; i++) {
-      if (!no_spill[i])
-	 ra_set_node_spill_cost(g, i, spill_costs[i]);
-   }
-
-   return ra_get_best_spill_node(g);
 }
 
 int

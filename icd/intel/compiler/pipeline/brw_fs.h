@@ -352,16 +352,12 @@ public:
    bool assign_regs_glassy(bool allow_spilling);
    void assign_regs_trivial();
    void get_used_mrfs(bool *mrf_used);
-   void setup_payload_interference(struct ra_graph *g,
-                                   int* payload_last_use_ip,
+   void setup_payload_interference(int* payload_last_use_ip,
                                    int* mrf_first_use_ip,
                                    int payload_reg_count,
                                    int mrf_node_count,
                                    int first_payload_node);
-   void setup_mrf_hack_interference(struct ra_graph *g,
-                                    int first_mrf_hack_node);
    void choose_spill_reg(float* spill_costs, bool* no_spill);
-   int choose_spill_reg(struct ra_graph *g);
    int choose_spill_reg(igraph_t& g);
    void spill_reg(int spill_reg);
    void split_virtual_grfs();

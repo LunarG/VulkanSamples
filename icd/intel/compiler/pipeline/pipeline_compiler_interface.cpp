@@ -99,7 +99,6 @@ static void initialize_brw_context(struct brw_context *brw,
     brw->intelScreen->deviceID = 0;
     brw->intelScreen->program_id = 0;
 
-    brw_fs_alloc_reg_sets(brw->intelScreen);
     brw_vec4_alloc_reg_set(brw->intelScreen);
 
     brw->shader_prog = brw_new_shader_program(&brw->ctx, 0);
