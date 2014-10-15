@@ -85,7 +85,7 @@ static inline bool icd_format_is_compressed(XGL_FORMAT format)
     }
 }
 
-static inline bool icd_format_get_block_width(XGL_FORMAT format)
+static inline int icd_format_get_block_width(XGL_FORMAT format)
 {
     /* all compressed formats use 4x4 blocks */
     return (icd_format_is_compressed(format)) ? 4 : 1;
