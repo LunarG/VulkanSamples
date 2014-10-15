@@ -227,10 +227,6 @@ namespace gla {
         // Track maximum array value used
         inline void trackMaxArrayElement(ir_rvalue* deref, int index) const;
 
-        // Dereference IO intrinsics down to a single slot
-        ir_rvalue* dereferenceIO(ir_rvalue*, const llvm::Type*, const llvm::MDNode*, int slotOffset,
-                                 EMdTypeLayout&, int irMode);
-
         // IR texture intrinsics
         inline void emitIRTexture(const llvm::IntrinsicInst*, bool gather);
 
@@ -304,8 +300,6 @@ namespace gla {
 
         // raw add instruction: don't add map entry, just append to inst list
         inline void addIRInstruction(ir_instruction*, bool global = false);
-
-        inline void emitIRIOIntrinsic(const llvm::IntrinsicInst* llvmInst, bool input);
 
         // Return ref count of an rvalue
         inline unsigned getRefCount(const llvm::Value*) const;
