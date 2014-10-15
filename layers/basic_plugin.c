@@ -14,12 +14,8 @@ static void initLayerTable()
 {
     GetProcAddrType fpGPA;
 
-    //memset(&myTable, 0 , sizeof(myTable));
-
-    //todo init the entire table to next entrypoint
     fpGPA = pCurObj->pGPA;
     assert(fpGPA);
-    // Layer
     myTable.GetProcAddr = fpGPA;
     myTable.InitAndEnumerateGpus = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglInitAndEnumerateGpus");
     myTable.GetGpuInfo = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglGetGpuInfo");
@@ -139,25 +135,17 @@ static void initLayerTable()
     myTable.WsiX11GetMSC = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglWsiX11GetMSC");
     myTable.WsiX11CreatePresentableImage = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglWsiX11CreatePresentableImage");
     myTable.WsiX11QueuePresent = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglWsiX11QueuePresent");
-#if 0
-    fpNextCD = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCreateDevice");
-    myTable.CreateDevice = fpNextCD;
-    fpNextGGI = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglGetGpuInfo");
-    myTable.GetGpuInfo = fpNextGGI;
-    fpNextGFI = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglGetFormatInfo");
-    myTable.GetFormatInfo = fpNextGFI;
-#endif
     return;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of wrapped xglCreateDevice() call w/ gpu: %p\n", (void*)gpu);
+    printf("At start of wrapped xglGetGpuInfo() call w/ gpu: %p\n", (void*)gpu);
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = myTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    printf("Completed wrapped xglCreateDevice() call w/ gpu: %p\n", (void*)gpu);
+    printf("Completed wrapped xglGetGpuInfo() call w/ gpu: %p\n", (void*)gpu);
     return result;
 }
 

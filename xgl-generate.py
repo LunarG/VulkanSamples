@@ -151,7 +151,7 @@ class Subcommand(object):
                              "    %s = wrapped_obj->nextObject;\n"
                              "    %s;\n"
                                  "}" % (qual, decl, proto.params[0].name, proto.params[0].name, stmt))
-            elif proto.name != "GetProcAddr":
+            elif proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
                 decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                 param0_name = proto.params[0].name
                 ret_val = ''
@@ -194,8 +194,13 @@ class Subcommand(object):
         for name in xgl.icd_dispatch_table:
             if name == "GetProcAddr":
                 continue
-            func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
+            if name == "InitAndEnumerateGpus":
+                func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
+                             '        return nextTable.%s;' % (prefix, name, prefix, name, name))
+            else:
+                func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
                              '        return %s%s;' % (prefix, name, prefix, name, prefix, name))
+
         func_body.append("    else {\n"
                          "        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
                          "        if (gpuw->pGPA == NULL)\n"
