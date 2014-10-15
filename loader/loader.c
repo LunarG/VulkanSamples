@@ -491,6 +491,9 @@ static void init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAddrType f
     tab->CreateDevice = fpGPA(gpu, (const XGL_CHAR *) "xglCreateDevice");
     tab->DestroyDevice = fpGPA(gpu, (const XGL_CHAR *) "xglDestroyDevice");
     tab->GetExtensionSupport = fpGPA(gpu, (const XGL_CHAR *) "xglGetExtensionSupport");
+    tab->EnumerateLayers = fpGPA(gpu, (const XGL_CHAR *) "xglEnumerateLayers");
+    if (tab->EnumerateLayers == NULL)
+        tab->EnumerateLayers = xglEnumerateLayers;
     tab->GetDeviceQueue = fpGPA(gpu, (const XGL_CHAR *) "xglGetDeviceQueue");
     tab->QueueSubmit = fpGPA(gpu, (const XGL_CHAR *) "xglQueueSubmit");
     tab->QueueSetGlobalMemReferences = fpGPA(gpu, (const XGL_CHAR *) "xglQueueSetGlobalMemReferences");
@@ -722,6 +725,8 @@ LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR 
         return disp_table->DestroyDevice;
     else if (!strncmp("xglGetExtensionSupport", (const char *) pName, sizeof ("xglGetExtensionSupport")))
         return disp_table->GetExtensionSupport;
+    else if (!strncmp("xglEnumerateLayers", (const char *) pName, sizeof ("xglEnumerateLayers")))
+        return disp_table->EnumerateLayers;
     else if (!strncmp("xglGetDeviceQueue", (const char *) pName, sizeof ("xglGetDeviceQueue")))
         return disp_table->GetDeviceQueue;
     else if (!strncmp("xglQueueSubmit", (const char *) pName, sizeof ("xglQueueSubmit")))
@@ -1010,6 +1015,28 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     *pGpuCount = count;
 
     return (count > 0) ? XGL_SUCCESS : res;
+}
+
+LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount)
+{
+    XGL_SIZE count = loader.layer_count;
+    // TODO handle layers per GPU, multiple icds
+
+    if (pOutLayerCount == NULL)
+        return XGL_ERROR_INVALID_POINTER;
+
+    if (maxLayerCount < loader.layer_count)
+        count = maxLayerCount;
+    *pOutLayerCount = count;
+
+    if (pOutLayers == NULL)
+        return XGL_SUCCESS;
+    for (XGL_SIZE i = 0; i < count; i++) {
+        strncpy((char *) (pOutLayers[i]), loader.layer_libs[i].lib_name, maxStringSize);
+        if (maxStringSize > 0)
+            pOutLayers[i][maxStringSize - 1] = '\0';
+    }
+    return XGL_SUCCESS;
 }
 
 LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)

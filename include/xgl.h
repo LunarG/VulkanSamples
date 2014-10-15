@@ -1796,6 +1796,14 @@ XGL_RESULT XGLAPI xglGetExtensionSupport(
     XGL_PHYSICAL_GPU                            gpu,
     const XGL_CHAR*                             pExtName);
 
+// Layer discovery function
+XGL_RESULT XGLAPI xglEnumerateLayers(
+    XGL_PHYSICAL_GPU gpu,
+    XGL_SIZE maxLayerCount,
+    XGL_SIZE maxStringSize,
+    XGL_CHAR* const* pOutLayers,
+    XGL_SIZE* pOutLayerCount);
+
 // Queue functions
 
 XGL_RESULT XGLAPI xglGetDeviceQueue(

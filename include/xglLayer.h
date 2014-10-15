@@ -21,6 +21,7 @@ typedef XGL_RESULT (XGLAPI *GetGpuInfoType)(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_G
 typedef XGL_RESULT (XGLAPI *CreateDeviceType)(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice);
 typedef XGL_RESULT (XGLAPI *DestroyDeviceType)(XGL_DEVICE device);
 typedef XGL_RESULT (XGLAPI *GetExtensionSupportType)(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName);
+typedef XGL_RESULT (XGLAPI *EnumerateLayersType)(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount);
 typedef XGL_RESULT (XGLAPI *GetDeviceQueueType)(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, XGL_UINT queueIndex, XGL_QUEUE* pQueue);
 typedef XGL_RESULT (XGLAPI *QueueSubmitType)(XGL_QUEUE queue, XGL_UINT cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *QueueSetGlobalMemReferencesType)(XGL_QUEUE queue, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs);
@@ -150,6 +151,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     CreateDeviceType CreateDevice;
     DestroyDeviceType DestroyDevice;
     GetExtensionSupportType GetExtensionSupport;
+    EnumerateLayersType EnumerateLayers;
     GetDeviceQueueType GetDeviceQueue;
     QueueSubmitType QueueSubmit;
     QueueSetGlobalMemReferencesType QueueSetGlobalMemReferences;
@@ -267,8 +269,3 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
 
 // ------------------------------------------------------------------------------------------------
 // API functions
-XGL_RESULT xglEnumerateLayers(
-    XGL_PHYSICAL_GPU gpu,
-    XGL_SIZE maxLayerCount,
-    XGL_CHAR* const* pOutLayers,
-    XGL_SIZE* pOutLayerCount);

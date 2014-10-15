@@ -110,6 +110,9 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
     XGL_UINT gpu_count;
     XGL_RESULT err;
     XglGpu *gpu;
+    XGL_CHAR *layers[16];
+    XGL_SIZE layer_count;
+    XGL_CHAR layer_buf[16][256];
 
     app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
@@ -123,6 +126,15 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
                                   MAX_GPUS, &gpu_count, objs);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_GE(1, gpu_count) << "No GPU available";
+
+    for (int i = 0; i < 16; i++)
+        layers[i] = &layer_buf[i][0];
+    err = xglEnumerateLayers(objs[0], 16, 256, (XGL_CHAR * const *) layers, &layer_count);
+    ASSERT_XGL_SUCCESS(err);
+    for (int i = 0; i < layer_count; i++) {
+        printf("Enumerated layers: %s ", layers[i]);
+    }
+    printf("\n");
 
     // TODO: Iterate over all GPUs
     gpu = new XglGpu(0, objs[0]);

@@ -116,6 +116,13 @@ core = (
         (Param("XGL_PHYSICAL_GPU", "gpu"),
          Param("const XGL_CHAR*", "pExtName"))),
 
+    Proto("XGL_RESULT", "EnumerateLayers",
+        (Param("XGL_PHYSICAL_GPU", "gpu"),
+         Param("XGL_SIZE", "maxLayerCount"),
+         Param("XGL_SIZE", "maxStringSize"),
+         Param("XGL_CHAR* const*", "pOutLayers"),
+         Param("XGL_SIZE *", "pOutLayerCount"))),
+
     Proto("XGL_RESULT", "GetDeviceQueue",
         (Param("XGL_DEVICE", "device"),
          Param("XGL_QUEUE_TYPE", "queueType"),
@@ -736,6 +743,7 @@ icd_dispatch_table = (
     "CreateDevice",
     "DestroyDevice",
     "GetExtensionSupport",
+    "EnumerateLayers",
     "GetDeviceQueue",
     "QueueSubmit",
     "QueueSetGlobalMemReferences",
@@ -856,6 +864,7 @@ def is_name_dispatchable(name):
     return name not in (
         "GetProcAddr",
         "InitAndEnumerateGpus",
+        "EnumerateLayers",
         "DbgRegisterMsgCallback",
         "DbgUnregisterMsgCallback",
         "DbgSetGlobalOption")

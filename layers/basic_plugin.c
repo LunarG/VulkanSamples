@@ -22,6 +22,7 @@ static void initLayerTable()
     myTable.CreateDevice = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCreateDevice");
     myTable.DestroyDevice = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglDestroyDevice");
     myTable.GetExtensionSupport = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglGetExtensionSupport");
+    myTable.EnumerateLayers = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglEnumerateLayers");
     myTable.GetDeviceQueue = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglGetDeviceQueue");
     myTable.QueueSubmit = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglQueueSubmit");
     myTable.QueueSetGlobalMemReferences = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglQueueSetGlobalMemReferences");
@@ -185,6 +186,8 @@ XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CH
         return myTable.DestroyDevice;
     else if (!strncmp("xglGetExtensionSupport", (const char *) pName, sizeof ("xglGetExtensionSupport")))
         return myTable.GetExtensionSupport;
+    else if (!strncmp("xglEnumerateLayers", (const char *) pName, sizeof ("xglEnumerateLayers")))
+        return myTable.EnumerateLayers;
     else if (!strncmp("xglGetDeviceQueue", (const char *) pName, sizeof ("xglGetDeviceQueue")))
         return myTable.GetDeviceQueue;
     else if (!strncmp("xglQueueSubmit", (const char *) pName, sizeof ("xglQueueSubmit")))
