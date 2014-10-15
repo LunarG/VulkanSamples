@@ -263,8 +263,7 @@ mesa_program_diskcache_cache(struct gl_context *ctx, struct gl_shader_program *p
       return -1;
 
    /* Glassy vs. Opaque compiled shaders */
-   if (_mesa_use_glass(ctx))
-       ralloc_strcat(&key, ".g");
+   ralloc_strcat(&key, ".g");
 
    char *shader_path =
       ralloc_asprintf(NULL, "%s/%s.bin", ctx->BinaryProgramCachePath, key);
@@ -373,8 +372,7 @@ mesa_program_diskcache_find(struct gl_context *ctx, struct gl_shader_program *pr
       return -1;
 
    /* Glassy vs. Opaque compiled shaders */
-   if (_mesa_use_glass(ctx))
-       ralloc_strcat(&key, ".g");
+   ralloc_strcat(&key, ".g");
 
 
    char *shader_path =
@@ -581,8 +579,7 @@ mesa_shader_diskcache_cache(struct gl_context *ctx, struct gl_shader *shader)
       return -1;
 
    /* Glassy vs. Opaque compiled shaders */
-   if (_mesa_use_glass(ctx))
-      ralloc_strcat(&key, ".g");
+   ralloc_strcat(&key, ".g");
 
    char *shader_path =
       ralloc_asprintf(NULL, "%s/%s.bin", ctx->BinaryShaderCachePath, key);
@@ -642,8 +639,7 @@ mesa_shader_diskcache_find(struct gl_context *ctx, struct gl_shader *shader)
       return -1;
 
    /* Glassy vs. Opaque compiled shaders */
-   if (_mesa_use_glass(ctx))
-      ralloc_strcat(&key, ".g");
+   ralloc_strcat(&key, ".g");
 
    char *shader_path =
       ralloc_asprintf(NULL, "%s/%s.bin", ctx->BinaryShaderCachePath, key);

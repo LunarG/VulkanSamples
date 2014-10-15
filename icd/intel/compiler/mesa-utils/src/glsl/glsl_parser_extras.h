@@ -513,8 +513,6 @@ extern bool _mesa_glsl_process_extension(const char *name, YYLTYPE *name_locp,
 extern "C" {
 #endif
 
-extern bool _mesa_use_glass(struct gl_context *ctx);
-
 /**
  * Get the textual name of the specified shader stage (which is a
  * gl_shader_stage).

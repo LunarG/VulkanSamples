@@ -227,28 +227,6 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
 }
 
 /**
- * Return true if using LunarGlass optimizer
- */
-bool _mesa_use_glass(struct gl_context *ctx)
-{
-    return true;
-    
-   // // Force LunarGlass on
-   // if (ctx->Const.GlassMode == DRI_CONF_GLASS_MODE_ALWAYS ||
-   //     (ctx->GlslFlags & GLSL_USE_GLASS))
-   //    return true;
-
-   // // Force LunarGlass off
-   // if (ctx->Const.GlassMode == DRI_CONF_GLASS_MODE_NEVER)
-   //    return false;
-
-   // // Use LunarGlass driver whitelist
-   // assert(ctx->Const.GlassMode == DRI_CONF_GLASS_MODE_WHITELIST);
-
-   // return false; // TODO: whitelist by app
-}
-
-/**
  * Determine whether the current GLSL version is sufficiently high to support
  * a certain feature, and generate an error message if it isn't.
  *
@@ -1838,7 +1816,7 @@ extern "C" {
 void
 _mesa_create_shader_compiler(void)
 {
-   static bool initialized;
+   static bool initialized = false;
 
    // Initialize glslang and LunarGlass
    if (!initialized) {
