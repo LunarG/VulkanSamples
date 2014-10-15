@@ -137,6 +137,8 @@ void brwDeleteProgram( struct gl_context *ctx,
 }
 
 
+// LunarG : Remove - Most of this is shader time related, may turn back on later
+
 //static GLboolean
 //brwIsProgramNative(struct gl_context *ctx,
 //		   GLenum target,

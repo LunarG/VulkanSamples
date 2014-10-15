@@ -1601,17 +1601,16 @@ fs_visitor::visit(ir_texture *ir)
 {
    fs_inst *inst = NULL;
 
-   int sampler = 0;
    // LunarG : TODO - hook these values up from descriptor set
+   int sampler = 0; // = _mesa_get_sampler_uniform_value(ir->sampler, shader_prog, prog);
 
-//      _mesa_get_sampler_uniform_value(ir->sampler, shader_prog, prog);
    /* FINISHME: We're failing to recompile our programs when the sampler is
     * updated.  This only matters for the texture rectangle scale parameters
     * (pre-gen6, or gen6+ with GL_CLAMP).
     */
-   // LunarG : TODO - hook these values up from descriptor set
 
-   int texunit = 0;//prog->SamplerUnits[sampler];
+   // LunarG : TODO - hook these values up from descriptor set
+   int texunit = 0;// = prog->SamplerUnits[sampler];
 
    if (ir->op == ir_tg4) {
       /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother

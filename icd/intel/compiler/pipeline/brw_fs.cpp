@@ -3271,8 +3271,7 @@ brw_wm_fs_emit(struct brw_context *brw, struct brw_wm_compile *c,
                        "SIMD8 at a 10-20%% performance cost: %s", v2.fail_msg);
          } else {
             // Use simd16 unless it looks some ratio worse than simd8
-            if (!_mesa_use_glass(&brw->ctx) ||
-                ((v2.estimated_clocks * 7 / 8) < v.estimated_clocks))
+            if ((v2.estimated_clocks * 7 / 8) < v.estimated_clocks)
                simd16_instructions = &v2.instructions;
          }
       } else {
@@ -3393,6 +3392,7 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
 
    // populate some other fields that would normally happen at draw time
    brw->wm.base.sampler_count = _mesa_fls(fp->Base.SamplersUsed);
+   // Others?  ...
 
    brw_wm_clear_compile(brw, c);
 
