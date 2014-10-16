@@ -852,8 +852,6 @@ instruction_scheduler::find_critical_path(schedule_node *n)
 void
 instruction_scheduler::compute_delay(schedule_node *n)
 {
-   const bool glassy = use_ips(mode);
-
    if (!n->child_count) {
       n->delay = issue_time(n->inst);
    } else {
@@ -861,10 +859,7 @@ instruction_scheduler::compute_delay(schedule_node *n)
          if (!n->children[i]->delay)
             compute_delay(n->children[i]);
 
-         if (glassy)
-            n->delay = MAX2(n->delay, n->platency + n->children[i]->delay);
-         else
-            n->delay = MAX2(n->delay, n->latency + n->children[i]->delay);
+         n->delay = MAX2(n->delay, n->platency + n->children[i]->delay);
       }
    }
 }
@@ -1004,7 +999,6 @@ bool fs_instruction_scheduler::conflict(fs_reg *r0, int n0, fs_reg *r1, int n1)
 void
 fs_instruction_scheduler::calculate_deps(bool bu)
 {
-   const bool glassy = use_ips(mode);
    const bool gen6plus = v->brw->gen >= 6;
 
    /* Pre-register-allocation, this tracks the last write per VGRF (so
@@ -1052,18 +1046,14 @@ fs_instruction_scheduler::calculate_deps(bool bu)
                for (int r = 0; r < reg_width * inst->regs_read(v, i); r++)
                   add_dep(bu, last_grf_write[inst->src[i].reg + r], n);
             } else {
-               if (glassy) {
-                  fs_inst* writer = last_grf_write[inst->src[i].reg] ?
-                     (fs_inst*)last_grf_write[inst->src[i].reg]->inst : 0;
-                  fs_inst* reader = (fs_inst*)n->inst;
+                fs_inst* writer = last_grf_write[inst->src[i].reg] ?
+                    (fs_inst*)last_grf_write[inst->src[i].reg]->inst : 0;
+                fs_inst* reader = (fs_inst*)n->inst;
 
-                  if (reader && writer)
-                     if (conflict(&writer->dst,    writer->regs_written,
-                                  &reader->src[i], reader->regs_read(v, i)))
+                if (reader && writer)
+                    if (conflict(&writer->dst,    writer->regs_written,
+                                 &reader->src[i], reader->regs_read(v, i)))
                         add_dep(bu, last_grf_write[inst->src[i].reg], n);
-               } else {
-                  add_dep(bu, last_grf_write[inst->src[i].reg], n);
-               }
             }
          } else if (inst->src[i].file == HW_REG &&
                     (inst->src[i].fixed_hw_reg.file ==
@@ -1082,8 +1072,8 @@ fs_instruction_scheduler::calculate_deps(bool bu)
          } else if (inst->src[i].file != BAD_FILE &&
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
-                    (!glassy || (inst->src[i].file != HW_REG ||
-                                 inst->src[i].fixed_hw_reg.file != IMM))) {
+                    (inst->src[i].file != HW_REG ||
+                     inst->src[i].fixed_hw_reg.file != IMM)) {
             assert(inst->src[i].file != MRF);
             add_barrier_deps(bu, n);
          }
@@ -1194,18 +1184,14 @@ fs_instruction_scheduler::calculate_deps(bool bu)
                for (int r = 0; r < reg_width * inst->regs_read(v, i); r++)
                   add_dep(bu, n, last_grf_write[inst->src[i].reg + r]);
             } else {
-               if (glassy) {
-                  fs_inst* writer = last_grf_write[inst->src[i].reg] ?
-                     (fs_inst*)last_grf_write[inst->src[i].reg]->inst : 0;
-                  fs_inst* reader = (fs_inst*)n->inst;
+                fs_inst* writer = last_grf_write[inst->src[i].reg] ?
+                    (fs_inst*)last_grf_write[inst->src[i].reg]->inst : 0;
+                fs_inst* reader = (fs_inst*)n->inst;
 
-                  if (reader && writer)
-                     if (conflict(&writer->dst,    writer->regs_written,
-                                  &reader->src[i], reader->regs_read(v, i)))
+                if (reader && writer)
+                    if (conflict(&writer->dst,    writer->regs_written,
+                                 &reader->src[i], reader->regs_read(v, i)))
                         add_dep(bu, n, last_grf_write[inst->src[i].reg]);
-               } else {
-                  add_dep(bu, n, last_grf_write[inst->src[i].reg]);
-               }
             }
          } else if (inst->src[i].file == HW_REG &&
                     (inst->src[i].fixed_hw_reg.file ==
@@ -1224,8 +1210,8 @@ fs_instruction_scheduler::calculate_deps(bool bu)
          } else if (inst->src[i].file != BAD_FILE &&
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
-                    (!glassy || (inst->src[i].file != HW_REG ||
-                                 inst->src[i].fixed_hw_reg.file != IMM))) {
+                    (inst->src[i].file != HW_REG ||
+                     inst->src[i].fixed_hw_reg.file != IMM)) {
             assert(inst->src[i].file != MRF);
             add_barrier_deps(bu, n);
          }
