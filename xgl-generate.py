@@ -122,7 +122,6 @@ class Subcommand(object):
                 if proto.ret != "XGL_VOID":
                     stmt = "return " + stmt
                 if proto.name == "CreateDevice" and qual == "LOADER_EXPORT ":
-                    stmt_cd = "XGL_RESULT res = " + "(*disp)->%s" % proto.c_call()
                     funcs.append("%s%s\n"
                              "{\n"
                              "    ActivateLayers(&%s);\n"
@@ -131,10 +130,7 @@ class Subcommand(object):
                              "            (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj->baseObject;\n"
                              "    %s = wrapped_obj->nextObject;\n"
                              "    %s;\n"
-                             "    const XGL_LAYER_DISPATCH_TABLE * *disp_dev = (const XGL_LAYER_DISPATCH_TABLE *  *) *%s;\n"
-                             "    *disp_dev = (const XGL_LAYER_DISPATCH_TABLE *) *disp;\n"
-                             "    return res;\n"
-                             "}" % (qual, decl, proto.params[0].name, proto.params[0].name, proto.params[0].name, stmt_cd, proto.params[2].name))
+                             "}" % (qual, decl, proto.params[0].name, proto.params[0].name, proto.params[0].name, stmt))
                 elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                     funcs.append("%s%s\n"
                              "{\n"

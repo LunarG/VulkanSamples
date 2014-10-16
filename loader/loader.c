@@ -40,15 +40,19 @@
 #include <assert.h>
 #include "loader.h"
 
+typedef XGL_VOID (* SetDispatchType)(XGL_LAYER_DISPATCH_TABLE * disp, XGL_BOOL debug);
 
 struct loader_icd {
     void *handle;
+
+   XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
 
     GetProcAddrType GetProcAddr;
     InitAndEnumerateGpusType InitAndEnumerateGpus;
     DbgRegisterMsgCallbackType DbgRegisterMsgCallback;
     DbgUnregisterMsgCallbackType DbgUnregisterMsgCallback;
     DbgSetGlobalOptionType DbgSetGlobalOption;
+    SetDispatchType SetDispatch;
 
     struct loader_icd *next;
 };
@@ -69,7 +73,6 @@ struct loader_msg_callback {
 static struct {
     bool scanned;
     struct loader_icd *icds;
-    XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
     XGL_UINT layer_count;
     bool layer_scaned;
     char layer_dirs[4096];
@@ -217,6 +220,7 @@ loader_icd_create(const char *filename)
     LOOKUP(icd, DbgRegisterMsgCallback);
     LOOKUP(icd, DbgUnregisterMsgCallback);
     LOOKUP(icd, DbgSetGlobalOption);
+    LOOKUP(icd, SetDispatch);
 #undef LOOKUP
 
     return icd;
@@ -485,6 +489,8 @@ LOADER_EXPORT XGL_RESULT XGLAPI ScanForLayers(const XGL_CHAR* pLibraryDirectorie
 
 static void init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
 {
+    XGL_BASE_LAYER_OBJECT* wrapped_obj = (XGL_BASE_LAYER_OBJECT*)gpu;
+    gpu = wrapped_obj->nextObject;
     tab->GetProcAddr = fpGPA;
     tab->InitAndEnumerateGpus = fpGPA(gpu, (const XGL_CHAR *) "xglInitAndEnumerateGpus");
     tab->GetGpuInfo = fpGPA(gpu, (const XGL_CHAR *) "xglGetGpuInfo");
@@ -612,13 +618,9 @@ static void init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAddrType f
 extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu)
 {
     static bool layer_installed = false;
-    //const struct loader_icd *icd;
+
     /* activate any layer libraries */
     if (loader.layer_count > 0 && !layer_installed) {
-
-        //todo get icd from gpu
-        //icd = loader.icds;  // We are only going to configure the first driver
-        //SetDispatchType IcdSetDispatch = dlsym(icd->handle, "xglSetDispatch");
 
         // TODO For now just assume  all layers scanned will be  activated in the order they were scanned
         XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) *gpu;
@@ -649,9 +651,9 @@ extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu)
             }
 
             if (i == 0) {
-                //TODO handle multiple icd case
-                init_dispatch_table(loader.loader_dispatch, nextGPA, gpuObj);
-                //IcdSetDispatch(&new_table, true);
+                //TODO handle multiple icd/gpus case, which dispatch table??
+                init_dispatch_table(loader.icds->loader_dispatch, nextGPA, gpuObj);
+                //loader.icds->SetDispatch(loader.icds->loader_dispatch, true);
             }
         }
         *gpu = ((XGL_PHYSICAL_GPU *) gpuObj);
@@ -964,9 +966,18 @@ LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR 
 LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
 {
     static pthread_once_t once = PTHREAD_ONCE_INIT;
-    const struct loader_icd *icd;
+    struct loader_icd *icd;
     XGL_UINT count = 0;
     XGL_RESULT res;
+
+    // cleanup any prior layer initializations
+    for (icd = loader.icds; icd; icd = icd->next) {
+        //TODO clean up the wrapped gpu structs from here and during layer activation
+        if (icd->loader_dispatch)
+            free(icd->loader_dispatch);
+        icd->loader_dispatch = NULL;
+        icd->SetDispatch(NULL, true);
+    }
 
     pthread_once(&once, loader_icd_scan);
 
@@ -987,15 +998,16 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
         res = icd->InitAndEnumerateGpus(pAppInfo, pAllocCb, max, &n, gpus);
         if (res == XGL_SUCCESS && n) {
             wrappedGpus = (XGL_BASE_LAYER_OBJECT*) malloc(n * sizeof(XGL_BASE_LAYER_OBJECT));
-            loader.loader_dispatch = (XGL_LAYER_DISPATCH_TABLE *) malloc(n * sizeof(XGL_LAYER_DISPATCH_TABLE));
+            icd->loader_dispatch = (XGL_LAYER_DISPATCH_TABLE *) malloc(n * sizeof(XGL_LAYER_DISPATCH_TABLE));
             for (int i = 0; i < n; i++) {
                 (wrappedGpus + i)->baseObject = gpus[i];
-                (wrappedGpus + i)->pGPA = getProcAddr; //loader.loader_dispatch + i; //getProcAddr;
+                (wrappedGpus + i)->pGPA = getProcAddr;
                 (wrappedGpus + i)->nextObject = gpus[i];
                 memcpy(pGpus + count, &wrappedGpus, sizeof(*pGpus));
-                init_dispatch_table(loader.loader_dispatch + i, getProcAddr, wrappedGpus + i);
+                init_dispatch_table(icd->loader_dispatch + i, getProcAddr, wrappedGpus + i);
                 const XGL_LAYER_DISPATCH_TABLE * *disp = (const XGL_LAYER_DISPATCH_TABLE *  *) gpus[i];
-                *disp = loader.loader_dispatch + i;
+                *disp = icd->loader_dispatch + i;
+                icd->SetDispatch(icd->loader_dispatch + i, true);
             }
 
             count += n;

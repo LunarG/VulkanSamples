@@ -53,6 +53,7 @@ static const struct icd_dispatch_table intel_normal_dispatch_table = {
     .CreateDevice = intelCreateDevice,
     .DestroyDevice = intelDestroyDevice,
     .GetExtensionSupport = intelGetExtensionSupport,
+    .EnumerateLayers = NULL,
     .GetDeviceQueue = intelGetDeviceQueue,
     .QueueSubmit = intelQueueSubmit,
     .QueueSetGlobalMemReferences = intelQueueSetGlobalMemReferences,
@@ -171,6 +172,7 @@ static const struct icd_dispatch_table intel_debug_dispatch_table = {
     .CreateDevice = intelCreateDevice,
     .DestroyDevice = intelDestroyDevice,
     .GetExtensionSupport = intelGetExtensionSupport,
+    .EnumerateLayers = NULL,
     .GetDeviceQueue = intelGetDeviceQueue,
     .QueueSubmit = intelQueueSubmit,
     .QueueSetGlobalMemReferences = intelQueueSetGlobalMemReferences,
@@ -286,21 +288,30 @@ static const struct icd_dispatch_table intel_debug_dispatch_table = {
     .WsiX11QueuePresent = intelWsiX11QueuePresent,
 };
 
-const struct icd_dispatch_table *intel_loader_dispatch_get(XGL_PHYSICAL_GPU gpu_)
-{
-    // todo handle multiple gpu case
-    return &intel_debug_dispatch_table;
-}
+static struct icd_dispatch_table *debug_dispatch = (struct icd_dispatch_table *) &intel_debug_dispatch_table;
+static struct icd_dispatch_table *normal_dispatch = (struct icd_dispatch_table *) &intel_normal_dispatch_table;
 
 const struct icd_dispatch_table *intel_dispatch_get(bool debug)
 {
-    return (debug) ? &intel_debug_dispatch_table :
-        &intel_normal_dispatch_table;
+
+    return (debug) ? debug_dispatch : normal_dispatch;
 }
 
+void intelSetDispatch(struct icd_dispatch_table * dispatch, bool debug)
+{
+    if (debug)
+        debug_dispatch = (dispatch == NULL) ? (struct icd_dispatch_table *) &intel_debug_dispatch_table : dispatch;
+    else
+        normal_dispatch = (dispatch == NULL) ? (struct icd_dispatch_table *) &intel_normal_dispatch_table : dispatch;
+}
+
+//TODO  since loader now has a dispatch table and it is used at first initAndEnumerate
+// probably can remove the normal and debug icd dispatch table  and have GPA use hardcoded function names
 void * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
 {
-    const struct icd_dispatch_table *disp_table = intel_loader_dispatch_get(gpu);
+    //const XGL_LAYER_DISPATCH_TABLE * const *disp =
+    //        (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj->baseObject;
+    const struct icd_dispatch_table *disp_table = * (const struct icd_dispatch_table * const *) gpu;
 
    if (!strncmp("xglGetProcAddr", (const char *) pName, sizeof("xglGetProcAddr")))
         return disp_table->GetProcAddr;

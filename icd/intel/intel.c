@@ -73,6 +73,13 @@ static void intel_debug_init(void)
         env = p + 1;
     }
 }
+
+ICD_EXPORT XGL_VOID xglSetDispatch(XGL_LAYER_DISPATCH_TABLE *dispatch, XGL_BOOL debug)
+{
+    struct icd_dispatch_table * disp = (struct icd_dispatch_table *) dispatch;
+    intelSetDispatch(disp, debug);
+}
+
 ICD_EXPORT void * xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
 {
     return intelGetProcAddr(gpu, pName);
