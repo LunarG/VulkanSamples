@@ -1994,6 +1994,648 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     gen6_3DSTATE_VS(cmd);
 }
 
+static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    uint32_t blend_offset, ds_offset, cc_offset, cc_vp_offset, *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    blend_offset = 0;
+    ds_offset = 0;
+    cc_offset = 0;
+    cc_vp_offset = 0;
+
+    if (meta->dst.valid) {
+        /* BLEND_STATE */
+        blend_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLEND,
+                GEN6_ALIGNMENT_BLEND_STATE * 4, 2, &dw);
+        dw[0] = 0;
+        dw[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT | 0x3;
+    }
+
+    if (meta->ds) {
+        assert(!"depth/stencil clear unsupported");
+
+        /* DEPTH_STENCIL_STATE */
+        ds_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
+                GEN6_ALIGNMENT_DEPTH_STENCIL_STATE * 4, 3, &dw);
+        dw[0] = 0;
+        dw[1] = 0;
+        dw[2] = 0;
+
+        /* COLOR_CALC_STATE */
+        cc_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_COLOR_CALC,
+                GEN6_ALIGNMENT_COLOR_CALC_STATE * 4, 6, &dw);
+        dw[0] = 0;
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+        dw[5] = 0;
+
+        /* CC_VIEWPORT */
+        cc_vp_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
+                GEN6_ALIGNMENT_CC_VIEWPORT * 4, 2, &dw);
+        dw[0] = 0;
+        dw[1] = 0;
+    }
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS,
+                blend_offset);
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
+                ds_offset);
+        gen7_3dstate_pointer(cmd,
+                GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, cc_offset);
+
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
+                cc_vp_offset);
+    } else {
+        /* 3DSTATE_CC_STATE_POINTERS */
+        cmd_batch_pointer(cmd, 4, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CC_STATE_POINTERS) | (4 - 2);
+        dw[1] = blend_offset | GEN6_PTR_CC_DW1_BLEND_CHANGED;
+        dw[2] = ds_offset | GEN6_PTR_CC_DW2_ZS_CHANGED;
+        dw[3] = cc_offset | GEN6_PTR_CC_DW3_CC_CHANGED;
+
+        /* 3DSTATE_VIEWPORT_STATE_POINTERS */
+        cmd_batch_pointer(cmd, 4, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VIEWPORT_STATE_POINTERS) | (4 - 2) |
+                GEN6_PTR_VP_DW0_CC_CHANGED;
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = cc_vp_offset;
+    }
+}
+
+static void gen6_meta_surface_states(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    uint32_t binding_table[2];
+    XGL_UINT surface_count = 0;
+    uint32_t offset;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    /* SURFACE_STATE */
+    if (meta->dst.valid) {
+        offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                meta->dst.surface_len, meta->dst.surface);
+
+        cmd_reserve_reloc(cmd, 1);
+        cmd_surface_reloc(cmd, offset, 1,
+                (struct intel_bo *) meta->dst.reloc_target,
+                meta->dst.reloc_offset, meta->dst.reloc_flags);
+
+        binding_table[surface_count++] = offset;
+    }
+    if (meta->src.valid) {
+        offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                meta->src.surface_len, meta->src.surface);
+
+        cmd_reserve_reloc(cmd, 1);
+        if (meta->src.reloc_flags & INTEL_CMD_RELOC_TARGET_IS_WRITER) {
+            cmd_surface_reloc_writer(cmd, offset, 1,
+                    meta->src.reloc_target, meta->src.reloc_offset);
+        } else {
+            cmd_surface_reloc(cmd, offset, 1,
+                    (struct intel_bo *) meta->src.reloc_target,
+                    meta->src.reloc_offset, meta->src.reloc_flags);
+        }
+
+        binding_table[surface_count++] = offset;
+    }
+
+    /* BINDING_TABLE */
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
+            GEN6_ALIGNMENT_BINDING_TABLE_STATE * 4,
+            surface_count, binding_table);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_3dstate_pointer(cmd,
+                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS,
+                offset);
+    } else {
+        /* 3DSTATE_BINDING_TABLE_POINTERS */
+        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
+    }
+}
+
+static void gen6_meta_urb(struct intel_cmd *cmd)
+{
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    /* 3DSTATE_URB */
+    cmd_batch_pointer(cmd, 3, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_URB) | (3 - 2);
+    dw[1] = 128 << GEN6_URB_DW1_VS_ENTRY_COUNT__SHIFT;
+    dw[2] = 0;
+}
+
+static void gen7_meta_urb(struct intel_cmd *cmd)
+{
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    /* 3DSTATE_PUSH_CONSTANT_ALLOC_x */
+    cmd_batch_pointer(cmd, 10, &dw);
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (2 - 2);
+    dw[1] = 1;
+
+    cmd_wa_gen7_pre_vs_depth_stall_write(cmd);
+
+    /* 3DSTATE_URB_x */
+    cmd_batch_pointer(cmd, 8, &dw);
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (2 - 2);
+    dw[1] = 1 << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
+            512;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_DS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_GS) | (2 - 2);
+    dw[1] = 0;
+    dw += 2;
+}
+
+static void gen6_meta_vf(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    XGL_UINT vertices[3][2];
+    uint32_t offset, *dw;
+    XGL_UINT pos;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    /* write vertices */
+    vertices[0][0] = meta->dst.x + meta->width;
+    vertices[0][1] = meta->dst.y + meta->height;
+    vertices[1][0] = meta->dst.x;
+    vertices[1][1] = meta->dst.y + meta->height;
+    vertices[2][0] = meta->dst.x;
+    vertices[2][1] = meta->dst.y;
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
+            sizeof(vertices) / 4, (const uint32_t *) vertices);
+
+    /* 3DSTATE_VERTEX_BUFFERS */
+    pos = cmd_batch_pointer(cmd, 5, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_BUFFERS) | (5 - 2);
+    dw[1] = sizeof(vertices[0]);
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        dw[1] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+
+    cmd_reserve_reloc(cmd, 2);
+    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, offset);
+    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE,
+            offset + sizeof(vertices) - 1);
+
+    dw[4] = 0;
+
+    /* 3DSTATE_VERTEX_ELEMENTS */
+    cmd_batch_pointer(cmd, 5, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) | (5 - 2);
+    dw[1] = GEN6_VE_STATE_DW0_VALID,
+    dw[2] = GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP0__SHIFT | /* Reserved */
+            GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP1__SHIFT | /* Render Target Array Index */
+            GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP2__SHIFT | /* Viewport Index */
+            GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP3__SHIFT;  /* Point Width */
+    dw[3] = GEN6_VE_STATE_DW0_VALID |
+            GEN6_FORMAT_R32G32_USCALED << GEN6_VE_STATE_DW0_FORMAT__SHIFT;
+    dw[4] = GEN6_VFCOMP_STORE_SRC  << GEN6_VE_STATE_DW1_COMP0__SHIFT |
+            GEN6_VFCOMP_STORE_SRC  << GEN6_VE_STATE_DW1_COMP1__SHIFT |
+            GEN6_VFCOMP_STORE_0    << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+            GEN6_VFCOMP_STORE_1_FP << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+}
+
+static void gen6_meta_disabled(struct intel_cmd *cmd)
+{
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    /* 3DSTATE_CONSTANT_VS */
+    cmd_batch_pointer(cmd, 5, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (5 - 2);
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+
+    /* 3DSTATE_VS */
+    cmd_batch_pointer(cmd, 6, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (6 - 2);
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+    dw[5] = 0;
+
+    /* 3DSTATE_CONSTANT_GS */
+    cmd_batch_pointer(cmd, 5, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_GS) | (5 - 2);
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+
+    /* 3DSTATE_GS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (7 - 2);
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT;
+    dw[5] = GEN6_GS_DW5_STATISTICS;
+    dw[6] = 0;
+
+    /* 3DSTATE_CLIP */
+    cmd_batch_pointer(cmd, 4, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (4 - 2);
+    dw[1] = 0;
+    dw[2] = 0;
+    dw[3] = 0;
+
+    /* 3DSTATE_SF */
+    cmd_batch_pointer(cmd, 20, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (20 - 2);
+    dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
+    memset(&dw[2], 0, 18 * sizeof(*dw));
+}
+
+static void gen7_meta_disabled(struct intel_cmd *cmd)
+{
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    /* 3DSTATE_CONSTANT_VS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_VS */
+    cmd_batch_pointer(cmd, 6, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (6 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (6 - 1));
+
+    /* 3DSTATE_CONSTANT_HS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_CONSTANT_HS) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_HS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_HS) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_TE */
+    cmd_batch_pointer(cmd, 4, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_TE) | (4 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (4 - 1));
+
+    /* 3DSTATE_CONSTANT_DS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_CONSTANT_DS) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_DS */
+    cmd_batch_pointer(cmd, 6, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_DS) | (6 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (6 - 1));
+
+    /* 3DSTATE_CONSTANT_GS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_GS) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_GS */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_STREAMOUT */
+    cmd_batch_pointer(cmd, 3, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) | (3 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (3 - 1));
+
+    /* 3DSTATE_CLIP */
+    cmd_batch_pointer(cmd, 4, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (4 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (4 - 1));
+
+    /* 3DSTATE_SF */
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (7 - 2);
+    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+    /* 3DSTATE_SBE */
+    cmd_batch_pointer(cmd, 14, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) | (14 - 2);
+    dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
+    memset(&dw[2], 0, sizeof(*dw) * (14 - 2));
+}
+
+static void gen6_meta_wm(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd_wa_gen6_pre_multisample_depth_flush(cmd);
+
+    /* 3DSTATE_MULTISAMPLE */
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        cmd_batch_pointer(cmd, 4, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (4 - 2);
+        dw[1] = (meta->samples <= 1) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1 :
+                (meta->samples <= 4) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4 :
+                                       GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+        dw[2] = 0;
+        dw[3] = 0;
+    } else {
+        cmd_batch_pointer(cmd, 3, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (3 - 2);
+        dw[1] = (meta->samples <= 1) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1 :
+                                       GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
+        dw[2] = 0;
+    }
+
+    /* 3DSTATE_SAMPLE_MASK */
+    cmd_batch_pointer(cmd, 2, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK) | (2 - 2);
+    dw[1] = (1 << meta->samples) - 1;
+
+    /* 3DSTATE_DRAWING_RECTANGLE */
+    cmd_batch_pointer(cmd, 4, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_DRAWING_RECTANGLE) | (4 - 2);
+    dw[1] = meta->dst.y << 16 | meta->dst.x;
+    dw[2] = (meta->dst.y + meta->height - 1) << 16 |
+            (meta->dst.x + meta->width - 1);
+    dw[3] = 0;
+}
+
+static uint32_t gen6_meta_ps_constants(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    XGL_UINT offset_x, offset_y;
+    /* one GPR */
+    XGL_UINT consts[8];
+    XGL_UINT const_count;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    /* underflow is fine here */
+    offset_x = meta->src.x - meta->dst.x;
+    offset_y = meta->src.y - meta->dst.y;
+
+    switch (meta->shader_id) {
+    case INTEL_DEV_META_FS_COPY_MEM:
+    case INTEL_DEV_META_FS_COPY_1D:
+    case INTEL_DEV_META_FS_COPY_1D_ARRAY:
+    case INTEL_DEV_META_FS_COPY_2D:
+    case INTEL_DEV_META_FS_COPY_2D_ARRAY:
+    case INTEL_DEV_META_FS_COPY_2D_MS:
+        consts[0] = offset_x;
+        consts[1] = offset_y;
+        consts[2] = meta->src.layer;
+        consts[3] = meta->src.lod;
+        const_count = 4;
+        break;
+    case INTEL_DEV_META_FS_COPY_1D_TO_MEM:
+    case INTEL_DEV_META_FS_COPY_1D_ARRAY_TO_MEM:
+    case INTEL_DEV_META_FS_COPY_2D_TO_MEM:
+    case INTEL_DEV_META_FS_COPY_2D_ARRAY_TO_MEM:
+    case INTEL_DEV_META_FS_COPY_2D_MS_TO_MEM:
+        consts[0] = offset_x;
+        consts[1] = offset_y;
+        consts[2] = meta->src.layer;
+        consts[3] = meta->src.lod;
+        consts[4] = meta->src.x;
+        consts[5] = meta->width;
+        const_count = 6;
+        break;
+    case INTEL_DEV_META_FS_COPY_MEM_TO_IMG:
+        consts[0] = offset_x;
+        consts[1] = offset_y;
+        consts[2] = meta->width;
+        const_count = 3;
+        break;
+    case INTEL_DEV_META_FS_CLEAR_COLOR:
+        consts[0] = meta->clear_val[0];
+        consts[1] = meta->clear_val[1];
+        consts[2] = meta->clear_val[2];
+        consts[3] = meta->clear_val[3];
+        const_count = 4;
+        break;
+    case INTEL_DEV_META_FS_CLEAR_DEPTH:
+        consts[0] = meta->clear_val[0];
+        const_count = 1;
+        break;
+    case INTEL_DEV_META_FS_RESOLVE_2X:
+    case INTEL_DEV_META_FS_RESOLVE_4X:
+    case INTEL_DEV_META_FS_RESOLVE_8X:
+    case INTEL_DEV_META_FS_RESOLVE_16X:
+        consts[0] = offset_x;
+        consts[1] = offset_y;
+        const_count = 2;
+        break;
+    default:
+        assert(!"unknown meta shader id");
+        const_count = 0;
+        break;
+    }
+
+    /* this can be skipped but it makes state dumping prettier */
+    memset(&consts[const_count], 0, sizeof(consts[0]) * (8 - const_count));
+
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32, 8, consts);
+}
+
+static void gen6_meta_ps(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    const struct intel_pipeline_shader *sh =
+        intel_dev_get_meta_shader(cmd->dev, meta->shader_id);
+    uint32_t offset, *dw;
+
+    CMD_ASSERT(cmd, 6, 6);
+
+    /* 3DSTATE_CONSTANT_PS */
+    offset = gen6_meta_ps_constants(cmd);
+    cmd_batch_pointer(cmd, 5, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (5 - 2) |
+            GEN6_PCB_ANY_DW0_PCB0_VALID;
+    dw[1] = offset;
+    dw[2] = 0;
+    dw[3] = 0;
+    dw[4] = 0;
+
+    /* 3DSTATE_WM */
+    offset = emit_shader(cmd, sh);
+    cmd_batch_pointer(cmd, 9, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (9 - 2);
+    dw[1] = offset;
+    dw[2] = (sh->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+             sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+    dw[3] = 0;
+    dw[4] = sh->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT;
+    dw[5] = (40 - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
+            GEN6_WM_DW5_PS_ENABLE |
+            GEN6_WM_DW5_8_PIXEL_DISPATCH;
+    dw[6] = sh->in_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
+            GEN6_WM_DW6_POSOFFSET_NONE |
+            GEN6_WM_DW6_ZW_INTERP_PIXEL |
+            sh->barycentric_interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT |
+            GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
+    if (meta->samples > 1) {
+        dw[6] |= GEN6_WM_DW6_MSRASTMODE_ON_PATTERN |
+                 GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
+    } else {
+        dw[6] |= GEN6_WM_DW6_MSRASTMODE_OFF_PIXEL |
+                 GEN6_WM_DW6_MSDISPMODE_PERSAMPLE;
+    }
+    dw[7] = 0;
+    dw[8] = 0;
+}
+
+static void gen7_meta_ps(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    const struct intel_pipeline_shader *sh =
+        intel_dev_get_meta_shader(cmd->dev, meta->shader_id);
+    uint32_t offset, *dw;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    /* 3DSTATE_WM */
+    cmd_batch_pointer(cmd, 3, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (3 - 2);
+    dw[1] = GEN7_WM_DW1_PS_ENABLE |
+            GEN7_WM_DW1_ZW_INTERP_PIXEL |
+            sh->barycentric_interps << GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT |
+            GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
+    dw[2] = 0;
+
+    /* 3DSTATE_CONSTANT_PS */
+    offset = gen6_meta_ps_constants(cmd);
+    cmd_batch_pointer(cmd, 7, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (7 - 2);
+    dw[1] = 1 << GEN7_PCB_ANY_DW1_PCB0_SIZE__SHIFT;
+    dw[2] = 0;
+    dw[3] = offset;
+    dw[4] = 0;
+    dw[5] = 0;
+    dw[6] = 0;
+
+    /* 3DSTATE_PS */
+    offset = emit_shader(cmd, sh);
+    cmd_batch_pointer(cmd, 8, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (8 - 2);
+    dw[1] = offset;
+    dw[2] = (sh->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+             sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+    dw[3] = 0;
+
+    dw[4] = GEN7_PS_DW4_PUSH_CONSTANT_ENABLE |
+            GEN7_PS_DW4_POSOFFSET_NONE |
+            GEN7_PS_DW4_8_PIXEL_DISPATCH |
+            (48 - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
+        dw[4] |= ((1 << meta->samples) - 1) << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
+
+    dw[5] = sh->urb_grf_start << GEN7_PS_DW5_URB_GRF_START0__SHIFT;
+    dw[6] = 0;
+    dw[7] = 0;
+}
+
+static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    const uint32_t depth_cmd = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        GEN7_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER) :
+        GEN6_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER);
+    const uint32_t hiz_cmd = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        GEN7_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER) :
+        GEN6_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER);
+    const uint32_t stencil_cmd = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        GEN7_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER) :
+        GEN6_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER);
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd_wa_gen6_pre_ds_flush(cmd);
+
+    if (meta->ds) {
+        assert(!"depth/stencil clear unsupported");
+    } else {
+        cmd_batch_pointer(cmd, 7, &dw);
+        dw[0] = depth_cmd | (7 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+        dw[5] = 0;
+        dw[6] = 0;
+
+        cmd_batch_pointer(cmd, 3, &dw);
+        dw[0] = hiz_cmd | (3 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+
+        cmd_batch_pointer(cmd, 3, &dw);
+        dw[0] = stencil_cmd | (3 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+
+        if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+            cmd_batch_pointer(cmd, 3, &dw);
+            dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) | (3 - 2);
+            dw[1] = 0;
+            dw[2] = GEN7_CLEAR_PARAMS_DW2_VALID;
+        } else {
+            cmd_batch_pointer(cmd, 2, &dw);
+            dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) | (2 - 2) |
+                    GEN6_CLEAR_PARAMS_DW0_VALID;
+            dw[1] = 0;
+        }
+    }
+}
+
 static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
                                        const struct intel_pipeline *pipeline)
 {
@@ -2177,6 +2819,41 @@ static void cmd_draw(struct intel_cmd *cmd,
 
 void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
 {
+    cmd->bind.meta = meta;
+
+    cmd_wa_gen6_pre_depth_stall_write(cmd);
+
+    gen6_meta_dynamic_states(cmd);
+    gen6_meta_surface_states(cmd);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        gen7_meta_urb(cmd);
+        gen6_meta_vf(cmd);
+        gen7_meta_disabled(cmd);
+        gen6_meta_wm(cmd);
+        gen7_meta_ps(cmd);
+        gen6_meta_depth_buffer(cmd);
+
+        cmd_wa_gen7_post_command_cs_stall(cmd);
+        cmd_wa_gen7_post_command_depth_stall(cmd);
+
+        gen7_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
+    } else {
+        gen6_meta_urb(cmd);
+        gen6_meta_vf(cmd);
+        gen6_meta_disabled(cmd);
+        gen6_meta_wm(cmd);
+        gen6_meta_ps(cmd);
+        gen6_meta_depth_buffer(cmd);
+
+        gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
+    }
+
+    cmd->bind.draw_count++;
+    /* need to re-emit all workarounds */
+    cmd->bind.wa_flags = 0;
+
+    cmd->bind.meta = NULL;
 }
 
 XGL_VOID XGLAPI intelCmdBindPipeline(

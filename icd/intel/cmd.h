@@ -45,6 +45,7 @@ struct intel_dset;
 
 struct intel_cmd_item;
 struct intel_cmd_reloc;
+struct intel_cmd_meta;
 
 /*
  * We know what workarounds are needed for intel_pipeline.  These are mostly
@@ -142,6 +143,8 @@ struct intel_cmd_shader_cache {
  * the command buffer when possible, and reduce this struct.
  */
 struct intel_cmd_bind {
+    const struct intel_cmd_meta *meta;
+
     struct intel_cmd_shader_cache shader_cache;
 
     struct {
