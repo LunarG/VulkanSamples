@@ -188,6 +188,10 @@ static inline struct intel_pipeline *intel_pipeline_from_obj(struct intel_obj *o
     return intel_pipeline_from_base(&obj->base);
 }
 
+struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev *dev,
+                                                                enum intel_dev_meta_shader id);
+void intel_pipeline_shader_destroy(struct intel_pipeline_shader *sh);
+
 XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
     XGL_DEVICE                                  device,
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,

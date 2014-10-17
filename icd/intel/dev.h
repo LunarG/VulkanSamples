@@ -32,8 +32,71 @@
 #include "gpu.h"
 #include "obj.h"
 
+struct intel_pipeline_shader;
 struct intel_queue;
 struct intel_winsys;
+
+enum intel_dev_meta_shader {
+    /*
+     * These expect an ivec4 to be pushed:
+     *
+     *  .xy is added to fragment coord to form (u, v)
+     *  .z is ai
+     *  .w is lod
+     */
+    INTEL_DEV_META_FS_COPY_MEM,             /* ld_lz(u)             */
+    INTEL_DEV_META_FS_COPY_1D,              /* ld(u, lod)           */
+    INTEL_DEV_META_FS_COPY_1D_ARRAY,        /* ld(u, lod, ai)       */
+    INTEL_DEV_META_FS_COPY_2D,              /* ld(u, lod, v)        */
+    INTEL_DEV_META_FS_COPY_2D_ARRAY,        /* ld(u, lod, v, ai)    */
+    INTEL_DEV_META_FS_COPY_2D_MS,           /* ld_mcs() + ld2dms()  */
+
+    /*
+     * These expect a second ivec4 to be pushed:
+     *
+     *  .x is memory offset
+     *  .y is extent width
+     *
+     * The second ivec4 is to convert linear fragment coord to (u, v).
+     */
+    INTEL_DEV_META_FS_COPY_1D_TO_MEM,       /* ld(u, lod)           */
+    INTEL_DEV_META_FS_COPY_1D_ARRAY_TO_MEM, /* ld(u, lod, ai)       */
+    INTEL_DEV_META_FS_COPY_2D_TO_MEM,       /* ld(u, lod, v)        */
+    INTEL_DEV_META_FS_COPY_2D_ARRAY_TO_MEM, /* ld(u, lod, v, ai)    */
+    INTEL_DEV_META_FS_COPY_2D_MS_TO_MEM,    /* ld_mcs() + ld2dms()  */
+
+    /*
+     * This expects an ivec4 to be pushed:
+     *
+     *  .xy is added to fargment coord to form (u, v)
+     *  .z is extent width
+     *
+     * .z is used to linearize (u, v).
+     */
+    INTEL_DEV_META_FS_COPY_MEM_TO_IMG,      /* ld_lz(u)             */
+
+    /*
+     * These expect the clear value to be pushed, and set fragment color or
+     * depth to the clear value.
+     */
+    INTEL_DEV_META_FS_CLEAR_COLOR,
+    INTEL_DEV_META_FS_CLEAR_DEPTH,
+
+    /*
+     * These expect an ivec4 to be pushed:
+     *
+     *  .xy is added to fragment coord to form (u, v)
+     *
+     * All samples are fetched and averaged.  The fragment color is set to the
+     * averaged value.
+     */
+    INTEL_DEV_META_FS_RESOLVE_2X,
+    INTEL_DEV_META_FS_RESOLVE_4X,
+    INTEL_DEV_META_FS_RESOLVE_8X,
+    INTEL_DEV_META_FS_RESOLVE_16X,
+
+    INTEL_DEV_META_SHADER_COUNT,
+};
 
 struct intel_dev_dbg_msg_filter {
     XGL_INT msg_code;
@@ -61,7 +124,9 @@ struct intel_dev {
 
     struct intel_gpu *gpu;
     struct intel_winsys *winsys;
+
     struct intel_bo *cmd_scratch_bo;
+    struct intel_pipeline_shader *cmd_meta_shaders[INTEL_DEV_META_SHADER_COUNT];
 
     struct intel_queue *queues[INTEL_GPU_ENGINE_COUNT];
 };
@@ -98,6 +163,13 @@ void intel_dev_log(struct intel_dev *dev,
                    XGL_SIZE location,
                    XGL_INT msg_code,
                    const char *format, ...);
+
+static inline const struct intel_pipeline_shader *intel_dev_get_meta_shader(const struct intel_dev *dev,
+                                                                            enum intel_dev_meta_shader id)
+{
+    assert(id < INTEL_DEV_META_SHADER_COUNT);
+    return dev->cmd_meta_shaders[id];
+}
 
 XGL_RESULT XGLAPI intelCreateDevice(
     XGL_PHYSICAL_GPU                            gpu,

@@ -29,8 +29,41 @@
 #include "kmd/winsys.h"
 #include "dispatch.h"
 #include "gpu.h"
+#include "pipeline.h"
 #include "queue.h"
 #include "dev.h"
+
+static void dev_destroy_meta_shaders(struct intel_dev *dev)
+{
+    XGL_UINT i;
+
+    for (i = 0; i < ARRAY_SIZE(dev->cmd_meta_shaders); i++) {
+        if (!dev->cmd_meta_shaders[i])
+            break;
+
+        intel_pipeline_shader_destroy(dev->cmd_meta_shaders[i]);
+        dev->cmd_meta_shaders[i] = NULL;
+    }
+}
+
+static bool dev_create_meta_shaders(struct intel_dev *dev)
+{
+    XGL_UINT i;
+
+    for (i = 0; i < ARRAY_SIZE(dev->cmd_meta_shaders); i++) {
+        struct intel_pipeline_shader *sh;
+
+        sh = intel_pipeline_shader_create_meta(dev, i);
+        if (!sh) {
+            dev_destroy_meta_shaders(dev);
+            return false;
+        }
+
+        dev->cmd_meta_shaders[i] = sh;
+    }
+
+    return true;
+}
 
 static XGL_RESULT dev_create_queues(struct intel_dev *dev,
                                     const XGL_DEVICE_QUEUE_CREATE_INFO *queues,
@@ -110,6 +143,11 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return XGL_ERROR_OUT_OF_GPU_MEMORY;
     }
 
+    if (!dev_create_meta_shaders(dev)) {
+        intel_dev_destroy(dev);
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
+
     ret = dev_create_queues(dev, info->pRequestedQueues,
             info->queueRecordCount);
     if (ret != XGL_SUCCESS) {
@@ -149,6 +187,8 @@ void intel_dev_destroy(struct intel_dev *dev)
         if (dev->queues[i])
             intel_queue_destroy(dev->queues[i]);
     }
+
+    dev_destroy_meta_shaders(dev);
 
     if (dev->cmd_scratch_bo)
         intel_bo_unreference(dev->cmd_scratch_bo);
