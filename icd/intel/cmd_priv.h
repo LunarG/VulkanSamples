@@ -75,6 +75,32 @@ struct intel_cmd_reloc {
     uint32_t flags;
 };
 
+struct intel_ds_view;
+
+struct intel_cmd_meta {
+    enum intel_dev_meta_shader shader_id;
+
+    struct {
+        bool valid;
+
+        uint32_t surface[8];
+        XGL_UINT surface_len;
+
+        intptr_t reloc_target;
+        uint32_t reloc_offset;
+        uint32_t reloc_flags;
+
+        XGL_UINT lod, layer;
+        XGL_UINT x, y;
+    } src, dst;
+
+    struct intel_ds_view *ds;
+    uint32_t clear_val[4];
+
+    XGL_UINT width, height;
+    XGL_UINT samples;
+};
+
 static inline int cmd_gen(const struct intel_cmd *cmd)
 {
     return intel_gpu_gen(cmd->dev->gpu);
@@ -400,5 +426,7 @@ void cmd_batch_immediate(struct intel_cmd *cmd,
                          struct intel_bo *bo,
                          XGL_GPU_SIZE offset,
                          uint64_t val);
+
+void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta);
 
 #endif /* CMD_PRIV_H */

@@ -2175,6 +2175,10 @@ static void cmd_draw(struct intel_cmd *cmd,
     cmd->bind.wa_flags = 0;
 }
 
+void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
+{
+}
+
 XGL_VOID XGLAPI intelCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
