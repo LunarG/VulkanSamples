@@ -80,7 +80,7 @@ ICD_EXPORT XGL_VOID xglSetDispatch(XGL_LAYER_DISPATCH_TABLE *dispatch, XGL_BOOL 
     intelSetDispatch(disp, debug);
 }
 
-ICD_EXPORT void * xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
+ICD_EXPORT XGL_VOID * xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
 {
     return intelGetProcAddr(gpu, pName);
 }

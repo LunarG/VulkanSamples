@@ -87,7 +87,7 @@ class Proto(object):
 
 # XGL core API
 core = (
-    Proto("void *", "GetProcAddr",
+    Proto("XGL_VOID *", "GetProcAddr",
         (Param("XGL_PHYSICAL_GPU", "gpu"),
          Param("const XGL_CHAR*", "pName"))),
 

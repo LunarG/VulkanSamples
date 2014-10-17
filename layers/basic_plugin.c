@@ -168,7 +168,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
        return result;
 }
 
-XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName) {
+XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName) {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     if (gpu == NULL)
         return NULL;
@@ -256,7 +256,7 @@ XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CH
         return myTable.CreateQueryPool;
     else if (!strncmp("xglGetQueryPoolResults", (const char *) pName, sizeof ("xglGetQueryPoolResults")))
         return myTable.GetQueryPoolResults;
-    else if (!strncmp("xglGetFormatInfo", (const char *) pName, sizeof ("xgllGetFormatInfo")))
+    else if (!strncmp("xglGetFormatInfo", (const char *) pName, sizeof ("xglGetFormatInfo")))
         return xglGetFormatInfo;
     else if (!strncmp("xglCreateImage", (const char *) pName, sizeof ("xglCreateImage")))
         return myTable.CreateImage;

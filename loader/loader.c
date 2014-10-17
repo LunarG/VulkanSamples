@@ -739,7 +739,7 @@ LOADER_EXPORT XGL_RESULT xglSetLayers(const XGL_CHAR * pStr)
 
 #endif
 
-LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName) {
+LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName) {
 
     if (gpu == NULL)
         return NULL;

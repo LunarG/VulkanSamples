@@ -1761,7 +1761,7 @@ typedef struct _XGL_DISPATCH_INDIRECT_CMD
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-void * XGLAPI xglGetProcAddr(
+XGL_VOID * XGLAPI xglGetProcAddr(
     XGL_PHYSICAL_GPU gpu,
     const XGL_CHAR * pName);
 

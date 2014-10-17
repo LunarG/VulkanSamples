@@ -32,5 +32,5 @@
 
 const struct icd_dispatch_table *intel_dispatch_get(bool debug);
 void intelSetDispatch(struct icd_dispatch_table * dispatch, bool debug);
-void * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
+XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
 #endif /* DISPATCH_H */

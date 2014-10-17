@@ -307,10 +307,8 @@ void intelSetDispatch(struct icd_dispatch_table * dispatch, bool debug)
 
 //TODO  since loader now has a dispatch table and it is used at first initAndEnumerate
 // probably can remove the normal and debug icd dispatch table  and have GPA use hardcoded function names
-void * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
+XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
 {
-    //const XGL_LAYER_DISPATCH_TABLE * const *disp =
-    //        (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj->baseObject;
     const struct icd_dispatch_table *disp_table = * (const struct icd_dispatch_table * const *) gpu;
 
    if (!strncmp("xglGetProcAddr", (const char *) pName, sizeof("xglGetProcAddr")))

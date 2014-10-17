@@ -15,7 +15,7 @@
 #  define XGL_LAYER_EXPORT
 #endif
 
-typedef void * (XGLAPI *GetProcAddrType)(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
+typedef XGL_VOID * (XGLAPI *GetProcAddrType)(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
 typedef XGL_RESULT (XGLAPI *InitAndEnumerateGpusType)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *GetGpuInfoType)(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
 typedef XGL_RESULT (XGLAPI *CreateDeviceType)(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice);
