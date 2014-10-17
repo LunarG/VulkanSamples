@@ -218,6 +218,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
 
             size += len + 1;
         }
+        dbg->create_info = dst;
     } else if (info.header->struct_type == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {
         // TODO: What do we want to copy here?
     }
