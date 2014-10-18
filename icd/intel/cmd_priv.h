@@ -64,12 +64,13 @@ struct intel_cmd_item {
     XGL_SIZE size;
 };
 
+#define INTEL_CMD_RELOC_TARGET_IS_WRITER (1u << 31)
 struct intel_cmd_reloc {
     enum intel_cmd_writer_type which;
     XGL_SIZE offset;
 
-    struct intel_bo *bo;
-    uint32_t bo_offset;
+    intptr_t target;
+    uint32_t target_offset;
 
     uint32_t flags;
 };
@@ -129,8 +130,8 @@ static inline XGL_SIZE cmd_writer_reserve(struct intel_cmd *cmd,
  */
 static inline void cmd_writer_reloc(struct intel_cmd *cmd,
                                     enum intel_cmd_writer_type which,
-                                    XGL_SIZE offset, struct intel_bo *bo,
-                                    uint32_t bo_offset, uint32_t flags)
+                                    XGL_SIZE offset, intptr_t target,
+                                    uint32_t target_offset, uint32_t flags)
 {
     struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
 
@@ -138,8 +139,8 @@ static inline void cmd_writer_reloc(struct intel_cmd *cmd,
 
     reloc->which = which;
     reloc->offset = offset;
-    reloc->bo = bo;
-    reloc->bo_offset = bo_offset;
+    reloc->target = target;
+    reloc->target_offset = target_offset;
     reloc->flags = flags;
 
     cmd->reloc_used++;
@@ -218,7 +219,19 @@ static inline void cmd_surface_reloc(struct intel_cmd *cmd,
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
 
     cmd_writer_reloc(cmd, which, offset + (dw_index << 2),
-            bo, bo_offset, reloc_flags);
+            (intptr_t) bo, bo_offset, reloc_flags);
+}
+
+static inline void cmd_surface_reloc_writer(struct intel_cmd *cmd,
+                                            uint32_t offset, XGL_UINT dw_index,
+                                            enum intel_cmd_writer_type writer,
+                                            uint32_t writer_offset)
+{
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
+
+    cmd_writer_reloc(cmd, which, offset + (dw_index << 2),
+            (intptr_t) writer, writer_offset,
+            INTEL_CMD_RELOC_TARGET_IS_WRITER);
 }
 
 /**
@@ -307,7 +320,17 @@ static inline void cmd_batch_reloc(struct intel_cmd *cmd, XGL_UINT pos,
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_BATCH;
 
-    cmd_writer_reloc(cmd, which, pos << 2, bo, bo_offset, reloc_flags);
+    cmd_writer_reloc(cmd, which, pos << 2, (intptr_t) bo, bo_offset, reloc_flags);
+}
+
+static inline void cmd_batch_reloc_writer(struct intel_cmd *cmd, XGL_UINT pos,
+                                          enum intel_cmd_writer_type writer,
+                                          uint32_t writer_offset)
+{
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_BATCH;
+
+    cmd_writer_reloc(cmd, which, pos << 2, (intptr_t) writer, writer_offset,
+            INTEL_CMD_RELOC_TARGET_IS_WRITER);
 }
 
 /**
@@ -326,9 +349,6 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
 
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
 
-    /* relocs are not added until cmd_batch_end() */
-    assert(!pos);
-
     dw[0] = dw0;
     /* start offsets */
     dw[1] = 1;
@@ -341,6 +361,11 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
     dw[7] = 1 + 0xfffff000;
     dw[8] = 1 + 0xfffff000;
     dw[9] = 1;
+
+    cmd_reserve_reloc(cmd, 3);
+    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, 1);
+    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE, 1);
+    cmd_batch_reloc_writer(cmd, pos + 5, INTEL_CMD_WRITER_INSTRUCTION, 1);
 }
 
 /**
@@ -349,18 +374,7 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
 static inline void cmd_batch_end(struct intel_cmd *cmd)
 {
     struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_BATCH];
-    const struct intel_cmd_writer *state =
-        &cmd->writers[INTEL_CMD_WRITER_STATE];
-    const struct intel_cmd_writer *inst =
-        &cmd->writers[INTEL_CMD_WRITER_INSTRUCTION];
     uint32_t *dw;
-
-    cmd_reserve_reloc(cmd, 5);
-    cmd_batch_reloc(cmd, 2, state->bo, 1, 0);
-    cmd_batch_reloc(cmd, 3, state->bo, 1, 0);
-    cmd_batch_reloc(cmd, 5, inst->bo, 1, 0);
-    cmd_batch_reloc(cmd, 7, state->bo, 1 + (state->size << 2), 0);
-    cmd_batch_reloc(cmd, 9, inst->bo, 1 + (inst->size << 2), 0);
 
     if (writer->used & 0x7) {
         cmd_batch_pointer(cmd, 1, &dw);

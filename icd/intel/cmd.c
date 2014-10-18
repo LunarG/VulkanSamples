@@ -355,9 +355,40 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         uint64_t presumed_offset;
         int err;
 
+        /*
+         * Once a bo is used as a reloc target, libdrm_intel disallows more
+         * relocs to be added to it.  That may happen when
+         * INTEL_CMD_RELOC_TARGET_IS_WRITER is set.  We have to process them
+         * in another pass.
+         */
+        if (reloc->flags & INTEL_CMD_RELOC_TARGET_IS_WRITER)
+            continue;
+
         err = intel_bo_add_reloc(writer->bo, reloc->offset,
-                reloc->bo, reloc->bo_offset,
+                (struct intel_bo *) reloc->target, reloc->target_offset,
                 reloc->flags, &presumed_offset);
+        if (err) {
+            cmd->result = XGL_ERROR_UNKNOWN;
+            break;
+        }
+
+        assert(presumed_offset == (uint64_t) (uint32_t) presumed_offset);
+        cmd_writer_patch(cmd, reloc->which, reloc->offset,
+                (uint32_t) presumed_offset);
+    }
+    for (i = 0; i < cmd->reloc_used; i++) {
+        const struct intel_cmd_reloc *reloc = &cmd->relocs[i];
+        const struct intel_cmd_writer *writer = &cmd->writers[reloc->which];
+        uint64_t presumed_offset;
+        int err;
+
+        if (!(reloc->flags & INTEL_CMD_RELOC_TARGET_IS_WRITER))
+            continue;
+
+        err = intel_bo_add_reloc(writer->bo, reloc->offset,
+                cmd->writers[reloc->target].bo, reloc->target_offset,
+                reloc->flags & ~INTEL_CMD_RELOC_TARGET_IS_WRITER,
+                &presumed_offset);
         if (err) {
             cmd->result = XGL_ERROR_UNKNOWN;
             break;
