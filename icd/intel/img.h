@@ -38,6 +38,7 @@ struct intel_img {
 
     XGL_IMAGE_TYPE type;
     XGL_INT depth;
+    XGL_UINT mip_levels;
     XGL_UINT array_size;
     XGL_UINT samples;
     struct intel_layout layout;

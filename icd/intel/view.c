@@ -1080,6 +1080,21 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
+    XGL_UINT mip_levels, array_size;
+
+    if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
+        info->subresourceRange.baseArraySlice >= img->array_size ||
+        !info->subresourceRange.mipLevels ||
+        !info->subresourceRange.arraySize)
+        return XGL_ERROR_INVALID_VALUE;
+
+    mip_levels = info->subresourceRange.mipLevels;
+    if (mip_levels > img->mip_levels - info->subresourceRange.baseMipLevel)
+        mip_levels = img->mip_levels - info->subresourceRange.baseMipLevel;
+
+    array_size = info->subresourceRange.arraySize;
+    if (array_size > img->array_size - info->subresourceRange.baseArraySlice)
+        array_size = img->array_size - info->subresourceRange.baseArraySlice;
 
     view = (struct intel_img_view *) intel_base_create(dev, sizeof(*view),
             dev->base.dbg, XGL_DBG_OBJECT_IMAGE_VIEW, info, 0);
@@ -1094,17 +1109,15 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_tex_gen7(dev->gpu, img, info->viewType, info->format,
-                info->subresourceRange.baseMipLevel,
-                info->subresourceRange.mipLevels,
-                info->subresourceRange.baseArraySlice,
-                info->subresourceRange.arraySize, false, view->cmd);
+                info->subresourceRange.baseMipLevel, mip_levels,
+                info->subresourceRange.baseArraySlice, array_size,
+                false, view->cmd);
         view->cmd_len = 8;
     } else {
         surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
-                info->subresourceRange.baseMipLevel,
-                info->subresourceRange.mipLevels,
-                info->subresourceRange.baseArraySlice,
-                info->subresourceRange.arraySize, false, view->cmd);
+                info->subresourceRange.baseMipLevel, mip_levels,
+                info->subresourceRange.baseArraySlice, array_size,
+                false, view->cmd);
         view->cmd_len = 6;
     }
 
