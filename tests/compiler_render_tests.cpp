@@ -181,7 +181,7 @@ protected:
 
         this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = (const XGL_CHAR *) "render_tests";
+        this->app_info.pAppName = (const XGL_CHAR *) "compiler render_tests";
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = (const XGL_CHAR *) "unittest";
         this->app_info.engineVersion = 1;
