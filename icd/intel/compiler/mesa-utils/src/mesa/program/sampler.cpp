@@ -26,7 +26,8 @@
 #include "ir.h"
 #include "glsl_types.h"
 #include "ir_visitor.h"
-#include "../glsl/program.h"
+//#include "../glsl/program.h" // LunarG : Removed
+#include "linker.h" // LunarG : ADD
 #include "program/hash_table.h"
 #include "ir_uniform.h"
 

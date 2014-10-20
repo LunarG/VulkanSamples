@@ -243,6 +243,8 @@ SET(COMPILER_SOURCES
 
     #compiler/mesa-utils/src/mesa/main/shaderobj.c
 
+    compiler/mesa-utils/src/mesa/program/sampler.cpp
+
     compiler/shader/glsl_glass_manager.cpp
     compiler/shader/glsl_glass_backend_translator.cpp
     compiler/shader/glsl_glass_backend.cpp

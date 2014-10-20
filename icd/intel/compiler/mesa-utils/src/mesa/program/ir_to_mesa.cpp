@@ -37,7 +37,7 @@
 #include "ir_uniform.h"
 #include "glsl_types.h"
 #include "glsl_parser_extras.h"
-#include "../glsl/program.h"
+//#include "../glsl/program.h" // LunarG : Removed
 #include "ir_optimization.h"
 #include "ast.h"
 #include "linker.h"
