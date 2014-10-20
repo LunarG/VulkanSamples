@@ -346,14 +346,60 @@ viewport_state_init(struct intel_viewport_state *state,
     return XGL_SUCCESS;
 }
 
+static void msaa_state_init_sample_pattern(const struct intel_msaa_state *state)
+{
+    struct sample {
+        int x, y;
+    };
+    static const struct sample default_pattern_2x[2] = {
+        { -4, -4 },
+        {  4,  4 },
+    };
+    static const struct sample default_pattern_4x[4] = {
+        { -2, -6 },
+        {  6, -2 },
+        { -6,  2 },
+        {  2,  6 },
+    };
+    static const struct sample default_pattern_8x[8] = {
+        {  1, -3 },
+        { -1,  3 },
+        {  5,  1 },
+        { -3, -5 },
+        { -5,  5 },
+        { -7, -1 },
+        {  3,  7 },
+        {  7, -7 },
+    };
+    uint8_t *samples = (uint8_t *) &state->cmd[2];
+    const struct sample *pattern;
+    int i;
+
+    switch (state->sample_count) {
+    case 2:
+        pattern = default_pattern_2x;
+        break;
+    case 4:
+        pattern = default_pattern_4x;
+        break;
+    case 8:
+        pattern = default_pattern_8x;
+        break;
+    default:
+        memset(samples, 0, state->sample_count);
+        return;
+        break;
+    }
+
+    for (i = 0; i < state->sample_count; i++)
+        samples[i] = (pattern[i].x + 8) << 4 | (pattern[i].y + 8);
+}
+
 static void
 msaa_state_init(struct intel_msaa_state *state,
                 const struct intel_gpu *gpu,
                 const XGL_MSAA_STATE_CREATE_INFO *info)
 {
-    /* taken from Mesa */
-    static const uint32_t brw_multisample_positions_4x = 0xae2ae662;
-    static const uint32_t brw_multisample_positions_8x[] = { 0xdbb39d79, 0x3ff55117 };
     uint32_t cmd, cmd_len;
     uint32_t *dw = state->cmd;
 
@@ -369,17 +415,14 @@ msaa_state_init(struct intel_msaa_state *state,
     cmd_len = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 4 : 3;
 
     dw[0] = cmd | (cmd_len - 2);
-    if (info->samples <= 1) {
+    if (info->samples <= 1)
         dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
-        dw[2] = 0;
-    } else if (info->samples <= 4 || intel_gpu_gen(gpu) == INTEL_GEN(6)) {
+    else if (info->samples <= 4 || intel_gpu_gen(gpu) == INTEL_GEN(6))
         dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
-        dw[2] = brw_multisample_positions_4x;
-    } else {
+    else
         dw[1] = GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
-        dw[2] = brw_multisample_positions_8x[0];
-        dw[3] = brw_multisample_positions_8x[1];
-    }
+
+    msaa_state_init_sample_pattern(state);
 
     dw += cmd_len;
 
