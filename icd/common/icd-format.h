@@ -85,6 +85,12 @@ static inline bool icd_format_is_compressed(XGL_FORMAT format)
     }
 }
 
+static inline bool icd_format_is_equal(XGL_FORMAT a, XGL_FORMAT b)
+{
+    return (a.channelFormat == b.channelFormat &&
+            a.numericFormat == b.numericFormat);
+}
+
 static inline int icd_format_get_block_width(XGL_FORMAT format)
 {
     /* all compressed formats use 4x4 blocks */
