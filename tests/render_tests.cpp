@@ -534,7 +534,8 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs_stage.shader.shader = *vs;
-    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    for (unsigned int i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)
+        vs_stage.shader.descriptorSetMapping[i].descriptorCount = 0;
     vs_stage.shader.linkConstBufferCount = 0;
     vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
@@ -547,7 +548,8 @@ void XglRenderTest::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER* vs
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     ps_stage.shader.shader = *ps;
     // TODO: Do we need a descriptor set mapping for fragment?
-    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    for (unsigned int i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)
+        ps_stage.shader.descriptorSetMapping[i].descriptorCount = 0;
     ps_stage.shader.linkConstBufferCount = 0;
     ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
