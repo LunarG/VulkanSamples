@@ -132,19 +132,70 @@ static const Vertex g_vbData[] =
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
 };
 
+static const Vertex g_vb_solid_face_colors_Data[] =
+{
+    { XYZ1( -1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1( 1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+
+    { XYZ1( 1,  1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
+
+    { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    { XYZ1( -1, -1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+
+    { XYZ1( 1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
+
+    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
+    { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
+};
+
 class XglRenderTest : public XglRenderFramework
 {
 public:
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
+    void UploadMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitTexture();
     void InitSampler();
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText);
+    void DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText, const char *fragShaderText);
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
+    void CreatePipelineWithVertexFetchAndMVP(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
+    void ClearDepthStencil(XGL_FLOAT value);
+    void ClearRenderBuffer(XGL_UINT32 clear_color);
+    void InitDepthStencil();
     void DrawRotatedTriangleTest();
 
 
@@ -155,6 +206,11 @@ protected:
     XGL_GPU_MEMORY m_textureMem;
 
     XGL_SAMPLER m_sampler;
+
+    XGL_FORMAT                  m_depth_stencil_fmt;
+    XGL_IMAGE                   m_depthStencilImage;
+    XGL_GPU_MEMORY              m_depthStencilMem;
+    XGL_DEPTH_STENCIL_VIEW      m_depthStencilView;
 
 //    XGL_APPLICATION_INFO app_info;
 //    XGL_PHYSICAL_GPU objs[MAX_GPUS];
@@ -265,6 +321,25 @@ void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
 
     // submit the command buffer to the universal queue
     err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS(err);
+}
+
+// this function will create the vertex buffer and fill it with the mesh data
+void XglRenderTest::UploadMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
+                              const void* vertices )
+{
+    XGL_UINT8 *pData;
+    XGL_RESULT err = XGL_SUCCESS;
+
+    assert( numVertices * vbStride > 0 );
+    m_numVertices = numVertices;
+
+    err = xglMapMemory(m_vtxBufferMem, 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData, vertices, numVertices * vbStride);
+
+    err = xglUnmapMemory(m_vtxBufferMem);
     ASSERT_XGL_SUCCESS(err);
 }
 
@@ -684,7 +759,7 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
     // render the cube
-    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+    xglCmdDraw( m_cmdBuffer, 0, 12*3, 0, 1 );
 
     // prepare the back buffer for present
 //    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
@@ -723,6 +798,157 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 
         MVP = glm::rotate(MVP, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
         memcpy(pData, (const void*) &MVP[0][0], matrixSize);
+
+        err = xglUnmapMemory(m_constantBufferMem);
+        ASSERT_XGL_SUCCESS(err);
+
+        // submit the command buffer to the universal queue
+        err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+        ASSERT_XGL_SUCCESS( err );
+
+        err = xglQueueWaitIdle( m_device->m_queue );
+        ASSERT_XGL_SUCCESS( err );
+
+        // Wait for work to finish before cleaning up.
+        xglDeviceWaitIdle(m_device->device());
+
+        RecordImage(m_renderTarget);
+    }
+}
+
+void dumpMatrix(const char *note, glm::mat4 MVP)
+{
+    int i,j;
+
+    printf("%s: \n", note);
+    for (i=0; i<4; i++) {
+        printf("%f, %f, %f, %f\n", MVP[i][0], MVP[i][1], MVP[i][2], MVP[i][3]);
+    }
+    printf("\n");
+    fflush(stdout);
+}
+
+void dumpVec4(const char *note, glm::vec4 vector)
+{
+    printf("%s: \n", note);
+        printf("%f, %f, %f, %f\n", vector[0], vector[1], vector[2], vector[3]);
+    printf("\n");
+    fflush(stdout);
+}
+
+void XglRenderTest::DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText, const char *fragShaderText)
+{
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
+    int i, loop;
+
+    // Projection matrix : 45° Field of View, 1:1 ratio, display range : 0.1 unit <-> 100 units
+    glm::mat4 Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+//    dumpMatrix("Projection", Projection);
+
+    // Camera matrix
+    glm::mat4 View       = glm::lookAt(
+                               glm::vec3(0,3,10), // Camera is at (0,3,10), in World Space
+                               glm::vec3(0,0,0), // and looks at the origin
+                               glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+                               );
+//    dumpMatrix("View", View);
+
+    // Model matrix : an identity matrix (model will be at the origin)
+    glm::mat4 Model = glm::mat4(1.0f);
+//    dumpMatrix("Model", Model);
+
+    // Our ModelViewProjection : multiplication of our 3 matrices
+//    Model = glm::translate(Model, glm::vec3(0.0f, 0.0f, 4.0f));
+//    Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 MVP = Projection * View * Model;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitDepthStencil());
+    ASSERT_NO_FATAL_FAILURE(InitMesh(sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
+                            sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data));
+
+    const int buf_size = sizeof(MVP) / sizeof(XGL_FLOAT);
+
+    InitConstantBuffer(buf_size, sizeof(MVP[0][0]), (const void*) &MVP[0][0]);
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, &vs));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, &ps));
+
+    ASSERT_NO_FATAL_FAILURE(CreatePipelineWithVertexFetchAndMVP(&pipeline, vs, ps));
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds();
+    ClearDepthStencil(1.0f); // HACK for now
+    GenerateBindRenderTargetCmd();
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
+    // render the cube
+    xglCmdDraw( m_cmdBuffer, 0, 12*3, 0, 1 );
+
+    // prepare the back buffer for present
+//    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
+//    transitionToPresent.image = m_image;
+//    transitionToPresent.oldState = m_image_state;
+//    transitionToPresent.newState = m_display.fullscreen ? XGL_WSI_WIN_PRESENT_SOURCE_FLIP : XGL_WSI_WIN_PRESENT_SOURCE_BLT;
+//    transitionToPresent.subresourceRange = srRange;
+//    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToPresent );
+//    m_image_state = ( XGL_IMAGE_STATE ) transitionToPresent.newState;
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 2;
+    m_memRefs[0].flags = 0;
+    m_memRefs[0].mem = m_vtxBufferMem;
+    m_memRefs[1].flags = 0;
+    m_memRefs[1].mem = m_constantBufferMem;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS( err );
+
+    err = xglQueueWaitIdle( m_device->m_queue );
+    ASSERT_XGL_SUCCESS( err );
+
+    // Wait for work to finish before cleaning up.
+    xglDeviceWaitIdle(m_device->device());
+
+    RecordImage(m_renderTarget);
+
+    for (loop = 0; loop < 16; loop++) {
+        ClearRenderBuffer(0x80); // HACK
+        ClearDepthStencil(1.0f); // HACK for now
+
+        // TODO: Do we need to transition the constant buffer?
+        XGL_UINT8 *pData;
+        err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
+        ASSERT_XGL_SUCCESS(err);
+
+        Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+        dumpMatrix("Model", Model);
+        glm::mat4 MVP = Projection * View * Model;
+//        dumpMatrix("MVP", MVP);
+
+        memcpy(pData, (const void*) &MVP[0][0], buf_size * sizeof(XGL_FLOAT));
 
         err = xglUnmapMemory(m_constantBufferMem);
         ASSERT_XGL_SUCCESS(err);
@@ -867,6 +1093,137 @@ void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SH
     ASSERT_XGL_SUCCESS(err);
 }
 
+/*
+ * Based on CreatePipelineWithVertexFetch and CreatePipelineVSUniform
+ */
+void XglRenderTest::CreatePipelineWithVertexFetchAndMVP(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
+{
+    XGL_RESULT err;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
+
+    // Create descriptor set for our two resources
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = 2; // Vertex buffer and Model View Matrix
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the vertex buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 1, 1, &m_constantBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
+    const int slots = 2;
+    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    slotInfo[0].shaderEntityIndex = 0;
+    slotInfo[0].slotObjectType = XGL_SLOT_VERTEX_INPUT;
+    slotInfo[1].shaderEntityIndex = 0;
+    slotInfo[1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+
+    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vs_stage.pNext = XGL_NULL_HANDLE;
+    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
+    vs_stage.shader.shader = vs;
+    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = slots;
+    vs_stage.shader.linkConstBufferCount = 0;
+    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ps_stage.pNext = &vs_stage;
+    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
+    ps_stage.shader.shader = ps;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    ps_stage.shader.linkConstBufferCount = 0;
+    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+        sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+    };
+
+    // this is the current description of g_vbData
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO, // sType;
+        &ps_stage,                                            // pNext;
+        1,                                                    // bindingCount
+        &vi_binding,                                          // pVertexBindingDescriptions;
+        2,                                                    // attributeCount; // number of attributes
+        vi_attribs                                            // pVertexAttributeDescriptions;
+    };
+
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
+        &vi_state,                                         // pNext
+        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
+        XGL_FALSE,                                         // disableVertexReuse
+        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
+        XGL_FALSE,                                         // primitiveRestartEnable
+        0                                                  // primitiveRestartIndex
+    };
+
+    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+        &ia_state,
+        XGL_FALSE,                                          // depthClipEnable
+        XGL_FALSE,                                          // rasterizerDiscardEnable
+        1.0                                                 // pointSize
+    };
+
+    XGL_PIPELINE_CB_STATE cb_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+        &rs_state,
+        XGL_FALSE,                                          // alphaToCoverageEnable
+        XGL_FALSE,                                          // dualSourceBlendEnable
+        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
+        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
+            {
+                XGL_FALSE,                                  // blendEnable
+                m_render_target_fmt,                        // XGL_FORMAT
+                0xF                                         // channelWriteMask
+            }
+        }
+    };
+
+    // TODO: Should take depth buffer format from queried formats
+    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+        &cb_state,
+        m_depth_stencil_fmt                    // XGL_FORMAT
+    };
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = &db_state;
+    info.flags = 0;
+    err = xglCreateGraphicsPipeline(device(), &info, pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(*pipeline, "Pipeline", &m_pipe_mem);
+    ASSERT_XGL_SUCCESS(err);
+}
+
 void XglRenderTest::CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
 {
     XGL_RESULT err;
@@ -965,6 +1322,158 @@ void XglRenderTest::CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER v
     ASSERT_XGL_SUCCESS(err);
 }
 
+void XglRenderTest::ClearDepthStencil(XGL_FLOAT value)
+/* clear the buffer */
+{
+    XGL_RESULT err;
+    const uint16_t depth_value = (uint16_t) (value * 65535);
+    const XGL_INT tw = 128 / sizeof(uint16_t);
+    const XGL_INT th = 32;
+    XGL_INT i, j, w, h;
+    XGL_VOID *data;
+
+    w = (m_width + tw - 1) / tw;
+    h = (m_height + th - 1) / th;
+
+    err = xglMapMemory(m_depthStencilMem, 0, &data);
+    ASSERT_XGL_SUCCESS(err);
+
+    for (i = 0; i < w * h; i++) {
+        uint16_t *tile = (uint16_t *) ((char *) data + 4096 * i);
+
+        for (j = 0; j < 2048; j++)
+            tile[j] = depth_value;
+    }
+
+    err = xglUnmapMemory(m_depthStencilMem);
+    ASSERT_XGL_SUCCESS(err);
+}
+
+void XglRenderTest::ClearRenderBuffer(XGL_UINT32 clear_color)
+/* clear the buffer */
+{
+    XGL_RESULT err;
+    const XGL_IMAGE_SUBRESOURCE sr = {
+        XGL_IMAGE_ASPECT_COLOR, 0, 0
+    };
+    XGL_SUBRESOURCE_LAYOUT sr_layout;
+    XGL_UINT data_size = sizeof(sr_layout);
+    XGL_VOID    *ptr;
+
+    err = xglGetImageSubresourceInfo( m_renderTarget->image(),
+                                      &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+                                      &data_size, &sr_layout);
+    ASSERT_XGL_SUCCESS( err );
+    ASSERT_EQ(data_size, sizeof(sr_layout));
+
+    err = m_renderTarget->MapMemory( &ptr );
+    ASSERT_XGL_SUCCESS( err );
+
+    ptr = (void *) ((char *) ptr + sr_layout.offset);
+
+    memset(ptr, clear_color, m_width * m_height *sizeof(XGL_UINT32));
+
+    err = m_renderTarget->UnmapMemory();
+    ASSERT_XGL_SUCCESS(err);
+}
+
+void XglRenderTest::InitDepthStencil()
+{
+    XGL_RESULT err;
+    XGL_IMAGE_CREATE_INFO image;
+    XGL_MEMORY_ALLOC_INFO mem_alloc;
+    XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view;
+    XGL_MEMORY_REQUIREMENTS mem_reqs;
+    XGL_SIZE mem_reqs_size;
+
+    // Clean up default state created by framework
+    if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
+
+    m_depth_stencil_fmt.channelFormat = XGL_CH_FMT_R16;
+    m_depth_stencil_fmt.numericFormat = XGL_NUM_FMT_DS;
+
+    image.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image.pNext = NULL;
+    image.imageType = XGL_IMAGE_2D;
+    image.format = m_depth_stencil_fmt;
+    image.extent.width = m_width;
+    image.extent.height = m_height;
+    image.extent.depth = 1;
+    image.mipLevels = 1;
+    image.arraySize = 1;
+    image.samples = 1;
+    image.tiling = XGL_OPTIMAL_TILING;
+    image.usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image.flags = 0;
+
+    mem_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.alignment = 0;
+    mem_alloc.flags = 0;
+    mem_alloc.heapCount = 0;
+    mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+
+    /* create image */
+    err = xglCreateImage(device(), &image,
+                         &m_depthStencilImage);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglGetObjectInfo(m_depthStencilImage,
+                           XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &mem_reqs_size, &mem_reqs);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(mem_reqs_size, sizeof(mem_reqs));
+
+    mem_alloc.allocationSize = mem_reqs.size;
+    mem_alloc.alignment = mem_reqs.alignment;
+    mem_alloc.heapCount = mem_reqs.heapCount;
+    memcpy(mem_alloc.heaps, mem_reqs.heaps,
+           sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+
+    /* allocate memory */
+    err = xglAllocMemory(device(), &mem_alloc, &m_depthStencilMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    /* bind memory */
+    err = xglBindObjectMemory(m_depthStencilImage, m_depthStencilMem, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    XGL_DEPTH_STENCIL_STATE_CREATE_INFO depthStencil = {};
+    depthStencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable        = XGL_TRUE;
+    depthStencil.depthWriteEnable       = XGL_TRUE;
+    depthStencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
+    depthStencil.depthBoundsEnable = XGL_FALSE;
+    depthStencil.minDepth = 0.f;
+    depthStencil.maxDepth = 1.f;
+    depthStencil.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
+    depthStencil.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
+    depthStencil.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
+    depthStencil.back.stencilRef = 0x00;
+    depthStencil.back.stencilFunc = XGL_COMPARE_ALWAYS;
+    depthStencil.front = depthStencil.back;
+
+    err = xglCreateDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
+    ASSERT_XGL_SUCCESS( err );
+
+    /* create image view */
+    view.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
+    view.pNext = NULL;
+    view.image = XGL_NULL_HANDLE;
+    view.mipLevel = 0;
+    view.baseArraySlice = 0;
+    view.arraySize = 1;
+    view.flags = 0;
+    view.image = m_depthStencilImage;
+    err = xglCreateDepthStencilView(device(), &view, &m_depthStencilView);
+    ASSERT_XGL_SUCCESS(err);
+
+    m_depthStencilBinding.view = m_depthStencilView;
+    m_depthStencilBinding.depthState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+    m_depthStencilBinding.stencilState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+}
+
 void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText)
 {
     XGL_PIPELINE pipeline;
@@ -1003,7 +1512,7 @@ void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, cons
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
     // render the cube
-    xglCmdDraw( m_cmdBuffer, 0, 6, 0, 1 );
+    xglCmdDraw( m_cmdBuffer, 0, 12*3, 0, 1 );
 
     // prepare the back buffer for present
 //    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
@@ -1227,7 +1736,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 430\n"
+            "#version 130\n"
             "void main() {\n"
             "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "}\n";
@@ -1238,6 +1747,31 @@ TEST_F(XglRenderTest, TriangleVSUniform)
 
 //    Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 //    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
+}
+
+TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
+{
+    static const char *vertShaderText =
+            "#version 140\n"
+            "layout (std140) uniform bufferVals {\n"
+            "    mat4 mvp;\n"
+            "} myBufferVals;\n"
+            "in vec4 pos;\n"
+            "in vec4 inColor;\n"
+            "out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   gl_Position = myBufferVals.mvp * pos;\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 130\n"
+            "in vec4 color;\n"
+            "void main() {\n"
+            "   gl_FragColor = color;\n"
+            "}\n";
+
+    DrawTriangleWithVertexFetchAndMVP(vertShaderText, fragShaderText);
 }
 
 int main(int argc, char **argv) {
