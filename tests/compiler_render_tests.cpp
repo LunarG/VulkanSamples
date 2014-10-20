@@ -661,7 +661,7 @@ void XglRenderTest::DrawTexturedTriangle(const char *vertShaderText, const char 
     ASSERT_NO_FATAL_FAILURE(InitTexture());
 
     // Create descriptor set for a texture and sampler resources
-    const int slotCount = 3;
+    const int slotCount = 2;
     XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
     descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
     descriptorInfo.slots = slotCount;
@@ -1293,10 +1293,6 @@ void XglRenderTest::CreatePipelineSingleTextureAndSampler(XGL_PIPELINE* pipeline
     err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
     ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
     err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
-
-//XXXXXX
-    // Texture must be first, followed by sampler (VALIDATED THIS BEFORE SUBMITTING COMMENT)
-//XXXXXX
 
     // Assign the slots, note that only t0 and s0 will work as of writing this test
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( psSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
@@ -1979,6 +1975,7 @@ TEST_F(XglRenderTest, TriangleVSFSUniformBlock)
 
 TEST_F(XglRenderTest, TexturedTriangle)
 {
+    // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
             "#version 130\n"
             "out vec2 samplePos;\n"
