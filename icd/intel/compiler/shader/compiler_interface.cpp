@@ -32,6 +32,7 @@
 #include "compiler/mesa-utils/src/glsl/glsl_parser_extras.h"
 #include "compiler/shader/program.h"
 #include "compiler/mesa-utils/src/mesa/main/context.h"
+#include "compiler/mesa-utils/src/mesa/main/config.h"
 #include "compiler/shader/standalone_scaffolding.h"
 #include "compiler/pipeline/brw_wm.h"
 #include "compiler/pipeline/brw_shader.h"
@@ -130,6 +131,156 @@ void init_mesa_program_limits(struct gl_context *ctx, gl_shader_stage stage,
     prog->MaxAtomicCounters = 0;
 }
 
+// Copied from context.c:_mesa_init_constants
+void
+initialize_mesa_constants(struct gl_context *ctx)
+{
+   int i;
+   assert(ctx);
+
+   /* Constants, may be overriden (usually only reduced) by device drivers */
+   ctx->Const.MaxTextureMbytes = MAX_TEXTURE_MBYTES;
+   ctx->Const.MaxTextureLevels = MAX_TEXTURE_LEVELS;
+   ctx->Const.Max3DTextureLevels = MAX_3D_TEXTURE_LEVELS;
+   ctx->Const.MaxCubeTextureLevels = MAX_CUBE_TEXTURE_LEVELS;
+   ctx->Const.MaxTextureRectSize = MAX_TEXTURE_RECT_SIZE;
+   ctx->Const.MaxArrayTextureLayers = MAX_ARRAY_TEXTURE_LAYERS;
+   ctx->Const.MaxTextureCoordUnits = MAX_TEXTURE_COORD_UNITS;
+   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits = MAX_TEXTURE_IMAGE_UNITS;
+   ctx->Const.MaxTextureUnits = MIN2(ctx->Const.MaxTextureCoordUnits,
+                                     ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits);
+   ctx->Const.MaxTextureMaxAnisotropy = MAX_TEXTURE_MAX_ANISOTROPY;
+   ctx->Const.MaxTextureLodBias = MAX_TEXTURE_LOD_BIAS;
+   ctx->Const.MaxTextureBufferSize = 65536;
+   ctx->Const.TextureBufferOffsetAlignment = 1;
+   ctx->Const.MaxArrayLockSize = MAX_ARRAY_LOCK_SIZE;
+   ctx->Const.SubPixelBits = SUB_PIXEL_BITS;
+   ctx->Const.MinPointSize = MIN_POINT_SIZE;
+   ctx->Const.MaxPointSize = MAX_POINT_SIZE;
+   ctx->Const.MinPointSizeAA = MIN_POINT_SIZE;
+   ctx->Const.MaxPointSizeAA = MAX_POINT_SIZE;
+   ctx->Const.PointSizeGranularity = (GLfloat) POINT_SIZE_GRANULARITY;
+   ctx->Const.MinLineWidth = MIN_LINE_WIDTH;
+   ctx->Const.MaxLineWidth = MAX_LINE_WIDTH;
+   ctx->Const.MinLineWidthAA = MIN_LINE_WIDTH;
+   ctx->Const.MaxLineWidthAA = MAX_LINE_WIDTH;
+   ctx->Const.LineWidthGranularity = (GLfloat) LINE_WIDTH_GRANULARITY;
+   ctx->Const.MaxClipPlanes = 6;
+   ctx->Const.MaxLights = MAX_LIGHTS;
+   ctx->Const.MaxShininess = 128.0;
+   ctx->Const.MaxSpotExponent = 128.0;
+   ctx->Const.MaxViewportWidth = MAX_VIEWPORT_WIDTH;
+   ctx->Const.MaxViewportHeight = MAX_VIEWPORT_HEIGHT;
+   ctx->Const.MinMapBufferAlignment = 64;
+
+   /* Driver must override these values if ARB_viewport_array is supported. */
+   ctx->Const.MaxViewports = 1;
+   ctx->Const.ViewportSubpixelBits = 0;
+   ctx->Const.ViewportBounds.Min = 0;
+   ctx->Const.ViewportBounds.Max = 0;
+
+   /** GL_ARB_uniform_buffer_object */
+   ctx->Const.MaxCombinedUniformBlocks = 36;
+   ctx->Const.MaxUniformBufferBindings = 36;
+   ctx->Const.MaxUniformBlockSize = 16384;
+   ctx->Const.UniformBufferOffsetAlignment = 1;
+
+   for (i = 0; i < MESA_SHADER_STAGES; i++)
+      init_mesa_program_limits(ctx, (gl_shader_stage)i, &ctx->Const.Program[i]);
+
+   ctx->Const.MaxProgramMatrices = MAX_PROGRAM_MATRICES;
+   ctx->Const.MaxProgramMatrixStackDepth = MAX_PROGRAM_MATRIX_STACK_DEPTH;
+
+   /* CheckArrayBounds is overriden by drivers/x11 for X server */
+   ctx->Const.CheckArrayBounds = GL_FALSE;
+
+   /* GL_ARB_draw_buffers */
+   ctx->Const.MaxDrawBuffers = MAX_DRAW_BUFFERS;
+
+   ctx->Const.MaxColorAttachments = MAX_COLOR_ATTACHMENTS;
+   ctx->Const.MaxRenderbufferSize = MAX_RENDERBUFFER_SIZE;
+
+   ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = MAX_TEXTURE_IMAGE_UNITS;
+   ctx->Const.MaxCombinedTextureImageUnits = MAX_COMBINED_TEXTURE_IMAGE_UNITS;
+   ctx->Const.MaxVarying = 16; /* old limit not to break tnl and swrast */
+   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = MAX_TEXTURE_IMAGE_UNITS;
+   ctx->Const.MaxGeometryOutputVertices = MAX_GEOMETRY_OUTPUT_VERTICES;
+   ctx->Const.MaxGeometryTotalOutputComponents = MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS;
+
+   /* Shading language version */
+   ctx->Const.GLSLVersion = 140;
+
+   /* GL_ARB_framebuffer_object */
+   ctx->Const.MaxSamples = 0;
+
+   /* GL_ARB_sync */
+   ctx->Const.MaxServerWaitTimeout = 0x1fff7fffffffULL;
+
+   /* GL_ATI_envmap_bumpmap */
+   ctx->Const.SupportedBumpUnits = SUPPORTED_ATI_BUMP_UNITS;
+
+   /* GL_EXT_provoking_vertex */
+   ctx->Const.QuadsFollowProvokingVertexConvention = GL_TRUE;
+
+   /* GL_EXT_transform_feedback */
+   ctx->Const.MaxTransformFeedbackBuffers = MAX_FEEDBACK_BUFFERS;
+   ctx->Const.MaxTransformFeedbackSeparateComponents = 4 * MAX_FEEDBACK_ATTRIBS;
+   ctx->Const.MaxTransformFeedbackInterleavedComponents = 4 * MAX_FEEDBACK_ATTRIBS;
+   ctx->Const.MaxVertexStreams = 1;
+
+   /* GL 3.2  */
+   ctx->Const.ProfileMask = ctx->API == API_OPENGL_CORE
+                          ? GL_CONTEXT_CORE_PROFILE_BIT
+                          : GL_CONTEXT_COMPATIBILITY_PROFILE_BIT;
+
+   /** GL_EXT_gpu_shader4 */
+   ctx->Const.MinProgramTexelOffset = -8;
+   ctx->Const.MaxProgramTexelOffset = 7;
+
+   /* GL_ARB_texture_gather */
+   ctx->Const.MinProgramTextureGatherOffset = -8;
+   ctx->Const.MaxProgramTextureGatherOffset = 7;
+
+   /* GL_ARB_robustness */
+   ctx->Const.ResetStrategy = GL_NO_RESET_NOTIFICATION_ARB;
+
+   /* PrimitiveRestart */
+   ctx->Const.PrimitiveRestartInSoftware = GL_FALSE;
+
+   /* ES 3.0 or ARB_ES3_compatibility */
+   ctx->Const.MaxElementIndex = 0xffffffffu;
+
+   /* GL_ARB_texture_multisample */
+   ctx->Const.MaxColorTextureSamples = 1;
+   ctx->Const.MaxDepthTextureSamples = 1;
+   ctx->Const.MaxIntegerSamples = 1;
+
+   /* GL_ARB_shader_atomic_counters */
+   ctx->Const.MaxAtomicBufferBindings = MAX_COMBINED_ATOMIC_BUFFERS;
+   ctx->Const.MaxAtomicBufferSize = MAX_ATOMIC_COUNTERS * ATOMIC_COUNTER_SIZE;
+   ctx->Const.MaxCombinedAtomicBuffers = MAX_COMBINED_ATOMIC_BUFFERS;
+   ctx->Const.MaxCombinedAtomicCounters = MAX_ATOMIC_COUNTERS;
+
+   /* GL_ARB_vertex_attrib_binding */
+   ctx->Const.MaxVertexAttribRelativeOffset = 2047;
+   ctx->Const.MaxVertexAttribBindings = MAX_VERTEX_GENERIC_ATTRIBS;
+
+   /* GL_ARB_compute_shader */
+   ctx->Const.MaxComputeWorkGroupCount[0] = 65535;
+   ctx->Const.MaxComputeWorkGroupCount[1] = 65535;
+   ctx->Const.MaxComputeWorkGroupCount[2] = 65535;
+   ctx->Const.MaxComputeWorkGroupSize[0] = 1024;
+   ctx->Const.MaxComputeWorkGroupSize[1] = 1024;
+   ctx->Const.MaxComputeWorkGroupSize[2] = 64;
+   ctx->Const.MaxComputeWorkGroupInvocations = 1024;
+
+   /** GL_ARB_gpu_shader5 */
+   ctx->Const.MinFragmentInterpolationOffset = MIN_FRAGMENT_INTERPOLATION_OFFSET;
+   ctx->Const.MaxFragmentInterpolationOffset = MAX_FRAGMENT_INTERPOLATION_OFFSET;
+
+   ctx->Const.GlassMode = 0;
+}
+
 void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 {
    memset(ctx, 0, sizeof(*ctx));
@@ -165,66 +316,9 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
    ctx->Extensions.EXT_texture3D = true;
    ctx->Extensions.EXT_texture_array = true;
    ctx->Extensions.NV_texture_rectangle = true;
-   ctx->Const.GLSLVersion = 330;
 
-   ctx->Const.MaxComputeWorkGroupCount[0] = 65535;
-   ctx->Const.MaxComputeWorkGroupCount[1] = 65535;
-   ctx->Const.MaxComputeWorkGroupCount[2] = 65535;
-   ctx->Const.MaxComputeWorkGroupSize[0] = 1024;
-   ctx->Const.MaxComputeWorkGroupSize[1] = 1024;
-   ctx->Const.MaxComputeWorkGroupSize[2] = 64;
-   ctx->Const.MaxComputeWorkGroupInvocations = 1024;
-
-   init_mesa_program_limits(ctx, MESA_SHADER_VERTEX,   &ctx->Const.Program[MESA_SHADER_VERTEX]);
-   init_mesa_program_limits(ctx, MESA_SHADER_GEOMETRY, &ctx->Const.Program[MESA_SHADER_GEOMETRY]);
-   init_mesa_program_limits(ctx, MESA_SHADER_FRAGMENT, &ctx->Const.Program[MESA_SHADER_FRAGMENT]);
-   init_mesa_program_limits(ctx, MESA_SHADER_COMPUTE,  &ctx->Const.Program[MESA_SHADER_COMPUTE]);
-
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 16;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents = 1024;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxInputComponents = 0; /* not used */
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxOutputComponents = 0; /* not used */
-
-
-   /* 3.30 minimums. */
-   ctx->Const.MaxLights = 8;
-   ctx->Const.MaxClipPlanes = 8;
-   ctx->Const.MaxTextureUnits = 2;
-   ctx->Const.MaxTextureCoordUnits = 8;
-   ctx->Const.MaxVarying = 60 / 4;
-   ctx->Const.MaxDrawBuffers = 1;
-
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs = 16;
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = 16;
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents = 1024;
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxInputComponents = 0; /* not used */
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents = 64;
-
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = 16;
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxUniformComponents = 1024;
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents =
-      ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents;
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents = 128;
-
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits = 16;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxUniformComponents = 1024;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents =
-      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxOutputComponents = 0; /* not used */
-
-   ctx->Const.MaxCombinedTextureImageUnits =
-      ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits
-      + ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits
-      + ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
-
-   ctx->Const.MaxGeometryOutputVertices = 256;
-   ctx->Const.MaxGeometryTotalOutputComponents = 1024;
-
-   /** GL_ARB_uniform_buffer_object */
-   ctx->Const.MaxCombinedUniformBlocks = 36;
-   ctx->Const.MaxUniformBufferBindings = 36;
-   ctx->Const.MaxUniformBlockSize = 16384;
-   ctx->Const.UniformBufferOffsetAlignment = 1;
+   // Set some initial constants, override as needed
+   initialize_mesa_constants( ctx );
 
    /* Set up default shader compiler options. */
    struct gl_shader_compiler_options options;
