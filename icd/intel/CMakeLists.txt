@@ -239,6 +239,7 @@ SET(COMPILER_SOURCES
     compiler/mesa-utils/src/mesa/main/enums.c
     compiler/mesa-utils/src/mesa/main/imports.c
     compiler/mesa-utils/src/mesa/main/version.c
+    compiler/mesa-utils/src/mesa/main/uniforms.c
 
     #compiler/mesa-utils/src/mesa/main/shaderobj.c
 
