@@ -478,8 +478,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
         prog->SamplersUsed = shader->base.active_samplers;
 
-        // LunarG : TODO - update resource map instead
-        //      _mesa_update_shader_textures_used(shProg, prog);
+        _mesa_update_shader_textures_used(shProg, prog);
 
         _mesa_reference_program(ctx, &shader->base.Program, prog);
 
