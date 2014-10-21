@@ -72,14 +72,15 @@ public:
                    std::vector<unsigned int> &bil);
     static bool         m_use_bil;
 
+    char** ReadFileData(const char* fileName);
+    void FreeFileData(char** data);
+
 private:
     int m_compile_options;
     int m_num_shader_strings;
     TBuiltInResource Resources;
     void SetMessageOptions(EShMessages& messages);
     void ProcessConfigFile();
-    char** ReadFileData(const char* fileName);
-    void FreeFileData(char** data);
     EShLanguage FindLanguage(const std::string& name);
     EShLanguage FindLanguage(const XGL_PIPELINE_SHADER_STAGE shader_type);
     std::string ConfigFile;
