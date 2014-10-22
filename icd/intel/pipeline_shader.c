@@ -453,108 +453,19 @@ void pipeline_tear_shaders(struct intel_pipeline *pipeline)
 struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev *dev,
                                                                 enum intel_dev_meta_shader id)
 {
-    static const uint32_t gen6_clear_code[] = {
-        0x00600001, 0x202003be, 0x00000040, 0x00000000, // mov(8)          m1<1>F          g2<0,1,0>F                      { align1 1Q };
-        0x00600001, 0x204003be, 0x00000044, 0x00000000, // mov(8)          m2<1>F          g2.1<0,1,0>F                    { align1 1Q };
-        0x00600001, 0x206003be, 0x00000048, 0x00000000, // mov(8)          m3<1>F          g2.2<0,1,0>F                    { align1 1Q };
-        0x00600001, 0x208003be, 0x0000004c, 0x00000000, // mov(8)          m4<1>F          g2.3<0,1,0>F                    { align1 1Q };
-        0x05600032, 0x20001fc8, 0x008d0020, 0x88019400, // sendc(8)        null            m1<8,8,1>F
-                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
-    };
-    static const uint32_t gen7_clear_code[] = {
-        0x20010b01, 0x00027c00,                         // mov(8)          g124<1>F        g2<0,1,0>F                      { align1 1Q compacted };
-        0x20150b01, 0x00027d00,                         // mov(8)          g125<1>F        g2.1<0,1,0>F                    { align1 1Q compacted };
-        0x20190b01, 0x00027e00,                         // mov(8)          g126<1>F        g2.2<0,1,0>F                    { align1 1Q compacted };
-        0x201d0b01, 0x00027f00,                         // mov(8)          g127<1>F        g2.3<0,1,0>F                    { align1 1Q compacted };
-        0x05600032, 0x20001fa8, 0x008d0f80, 0x88031400, // sendc(8)        null            g124<8,8,1>F
-                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
-    };
-    static const uint32_t gen6_copy_mem_code[] = {
-        0x00600040, 0x20a06d29, 0x00480028, 0x10101010, // add(8)          g5<1>UW         g1.4<2,4,0>UW   0x10101010V     { align1 1Q };
-        0x00600001, 0x20a00062, 0x00000000, 0x00000000, // mov(8)          m5<1>UD         0x00000000UD                    { align1 1Q };
-        0x00600001, 0x20c0013d, 0x008d00a0, 0x00000000, // mov(8)          g6<1>F          g5<8,8,1>UW                     { align1 1Q };
-        0x00600040, 0x20607fbd, 0x008d00c0, 0x3f000000, // add(8)          g3<1>F          g6<8,8,1>F      0.5F            { align1 1Q };
-        0x00600001, 0x204003a5, 0x008d0060, 0x00000000, // mov(8)          g2<1>D          g3<8,8,1>F                      { align1 1Q };
-        0x00600040, 0x204014a6, 0x008d0040, 0x00000080, // add(8)          m2<1>D          g2<8,8,1>D      g4<0,1,0>D      { align1 1Q };
-        0x02600031, 0x20401fc9, 0x008d0040, 0x08417001, // send(8)         g2<1>UW         m2<8,8,1>F
-                                                        // sampler (1, 0, 7, 1) mlen 4 rlen 4              { align1 1Q };
-        0x00600001, 0x202003be, 0x008d0040, 0x00000000, // mov(8)          m1<1>F          g2<8,8,1>F                      { align1 1Q };
-        0x00600001, 0x204003be, 0x008d0060, 0x00000000, // mov(8)          m2<1>F          g3<8,8,1>F                      { align1 1Q };
-        0x00600001, 0x206003be, 0x008d0080, 0x00000000, // mov(8)          m3<1>F          g4<8,8,1>F                      { align1 1Q };
-        0x00600001, 0x208003be, 0x008d00a0, 0x00000000, // mov(8)          m4<1>F          g5<8,8,1>F                      { align1 1Q };
-        0x05600032, 0x20001fc8, 0x008d0020, 0x88019400, // sendc(8)        null            m1<8,8,1>F
-                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
-    };
-    static const uint32_t gen7_copy_mem_code[] = {
-        0x00600040, 0x20a06d29, 0x00480028, 0x10101010, // add(8)          g5<1>UW         g1.4<2,4,0>UW   0x10101010V     { align1 1Q };
-        0x00600001, 0x20600065, 0x00000000, 0x00000000, // mov(8)          g3<1>D          0x00000000UD                    { align1 1Q };
-        0x00600001, 0x20c0013d, 0x008d00a0, 0x00000000, // mov(8)          g6<1>F          g5<8,8,1>UW                     { align1 1Q };
-        0x00600040, 0x20a07fbd, 0x008d00c0, 0x3f000000, // add(8)          g5<1>F          g6<8,8,1>F      0.5F            { align1 1Q };
-        0x2000eb01, 0x00050707,                         // mov(8)          g7<1>D          g5<8,8,1>F                      { align1 1Q compacted };
-        0x20018b40, 0x04070207,                         // add(8)          g2<1>D          g7<8,8,1>D      g4<0,1,0>D      { align1 1Q compacted };
-        0x02600031, 0x2f801fa9, 0x008d0040, 0x04427001, // send(8)         g124<1>UW       g2<8,8,1>F
-                                                        // sampler (1, 0, 7, 1) mlen 2 rlen 4              { align1 1Q };
-        0x05600032, 0x20001fa8, 0x008d0f80, 0x88031400, // sendc(8)        null            g124<8,8,1>F
-                                                        // render RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 { align1 1Q EOT };
-    };
-    XGL_UINT surface_count, urb_grf_start;
     struct intel_pipeline_shader *sh;
-    const void *code;
-    XGL_SIZE code_size;
-
-    switch (intel_gpu_gen(dev->gpu)) {
-    case INTEL_GEN(6):
-        if (id == INTEL_DEV_META_FS_COPY_MEM) {
-            code = gen6_copy_mem_code;
-            code_size = sizeof(gen6_copy_mem_code);
-            surface_count = 2;
-            urb_grf_start = 4;
-        } else {
-            code = gen6_clear_code;
-            code_size = sizeof(gen6_clear_code);
-            surface_count = 1;
-            urb_grf_start = 2;
-        }
-        break;
-    case INTEL_GEN(7):
-    case INTEL_GEN(7.5):
-        if (id == INTEL_DEV_META_FS_COPY_MEM) {
-            code = gen7_copy_mem_code;
-            code_size = sizeof(gen7_copy_mem_code);
-            surface_count = 2;
-            urb_grf_start = 4;
-        } else {
-            code = gen7_clear_code;
-            code_size = sizeof(gen7_clear_code);
-            surface_count = 1;
-            urb_grf_start = 2;
-        }
-        break;
-    default:
-        code = NULL;
-        break;
-    }
-
-    if (!code)
-        return NULL;
+    XGL_RESULT ret;
 
     sh = icd_alloc(sizeof(*sh), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));
 
-    sh->pCode = icd_alloc(code_size, 0, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!sh->pCode) {
+    ret = intel_pipeline_shader_compile_meta(sh, dev->gpu, id);
+    if (ret != XGL_SUCCESS) {
         icd_free(sh);
         return NULL;
     }
-
-    memcpy(sh->pCode, code, code_size);
-    sh->codeSize = code_size;
-
-    sh->out_count = 1;
-    sh->surface_count = surface_count;
-    sh->urb_grf_start = urb_grf_start;
 
     return sh;
 }

@@ -2085,25 +2085,12 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
 static void gen6_meta_surface_states(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    uint32_t binding_table[2];
-    XGL_UINT surface_count = 0;
+    uint32_t binding_table[2] = { 0, 0 };
     uint32_t offset;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    /* SURFACE_STATE */
-    if (meta->dst.valid) {
-        offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                GEN6_ALIGNMENT_SURFACE_STATE * 4,
-                meta->dst.surface_len, meta->dst.surface);
-
-        cmd_reserve_reloc(cmd, 1);
-        cmd_surface_reloc(cmd, offset, 1,
-                (struct intel_bo *) meta->dst.reloc_target,
-                meta->dst.reloc_offset, meta->dst.reloc_flags);
-
-        binding_table[surface_count++] = offset;
-    }
+    /* SURFACE_STATEs */
     if (meta->src.valid) {
         offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                 GEN6_ALIGNMENT_SURFACE_STATE * 4,
@@ -2119,13 +2106,25 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
                     meta->src.reloc_offset, meta->src.reloc_flags);
         }
 
-        binding_table[surface_count++] = offset;
+        binding_table[0] = offset;
+    }
+    if (meta->dst.valid) {
+        offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                GEN6_ALIGNMENT_SURFACE_STATE * 4,
+                meta->dst.surface_len, meta->dst.surface);
+
+        cmd_reserve_reloc(cmd, 1);
+        cmd_surface_reloc(cmd, offset, 1,
+                (struct intel_bo *) meta->dst.reloc_target,
+                meta->dst.reloc_offset, meta->dst.reloc_flags);
+
+        binding_table[1] = offset;
     }
 
     /* BINDING_TABLE */
     offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
             GEN6_ALIGNMENT_BINDING_TABLE_STATE * 4,
-            surface_count, binding_table);
+            2, binding_table);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_3dstate_pointer(cmd,
@@ -2610,7 +2609,8 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
     dw[4] = sh->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT;
     dw[5] = (40 - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
             GEN6_WM_DW5_PS_ENABLE |
-            GEN6_WM_DW5_8_PIXEL_DISPATCH;
+            GEN6_WM_DW5_16_PIXEL_DISPATCH;
+
     dw[6] = sh->in_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
             GEN6_WM_DW6_POSOFFSET_NONE |
             GEN6_WM_DW6_ZW_INTERP_PIXEL |
@@ -2672,7 +2672,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 
     dw[4] = GEN7_PS_DW4_PUSH_CONSTANT_ENABLE |
             GEN7_PS_DW4_POSOFFSET_NONE |
-            GEN7_PS_DW4_8_PIXEL_DISPATCH |
+            GEN7_PS_DW4_16_PIXEL_DISPATCH |
             (48 - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     if (cmd_gen(cmd) >= INTEL_GEN(7.5))
         dw[4] |= ((1 << meta->samples) - 1) << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
