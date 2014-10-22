@@ -30,6 +30,8 @@
 #include <assert.h>
 #include <pthread.h>
 #include "xglLayer.h"
+#include "xgl_string_helper.h"
+#include "xgl_struct_string_helper.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
@@ -288,396 +290,400 @@ static void initLayerTable()
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    //printf("At start of layered GetGpuInfo\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    printf("xglGetGpuInfo(gpu = %p, infoType = %p, pDataSize = %i, pData = %p) = %s\n", (void*)gpu, (void*)infoType, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
-    //printf("Completed layered GetGpuInfo\n");
+    printf("xglGetGpuInfo(gpu = %p, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)gpu, string_XGL_PHYSICAL_GPU_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    //printf("At start of layered CreateDevice\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
-    printf("xglCreateDevice(gpu = %p, pCreateInfo = %p, pDevice = %p) = %s\n", (void*)gpu, (void*)pCreateInfo, (void*)*pDevice, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
-    //printf("Completed layered CreateDevice\n");
+    printf("xglCreateDevice(gpu = %p, pCreateInfo = %p, pDevice = %p) = %s\n", (void*)gpu, (void*)pCreateInfo, (void*)*pDevice, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_device_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
 {
     XGL_RESULT result = nextTable.DestroyDevice(device);
-    printf("xglDestroyDevice(device = %p) = %s\n", (void*)device, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDestroyDevice(device = %p) = %s\n", (void*)device, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    //printf("At start of layered GetExtensionSupport\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
-    printf("xglGetExtensionSupport(gpu = %p, pExtName = %p) = %s\n", (void*)gpu, (void*)pExtName, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
-    //printf("Completed layered GetExtensionSupport\n");
+    printf("xglGetExtensionSupport(gpu = %p, pExtName = %p) = %s\n", (void*)gpu, (void*)pExtName, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    //printf("At start of layered EnumerateLayers\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
-    printf("xglEnumerateLayers(gpu = %p, maxLayerCount = %i, maxStringSize = %i, pOutLayers = %p, pOutLayerCount = %i) = %s\n", (void*)gpu, maxLayerCount, maxStringSize, (void*)pOutLayers, *pOutLayerCount, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
-    //printf("Completed layered EnumerateLayers\n");
+    printf("xglEnumerateLayers(gpu = %p, maxLayerCount = %i, maxStringSize = %i, pOutLayers = %p, pOutLayerCount = %i) = %s\n", (void*)gpu, maxLayerCount, maxStringSize, (void*)pOutLayers, *pOutLayerCount, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, XGL_UINT queueIndex, XGL_QUEUE* pQueue)
 {
     XGL_RESULT result = nextTable.GetDeviceQueue(device, queueType, queueIndex, pQueue);
-    printf("xglGetDeviceQueue(device = %p, queueType = %p, queueIndex = %i, pQueue = %p) = %s\n", (void*)device, (void*)queueType, queueIndex, (void*)pQueue, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetDeviceQueue(device = %p, queueType = %s, queueIndex = %i, pQueue = %p) = %s\n", (void*)device, string_XGL_QUEUE_TYPE(queueType), queueIndex, (void*)pQueue, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, XGL_UINT cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, fence);
-    printf("xglQueueSubmit(queue = %p, cmdBufferCount = %i, pCmdBuffers = %p, memRefCount = %i, pMemRefs = %p, fence = %p) = %s\n", (void*)queue, cmdBufferCount, (void*)pCmdBuffers, memRefCount, (void*)pMemRefs, (void*)fence, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglQueueSubmit(queue = %p, cmdBufferCount = %i, pCmdBuffers = %p, memRefCount = %i, pMemRefs = %p, fence = %p) = %s\n", (void*)queue, cmdBufferCount, (void*)pCmdBuffers, memRefCount, (void*)pMemRefs, (void*)fence, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(XGL_QUEUE queue, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs)
 {
     XGL_RESULT result = nextTable.QueueSetGlobalMemReferences(queue, memRefCount, pMemRefs);
-    printf("xglQueueSetGlobalMemReferences(queue = %p, memRefCount = %i, pMemRefs = %p) = %s\n", (void*)queue, memRefCount, (void*)pMemRefs, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglQueueSetGlobalMemReferences(queue = %p, memRefCount = %i, pMemRefs = %p) = %s\n", (void*)queue, memRefCount, (void*)pMemRefs, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
 {
     XGL_RESULT result = nextTable.QueueWaitIdle(queue);
-    printf("xglQueueWaitIdle(queue = %p) = %s\n", (void*)queue, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglQueueWaitIdle(queue = %p) = %s\n", (void*)queue, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
 {
     XGL_RESULT result = nextTable.DeviceWaitIdle(device);
-    printf("xglDeviceWaitIdle(device = %p) = %s\n", (void*)device, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDeviceWaitIdle(device = %p) = %s\n", (void*)device, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapCount(XGL_DEVICE device, XGL_UINT* pCount)
 {
     XGL_RESULT result = nextTable.GetMemoryHeapCount(device, pCount);
-    printf("xglGetMemoryHeapCount(device = %p, pCount = %i) = %s\n", (void*)device, *pCount, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetMemoryHeapCount(device = %p, pCount = %i) = %s\n", (void*)device, *pCount, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapInfo(XGL_DEVICE device, XGL_UINT heapId, XGL_MEMORY_HEAP_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetMemoryHeapInfo(device, heapId, infoType, pDataSize, pData);
-    printf("xglGetMemoryHeapInfo(device = %p, heapId = %i, infoType = %p, pDataSize = %i, pData = %p) = %s\n", (void*)device, heapId, (void*)infoType, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetMemoryHeapInfo(device = %p, heapId = %i, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)device, heapId, string_XGL_MEMORY_HEAP_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
-    printf("xglAllocMemory(device = %p, pAllocInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pAllocInfo, (void*)pMem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglAllocMemory(device = %p, pAllocInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pAllocInfo, (void*)pMem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
 {
     XGL_RESULT result = nextTable.FreeMemory(mem);
-    printf("xglFreeMemory(mem = %p) = %s\n", (void*)mem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglFreeMemory(mem = %p) = %s\n", (void*)mem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(XGL_GPU_MEMORY mem, XGL_MEMORY_PRIORITY priority)
 {
     XGL_RESULT result = nextTable.SetMemoryPriority(mem, priority);
-    printf("xglSetMemoryPriority(mem = %p, priority = %p) = %s\n", (void*)mem, (void*)priority, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglSetMemoryPriority(mem = %p, priority = %p) = %s\n", (void*)mem, (void*)priority, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglMapMemory(XGL_GPU_MEMORY mem, XGL_FLAGS flags, XGL_VOID** ppData)
 {
     XGL_RESULT result = nextTable.MapMemory(mem, flags, ppData);
-    printf("xglMapMemory(mem = %p, flags = %i, ppData = %p) = %s\n", (void*)mem, flags, (void*)ppData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglMapMemory(mem = %p, flags = %i, ppData = %p) = %s\n", (void*)mem, flags, (void*)ppData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(XGL_GPU_MEMORY mem)
 {
     XGL_RESULT result = nextTable.UnmapMemory(mem);
-    printf("xglUnmapMemory(mem = %p) = %s\n", (void*)mem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglUnmapMemory(mem = %p) = %s\n", (void*)mem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(XGL_DEVICE device, const XGL_VOID* pSysMem, XGL_SIZE memSize, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
-    printf("xglPinSystemMemory(device = %p, pSysMem = %p, memSize = %i, pMem = %p) = %s\n", (void*)device, (void*)pSysMem, memSize, (void*)pMem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglPinSystemMemory(device = %p, pSysMem = %p, memSize = %i, pMem = %p) = %s\n", (void*)device, (void*)pSysMem, memSize, (void*)pMem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device, XGL_UINT rangeCount, const XGL_VIRTUAL_MEMORY_REMAP_RANGE* pRanges, XGL_UINT preWaitSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPreWaitSemaphores, XGL_UINT postSignalSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPostSignalSemaphores)
 {
     XGL_RESULT result = nextTable.RemapVirtualMemoryPages(device, rangeCount, pRanges, preWaitSemaphoreCount, pPreWaitSemaphores, postSignalSemaphoreCount, pPostSignalSemaphores);
-    printf("xglRemapVirtualMemoryPages(device = %p, rangeCount = %i, pRanges = %p, preWaitSemaphoreCount = %i, pPreWaitSemaphores = %p, postSignalSemaphoreCount = %i, pPostSignalSemaphores = %p) = %s\n", (void*)device, rangeCount, (void*)pRanges, preWaitSemaphoreCount, (void*)pPreWaitSemaphores, postSignalSemaphoreCount, (void*)pPostSignalSemaphores, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglRemapVirtualMemoryPages(device = %p, rangeCount = %i, pRanges = %p, preWaitSemaphoreCount = %i, pPreWaitSemaphores = %p, postSignalSemaphoreCount = %i, pPostSignalSemaphores = %p) = %s\n", (void*)device, rangeCount, (void*)pRanges, preWaitSemaphoreCount, (void*)pPreWaitSemaphores, postSignalSemaphoreCount, (void*)pPostSignalSemaphores, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
-    //printf("At start of layered GetMultiGpuCompatibility\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
-    printf("xglGetMultiGpuCompatibility(gpu0 = %p, gpu1 = %p, pInfo = %p) = %s\n", (void*)gpu0, (void*)gpu1, (void*)pInfo, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
-    //printf("Completed layered GetMultiGpuCompatibility\n");
+    printf("xglGetMultiGpuCompatibility(gpu0 = %p, gpu1 = %p, pInfo = %p) = %s\n", (void*)gpu0, (void*)gpu1, (void*)pInfo, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
-    printf("xglOpenSharedMemory(device = %p, pOpenInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pMem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglOpenSharedMemory(device = %p, pOpenInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pMem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
 {
     XGL_RESULT result = nextTable.OpenSharedQueueSemaphore(device, pOpenInfo, pSemaphore);
-    printf("xglOpenSharedQueueSemaphore(device = %p, pOpenInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pSemaphore, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglOpenSharedQueueSemaphore(device = %p, pOpenInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pSemaphore, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(XGL_DEVICE device, const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
-    printf("xglOpenPeerMemory(device = %p, pOpenInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pMem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglOpenPeerMemory(device = %p, pOpenInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pMem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
-    printf("xglOpenPeerImage(device = %p, pOpenInfo = %p, pImage = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pImage, (void*)pMem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglOpenPeerImage(device = %p, pOpenInfo = %p, pImage = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pImage, (void*)pMem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
     XGL_RESULT result = nextTable.DestroyObject(object);
-    printf("xglDestroyObject(object = %p) = %s\n", (void*)object, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDestroyObject(object = %p) = %s\n", (void*)object, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(XGL_BASE_OBJECT object, XGL_OBJECT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
-    printf("xglGetObjectInfo(object = %p, infoType = %p, pDataSize = %i, pData = %p) = %s\n", (void*)object, (void*)infoType, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetObjectInfo(object = %p, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)object, string_XGL_OBJECT_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
     XGL_RESULT result = nextTable.BindObjectMemory(object, mem, offset);
-    printf("xglBindObjectMemory(object = %p, mem = %p, offset = %i) = %s\n", (void*)object, (void*)mem, offset, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglBindObjectMemory(object = %p, mem = %p, offset = %i) = %s\n", (void*)object, (void*)mem, offset, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence)
 {
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
-    printf("xglCreateFence(device = %p, pCreateInfo = %p, pFence = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pFence, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateFence(device = %p, pCreateInfo = %p, pFence = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pFence, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_fence_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
-    printf("xglGetFenceStatus(fence = %p) = %s\n", (void*)fence, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetFenceStatus(fence = %p) = %s\n", (void*)fence, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, XGL_UINT fenceCount, const XGL_FENCE* pFences, XGL_BOOL waitAll, XGL_UINT64 timeout)
 {
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
-    printf("xglWaitForFences(device = %p, fenceCount = %i, pFences = %p, waitAll = %u, timeout = %lu) = %s\n", (void*)device, fenceCount, (void*)pFences, waitAll, timeout, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglWaitForFences(device = %p, fenceCount = %i, pFences = %p, waitAll = %u, timeout = %lu) = %s\n", (void*)device, fenceCount, (void*)pFences, waitAll, timeout, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
 {
     XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
-    printf("xglCreateQueueSemaphore(device = %p, pCreateInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSemaphore, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateQueueSemaphore(device = %p, pCreateInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSemaphore, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_queue_semaphore_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
 {
     XGL_RESULT result = nextTable.SignalQueueSemaphore(queue, semaphore);
-    printf("xglSignalQueueSemaphore(queue = %p, semaphore = %p) = %s\n", (void*)queue, (void*)semaphore, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglSignalQueueSemaphore(queue = %p, semaphore = %p) = %s\n", (void*)queue, (void*)semaphore, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
 {
     XGL_RESULT result = nextTable.WaitQueueSemaphore(queue, semaphore);
-    printf("xglWaitQueueSemaphore(queue = %p, semaphore = %p) = %s\n", (void*)queue, (void*)semaphore, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglWaitQueueSemaphore(queue = %p, semaphore = %p) = %s\n", (void*)queue, (void*)semaphore, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_EVENT_CREATE_INFO* pCreateInfo, XGL_EVENT* pEvent)
 {
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
-    printf("xglCreateEvent(device = %p, pCreateInfo = %p, pEvent = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pEvent, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateEvent(device = %p, pCreateInfo = %p, pEvent = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pEvent, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_event_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(XGL_EVENT event)
 {
     XGL_RESULT result = nextTable.GetEventStatus(event);
-    printf("xglGetEventStatus(event = %p) = %s\n", (void*)event, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetEventStatus(event = %p) = %s\n", (void*)event, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetEvent(XGL_EVENT event)
 {
     XGL_RESULT result = nextTable.SetEvent(event);
-    printf("xglSetEvent(event = %p) = %s\n", (void*)event, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglSetEvent(event = %p) = %s\n", (void*)event, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetEvent(XGL_EVENT event)
 {
     XGL_RESULT result = nextTable.ResetEvent(event);
-    printf("xglResetEvent(event = %p) = %s\n", (void*)event, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglResetEvent(event = %p) = %s\n", (void*)event, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo, XGL_QUERY_POOL* pQueryPool)
 {
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
-    printf("xglCreateQueryPool(device = %p, pCreateInfo = %p, pQueryPool = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pQueryPool, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateQueryPool(device = %p, pCreateInfo = %p, pQueryPool = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pQueryPool, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_query_pool_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
-    printf("xglGetQueryPoolResults(queryPool = %p, startQuery = %i, queryCount = %i, pDataSize = %i, pData = %p) = %s\n", (void*)queryPool, startQuery, queryCount, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetQueryPoolResults(queryPool = %p, startQuery = %i, queryCount = %i, pDataSize = %i, pData = %p) = %s\n", (void*)queryPool, startQuery, queryCount, *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
-    printf("xglGetFormatInfo(device = %p, format.channelFormat = %i, format.numericFormat = %i, infoType = %i, pDataSize = %i, pData = %p) = %s\n", (void*)device, format.channelFormat, format.numericFormat, infoType, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetFormatInfo(device = %p, format.channelFormat = %s, format.numericFormat = %s, infoType = %i, pDataSize = %i, pData = %p) = %s\n", (void*)device, string_XGL_CHANNEL_FORMAT(format.channelFormat), string_XGL_NUM_FORMAT(format.numericFormat), infoType, *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
 {
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
-    printf("xglCreateImage(device = %p, pCreateInfo = %p, pImage = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pImage, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateImage(device = %p, pCreateInfo = %p, pImage = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pImage, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_image_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
-    printf("xglGetImageSubresourceInfo(image = %p, pSubresource = %p, infoType = %p, pDataSize = %i, pData = %p) = %s\n", (void*)image, (void*)pSubresource, (void*)infoType, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglGetImageSubresourceInfo(image = %p, pSubresource = %p, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)image, (void*)pSubresource, string_XGL_SUBRESOURCE_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
-    printf("xglCreateImageView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateImageView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_image_view_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE device, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, XGL_COLOR_ATTACHMENT_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
-    printf("xglCreateColorAttachmentView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateColorAttachmentView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_color_attachment_view_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
-    printf("xglCreateDepthStencilView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateDepthStencilView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_depth_stencil_view_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_SHADER_CREATE_INFO* pCreateInfo, XGL_SHADER* pShader)
 {
     XGL_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
-    printf("xglCreateShader(device = %p, pCreateInfo = %p, pShader = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pShader, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateShader(device = %p, pCreateInfo = %p, pShader = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pShader, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_shader_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-    printf("xglCreateGraphicsPipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateGraphicsPipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_graphics_pipeline_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
-    printf("xglCreateComputePipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateComputePipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_compute_pipeline_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglStorePipeline(XGL_PIPELINE pipeline, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.StorePipeline(pipeline, pDataSize, pData);
-    printf("xglStorePipeline(pipeline = %p, pDataSize = %i, pData = %p) = %s\n", (void*)pipeline, *pDataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglStorePipeline(pipeline = %p, pDataSize = %i, pData = %p) = %s\n", (void*)pipeline, *pDataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(XGL_DEVICE device, XGL_SIZE dataSize, const XGL_VOID* pData, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
-    printf("xglLoadPipeline(device = %p, dataSize = %i, pData = %p, pPipeline = %p) = %s\n", (void*)device, dataSize, (void*)pData, (void*)pPipeline, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglLoadPipeline(device = %p, dataSize = %i, pData = %p, pPipeline = %p) = %s\n", (void*)device, dataSize, (void*)pData, (void*)pPipeline, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta)
 {
     XGL_RESULT result = nextTable.CreatePipelineDelta(device, p1, p2, delta);
-    printf("xglCreatePipelineDelta(device = %p, p1 = %p, p2 = %p, delta = %p) = %s\n", (void*)device, (void*)p1, (void*)p2, (void*)*delta, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreatePipelineDelta(device = %p, p1 = %p, p2 = %p, delta = %p) = %s\n", (void*)device, (void*)p1, (void*)p2, (void*)*delta, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
-    printf("xglCreateSampler(device = %p, pCreateInfo = %p, pSampler = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSampler, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateSampler(device = %p, pCreateInfo = %p, pSampler = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSampler, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_sampler_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet)
 {
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
-    printf("xglCreateDescriptorSet(device = %p, pCreateInfo = %p, pDescriptorSet = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pDescriptorSet, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateDescriptorSet(device = %p, pCreateInfo = %p, pDescriptorSet = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pDescriptorSet, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_descriptor_set_create_info(pCreateInfo, "    "));
     return result;
 }
 
@@ -726,63 +732,69 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET d
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
-    printf("xglCreateViewportState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateViewportState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_viewport_state_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
-    printf("xglCreateRasterState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateRasterState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_raster_state_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
-    printf("xglCreateMsaaState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateMsaaState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_msaa_state_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
-    printf("xglCreateColorBlendState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateColorBlendState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_color_blend_state_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
-    printf("xglCreateDepthStencilState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateDepthStencilState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_depth_stencil_state_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer)
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
-    printf("xglCreateCommandBuffer(device = %p, pCreateInfo = %p, pCmdBuffer = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pCmdBuffer, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglCreateCommandBuffer(device = %p, pCreateInfo = %p, pCmdBuffer = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pCmdBuffer, string_XGL_RESULT(result));
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_cmd_buffer_create_info(pCreateInfo, "    "));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_FLAGS flags)
 {
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, flags);
-    printf("xglBeginCommandBuffer(cmdBuffer = %p, flags = %i) = %s\n", (void*)cmdBuffer, flags, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglBeginCommandBuffer(cmdBuffer = %p, flags = %i) = %s\n", (void*)cmdBuffer, flags, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     XGL_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
-    printf("xglEndCommandBuffer(cmdBuffer = %p) = %s\n", (void*)cmdBuffer, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglEndCommandBuffer(cmdBuffer = %p) = %s\n", (void*)cmdBuffer, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
-    printf("xglResetCommandBuffer(cmdBuffer = %p) = %s\n", (void*)cmdBuffer, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglResetCommandBuffer(cmdBuffer = %p) = %s\n", (void*)cmdBuffer, string_XGL_RESULT(result));
     return result;
 }
 
@@ -819,7 +831,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdB
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
     nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
-    printf("xglCmdBindIndexData(cmdBuffer = %p, mem = %p, offset = %i, indexType = %p)\n", (void*)cmdBuffer, (void*)mem, offset, (void*)indexType);
+    printf("xglCmdBindIndexData(cmdBuffer = %p, mem = %p, offset = %i, indexType = %s)\n", (void*)cmdBuffer, (void*)mem, offset, string_XGL_INDEX_TYPE(indexType));
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(XGL_CMD_BUFFER cmdBuffer, XGL_UINT colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment)
@@ -981,7 +993,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
 {
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destMem, destOffset);
-    printf("xglCmdWriteTimestamp(cmdBuffer = %p, timestampType = %p, destMem = %p, destOffset = %i)\n", (void*)cmdBuffer, (void*)timestampType, (void*)destMem, destOffset);
+    printf("xglCmdWriteTimestamp(cmdBuffer = %p, timestampType = %s, destMem = %p, destOffset = %i)\n", (void*)cmdBuffer, string_XGL_TIMESTAMP_TYPE(timestampType), (void*)destMem, destOffset);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, const XGL_UINT32* pData)
@@ -1005,49 +1017,49 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuff
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel)
 {
     XGL_RESULT result = nextTable.DbgSetValidationLevel(device, validationLevel);
-    printf("xglDbgSetValidationLevel(device = %p, validationLevel = %p) = %s\n", (void*)device, (void*)validationLevel, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgSetValidationLevel(device = %p, validationLevel = %p) = %s\n", (void*)device, (void*)validationLevel, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
 {
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
-    printf("xglDbgRegisterMsgCallback(pfnMsgCallback = %p, pUserData = %p) = %s\n", (void*)pfnMsgCallback, (void*)pUserData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgRegisterMsgCallback(pfnMsgCallback = %p, pUserData = %p) = %s\n", (void*)pfnMsgCallback, (void*)pUserData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
-    printf("xglDbgUnregisterMsgCallback(pfnMsgCallback = %p) = %s\n", (void*)pfnMsgCallback, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgUnregisterMsgCallback(pfnMsgCallback = %p) = %s\n", (void*)pfnMsgCallback, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(XGL_DEVICE device, XGL_INT msgCode, XGL_DBG_MSG_FILTER filter)
 {
     XGL_RESULT result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
-    printf("xglDbgSetMessageFilter(device = %p, msgCode = %i, filter = %p) = %s\n", (void*)device, msgCode, (void*)filter, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgSetMessageFilter(device = %p, msgCode = %i, filter = %p) = %s\n", (void*)device, msgCode, (void*)filter, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(XGL_BASE_OBJECT object, XGL_SIZE tagSize, const XGL_VOID* pTag)
 {
     XGL_RESULT result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
-    printf("xglDbgSetObjectTag(object = %p, tagSize = %i, pTag = %p) = %s\n", (void*)object, tagSize, (void*)pTag, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgSetObjectTag(object = %p, tagSize = %i, pTag = %p) = %s\n", (void*)object, tagSize, (void*)pTag, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.DbgSetGlobalOption(dbgOption, dataSize, pData);
-    printf("xglDbgSetGlobalOption(dbgOption = %p, dataSize = %i, pData = %p) = %s\n", (void*)dbgOption, dataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgSetGlobalOption(dbgOption = %p, dataSize = %i, pData = %p) = %s\n", (void*)dbgOption, dataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
-    printf("xglDbgSetDeviceOption(device = %p, dbgOption = %p, dataSize = %i, pData = %p) = %s\n", (void*)device, (void*)dbgOption, dataSize, (void*)pData, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglDbgSetDeviceOption(device = %p, dbgOption = %p, dataSize = %i, pData = %p) = %s\n", (void*)device, (void*)dbgOption, dataSize, (void*)pData, string_XGL_RESULT(result));
     return result;
 }
 
@@ -1066,33 +1078,31 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    //printf("At start of layered WsiX11AssociateConnection\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
-    printf("xglWsiX11AssociateConnection(gpu = %p, pConnectionInfo = %p) = %s\n", (void*)gpu, (void*)pConnectionInfo, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
-    //printf("Completed layered WsiX11AssociateConnection\n");
+    printf("xglWsiX11AssociateConnection(gpu = %p, pConnectionInfo = %p) = %s\n", (void*)gpu, (void*)pConnectionInfo, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
 {
     XGL_RESULT result = nextTable.WsiX11GetMSC(device, crtc, pMsc);
-    printf("xglWsiX11GetMSC(device = %p, crtc = %i, pMsc = %lu) = %s\n", (void*)device, crtc, *pMsc, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglWsiX11GetMSC(device = %p, crtc = %i, pMsc = %lu) = %s\n", (void*)device, crtc, *pMsc, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
-    printf("xglWsiX11CreatePresentableImage(device = %p, pCreateInfo = %p, pImage = %p, pMem = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)pImage, (void*)pMem, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglWsiX11CreatePresentableImage(device = %p, pCreateInfo = %p, pImage = %p, pMem = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)pImage, (void*)pMem, string_XGL_RESULT(result));
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
-    printf("xglWsiX11QueuePresent(queue = %p, pPresentInfo = %p, fence = %p) = %s\n", (void*)queue, (void*)pPresentInfo, (void*)fence, (result == XGL_SUCCESS) ? "XGL_SUCCESS" : "XGL_FAIL");
+    printf("xglWsiX11QueuePresent(queue = %p, pPresentInfo = %p, fence = %p) = %s\n", (void*)queue, (void*)pPresentInfo, (void*)fence, string_XGL_RESULT(result));
     return result;
 }
 
