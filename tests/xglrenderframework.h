@@ -81,6 +81,8 @@ protected:
     XglImage                       *m_renderTarget;
     XGL_FLOAT                       m_width, m_height;
     XGL_FORMAT                      m_render_target_fmt;
+    XGL_COLOR_ATTACHMENT_BIND_INFO  m_colorBinding;
+    XGL_DEPTH_STENCIL_BIND_INFO     m_depthStencilBinding;
 
     /*
      * SetUp and TearDown are called by the Google Test framework

@@ -39,6 +39,9 @@ XglRenderFramework::XglRenderFramework() :
 {
     m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
     m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
+
+    m_colorBinding.view = XGL_NULL_HANDLE;
+    m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
 
 XglRenderFramework::~XglRenderFramework()
@@ -440,10 +443,13 @@ void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADE
 void XglRenderFramework::GenerateBindRenderTargetCmd()
 {
     // bind render target
-    XGL_COLOR_ATTACHMENT_BIND_INFO colorBind = {};
-    colorBind.view  = m_renderTarget->targetView();
-    colorBind.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
-    xglCmdBindAttachments(m_cmdBuffer, 1, &colorBind, NULL );
+    m_colorBinding.view  = m_renderTarget->targetView();
+    m_colorBinding.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+    if (m_depthStencilBinding.view) {
+       xglCmdBindAttachments(m_cmdBuffer, 1, &m_colorBinding, &m_depthStencilBinding );
+    } else {
+       xglCmdBindAttachments(m_cmdBuffer, 1, &m_colorBinding, XGL_NULL_HANDLE );
+    }
 }
 
 void XglRenderFramework::GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline)
