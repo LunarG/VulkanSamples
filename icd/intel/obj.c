@@ -166,7 +166,9 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
     }
 
     if (shallow_copy) {
-        assert(!info.header->next);
+        /* XGL_VIEWPORT_STATE_CREATE_INFO has no header */
+        if (dbg->type != XGL_DBG_OBJECT_VIEWPORT_STATE)
+            assert(!info.header->next);
 
         dbg->create_info = icd_alloc(shallow_copy, 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!dbg->create_info)
