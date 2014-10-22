@@ -3216,7 +3216,7 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
 
       if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
          ioVar->data.explicit_location = true;
-         ioVar->data.location          = layoutLocation;
+         ioVar->data.location          = layoutLocation + VARYING_SLOT_VAR0;
       }
    }
 }
