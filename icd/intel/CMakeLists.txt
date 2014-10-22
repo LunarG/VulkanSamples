@@ -260,6 +260,7 @@ SET(COMPILER_SOURCES
 
     # File required for backend compiler
     compiler/pipeline/pipeline_compiler_interface.cpp
+    compiler/pipeline/pipeline_compiler_interface_meta.cpp
     compiler/pipeline/brw_blorp_blit_eu.cpp
     compiler/pipeline/brw_shader.cpp
     compiler/pipeline/brw_fs.cpp
