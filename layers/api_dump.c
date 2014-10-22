@@ -304,7 +304,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     printf("xglCreateDevice(gpu = %p, pCreateInfo = %p, pDevice = %p) = %s\n", (void*)gpu, (void*)pCreateInfo, (void*)*pDevice, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_device_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_device_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -496,7 +498,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_F
 {
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
     printf("xglCreateFence(device = %p, pCreateInfo = %p, pFence = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pFence, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_fence_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_fence_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -518,7 +522,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, co
 {
     XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
     printf("xglCreateQueueSemaphore(device = %p, pCreateInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSemaphore, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_queue_semaphore_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_queue_semaphore_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -540,7 +546,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_E
 {
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     printf("xglCreateEvent(device = %p, pCreateInfo = %p, pEvent = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pEvent, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_event_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_event_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -569,7 +577,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const X
 {
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     printf("xglCreateQueryPool(device = %p, pCreateInfo = %p, pQueryPool = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pQueryPool, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_query_pool_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_query_pool_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -591,7 +601,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_I
 {
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
     printf("xglCreateImage(device = %p, pCreateInfo = %p, pImage = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pImage, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_image_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_image_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -606,7 +618,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
 {
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
     printf("xglCreateImageView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_image_view_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_image_view_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -614,7 +628,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE devic
 {
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     printf("xglCreateColorAttachmentView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_color_attachment_view_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_color_attachment_view_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -622,7 +638,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, 
 {
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     printf("xglCreateDepthStencilView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_depth_stencil_view_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_depth_stencil_view_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -630,7 +648,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_
 {
     XGL_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
     printf("xglCreateShader(device = %p, pCreateInfo = %p, pShader = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pShader, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_shader_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_shader_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -638,7 +658,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
 {
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     printf("xglCreateGraphicsPipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_graphics_pipeline_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_graphics_pipeline_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -646,7 +668,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, c
 {
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     printf("xglCreateComputePipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_compute_pipeline_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_compute_pipeline_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -675,7 +699,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     printf("xglCreateSampler(device = %p, pCreateInfo = %p, pSampler = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSampler, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_sampler_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_sampler_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -683,7 +709,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, con
 {
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
     printf("xglCreateDescriptorSet(device = %p, pCreateInfo = %p, pDescriptorSet = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pDescriptorSet, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_descriptor_set_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_descriptor_set_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -733,7 +761,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, con
 {
     XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
     printf("xglCreateViewportState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_viewport_state_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_viewport_state_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -741,7 +771,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const
 {
     XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
     printf("xglCreateRasterState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_raster_state_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_raster_state_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -749,7 +781,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const X
 {
     XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
     printf("xglCreateMsaaState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_msaa_state_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_msaa_state_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -757,7 +791,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, c
 {
     XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
     printf("xglCreateColorBlendState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_color_blend_state_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_color_blend_state_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -765,7 +801,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device,
 {
     XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
     printf("xglCreateDepthStencilState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_depth_stencil_state_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_depth_stencil_state_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 
@@ -773,7 +811,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     printf("xglCreateCommandBuffer(device = %p, pCreateInfo = %p, pCmdBuffer = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pCmdBuffer, string_XGL_RESULT(result));
-    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, xgl_print_xgl_cmd_buffer_create_info(pCreateInfo, "    "));
+    char *pTmpStr = xgl_print_xgl_cmd_buffer_create_info(pCreateInfo, "    ");
+    printf("   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+    free(pTmpStr);
     return result;
 }
 

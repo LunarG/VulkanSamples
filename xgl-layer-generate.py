@@ -202,7 +202,9 @@ class Subcommand(object):
                     log_func = '%s%s);' % (log_func, print_vals)
                     if cis_param_index >= 0:
                         cis_print_func = 'xgl_print_%s' % (proto.params[cis_param_index].ty.strip('const ').strip('*').lower())
-                        log_func += '\n    printf("   pCreateInfo (%%p)\\n%%s\\n", (void*)pCreateInfo, %s(pCreateInfo, "    "));' % (cis_print_func)
+                        log_func += '\n    char *pTmpStr = %s(pCreateInfo, "    ");' % (cis_print_func)
+                        log_func += '\n    printf("   pCreateInfo (%p)\\n%s\\n", (void*)pCreateInfo, pTmpStr);'
+                        log_func += '\n    free(pTmpStr);'
                     if proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
