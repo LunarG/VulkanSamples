@@ -368,8 +368,9 @@ class parcel_out_uniform_storage : public program_resource_visitor {
 public:
    parcel_out_uniform_storage(struct string_to_uint_map *map,
 			      struct gl_uniform_storage *uniforms,
-			      union gl_constant_value *values)
-      : map(map), uniforms(uniforms), values(values)
+				  union gl_constant_value *values,
+				  bool xgl)
+	  : map(map), uniforms(uniforms), values(values), isXGL(xgl)
    {
    }
 
@@ -440,14 +441,27 @@ public:
                     var->get_interface_type()->name);
          else
             process(var);
-      } else
+      } else {
+
+         // Allow uniform binding to set sampler index for XGL
+         // This means both the texture unit and sampler unit will
+         // be bound based on the binding.  For instance:
+         //     layout (binding = 2) uniform sampler2D surface;
+         // will read from:
+         //     XGL_SLOT_SHADER_SAMPLER 2
+         //     XGL_SLOT_SHADER_RESOURCE 2
+         if (isXGL && var->type->is_sampler())
+             this->next_sampler = var->data.binding;
+
          process(var);
+      }
    }
 
    int ubo_block_index;
    int ubo_byte_offset;
    bool ubo_row_major;
    gl_shader_stage shader_type;
+   bool isXGL;
 
 private:
    void handle_samplers(const glsl_type *base_type,
@@ -794,7 +808,7 @@ link_set_image_access_qualifiers(struct gl_shader_program *prog)
 }
 
 void
-link_assign_uniform_locations(struct gl_shader_program *prog)
+link_assign_uniform_locations(struct gl_shader_program *prog, bool isXGL)
 {
    ralloc_free(prog->UniformStorage);
    prog->UniformStorage = NULL;
@@ -886,7 +900,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog)
    union gl_constant_value *data_end = &data[num_data_slots];
 #endif
 
-   parcel_out_uniform_storage parcel(prog->UniformHash, uniforms, data);
+   parcel_out_uniform_storage parcel(prog->UniformHash, uniforms, data, isXGL);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
