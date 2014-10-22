@@ -51,7 +51,7 @@ public:
     //    } XGL_IMAGE_USAGE_FLAGS;
 public:
     void init( XGL_UINT32 w, XGL_UINT32 h,
-                     XGL_FORMAT fmt, XGL_FLAGS usage);
+               XGL_FORMAT fmt, XGL_FLAGS usage);
 
     //    void clear( CommandBuffer*, XGL_UINT[4] );
     //    void prepare( CommandBuffer*, XGL_IMAGE_STATE );
