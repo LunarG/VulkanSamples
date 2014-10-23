@@ -173,7 +173,7 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    cis_param_index = -1 # Store index when func has pCreateInfo param
+                    cis_param_index = [] # Store list of indices when func has struct params
                     create_func = False
                     if 'Create' in proto.name:
                         create_func = True
@@ -190,8 +190,9 @@ class Subcommand(object):
                             (pft, pfi) = self._get_printf_params(p.ty, p.name, False)
                         log_func += '%s = %s, ' % (p.name, pft)
                         print_vals += ', %s' % (pfi)
-                        if "pCreateInfo" in p.name:
-                            cis_param_index = pindex
+                        # TODO : Just want this to be simple check for params of STRUCT type
+                        if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['XGL_CHAR', 'XGL_VOID', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'XGL_UINT32']]):
+                            cis_param_index.append(pindex)
                         pindex += 1
                     log_func = log_func.strip(', ')
                     if proto.ret != "XGL_VOID":
@@ -200,11 +201,14 @@ class Subcommand(object):
                     else:
                         log_func += ')\\n"'
                     log_func = '%s%s);' % (log_func, print_vals)
-                    if cis_param_index >= 0:
-                        cis_print_func = 'xgl_print_%s' % (proto.params[cis_param_index].ty.strip('const ').strip('*').lower())
-                        log_func += '\n    char *pTmpStr = %s(pCreateInfo, "    ");' % (cis_print_func)
-                        log_func += '\n    printf("   pCreateInfo (%p)\\n%s\\n", (void*)pCreateInfo, pTmpStr);'
-                        log_func += '\n    free(pTmpStr);'
+                    if len(cis_param_index) > 0:
+                        log_func += '\n    char *pTmpStr;'
+                        for sp_index in cis_param_index:
+                            cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                            log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                            log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
+                            log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            log_func += '\n        free(pTmpStr);\n    }'
                     if proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'

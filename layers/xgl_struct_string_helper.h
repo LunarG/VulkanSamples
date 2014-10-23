@@ -750,13 +750,13 @@ char* xgl_print_xgl_pipeline_vertex_input_create_info(const XGL_PIPELINE_VERTEX_
     }
     return str;
 }
-char* xgl_print_xgl_vertex_input_binding_description(const XGL_VERTEX_INPUT_BINDING_DESCRIPTION* pStruct, const char* prefix)
+/*char* xgl_print_xgl_vertex_input_binding_description(const XGL_VERTEX_INPUT_BINDING_DESCRIPTION* pStruct, const char* prefix)
 {
     char* str;
     str = (char*)malloc(sizeof(char)*1024);
     sprintf(str, "%sstrideInBytes = %u\n%sstepRate = %s\n", prefix, (pStruct->strideInBytes), prefix, string_XGL_VERTEX_INPUT_STEP_RATE(pStruct->stepRate));
     return str;
-}
+}*/
 char* xgl_print_xgl_offset3d(const XGL_OFFSET3D* pStruct, const char* prefix)
 {
     char* str;
