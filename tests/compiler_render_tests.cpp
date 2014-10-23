@@ -1757,6 +1757,50 @@ TEST_F(XglRenderTest, MixTriangle)
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
+TEST_F(XglRenderTest, BIL_MixTriangle)
+{
+    bool saved_use_bil = XglTestFramework::m_use_bil;
+
+    // This tests location applied to varyings. Notice that we have switched foo
+    // and bar in the FS. The triangle should be blended with red, green and blue
+    // corners.
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location=0) out vec4 bar;\n"
+            "layout (location=1) out vec4 foo;\n"
+            "layout (location=2) out vec4 scale;\n"
+            "vec2 vertices[3];\n"
+            "void main() {\n"
+            "      vertices[0] = vec2(-1.0, -1.0);\n"
+            "      vertices[1] = vec2( 1.0, -1.0);\n"
+            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "   foo = colors[gl_VertexID % 3];\n"
+            "   bar = vec4(1.0, 1.0, 1.0, 1.0);\n"
+            "   scale.x = 0.0;\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+       "#version 140\n"
+       "#extension GL_ARB_separate_shader_objects : enable\n"
+       "#extension GL_ARB_shading_language_420pack : enable\n"
+       "layout (location=1) in vec4 bar;\n"
+       "layout (location=0) in vec4 foo;\n"
+       "layout (location=2) in vec4 scale;\n"
+       "void main() {\n"
+       "   gl_FragColor = bar + foo * scale.x;\n"
+       "}\n";
+    XglTestFramework::m_use_bil = true;
+    DrawTriangleTest(vertShaderText, fragShaderText);
+    XglTestFramework::m_use_bil = saved_use_bil;
+}
+
 TEST_F(XglRenderTest, TriangleFragUniform)
 {
 
