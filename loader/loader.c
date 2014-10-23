@@ -629,6 +629,8 @@ static XGL_UINT loader_get_layer_env(XGL_CHAR * *ppLayerNames)
     char *p, *pOrig, *next, *name;
 
     layerEnv = getenv("LIBXGL_LAYER_LIBS");
+    if (!layerEnv)
+        return 0;
     p = malloc(strlen(layerEnv) + 1);
     if (!p)
         return 0;
