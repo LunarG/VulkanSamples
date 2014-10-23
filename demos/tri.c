@@ -554,7 +554,7 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
     static const char *fragShaderText =
-            "#version 430\n"
+            "#version 130\n"
             "void main() {\n"
             "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "}\n";
