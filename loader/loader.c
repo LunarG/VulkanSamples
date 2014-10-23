@@ -25,7 +25,7 @@
  *   Chia-I Wu <olv@lunarg.com>
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -42,13 +42,19 @@
 
 typedef XGL_VOID (* SetDispatchType)(XGL_LAYER_DISPATCH_TABLE * disp, XGL_BOOL debug);
 
+struct loader_layers {
+    void *lib_handle;
+    char lib_name[1024];
+};
+
 struct loader_icd {
     void *handle;
 
     XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
-    bool layers_activated;
+    XGL_UINT layer_count[XGL_MAX_PHYSICAL_GPUS];
+    struct loader_layers layer_libs[XGL_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
     XGL_UINT gpu_count;
-    XGL_BASE_LAYER_OBJECT *gpu;
+    XGL_BASE_LAYER_OBJECT *gpus;
 
     GetProcAddrType GetProcAddr;
     InitAndEnumerateGpusType InitAndEnumerateGpus;
@@ -60,10 +66,6 @@ struct loader_icd {
     struct loader_icd *next;
 };
 
-struct loader_layers {
-    void *lib_handle;
-    char lib_name[1024];
-};
 
 struct loader_msg_callback {
     XGL_DBG_MSG_CALLBACK_FUNCTION func;
@@ -76,10 +78,10 @@ struct loader_msg_callback {
 static struct {
     bool scanned;
     struct loader_icd *icds;
-    XGL_UINT layer_count;
-    bool layer_scaned;
+    bool layer_scanned;
     char layer_dirs[4096];
-    struct loader_layers layer_libs[MAX_LAYER_LIBRARIES];
+    unsigned int scanned_layer_count;
+    char *scanned_layer_names[MAX_LAYER_LIBRARIES];
     struct loader_msg_callback *msg_callbacks;
 
     bool debug_echo_enable;
@@ -371,13 +373,14 @@ static void loader_icd_scan(void)
 #define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
 #endif
 
-static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs, const bool openLibs)
+static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs)
 {
     const char *p, *next;
     char *libPaths = &loader.layer_dirs[0];
     DIR *curdir;
     struct dirent *dent;
-    int len, i, n;
+    int len, i;
+    char temp_str[1024];
 
     if (libInPaths){
         strncpy(libPaths, libInPaths, sizeof(loader.layer_dirs));
@@ -387,12 +390,12 @@ static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs, c
     }
 
     /* cleanup any previously scanned libraries */
-    for (i = 0; i < loader.layer_count; i++) {
-        if (loader.layer_libs[i].lib_handle != NULL)
-            dlclose(loader.layer_libs[i].lib_handle);
-        loader.layer_libs[i].lib_handle = NULL;
+    for (i = 0; i < loader.scanned_layer_count; i++) {
+        if (loader.scanned_layer_names[i] != NULL)
+            free(loader.scanned_layer_names[i]);
+        loader.scanned_layer_names[i] = NULL;
     }
-    loader.layer_count = 0;
+    loader.scanned_layer_count = 0;
 
     if (useDefaultDirs)
        strncat(libPaths, DEFAULT_XGL_LAYERS_PATH, sizeof(loader.layer_dirs) - sizeof(DEFAULT_XGL_LAYERS_PATH));
@@ -413,16 +416,23 @@ static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs, c
        if (curdir) {
           dent = readdir(curdir);
           while (dent) {
-              n = loader.layer_count;
              /* look for wrappers starting with "libXGLlayer" */
              if (!strncmp(dent->d_name, "libXGLLayer", strlen("libXGLLayer"))) {
-                snprintf((char *) &(loader.layer_libs[n].lib_name), sizeof(loader.layer_libs[0].lib_name), "%s/%s",p,dent->d_name);
-                if ((loader.layer_libs[n].lib_handle = dlopen((const char *) &(loader.layer_libs[n].lib_name), RTLD_LAZY)) == NULL)
+                void * handle;
+                snprintf(temp_str, sizeof(temp_str), "%s/%s",p,dent->d_name);
+                if ((handle = dlopen((const char *) temp_str, RTLD_LAZY)) == NULL)
                     continue;
-
-                loader.layer_count++;
-                if (!openLibs)
-                    dlclose(loader.layer_libs[n].lib_handle);
+                if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
+                    loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
+                    break;
+                }
+                if ((loader.scanned_layer_names[loader.scanned_layer_count] = malloc(strlen(temp_str) + 1)) == NULL) {
+                     loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: out of memory", temp_str);
+                     break;
+                }
+                strcpy(loader.scanned_layer_names[loader.scanned_layer_count], temp_str);
+                loader.scanned_layer_count++;
+                dlclose(handle);
              }
 
              dent = readdir(curdir);
@@ -431,63 +441,7 @@ static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs, c
        }
     }
 
-    loader.layer_scaned = true;
-}
-
-#if 0
-static bool layer_lib_sort(char * str, const XGL_UINT count)
-{
-    XGL_UINT i;
-    struct loader_layers temp, *cur, *start;
-
-    start = &loader.layer_libs[count];
-    for (i = count; i < loader.layer_count; i++) {
-        cur = &loader.layer_libs[i];
-
-        if (!strcmp(str, cur->lib_name) && cur->lib_handle != NULL) {
-            if (count == i)
-                return true;
-            strcpy(temp.lib_name, cur->lib_name);
-            temp.lib_handle = cur->lib_handle;
-            strcpy(cur->lib_name, start->lib_name);
-            cur->lib_handle = start->lib_handle;
-            strcpy(start->lib_name, temp.lib_name);
-            start->lib_handle = temp.lib_handle;
-            return true;
-        }
-    }
-    return false;
-}
-#endif
-LOADER_EXPORT XGL_RESULT XGLAPI ScanForLayers(const XGL_CHAR* pLibraryDirectories, XGL_CHAR * pStr)
-{
-    size_t size = 0;
-    XGL_UINT i;
-    static XGL_CHAR *lib_str=NULL;
-
-    if (!pLibraryDirectories)
-        return XGL_ERROR_INVALID_POINTER;
-
-    if (strlen((const char *) pLibraryDirectories) > sizeof(loader.layer_dirs))
-        return XGL_ERROR_INVALID_POINTER;
-
-    layer_lib_scan((const char *) pLibraryDirectories, true, false);
-
-    for (i = 0; i < loader.layer_count; i++) {
-        size += strlen(loader.layer_libs[i].lib_name) + 1;
-    }
-
-    free(lib_str);
-    lib_str = malloc(size);
-    if (!lib_str)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-   pStr = lib_str;
-   for (i = 0; i < loader.layer_count; i++) {
-        strncat((char *) pStr, loader.layer_libs[i].lib_name, strlen(loader.layer_libs[i].lib_name));
-        strcat((char *) pStr, ":");
-    }
-    return XGL_SUCCESS;
+    loader.layer_scanned = true;
 }
 
 static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
@@ -620,7 +574,7 @@ static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, XGL_
 {
     for (struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
         for (XGL_UINT i = 0; i < icd->gpu_count; i++)
-            if ((icd->gpu + i) == gpu) {
+            if ((icd->gpus + i) == gpu || (icd->gpus +i)->baseObject == gpu->baseObject) {
                 *gpu_index = i;
                 return icd;
             }
@@ -628,84 +582,60 @@ static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, XGL_
     return NULL;
 }
 
-static void loader_deactivate_layer()
+static bool loader_layers_activated(const struct loader_icd *icd, const XGL_UINT gpu_index)
 {
-    struct loader_icd *icd;
-
-    for (icd = loader.icds; icd; icd = icd->next) {
-        //TODO clean up the wrapped gpu structs malloced during layer activation
-        if (icd->gpu)
-            free(icd->gpu);
-        icd->gpu = NULL;
-        icd->gpu_count = 0;
-        if (icd->loader_dispatch)
-            free(icd->loader_dispatch);
-        icd->loader_dispatch = NULL;
-        icd->SetDispatch(NULL, true);
-        icd->layers_activated = false;
-    }
+    if (icd->layer_count[gpu_index])
+        return true;
+    else
+        return false;
 }
 
-extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu)
+static void loader_init_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index, XGL_CHAR ** ppLayerNames, XGL_UINT count)
 {
-    XGL_UINT gpu_index;
-    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) *gpu, &gpu_index);
+    if (!icd)
+        return;
 
-    /* activate any layer libraries */
-    // TODO layer active list should be per icd/gpu rather than global
-    if (loader.layer_count > 0 && !icd->layers_activated) {
-
-        // TODO For now just assume  all layers scanned will be  activated in the order they were scanned
-        XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) *gpu;
-        XGL_BASE_LAYER_OBJECT *nextGpuObj;
-        GetProcAddrType nextGPA = xglGetProcAddr;
-        for (XGL_INT i = loader.layer_count - 1; i >= 0; i--) {
-
-            if ((loader.layer_libs[i].lib_handle = dlopen((const char *) &(loader.layer_libs[i].lib_name), RTLD_LAZY | RTLD_DEEPBIND)) == NULL) {
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to open layer library %s got error %d", loader.layer_libs[i].lib_name, dlerror());
+    struct loader_layers *obj;
+    bool foundLib;
+    for (XGL_UINT i = 0; i < count; i++) {
+        foundLib = false;
+        for (XGL_UINT j = 0; j < icd->layer_count[gpu_index]; j++) {
+            if (icd->layer_libs[gpu_index][j].lib_handle && !strcmp(icd->layer_libs[gpu_index][j].lib_name, (char *) ppLayerNames[i])) {
+                foundLib = true;
+                break;
+            }
+        }
+        if (!foundLib) {
+            obj = &(icd->layer_libs[gpu_index][i]);
+            strncpy(obj->lib_name, (char *) ppLayerNames[i], sizeof(obj->lib_name) - 1);
+            obj->lib_name[sizeof(obj->lib_name) - 1] = '\0';
+            if ((obj->lib_handle = dlopen(obj->lib_name, RTLD_LAZY | RTLD_DEEPBIND)) == NULL) {
+                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to open layer library %s got error %d", obj->lib_name, dlerror());
                 continue;
             } else {
-                loader_log(XGL_DBG_MSG_UNKNOWN, 0, "Inserting layer lib %s",loader.layer_libs[i].lib_name);
+                loader_log(XGL_DBG_MSG_UNKNOWN, 0, "Inserting layer lib %s", obj->lib_name);
             }
 
-            //create newly wrapped gpu object
-            nextGpuObj = malloc(sizeof(XGL_BASE_LAYER_OBJECT));
-            if (! nextGpuObj)
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to malloc Gpu object for layer");
-            nextGpuObj->pGPA = nextGPA;
-            nextGpuObj->baseObject = gpuObj->baseObject;
-            nextGpuObj->nextObject = gpuObj;
-            gpuObj = nextGpuObj;
-
-            nextGPA = dlsym(loader.layer_libs[i].lib_handle, "xglGetProcAddr");
-            if (!nextGPA) {
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to find xglGetProcAddr in layer %s", loader.layer_libs[i].lib_name);
-                continue;
-            }
-
-            if (i == 0)
-                loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, gpuObj);
-
+            icd->layer_count[gpu_index]++;
         }
-        *gpu = ((XGL_PHYSICAL_GPU *) gpuObj);
-        icd->layers_activated = true;
     }
-    return loader.layer_count;
 }
 
-#if 0
-LOADER_EXPORT XGL_RESULT xglSetLayers(const XGL_CHAR * pStr)
+static XGL_UINT loader_get_layer_env(XGL_CHAR * *ppLayerNames)
 {
-    char *p, *next, *str;
-    int len;
-    XGL_UINT count= 0;
+    const char *layerEnv;
+    XGL_UINT len, count = 0;
+    char *p, *next, *name;
 
-    if (!pStr)
-        return XGL_ERROR_INVALID_POINTER;
+    layerEnv = getenv("LIBXGL_LAYER_LIBS");
+    p = malloc(strlen(layerEnv) + 1);
+    if (!p)
+        return 0;
+    strcpy(p, layerEnv);
 
-    p= (char *) pStr;
-    str = malloc(strlen(p) + 1);
-    do {
+    while (p && *p && count < MAX_LAYER_LIBRARIES) {
+        bool foundScanned = false;
+        unsigned int j;
         next = strchr(p, ':');
         if (next == NULL) {
             len = strlen(p);
@@ -716,26 +646,163 @@ LOADER_EXPORT XGL_RESULT xglSetLayers(const XGL_CHAR * pStr)
             *(char *) next = '\0';
             next++;
         }
+        name = basename(p);
+        for (j = 0; j < loader.scanned_layer_count; j++) {
+            if (!strcmp(basename(loader.scanned_layer_names[j]), name)) {
+                foundScanned = true;
+                break;
+            }
+        }
+        if (!foundScanned) {
+            p = next;
+            continue;
+        }
 
-        strncpy(str, p, len);
-        str[len] = '\0';
-        if (layer_lib_sort(str, count))
-           count++;
+        //copy to convert any dir path differences between scanned and base names
+        len = strlen(loader.scanned_layer_names[j]);
+        ppLayerNames[count] = malloc(len + 1);
+        if (!ppLayerNames[count])
+            return count;
+        strncpy((char *) ppLayerNames[count], loader.scanned_layer_names[j], len);
+        ppLayerNames[count][len] = '\0';
+        count++;
         p = next;
 
-    } while (*p  && count < MAX_LAYER_LIBRARIES-1);
+    };
 
-    for (int i = count; i < loader.layer_count; i++) {
-        loader.layer_libs[i].lib_handle = NULL;
-    }
-
-    loader.layer_count = count;
-    free(str);
-
-    return XGL_SUCCESS;
+    return count;
 }
 
-#endif
+static XGL_UINT loader_get_layer_libs(const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_CHAR *** ppLayerNames)
+{
+    static XGL_CHAR *layerNames[MAX_LAYER_LIBRARIES];
+
+    *ppLayerNames =  &layerNames[0];
+    if (!pCreateInfo) {
+        return loader_get_layer_env(layerNames);
+    }
+
+    XGL_LAYER_CREATE_INFO *pCi = (XGL_LAYER_CREATE_INFO *) pCreateInfo->pNext;
+
+    while (pCi) {
+        if (pCi->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) {
+            const char *name;
+            XGL_UINT len;
+            unsigned int j;
+            for (XGL_UINT i = 0; i < pCi->layerCount; i++) {
+                bool foundScanned = false;
+                name = (const char *) *(pCi->ppActiveLayerNames + i);
+                for (j = 0; j < loader.scanned_layer_count; j++) {
+                    if (!strcmp(basename(loader.scanned_layer_names[j]), basename(name))) {
+                        foundScanned = true;
+                        break;
+                    }
+                }
+                if (!foundScanned)
+                    return loader_get_layer_env(layerNames);
+                //copy to convert any dir path differences between scanned and base names
+                len = strlen(loader.scanned_layer_names[j]);
+                layerNames[i] = malloc(len + 1);
+                if (!layerNames[i])
+                    return i;
+                strncpy((char *) layerNames[i], loader.scanned_layer_names[j], len);
+                layerNames[i][len] = '\0';
+            }
+            return pCi->layerCount;
+        }
+        pCi = pCi->pNext;
+    }
+    return loader_get_layer_env(layerNames);
+}
+
+static void loader_deactivate_layer()
+{
+    struct loader_icd *icd;
+    struct loader_layers *libs;
+
+    for (icd = loader.icds; icd; icd = icd->next) {
+        //TODO clean up the wrapped gpu structs malloced during layer activation
+        if (icd->gpus)
+            free(icd->gpus);
+        icd->gpus = NULL;
+        if (icd->loader_dispatch)
+            free(icd->loader_dispatch);
+        icd->loader_dispatch = NULL;
+        icd->SetDispatch(NULL, true);
+        for (XGL_UINT j = 0; j < icd->gpu_count; j++) {
+            if (icd->layer_count[j] > 0) {
+                for (XGL_UINT i = 0; i < icd->layer_count[j]; i++) {
+                    libs = &(icd->layer_libs[j][i]);
+                    if (libs->lib_handle)
+                        dlclose(libs->lib_handle);
+                    libs->lib_handle = NULL;
+                }
+            }
+            icd->layer_count[j] = 0;
+        }
+        icd->gpu_count = 0;
+    }
+}
+
+extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
+{
+    XGL_UINT gpu_index;
+    XGL_UINT count;
+    XGL_CHAR ** ppLayerNames;
+    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) *gpu, &gpu_index);
+
+    if (!icd)
+        return 0;
+    assert(gpu_index < XGL_MAX_PHYSICAL_GPUS);
+
+    /* activate any layer libraries */
+    if (!loader_layers_activated(icd, gpu_index)) {
+        XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) *gpu;
+        XGL_BASE_LAYER_OBJECT *nextGpuObj;
+        GetProcAddrType nextGPA = xglGetProcAddr;
+
+        count = loader_get_layer_libs(pCreateInfo, &ppLayerNames);
+        if (!count)
+            return 0;
+        loader_init_layer_libs(icd, gpu_index, ppLayerNames, count);
+
+        for (XGL_INT i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
+            //create newly wrapped gpu object
+            nextGpuObj = malloc(sizeof(XGL_BASE_LAYER_OBJECT));
+            if (! nextGpuObj)
+                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to malloc Gpu object for layer");
+            nextGpuObj->pGPA = nextGPA;
+            nextGpuObj->baseObject = gpuObj->baseObject;
+            nextGpuObj->nextObject = gpuObj;
+            gpuObj = nextGpuObj;
+
+            nextGPA = dlsym(icd->layer_libs[gpu_index][i].lib_handle, "xglGetProcAddr");
+            if (!nextGPA) {
+                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to find xglGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].lib_name);
+                continue;
+            }
+
+            if (i == 0)
+                loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, gpuObj);
+
+        }
+        *gpu = ((XGL_PHYSICAL_GPU *) gpuObj);
+    }
+    else {
+        //make sure requested Layers matches currently activated Layers
+        count = loader_get_layer_libs(pCreateInfo, &ppLayerNames);
+        for (XGL_UINT i = 0; i < count; i++) {
+            if (strcmp(icd->layer_libs[gpu_index][i].lib_name, (char *) *(ppLayerNames + i))) {
+                loader_log(XGL_DBG_MSG_ERROR, 0, "Layers activated != Layers requested");
+                break;
+            }
+        }
+        if (count != icd->layer_count[gpu_index]) {
+            loader_log(XGL_DBG_MSG_ERROR, 0, "Number of Layers activated!= number requested");
+        }
+    }
+    return icd->layer_count[gpu_index];
+}
 
 LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName) {
 
@@ -1024,7 +1091,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
         res = icd->InitAndEnumerateGpus(pAppInfo, pAllocCb, max, &n, gpus);
         if (res == XGL_SUCCESS && n) {
             wrappedGpus = (XGL_BASE_LAYER_OBJECT*) malloc(n * sizeof(XGL_BASE_LAYER_OBJECT));
-            icd->gpu = wrappedGpus;
+            icd->gpus = wrappedGpus;
             icd->gpu_count = n;
             icd->loader_dispatch = (XGL_LAYER_DISPATCH_TABLE *) malloc(n * sizeof(XGL_LAYER_DISPATCH_TABLE));
             for (int i = 0; i < n; i++) {
@@ -1049,8 +1116,8 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     }
 
     /* get layer libraries */
-    if (!loader.layer_scaned)
-        layer_lib_scan(NULL, true, false);
+    if (!loader.layer_scanned)
+        layer_lib_scan(NULL, true);
 
     *pGpuCount = count;
 
@@ -1059,20 +1126,20 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
 
 LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount)
 {
-    XGL_SIZE count = loader.layer_count;
+    XGL_SIZE count = loader.scanned_layer_count;
     // TODO handle layers per GPU, multiple icds
 
     if (pOutLayerCount == NULL)
         return XGL_ERROR_INVALID_POINTER;
 
-    if (maxLayerCount < loader.layer_count)
+    if (maxLayerCount < loader.scanned_layer_count)
         count = maxLayerCount;
     *pOutLayerCount = count;
 
     if (pOutLayers == NULL)
         return XGL_SUCCESS;
     for (XGL_SIZE i = 0; i < count; i++) {
-        strncpy((char *) (pOutLayers[i]), loader.layer_libs[i].lib_name, maxStringSize);
+        strncpy((char *) (pOutLayers[i]), loader.scanned_layer_names[i], maxStringSize);
         if (maxStringSize > 0)
             pOutLayers[i][maxStringSize - 1] = '\0';
     }

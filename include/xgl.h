@@ -871,6 +871,7 @@ typedef enum _XGL_STRUCTURE_TYPE
 // IMG CHANGE BEGIN - support for vertex input description
     XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 34,
 // IMG CHANGE END
+    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                   = 35,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1117,6 +1118,14 @@ typedef struct _XGL_DEVICE_CREATE_INFO
     XGL_VALIDATION_LEVEL                    maxValidationLevel;
     XGL_FLAGS                               flags;                      // XGL_DEVICE_CREATE_FLAGS
 } XGL_DEVICE_CREATE_INFO;
+
+typedef struct _XGL_LAYER_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Should be XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO
+    XGL_VOID*                               pNext;                      // Pointer to next structure
+    XGL_UINT                                layerCount;
+    const XGL_CHAR *const*                  ppActiveLayerNames;         // layer library name of form libXGLLayer<Name>.so
+} XGL_LAYER_CREATE_INFO;
 
 typedef struct _XGL_PHYSICAL_GPU_QUEUE_PROPERTIES
 {

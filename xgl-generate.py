@@ -124,13 +124,13 @@ class Subcommand(object):
                 if proto.name == "CreateDevice" and qual == "LOADER_EXPORT ":
                     funcs.append("%s%s\n"
                              "{\n"
-                             "    ActivateLayers(&%s);\n"
+                             "    ActivateLayers(&%s, %s);\n"
                              "    XGL_BASE_LAYER_OBJECT* wrapped_obj = (XGL_BASE_LAYER_OBJECT*)%s;\n"
                              "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
                              "            (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj->baseObject;\n"
                              "    %s = wrapped_obj->nextObject;\n"
                              "    %s;\n"
-                             "}" % (qual, decl, proto.params[0].name, proto.params[0].name, proto.params[0].name, stmt))
+                             "}" % (qual, decl, proto.params[0].name, proto.params[1].name, proto.params[0].name, proto.params[0].name, stmt))
                 elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                     funcs.append("%s%s\n"
                              "{\n"
