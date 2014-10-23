@@ -53,6 +53,7 @@ struct loader_icd {
     XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
     XGL_UINT layer_count[XGL_MAX_PHYSICAL_GPUS];
     struct loader_layers layer_libs[XGL_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
+    XGL_BASE_LAYER_OBJECT *wrappedGpus[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT gpu_count;
     XGL_BASE_LAYER_OBJECT *gpus;
 
@@ -615,7 +616,7 @@ static void loader_init_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index, X
             } else {
                 loader_log(XGL_DBG_MSG_UNKNOWN, 0, "Inserting layer lib %s", obj->lib_name);
             }
-
+            free(ppLayerNames[i]);
             icd->layer_count[gpu_index]++;
         }
     }
@@ -625,13 +626,14 @@ static XGL_UINT loader_get_layer_env(XGL_CHAR * *ppLayerNames)
 {
     const char *layerEnv;
     XGL_UINT len, count = 0;
-    char *p, *next, *name;
+    char *p, *pOrig, *next, *name;
 
     layerEnv = getenv("LIBXGL_LAYER_LIBS");
     p = malloc(strlen(layerEnv) + 1);
     if (!p)
         return 0;
     strcpy(p, layerEnv);
+    pOrig = p;
 
     while (p && *p && count < MAX_LAYER_LIBRARIES) {
         bool foundScanned = false;
@@ -661,8 +663,10 @@ static XGL_UINT loader_get_layer_env(XGL_CHAR * *ppLayerNames)
         //copy to convert any dir path differences between scanned and base names
         len = strlen(loader.scanned_layer_names[j]);
         ppLayerNames[count] = malloc(len + 1);
-        if (!ppLayerNames[count])
+        if (!ppLayerNames[count]) {
+            free(pOrig);
             return count;
+        }
         strncpy((char *) ppLayerNames[count], loader.scanned_layer_names[j], len);
         ppLayerNames[count][len] = '\0';
         count++;
@@ -670,6 +674,7 @@ static XGL_UINT loader_get_layer_env(XGL_CHAR * *ppLayerNames)
 
     };
 
+    free(pOrig);
     return count;
 }
 
@@ -721,7 +726,6 @@ static void loader_deactivate_layer()
     struct loader_layers *libs;
 
     for (icd = loader.icds; icd; icd = icd->next) {
-        //TODO clean up the wrapped gpu structs malloced during layer activation
         if (icd->gpus)
             free(icd->gpus);
         icd->gpus = NULL;
@@ -737,6 +741,8 @@ static void loader_deactivate_layer()
                         dlclose(libs->lib_handle);
                     libs->lib_handle = NULL;
                 }
+                if (icd->wrappedGpus[j])
+                    free(icd->wrappedGpus[j]);
             }
             icd->layer_count[j] = 0;
         }
@@ -766,11 +772,11 @@ extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu, const XGL_DEVICE_CREATE_IN
             return 0;
         loader_init_layer_libs(icd, gpu_index, ppLayerNames, count);
 
+        icd->wrappedGpus[gpu_index] = malloc(sizeof(XGL_BASE_LAYER_OBJECT) * icd->layer_count[gpu_index]);
+        if (! icd->wrappedGpus[gpu_index])
+                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to malloc Gpu objects for layer");
         for (XGL_INT i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
-            //create newly wrapped gpu object
-            nextGpuObj = malloc(sizeof(XGL_BASE_LAYER_OBJECT));
-            if (! nextGpuObj)
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to malloc Gpu object for layer");
+            nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
             nextGpuObj->baseObject = gpuObj->baseObject;
             nextGpuObj->nextObject = gpuObj;

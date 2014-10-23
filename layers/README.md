@@ -18,11 +18,11 @@ layer/basic_plugin.c  - simple example
 Using Layers::
 Build XGL loader  and i965 icd driver using normal steps (cmake and make)
 Place libXGLLayer<name>.so in the same directory as your XGL test or app:
-  cp build/layer/libXGLLayerBasic.so build/tests
+  cp build/layer/libXGLLayerBasic.so build/layer/libXGLLayerGeneric.so build/tests
 
 Specify which Layers to activate by using xglCreateDevice XGL_LAYER_CREATE_INFO struct or
 environment variable LIBXGL_LAYERS_LIB
-   export LIBXGL_LAYERS_LIB=libXGLLayerBasic.so
+   export LIBXGL_LAYERS_LIB=libXGLLayerBasic.so:LibXGLLayerGeneric.so
    cd build/tests; ./xglinfo
 
 
@@ -39,7 +39,6 @@ Current Features:
 -layer libraries can be LD_PRELOADed
 
 Current known issues:
--memory leak of gpu wrapped objects
 -layer libraries don't support multiple dispatch tables for multi-gpus
 -layers  with extension APIs  not yet tested or supported
 -layer libraries not yet include loader init functionality for full  LD_PRELOAD of
