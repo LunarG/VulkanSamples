@@ -378,6 +378,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
     XGL_RESULT result = nextTable.DestroyDevice(device);
     printf("OBJ[%llu] : DESTROY device object %p\n", object_track_index++, (void*)device);
     ll_remove_obj((XGL_VOID*)device);
+    // Report any remaining objects in LL
+    objNode *pTrav = pObjLLHead;
+    while (pTrav) {
+        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\n", pTrav->objType, pTrav->pObj, pTrav->numUses);
+        pTrav = pTrav->pNext;
+    }
     return result;
 }
 

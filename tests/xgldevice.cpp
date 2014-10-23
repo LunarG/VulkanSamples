@@ -51,6 +51,15 @@ void XglDevice::init_device()
     }
 }
 
+void XglDevice::destroy_device()
+{
+    if (m_xgl_device_object)
+    {
+        XGL_RESULT err = xglDestroyDevice(m_xgl_device_object);
+        ASSERT_XGL_SUCCESS(err);
+    }
+}
+
 void XglDevice::init_formats()
 {
     for (int chInt = XGL_CH_FMT_UNDEFINED; chInt < XGL_MAX_CH_FMT; chInt++) {

@@ -256,6 +256,7 @@ protected:
 
     virtual void TearDown() {
         xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
+        m_device->destroy_device();
     }
 };
 
