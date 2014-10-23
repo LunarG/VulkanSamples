@@ -197,6 +197,7 @@ public:
     void ClearRenderBuffer(XGL_UINT32 clear_color);
     void InitDepthStencil();
     void DrawRotatedTriangleTest();
+    void GenerateClearAndPrepareBufferCmds();
 
 
 protected:
@@ -836,6 +837,41 @@ void dumpVec4(const char *note, glm::vec4 vector)
     fflush(stdout);
 }
 
+void XglRenderTest::GenerateClearAndPrepareBufferCmds()
+{
+    XglRenderFramework::GenerateClearAndPrepareBufferCmds();
+
+    if (0) {
+//    if (m_depthStencilImage) {
+        XGL_IMAGE_SUBRESOURCE_RANGE dsRange = {};
+        dsRange.aspect = XGL_IMAGE_ASPECT_DEPTH;
+        dsRange.baseMipLevel = 0;
+        dsRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
+        dsRange.baseArraySlice = 0;
+        dsRange.arraySize = XGL_LAST_MIP_OR_SLICE;
+
+        // prepare the depth buffer for clear
+        XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
+        transitionToClear.image = m_depthStencilImage;
+        transitionToClear.oldState = m_depthStencilBinding.depthState;
+        transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
+        transitionToClear.subresourceRange = dsRange;
+        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
+        m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
+
+        xglCmdClearDepthStencil(m_cmdBuffer, m_depthStencilImage, 1.0f, 0, 1, &dsRange);
+
+        // prepare depth buffer for rendering
+        XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
+        transitionToRender.image = m_renderTarget->image();
+        transitionToRender.oldState = XGL_IMAGE_STATE_CLEAR;
+        transitionToRender.newState = m_depthStencilBinding.depthState;
+        transitionToRender.subresourceRange = dsRange;
+        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
+        m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
+    }
+}
+
 void XglRenderTest::DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText, const char *fragShaderText)
 {
     XGL_PIPELINE pipeline;
@@ -935,7 +971,7 @@ void XglRenderTest::DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText
     RecordImage(m_renderTarget);
 
     for (loop = 0; loop < 16; loop++) {
-        ClearRenderBuffer(0x80); // HACK
+//        ClearRenderBuffer(0x80); // HACK
         ClearDepthStencil(1.0f); // HACK for now
 
         // TODO: Do we need to transition the constant buffer?
@@ -944,7 +980,7 @@ void XglRenderTest::DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText
         ASSERT_XGL_SUCCESS(err);
 
         Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
-        dumpMatrix("Model", Model);
+//        dumpMatrix("Model", Model);
         glm::mat4 MVP = Projection * View * Model;
 //        dumpMatrix("MVP", MVP);
 
