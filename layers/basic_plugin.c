@@ -144,7 +144,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     printf("At start of wrapped xglGetGpuInfo() call w/ gpu: %p\n", (void*)gpu);
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&tabOnce, initLayerTable);  //Required for LD_PRELOAD case
     XGL_RESULT result = myTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
     printf("Completed wrapped xglGetGpuInfo() call w/ gpu: %p\n", (void*)gpu);
     return result;
@@ -155,7 +155,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     printf("At start of wrapped xglCreateDevice() call w/ gpu: %p\n", (void*)gpu);
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable); 
+    pthread_once(&tabOnce, initLayerTable);   //Required for LD_PRELOAD case
     XGL_RESULT result = myTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     printf("Completed wrapped xglCreateDevice() call w/ pDevice: %p\n", (void*)pDevice);
     return result;

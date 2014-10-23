@@ -12,19 +12,25 @@ activated at xglCreateDevice time. xglCreateDevice createInfo struct is extended
 a list of layers to be activated.  Layer libraries can alternatively be LD_PRELOADed.
 
 Layer library example code:
-layer/basic_plugin.c - simple example
-<build dir>/layer/generic_layer.c - auto generated example wrapping all XGL entrypoints
+include/xglLayer.h  - header file for layer code
+layer/basic_plugin.c  - simple example wrapping three entrypoints. Single global dispatch
+                        table for either single gpu/device or multi-gpu with same activated
+                        layers for each device. Can be LD_PRELOADed individually.
+<build dir>/layer/generic_layer.c  - auto generated example wrapping all XGL entrypoints.
+                                     Single global dispatch table. Can be LD_PRELOADed.
 <build dir>/layer/api_dump.c - print out API calls along with parameter values
 <build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats
 
-Using Layers::
-Build XGL loader and i965 icd driver using normal steps (cmake and make)
-Place libXGLLayer<name>.so in the same directory as your XGL test or app:
-  cp build/layer/libXGLLayerBasic.so build/layer/libXGLLayerGeneric.so build/tests
+Using Layers:
+1) Build XGL loader  and i965 icd driver using normal steps (cmake and make)
 
-Specify which Layers to activate by using xglCreateDevice XGL_LAYER_CREATE_INFO struct or
-environment variable LIBXGL_LAYERS_LIB
-   export LIBXGL_LAYERS_LIB=libXGLLayerBasic.so:LibXGLLayerGeneric.so
+2) Place libXGLLayer<name>.so in the same directory as your XGL test or app:
+  cp build/layer/libXGLLayerBasic.so build/layer/libXGLLayerGeneric.so build/tests
+This is required for the Icd loader to be able to scan and enumerate your library.
+
+3) Specify which Layers to activate by using xglCreateDevice XGL_LAYER_CREATE_INFO struct or
+environment variable LIBXGL_LAYER_LIBS
+   export LIBXGL_LAYER_LIBS=libXGLLayerBasic.so:LibXGLLayerGeneric.so
    cd build/tests; ./xglinfo
 
 
@@ -33,8 +39,8 @@ Current Features:
 -scanning of available Layers during xglInitAndEnumerateGpus
 -xglEnumerateLayers and xglGetProcAddr supported APIs in xgl.h, ICD loader and i965 driver
 -multiple layers in a hierarchy supported
--layer enumeration works
--layers activated per gpu and per icd driver: separate dispatch table and layer library
+-layer enumeration supported
+-layers  activated per gpu and per icd driver: separate  dispatch table and layer library
    list in loader for each gpu or icd driver
 -activation via xglCreateDevice extension struct in CreateInfo or via env var
    (LIBXGL_LAYER_LIBS)
