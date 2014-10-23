@@ -146,6 +146,7 @@ public:
     void DrawTriangleVSUniformBlock(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleVSFSUniformBlock(const char *vertShaderText, const char *fragShaderText);
     void DrawTexturedTriangle(const char *vertShaderText, const char *fragShaderText);
+    void DrawVSTexture(const char *vertShaderText, const char *fragShaderText);
 
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
@@ -1284,38 +1285,56 @@ void XglRenderTest::CreatePipelineSingleTextureAndSampler(XGL_PIPELINE* pipeline
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
 
-    const int psSlots = 2; // One texture, one sampler
+    const int vsSlots = 2; // One texture, one sampler
 
     // Create descriptor set for single texture and sampler
-    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
-    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-    descriptorInfo.slots = psSlots;
-    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    XGL_DESCRIPTOR_SET_CREATE_INFO vsDescriptorInfo = {};
+    vsDescriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    vsDescriptorInfo.slots = vsSlots;
+    err = xglCreateDescriptorSet( device(), &vsDescriptorInfo, &m_rsrcDescSet );
     ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
     err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
 
     // Assign the slots, note that only t0 and s0 will work as of writing this test
-    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( psSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
-    slotInfo[0].shaderEntityIndex = 0;
-    slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
-    slotInfo[1].shaderEntityIndex = 0;
-    slotInfo[1].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
+    XGL_DESCRIPTOR_SLOT_INFO *vsSlotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( vsSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    vsSlotInfo[0].shaderEntityIndex = 0;
+    vsSlotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    vsSlotInfo[1].shaderEntityIndex = 0;
+    vsSlotInfo[1].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs_stage.shader.shader = vs;
-    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) vsSlotInfo;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = vsSlots;
     vs_stage.shader.linkConstBufferCount = 0;
     vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
+    const int psSlots = 2; // One texture, one sampler
+
+    // Create descriptor set for single texture and sampler
+    XGL_DESCRIPTOR_SET_CREATE_INFO psDescriptorInfo = {};
+    psDescriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    psDescriptorInfo.slots = psSlots;
+    err = xglCreateDescriptorSet( device(), &psDescriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // Assign the slots, note that only t0 and s0 will work as of writing this test
+    XGL_DESCRIPTOR_SLOT_INFO *psSlotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( psSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    psSlotInfo[0].shaderEntityIndex = 0;
+    psSlotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    psSlotInfo[1].shaderEntityIndex = 0;
+    psSlotInfo[1].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
+
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     ps_stage.shader.shader = ps;
-    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) psSlotInfo;
     ps_stage.shader.descriptorSetMapping[0].descriptorCount = psSlots;
     ps_stage.shader.linkConstBufferCount = 0;
     ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
@@ -2000,6 +2019,38 @@ TEST_F(XglRenderTest, TexturedTriangle)
             "   vec4 texColor = textureLod(surface, samplePos, 0.0);\n"
             "   gl_FragColor = texColor;\n"
             "}\n";
+    DrawTexturedTriangle(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, VSTexture)
+{
+    // The expected result from this test is a green and red triangle;
+    // one red vertex on the left, two green vertices on the right.
+    static const char *vertShaderText =
+            "#version 130\n"
+            "out vec4 texColor;\n"
+            "uniform sampler2D surface;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 0.25, 0.1);\n"
+            "      positions[2] = vec2( 0.1, 0.25);\n"
+            "   vec2 samplePos = positions[gl_VertexID % 3];\n"
+            "   texColor = textureLod(surface, samplePos, 0.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 130\n"
+            "in vec4 texColor;\n"
+            "void main() {\n"
+            "   gl_FragColor = texColor;\n"
+            "}\n";
+
     DrawTexturedTriangle(vertShaderText, fragShaderText);
 }
 
