@@ -13,3 +13,6 @@ link_libraries(${XCB_LIBRARIES} XGL)
 
 add_executable(tri tri.c)
 target_link_libraries(tri)
+
+add_executable(cube cube.c)
+target_link_libraries(cube)
