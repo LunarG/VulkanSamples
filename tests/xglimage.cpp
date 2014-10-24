@@ -55,7 +55,8 @@ XglImage::~XglImage()
 }
 
 void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
-               XGL_FORMAT fmt, XGL_FLAGS usage)
+               XGL_FORMAT fmt, XGL_FLAGS usage,
+               XGL_IMAGE_TILING tiling)
 {
     XGL_RESULT err;
     XGL_UINT mipCount;
@@ -121,7 +122,7 @@ void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    imageCreateInfo.tiling = tiling;
 
     // Image usage flags
     //    typedef enum _XGL_IMAGE_USAGE_FLAGS
