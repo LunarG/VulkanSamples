@@ -752,12 +752,12 @@ static void loader_deactivate_layer()
     }
 }
 
-extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
+extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
 {
     XGL_UINT gpu_index;
     XGL_UINT count;
     XGL_CHAR ** ppLayerNames;
-    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) *gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
 
     if (!icd)
         return 0;
@@ -765,8 +765,8 @@ extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu, const XGL_DEVICE_CREATE_IN
 
     /* activate any layer libraries */
     if (!loader_layers_activated(icd, gpu_index)) {
-        XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) *gpu;
-        XGL_BASE_LAYER_OBJECT *nextGpuObj;
+        XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) gpu;
+        XGL_BASE_LAYER_OBJECT *nextGpuObj, *baseObj = gpuObj->baseObject;
         GetProcAddrType nextGPA = xglGetProcAddr;
 
         count = loader_get_layer_libs(pCreateInfo, &ppLayerNames);
@@ -780,7 +780,7 @@ extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu, const XGL_DEVICE_CREATE_IN
         for (XGL_INT i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
             nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
-            nextGpuObj->baseObject = gpuObj->baseObject;
+            nextGpuObj->baseObject = baseObj;
             nextGpuObj->nextObject = gpuObj;
             gpuObj = nextGpuObj;
 
@@ -790,11 +790,17 @@ extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU *gpu, const XGL_DEVICE_CREATE_IN
                 continue;
             }
 
-            if (i == 0)
+            if (i == 0) {
                 loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, gpuObj);
+                //Insert the new wrapped objects into the list with loader object at head
+                ((XGL_BASE_LAYER_OBJECT *) gpu)->nextObject = gpuObj;
+                ((XGL_BASE_LAYER_OBJECT *) gpu)->pGPA = nextGPA;
+                gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
+                gpuObj->nextObject = baseObj;
+                gpuObj->pGPA = icd->GetProcAddr;
+            }
 
         }
-        *gpu = ((XGL_PHYSICAL_GPU *) gpuObj);
     }
     else {
         //make sure requested Layers matches currently activated Layers
@@ -817,13 +823,13 @@ LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_C
     if (gpu == NULL)
         return NULL;
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    XGL_LAYER_DISPATCH_TABLE * disp_table = * (XGL_LAYER_DISPATCH_TABLE **) gpuw->nextObject;
+    XGL_LAYER_DISPATCH_TABLE * disp_table = * (XGL_LAYER_DISPATCH_TABLE **) gpuw->baseObject;
 
     if (disp_table == NULL)
         return NULL;
 
     if (!strncmp("xglGetProcAddr", (const char *) pName, sizeof("xglGetProcAddr")))
-        return xglGetProcAddr;
+        return disp_table->GetProcAddr;
     else if (!strncmp("xglInitAndEnumerateGpus", (const char *) pName, sizeof("xglInitAndEnumerateGpus")))
         return disp_table->InitAndEnumerateGpus;
     else if (!strncmp("xglGetGpuInfo", (const char *) pName, sizeof ("xglGetGpuInfo")))
@@ -1063,10 +1069,9 @@ LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_C
     else if (!strncmp("xglWsiX11QueuePresent", (const char *) pName, sizeof("xglWsiX11QueuePresent")))
         return disp_table->WsiX11QueuePresent;
     else  {
-        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-        if (gpuw->pGPA == NULL)
+        if (disp_table->GetProcAddr == NULL)
             return NULL;
-        return gpuw->pGPA(gpuw->nextObject, pName);
+        return disp_table->GetProcAddr(gpuw->nextObject, pName);
     }
 }
 

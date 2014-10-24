@@ -124,7 +124,7 @@ class Subcommand(object):
                 if proto.name == "CreateDevice" and qual == "LOADER_EXPORT ":
                     funcs.append("%s%s\n"
                              "{\n"
-                             "    ActivateLayers(&%s, %s);\n"
+                             "    ActivateLayers(%s, %s);\n"
                              "    XGL_BASE_LAYER_OBJECT* wrapped_obj = (XGL_BASE_LAYER_OBJECT*)%s;\n"
                              "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
                              "            (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj->baseObject;\n"
