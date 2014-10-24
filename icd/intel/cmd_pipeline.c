@@ -2585,55 +2585,25 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    const uint32_t depth_cmd = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        GEN7_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER) :
-        GEN6_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER);
-    const uint32_t hiz_cmd = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        GEN7_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER) :
-        GEN6_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER);
-    const uint32_t stencil_cmd = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        GEN7_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER) :
-        GEN6_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER);
-    uint32_t *dw;
+    const struct intel_ds_view *ds = meta->ds;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    cmd_wa_gen6_pre_ds_flush(cmd);
-
-    if (meta->ds) {
-        assert(!"depth/stencil clear unsupported");
-    } else {
-        cmd_batch_pointer(cmd, 7, &dw);
-        dw[0] = depth_cmd | (7 - 2);
-        dw[1] = 0;
-        dw[2] = 0;
-        dw[3] = 0;
-        dw[4] = 0;
-        dw[5] = 0;
-        dw[6] = 0;
-
-        cmd_batch_pointer(cmd, 3, &dw);
-        dw[0] = hiz_cmd | (3 - 2);
-        dw[1] = 0;
-        dw[2] = 0;
-
-        cmd_batch_pointer(cmd, 3, &dw);
-        dw[0] = stencil_cmd | (3 - 2);
-        dw[1] = 0;
-        dw[2] = 0;
-
-        if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-            cmd_batch_pointer(cmd, 3, &dw);
-            dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) | (3 - 2);
-            dw[1] = 0;
-            dw[2] = GEN7_CLEAR_PARAMS_DW2_VALID;
-        } else {
-            cmd_batch_pointer(cmd, 2, &dw);
-            dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLEAR_PARAMS) | (2 - 2) |
-                    GEN6_CLEAR_PARAMS_DW0_VALID;
-            dw[1] = 0;
-        }
+    if (!ds) {
+        /* all zeros */
+        static const struct intel_ds_view null_ds;
+        ds = &null_ds;
     }
+
+    cmd_wa_gen6_pre_ds_flush(cmd);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
+    else
+        gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
 }
 
 static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
