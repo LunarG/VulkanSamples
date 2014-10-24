@@ -187,7 +187,8 @@ public:
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText);
-    void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText);
+    void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model);
+    void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText, int numTris);
     void DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText, const char *fragShaderText);
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
@@ -695,16 +696,11 @@ void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const 
 }
 
 
-void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText)
+void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText, int numTris)
 {
     XGL_PIPELINE pipeline;
     XGL_SHADER vs, ps;
     XGL_RESULT err;
-    glm::mat4 MVP;
-    int i;
-
-    // Create identity matrix
-    glm::mat4 Model      = glm::mat4(1.0f);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -724,11 +720,6 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
     ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    const int matrixSize = 16;
-    MVP = Model;
-
-    InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
 
     // Create descriptor set for a uniform resource
     const int slotCount = 1;
@@ -760,7 +751,7 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
 
     // render the cube
-    xglCmdDraw( m_cmdBuffer, 0, 12*3, 0, 1 );
+    xglCmdDraw( m_cmdBuffer, 0, numTris*3, 0, 1 );
 
     // prepare the back buffer for present
 //    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
@@ -791,13 +782,23 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
     xglDeviceWaitIdle(m_device->device());
 
     RecordImage(m_renderTarget);
+}
+
+
+void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model)
+{
+    int i;
+    glm::mat4 MVP;
+    int matrixSize = sizeof(MVP);
+    XGL_RESULT err;
 
     for (i = 0; i < 8; i++) {
         XGL_UINT8 *pData;
         err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
         ASSERT_XGL_SUCCESS(err);
 
-        MVP = glm::rotate(MVP, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+        Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+        MVP = Projection * View * Model;
         memcpy(pData, (const void*) &MVP[0][0], matrixSize);
 
         err = xglUnmapMemory(m_constantBufferMem);
@@ -1582,6 +1583,163 @@ void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, cons
 
 }
 
+struct xgltriangle_vs_uniform {
+    // Must start with MVP
+    XGL_FLOAT   mvp[4][4];
+    XGL_FLOAT   position[3][4];
+    XGL_FLOAT   color[3][4];
+};
+
+TEST_F(XglRenderTest, XGLTriangle)
+{
+    static const char *vertShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout(binding = 0) uniform buf {\n"
+        "        mat4 MVP;\n"
+        "        vec4 position[3];\n"
+        "        vec4 color[3];\n"
+        "} ubuf;\n"
+        "\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "\n"
+        "void main() \n"
+        "{\n"
+        "   outColor = ubuf.color[gl_VertexID];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "}\n";
+
+    static const char *fragShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout (location = 0) in vec4 inColor;\n"
+//        "layout (location = 0) out vec4 outColor;\n"
+//        "out vec4 outColor;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+//        "   outColor = inColor;\n"
+        "   gl_FragColor = inColor;\n"
+        "}\n";
+
+    // Create identity matrix
+    int i;
+    struct xgltriangle_vs_uniform data;
+
+    glm::mat4 Projection      = glm::mat4(1.0f);
+    glm::mat4 View      = glm::mat4(1.0f);
+    glm::mat4 Model      = glm::mat4(1.0f);
+    glm::mat4 MVP = Projection * View * Model;
+    const int matrixSize = sizeof(MVP);
+    const int bufSize = sizeof(xgltriangle_vs_uniform) / sizeof(XGL_FLOAT);
+    memcpy(&data.mvp, &MVP[0][0], matrixSize);
+
+    static const Vertex tri_data[] =
+    {
+        { XYZ1( -1, -1, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
+        { XYZ1( 1, -1, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
+        { XYZ1( 0,  1, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
+    };
+
+    for (i=0; i<3; i++) {
+        data.position[i][0] = tri_data[i].posX;
+        data.position[i][1] = tri_data[i].posY;
+        data.position[i][2] = tri_data[i].posZ;
+        data.position[i][3] = tri_data[i].posW;
+        data.color[i][0] = tri_data[i].r;
+        data.color[i][1] = tri_data[i].g;
+        data.color[i][2] = tri_data[i].b;
+        data.color[i][3] = tri_data[i].a;
+    }
+
+    InitConstantBuffer(bufSize*2, sizeof(XGL_FLOAT), (const void*) &data);
+
+    DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
+    RotateTriangleVSUniform(Projection, View, Model);
+}
+
+TEST_F(XglRenderTest, BIL_XGLTriangle)
+{
+    bool saved_use_bil = XglTestFramework::m_use_bil;
+
+    static const char *vertShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout(binding = 0) uniform buf {\n"
+        "        mat4 MVP;\n"
+        "        vec4 position[3];\n"
+        "        vec4 color[3];\n"
+        "} ubuf;\n"
+        "\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "\n"
+        "void main() \n"
+        "{\n"
+        "   outColor = ubuf.color[gl_VertexID];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "}\n";
+
+    static const char *fragShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout (location = 0) in vec4 inColor;\n"
+//        "layout (location = 0) out vec4 outColor;\n"
+//        "out vec4 outColor;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+//        "   outColor = inColor;\n"
+        "   gl_FragColor = inColor;\n"
+        "}\n";
+
+    // Create identity matrix
+    int i;
+    struct xgltriangle_vs_uniform data;
+
+    glm::mat4 Projection      = glm::mat4(1.0f);
+    glm::mat4 View      = glm::mat4(1.0f);
+    glm::mat4 Model      = glm::mat4(1.0f);
+    glm::mat4 MVP = Projection * View * Model;
+    const int matrixSize = sizeof(MVP);
+    const int bufSize = sizeof(xgltriangle_vs_uniform) / sizeof(XGL_FLOAT);
+    memcpy(&data.mvp, &MVP[0][0], matrixSize);
+
+    static const Vertex tri_data[] =
+    {
+        { XYZ1( -1, -1, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
+        { XYZ1( 1, -1, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
+        { XYZ1( 0,  1, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
+    };
+
+    for (i=0; i<3; i++) {
+        data.position[i][0] = tri_data[i].posX;
+        data.position[i][1] = tri_data[i].posY;
+        data.position[i][2] = tri_data[i].posZ;
+        data.position[i][3] = tri_data[i].posW;
+        data.color[i][0] = tri_data[i].r;
+        data.color[i][1] = tri_data[i].g;
+        data.color[i][2] = tri_data[i].b;
+        data.color[i][3] = tri_data[i].a;
+    }
+
+    InitConstantBuffer(bufSize*2, sizeof(XGL_FLOAT), (const void*) &data);
+
+    XglTestFramework::m_use_bil = true;
+
+    DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
+    RotateTriangleVSUniform(Projection, View, Model);
+
+    XglTestFramework::m_use_bil = saved_use_bil;
+}
+
 TEST_F(XglRenderTest, GreenTriangle)
 {
     static const char *vertShaderText =
@@ -1599,6 +1757,7 @@ TEST_F(XglRenderTest, GreenTriangle)
        "void main() {\n"
        "   gl_FragColor = vec4(0,1,0,1);\n"
        "}\n";
+
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
@@ -1768,7 +1927,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0) * mvp;\n"
+            "   gl_Position = mvp * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -1778,11 +1937,16 @@ TEST_F(XglRenderTest, TriangleVSUniform)
             "}\n";
 
     // Create identity matrix
+    glm::mat4 Projection      = glm::mat4(1.0f);
+    glm::mat4 View      = glm::mat4(1.0f);
     glm::mat4 Model      = glm::mat4(1.0f);
-    DrawTriangleVSUniform(vertShaderText, fragShaderText);
+    glm::mat4 MVP = Projection * View * Model;
+    const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
 
-//    Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-//    DrawTriangleVSUniform(vertShaderText, fragShaderText, Model);
+    InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+
+    DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
+    RotateTriangleVSUniform(Projection, View, Model);
 }
 
 TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
