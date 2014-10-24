@@ -27,6 +27,7 @@
 
 #include "img.h"
 #include "mem.h"
+#include "state.h"
 #include "cmd_priv.h"
 
 static void cmd_meta_init_mem_view(struct intel_cmd *cmd,
@@ -204,10 +205,10 @@ static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
     meta->src.reloc_flags = INTEL_CMD_RELOC_TARGET_IS_WRITER;
 }
 
-static void cmd_meta_set_ds(struct intel_cmd *cmd,
-                            const struct intel_img *img,
-                            XGL_UINT lod, XGL_UINT layer,
-                            struct intel_cmd_meta *meta)
+static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
+                                 const struct intel_img *img,
+                                 XGL_UINT lod, XGL_UINT layer,
+                                 struct intel_cmd_meta *meta)
 {
     XGL_DEPTH_STENCIL_VIEW_CREATE_INFO info;
     struct intel_ds_view *ds;
@@ -226,7 +227,43 @@ static void cmd_meta_set_ds(struct intel_cmd *cmd,
         return;
     }
 
-    meta->ds = ds;
+    meta->ds.view = ds;
+}
+
+static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
+                                  XGL_IMAGE_ASPECT aspect,
+                                  XGL_UINT32 stencil_ref,
+                                  struct intel_cmd_meta *meta)
+{
+    XGL_DEPTH_STENCIL_STATE_CREATE_INFO info;
+    struct intel_ds_state *state;
+    XGL_RESULT ret;
+
+    memset(&info, 0, sizeof(info));
+    info.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+    if (aspect == XGL_IMAGE_ASPECT_DEPTH) {
+        info.depthWriteEnable = XGL_TRUE;
+    }
+    else if (aspect == XGL_IMAGE_ASPECT_STENCIL) {
+        info.stencilTestEnable = XGL_TRUE;
+        info.stencilReadMask = 0xff;
+        info.stencilWriteMask = 0xff;
+        info.front.stencilFailOp = XGL_STENCIL_OP_KEEP;
+        info.front.stencilPassOp = XGL_STENCIL_OP_REPLACE;
+        info.front.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
+        info.front.stencilFunc = XGL_COMPARE_ALWAYS;
+        info.front.stencilRef = stencil_ref;
+        info.back = info.front;
+    }
+
+    ret = intel_ds_state_create(cmd->dev, &info, &state);
+    if (ret != XGL_SUCCESS) {
+        cmd->result = ret;
+        return;
+    }
+
+    meta->ds.state = state;
 }
 
 static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
@@ -677,12 +714,15 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
 
                 cmd_draw_meta(cmd, meta);
             } else {
-                cmd_meta_set_ds(cmd, img, meta->dst.lod,
+                cmd_meta_set_ds_view(cmd, img, meta->dst.lod,
                         meta->dst.layer, meta);
+                cmd_meta_set_ds_state(cmd, range->aspect,
+                        meta->clear_val[1], meta);
 
                 cmd_draw_meta(cmd, meta);
 
-                intel_ds_view_destroy(meta->ds);
+                intel_ds_view_destroy(meta->ds.view);
+                intel_ds_state_destroy(meta->ds.state);
             }
 
             meta->dst.layer++;
@@ -767,13 +807,11 @@ XGL_VOID XGLAPI intelCmdClearDepthStencil(
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_DEPTH;
     meta.samples = img->samples;
 
+    meta.clear_val[0] = u_fui(depth);
+    meta.clear_val[1] = stencil;
+
     for (i = 0; i < rangeCount; i++) {
         const XGL_IMAGE_SUBRESOURCE_RANGE *range = &pRanges[i];
-
-        if (range->aspect == XGL_IMAGE_ASPECT_STENCIL)
-            meta.clear_val[0] = stencil;
-        else
-            meta.clear_val[0] = u_fui(depth);
 
         cmd_meta_clear_image(cmd, img, img->layout.format,
                 &meta, range);

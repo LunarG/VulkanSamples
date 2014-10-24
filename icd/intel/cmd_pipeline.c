@@ -2014,31 +2014,21 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
         dw[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT | 0x3;
     }
 
-    if (meta->ds) {
-        assert(!"depth/stencil clear unsupported");
+    if (meta->ds.state) {
+        const uint32_t blend_color[4] = { 0, 0, 0, 0 };
 
         /* DEPTH_STENCIL_STATE */
-        ds_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
-                GEN6_ALIGNMENT_DEPTH_STENCIL_STATE * 4, 3, &dw);
-        dw[0] = 0;
-        dw[1] = 0;
-        dw[2] = 0;
+        ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, meta->ds.state);
 
         /* COLOR_CALC_STATE */
-        cc_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_COLOR_CALC,
-                GEN6_ALIGNMENT_COLOR_CALC_STATE * 4, 6, &dw);
-        dw[0] = 0;
-        dw[1] = 0;
-        dw[2] = 0;
-        dw[3] = 0;
-        dw[4] = 0;
-        dw[5] = 0;
+        cc_offset = gen6_COLOR_CALC_STATE(cmd,
+                meta->ds.state->cmd_stencil_ref, blend_color);
 
         /* CC_VIEWPORT */
         cc_vp_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
                 GEN6_ALIGNMENT_CC_VIEWPORT * 4, 2, &dw);
-        dw[0] = 0;
-        dw[1] = 0;
+        dw[0] = u_fui(0.0f);
+        dw[1] = u_fui(1.0f);
     }
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
@@ -2056,11 +2046,7 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
                 cc_vp_offset);
     } else {
         /* 3DSTATE_CC_STATE_POINTERS */
-        cmd_batch_pointer(cmd, 4, &dw);
-        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CC_STATE_POINTERS) | (4 - 2);
-        dw[1] = blend_offset | GEN6_PTR_CC_DW1_BLEND_CHANGED;
-        dw[2] = ds_offset | GEN6_PTR_CC_DW2_ZS_CHANGED;
-        dw[3] = cc_offset | GEN6_PTR_CC_DW3_CC_CHANGED;
+        gen6_3DSTATE_CC_STATE_POINTERS(cmd, blend_offset, ds_offset, cc_offset);
 
         /* 3DSTATE_VIEWPORT_STATE_POINTERS */
         cmd_batch_pointer(cmd, 4, &dw);
@@ -2463,7 +2449,8 @@ static uint32_t gen6_meta_ps_constants(struct intel_cmd *cmd)
         break;
     case INTEL_DEV_META_FS_CLEAR_DEPTH:
         consts[0] = meta->clear_val[0];
-        const_count = 1;
+        consts[1] = meta->clear_val[1];
+        const_count = 2;
         break;
     case INTEL_DEV_META_FS_RESOLVE_2X:
     case INTEL_DEV_META_FS_RESOLVE_4X:
@@ -2585,7 +2572,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    const struct intel_ds_view *ds = meta->ds;
+    const struct intel_ds_view *ds = meta->ds.view;
 
     CMD_ASSERT(cmd, 6, 7.5);
 

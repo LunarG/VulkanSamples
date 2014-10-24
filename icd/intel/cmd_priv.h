@@ -94,7 +94,11 @@ struct intel_cmd_meta {
         XGL_UINT x, y;
     } src, dst;
 
-    struct intel_ds_view *ds;
+    struct {
+        struct intel_ds_view *view;
+        struct intel_ds_state *state;
+    } ds;
+
     uint32_t clear_val[4];
 
     XGL_UINT width, height;
