@@ -3245,7 +3245,7 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
    if (gepInst)
       name = gepInst->getOperand(0)->getName();
    else 
-      name = llvmInst->getOperand(0)->getName();
+      name = llvmInst->getOperand(1)->getName();
 
    mdNode = typenameMdMap[name];
 
