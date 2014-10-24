@@ -535,12 +535,14 @@ ds_state_init(struct intel_ds_state *state,
     * TODO We do not check these yet.
     */
    if (info->depthTestEnable) {
-      dw[2] = 1 << 31 |
-              translate_compare_func(info->depthFunc) << 27 |
-              (bool) info->depthWriteEnable << 26;
+      dw[2] = GEN6_ZS_DW2_DEPTH_TEST_ENABLE |
+              translate_compare_func(info->depthFunc) << 27;
    } else {
       dw[2] = GEN6_COMPAREFUNCTION_ALWAYS << 27;
    }
+
+   if (info->depthWriteEnable)
+      dw[2] |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
 
    return XGL_SUCCESS;
 }
