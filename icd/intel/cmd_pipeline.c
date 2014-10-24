@@ -2180,33 +2180,64 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
 static void gen6_meta_vf(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    XGL_UINT vertices[3][2];
-    uint32_t offset, *dw;
+    uint32_t vb_start, vb_end, vb_stride;
+    int ve_format, ve_z_source;
+    uint32_t *dw;
     XGL_UINT pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
     /* write vertices */
-    vertices[0][0] = meta->dst.x + meta->width;
-    vertices[0][1] = meta->dst.y + meta->height;
-    vertices[1][0] = meta->dst.x;
-    vertices[1][1] = meta->dst.y + meta->height;
-    vertices[2][0] = meta->dst.x;
-    vertices[2][1] = meta->dst.y;
-    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
-            sizeof(vertices) / 4, (const uint32_t *) vertices);
+    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH) {
+        XGL_FLOAT vertices[3][3];
+
+        vertices[0][0] = (XGL_FLOAT) (meta->dst.x + meta->width);
+        vertices[0][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
+        vertices[0][2] = u_uif(meta->clear_val[0]);
+        vertices[1][0] = (XGL_FLOAT) meta->dst.x;
+        vertices[1][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
+        vertices[1][2] = u_uif(meta->clear_val[0]);
+        vertices[2][0] = (XGL_FLOAT) meta->dst.x;
+        vertices[2][1] = (XGL_FLOAT) meta->dst.y;
+        vertices[2][2] = u_uif(meta->clear_val[0]);
+
+        vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
+                sizeof(vertices) / 4, (const uint32_t *) vertices);
+
+        vb_end = vb_start + sizeof(vertices) - 1;
+        vb_stride = sizeof(vertices[0]);
+        ve_z_source = GEN6_VFCOMP_STORE_SRC;
+        ve_format = GEN6_FORMAT_R32G32B32_FLOAT;
+    } else {
+        XGL_UINT vertices[3][2];
+
+        vertices[0][0] = meta->dst.x + meta->width;
+        vertices[0][1] = meta->dst.y + meta->height;
+        vertices[1][0] = meta->dst.x;
+        vertices[1][1] = meta->dst.y + meta->height;
+        vertices[2][0] = meta->dst.x;
+        vertices[2][1] = meta->dst.y;
+
+        vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
+                sizeof(vertices) / 4, (const uint32_t *) vertices);
+
+        vb_end = vb_start + sizeof(vertices) - 1;
+        vb_stride = sizeof(vertices[0]);
+        ve_z_source = GEN6_VFCOMP_STORE_0;
+        ve_format = GEN6_FORMAT_R32G32_USCALED;
+    }
 
     /* 3DSTATE_VERTEX_BUFFERS */
     pos = cmd_batch_pointer(cmd, 5, &dw);
+
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_BUFFERS) | (5 - 2);
-    dw[1] = sizeof(vertices[0]);
+    dw[1] = vb_stride;
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         dw[1] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
 
     cmd_reserve_reloc(cmd, 2);
-    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, offset);
-    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE,
-            offset + sizeof(vertices) - 1);
+    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, vb_start);
+    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE, vb_end);
 
     dw[4] = 0;
 
@@ -2219,15 +2250,16 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
             GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP2__SHIFT | /* Viewport Index */
             GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP3__SHIFT;  /* Point Width */
     dw[3] = GEN6_VE_STATE_DW0_VALID |
-            GEN6_FORMAT_R32G32_USCALED << GEN6_VE_STATE_DW0_FORMAT__SHIFT;
+            ve_format << GEN6_VE_STATE_DW0_FORMAT__SHIFT;
     dw[4] = GEN6_VFCOMP_STORE_SRC  << GEN6_VE_STATE_DW1_COMP0__SHIFT |
             GEN6_VFCOMP_STORE_SRC  << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-            GEN6_VFCOMP_STORE_0    << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+            ve_z_source            << GEN6_VE_STATE_DW1_COMP2__SHIFT |
             GEN6_VFCOMP_STORE_1_FP << GEN6_VE_STATE_DW1_COMP3__SHIFT;
 }
 
 static void gen6_meta_disabled(struct intel_cmd *cmd)
 {
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
@@ -2279,10 +2311,33 @@ static void gen6_meta_disabled(struct intel_cmd *cmd)
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (20 - 2);
     dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
     memset(&dw[2], 0, 18 * sizeof(*dw));
+
+    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH) {
+        /* 3DSTATE_CONSTANT_PS */
+        cmd_batch_pointer(cmd, 5, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (5 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+
+        /* 3DSTATE_WM */
+        cmd_batch_pointer(cmd, 9, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (9 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+        dw[5] = (40 - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
+        dw[6] = 0;
+        dw[7] = 0;
+        dw[8] = 0;
+    }
 }
 
 static void gen7_meta_disabled(struct intel_cmd *cmd)
 {
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
@@ -2352,6 +2407,30 @@ static void gen7_meta_disabled(struct intel_cmd *cmd)
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) | (14 - 2);
     dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
     memset(&dw[2], 0, sizeof(*dw) * (14 - 2));
+
+    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH) {
+        /* 3DSTATE_WM */
+        cmd_batch_pointer(cmd, 3, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (3 - 2);
+        memset(&dw[1], 0, sizeof(*dw) * (3 - 1));
+
+        /* 3DSTATE_CONSTANT_GS */
+        cmd_batch_pointer(cmd, 7, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (7 - 2);
+        memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+        /* 3DSTATE_PS */
+        cmd_batch_pointer(cmd, 8, &dw);
+        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (8 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = GEN7_PS_DW4_8_PIXEL_DISPATCH | /* required to avoid hangs */
+                (48 - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+        dw[5] = 0;
+        dw[6] = 0;
+        dw[7] = 0;
+    }
 }
 
 static void gen6_meta_wm(struct intel_cmd *cmd)
@@ -2481,6 +2560,11 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
 
     CMD_ASSERT(cmd, 6, 6);
 
+    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH)
+        return;
+    /* a normal color write */
+    assert(meta->dst.valid && !sh->uses);
+
     /* 3DSTATE_CONSTANT_PS */
     offset = gen6_meta_ps_constants(cmd);
     cmd_batch_pointer(cmd, 5, &dw);
@@ -2527,6 +2611,11 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     uint32_t offset, *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
+
+    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH)
+        return;
+    /* a normal color write */
+    assert(meta->dst.valid && !sh->uses);
 
     /* 3DSTATE_WM */
     cmd_batch_pointer(cmd, 3, &dw);
