@@ -35,6 +35,7 @@ function create_BIL () {
    cd $BASEDIR/BIL
    if [ -z "$KHRONOS_ACCOUNT_NAME" ]; then
       echo "Must define KHRONOS_ACCOUNT_NAME to access BIL component"
+      exit 1
    else
       svn checkout --username "$KHRONOS_ACCOUNT_NAME" https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL .
    fi
