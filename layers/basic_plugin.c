@@ -139,14 +139,25 @@ static void initLayerTable()
     return;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLayerExtension1(XGL_DEVICE device)
+{
+    printf("In xglLayerExtension1() call w/ device: %p\n", (void*)device);
+    printf("xglLayerExtension1 returning SUCCESS\n");
+    return XGL_SUCCESS;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of wrapped xglGetGpuInfo() call w/ gpu: %p\n", (void*)gpu);
+    XGL_RESULT result;
+    printf("At start of wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);  //Required for LD_PRELOAD case
-    XGL_RESULT result = myTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    printf("Completed wrapped xglGetGpuInfo() call w/ gpu: %p\n", (void*)gpu);
+    if (!strncmp(pExtName, "xglLayerExtension1", strlen("xglLayerExtension1")))
+        result = XGL_SUCCESS;
+    else
+        result = myTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    printf("Completed wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
     return result;
 }
 
@@ -157,7 +168,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);   //Required for LD_PRELOAD case
     XGL_RESULT result = myTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
-    printf("Completed wrapped xglCreateDevice() call w/ pDevice: %p\n", (void*)pDevice);
+    printf("Completed wrapped xglCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
@@ -165,7 +176,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
     printf("At start of wrapped xglGetFormatInfo() call w/ device: %p\n", (void*)device);
     XGL_RESULT result = myTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
     printf("Completed wrapped xglGetFormatInfo() call w/ device: %p\n", (void*)device);
-       return result;
+    return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName) {
@@ -179,13 +190,13 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XG
     else if (!strncmp("xglInitAndEnumerateGpus", (const char *) pName, sizeof("xglInitAndEnumerateGpus")))
         return myTable.InitAndEnumerateGpus;
     if (!strncmp("xglGetGpuInfo", (const char *) pName, sizeof ("xglGetGpuInfo")))
-        return xglGetGpuInfo;
+        return myTable.GetGpuInfo;
     else if (!strncmp("xglCreateDevice", (const char *) pName, sizeof ("xglCreateDevice")))
         return xglCreateDevice;
     else if (!strncmp("xglDestroyDevice", (const char *) pName, sizeof ("xglDestroyDevice")))
         return myTable.DestroyDevice;
     else if (!strncmp("xglGetExtensionSupport", (const char *) pName, sizeof ("xglGetExtensionSupport")))
-        return myTable.GetExtensionSupport;
+        return xglGetExtensionSupport;
     else if (!strncmp("xglEnumerateLayers", (const char *) pName, sizeof ("xglEnumerateLayers")))
         return myTable.EnumerateLayers;
     else if (!strncmp("xglGetDeviceQueue", (const char *) pName, sizeof ("xglGetDeviceQueue")))
@@ -414,6 +425,8 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XG
         return myTable.WsiX11CreatePresentableImage;
     else if (!strncmp("xglWsiX11QueuePresent", (const char *) pName, sizeof("xglWsiX11QueuePresent")))
         return myTable.WsiX11QueuePresent;
+    else if (!strncmp("xglLayerExtension1", (const char *) pName, sizeof("xglLayerExtension1")))
+        return xglLayerExtension1;
     else {
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
         if (gpuw->pGPA == NULL)
