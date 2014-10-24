@@ -13,4 +13,5 @@ add_library (XGLLayerBasic SHARED basic_plugin.c)
 add_library (XGLLayerGeneric SHARED generic_layer.c)
 add_library (XGLLayerObjectTrack SHARED object_track.c)
 add_library (XGLLayerAPIDump SHARED api_dump.c)
+add_library (XGLLayerDrawState SHARED draw_state.c)
 
