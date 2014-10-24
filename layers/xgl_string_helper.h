@@ -166,6 +166,9 @@ static const char* string_XGL_DESCRIPTOR_SET_SLOT_TYPE(XGL_DESCRIPTOR_SET_SLOT_T
     case XGL_SLOT_UNUSED:
         return "XGL_SLOT_UNUSED";
 
+    case XGL_SLOT_VERTEX_INPUT:
+        return "XGL_SLOT_VERTEX_INPUT";
+
     default:
         return "Unhandled XGL_DESCRIPTOR_SET_SLOT_TYPE";
     }

@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include "xglLayer.h"
-//#include "xgl_struct_wrappers.h"
+#include "xgl_string_helper.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
@@ -186,7 +186,7 @@ static XGL_BOOL clearDS(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XG
 static void dsSetMapping(DS_SLOT* pSlot, XGL_UINT mapping)
 {
     pSlot->mappingMask   |= mapping;
-    pSlot->activeMapping &= mapping;
+    pSlot->activeMapping = mapping;
 }
 
 static void noteSlotMapping(XGL_UINT32 mapping)
@@ -222,7 +222,9 @@ static XGL_BOOL dsMemMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlo
             dsSetMemMapping(&pTrav->dsSlot[i+startSlot], &pMemViews[i]);
         }
     }
-    return XGL_FALSE;
+    else
+        return XGL_FALSE;
+    return XGL_TRUE;
 }
 
 static void dsSetImageMapping(DS_SLOT* pSlot, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews)
@@ -246,7 +248,9 @@ static XGL_BOOL dsImageMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startS
             dsSetImageMapping(&pTrav->dsSlot[i+startSlot], &pImageViews[i]);
         }
     }
-    return XGL_FALSE;
+    else
+        return XGL_FALSE;
+    return XGL_TRUE;
 }
 
 static void dsSetSamplerMapping(DS_SLOT* pSlot, const XGL_SAMPLER sampler)
@@ -270,7 +274,9 @@ static XGL_BOOL dsSamplerMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT star
             dsSetImageMapping(&pTrav->dsSlot[i+startSlot], pSamplers[i]);
         }
     }
-    return XGL_FALSE;
+    else
+        return XGL_FALSE;
+    return XGL_TRUE;
 }
 
 // Synch up currently bound pipeline settings with DS mappings
@@ -283,23 +289,29 @@ static void synchDSMapping()
     }
     else {
         for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-            DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
-            if (!pDS) {
-                printf("DS ERROR : Can't find last bound DS %p. Did you need to bind DS to index %u?\n", (void*)lastBoundDS[i], i);
-            }
-            else { // We have a good DS & Pipeline, store pipeline mappings in DS
-                for (uint32_t j = 0; j < 2; j++) { // j is shader selector
-                    for (uint32_t k = 0; k < XGL_MAX_DESCRIPTOR_SETS; k++) {
-                        if (pPipeTrav->dsMapping[j][k].slotCount > pDS->numSlots) {
-                            printf("DS ERROR : DS Mapping for shader %u has more slots (%u) than DS %p (%u)!\n", j, pPipeTrav->dsMapping[j][k].slotCount, (void*)pDS->dsID, pDS->numSlots);
-                        }
-                        else {
-                            for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][k].slotCount; r++) {
-                                pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][k].pShaderMappingSlot[j];
+            DS_LL_HEAD *pDS;
+            if (lastBoundDS[i]) {
+                pDS = getDS(lastBoundDS[i]);
+                if (!pDS) {
+                    printf("DS ERROR : Can't find last bound DS %p. Did you need to bind DS to index %u?\n", (void*)lastBoundDS[i], i);
+                }
+                else { // We have a good DS & Pipeline, store pipeline mappings in DS
+                    for (uint32_t j = 0; j < 2; j++) { // j is shader selector
+                        for (uint32_t k = 0; k < XGL_MAX_DESCRIPTOR_SETS; k++) {
+                            if (pPipeTrav->dsMapping[j][k].slotCount > pDS->numSlots) {
+                                printf("DS ERROR : DS Mapping for shader %u has more slots (%u) than DS %p (%u)!\n", j, pPipeTrav->dsMapping[j][k].slotCount, (void*)pDS->dsID, pDS->numSlots);
+                            }
+                            else {
+                                for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][k].slotCount; r++) {
+                                    pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][k].pShaderMappingSlot[j];
+                                }
                             }
                         }
                     }
                 }
+            }
+            else {
+                printf("DS INFO : It appears that no DS was bound to index %u.\n", i);
             }
         }
     }
@@ -313,25 +325,25 @@ static void printDSConfig()
         if (pDS) {
             printf("DS INFO : Bindings for DS %p:\n", (void*)pDS->dsID);
             for (uint32_t j = 0; j < pDS->numSlots; j++) {
-                printf("\tSlot %u\n", j);
+                printf("    Slot %u\n", j);
                 switch (pDS->dsSlot[j].activeMapping)
                 {
                     case MAPPING_MEMORY:
-                        printf("\tMapped to Memory View %p (CAN PRINT DETAILS HERE)\n", (void*)&pDS->dsSlot[j].memView);
+                        printf("    Mapped to Memory View %p (CAN PRINT DETAILS HERE)\n", (void*)&pDS->dsSlot[j].memView);
                         break;
                     case MAPPING_IMAGE:
-                        printf("\tMapped to Image View %p (CAN PRINT DETAILS HERE)\n", (void*)&pDS->dsSlot[j].imageView);
+                        printf("    Mapped to Image View %p (CAN PRINT DETAILS HERE)\n", (void*)&pDS->dsSlot[j].imageView);
                         break;
                     case MAPPING_SAMPLER:
-                        printf("\tMapped to Sampler View %p (CAN PRINT DETAILS HERE)\n", (void*)pDS->dsSlot[j].sampler);
+                        printf("    Mapped to Sampler View %p (CAN PRINT DETAILS HERE)\n", (void*)pDS->dsSlot[j].sampler);
                         break;
                     default:
-                        printf("\tNO VIEW MAPPED TO THIS DS SLOT\n");
+                        printf("    NO VIEW MAPPED TO THIS DS SLOT\n");
                         break;                    
                 }
                 for (uint32_t k = 0; k < 2; k++) {
                     if (XGL_SLOT_UNUSED != pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType) {
-                        printf("\tShader type %u has %u slot type mapping to shaderEntityIndex %u\n", k, pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType, pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
+                        printf("    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", (k == 0) ? "VS" : "FS", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
                     }
                 }
             }
@@ -977,9 +989,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, con
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglBeginDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
 {
-    if (!getDS(descriptorSet)) {
+    DS_LL_HEAD* pDS = getDS(descriptorSet);
+    if (!pDS) {
         // TODO : This is where we should flag a REAL error
         printf("DS ERROR : Specified Descriptor Set %p does not exist!\n", (void*)descriptorSet);
+    }
+    else {
+        pDS->updateActive = XGL_TRUE;
     }
     nextTable.BeginDescriptorSetUpdate(descriptorSet);
 }
@@ -989,6 +1005,15 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglEndDescriptorSetUpdate(XGL_DESCRIPTOR_SET de
     if (!dsUpdate(descriptorSet)) {
         // TODO : This is where we should flag a REAL error
         printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglEndDescriptorSetUpdate()!\n", (void*)descriptorSet);
+    }
+    else {
+        DS_LL_HEAD* pDS = getDS(descriptorSet);
+        if (!pDS) {
+            printf("DS ERROR : Specified Descriptor Set %p does not exist!\n", (void*)descriptorSet);
+        }
+        else {
+            pDS->updateActive = XGL_FALSE;
+        }
     }
     nextTable.EndDescriptorSetUpdate(descriptorSet);
 }
