@@ -438,7 +438,6 @@ void XglRenderTest::DrawTriangleTest()
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
     std::vector<unsigned int> bil;
     XGL_SHADER_CREATE_INFO createInfo;
-    XGL_SHADER shader;
     size_t shader_len;
     XGL_IMAGE                    m_image;
     XGL_COLOR_ATTACHMENT_VIEW    m_targetView;
@@ -533,34 +532,17 @@ void XglRenderTest::DrawTriangleTest()
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
 
-    const int constantCount = 4;
-    const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
-    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
-
-    // Create descriptor set for a uniform resource
-    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
-    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-    descriptorInfo.slots = 1;
-
-    // create a descriptor set with a single slot
-    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
-    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
-
-    // bind memory to the descriptor set
-    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
-
-    // write the constant buffer view to the descriptor set
-    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
-    xglEndDescriptorSetUpdate( m_rsrcDescSet );
-
     static const char *vertShaderText =
             "#version 130\n"
-            "vec2 vertices[3];\n"
             "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
@@ -578,7 +560,7 @@ void XglRenderTest::DrawTriangleTest()
     ((uint32_t *) createInfo.pCode)[2] = XGL_SHADER_STAGE_VERTEX;
     memcpy(((uint32_t *) createInfo.pCode + 3), vertShaderText, shader_len + 1);
 
-    err = xglCreateShader(device(), &createInfo, &shader);
+    err = xglCreateShader(device(), &createInfo, &vs);
     if (err) {
         free((void *) createInfo.pCode);
 
@@ -587,7 +569,7 @@ void XglRenderTest::DrawTriangleTest()
         createInfo.pCode = bil.data();
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;
-        err = xglCreateShader(device(), &createInfo, &shader);
+        err = xglCreateShader(device(), &createInfo, &vs);
     }
     ASSERT_XGL_SUCCESS(err);
 
@@ -706,10 +688,6 @@ void XglRenderTest::DrawTriangleTest()
      */
     ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
     ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
-
-    XGL_QUERY_POOL query;
-    XGL_GPU_MEMORY query_mem;
-    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
 
     XglImage *renderTarget;
     XGL_FORMAT fmt = {
@@ -844,6 +822,31 @@ void XglRenderTest::DrawTriangleTest()
         err = xglCreateColorAttachmentView(device(), &createView, &m_targetView);
         ASSERT_XGL_SUCCESS(err);
     }
+
+    const int constantCount = 4;
+    const float constants[constantCount] = { 0.5, 0.5, 0.5, 1.0 };
+    InitConstantBuffer(constantCount, sizeof(constants[0]), (const void*) constants);
+
+    // Create descriptor set for a uniform resource
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = 1;
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the constant buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
+    XGL_QUERY_POOL query;
+    XGL_GPU_MEMORY query_mem;
+    ASSERT_NO_FATAL_FAILURE(CreateQueryPool(XGL_QUERY_PIPELINE_STATISTICS, 1, &query, &query_mem));
 
     // Build command buffer
     err = xglBeginCommandBuffer(m_cmdBuffer, 0);
