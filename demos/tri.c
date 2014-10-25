@@ -1,3 +1,9 @@
+/*
+ * Draw a textured triangle with depth testing.  This is written against Intel
+ * ICD.  It does not do state transition nor object memory binding like it
+ * should.  It also does no error checking.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -528,6 +534,7 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     err = xglCreateShader(demo->device, &createInfo, &shader);
     if (err) {
         free((void *) createInfo.pCode);
+        return NULL;
     }
 
     return shader;
@@ -537,13 +544,12 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
     static const char *vertShaderText =
             "#version 130\n"
-            "uniform mat4 mvp;\n"
+            "in vec4 pos;\n"
+            "in vec2 attr;\n"
+            "out vec2 texcoord;\n"
             "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0) * mvp;\n"
+            "   texcoord = attr;\n"
+            "   gl_Position = pos;\n"
             "}\n";
 
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
@@ -555,8 +561,10 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
     static const char *fragShaderText =
             "#version 130\n"
+            "uniform sampler2D tex;\n"
+            "in vec2 texcoord;\n"
             "void main() {\n"
-            "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   gl_FragColor = texture(tex, texcoord);\n"
             "}\n";
 
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
