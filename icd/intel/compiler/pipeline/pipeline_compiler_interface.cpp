@@ -389,5 +389,20 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     return status;
 }
 
+void intel_disassemble_kernel(const struct intel_gpu *gpu,
+                              const void *kernel, XGL_SIZE size)
+{
+    struct brw_context brw;
+    struct brw_compile c;
+
+    memset(&brw, 0, sizeof(brw));
+    initialize_brw_context(&brw, gpu);
+
+    memset(&c, 0, sizeof(c));
+    c.brw = &brw;
+    c.store = (struct brw_instruction *) kernel;
+
+    brw_dump_compile(&c, stderr, 0, size);
+}
 
 } // extern "C"

@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include "compiler/pipeline/pipeline_compiler_interface.h"
 #include "genhw/genhw.h"
 #include "kmd/winsys.h"
 #include "cmd_priv.h"
@@ -506,6 +507,11 @@ writer_decode_kernel(const struct intel_cmd *cmd,
                      enum intel_cmd_writer_type which,
                      const struct intel_cmd_item *item)
 {
+    const void *kernel = (const void *)
+        writer_pointer(cmd, which, item->offset);
+
+    fprintf(stderr, "0x%08x:\n", item->offset);
+    intel_disassemble_kernel(cmd->dev->gpu, kernel, item->size);
 }
 
 static const struct {

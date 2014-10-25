@@ -47,6 +47,9 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,
                                               enum intel_dev_meta_shader id);
 
+void intel_disassemble_kernel(const struct intel_gpu *gpu,
+                              const void *kernel, XGL_SIZE size);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
