@@ -92,8 +92,8 @@ static void demo_draw_build_cmd(struct demo *demo)
         .depthState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
         .stencilState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
     };
-    const XGL_FLOAT clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const XGL_FLOAT clear_depth = 0.5f;
+    const XGL_FLOAT clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
+    const XGL_FLOAT clear_depth = 0.9f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
     XGL_RESULT err;
 
@@ -402,8 +402,8 @@ static void demo_prepare_vertices(struct demo *demo)
 {
     const float vb[3][5] = {
         /*      position             texcoord */
-        { -1.0f, -1.0f, -1.0f,      0.0f, 0.0f },
-        {  1.0f, -1.0f, -1.0f,      1.0f, 0.0f },
+        { -1.0f, -1.0f, -0.6f,      0.0f, 0.0f },
+        {  1.0f, -1.0f, -0.5f,      1.0f, 0.0f },
         {  0.0f,  1.0f,  1.0f,      0.5f, 1.0f },
     };
     const XGL_MEMORY_ALLOC_INFO mem_alloc = {
@@ -677,7 +677,7 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     depth_stencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depth_stencil.depthTestEnable = XGL_TRUE;
     depth_stencil.depthWriteEnable = XGL_TRUE;
-    depth_stencil.depthFunc = XGL_COMPARE_GREATER;
+    depth_stencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
     depth_stencil.depthBoundsEnable = XGL_FALSE;
 
     err = xglCreateViewportState(demo->device, &viewport, &demo->viewport);
