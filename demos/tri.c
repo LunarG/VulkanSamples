@@ -92,6 +92,9 @@ static void demo_draw_build_cmd(struct demo *demo)
         .depthState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
         .stencilState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
     };
+    const XGL_FLOAT clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    const XGL_FLOAT clear_depth = 0.5f;
+    XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
     XGL_RESULT err;
 
     err = xglBeginCommandBuffer(demo->cmd,
@@ -113,6 +116,19 @@ static void demo_draw_build_cmd(struct demo *demo)
                                      demo->depth_stencil);
 
     xglCmdBindAttachments(demo->cmd, 1, &color_attachment, &depth_stencil);
+
+    clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
+    clear_range.baseMipLevel = 0;
+    clear_range.mipLevels = 1;
+    clear_range.baseArraySlice = 0;
+    clear_range.arraySize = 1;
+    xglCmdClearColorImage(demo->cmd,
+            demo->buffers[demo->current_buffer].image,
+            clear_color, 1, &clear_range);
+
+    clear_range.aspect = XGL_IMAGE_ASPECT_DEPTH;
+    xglCmdClearDepthStencil(demo->cmd, demo->depth.image,
+            clear_depth, 0, 1, &clear_range);
 
     xglCmdDraw(demo->cmd, 0, 3, 0, 1);
 
@@ -179,7 +195,6 @@ static void demo_prepare_buffers(struct demo *demo)
 static void demo_prepare_depth(struct demo *demo)
 {
     const XGL_FORMAT depth_format = { XGL_CH_FMT_R16, XGL_NUM_FMT_DS };
-    const uint16_t depth_value = (uint16_t) (0.5f * 65535);
     const XGL_IMAGE_CREATE_INFO image = {
         .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
@@ -248,30 +263,6 @@ static void demo_prepare_depth(struct demo *demo)
     err = xglCreateDepthStencilView(demo->device, &view,
             &demo->depth.view);
     assert(!err);
-
-    /* clear the buffer */
-    {
-        const XGL_INT tw = 128 / sizeof(uint16_t);
-        const XGL_INT th = 32;
-        XGL_INT i, j, w, h;
-        XGL_VOID *data;
-
-        w = (demo->width + tw - 1) / tw;
-        h = (demo->height + th - 1) / th;
-
-        err = xglMapMemory(demo->depth.mem, 0, &data);
-        assert(!err);
-
-        for (i = 0; i < w * h; i++) {
-            uint16_t *tile = (uint16_t *) ((char *) data + 4096 * i);
-
-            for (j = 0; j < 2048; j++)
-                tile[j] = depth_value;
-        }
-
-        err = xglUnmapMemory(demo->depth.mem);
-        assert(!err);
-    }
 }
 
 static void demo_prepare_textures(struct demo *demo)
