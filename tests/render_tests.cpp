@@ -766,10 +766,10 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
     err = xglEndCommandBuffer( m_cmdBuffer );
     ASSERT_XGL_SUCCESS( err );
 
-    // this command buffer only uses the vertex buffer memory
-    m_numMemRefs = 0;
-//    m_memRefs[0].flags = 0;
-//    m_memRefs[0].mem = m_vtxBufferMemory;
+    // this command buffer only uses a data buffer for the MVP
+    m_numMemRefs = 1;
+    m_memRefs[0].flags = 0;
+    m_memRefs[0].mem = m_constantBufferMem;
 
     // submit the command buffer to the universal queue
     err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
@@ -952,7 +952,7 @@ void XglRenderTest::DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText
     err = xglEndCommandBuffer( m_cmdBuffer );
     ASSERT_XGL_SUCCESS( err );
 
-    // this command buffer only uses the vertex buffer memory
+    // this command buffer uses the vertex buffer memory and a data buffer (for MVP)
     m_numMemRefs = 2;
     m_memRefs[0].flags = 0;
     m_memRefs[0].mem = m_vtxBufferMem;
@@ -1730,7 +1730,7 @@ TEST_F(XglRenderTest, BIL_XGLTriangle)
         data.color[i][3] = tri_data[i].a;
     }
 
-    InitConstantBuffer(bufSize*2, sizeof(XGL_FLOAT), (const void*) &data);
+    InitConstantBuffer(bufSize, sizeof(XGL_FLOAT), (const void*) &data);
 
     XglTestFramework::m_use_bil = true;
 
@@ -1917,17 +1917,22 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TriangleVSUniform)
+TEST_F(XglRenderTest, TriangleVSUniform1)
 {
     static const char *vertShaderText =
-            "#version 130\n"
-            "uniform mat4 mvp;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "\n"
+            "layout(binding = 0) uniform buf {\n"
+            "        mat4 MVP;\n"
+            "} ubuf;\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = mvp * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = ubuf.MVP * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -1937,9 +1942,42 @@ TEST_F(XglRenderTest, TriangleVSUniform)
             "}\n";
 
     // Create identity matrix
-    glm::mat4 Projection      = glm::mat4(1.0f);
-    glm::mat4 View      = glm::mat4(1.0f);
-    glm::mat4 Model      = glm::mat4(1.0f);
+    glm::mat4 Projection    = glm::mat4(1.0f);
+    glm::mat4 View          = glm::mat4(1.0f);
+    glm::mat4 Model         = glm::mat4(1.0f);
+    glm::mat4 MVP = Projection * View * Model;
+    const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
+
+    InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+
+    DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
+    RotateTriangleVSUniform(Projection, View, Model);
+}
+
+TEST_F(XglRenderTest, TriangleVSUniform2)
+{
+    static const char *vertShaderText =
+            "#version 130\n"
+            "uniform mat4 MVP;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = MVP * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 130\n"
+            "void main() {\n"
+            "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "}\n";
+
+    // Create identity matrix
+    glm::mat4 Projection    = glm::mat4(1.0f);
+    glm::mat4 View          = glm::mat4(1.0f);
+    glm::mat4 Model         = glm::mat4(1.0f);
     glm::mat4 MVP = Projection * View * Model;
     const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
 
