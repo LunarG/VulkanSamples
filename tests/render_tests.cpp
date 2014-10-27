@@ -1662,6 +1662,7 @@ TEST_F(XglRenderTest, XGLTriangle_FragColor)
         "   gl_FragColor = inColor;\n"
         "}\n";
 
+    TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to GLSL built-in gl_FragColor");
     XGLTriangleTest(vertShaderText, fragShaderText);
 }
 
@@ -1699,6 +1700,7 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
         "   outColor = inColor;\n"
         "}\n";
 
+    TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to output location 0, which should be the same as gl_FragColor");
 
     XGLTriangleTest(vertShaderText, fragShaderText);
 }
@@ -1738,6 +1740,7 @@ TEST_F(XglRenderTest, BIL_XGLTriangle)
         "   gl_FragColor = inColor;\n"
         "}\n";
 
+    TEST_DESCRIPTION("XGL-style shaders, but force test framework to compile shader to BIL and pass BIL to driver.");
 
     XglTestFramework::m_use_bil = true;
 
@@ -1764,6 +1767,8 @@ TEST_F(XglRenderTest, GreenTriangle)
        "   gl_FragColor = vec4(0,1,0,1);\n"
        "}\n";
 
+    TEST_DESCRIPTION("Basic shader that renders a fixed Green triangle coded as part of the vertex shader.");
+
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
@@ -1786,6 +1791,9 @@ TEST_F(XglRenderTest, BIL_GreenTriangle)
        "void main() {\n"
        "   gl_FragColor = vec4(0,1,0,1);\n"
        "}\n";
+
+    TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to BIL and gives BIL to driver.");
+
     XglTestFramework::m_use_bil = true;
     DrawTriangleTest(vertShaderText, fragShaderText);
     XglTestFramework::m_use_bil = saved_use_bil;
