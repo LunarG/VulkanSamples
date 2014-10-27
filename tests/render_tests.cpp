@@ -199,6 +199,7 @@ public:
     void InitDepthStencil();
     void DrawRotatedTriangleTest();
     void GenerateClearAndPrepareBufferCmds();
+    void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText);
 
 
 protected:
@@ -1590,42 +1591,8 @@ struct xgltriangle_vs_uniform {
     XGL_FLOAT   color[3][4];
 };
 
-TEST_F(XglRenderTest, XGLTriangle)
+void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText)
 {
-    static const char *vertShaderText =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "\n"
-        "layout(binding = 0) uniform buf {\n"
-        "        mat4 MVP;\n"
-        "        vec4 position[3];\n"
-        "        vec4 color[3];\n"
-        "} ubuf;\n"
-        "\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "\n"
-        "void main() \n"
-        "{\n"
-        "   outColor = ubuf.color[gl_VertexID];\n"
-        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
-        "}\n";
-
-    static const char *fragShaderText =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "\n"
-        "layout (location = 0) in vec4 inColor;\n"
-//        "layout (location = 0) out vec4 outColor;\n"
-//        "out vec4 outColor;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-//        "   outColor = inColor;\n"
-        "   gl_FragColor = inColor;\n"
-        "}\n";
-
     // Create identity matrix
     int i;
     struct xgltriangle_vs_uniform data;
@@ -1662,6 +1629,80 @@ TEST_F(XglRenderTest, XGLTriangle)
     RotateTriangleVSUniform(Projection, View, Model);
 }
 
+TEST_F(XglRenderTest, XGLTriangle_FragColor)
+{
+    static const char *vertShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout(binding = 0) uniform buf {\n"
+        "        mat4 MVP;\n"
+        "        vec4 position[3];\n"
+        "        vec4 color[3];\n"
+        "} ubuf;\n"
+        "\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "\n"
+        "void main() \n"
+        "{\n"
+        "   outColor = ubuf.color[gl_VertexID];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "}\n";
+
+    static const char *fragShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout (location = 0) in vec4 inColor;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   gl_FragColor = inColor;\n"
+        "}\n";
+
+    XGLTriangleTest(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
+{
+    static const char *vertShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout(binding = 0) uniform buf {\n"
+        "        mat4 MVP;\n"
+        "        vec4 position[3];\n"
+        "        vec4 color[3];\n"
+        "} ubuf;\n"
+        "\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "\n"
+        "void main() \n"
+        "{\n"
+        "   outColor = ubuf.color[gl_VertexID];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "}\n";
+
+    static const char *fragShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "\n"
+        "layout (location = 0) in vec4 inColor;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   outColor = inColor;\n"
+        "}\n";
+
+
+    XGLTriangleTest(vertShaderText, fragShaderText);
+}
+
 TEST_F(XglRenderTest, BIL_XGLTriangle)
 {
     bool saved_use_bil = XglTestFramework::m_use_bil;
@@ -1691,51 +1732,16 @@ TEST_F(XglRenderTest, BIL_XGLTriangle)
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
         "layout (location = 0) in vec4 inColor;\n"
-//        "layout (location = 0) out vec4 outColor;\n"
-//        "out vec4 outColor;\n"
         "\n"
         "void main()\n"
         "{\n"
-//        "   outColor = inColor;\n"
         "   gl_FragColor = inColor;\n"
         "}\n";
 
-    // Create identity matrix
-    int i;
-    struct xgltriangle_vs_uniform data;
-
-    glm::mat4 Projection      = glm::mat4(1.0f);
-    glm::mat4 View      = glm::mat4(1.0f);
-    glm::mat4 Model      = glm::mat4(1.0f);
-    glm::mat4 MVP = Projection * View * Model;
-    const int matrixSize = sizeof(MVP);
-    const int bufSize = sizeof(xgltriangle_vs_uniform) / sizeof(XGL_FLOAT);
-    memcpy(&data.mvp, &MVP[0][0], matrixSize);
-
-    static const Vertex tri_data[] =
-    {
-        { XYZ1( -1, -1, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-        { XYZ1( 1, -1, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
-        { XYZ1( 0,  1, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
-    };
-
-    for (i=0; i<3; i++) {
-        data.position[i][0] = tri_data[i].posX;
-        data.position[i][1] = tri_data[i].posY;
-        data.position[i][2] = tri_data[i].posZ;
-        data.position[i][3] = tri_data[i].posW;
-        data.color[i][0] = tri_data[i].r;
-        data.color[i][1] = tri_data[i].g;
-        data.color[i][2] = tri_data[i].b;
-        data.color[i][3] = tri_data[i].a;
-    }
-
-    InitConstantBuffer(bufSize, sizeof(XGL_FLOAT), (const void*) &data);
 
     XglTestFramework::m_use_bil = true;
 
-    DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
-    RotateTriangleVSUniform(Projection, View, Model);
+    XGLTriangleTest(vertShaderText, fragShaderText);
 
     XglTestFramework::m_use_bil = saved_use_bil;
 }
