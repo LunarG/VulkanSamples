@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include "xglLayer.h"
 #include "xgl_string_helper.h"
+#include "xgl_struct_string_helper.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
@@ -40,7 +41,15 @@ static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;
 // Just track 2 shaders for now
 #define VS 0
 #define FS 1
+#define DRAW 0
+#define DRAW_INDEXED 1
+#define DRAW_INDIRECT 2
+#define DRAW_INDEXED_INDIRECT 3
+#define NUM_DRAW_TYPES 4
 #define MAX_SLOTS 2048
+
+static uint64_t drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
+
 typedef struct _SHADER_DS_MAPPING {
     XGL_UINT slotCount;
     XGL_DESCRIPTOR_SLOT_INFO* pShaderMappingSlot;
@@ -87,7 +96,7 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
                     pPipeline->dsMapping[0][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
                     // Deep copy DS Slot array
                     pPipeline->dsMapping[0][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
-                    memcpy(&pPipeline->dsMapping[0][i].pShaderMappingSlot, &pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
+                    memcpy(pPipeline->dsMapping[0][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
                 }
             }
             else if (XGL_SHADER_STAGE_FRAGMENT == pSSCI->shader.stage) {
@@ -99,11 +108,11 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
                     pPipeline->dsMapping[1][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
                     // Deep copy DS Slot array
                     pPipeline->dsMapping[1][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
-                    memcpy(&pPipeline->dsMapping[1][i].pShaderMappingSlot, &pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
+                    memcpy(pPipeline->dsMapping[1][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
                 }
             }
         }
-        pTrav = pTrav->pNext;
+        pTrav = (PIPELINE_LL_HEADER*)pTrav->pNext;
     }
 }
 
@@ -271,7 +280,7 @@ static XGL_BOOL dsSamplerMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT star
             return XGL_FALSE;
         }
         for (uint32_t i = 0; i < slotCount; i++) {
-            dsSetImageMapping(&pTrav->dsSlot[i+startSlot], pSamplers[i]);
+            dsSetSamplerMapping(&pTrav->dsSlot[i+startSlot], pSamplers[i]);
         }
     }
     else
@@ -303,7 +312,7 @@ static void synchDSMapping()
                             }
                             else {
                                 for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][k].slotCount; r++) {
-                                    pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][k].pShaderMappingSlot[j];
+                                    pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][k].pShaderMappingSlot[r];
                                 }
                             }
                         }
@@ -321,35 +330,37 @@ static void synchDSMapping()
 static void printDSConfig()
 {
     for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-        DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
-        if (pDS) {
-            printf("DS INFO : Bindings for DS %p:\n", (void*)pDS->dsID);
-            for (uint32_t j = 0; j < pDS->numSlots; j++) {
-                printf("    Slot %u\n", j);
-                switch (pDS->dsSlot[j].activeMapping)
-                {
-                    case MAPPING_MEMORY:
-                        printf("    Mapped to Memory View %p (CAN PRINT DETAILS HERE)\n", (void*)&pDS->dsSlot[j].memView);
-                        break;
-                    case MAPPING_IMAGE:
-                        printf("    Mapped to Image View %p (CAN PRINT DETAILS HERE)\n", (void*)&pDS->dsSlot[j].imageView);
-                        break;
-                    case MAPPING_SAMPLER:
-                        printf("    Mapped to Sampler View %p (CAN PRINT DETAILS HERE)\n", (void*)pDS->dsSlot[j].sampler);
-                        break;
-                    default:
-                        printf("    NO VIEW MAPPED TO THIS DS SLOT\n");
-                        break;                    
-                }
-                for (uint32_t k = 0; k < 2; k++) {
-                    if (XGL_SLOT_UNUSED != pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType) {
-                        printf("    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", (k == 0) ? "VS" : "FS", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
+        if (lastBoundDS[i]) {
+            DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
+            if (pDS) {
+                printf("DS INFO : Slot bindings for DS w/ %u slots at index %u (%p):\n", pDS->numSlots, i, (void*)pDS->dsID);
+                for (uint32_t j = 0; j < pDS->numSlots; j++) {
+                    printf("----Slot %u\n", j);
+                    switch (pDS->dsSlot[j].activeMapping)
+                    {
+                        case MAPPING_MEMORY:
+                            printf("    Mapped to Memory View %p:\n%s", (void*)&pDS->dsSlot[j].memView, xgl_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].memView, "        "));
+                            break;
+                        case MAPPING_IMAGE:
+                            printf("    Mapped to Image View %p:\n%s", (void*)&pDS->dsSlot[j].imageView, xgl_print_xgl_image_view_attach_info(&pDS->dsSlot[j].imageView, "        "));
+                            break;
+                        case MAPPING_SAMPLER:
+                            printf("    Mapped to Sampler Object %p (CAN PRINT DETAILS HERE)\n", (void*)pDS->dsSlot[j].sampler);
+                            break;
+                        default:
+                            printf("    NO VIEW MAPPED TO THIS DS SLOT\n");
+                            break;
+                    }
+                    for (uint32_t k = 0; k < 2; k++) {
+                        if (XGL_SLOT_UNUSED != pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType) {
+                            printf("    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", (k == 0) ? "VS" : "FS", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
+                        }
                     }
                 }
             }
-        }
-        else {
-            printf("DS ERROR : Can't find last bound DS %p!\n", (void*)lastBoundDS[i]);
+            else {
+                printf("DS ERROR : Can't find last bound DS %p. Did you need to bind DS to index %u?\n", (void*)lastBoundDS[i], i);
+            }
         }
     }
 }
@@ -612,22 +623,18 @@ static void initLayerTable()
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of layered GetGpuInfo\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    printf("Completed layered GetGpuInfo\n");
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of layered CreateDevice\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
-    printf("Completed layered CreateDevice\n");
     return result;
 }
 
@@ -640,22 +647,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of layered GetExtensionSupport\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
-    printf("Completed layered GetExtensionSupport\n");
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of layered EnumerateLayers\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
-    printf("Completed layered EnumerateLayers\n");
     return result;
 }
 
@@ -746,11 +749,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device,
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
-    printf("At start of layered GetMultiGpuCompatibility\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
-    printf("Completed layered GetMultiGpuCompatibility\n");
     return result;
 }
 
@@ -914,7 +915,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
 {
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     // Create LL HEAD for this Pipeline
-    printf("INFO: Created Gfx Pipelines %p\n", (void*)*pPipeline);
+    printf("DS INFO : Created Gfx Pipeline %p\n", (void*)*pPipeline);
     PIPELINE_NODE *pTrav = pPipelineHead;
     if (pTrav) {
         while (pTrav->pNext)
@@ -966,6 +967,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, con
 {
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
     // Create LL chain
+    printf("DS INFO : Created Descriptor Set (DS) %p\n", (void*)*pDescriptorSet);
     DS_LL_HEAD *pTrav = pDSHead;
     if (pTrav) {
         // Grow existing list
@@ -1158,8 +1160,9 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer,
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset)
 {
     if (getDS(descriptorSet)) {
-        // TODO : Validate index
+        assert(index < XGL_MAX_DESCRIPTOR_SETS);
         lastBoundDS[index] = descriptorSet;
+        printf("DS INFO : DS %p bound to DS index %u on pipeline %s\n", (void*)descriptorSet, index, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
     }
     else {
         printf("DS ERROR : Attempt to bind DS %p that doesn't exist!\n", (void*)descriptorSet);
@@ -1194,22 +1197,29 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, X
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
+    printf("DS INFO : xglCmdDraw() call #%lu, reporting DS state:\n", drawCount[DRAW]++);
     synchAndPrintDSConfig();
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
+    printf("DS INFO : xglCmdDrawIndexed() call #%lu, reporting DS state:\n", drawCount[DRAW_INDEXED]++);
+    synchAndPrintDSConfig();
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride)
 {
+    printf("DS INFO : xglCmdDrawIndirect() call #%lu, reporting DS state:\n", drawCount[DRAW_INDIRECT]++);
+    synchAndPrintDSConfig();
     nextTable.CmdDrawIndirect(cmdBuffer, mem, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride)
 {
+    printf("DS INFO : xglCmdDrawIndexedIndirect() call #%lu, reporting DS state:\n", drawCount[DRAW_INDEXED_INDIRECT]++);
+    synchAndPrintDSConfig();
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, mem, offset, count, stride);
 }
 
@@ -1383,11 +1393,9 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    printf("At start of layered WsiX11AssociateConnection\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
-    printf("Completed layered WsiX11AssociateConnection\n");
     return result;
 }
 
