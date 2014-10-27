@@ -122,6 +122,21 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
 #define MAPPING_SAMPLER 0x00000004
 #define MAPPING_DS      0x00000008
 
+static char* stringSlotBinding(XGL_UINT binding)
+{
+    switch (binding)
+    {
+        case MAPPING_MEMORY:
+            return "Memory View";
+        case MAPPING_IMAGE:
+            return "Image View";
+        case MAPPING_SAMPLER:
+            return "Sampler";
+        default:
+            return "UNKNOWN DS BINDING";
+    }
+}
+
 typedef struct _DS_SLOT {
     XGL_UINT                     slot;
     XGL_DESCRIPTOR_SLOT_INFO     shaderSlotInfo[2];
@@ -326,6 +341,46 @@ static void synchDSMapping()
     }
 }
 
+// Checks to make sure that shader mapping matches slot binding
+// Print an ERROR and return XGL_FALSE if they don't line up
+static XGL_BOOL verifyShaderSlotMapping(const XGL_UINT slot, const XGL_UINT slotBinding, const XGL_UINT shaderStage, const XGL_DESCRIPTOR_SET_SLOT_TYPE shaderMapping)
+{
+    XGL_BOOL error = XGL_FALSE;
+    switch (shaderMapping)
+    {
+        case XGL_SLOT_SHADER_RESOURCE:
+            if (MAPPING_MEMORY != slotBinding && MAPPING_IMAGE != slotBinding)
+                error = XGL_TRUE;
+            break;
+        case XGL_SLOT_SHADER_SAMPLER:
+            if (MAPPING_SAMPLER != slotBinding)
+                error = XGL_TRUE;
+            break;
+        case XGL_SLOT_VERTEX_INPUT:
+            if (MAPPING_MEMORY != slotBinding)
+                error = XGL_TRUE;
+            break;
+        case XGL_SLOT_SHADER_UAV:
+            if (MAPPING_MEMORY != slotBinding)
+                error = XGL_TRUE;
+            break;
+        case XGL_SLOT_NEXT_DESCRIPTOR_SET:
+            if (MAPPING_DS != slotBinding)
+                error = XGL_TRUE;
+            break;
+        case XGL_SLOT_UNUSED:
+            break;
+        default:
+            printf("DS ERROR : For DS slot %u, unknown shader slot mapping w/ value %u\n", slot, shaderMapping);
+            return XGL_FALSE;
+    }
+    if (XGL_TRUE == error) {
+        printf("DS ERROR : DS Slot #%u binding of %s does not match %s shader mapping of %s\n", slot, stringSlotBinding(slotBinding), (shaderStage == VS) ? "Vtx" : "Frag", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(shaderMapping));
+        return XGL_FALSE;
+    }
+    return XGL_TRUE;
+}
+
 // Print details of DS config to stdout
 static void printDSConfig()
 {
@@ -351,9 +406,11 @@ static void printDSConfig()
                             printf("    NO VIEW MAPPED TO THIS DS SLOT\n");
                             break;
                     }
+                    // For each shader type, check its mapping
                     for (uint32_t k = 0; k < 2; k++) {
                         if (XGL_SLOT_UNUSED != pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType) {
                             printf("    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", (k == 0) ? "VS" : "FS", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
+                            verifyShaderSlotMapping(j, pDS->dsSlot[j].activeMapping, k, pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType);
                         }
                     }
                 }
