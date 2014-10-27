@@ -36,6 +36,10 @@
 #include <iostream>
 #include <fstream>
 #include <list>
+
+// Can be used by tests to record additional details / description of test
+#define TEST_DESCRIPTION(desc) RecordProperty("description", desc)
+
 using namespace std;
 
 class XglTestImageRecord
