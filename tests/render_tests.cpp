@@ -1917,7 +1917,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TriangleVSUniform1)
+TEST_F(XglRenderTest, TriangleVSUniform)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1934,39 +1934,6 @@ TEST_F(XglRenderTest, TriangleVSUniform1)
             "      vertices[2] = vec2( 0.5,  0.5);\n"
             "   gl_Position = ubuf.MVP * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
-
-    static const char *fragShaderText =
-            "#version 130\n"
-            "void main() {\n"
-            "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "}\n";
-
-    // Create identity matrix
-    glm::mat4 Projection    = glm::mat4(1.0f);
-    glm::mat4 View          = glm::mat4(1.0f);
-    glm::mat4 Model         = glm::mat4(1.0f);
-    glm::mat4 MVP = Projection * View * Model;
-    const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
-
-    InitConstantBuffer(matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-
-    DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
-    RotateTriangleVSUniform(Projection, View, Model);
-}
-
-TEST_F(XglRenderTest, TriangleVSUniform2)
-{
-    static const char *vertShaderText =
-            "#version 130\n"
-            "uniform mat4 MVP;\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = MVP * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
 
     static const char *fragShaderText =
             "#version 130\n"
