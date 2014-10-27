@@ -2644,7 +2644,7 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
       ioVar = aggregate->as_dereference_variable()->variable_referenced();
    }
 
-   setIoParameters(ioVar, mdNode);
+   setIoParameters(ioVar, mdNode, false);
 
    // Handle type overriding
    if (typeOverride)
@@ -3194,7 +3194,7 @@ inline void MesaGlassTranslator::emitIRLoad(const llvm::Instruction* llvmInst)
  * Set IO variable parameters (locations, interp modes, pixel origins, etc)
  * -----------------------------------------------------------------------------
  */
-void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode)
+void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode, bool isOutput)
 {
    if (ioVar && mdNode) {
       std::string         name;
@@ -3216,7 +3216,11 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
 
       if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
          ioVar->data.explicit_location = true;
-         ioVar->data.location          = layoutLocation + VARYING_SLOT_VAR0;
+
+         if ((manager->getStage() == EShLangFragment) && isOutput)
+            ioVar->data.location          = layoutLocation + FRAG_RESULT_DATA0;
+         else
+            ioVar->data.location          = layoutLocation + VARYING_SLOT_VAR0;
       }
    }
 }
@@ -3291,7 +3295,7 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
       ioVar = aggregate->as_dereference_variable()->variable_referenced();
    }
 
-   setIoParameters(ioVar, mdNode);
+   setIoParameters(ioVar, mdNode, true);
 
    addIRInstruction(llvmInst, fixIRLValue(irDst, getIRValue(src)));
 }
