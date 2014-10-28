@@ -700,10 +700,10 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
     if (array_size > range->arraySize)
         array_size = range->arraySize;
 
-    meta->dst.lod = range->baseMipLevel;
-    meta->dst.layer = range->baseArraySlice;
-
     for (i = 0; i < mip_levels; i++) {
+        meta->dst.lod = range->baseMipLevel + i;
+        meta->dst.layer = range->baseArraySlice;
+
         meta->width = u_minify(img->layout.width0, meta->dst.lod);
         meta->height = u_minify(img->layout.height0, meta->dst.lod);
 
@@ -727,8 +727,6 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
 
             meta->dst.layer++;
         }
-
-        meta->dst.lod++;
     }
 }
 
