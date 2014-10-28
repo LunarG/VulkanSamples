@@ -521,6 +521,7 @@ do_dead_builtin_varyings(struct gl_context *ctx,
     * GLES2, because they are not available there.
     */
    if (ctx->API == API_OPENGL_CORE ||
+       ctx->API == API_XGL ||
        ctx->API == API_OPENGLES2) {
       return;
    }

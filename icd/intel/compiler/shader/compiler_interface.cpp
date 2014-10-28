@@ -229,7 +229,7 @@ initialize_mesa_constants(struct gl_context *ctx)
    ctx->Const.MaxVertexStreams = 1;
 
    /* GL 3.2  */
-   ctx->Const.ProfileMask = ctx->API == API_OPENGL_CORE
+   ctx->Const.ProfileMask = (ctx->API == API_OPENGL_CORE || ctx->API == API_XGL)
                           ? GL_CONTEXT_CORE_PROFILE_BIT
                           : GL_CONTEXT_COMPATIBILITY_PROFILE_BIT;
 
@@ -285,7 +285,7 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 {
    memset(ctx, 0, sizeof(*ctx));
 
-   ctx->API = API_OPENGL_CORE;
+   ctx->API = API_XGL;
 
    ctx->Extensions.dummy_false = false;
    ctx->Extensions.dummy_true = true;
