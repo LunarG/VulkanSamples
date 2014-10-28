@@ -1225,6 +1225,16 @@ void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
     gen6_PIPE_CONTROL(cmd, pipe_control_dw0, NULL, 0, 0);
 }
 
+void cmd_batch_flush_all(struct intel_cmd *cmd)
+{
+    cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_INSTRUCTION_CACHE_INVALIDATE |
+                         GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH |
+                         GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                         GEN6_PIPE_CONTROL_VF_CACHE_INVALIDATE |
+                         GEN6_PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
+                         GEN6_PIPE_CONTROL_CS_STALL);
+}
+
 void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
                            XGL_GPU_SIZE offset)
@@ -2864,6 +2874,9 @@ static void cmd_draw(struct intel_cmd *cmd,
                 vertex_start, instance_count, instance_start, vertex_base);
     }
 
+    if (intel_debug & INTEL_DEBUG_NOCACHE)
+        cmd_batch_flush_all(cmd);
+
     cmd->bind.draw_count++;
     /* need to re-emit all workarounds */
     cmd->bind.wa_flags = 0;
@@ -2901,6 +2914,9 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
 
         gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
     }
+
+    if (intel_debug & INTEL_DEBUG_NOCACHE)
+        cmd_batch_flush_all(cmd);
 
     cmd->bind.draw_count++;
     /* need to re-emit all workarounds */

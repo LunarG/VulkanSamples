@@ -417,6 +417,7 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
 }
 
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0);
+void cmd_batch_flush_all(struct intel_cmd *cmd);
 
 void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
