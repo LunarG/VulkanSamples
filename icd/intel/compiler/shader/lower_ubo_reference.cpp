@@ -37,14 +37,15 @@
 #include "ir_builder.h"
 #include "ir_rvalue_visitor.h"
 #include "main/macros.h"
+#include "main/mtypes.h"
 
 using namespace ir_builder;
 
 namespace {
 class lower_ubo_reference_visitor : public ir_rvalue_enter_visitor {
 public:
-   lower_ubo_reference_visitor(struct gl_shader *shader)
-   : shader(shader)
+   lower_ubo_reference_visitor(struct gl_shader *shader, bool xgl)
+   : shader(shader), isXGL(xgl)
    {
    }
 
@@ -59,6 +60,7 @@ public:
    struct gl_uniform_buffer_variable *ubo_var;
    unsigned uniform_block;
    bool progress;
+   bool isXGL;
 };
 
 /**
@@ -138,7 +140,15 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    this->uniform_block = -1;
    for (unsigned i = 0; i < shader->NumUniformBlocks; i++) {
       if (strcmp(field_name, shader->UniformBlocks[i].Name) == 0) {
-         this->uniform_block = i;
+
+          // If this shader is being used for XGL, then buffer bindings
+          // should be used directly, as they will match exactly what
+          // the application is submitting via descriptor sets
+          if (this->isXGL) {
+              this->uniform_block = shader->UniformBlocks[i].Binding;
+          } else {
+              this->uniform_block = i;
+          }
 
          struct gl_uniform_block *block = &shader->UniformBlocks[i];
 
@@ -376,9 +386,9 @@ lower_ubo_reference_visitor::emit_ubo_loads(ir_dereference *deref,
 } /* unnamed namespace */
 
 void
-lower_ubo_reference(struct gl_shader *shader, exec_list *instructions)
+lower_ubo_reference(struct gl_shader *shader, exec_list *instructions, bool isXGL)
 {
-   lower_ubo_reference_visitor v(shader);
+   lower_ubo_reference_visitor v(shader, isXGL);
 
    /* Loop over the instructions lowering references, because we take
     * a deref of a UBO array using a UBO dereference as the index will

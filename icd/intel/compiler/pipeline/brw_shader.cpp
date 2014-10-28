@@ -428,7 +428,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                        "back to very inefficient code generation\n");
         }
 
-        lower_ubo_reference(&shader->base, shader->base.ir);
+        lower_ubo_reference(&shader->base, shader->base.ir, ctx->API == API_XGL);
 
         do {
             progress = false;
