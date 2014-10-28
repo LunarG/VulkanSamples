@@ -188,6 +188,8 @@ loader_icd_create(const char *filename)
     if (!icd)
         return NULL;
 
+    memset(icd, 0, sizeof(*icd));
+
     icd->handle = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
     if (!icd->handle) {
         loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());
