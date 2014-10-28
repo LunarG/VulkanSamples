@@ -2029,6 +2029,12 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
                 GEN6_ALIGNMENT_CC_VIEWPORT * 4, 2, &dw);
         dw[0] = u_fui(0.0f);
         dw[1] = u_fui(1.0f);
+    } else {
+        /* DEPTH_STENCIL_STATE */
+        ds_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
+                GEN6_ALIGNMENT_DEPTH_STENCIL_STATE * 4,
+                GEN6_DEPTH_STENCIL_STATE__SIZE, &dw);
+        memset(dw, 0, sizeof(*dw) * GEN6_DEPTH_STENCIL_STATE__SIZE);
     }
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
