@@ -64,7 +64,7 @@ static void ll_increment_use_count(XGL_VOID* pObj) {
         pTrav = pTrav->pNext;
     }
     // If we do not find obj, insert it and then intrement count
-    printf("INFO : Unable to increment count for obj %p, will add to list as UNKNOWN type and increment count\n", pObj);
+    printf("OBJ WARN : Unable to increment count for obj %p, will add to list as UNKNOWN type and increment count\n", pObj);
     ll_insert_obj(pObj, "UNKNOWN");
     ll_increment_use_count(pObj);
 }
@@ -350,11 +350,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     ll_increment_use_count((XGL_VOID*)gpu);
     printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
-    //printf("At start of layered GetGpuInfo\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    //printf("Completed layered GetGpuInfo\n");
     return result;
 }
 
@@ -363,13 +361,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     ll_increment_use_count((XGL_VOID*)gpu);
     printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
-    //printf("At start of layered CreateDevice\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     printf("OBJ[%llu] : CREATE XGL_DEVICE object %p\n", object_track_index++, (void*)*pDevice);
     ll_insert_obj((XGL_VOID*)*pDevice, "XGL_DEVICE");
-    //printf("Completed layered CreateDevice\n");
     return result;
 }
 
@@ -392,11 +388,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     ll_increment_use_count((XGL_VOID*)gpu);
     printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
-    //printf("At start of layered GetExtensionSupport\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
-    //printf("Completed layered GetExtensionSupport\n");
     return result;
 }
 
@@ -405,11 +399,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     ll_increment_use_count((XGL_VOID*)gpu);
     printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
-    //printf("At start of layered EnumerateLayers\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
-    //printf("Completed layered EnumerateLayers\n");
     return result;
 }
 
@@ -474,14 +466,16 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_M
     ll_increment_use_count((XGL_VOID*)device);
     printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
+    printf("OBJ[%llu] : CREATE XGL_GPU_MEMORY object %p\n", object_track_index++, (void*)*pMem);
+    ll_insert_obj((XGL_VOID*)*pMem, "XGL_GPU_MEMORY");
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
 {
-    ll_increment_use_count((XGL_VOID*)mem);
-    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem));
     XGL_RESULT result = nextTable.FreeMemory(mem);
+    printf("OBJ[%llu] : DESTROY mem object %p\n", object_track_index++, (void*)mem);
+    ll_remove_obj((XGL_VOID*)mem);
     return result;
 }
 
@@ -530,11 +524,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
     ll_increment_use_count((XGL_VOID*)gpu0);
     printf("OBJ[%llu] : USING gpu0 object %p (%lu total uses)\n", object_track_index++, (void*)gpu0, ll_get_obj_uses((XGL_VOID*)gpu0));
-    //printf("At start of layered GetMultiGpuCompatibility\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
-    //printf("Completed layered GetMultiGpuCompatibility\n");
     return result;
 }
 
@@ -1290,11 +1282,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     ll_increment_use_count((XGL_VOID*)gpu);
     printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
-    //printf("At start of layered WsiX11AssociateConnection\n");
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
-    //printf("Completed layered WsiX11AssociateConnection\n");
     return result;
 }
 

@@ -233,11 +233,15 @@ class Subcommand(object):
                     create_line = ''
                     destroy_line = ''
                     using_line = '    ll_increment_use_count((XGL_VOID*)%s);\n    printf("OBJ[%%llu] : USING %s object %%p (%%lu total uses)\\n", object_track_index++, (void*)%s, ll_get_obj_uses((XGL_VOID*)%s));\n' % (param0_name, param0_name, param0_name, param0_name)
-                    if 'Create' in proto.name:
+                    if 'Create' in proto.name or 'Alloc' in proto.name:
                         create_line = '    printf("OBJ[%%llu] : CREATE %s object %%p\\n", object_track_index++, (void*)*%s);\n    ll_insert_obj((XGL_VOID*)*%s, "%s");\n' % (proto.params[-1].ty.strip('*'), proto.params[-1].name, proto.params[-1].name, proto.params[-1].ty.strip('*'))
-                    if 'Destroy' in proto.name:
+                    if 'Destroy' in proto.name or 'Free' in proto.name:
                         destroy_line = '    printf("OBJ[%%llu] : DESTROY %s object %%p\\n", object_track_index++, (void*)%s);\n    ll_remove_obj((XGL_VOID*)%s);\n' % (param0_name, param0_name, param0_name)
                         using_line = ''
+                    if 'DestroyDevice' in proto.name:
+                        destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pObjLLHead;\n    while (pTrav) {\n'
+                        destroy_line += '        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\\n", pTrav->objType, pTrav->pObj, pTrav->numUses);\n'
+                        destroy_line += '        pTrav = pTrav->pNext;\n    }\n'
                     ret_val = ''
                     stmt = ''
                     if proto.ret != "XGL_VOID":
@@ -385,7 +389,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        pTrav = pTrav->pNext;')
         header_txt.append('    }')
         header_txt.append('    // If we do not find obj, insert it and then intrement count')
-        header_txt.append('    printf("INFO : Unable to increment count for obj %p, will add to list as UNKNOWN type and increment count\\n", pObj);')
+        header_txt.append('    printf("OBJ WARN : Unable to increment count for obj %p, will add to list as UNKNOWN type and increment count\\n", pObj);')
         header_txt.append('    ll_insert_obj(pObj, "UNKNOWN");')
         header_txt.append('    ll_increment_use_count(pObj);')
         header_txt.append('}')
