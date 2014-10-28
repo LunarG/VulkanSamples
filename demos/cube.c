@@ -17,7 +17,35 @@
 #define DEMO_TEXTURE_COUNT 1
 
 // HACK
-bool do_tri = true;
+bool do_tri = false;
+
+struct xgltriangle_vs_uniform {
+    // Must start with MVP
+    XGL_FLOAT   mvp[4][4];
+    XGL_FLOAT   position[3][4];
+    XGL_FLOAT   color[3][4];
+};
+
+struct xgltextriangle_vs_uniform {
+    // Must start with MVP
+    XGL_FLOAT   mvp[4][4];
+    XGL_FLOAT   position[3][4];
+    XGL_FLOAT   attr[3][4];
+};
+
+struct xglcube_vs_uniform {
+    // Must start with MVP
+    XGL_FLOAT   mvp[4][4];
+    XGL_FLOAT   position[12*3][4];
+    XGL_FLOAT   color[12*3][4];
+};
+
+struct xgltexcube_vs_uniform {
+    // Must start with MVP
+    XGL_FLOAT   mvp[4][4];
+    XGL_FLOAT   position[12*3][4];
+    XGL_FLOAT   attr[12*3][4];
+};
 
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
@@ -28,7 +56,14 @@ struct Vertex
     XGL_FLOAT r, g, b, a;                // Color
 };
 
+struct VertexPosTex
+{
+    XGL_FLOAT posX, posY, posZ, posW;    // Position data
+    XGL_FLOAT u, v, s, t;                // Texcoord
+};
+
 #define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
+#define UV(_u_, _v_)                (_u_), (_v_), 0.f, 1.f
 
 static const struct Vertex g_vb_solid_face_colors_Data[] =
 {
@@ -74,6 +109,104 @@ static const struct Vertex g_vb_solid_face_colors_Data[] =
     { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
 };
+
+static const XGL_FLOAT g_vertex_buffer_data[] = {
+        -1.0f,-1.0f,-1.0f,
+        -1.0f,-1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f,-1.0f,
+        -1.0f,-1.0f,-1.0f,
+        -1.0f, 1.0f,-1.0f,
+         1.0f,-1.0f, 1.0f,
+        -1.0f,-1.0f,-1.0f,
+         1.0f,-1.0f,-1.0f,
+         1.0f, 1.0f,-1.0f,
+         1.0f,-1.0f,-1.0f,
+        -1.0f,-1.0f,-1.0f,
+        -1.0f,-1.0f,-1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f,-1.0f,
+         1.0f,-1.0f, 1.0f,
+        -1.0f,-1.0f, 1.0f,
+        -1.0f,-1.0f,-1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f,-1.0f, 1.0f,
+         1.0f,-1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+         1.0f,-1.0f,-1.0f,
+         1.0f, 1.0f,-1.0f,
+         1.0f,-1.0f,-1.0f,
+         1.0f, 1.0f, 1.0f,
+         1.0f,-1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f,-1.0f,
+        -1.0f, 1.0f,-1.0f,
+         1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f,-1.0f,
+        -1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+         1.0f,-1.0f, 1.0f
+};
+
+static const XGL_FLOAT g_uv_buffer_data[] = {
+        0.000059f, 1.0f-0.000004f,
+        0.000103f, 1.0f-0.336048f,
+        0.335973f, 1.0f-0.335903f,
+        1.000023f, 1.0f-0.000013f,
+        0.667979f, 1.0f-0.335851f,
+        0.999958f, 1.0f-0.336064f,
+        0.667979f, 1.0f-0.335851f,
+        0.336024f, 1.0f-0.671877f,
+        0.667969f, 1.0f-0.671889f,
+        1.000023f, 1.0f-0.000013f,
+        0.668104f, 1.0f-0.000013f,
+        0.667979f, 1.0f-0.335851f,
+        0.000059f, 1.0f-0.000004f,
+        0.335973f, 1.0f-0.335903f,
+        0.336098f, 1.0f-0.000071f,
+        0.667979f, 1.0f-0.335851f,
+        0.335973f, 1.0f-0.335903f,
+        0.336024f, 1.0f-0.671877f,
+        1.000004f, 1.0f-0.671847f,
+        0.999958f, 1.0f-0.336064f,
+        0.667979f, 1.0f-0.335851f,
+        0.668104f, 1.0f-0.000013f,
+        0.335973f, 1.0f-0.335903f,
+        0.667979f, 1.0f-0.335851f,
+        0.335973f, 1.0f-0.335903f,
+        0.668104f, 1.0f-0.000013f,
+        0.336098f, 1.0f-0.000071f,
+        0.000103f, 1.0f-0.336048f,
+        0.000004f, 1.0f-0.671870f,
+        0.336024f, 1.0f-0.671877f,
+        0.000103f, 1.0f-0.336048f,
+        0.336024f, 1.0f-0.671877f,
+        0.335973f, 1.0f-0.335903f,
+        0.667969f, 1.0f-0.671889f,
+        1.000004f, 1.0f-0.671847f,
+        0.667979f, 1.0f-0.335851f
+};
+
+void dumpMatrix(const char *note, mat4x4 MVP)
+{
+    int i;
+
+    printf("%s: \n", note);
+    for (i=0; i<4; i++) {
+        printf("%f, %f, %f, %f\n", MVP[i][0], MVP[i][1], MVP[i][2], MVP[i][3]);
+    }
+    printf("\n");
+    fflush(stdout);
+}
+
+void dumpVec4(const char *note, vec4 vector)
+{
+    printf("%s: \n", note);
+        printf("%f, %f, %f, %f\n", vector[0], vector[1], vector[2], vector[3]);
+    printf("\n");
+    fflush(stdout);
+}
 
 struct demo {
     xcb_connection_t *connection;
@@ -157,7 +290,7 @@ static void demo_draw_build_cmd(struct demo *demo)
         .stencilState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
     };
     const XGL_FLOAT clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
-    const XGL_FLOAT clear_depth = 0.9f;
+    const XGL_FLOAT clear_depth = 1.0f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
     XGL_RESULT err;
 
@@ -194,15 +327,18 @@ static void demo_draw_build_cmd(struct demo *demo)
     xglCmdClearDepthStencil(demo->cmd, demo->depth.image,
             clear_depth, 0, 1, &clear_range);
 
-    xglCmdDraw(demo->cmd, 0, 3, 0, 1);
-//    xglCmdDraw(demo->cmd, 0, 12 * 3, 0, 1);
+    if (do_tri) {
+        xglCmdDraw(demo->cmd, 0, 3, 0, 1);
+    } else {
+        xglCmdDraw(demo->cmd, 0, 12 * 3, 0, 1);
+    }
 
     err = xglEndCommandBuffer(demo->cmd);
     assert(!err);
 }
 
 
-void demo_update_data_buffer(struct demo *demo)
+void demo_update_data_buffer(struct demo *demo, bool forward)
 {
     mat4x4 MVP, Model, VP;
     int matrixSize = sizeof(MVP);
@@ -212,8 +348,13 @@ void demo_update_data_buffer(struct demo *demo)
     mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
 
     // Rotate 22.5 degrees around the Y axis
-    mat4x4_rotate(Model, demo->model_matrix, 0.0f, 1.0f, 0.0f, 22.5f);
-    mat4x4_mul(MVP, VP, Model);
+    mat4x4_dup(Model, demo->model_matrix);
+    if (forward) {
+        mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f, degreesToRadians(22.5f));
+    } else {
+        mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f, degreesToRadians(-22.5f));
+    }
+    mat4x4_mul(MVP, VP, demo->model_matrix);
 
     err = xglMapMemory(demo->uniform_data.mem, 0, (XGL_VOID **) &pData);
     assert(!err);
@@ -356,9 +497,9 @@ static void demo_prepare_depth(struct demo *demo)
 #if 1
 static void demo_prepare_textures(struct demo *demo)
 {
-    const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
-    const XGL_INT tex_width = 2;
-    const XGL_INT tex_height = 2;
+    const XGL_FORMAT tex_format = { XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM };
+    const XGL_INT tex_width = 64;
+    const XGL_INT tex_height = 64;
     const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
         { 0xffff0000, 0xff00ff00 },
     };
@@ -488,6 +629,72 @@ static void demo_prepare_textures(struct demo *demo)
 }
 #endif
 
+void demo_prepare_cube_data_buffer(struct demo *demo)
+{
+    XGL_MEMORY_ALLOC_INFO alloc_info;
+    XGL_UINT8 *pData;
+    int i;
+    mat4x4 MVP, VP;
+    vec3 eye = {0.0f, 3.0f, 10.0f};
+    vec3 origin = {0, 0, 0};
+    vec3 up = {0.0f, 1.0f, 0.0};
+    XGL_RESULT err;
+    struct xgltexcube_vs_uniform data;
+
+    mat4x4_perspective(demo->projection_matrix, degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+    mat4x4_look_at(demo->view_matrix, eye, origin, up);
+//    mat4x4_identity(demo->projection_matrix);
+//    mat4x4_identity(demo->view_matrix);
+    mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
+//    mat4x4_translate(demo->model_matrix, 0.25, 0, 0);
+    mat4x4_identity(demo->model_matrix);
+    mat4x4_mul(MVP, VP, demo->model_matrix);
+    memcpy(data.mvp, MVP, sizeof(MVP));
+    dumpMatrix("MVP", MVP);
+
+    for (i=0; i<12*3; i++) {
+        data.position[i][0] = g_vertex_buffer_data[i*3];
+        data.position[i][1] = g_vertex_buffer_data[i*3+1];
+        data.position[i][2] = g_vertex_buffer_data[i*3+2];
+        data.position[i][3] = 1.0f;
+        data.attr[i][0] = g_uv_buffer_data[2*i];
+        data.attr[i][1] = g_uv_buffer_data[2*i + 1];
+        data.attr[i][2] = 0;
+        data.attr[i][3] = 0;
+    }
+
+    memset(&alloc_info, 0, sizeof(alloc_info));
+    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.allocationSize = sizeof(data);
+    alloc_info.alignment = 0;
+    alloc_info.heapCount = 1;
+    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
+
+    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
+    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+
+    err = xglAllocMemory(demo->device, &alloc_info, &demo->uniform_data.mem);
+    assert(!err);
+
+    err = xglMapMemory(demo->uniform_data.mem, 0, (XGL_VOID **) &pData);
+    assert(!err);
+
+    memcpy(pData, &data, alloc_info.allocationSize);
+
+    err = xglUnmapMemory(demo->uniform_data.mem);
+    assert(!err);
+
+    // set up the memory view for the constant buffer
+    demo->uniform_data.view.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
+    demo->uniform_data.view.stride = 16;
+    demo->uniform_data.view.range  = alloc_info.allocationSize;
+    demo->uniform_data.view.offset = 0;
+    demo->uniform_data.view.mem    = demo->uniform_data.mem;
+    demo->uniform_data.view.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    demo->uniform_data.view.format.numericFormat = XGL_NUM_FMT_FLOAT;
+}
+
+#if 0
 // this function will create the vertex buffer and fill it with the mesh data
 void demo_prepare_mesh( struct demo *demo )
 {
@@ -555,7 +762,9 @@ void demo_prepare_mesh( struct demo *demo )
     demo->vertices.vi.attributeCount = 2;
     demo->vertices.vi.pVertexAttributeDescriptions = demo->vertices.vi_attrs;
 }
+#endif
 
+#if 0
 static void demo_prepare_vertices(struct demo *demo)
 {
     const float vb[3][5] = {
@@ -564,6 +773,7 @@ static void demo_prepare_vertices(struct demo *demo)
         {  1.0f, -1.0f, -0.5f,      1.0f, 0.0f },
         {  0.0f,  1.0f,  1.0f,      0.5f, 1.0f },
     };
+
     const XGL_MEMORY_ALLOC_INFO mem_alloc = {
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
@@ -580,7 +790,7 @@ static void demo_prepare_vertices(struct demo *demo)
     memset(&demo->vertices, 0, sizeof(demo->vertices));
 
     err = xglAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem);
-    assert(!err);
+    XGL_RESULT err;    assert(!err);
 
     err = xglMapMemory(demo->vertices.mem, 0, &data);
     assert(!err);
@@ -620,22 +830,65 @@ static void demo_prepare_vertices(struct demo *demo)
     demo->vertices.vi_attrs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
     demo->vertices.vi_attrs[1].offsetInBytes = sizeof(float) * 3;
 }
+#endif
 
-void demo_prepare_data_buffer(struct demo *demo)
+void demo_prepare_tri_data_buffer(struct demo *demo)
 {
     XGL_MEMORY_ALLOC_INFO alloc_info;
     XGL_UINT8 *pData;
+    int i;
     mat4x4 MVP, VP;
+    vec3 eye = {0.0f, 3.0f, 10.0f};
+    vec3 origin = {0, 0, 0};
+    vec3 up = {0.0f, 1.0f, 0.0};
+    struct xgltextriangle_vs_uniform data;
+    const struct VertexPosTex tri_data[] =
+    {
+        /*      position                texcoord */
+        { XYZ1(-1.0f, -1.0f, -0.6f),    UV(0.0f, 0.0f) },
+        { XYZ1(1.0f, -1.0f, -0.5f),     UV(1.0f, 0.0f) },
+        { XYZ1(0.0f,  1.0f,  1.0f),     UV(0.5f, 1.0f) },
+    };
     XGL_RESULT err;
 
-    mat4x4_identity(demo->projection_matrix);
-    mat4x4_identity(demo->view_matrix);
+//    glm::mat4 Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+//    dumpMatrix("Projection", Projection);
+
+    // Camera matrix
+   /* glm::mat4 View       = glm::lookAt(
+                               glm::vec3(0,3,10), // Camera is at (0,3,10), in World Space
+                               glm::vec3(0,0,0), // and looks at the origin
+                               glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+                               );
+                               */
+    mat4x4_perspective(demo->projection_matrix, degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+    dumpMatrix("Projection", demo->projection_matrix);
+    mat4x4_look_at(demo->view_matrix, eye, origin, up);
+    dumpMatrix("View", demo->view_matrix);
+//    mat4x4_identity(demo->projection_matrix);
+//    mat4x4_identity(demo->view_matrix);
     mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
     mat4x4_identity(demo->model_matrix);
     mat4x4_mul(MVP, VP, demo->model_matrix);
+    mat4x4_identity(MVP);
+//    mat4x4_translate(MVP, 0.25, 0, 0);
+    dumpMatrix("MVP", MVP);
+    memcpy(data.mvp, MVP, sizeof(MVP));
 
+    for (i=0; i<3; i++) {
+        data.position[i][0] = tri_data[i].posX;
+        data.position[i][1] = tri_data[i].posY;
+        data.position[i][2] = tri_data[i].posZ;
+        data.position[i][3] = tri_data[i].posW;
+        data.attr[i][0] = tri_data[i].u;
+        data.attr[i][1] = tri_data[i].v;
+        data.attr[i][2] = tri_data[i].s;
+        data.attr[i][3] = tri_data[i].t;
+    }
+
+    memset(&alloc_info, 0, sizeof(alloc_info));
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = sizeof(MVP);
+    alloc_info.allocationSize = sizeof(data);
     alloc_info.alignment = 0;
     alloc_info.heapCount = 1;
     alloc_info.heaps[0] = 0; // TODO: Use known existing heap
@@ -649,7 +902,7 @@ void demo_prepare_data_buffer(struct demo *demo)
     err = xglMapMemory(demo->uniform_data.mem, 0, (XGL_VOID **) &pData);
     assert(!err);
 
-    memcpy(pData, MVP, alloc_info.allocationSize);
+    memcpy(pData, &data, alloc_info.allocationSize);
 
     err = xglUnmapMemory(demo->uniform_data.mem);
     assert(!err);
@@ -679,9 +932,9 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     xglBeginDescriptorSetUpdate(demo->dset);
     xglClearDescriptorSetSlots(demo->dset, 0, DEMO_TEXTURE_COUNT * 2 + 2);
 
-    xglAttachMemoryViewDescriptors(demo->dset, 0, 1, &demo->vertices.view);
+//    xglAttachMemoryViewDescriptors(demo->dset, 0, 1, &demo->vertices.view);
 
-    xglAttachMemoryViewDescriptors(demo->dset, 1, 1, &demo->uniform_data.view);
+    xglAttachMemoryViewDescriptors(demo->dset, 0, 1, &demo->uniform_data.view);
 
     XGL_IMAGE_VIEW_ATTACH_INFO image_view;
 
@@ -690,10 +943,8 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     image_view.view = demo->textures[0].view;
     image_view.state = XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY;
 
-    xglAttachSamplerDescriptors(demo->dset, 2, 1,
-            &demo->textures[0].sampler);
-    xglAttachImageViewDescriptors(demo->dset, 3, 1,
-            &image_view);
+    xglAttachSamplerDescriptors(demo->dset, 1, 1, &demo->textures[0].sampler);
+    xglAttachImageViewDescriptors(demo->dset, 2, 1, &image_view);
 
     xglEndDescriptorSetUpdate(demo->dset);
 }
@@ -734,99 +985,51 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
 static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
     if (do_tri) {
-#if 1
         static const char *vertShaderText =
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (std140) uniform bufferVals {\n"
-                "    mat4 mvp;\n"
-                "} myBufferVals;\n"
-                "in vec4 pos;\n"
-                "in vec2 attr;\n"
-//                "out vec2 texcoord;\n"
-                "layout (location = 0) out vec4 outColor;\n"
-                "void main() {\n"
-                "   vec2 vertices[3];"
-                "      vertices[0] = vec2(-0.5, -0.5);\n"
-                "      vertices[1] = vec2( 0.5, -0.5);\n"
-                "      vertices[2] = vec2( 0.5,  0.5);\n"
-//                "   gl_Position = myBufferVals.mvp * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-                "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-                "   vec4 testColor;"
-                "   testColor = myBufferVals.mvp[0];\n"
-//                "   gl_Position = myBufferVals.mvp * pos;\n"
-//                "   gl_Position = pos;\n"
-                "   outColor = testColor;\n"
-                "}\n";
-#endif
-#if 0
-        static const char *vertShaderText =
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (std140) uniform bufferVals {\n"
-                "    mat4 mvp;\n"
-                "} myBufferVals;\n"
-                "layout (location = 0) in vec4 pos;\n"
-                "layout (location = 1) in vec2 attr;\n"
-//                "out vec2 texcoord;\n"
-                "layout (location = 0) out vec4 outColor;\n"
-                "void main() {\n"
-                "   vec4 testColor;"
-//                "   texcoord = attr;\n"
-                "   testColor = vec4(1, 1, 1, 1);\n"
-                "   if (gl_VertexID == 4) {\n"
-//                "      gl_Position = myBufferVals.mvp * pos;\n"
-//                "      gl_Position = pos;\n"
-                "      testColor = vec4(1, 0, 0, 1);\n"
-                "   } else {\n"
-//                "      gl_Position = pos;\n"
-                "      testColor = vec4(0, 1, 0, 1);\n"
-                "   }\n"
-                "   gl_Position = pos;\n"
-                "   outColor = testColor;\n"
-                "}\n";
-#endif
-#if 0
-        // WORKING SHADER
-        static const char *vertShaderText =
-//                "#version 130\n"
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (std140) uniform bufferVals {\n"
-                "    mat4 mvp;\n"
-                "} myBufferVals;\n"
-                "in vec4 pos;\n"
-                "in vec2 attr;\n"
-//                "out vec2 texcoord;\n"
-                "layout (location = 0) out vec4 outColor;\n"
-                "void main() {\n"
-//                "   texcoord = attr;\n"
-                "   gl_Position = pos;\n"
-                "   outColor = vec4(0, 1, 0, 1);\n"
-                "}\n";
-#endif
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "\n"
+            "layout(binding = 0) uniform buf {\n"
+            "        mat4 MVP;\n"
+            "        vec4 position[3];\n"
+            "        vec4 attr[3];\n"
+            "} ubuf;\n"
+            "\n"
+            "layout (location = 0) out vec4 texcoord;\n"
+//                "layout (location = 0) out vec2 texcoord;\n"
+            "\n"
+            "void main() \n"
+            "{\n"
+            "   texcoord = ubuf.attr[gl_VertexID];\n"
+//            "   texcoord = ubuf.position[gl_VertexID].xy;\n"
+            "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+            "}\n";
 
         return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
                                    (const void *) vertShaderText,
                                    strlen(vertShaderText));
     } else {
         static const char *vertShaderText =
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (std140) uniform bufferVals {\n"
-                "    mat4 mvp;\n"
-                "} myBufferVals;\n"
-                "in vec4 pos;\n"
-                "in vec4 inColor;\n"
-                "layout (location = 0) out vec4 outColor;\n"
-                "void main() {\n"
-                "   outColor = inColor;\n"
-                "   gl_Position = myBufferVals.mvp * pos;\n"
-                "}\n";
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "\n"
+            "layout(binding = 0) uniform buf {\n"
+            "        mat4 MVP;\n"
+            "        vec4 position[12*3];\n"
+            "        vec4 attr[12*3];\n"
+            "} ubuf;\n"
+            "\n"
+            "layout (location = 0) out vec4 texcoord;\n"
+//                "layout (location = 0) out vec2 texcoord;\n"
+            "\n"
+            "void main() \n"
+            "{\n"
+            "   texcoord = ubuf.attr[gl_VertexID];\n"
+//            "   texcoord = ubuf.position[gl_VertexID].xy;\n"
+            "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+            "}\n";
 
         return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
                                    (const void *) vertShaderText,
@@ -837,41 +1040,36 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
     if (do_tri) {
-#if 0
-        static const char *fragShaderText =
-                "#version 130\n"
-                "uniform sampler2D tex;\n"
-//                "in vec2 texcoord;\n"
-                "void main() {\n"
-//                "   gl_FragColor = texture(tex, texcoord);\n"
-                "   gl_FragColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);"
-                "}\n";
-#endif
+#if 1
         static const char *fragShaderText =
                 "#version 140\n"
                 "#extension GL_ARB_separate_shader_objects : enable\n"
                 "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (location = 0) in vec4 inColor;\n"
                 "uniform sampler2D tex;\n"
 //                "in vec2 texcoord;\n"
+                "layout (location = 0) in vec4 texcoord;\n"
                 "void main() {\n"
-//                "   gl_FragColor = texture(tex, texcoord);\n"
-//                "   gl_FragColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);"
-                "   gl_FragColor = inColor;"
+                "   gl_FragColor = texture(tex, texcoord.xy);\n"
+//                "   gl_FragColor = texture(tex, vec2(0, 0));\n"
+//                "   gl_FragColor = texcoord;"
+//                "   gl_FragColor = vec4(0, 1, 0, 1);"
                 "}\n";
+#endif
 
         return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
                                    (const void *) fragShaderText,
                                    strlen(fragShaderText));
     } else {
         static const char *fragShaderText =
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (location = 0) in vec4 inColor;\n"
-                "void main() {\n"
-                "   gl_FragColor = inColor;\n"
-                "}\n";
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "uniform sampler2D tex;\n"
+            "\n"
+            "layout (location = 0) in vec4 texcoord;\n"
+            "void main() {\n"
+            "   gl_FragColor = texture(tex, texcoord.xy);\n"
+            "}\n";
 
         return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
                                    (const void *) fragShaderText,
@@ -882,22 +1080,19 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
 static void demo_prepare_pipeline(struct demo *demo)
 {
     XGL_GRAPHICS_PIPELINE_CREATE_INFO pipeline;
-    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
+//    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
     XGL_PIPELINE_IA_STATE_CREATE_INFO ia;
     XGL_PIPELINE_RS_STATE_CREATE_INFO rs;
     XGL_PIPELINE_CB_STATE cb;
     XGL_PIPELINE_DB_STATE_CREATE_INFO db;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fs;
-    XGL_DESCRIPTOR_SLOT_INFO vs_slots[DEMO_TEXTURE_COUNT * 2 + 2];
-    XGL_DESCRIPTOR_SLOT_INFO fs_slots[DEMO_TEXTURE_COUNT * 2 + 2];
+    XGL_DESCRIPTOR_SLOT_INFO vs_slots[3];
+    XGL_DESCRIPTOR_SLOT_INFO fs_slots[3];
     XGL_RESULT err;
-    XGL_UINT i;
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-
-    vi = demo->vertices.vi;
 
     memset(&ia, 0, sizeof(ia));
     ia.sType = XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
@@ -916,24 +1111,21 @@ static void demo_prepare_pipeline(struct demo *demo)
     db.format = demo->depth.format;
 
     memset(&vs_slots, 0, sizeof(vs_slots));
-    vs_slots[2 * DEMO_TEXTURE_COUNT].slotObjectType = XGL_SLOT_VERTEX_INPUT;
-    vs_slots[2 * DEMO_TEXTURE_COUNT].shaderEntityIndex = 0;
+    vs_slots[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    vs_slots[0].shaderEntityIndex = 0;
 
     memset(&fs_slots, 0, sizeof(fs_slots));
-    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        fs_slots[2 * i].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
-        fs_slots[2 * i].shaderEntityIndex = i;
-        fs_slots[2 * i + 1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
-        fs_slots[2 * i + 1].shaderEntityIndex = i;
-    }
+    fs_slots[1].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
+    fs_slots[1].shaderEntityIndex = 0;
+    fs_slots[2].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    fs_slots[2].shaderEntityIndex = 0;
 
     memset(&vs, 0, sizeof(vs));
     vs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs.shader.stage = XGL_SHADER_STAGE_VERTEX;
-    vs.shader.shader = demo_prepare_vs(demo);\
+    vs.shader.shader = demo_prepare_vs(demo);
     assert(vs.shader.shader != NULL);
-    vs.shader.descriptorSetMapping[0].descriptorCount =
-        DEMO_TEXTURE_COUNT * 2 + 1;
+    vs.shader.descriptorSetMapping[0].descriptorCount = 3;
     vs.shader.descriptorSetMapping[0].pDescriptorInfo = vs_slots;
 
     memset(&fs, 0, sizeof(fs));
@@ -941,12 +1133,10 @@ static void demo_prepare_pipeline(struct demo *demo)
     fs.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     fs.shader.shader = demo_prepare_fs(demo);
     assert(fs.shader.shader != NULL);
-    fs.shader.descriptorSetMapping[0].descriptorCount =
-        DEMO_TEXTURE_COUNT * 2 + 1;
+    fs.shader.descriptorSetMapping[0].descriptorCount = 3;
     fs.shader.descriptorSetMapping[0].pDescriptorInfo = fs_slots;
 
-    pipeline.pNext = (const XGL_VOID *) &vi;
-    vi.pNext = (XGL_VOID *) &ia;
+    pipeline.pNext = (const XGL_VOID *) &ia;
     ia.pNext = (const XGL_VOID *) &rs;
     rs.pNext = (const XGL_VOID *) &cb;
     cb.pNext = (const XGL_VOID *) &db;
@@ -1030,11 +1220,11 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_depth(demo);
     demo_prepare_textures(demo);
     if (do_tri) {
-         demo_prepare_vertices(demo);
+//         demo_prepare_vertices(demo);
+        demo_prepare_tri_data_buffer(demo);
     } else {
-        demo_prepare_mesh(demo);
+        demo_prepare_cube_data_buffer(demo);
     }
-    demo_prepare_data_buffer(demo);
     demo_prepare_descriptor_set(demo);
 
     demo_prepare_pipeline(demo);
@@ -1060,11 +1250,19 @@ static void demo_handle_event(struct demo *demo,
             case 0x9:           // Escape
                 demo->quit = true;
                 break;
+            case 0x71:          // left arrow key
+                // Wait for work to finish before updating MVP.
+                xglDeviceWaitIdle(demo->device);
+
+                demo_update_data_buffer(demo, false);
+
+                demo_draw(demo);
+                break;
             case 0x72:          // right arrow key
                 // Wait for work to finish before updating MVP.
                 xglDeviceWaitIdle(demo->device);
 
-                demo_update_data_buffer(demo);
+                demo_update_data_buffer(demo, true);
 
                 demo_draw(demo);
                 break;
@@ -1214,7 +1412,7 @@ static void demo_cleanup(struct demo *demo)
 
     xglDestroyObject(demo->dset);
 
-    xglFreeMemory(demo->vertices.mem);
+//    xglFreeMemory(demo->vertices.mem);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         xglDestroyObject(demo->textures[i].view);
