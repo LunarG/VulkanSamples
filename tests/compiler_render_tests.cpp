@@ -132,17 +132,21 @@ static const Vertex g_vbData[] =
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
 };
 
+static const int uniformBufferCount = 16;
+
 class XglRenderTest : public XglRenderFramework
 {
 public:
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
     void InitTexture();
     void InitSampler();
+    void InitUniformBuffer(int constantCount, int constantSize, int constantIndex, const void* data);
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleVSUniform(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleFSUniformBlock(const char *vertShaderText, const char *fragShaderText);
+    void DrawTriangleFSUniformBlockBinding(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleVSUniformBlock(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleVSFSUniformBlock(const char *vertShaderText, const char *fragShaderText);
     void DrawTexturedTriangle(const char *vertShaderText, const char *fragShaderText);
@@ -150,10 +154,10 @@ public:
 
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
+    void CreatePipelineFSUniformBlockBinding(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps, int bufferCount);
     void CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineVSFSUniformBlock(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineSingleTextureAndSampler(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
-    void DrawRotatedTriangleTest();
 
 
 protected:
@@ -163,6 +167,11 @@ protected:
     XGL_GPU_MEMORY m_textureMem;
 
     XGL_SAMPLER m_sampler;
+
+    XGL_GPU_MEMORY m_uniformBufferMem[uniformBufferCount];
+    XGL_MEMORY_VIEW_ATTACH_INFO     m_uniformBufferView[uniformBufferCount];
+
+
 
 //    XGL_APPLICATION_INFO app_info;
 //    XGL_PHYSICAL_GPU objs[MAX_GPUS];
@@ -434,9 +443,44 @@ void XglRenderTest::InitSampler()
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglRenderTest::DrawRotatedTriangleTest()
+void XglRenderTest::InitUniformBuffer(int constantCount, int constantSize,
+                                      int constantIndex, const void* data)
 {
-    // TODO : This test will pass a matrix into VS to affect triangle orientation.
+    // based on XglRenderFramework::InitConstantBuffer
+    // mainly add an index when selecting which buffer you are creating
+
+    XGL_RESULT err = XGL_SUCCESS;
+
+    XGL_MEMORY_ALLOC_INFO alloc_info = {};
+    XGL_UINT8 *pData;
+
+    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.allocationSize = constantCount * constantSize;
+    alloc_info.alignment = 0;
+    alloc_info.heapCount = 1;
+    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
+
+    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
+    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+
+    err = xglAllocMemory(device(), &alloc_info, &m_uniformBufferMem[constantIndex]);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglMapMemory(m_uniformBufferMem[constantIndex], 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData, data, alloc_info.allocationSize);
+
+    err = xglUnmapMemory(m_uniformBufferMem[constantIndex]);
+    ASSERT_XGL_SUCCESS(err);
+
+    // set up the memory view for the constant buffer
+    this->m_uniformBufferView[constantIndex].stride = 16;
+    this->m_uniformBufferView[constantIndex].range  = alloc_info.allocationSize;
+    this->m_uniformBufferView[constantIndex].offset = 0;
+    this->m_uniformBufferView[constantIndex].mem    = m_uniformBufferMem[constantIndex];
+    this->m_uniformBufferView[constantIndex].format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    this->m_uniformBufferView[constantIndex].format.numericFormat = XGL_NUM_FMT_FLOAT;
 }
 
 void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fragShaderText)
@@ -1175,6 +1219,99 @@ void XglRenderTest::CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER v
     ASSERT_XGL_SUCCESS(err);
 }
 
+void XglRenderTest::CreatePipelineFSUniformBlockBinding(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps, const int bufferCount)
+{
+    // based on CreateDefaultPipeline
+    // only difference is number of constant buffers
+
+    XGL_RESULT err;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
+
+    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vs_stage.pNext = XGL_NULL_HANDLE;
+    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
+    vs_stage.shader.shader = vs;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    vs_stage.shader.linkConstBufferCount = 0;
+    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ps_stage.pNext = &vs_stage;
+    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
+    ps_stage.shader.shader = ps;
+
+//    const int slots = 4;
+//    assert (slots == bufferCount); // update as needed
+
+    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( bufferCount * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    for (int i = 0; i < bufferCount; ++i) {
+        // Note:  These are all constant buffers
+        slotInfo[i].shaderEntityIndex = i;
+        slotInfo[i].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    }
+
+    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = bufferCount;
+
+    ps_stage.shader.linkConstBufferCount = 0;
+    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
+        &ps_stage,                                         // pNext
+        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
+        XGL_FALSE,                                         // disableVertexReuse
+        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
+        XGL_FALSE,                                         // primitiveRestartEnable
+        0                                                  // primitiveRestartIndex
+    };
+
+    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+        &ia_state,
+        XGL_FALSE,                                          // depthClipEnable
+        XGL_FALSE,                                          // rasterizerDiscardEnable
+        1.0                                                 // pointSize
+    };
+
+    XGL_PIPELINE_CB_STATE cb_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+        &rs_state,
+        XGL_FALSE,                                          // alphaToCoverageEnable
+        XGL_FALSE,                                          // dualSourceBlendEnable
+        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
+        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
+            {
+                XGL_FALSE,                                  // blendEnable
+                m_render_target_fmt,                        // XGL_FORMAT
+                0xF                                         // channelWriteMask
+            }
+        }
+    };
+
+    // TODO: Should take depth buffer format from queried formats
+    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+        &cb_state,
+        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
+    };
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = &db_state;
+    info.flags = 0;
+    err = xglCreateGraphicsPipeline(device(), &info, pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(*pipeline, "Pipeline", &m_pipe_mem);
+    ASSERT_XGL_SUCCESS(err);
+}
+
 void XglRenderTest::CreatePipelineVSFSUniformBlock(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps)
 {
     // this is based on CreatePipelineVSUniform
@@ -1568,6 +1705,129 @@ void XglRenderTest::DrawTriangleFSUniformBlock(const char *vertShaderText, const
 
 }
 
+void XglRenderTest::DrawTriangleFSUniformBlockBinding(const char *vertShaderText, const char *fragShaderText)
+{
+    // sourced from DrawTriangleFSUniformBlock
+
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, &vs));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, &ps));
+
+    const int bufferCount = 4;
+    ASSERT_NO_FATAL_FAILURE(CreatePipelineFSUniformBlockBinding(&pipeline, vs, ps, bufferCount));
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+
+    // We're going to create a number of uniform buffers, and then allow
+    // the shader to select which it wants to read from with a binding
+
+    // Let's populate the buffers with a single color each:
+    //    layout (std140, binding = 0) uniform bufferVals { vec4 red;   } myRedVal;
+    //    layout (std140, binding = 1) uniform bufferVals { vec4 green; } myGreenVal;
+    //    layout (std140, binding = 2) uniform bufferVals { vec4 blue;  } myBlueVal;
+    //    layout (std140, binding = 3) uniform bufferVals { vec4 white; } myWhiteVal;
+
+    assert(4 == bufferCount);  // update the following code if you want more than 4
+
+    const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
+    const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
+    const float blueVals[4]  = { 0.0, 0.0, 1.0, 1.0 };
+    const float whiteVals[4] = { 1.0, 1.0, 1.0, 1.0 };
+
+    const int redCount   = sizeof(redVals)   / sizeof(float);
+    const int greenCount = sizeof(greenVals) / sizeof(float);
+    const int blueCount  = sizeof(blueVals)  / sizeof(float);
+    const int whiteCount = sizeof(whiteVals) / sizeof(float);
+
+    int index = 0;
+    InitUniformBuffer(redCount,   sizeof(redVals[0]),   index++, (const void *) redVals);
+    InitUniformBuffer(greenCount, sizeof(greenVals[0]), index++, (const void *) greenVals);
+    InitUniformBuffer(blueCount,  sizeof(blueVals[0]),  index++, (const void *) blueVals);
+    InitUniformBuffer(whiteCount, sizeof(whiteVals[0]), index++, (const void *) whiteVals);
+
+
+    // Create descriptor set for a uniform resource
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = bufferCount;
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the constant buffer view to the descriptor set
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+
+    for(int i = 0; i < bufferCount; ++i)
+        xglAttachMemoryViewDescriptors( m_rsrcDescSet, i, 1, &m_uniformBufferView[i] );
+
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds();
+    GenerateBindRenderTargetCmd();
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
+//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+//    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
+
+    // render the cube
+    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+
+    // prepare the back buffer for present
+//    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
+//    transitionToPresent.image = m_image;
+//    transitionToPresent.oldState = m_image_state;
+//    transitionToPresent.newState = m_display.fullscreen ? XGL_WSI_WIN_PRESENT_SOURCE_FLIP : XGL_WSI_WIN_PRESENT_SOURCE_BLT;
+//    transitionToPresent.subresourceRange = srRange;
+//    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToPresent );
+//    m_image_state = ( XGL_IMAGE_STATE ) transitionToPresent.newState;
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 0;
+//    m_memRefs[0].flags = 0;
+//    m_memRefs[0].mem = m_vtxBufferMemory;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS( err );
+
+    err = xglQueueWaitIdle( m_device->m_queue );
+    ASSERT_XGL_SUCCESS( err );
+
+    // Wait for work to finish before cleaning up.
+    xglDeviceWaitIdle(m_device->device());
+
+    RecordImage(m_renderTarget);
+
+}
+
 void XglRenderTest::DrawTriangleVSFSUniformBlock(const char *vertShaderText, const char *fragShaderText)
 {
     // this is sourced from DrawTriangleFSUniformBlock
@@ -1860,10 +2120,6 @@ TEST_F(XglRenderTest, YellowTriangle)
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, RotatedTriangle) {
-    DrawRotatedTriangleTest();
-}
-
 TEST_F(XglRenderTest, TriangleTwoFSUniforms)
 {
     static const char *vertShaderText =
@@ -2136,6 +2392,40 @@ TEST_F(XglRenderTest, VSTexture)
             "}\n";
 
     DrawTexturedTriangle(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
+{
+    // This test allows the shader to select which buffer it is
+    // pulling from using layout binding qualifier.
+    // There are corresponding changes in the compiler stack that
+    // will select the buffer using binding directly.
+    // The expected result from this test is a purple triangle
+
+    static const char *vertShaderText =
+            "#version 130\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform redVal   { vec4 color; } myRedVal\n;"
+            "layout (std140, binding = 1) uniform greenVal { vec4 color; } myGreenVal\n;"
+            "layout (std140, binding = 2) uniform blueVal  { vec4 color; } myBlueVal\n;"
+            "layout (std140, binding = 3) uniform whiteVal { vec4 color; } myWhiteVal\n;"
+            "void main() {\n"
+            "   gl_FragColor = myBlueVal.color;\n"
+            "   gl_FragColor += myRedVal.color;\n"
+            "}\n";
+
+    DrawTriangleFSUniformBlockBinding(vertShaderText, fragShaderText);
 }
 
 int main(int argc, char **argv) {
