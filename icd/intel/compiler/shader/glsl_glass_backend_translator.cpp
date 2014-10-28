@@ -3215,14 +3215,25 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
       ioVar->data.pixel_center_integer = state->fs_pixel_center_integer;
 
       if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
-         ioVar->data.explicit_location = true;
 
-         if ((manager->getStage() == EShLangFragment) && isOutput)
-            ioVar->data.location          = layoutLocation + FRAG_RESULT_DATA0;
-         else if ((manager->getStage() == EShLangVertex) && !isOutput)
-            ioVar->data.location          = layoutLocation + VERT_ATTRIB_GENERIC0;
-         else
-            ioVar->data.location          = layoutLocation + VARYING_SLOT_VAR0;
+          if (mdAggregate && mdLayout) {
+
+              // An aggregate with layout is a uniform block which expects binding instead of location
+              // TODO: checking for layout alone may be sufficient
+              ioVar->data.explicit_binding  = true;
+              ioVar->data.binding           = layoutLocation;
+
+          } else {
+
+              ioVar->data.explicit_location = true;
+
+              if ((manager->getStage() == EShLangFragment) && isOutput)
+                  ioVar->data.location      = layoutLocation + FRAG_RESULT_DATA0;
+              else if ((manager->getStage() == EShLangVertex) && !isOutput)
+                  ioVar->data.location      = layoutLocation + VERT_ATTRIB_GENERIC0;
+              else
+                  ioVar->data.location      = layoutLocation + VARYING_SLOT_VAR0;
+          }
       }
    }
 }
