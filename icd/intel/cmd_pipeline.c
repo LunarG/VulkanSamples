@@ -2868,6 +2868,7 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
     cmd->bind.meta = meta;
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
+    cmd_wa_gen6_pre_command_scoreboard_stall(cmd);
 
     gen6_meta_dynamic_states(cmd);
     gen6_meta_surface_states(cmd);
