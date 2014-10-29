@@ -466,23 +466,6 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
             (cmd_len - 2);
     dw++;
 
-    if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)) {
-        comps[0] = (vs->uses & INTEL_SHADER_USE_VID) ?
-            GEN6_VFCOMP_STORE_VID : GEN6_VFCOMP_STORE_0;
-        comps[1] = (vs->uses & INTEL_SHADER_USE_IID) ?
-            GEN6_VFCOMP_STORE_IID : GEN6_VFCOMP_NOSTORE;
-        comps[2] = GEN6_VFCOMP_NOSTORE;
-        comps[3] = GEN6_VFCOMP_NOSTORE;
-
-        dw[0] = GEN6_VE_STATE_DW0_VALID;
-        dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-                comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-                comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-                comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
-
-        dw += 2;
-    }
-
     /* VERTEX_ELEMENT_STATE */
     for (i = 0; i < info->vi.attributeCount; i++) {
         const XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr =
@@ -512,6 +495,23 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
                 format << GEN6_VE_STATE_DW0_FORMAT__SHIFT |
                 attr->offsetInBytes;
 
+        dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
+                comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
+                comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+                comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+
+        dw += 2;
+    }
+
+    if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID)) {
+        comps[0] = (vs->uses & INTEL_SHADER_USE_VID) ?
+            GEN6_VFCOMP_STORE_VID : GEN6_VFCOMP_STORE_0;
+        comps[1] = (vs->uses & INTEL_SHADER_USE_IID) ?
+            GEN6_VFCOMP_STORE_IID : GEN6_VFCOMP_NOSTORE;
+        comps[2] = GEN6_VFCOMP_NOSTORE;
+        comps[3] = GEN6_VFCOMP_NOSTORE;
+
+        dw[0] = GEN6_VE_STATE_DW0_VALID;
         dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
                 comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
                 comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
