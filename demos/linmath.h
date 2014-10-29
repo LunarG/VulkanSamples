@@ -17,7 +17,6 @@
 #ifndef LINMATH_H
 #define LINMATH_H
 
-#define __USE_BSD
 #include <math.h>
 
 // Converts degrees to radians.

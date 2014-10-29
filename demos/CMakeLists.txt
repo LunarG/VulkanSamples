@@ -5,6 +5,9 @@ endif()
 if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
 endif()
+if(NOT EXISTS /usr/include/png.h)
+    message(FATAL_ERROR "Necessary png12-dev headers cannot be found: sudo apt-get install png12-dev")
+endif()
 
 
 include_directories (
@@ -13,7 +16,7 @@ include_directories (
    )
 
 link_directories(${XCB_LIBRARY_DIRS})
-link_libraries(${XCB_LIBRARIES} XGL m)
+link_libraries(${XCB_LIBRARIES} XGL png m)
 
 add_executable(tri tri.c)
 target_link_libraries(tri)

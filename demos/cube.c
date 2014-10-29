@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +13,14 @@
 #include "icd-bil.h"
 
 #include "linmath.h"
+#include <png.h>
 
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
+
+static char *tex_files[] = {
+    "demos/lunarg-logo-256x256-solid.png"
+};
 
 // HACK
 bool do_tri = false;
@@ -65,127 +71,104 @@ struct VertexPosTex
 #define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
 #define UV(_u_, _v_)                (_u_), (_v_), 0.f, 1.f
 
-static const struct Vertex g_vb_solid_face_colors_Data[] =
-{
-    { XYZ1( -1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-
-    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( 1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-
-    { XYZ1( 1,  1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
-
-    { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
-    { XYZ1( -1, -1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
-    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
-    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
-    { XYZ1( -1, -1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
-    { XYZ1( -1, -1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
-
-    { XYZ1( 1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
-
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
-    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
-    { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
-    { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
-};
-
 static const XGL_FLOAT g_vertex_buffer_data[] = {
-        -1.0f,-1.0f,-1.0f,
-        -1.0f,-1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f,-1.0f,
-        -1.0f,-1.0f,-1.0f,
-        -1.0f, 1.0f,-1.0f,
-         1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f,-1.0f,
-         1.0f,-1.0f,-1.0f,
-         1.0f, 1.0f,-1.0f,
-         1.0f,-1.0f,-1.0f,
-        -1.0f,-1.0f,-1.0f,
-        -1.0f,-1.0f,-1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f,-1.0f,
-         1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f,-1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f,-1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f,-1.0f,
-         1.0f, 1.0f,-1.0f,
-         1.0f,-1.0f,-1.0f,
-         1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f,-1.0f,
-        -1.0f, 1.0f,-1.0f,
-         1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f,-1.0f,
-        -1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f
+    -1.0f,-1.0f,-1.0f,  // Vertex 0
+    -1.0f,-1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,
+
+    -1.0f, 1.0f, 1.0f,  // Vertex 1
+    -1.0f, 1.0f,-1.0f,
+    -1.0f,-1.0f,-1.0f,
+
+    -1.0f,-1.0f,-1.0f,  // Vertex 2
+     1.0f, 1.0f,-1.0f,
+     1.0f,-1.0f,-1.0f,
+
+    -1.0f,-1.0f,-1.0f,  // Vertex 3
+     1.0f, 1.0f,-1.0f,
+    -1.0f, 1.0f,-1.0f,
+
+    -1.0f,-1.0f,-1.0f,  // Vertex 4
+     1.0f,-1.0f, 1.0f,
+     1.0f,-1.0f,-1.0f,
+
+    -1.0f,-1.0f,-1.0f,  // Vertex 5
+    -1.0f,-1.0f, 1.0f,
+     1.0f,-1.0f, 1.0f,
+
+    -1.0f, 1.0f,-1.0f,  // Vertex 6
+    -1.0f, 1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
+
+    -1.0f, 1.0f,-1.0f,  // Vertex 7
+     1.0f, 1.0f,-1.0f,
+     1.0f, 1.0f, 1.0f,
+
+     1.0f, 1.0f,-1.0f,  // Vertex 8
+     1.0f, 1.0f, 1.0f,
+     1.0f,-1.0f, 1.0f,
+
+     1.0f,-1.0f, 1.0f,  // Vertex 9
+     1.0f,-1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,
+
+    -1.0f, 1.0f, 1.0f,  // Vertex 10
+     1.0f, 1.0f, 1.0f,
+    -1.0f,-1.0f, 1.0f,
+
+    -1.0f,-1.0f, 1.0f,  // Vertex 11
+     1.0f,-1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
 };
 
 static const XGL_FLOAT g_uv_buffer_data[] = {
-        0.000059f, 1.0f-0.000004f,
-        0.000103f, 1.0f-0.336048f,
-        0.335973f, 1.0f-0.335903f,
-        1.000023f, 1.0f-0.000013f,
-        0.667979f, 1.0f-0.335851f,
-        0.999958f, 1.0f-0.336064f,
-        0.667979f, 1.0f-0.335851f,
-        0.336024f, 1.0f-0.671877f,
-        0.667969f, 1.0f-0.671889f,
-        1.000023f, 1.0f-0.000013f,
-        0.668104f, 1.0f-0.000013f,
-        0.667979f, 1.0f-0.335851f,
-        0.000059f, 1.0f-0.000004f,
-        0.335973f, 1.0f-0.335903f,
-        0.336098f, 1.0f-0.000071f,
-        0.667979f, 1.0f-0.335851f,
-        0.335973f, 1.0f-0.335903f,
-        0.336024f, 1.0f-0.671877f,
-        1.000004f, 1.0f-0.671847f,
-        0.999958f, 1.0f-0.336064f,
-        0.667979f, 1.0f-0.335851f,
-        0.668104f, 1.0f-0.000013f,
-        0.335973f, 1.0f-0.335903f,
-        0.667979f, 1.0f-0.335851f,
-        0.335973f, 1.0f-0.335903f,
-        0.668104f, 1.0f-0.000013f,
-        0.336098f, 1.0f-0.000071f,
-        0.000103f, 1.0f-0.336048f,
-        0.000004f, 1.0f-0.671870f,
-        0.336024f, 1.0f-0.671877f,
-        0.000103f, 1.0f-0.336048f,
-        0.336024f, 1.0f-0.671877f,
-        0.335973f, 1.0f-0.335903f,
-        0.667969f, 1.0f-0.671889f,
-        1.000004f, 1.0f-0.671847f,
-        0.667979f, 1.0f-0.335851f
+    0.0f, 1.0f,  // Vertex 0
+    1.0f, 1.0f,
+    1.0f, 0.0f,
+
+    1.0f, 0.0f,  // Vertex 1
+    0.0f, 0.0f,
+    0.0f, 1.0f,
+
+    0.0f, 1.0f,  // Vertex 2
+    1.0f, 0.0f,
+    0.0f, 0.0f,
+
+    0.0f, 1.0f,  // Vertex 3
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+
+    0.0f, 1.0f,  // Vertex 4
+    1.0f, 0.0f,
+    0.0f, 0.0f,
+
+    0.0f, 1.0f,  // Vertex 5
+    1.0f, 1.0f,
+    1.0f, 0.0f,
+
+    0.0f, 1.0f,  // Vertex 6
+    1.0f, 1.0f,
+    1.0f, 0.0f,
+
+    0.0f, 1.0f,  // Vertex 7
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+
+    0.0f, 0.0f,  // Vertex 8
+    0.0f, 1.0f,
+    1.0f, 1.0f,
+
+    1.0f, 1.0f,  // Vertex 9
+    1.0f, 0.0f,
+    0.0f, 0.0f,
+
+    0.0f, 0.0f,  // Vertex 10
+    1.0f, 0.0f,
+    0.0f, 1.0f,
+
+    0.0f, 1.0f,  // Vertex 11
+    1.0f, 1.0f,
+    1.0f, 0.0f,
 };
 
 void dumpMatrix(const char *note, mat4x4 MVP)
@@ -237,6 +220,7 @@ struct demo {
     struct {
         XGL_SAMPLER sampler;
 
+        char *filename;
         XGL_IMAGE image;
         XGL_GPU_MEMORY mem;
         XGL_IMAGE_VIEW view;
@@ -495,14 +479,160 @@ static void demo_prepare_depth(struct demo *demo)
 }
 
 #if 1
+/** loadTexture
+ * 	loads a png file into an memory object, using cstdio , libpng.
+ *
+ *    	\param demo : Needed to access XGL calls
+ * 	\param filename : the png file to be loaded
+ * 	\param width : width of png, to be updated as a side effect of this function
+ * 	\param height : height of png, to be updated as a side effect of this function
+ *
+ * 	\return bool : an opengl texture id.  true if successful?,
+ * 					should be validated by the client of this function.
+ *
+ * Source: http://en.wikibooks.org/wiki/OpenGL_Programming/Intermediate/Textures
+ * Modified to copy image to memory
+ *
+ */
+bool loadTexture(char *filename, XGL_UINT8 *rgba_data,
+                 XGL_SUBRESOURCE_LAYOUT *layout,
+                 XGL_INT *width, XGL_INT *height)
+{
+  //header for testing if it is a png
+  png_byte header[8];
+  int i, is_png, bit_depth, color_type,rowbytes;
+  png_uint_32 twidth, theight;
+  png_structp  png_ptr;
+  png_infop info_ptr, end_info;
+  png_byte *image_data;
+  png_bytep *row_pointers;
+
+  //open file as binary
+  FILE *fp = fopen(filename, "rb");
+  if (!fp) {
+    return false;
+  }
+
+  //read the header
+  fread(header, 1, 8, fp);
+
+  //test if png
+  is_png = !png_sig_cmp(header, 0, 8);
+  if (!is_png) {
+    fclose(fp);
+    return false;
+  }
+
+  //create png struct
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
+      NULL, NULL);
+  if (!png_ptr) {
+    fclose(fp);
+    return (false);
+  }
+
+  //create png info struct
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr) {
+    png_destroy_read_struct(&png_ptr, (png_infopp) NULL, (png_infopp) NULL);
+    fclose(fp);
+    return (false);
+  }
+
+  //create png info struct
+  end_info = png_create_info_struct(png_ptr);
+  if (!end_info) {
+    png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
+    fclose(fp);
+    return (false);
+  }
+
+  //png error stuff, not sure libpng man suggests this.
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+    fclose(fp);
+    return (false);
+  }
+
+  //init png reading
+  png_init_io(png_ptr, fp);
+
+  //let libpng know you already read the first 8 bytes
+  png_set_sig_bytes(png_ptr, 8);
+
+  // read all the info up to the image data
+  png_read_info(png_ptr, info_ptr);
+
+  // get info about png
+  png_get_IHDR(png_ptr, info_ptr, &twidth, &theight, &bit_depth, &color_type,
+      NULL, NULL, NULL);
+
+  //update width and height based on png info
+  *width = twidth;
+  *height = theight;
+
+  // Require that incoming texture be 8bits per color component
+  // and 4 components (RGBA).
+  if (png_get_bit_depth(png_ptr, info_ptr) != 8 ||
+      png_get_channels(png_ptr, info_ptr) != 4) {
+      return false;
+  }
+
+  if (rgba_data == NULL) {
+      // If data pointer is null, we just want the width & height
+      // clean up memory and close stuff
+      png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+      fclose(fp);
+
+      return true;
+  }
+
+  // Update the png info struct.
+  png_read_update_info(png_ptr, info_ptr);
+
+  // Row size in bytes.
+  rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+
+  // Allocate the image_data as a big block, to be given to opengl
+  image_data = (png_byte *)malloc(rowbytes * theight * sizeof(png_byte));
+  if (!image_data) {
+    //clean up memory and close stuff
+    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+    fclose(fp);
+    return false;
+  }
+
+  // row_pointers is for pointing to image_data for reading the png with libpng
+  row_pointers = (png_bytep *)malloc(theight * sizeof(png_bytep));
+  if (!row_pointers) {
+    //clean up memory and close stuff
+    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+    // delete[] image_data;
+    fclose(fp);
+    return false;
+  }
+  // set the individual row_pointers to point at the correct offsets of image_data
+  for (i = 0; i < theight; ++i)
+    row_pointers[theight - 1 - i] = rgba_data + i * rowbytes;
+
+  // read the png into image_data through row_pointers
+  png_read_image(png_ptr, row_pointers);
+
+  // clean up memory and close stuff
+  png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+  free(row_pointers);
+  free(image_data);
+  fclose(fp);
+
+  return true;
+}
+#endif
+
 static void demo_prepare_textures(struct demo *demo)
 {
     const XGL_FORMAT tex_format = { XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM };
-    const XGL_INT tex_width = 64;
-    const XGL_INT tex_height = 64;
-    const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
-        { 0xffff0000, 0xff00ff00 },
-    };
+    XGL_INT tex_width;
+    XGL_INT tex_height;
     XGL_RESULT err;
     XGL_UINT i;
 
@@ -513,9 +643,9 @@ static void demo_prepare_textures(struct demo *demo)
             .magFilter = XGL_TEX_FILTER_NEAREST,
             .minFilter = XGL_TEX_FILTER_NEAREST,
             .mipMode = XGL_TEX_MIPMAP_BASE,
-            .addressU = XGL_TEX_ADDRESS_WRAP,
-            .addressV = XGL_TEX_ADDRESS_WRAP,
-            .addressW = XGL_TEX_ADDRESS_WRAP,
+            .addressU = XGL_TEX_ADDRESS_CLAMP,
+            .addressV = XGL_TEX_ADDRESS_CLAMP,
+            .addressW = XGL_TEX_ADDRESS_CLAMP,
             .mipLodBias = 0.0f,
             .maxAnisotropy = 0,
             .compareFunc = XGL_COMPARE_NEVER,
@@ -523,6 +653,9 @@ static void demo_prepare_textures(struct demo *demo)
             .maxLod = 0.0f,
             .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
         };
+
+        assert(loadTexture(tex_files[i], NULL, NULL, &tex_width, &tex_height));
+
         const XGL_IMAGE_CREATE_INFO image = {
             .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = NULL,
@@ -608,7 +741,6 @@ static void demo_prepare_textures(struct demo *demo)
         XGL_SUBRESOURCE_LAYOUT layout;
         XGL_SIZE layout_size;
         XGL_VOID *data;
-        XGL_INT x, y;
 
         err = xglGetImageSubresourceInfo(demo->textures[i].image, &subres,
                 XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
@@ -617,17 +749,12 @@ static void demo_prepare_textures(struct demo *demo)
         err = xglMapMemory(demo->textures[i].mem, 0, &data);
         assert(!err);
 
-        for (y = 0; y < tex_height; y++) {
-            uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
-            for (x = 0; x < tex_width; x++)
-                row[x] = tex_colors[i][(x & 1) ^ (y & 1)];
-        }
+        loadTexture(tex_files[i], data, &layout, &tex_width, &tex_height);
 
         err = xglUnmapMemory(demo->textures[i].mem);
         assert(!err);
     }
 }
-#endif
 
 void demo_prepare_cube_data_buffer(struct demo *demo)
 {
@@ -845,9 +972,12 @@ void demo_prepare_tri_data_buffer(struct demo *demo)
     const struct VertexPosTex tri_data[] =
     {
         /*      position                texcoord */
-        { XYZ1(-1.0f, -1.0f, -0.6f),    UV(0.0f, 0.0f) },
-        { XYZ1(1.0f, -1.0f, -0.5f),     UV(1.0f, 0.0f) },
-        { XYZ1(0.0f,  1.0f,  1.0f),     UV(0.5f, 1.0f) },
+//        { XYZ1(-1.0f, -1.0f, -0.6f),    UV(0.0f, 0.0f) },
+//        { XYZ1(1.0f, -1.0f, -0.5f),     UV(1.0f, 0.0f) },
+//        { XYZ1(0.0f,  1.0f,  1.0f),     UV(0.5f, 1.0f) },
+        { XYZ1(-1.0f, -1.0f, 0.0f),    UV(0.0f, 0.0f) },
+        { XYZ1(1.0f, -1.0f, 0.0f),     UV(1.0f, 0.0f) },
+        { XYZ1(-1.0f,  1.0f,  0.0f),     UV(0.0f, 1.0f) },
     };
     XGL_RESULT err;
 
@@ -949,6 +1079,8 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     xglEndDescriptorSetUpdate(demo->dset);
 }
 
+#define USE_BIL
+
 static XGL_SHADER demo_prepare_shader(struct demo *demo,
                                       XGL_PIPELINE_SHADER_STAGE stage,
                                       const void *code,
@@ -958,9 +1090,25 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     XGL_SHADER shader;
     XGL_RESULT err;
 
+#ifdef USE_BIL
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
+    createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
+    createInfo.pCode = malloc(createInfo.codeSize);
+    createInfo.flags = 0;
+
+    /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
+    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+    ((uint32_t *) createInfo.pCode)[1] = 0;
+    ((uint32_t *) createInfo.pCode)[2] = stage;
+    memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
+
+    err = xglCreateShader(demo->device, &createInfo, &shader);
+    if (err) {
+        free((void *) createInfo.pCode);
+    }
+#else
     // Create fake BIL structure to feed GLSL
     // to the driver "under the covers"
     createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
@@ -978,6 +1126,7 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
         free((void *) createInfo.pCode);
         return NULL;
     }
+#endif
 
     return shader;
 }
@@ -997,12 +1146,10 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
             "} ubuf;\n"
             "\n"
             "layout (location = 0) out vec4 texcoord;\n"
-//                "layout (location = 0) out vec2 texcoord;\n"
             "\n"
             "void main() \n"
             "{\n"
             "   texcoord = ubuf.attr[gl_VertexID];\n"
-//            "   texcoord = ubuf.position[gl_VertexID].xy;\n"
             "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
             "}\n";
 
@@ -1022,12 +1169,10 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
             "} ubuf;\n"
             "\n"
             "layout (location = 0) out vec4 texcoord;\n"
-//                "layout (location = 0) out vec2 texcoord;\n"
             "\n"
             "void main() \n"
             "{\n"
             "   texcoord = ubuf.attr[gl_VertexID];\n"
-//            "   texcoord = ubuf.position[gl_VertexID].xy;\n"
             "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
             "}\n";
 
@@ -1390,8 +1535,8 @@ static void demo_init(struct demo *demo)
     demo_init_connection(demo);
     demo_init_xgl(demo);
 
-    demo->width = 300;
-    demo->height = 300;
+    demo->width = 1024;
+    demo->height = 1024;
     demo->format.channelFormat = XGL_CH_FMT_B8G8R8A8;
     demo->format.numericFormat = XGL_NUM_FMT_UNORM;
 }
