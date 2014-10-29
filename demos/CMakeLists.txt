@@ -9,6 +9,10 @@ if(NOT EXISTS /usr/include/png.h)
     message(FATAL_ERROR "Necessary png12-dev headers cannot be found: sudo apt-get install png12-dev")
 endif()
 
+file(GLOB TEXTURES
+  "${PROJECT_SOURCE_DIR}/demos/*.png"
+  )
+file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 
 include_directories (
    ${XCB_INCLUDE_DIRS}
