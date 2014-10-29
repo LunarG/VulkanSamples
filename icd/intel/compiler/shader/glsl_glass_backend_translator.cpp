@@ -3197,42 +3197,32 @@ inline void MesaGlassTranslator::emitIRLoad(const llvm::Instruction* llvmInst)
 void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode, bool isOutput)
 {
    if (ioVar && mdNode) {
-      std::string         name;
-      llvm::Type*         mdType;
-      EMdInputOutput      mdQual;
-      EMdPrecision        mdPrecision;
-      EMdTypeLayout       mdLayout;
-      int                 layoutLocation;
-      const llvm::MDNode* mdAggregate;
-      const llvm::MDNode* dummySampler;
-      int                 interpMode;
+      const llvm::Type*   mdType;
+      MetaType metaType;
+
       // Glean information from metadata for intrinsic
-      gla::CrackIOMd(mdNode, name, mdQual, mdType, mdLayout, mdPrecision, layoutLocation, dummySampler, mdAggregate, interpMode);
+      decodeMdTypesEmitMdQualifiers(true, mdNode, mdType, false, metaType);
 
       // ioVar->data.index         = slotOffset;
       ioVar->data.used = true;
       ioVar->data.origin_upper_left    = state->fs_origin_upper_left;
       ioVar->data.pixel_center_integer = state->fs_pixel_center_integer;
 
-      if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
+      if (metaType.location >= 0 && metaType.location < gla::MaxUserLayoutLocation) {
 
-          if (mdAggregate && mdLayout) {
-
-              // An aggregate with layout is a uniform block which expects binding instead of location
-              // TODO: checking for layout alone may be sufficient
+          if (metaType.block || metaType.mdSampler != 0) {
+              // If we have a sampler or a block, we need a binding
               ioVar->data.explicit_binding  = true;
-              ioVar->data.binding           = layoutLocation;
-
+              ioVar->data.binding           = metaType.location;
           } else {
-
               ioVar->data.explicit_location = true;
 
               if ((manager->getStage() == EShLangFragment) && isOutput)
-                  ioVar->data.location      = layoutLocation + FRAG_RESULT_DATA0;
+                  ioVar->data.location      = metaType.location + FRAG_RESULT_DATA0;
               else if ((manager->getStage() == EShLangVertex) && !isOutput)
-                  ioVar->data.location      = layoutLocation + VERT_ATTRIB_GENERIC0;
+                  ioVar->data.location      = metaType.location + VERT_ATTRIB_GENERIC0;
               else
-                  ioVar->data.location      = layoutLocation + VARYING_SLOT_VAR0;
+                  ioVar->data.location      = metaType.location + VARYING_SLOT_VAR0;
           }
       }
    }
