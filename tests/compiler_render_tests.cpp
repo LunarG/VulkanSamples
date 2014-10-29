@@ -132,14 +132,19 @@ static const Vertex g_vbData[] =
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
 };
 
-static const int uniformBufferCount = 16;
+// These values are used in a few places
+static const int g_UniformBufferCount = 16;
+static const int g_SamplerCount = 3;
+static const int g_TextureCount = 3;
 
 class XglRenderTest : public XglRenderFramework
 {
 public:
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
-    void InitTexture();
-    void InitSampler();
+    void InitTexture(int textureSlot = 0, int* color = 0);
+    void InitMultipleTextures(int textureCount, int* colors);
+    void InitSampler(int samplerSlot = 0);
+    void InitMultipleSamplers(int samplerCount);
     void InitUniformBuffer(int constantCount, int constantSize, int constantIndex, const void* data);
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void DrawTriangleTwoUniformsFS(const char *vertShaderText, const char *fragShaderText);
@@ -151,6 +156,7 @@ public:
     void DrawTriangleVSFSUniformBlock(const char *vertShaderText, const char *fragShaderText);
     void DrawTexturedTriangle(const char *vertShaderText, const char *fragShaderText);
     void DrawVSTexture(const char *vertShaderText, const char *fragShaderText);
+    void DrawSamplerBindingsTriangle(const char *vertShaderText, const char *fragShaderText, int textureCount, int samplerCount);
 
 
     void CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
@@ -158,18 +164,19 @@ public:
     void CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineVSFSUniformBlock(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void CreatePipelineSingleTextureAndSampler(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
-
+    void CreatePipelineMultipleTexturesAndSamplers(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps, int textureCount, int samplerCount);
 
 protected:
-    XGL_IMAGE m_texture;
-    XGL_IMAGE_VIEW m_textureView;
-    XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
-    XGL_GPU_MEMORY m_textureMem;
+    XGL_IMAGE m_texture[g_TextureCount];
+    XGL_IMAGE_VIEW m_textureView[g_TextureCount];
+    XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo[g_TextureCount];
+    XGL_GPU_MEMORY m_textureMem[g_TextureCount];
 
-    XGL_SAMPLER m_sampler;
 
-    XGL_GPU_MEMORY m_uniformBufferMem[uniformBufferCount];
-    XGL_MEMORY_VIEW_ATTACH_INFO     m_uniformBufferView[uniformBufferCount];
+    XGL_SAMPLER m_sampler[g_SamplerCount];
+
+    XGL_GPU_MEMORY m_uniformBufferMem[g_UniformBufferCount];
+    XGL_MEMORY_VIEW_ATTACH_INFO     m_uniformBufferView[g_UniformBufferCount];
 
 
 
@@ -204,8 +211,9 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
-        memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
-        m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+        for (int i = 0; i < g_TextureCount; ++i) {
+            m_textureViewInfo[i].sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+        }
 
         InitFramework();
     }
@@ -285,36 +293,29 @@ void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
     ASSERT_XGL_SUCCESS(err);
 }
 
-void XglRenderTest::InitTexture()
+void XglRenderTest::InitTexture(int textureSlot, int* color)
 {
 #define DEMO_TEXTURE_COUNT 1
 
-    const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
+    const XGL_FORMAT tex_format = { XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM };
     const XGL_INT tex_width = 16;
     const XGL_INT tex_height = 16;
-    const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
-        { 0xffff0000, 0xff00ff00 },
-    };
+    uint32_t tex_colors[DEMO_TEXTURE_COUNT][2];
+
+    // assign the texture color with parameter
+    assert(1 == DEMO_TEXTURE_COUNT);
+    if (color != NULL) {
+        tex_colors[0][0] = *color;
+        tex_colors[0][1] = *color;
+    } else {
+        tex_colors[0][0] = 0xffff0000;
+        tex_colors[0][1] = 0xff00ff00;
+    }
+
     XGL_RESULT err;
     XGL_UINT i;
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        const XGL_SAMPLER_CREATE_INFO sampler = {
-            .sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .pNext = NULL,
-            .magFilter = XGL_TEX_FILTER_NEAREST,
-            .minFilter = XGL_TEX_FILTER_NEAREST,
-            .mipMode = XGL_TEX_MIPMAP_BASE,
-            .addressU = XGL_TEX_ADDRESS_WRAP,
-            .addressV = XGL_TEX_ADDRESS_WRAP,
-            .addressW = XGL_TEX_ADDRESS_WRAP,
-            .mipLodBias = 0.0f,
-            .maxAnisotropy = 0,
-            .compareFunc = XGL_COMPARE_NEVER,
-            .minLod = 0.0f,
-            .maxLod = 0.0f,
-            .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
-        };
         const XGL_IMAGE_CREATE_INFO image = {
             .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = NULL,
@@ -356,15 +357,11 @@ void XglRenderTest::InitTexture()
         XGL_MEMORY_REQUIREMENTS mem_reqs;
         XGL_SIZE mem_reqs_size;
 
-        /* create sampler */
-        err = xglCreateSampler(device(), &sampler, &m_sampler);
-        assert(!err);
-
         /* create image */
-        err = xglCreateImage(device(), &image, &m_texture);
+        err = xglCreateImage(device(), &image, &m_texture[textureSlot]);
         assert(!err);
 
-        err = xglGetObjectInfo(m_texture,
+        err = xglGetObjectInfo(m_texture[textureSlot],
                 XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, &mem_reqs);
         assert(!err && mem_reqs_size == sizeof(mem_reqs));
@@ -376,16 +373,16 @@ void XglRenderTest::InitTexture()
                 sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
 
         /* allocate memory */
-        err = xglAllocMemory(device(), &mem_alloc, &m_textureMem);
+        err = xglAllocMemory(device(), &mem_alloc, &m_textureMem[textureSlot]);
         assert(!err);
 
         /* bind memory */
-        err = xglBindObjectMemory(m_texture, m_textureMem, 0);
+        err = xglBindObjectMemory(m_texture[textureSlot], m_textureMem[textureSlot], 0);
         assert(!err);
 
         /* create image view */
-        view.image = m_texture;
-        err = xglCreateImageView(device(), &view, &m_textureView);
+        view.image = m_texture[textureSlot];
+        err = xglCreateImageView(device(), &view, &m_textureView[textureSlot]);
         assert(!err);
     }
 
@@ -400,11 +397,11 @@ void XglRenderTest::InitTexture()
         XGL_VOID *data;
         XGL_INT x, y;
 
-        err = xglGetImageSubresourceInfo(m_texture, &subres,
+        err = xglGetImageSubresourceInfo(m_texture[textureSlot], &subres,
                 XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
 
-        err = xglMapMemory(m_textureMem, 0, &data);
+        err = xglMapMemory(m_textureMem[textureSlot], 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
@@ -413,14 +410,49 @@ void XglRenderTest::InitTexture()
                 row[x] = tex_colors[i][(x & 1) ^ (y & 1)];
         }
 
-        err = xglUnmapMemory(m_textureMem);
+        err = xglUnmapMemory(m_textureMem[textureSlot]);
         assert(!err);
     }
 
-    m_textureViewInfo.view = m_textureView;
+    m_textureViewInfo[textureSlot].view = m_textureView[textureSlot];
 }
 
-void XglRenderTest::InitSampler()
+
+void XglRenderTest::InitMultipleTextures(int textureCount, int* colors)
+{
+
+    for (int i = 0; i < textureCount; ++i)
+        InitTexture(i, &colors[i]);
+}
+
+
+void XglRenderTest::InitMultipleSamplers(const int samplerCount)
+{
+    XGL_RESULT err;
+
+    for (int i = 0; i < samplerCount; ++i) {
+
+        XGL_SAMPLER_CREATE_INFO samplerCreateInfo = {};
+        samplerCreateInfo.sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerCreateInfo.magFilter = XGL_TEX_FILTER_NEAREST;
+        samplerCreateInfo.minFilter = XGL_TEX_FILTER_NEAREST;
+        samplerCreateInfo.mipMode = XGL_TEX_MIPMAP_BASE;
+        samplerCreateInfo.addressU = XGL_TEX_ADDRESS_WRAP;
+        samplerCreateInfo.addressV = XGL_TEX_ADDRESS_WRAP;
+        samplerCreateInfo.addressW = XGL_TEX_ADDRESS_WRAP;
+        samplerCreateInfo.mipLodBias = 0.0;
+        samplerCreateInfo.maxAnisotropy = 0.0;
+        samplerCreateInfo.compareFunc = XGL_COMPARE_NEVER;
+        samplerCreateInfo.minLod = 0.0;
+        samplerCreateInfo.maxLod = 0.0;
+        samplerCreateInfo.borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE;
+
+        err = xglCreateSampler(device(),&samplerCreateInfo, &m_sampler[i]);
+        ASSERT_XGL_SUCCESS(err);
+    }
+}
+
+void XglRenderTest::InitSampler(int samplerSlot)
 {
     XGL_RESULT err;
 
@@ -439,9 +471,10 @@ void XglRenderTest::InitSampler()
     samplerCreateInfo.maxLod = 0.0;
     samplerCreateInfo.borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE;
 
-    err = xglCreateSampler(device(),&samplerCreateInfo, &m_sampler);
+    err = xglCreateSampler(device(),&samplerCreateInfo, &m_sampler[samplerSlot]);
     ASSERT_XGL_SUCCESS(err);
 }
+
 
 void XglRenderTest::InitUniformBuffer(int constantCount, int constantSize,
                                       int constantIndex, const void* data)
@@ -721,8 +754,8 @@ void XglRenderTest::DrawTexturedTriangle(const char *vertShaderText, const char 
     // write the sampler and image views to the descriptor set
     // ensure this matches order set in CreatePipelineSingleTextureAndSampler
     xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachImageViewDescriptors( m_rsrcDescSet, 0, 1, &m_textureViewInfo );
-    xglAttachSamplerDescriptors(m_rsrcDescSet, 1, 1, &m_sampler);
+    xglAttachImageViewDescriptors( m_rsrcDescSet, 0, 1, &m_textureViewInfo[0] );
+    xglAttachSamplerDescriptors(m_rsrcDescSet, 1, 1, &m_sampler[0]);
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
     // Build command buffer
@@ -1528,6 +1561,109 @@ void XglRenderTest::CreatePipelineSingleTextureAndSampler(XGL_PIPELINE* pipeline
     ASSERT_XGL_SUCCESS(err);
 }
 
+void XglRenderTest::CreatePipelineMultipleTexturesAndSamplers(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps,
+                                                         int textureCount, int samplerCount)
+{
+    // based on CreatePipelineSingleTextureAndSampler
+
+    XGL_RESULT err;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs_stage;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO ps_stage;
+
+    const int psSlots = textureCount + samplerCount;
+
+    // Create descriptor set for single texture and sampler
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = psSlots;
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // Assign the slots, note that only t0 and s0 will work as of writing this test
+    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( psSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    int slotIndex = 0;
+    for (int i = 0; i < textureCount; ++i) {
+        slotInfo[slotIndex].shaderEntityIndex = i;
+        slotInfo[slotIndex++].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    }
+    for (int i = 0; i < samplerCount; ++i) {
+        slotInfo[slotIndex].shaderEntityIndex = i;
+        slotInfo[slotIndex++].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
+    }
+
+    vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vs_stage.pNext = XGL_NULL_HANDLE;
+    vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
+    vs_stage.shader.shader = vs;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
+    vs_stage.shader.linkConstBufferCount = 0;
+    vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ps_stage.pNext = &vs_stage;
+    ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
+    ps_stage.shader.shader = ps;
+    ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+    ps_stage.shader.descriptorSetMapping[0].descriptorCount = psSlots;
+    ps_stage.shader.linkConstBufferCount = 0;
+    ps_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
+    ps_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    ps_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+
+    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
+        &ps_stage,                                         // pNext
+        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
+        XGL_FALSE,                                         // disableVertexReuse
+        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
+        XGL_FALSE,                                         // primitiveRestartEnable
+        0                                                  // primitiveRestartIndex
+    };
+
+    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+        &ia_state,
+        XGL_FALSE,                                          // depthClipEnable
+        XGL_FALSE,                                          // rasterizerDiscardEnable
+        1.0                                                 // pointSize
+    };
+
+    XGL_PIPELINE_CB_STATE cb_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+        &rs_state,
+        XGL_FALSE,                                          // alphaToCoverageEnable
+        XGL_FALSE,                                          // dualSourceBlendEnable
+        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
+        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
+            {
+                XGL_FALSE,                                  // blendEnable
+                m_render_target_fmt,                        // XGL_FORMAT
+                0xF                                         // channelWriteMask
+            }
+        }
+    };
+
+    // TODO: Should take depth buffer format from queried formats
+    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state = {
+        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+        &cb_state,
+        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
+    };
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = &db_state;
+    info.flags = 0;
+    err = xglCreateGraphicsPipeline(device(), &info, pipeline);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = m_device->AllocAndBindGpuMemory(*pipeline, "Pipeline", &m_pipe_mem);
+    ASSERT_XGL_SUCCESS(err);
+}
+
 void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, const char *fragShaderText)
 {
     XGL_PIPELINE pipeline;
@@ -1780,6 +1916,114 @@ void XglRenderTest::DrawTriangleFSUniformBlockBinding(const char *vertShaderText
     for(int i = 0; i < bufferCount; ++i)
         xglAttachMemoryViewDescriptors( m_rsrcDescSet, i, 1, &m_uniformBufferView[i] );
 
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+
+    // Build command buffer
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds();
+    GenerateBindRenderTargetCmd();
+    GenerateBindStateAndPipelineCmds(&pipeline);
+
+//    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+//    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
+
+    // render the cube
+    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
+
+    // prepare the back buffer for present
+//    XGL_IMAGE_STATE_TRANSITION transitionToPresent = {};
+//    transitionToPresent.image = m_image;
+//    transitionToPresent.oldState = m_image_state;
+//    transitionToPresent.newState = m_display.fullscreen ? XGL_WSI_WIN_PRESENT_SOURCE_FLIP : XGL_WSI_WIN_PRESENT_SOURCE_BLT;
+//    transitionToPresent.subresourceRange = srRange;
+//    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToPresent );
+//    m_image_state = ( XGL_IMAGE_STATE ) transitionToPresent.newState;
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    // this command buffer only uses the vertex buffer memory
+    m_numMemRefs = 0;
+//    m_memRefs[0].flags = 0;
+//    m_memRefs[0].mem = m_vtxBufferMemory;
+
+    // submit the command buffer to the universal queue
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    ASSERT_XGL_SUCCESS( err );
+
+    err = xglQueueWaitIdle( m_device->m_queue );
+    ASSERT_XGL_SUCCESS( err );
+
+    // Wait for work to finish before cleaning up.
+    xglDeviceWaitIdle(m_device->device());
+
+    RecordImage(m_renderTarget);
+
+}
+
+void XglRenderTest::DrawSamplerBindingsTriangle(const char *vertShaderText, const char *fragShaderText,
+                                               int textureCount, int samplerCount)
+{
+    // based on DrawTexturedTriangle
+
+    XGL_PIPELINE pipeline;
+    XGL_SHADER vs, ps;
+    XGL_RESULT err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_VERTEX,
+                                         vertShaderText, &vs));
+
+    ASSERT_NO_FATAL_FAILURE(CreateShader(XGL_SHADER_STAGE_FRAGMENT,
+                                         fragShaderText, &ps));
+
+    ASSERT_NO_FATAL_FAILURE(CreatePipelineMultipleTexturesAndSamplers(&pipeline, vs, ps, textureCount, samplerCount));
+
+    /*
+     * Shaders are now part of the pipeline, don't need these anymore
+     */
+    ASSERT_XGL_SUCCESS(xglDestroyObject(ps));
+    ASSERT_XGL_SUCCESS(xglDestroyObject(vs));
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+
+    // Create a few texture/sampler pairs
+    int textureColors[16];
+    assert(textureCount < 16);
+    textureColors[0] = 0xFF0000FF; //red
+    textureColors[1] = 0xFF00FF00; //green
+    textureColors[2] = 0xFFFF0000; //blue
+
+    ASSERT_NO_FATAL_FAILURE(InitMultipleSamplers(samplerCount));
+    ASSERT_NO_FATAL_FAILURE(InitMultipleTextures(textureCount, textureColors));
+
+    // Create descriptor set for a texture and sampler resources
+    const int slotCount = textureCount + samplerCount;
+    XGL_DESCRIPTOR_SET_CREATE_INFO descriptorInfo = {};
+    descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    descriptorInfo.slots = slotCount;
+
+    // create a descriptor set with a single slot
+    err = xglCreateDescriptorSet( device(), &descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err) << "xglCreateDescriptorSet failed";
+
+    // bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+
+    // write the sampler and image views to the descriptor set
+    // ensure this matches order set in CreatePipelineSingleTextureAndSampler
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    int descSlot = 0;
+    for (int i = 0; i < textureCount; ++i)
+        xglAttachImageViewDescriptors( m_rsrcDescSet, descSlot++, 1, &m_textureViewInfo[i]);
+    for (int i = 0; i < samplerCount; ++i)
+        xglAttachSamplerDescriptors(m_rsrcDescSet, descSlot++, 1, &m_sampler[i]);
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
     // Build command buffer
@@ -2426,6 +2670,45 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
             "}\n";
 
     DrawTriangleFSUniformBlockBinding(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, SamplerBindingsTriangle)
+{
+    // This test sets bindings on the samplers
+    // For this implementation, we are asserting that sampler and texture pairs
+    // march in lock step, and are set via GLSL binding.
+    // This test will result in a blue triangle
+    static const char *vertShaderText =
+            "#version 140\n"
+            "out vec4 samplePos;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 1.0, 0.0);\n"
+            "      positions[2] = vec2( 1.0, 1.0);\n"
+            "   samplePos = vec4(positions[gl_VertexID % 3], 0.0, 0.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+   static const char *fragShaderText =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "in vec4 samplePos;\n"
+        "layout (binding = 0) uniform sampler2D surface0;\n"
+        "layout (binding = 1) uniform sampler2D surface1;\n"
+        "layout (binding = 2) uniform sampler2D surface2;\n"
+        "void main() {\n"
+        "   gl_FragColor = textureLod(surface2, samplePos.xy, 0.0);\n"
+        "}\n";
+
+   int textureCount = g_TextureCount;
+   int samplerCount = g_SamplerCount;
+   DrawSamplerBindingsTriangle(vertShaderText, fragShaderText, textureCount, samplerCount);
 }
 
 int main(int argc, char **argv) {
