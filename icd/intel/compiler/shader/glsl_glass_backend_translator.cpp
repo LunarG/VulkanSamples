@@ -3219,6 +3219,8 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
 
          if ((manager->getStage() == EShLangFragment) && isOutput)
             ioVar->data.location          = layoutLocation + FRAG_RESULT_DATA0;
+         else if ((manager->getStage() == EShLangVertex) && !isOutput)
+            ioVar->data.location          = layoutLocation + VERT_ATTRIB_GENERIC0;
          else
             ioVar->data.location          = layoutLocation + VARYING_SLOT_VAR0;
       }
