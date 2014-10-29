@@ -2,6 +2,10 @@
 # Update source for glslang and LLVM
 # Copy necessary BIL pieces into glslang and LLVM
 
+BIL_REVISION=28725
+LUNARGLASS_REVISION=1052
+GLSLANG_REVISION=28653
+
 BUILDDIR=$PWD
 BASEDIR=$BUILDDIR/..
 
@@ -15,7 +19,7 @@ function create_glslang () {
 function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
-   svn update
+   svn update -r "$GLSLANG_REVISION"
 }
 
 function create_LunarGLASS () {
@@ -44,14 +48,14 @@ function create_BIL () {
 function update_LunarGLASS () {
    echo "Updating $BASEDIR/LunarGLASS"
    cd $BASEDIR/LunarGLASS
-   svn update
+   svn update -r "$LUNARGLASS_REVISION"
 }
 
 function update_BIL () {
    if [ -d "$BASEDIR/BIL" ]; then
      # Update source
      cd $BASEDIR/BIL
-     svn update
+     svn update -r "$BIL_REVISION"
      # copy of necessary BIL pieces into glslang
      cp $BASEDIR/BIL/glslangOverlay_into_BIL/* $BASEDIR/glslang/BIL
      cp $BASEDIR/BIL/Bil.h $BASEDIR/glslang/BIL
@@ -108,5 +112,5 @@ update_glslang
 update_LunarGLASS
 update_BIL
 
-build_LunarGLASS
 build_glslang
+build_LunarGLASS
