@@ -70,7 +70,9 @@ public:
 
     void WritePPM( const char *basename, XglImage *image );
     void Show(const char *comment, XglImage *image);
+    void Compare(const char *comment, XglImage *image);
     void RecordImage(XglImage *image);
+    void RecordImage(XglImage *image, char *tag);
     bool GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &bil);
@@ -98,6 +100,7 @@ private:
 
     static bool         m_show_images;
     static bool         m_save_images;
+    static bool         m_compare_images;
 
     static std::list<XglTestImageRecord> m_images;
     static std::list<XglTestImageRecord>::iterator m_display_image;
@@ -107,6 +110,10 @@ private:
     static int          m_window;
     static int          m_width;            // Window width
     static int          m_height;           // Window height
+
+    int          m_frameNum;
+    string       m_testName;
+
 };
 
 class TestEnvironment : public ::testing::Environment

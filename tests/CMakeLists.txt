@@ -2,6 +2,7 @@ include (FindPkgConfig)
 
 find_package (OpenGL REQUIRED)
 find_package (GLUT REQUIRED)
+find_package(ImageMagick REQUIRED MagickWand)
 if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
 endif()
@@ -39,6 +40,7 @@ set(TEST_LIBRARIES
    OGLCompiler
    OSDependent
    BIL
+   MagickWand
    )
 
 include_directories(
@@ -47,6 +49,7 @@ include_directories(
     "${GLSLANG_PREFIX}/glslang/Include"
     "${GLSLANG_PREFIX}/glslang/Public"
     "${GLSLANG_PREFIX}/BIL"
+    "/usr/include/ImageMagick"
     )
 
 
@@ -68,6 +71,12 @@ set_target_properties(xgl_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
+
+add_executable(xgl_tony_render_tests tony_render_tests.cpp ${COMMON_CPP} displayengine.cpp)
+set_target_properties(xgl_tony_render_tests
+   PROPERTIES
+   COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
+target_link_libraries(xgl_tony_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(xgl_compiler_render_tests compiler_render_tests.cpp ${COMMON_CPP} displayengine.cpp)
 set_target_properties(xgl_compiler_render_tests

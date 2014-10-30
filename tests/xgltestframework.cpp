@@ -25,6 +25,7 @@
 //#include "ShaderLang.h"
 #include "GlslangToBil.h"
 #include <math.h>
+#include <ImageMagick/wand/MagickWand.h>
 
 // Command-line options
 enum TOptions {
@@ -101,6 +102,7 @@ XglTestFramework::~XglTestFramework()
 // Define all the static elements
 bool XglTestFramework::m_show_images = false;
 bool XglTestFramework::m_save_images = false;
+bool XglTestFramework::m_compare_images = false;
 bool XglTestFramework::m_use_bil = true;
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
@@ -131,6 +133,11 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
 
         if (strncmp("--no-BIL", argv[i], 13) == 0) {
             m_use_bil = false;
+            continue;
+        }
+
+        if (strncmp("--compare-images", argv[i], 16) == 0) {
+            m_compare_images = true;
             continue;
         }
 
@@ -240,6 +247,45 @@ void XglTestFramework::InitGLUT(int w, int h)
 
     Reshape(w, h);
 }
+void XglTestFramework::Compare(const char *basename, XglImage *image )
+{
+
+    MagickWand *magick_wand_1;
+    MagickWand *magick_wand_2;
+    MagickWand *compare_wand;
+    MagickBooleanType status;
+    char testimage[256],golden[256];
+    double differenz;
+
+    MagickWandGenesis();
+    magick_wand_1=NewMagickWand();
+    sprintf(testimage,"%s.ppm",basename);
+    status=MagickReadImage(magick_wand_1,testimage);
+    ASSERT_TRUE(status) << "Unable to open file: " << testimage;
+
+
+    MagickWandGenesis();
+    magick_wand_2=NewMagickWand();
+    sprintf(golden,"golden/%s.ppm",basename);
+    status=MagickReadImage(magick_wand_2,golden);
+    ASSERT_TRUE(status) << "Unable to open file: " << golden;
+
+    compare_wand = NewMagickWand();
+    compare_wand=MagickCompareImages(magick_wand_1,magick_wand_2, MeanAbsoluteErrorMetric, &differenz);
+    if (differenz != 0.0)
+    {
+        char difference[256];
+
+        sprintf(difference,"%s-diff.ppm",basename);
+        status = MagickWriteImage(compare_wand, difference);
+        ASSERT_TRUE(differenz == 0.0) << "Image comparison failed - diff file written";
+    }
+    DestroyMagickWand(compare_wand);
+
+    DestroyMagickWand(magick_wand_1);
+    DestroyMagickWand(magick_wand_2);
+    MagickWandTerminus();
+}
 
 void XglTestFramework::Show(const char *comment, XglImage *image)
 {
@@ -285,13 +331,56 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
     ASSERT_XGL_SUCCESS( err );
 }
 
+void XglTestFramework::RecordImage(XglImage *image, char *tag)
+{
+    const ::testing::TestInfo* const test_info =
+      ::testing::UnitTest::GetInstance()->current_test_info();
+    ostringstream filestream;
+    string filename;
+
+    filestream << test_info->name() << "-" << tag;
+    filename = filestream.str();
+    // ToDo - scrub string for bad characters
+
+    if (m_save_images || m_compare_images) {
+        WritePPM(filename.c_str(), image);
+        if (m_compare_images) {
+            Compare(filename.c_str(), image);
+        }
+    }
+
+    if (m_show_images) {
+        Show(test_info->name(), image);
+    }
+}
+
 void XglTestFramework::RecordImage(XglImage *image)
 {
     const ::testing::TestInfo* const test_info =
       ::testing::UnitTest::GetInstance()->current_test_info();
+    ostringstream filestream;
+    string filename;
 
-    if (m_save_images) {
-        WritePPM(test_info->name(), image);
+    m_width = 40;
+
+    if (strcmp(test_info->name(), m_testName.c_str())) {
+        filestream << test_info->name();
+        m_testName.assign(test_info->name());
+        m_frameNum = 1;
+    }
+    else {
+        filestream << test_info->name() << "-" << m_frameNum;
+        m_frameNum++;
+    }
+
+
+    // ToDo - scrub string for bad characters
+
+    if (m_save_images || m_compare_images) {
+        WritePPM(filename.c_str(), image);
+        if (m_compare_images) {
+            Compare(filename.c_str(), image);
+        }
     }
 
     if (m_show_images) {
