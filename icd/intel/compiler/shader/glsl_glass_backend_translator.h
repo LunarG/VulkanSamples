@@ -327,7 +327,7 @@ namespace gla {
         // Add error message
         void error(const char* msg) const;
 
-        void setIoParameters(ir_variable* ioVar, const llvm::MDNode*, bool isOutput);
+        void setIoParameters(ir_variable* ioVar, const llvm::MDNode*);
 
         // Data ----------------------------------------------------------------
 

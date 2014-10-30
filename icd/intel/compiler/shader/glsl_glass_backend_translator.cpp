@@ -2644,7 +2644,7 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
       ioVar = aggregate->as_dereference_variable()->variable_referenced();
    }
 
-   setIoParameters(ioVar, mdNode, false);
+   setIoParameters(ioVar, mdNode);
 
    // Handle type overriding
    if (typeOverride)
@@ -3194,7 +3194,7 @@ inline void MesaGlassTranslator::emitIRLoad(const llvm::Instruction* llvmInst)
  * Set IO variable parameters (locations, interp modes, pixel origins, etc)
  * -----------------------------------------------------------------------------
  */
-void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode, bool isOutput)
+void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode)
 {
    if (ioVar && mdNode) {
       const llvm::Type*   mdType;
@@ -3217,9 +3217,9 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
           } else {
               ioVar->data.explicit_location = true;
 
-              if ((manager->getStage() == EShLangFragment) && isOutput)
+              if ((manager->getStage() == EShLangFragment) && metaType.qualifier == EVQOutput)
                   ioVar->data.location      = metaType.location + FRAG_RESULT_DATA0;
-              else if ((manager->getStage() == EShLangVertex) && !isOutput)
+              else if ((manager->getStage() == EShLangVertex) && metaType.qualifier == EVQInput)
                   ioVar->data.location      = metaType.location + VERT_ATTRIB_GENERIC0;
               else
                   ioVar->data.location      = metaType.location + VARYING_SLOT_VAR0;
@@ -3298,7 +3298,7 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
       ioVar = aggregate->as_dereference_variable()->variable_referenced();
    }
 
-   setIoParameters(ioVar, mdNode, true);
+   setIoParameters(ioVar, mdNode);
 
    addIRInstruction(llvmInst, fixIRLValue(irDst, getIRValue(src)));
 }
