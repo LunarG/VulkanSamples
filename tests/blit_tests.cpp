@@ -459,7 +459,7 @@ TEST_F(XglBlitTest, CopyImageBasic)
                 ((char *) data + layout.offset + layout.rowPitch * y);
 
             for (x = 0; x < width; x++)
-                ASSERT_EQ(0xff00ff00, real[x]);
+                ASSERT_EQ(0xff00ff00, real[x]) << "location:" << x << "," << y << ": 0x" << std::hex << real[x] << '\n';
         }
 
         dst->UnmapMemory();
