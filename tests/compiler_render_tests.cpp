@@ -1738,6 +1738,40 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
+TEST_F(XglRenderTest, TriVertFetchAndVertID)
+{
+    // This tests that attributes work in the presence of gl_VertexID
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            //XYZ1( -1, -1, -1 )
+            "layout (location = 0) in vec4 pos;\n"
+            //XYZ1( 0.f, 0.f, 0.f )
+            "layout (location = 1) in vec4 inColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   vec4 vertices[3];"
+            "      vertices[gl_VertexID % 3] = pos;\n"
+            "   gl_Position = vertices[(gl_VertexID + 3) % 3];\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "void main() {\n"
+            "   gl_FragColor = color;\n"
+            "}\n";
+
+    XglTestFramework::m_use_bil = true;
+    DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
+}
+
 TEST_F(XglRenderTest, TexturedTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
