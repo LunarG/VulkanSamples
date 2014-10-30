@@ -6,7 +6,7 @@ if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
 endif()
 if(NOT EXISTS /usr/include/png.h)
-    message(FATAL_ERROR "Necessary png12-dev headers cannot be found: sudo apt-get install png12-dev")
+    message(FATAL_ERROR "Necessary png12-dev headers cannot be found: sudo apt-get install libpng12-dev")
 endif()
 
 file(GLOB TEXTURES
