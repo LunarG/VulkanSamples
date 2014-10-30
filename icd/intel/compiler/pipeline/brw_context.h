@@ -611,6 +611,7 @@ struct brw_vs_prog_data {
    GLbitfield64 inputs_read;
 
    bool uses_vertexid;
+   bool uses_instanceid;
 };
 
 

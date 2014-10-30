@@ -210,6 +210,8 @@ static void vs_data_dump(FILE *fp, struct brw_vs_prog_data *data)
                  data->inputs_read);
     fprintf(fp, "data->uses_vertexid = %s\n",
                  data->uses_vertexid ? "true" : "false");
+    fprintf(fp, "data->uses_instanceid = %s\n",
+                 data->uses_instanceid ? "true" : "false");
 
     fprintf(fp, "=== end brw_vs_prog_data ===\n");
 
@@ -303,6 +305,9 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             if (data->uses_vertexid)
                 pipe_shader->uses |= INTEL_SHADER_USE_VID;
+
+            if (data->uses_instanceid)
+                pipe_shader->uses |= INTEL_SHADER_USE_IID;
 
             // These are really best guesses, and will require more work to
             // understand as we turn on more features
