@@ -14,6 +14,18 @@ file(GLOB TEXTURES
   )
 file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
+   COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -b ${PROJECT_SOURCE_DIR}/demos/cube.vert 
+   COMMAND mv vert.bil ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
+   DEPENDS cube.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+   )
+
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.bil
+   COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -b ${PROJECT_SOURCE_DIR}/demos/cube.frag 
+   COMMAND mv frag.bil ${CMAKE_BINARY_DIR}/demos/cube-frag.bil
+   DEPENDS cube.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+   )
+
 include_directories (
    ${XCB_INCLUDE_DIRS}
    "${PROJECT_SOURCE_DIR}/icd/common"
@@ -25,5 +37,5 @@ link_libraries(${XCB_LIBRARIES} XGL png m)
 add_executable(tri tri.c)
 target_link_libraries(tri)
 
-add_executable(cube cube.c)
+add_executable(cube cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.bil ${CMAKE_BINARY_DIR}/demos/cube-frag.bil)
 target_link_libraries(cube)

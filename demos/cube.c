@@ -19,8 +19,14 @@
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
 
+/*
+ * When not defined, code will use built-in GLSL compiler
+ * which may not be supported on all drivers
+ */
+#define EXTERNAL_BIL
+
 static char *tex_files[] = {
-    "demos/lunarg-logo-256x256-solid.png"
+    "lunarg-logo-256x256-solid.png"
 };
 
 struct xglcube_vs_uniform {
@@ -831,8 +837,6 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     xglEndDescriptorSetUpdate(demo->dset);
 }
 
-#define USE_BIL
-
 static XGL_SHADER demo_prepare_shader(struct demo *demo,
                                       XGL_PIPELINE_SHADER_STAGE stage,
                                       const void *code,
@@ -842,19 +846,14 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     XGL_SHADER shader;
     XGL_RESULT err;
 
-#ifdef USE_BIL
+
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
-    createInfo.pCode = malloc(createInfo.codeSize);
+#ifdef EXTERNAL_BIL
+    createInfo.codeSize = size;
+    createInfo.pCode = code;
     createInfo.flags = 0;
-
-    /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
-    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
-    ((uint32_t *) createInfo.pCode)[1] = 0;
-    ((uint32_t *) createInfo.pCode)[2] = stage;
-    memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
 
     err = xglCreateShader(demo->device, &createInfo, &shader);
     if (err) {
@@ -883,8 +882,38 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     return shader;
 }
 
+char *demo_read_bil(const char *filename, XGL_SIZE *psize)
+{
+    long int size;
+    void *shader_code;
+
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return NULL;
+
+    fseek(fp, 0L, SEEK_END);
+    size = ftell(fp);
+
+    fseek(fp, 0L, SEEK_SET);
+
+    shader_code = malloc(size);
+    fread(shader_code, size, 1, fp);
+
+    *psize = size;
+
+    return shader_code;
+}
+
 static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
+#ifdef EXTERNAL_BIL
+    void *vertShaderCode;
+    XGL_SIZE size;
+
+    vertShaderCode = demo_read_bil("cube-vert.bil", &size);
+
+    return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
+                               vertShaderCode, size);
+#else
     static const char *vertShaderText =
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
@@ -907,15 +936,25 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
                                (const void *) vertShaderText,
                                strlen(vertShaderText));
+#endif
 }
 
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
+#ifdef EXTERNAL_BIL
+    void *fragShaderCode;
+    XGL_SIZE size;
+
+    fragShaderCode = demo_read_bil("cube-frag.bil", &size);
+
+    return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
+                               fragShaderCode, size);
+#else
     static const char *fragShaderText =
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            "uniform sampler2D tex;\n"
+            "layout (binding = 0) uniform sampler2D tex;\n"
             "\n"
             "layout (location = 0) in vec4 texcoord;\n"
             "void main() {\n"
@@ -925,6 +964,7 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
                                (const void *) fragShaderText,
                                strlen(fragShaderText));
+#endif
 }
 
 static void demo_prepare_pipeline(struct demo *demo)
