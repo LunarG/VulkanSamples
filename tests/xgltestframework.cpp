@@ -101,7 +101,7 @@ XglTestFramework::~XglTestFramework()
 // Define all the static elements
 bool XglTestFramework::m_show_images = false;
 bool XglTestFramework::m_save_images = false;
-bool XglTestFramework::m_use_bil = false;
+bool XglTestFramework::m_use_bil = true;
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
 int XglTestFramework::m_window = 0;
@@ -126,6 +126,11 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
 
         if (strncmp("--use-BIL", argv[i], 13) == 0) {
             m_use_bil = true;
+            continue;
+        }
+
+        if (strncmp("--no-BIL", argv[i], 13) == 0) {
+            m_use_bil = false;
             continue;
         }
 
