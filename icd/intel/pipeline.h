@@ -103,6 +103,7 @@ struct intel_pipeline_shader {
      * can go away after the pipeline is created
      */
     XGL_FLAGS uses;
+    uint32_t user_attributes_read;
 
     XGL_UINT in_count;
     XGL_UINT out_count;

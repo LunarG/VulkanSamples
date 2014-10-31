@@ -453,7 +453,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    cmd_len = 1 + 2 * info->vi.attributeCount;
+    cmd_len = 1 + 2 * __builtin_popcount(vs->user_attributes_read);
     if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID))
         cmd_len += 2;
 
@@ -468,6 +468,8 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     /* VERTEX_ELEMENT_STATE */
     for (i = 0; i < info->vi.attributeCount; i++) {
+        if (!(vs->user_attributes_read & (1 << i)))
+            continue;
         const XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr =
             &info->vi.pVertexAttributeDescriptions[i];
         const int format =
