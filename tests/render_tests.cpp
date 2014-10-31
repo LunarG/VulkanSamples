@@ -73,9 +73,6 @@ using namespace std;
 
 #include "xglrenderframework.h"
 
-#undef ASSERT_NO_FATAL_FAILURE
-#define ASSERT_NO_FATAL_FAILURE(x) x
-
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
@@ -1623,7 +1620,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
         data.color[i][3] = tri_data[i].a;
     }
 
-    InitConstantBuffer(bufSize*2, sizeof(XGL_FLOAT), (const void*) &data);
+    InitConstantBuffer(bufSize, sizeof(XGL_FLOAT), (const void*) &data);
 
     DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
     RotateTriangleVSUniform(Projection, View, Model);
@@ -1705,50 +1702,6 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
     XGLTriangleTest(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, BIL_XGLTriangle)
-{
-    bool saved_use_bil = XglTestFramework::m_use_bil;
-
-    static const char *vertShaderText =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "\n"
-        "layout(binding = 0) uniform buf {\n"
-        "        mat4 MVP;\n"
-        "        vec4 position[3];\n"
-        "        vec4 color[3];\n"
-        "} ubuf;\n"
-        "\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "\n"
-        "void main() \n"
-        "{\n"
-        "   outColor = ubuf.color[gl_VertexID];\n"
-        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
-        "}\n";
-
-    static const char *fragShaderText =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "\n"
-        "layout (location = 0) in vec4 inColor;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   gl_FragColor = inColor;\n"
-        "}\n";
-
-    TEST_DESCRIPTION("XGL-style shaders, but force test framework to compile shader to BIL and pass BIL to driver.");
-
-    XglTestFramework::m_use_bil = true;
-
-    XGLTriangleTest(vertShaderText, fragShaderText);
-
-    XglTestFramework::m_use_bil = saved_use_bil;
-}
-
 TEST_F(XglRenderTest, GreenTriangle)
 {
     static const char *vertShaderText =
@@ -1772,41 +1725,15 @@ TEST_F(XglRenderTest, GreenTriangle)
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, BIL_GreenTriangle)
-{
-    bool saved_use_bil = XglTestFramework::m_use_bil;
-
-    static const char *vertShaderText =
-            "#version 130\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
-    static const char *fragShaderText =
-       "#version 130\n"
-       "void main() {\n"
-       "   gl_FragColor = vec4(0,1,0,1);\n"
-       "}\n";
-
-    TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to BIL and gives BIL to driver.");
-
-    XglTestFramework::m_use_bil = true;
-    DrawTriangleTest(vertShaderText, fragShaderText);
-    XglTestFramework::m_use_bil = saved_use_bil;
-}
-
 TEST_F(XglRenderTest, TriangleFragUniform)
 {
 
     static const char *vertShaderText =
-            "#version 130\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "vec2 vertices[3];\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout(location = 0) out vec4 color;\n"
+            "layout(location = 1) out vec4 scale;\n"
             "void main() {\n"
             "vec2 vertices[3];\n"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -1817,42 +1744,23 @@ TEST_F(XglRenderTest, TriangleFragUniform)
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
             "   color = colors[gl_VertexID % 3];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
+            "   scale.x = 0;\n"
+            "   scale = vec4(0);\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
-            "#version 130\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "uniform vec4 foo;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout(location = 0) in vec4 color;\n"
+            "layout(location = 1) in vec4 scale;\n"
+//            "layout(std140, binding = 0) uniform fooVal {\n"
+//            "   vec4 foo;\n"
+//            "} myFooVal;\n"
             "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
-
-    DrawTriangleTest(vertShaderText, fragShaderText);
-}
-
-TEST_F(XglRenderTest, YellowTriangle)
-{
-    static const char *vertShaderText =
-            "#version 130\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
-    static const char *fragShaderText =
-            "#version 130\n"
-            "void main() {\n"
-            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
+//            "   gl_FragColor = color * scale + myFooVal.foo;\n"
+            "   gl_FragColor = color * scale;\n"
             "}\n";
 
     DrawTriangleTest(vertShaderText, fragShaderText);
@@ -1862,59 +1770,16 @@ TEST_F(XglRenderTest, RotatedTriangle) {
     DrawRotatedTriangleTest();
 }
 
-TEST_F(XglRenderTest, TriangleTwoFSUniforms)
-{
-    static const char *vertShaderText =
-            "#version 130\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "out vec2 samplePos;\n"
-            "void main() {\n"
-            "   vec2 vertices[3];"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[gl_VertexID % 3];\n"
-            "   vec2 positions[3];"
-            "      positions[0] = vec2( 0.0, 0.0);\n"
-            "      positions[1] = vec2( 1.0, 0.0);\n"
-            "      positions[2] = vec2( 1.0, 1.0);\n"
-            "   scale = vec4(0.0, 0.0, 0.0, 0.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
-
-    static const char *fragShaderText =
-            "#version 430\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "uniform vec4 foo;\n"
-            "uniform vec4 bar;\n"
-            "void main() {\n"
-            // by default, with no location or blocks
-            // the compiler will read them from buffer
-            // in reverse order of first use in shader
-            // The buffer contains red, followed by blue,
-            // so foo should be blue, bar should be red
-            "   gl_FragColor = color * scale * foo * bar + foo;\n"
-            "}\n";
-
-    DrawTriangleTwoUniformsFS(vertShaderText, fragShaderText);
-}
 
 TEST_F(XglRenderTest, TriangleWithVertexFetch)
 {
     static const char *vertShaderText =
-            "#version 130\n"
-            //XYZ1( -1, -1, -1 )
-            "in vec4 pos;\n"
-            //XYZ1( 0.f, 0.f, 0.f )
-            "in vec4 inColor;\n"
-            "out vec4 outColor;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout(location = 0) in vec4 pos;\n"
+            "layout(location = 1) in vec4 inColor;\n"
+            "layout(location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = pos;\n"
@@ -1922,8 +1787,10 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
 
     static const char *fragShaderText =
-            "#version 430\n"
-            "in vec4 color;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout(location = 0) in vec4 color;\n"
             "void main() {\n"
             "   gl_FragColor = color;\n"
             "}\n";
