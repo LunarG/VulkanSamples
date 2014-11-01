@@ -21,7 +21,7 @@ This version of the components are written based on the following preliminary sp
 - [**XGL Programers Reference**, 1 Jul 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/AMD/Explicit%20GL%20Programming%20Guide%20and%20API%20Reference.pdf)
 - [**BIL**, version 1.0, revision 18](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
 - [**IMG's Fixed Function Proposal**, 28 Oct 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/IMG/xgl_vertex_input_description2_img.h)
-- [**Valve's Loader Proposal**, 7 Oct 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/Valve/xglLayers.ppt)
+- [**Valve's Loader Proposal**, 7 Oct 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/Valve/xglLayers.pptx)
 
 This work is intended to be released as open source under a BSD-style
 license once the XGL specification is public. Until that time, this work
