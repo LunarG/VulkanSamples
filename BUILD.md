@@ -43,14 +43,14 @@ gtest infrastructure. Tests avilable so far:
 - xgl_render_tests: Render a single triangle with XGL. Triangle will be in a .ppm in
 the current directory at the end of the test.
 
-#Demos
+##Demos
 
 The demos executables can be found in the dbuild/demos directory. The demos use DRI 3
 to render directly onto window surfaces.
 - tri: a textured triangle
 - cube: a textured spinning cube
 
-#Render Nodes
+##Render Nodes
 
 The render tests depend on access to DRM render nodes.
 To make that available, a couple of config files need to be created to set a module option
