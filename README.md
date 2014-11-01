@@ -3,9 +3,7 @@
 
 This project provides open source components for the XGL Ecosystem.
 
-The components here are being shared with the Khronos community to provide
-early insights into the specification of XGL and to assists those doing
-prototyping at this point.
+The components here are being shared with the Khronos community to provide early insights into the specification of XGL and to assists those doing prototyping at this point.
 
 The following components are available:
 - Proposed Reference [*ICD Loader*](https://github.com/KhronosGroup/GL-Next/tree/master/loader) (including [*Layer Management*](https://github.com/KhronosGroup/GL-Next/tree/master/layers/README.md))
