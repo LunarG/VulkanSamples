@@ -15,7 +15,7 @@ The following components are available:
   - [Object Tracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/object_track.c)
   - [Draw State](https://github.com/KhronosGroup/GL-Next/blob/master/layers/draw_state.c)
 - *GLAVE Debugger* ([API Dump](https://github.com/KhronosGroup/GL-Next/blob/master/layers/api_dump.c) only)
-- [*Sample Driver*](https://github.com/KhronosGroup/GL-Next/tree/master/icd)
+- [*Sample Drivers*](https://github.com/KhronosGroup/GL-Next/tree/master/icd)
   - [Common Infrastructure](https://github.com/KhronosGroup/GL-Next/tree/master/icd/common)
   - [Implementation for Intel GPUs](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel)
 

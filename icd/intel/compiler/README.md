@@ -1,0 +1,31 @@
+# Sample BIL to Intel ISA Compiler
+
+This compiler stack was brought over from the GlassyMesa driver LunarG created for Valve.
+It uses the following tools:
+- [glslang with BIL support](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel/compiler/mesa-utils/src/glsl)
+- LunarGLASS middle end optimizer
+- GlassyMesa's GLSLIR and supporting infrastructure
+- GlassyMesa's DRI i965 backend
+
+For xglCreateShader, we primarily used the existing standalone device independent front end which can consume GLSL or BIL, and results in a separately linked shader object.
+
+For xglCreateGraphicsPipeline, we pulled over only the files needed to lower the shader object to ISA ans supporting metadata.  Much of the i965 DRI driver was removed or commented out for future use, and is still being actively bootstrapped.
+
+Currently only Vertex and Fragment shaders are supported.  Any shader that fits within the IO parameters you see tested in compiler_render_tests.cpp should work.  Buffers with bindings, samplers with bindings, interstage IO with locations, are all working.  Vertex input locations work if they are sequential and start from 0.  Fragment output locations only work for location 0.
+
+We recommend using only buffers with bindings for uniforms, no global, non-block uniforms.
+
+Design decisions we made to get this stack working with current specified XGL and BIL.  We know these are active areas of discussion, and we'll update when decisions are made:
+- Samplers:
+  - GLSL sampler bindings equate to a sampler/texture pair of the same number, as set up by the XGL application.  i.e. the following sampler:
+```
+    layout (binding = 2) uniform sampler2D surface;
+```
+will read from XGL_SLOT_SHADER_SAMPLER entity 2 and XGL_SLOT_SHADER_RESOURCE entity 2.
+
+- Buffers:
+  - GLSL buffer bindings equate to the buffer bound at the same slot. i.e. the following uniform buffer:
+```
+    layout (std140, binding = 2) uniform foo { vec4 bar; } myBuffer;
+```
+will be read from XGL_SHADER_RESOURCE entity 2.
