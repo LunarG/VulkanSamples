@@ -8,7 +8,7 @@ early insights into the specification of XGL and to assists those doing
 prototyping at this point.
 
 The following components are available:
-- Proposed Reference [*ICD Loader*](https://github.com/KhronosGroup/GL-Next/tree/master/loader) (including [*Layer Management*](https://github.com/KhronosGroup/GL-Next/tree/master/layers/README.md)
+- Proposed Reference [*ICD Loader*](https://github.com/KhronosGroup/GL-Next/tree/master/loader) (including [*Layer Management*](https://github.com/KhronosGroup/GL-Next/tree/master/layers/README.md))
 - Proposed Reference [*Validation Layers*](https://github.com/KhronosGroup/GL-Next/tree/master/layers/)
   - [Object Tracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/object_track.c)
   - [Draw State](https://github.com/KhronosGroup/GL-Next/blob/master/layers/draw_state.c)
