@@ -63,7 +63,8 @@ sudo tee /etc/modprobe.d/drm.conf << EOF
 # Enable render nodes
 options drm rnodes=1
 EOF
-
+```
+```
 sudo tee /etc/udev/rules.d/drm.rules << EOF
 # Add permissions to render nodes
 SUBSYSTEM=="drm", ACTION=="add", DEVPATH=="/devices/*/renderD*", MODE="020666"

@@ -23,10 +23,9 @@ The following components are available:
 
 This release demonstrates a spinning textured cube as an example of the
 vertical slice of XGL functionality running on Ubuntu 14.10 with an Intel
-GPU. Included are instructions for
-[building all the components](https://github.com/KhronosGroup/GL-Next/tree/master/BUILD.md)
-and
-[running the XGL spinning cube demo application](https://github.com/KhronosGroup/GL-Next/tree/master/demos/README.md).
+GPU.
+[BUILD.md](https://github.com/KhronosGroup/GL-Next/tree/master/BUILD.md)
+includes directions for building all the components, running the validation tests and running the demo applications.
 
 Information on how to enable the API Dump and Validation layers is in
 [layers/README.md](https://github.com/KhronosGroup/GL-Next/tree/master/layers/README.md).
