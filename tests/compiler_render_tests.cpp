@@ -1774,6 +1774,39 @@ TEST_F(XglRenderTest, TexturedTriangle)
     DrawTexturedTriangle(vertShaderText, fragShaderText);
 }
 
+TEST_F(XglRenderTest, TexTriWithLocFragOut)
+{
+    // The expected result from this test is a red and green checkered triangle
+    static const char *vertShaderText =
+            "#version 130\n"
+            "out vec2 samplePos;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 1.0, 0.0);\n"
+            "      positions[2] = vec2( 1.0, 1.0);\n"
+            "   samplePos = positions[gl_VertexID % 3];\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "in vec2 samplePos;\n"
+            "layout (location=0) out vec4 outColor;\n"
+            "uniform sampler2D surface;\n"
+            "void main() {\n"
+            "   vec4 texColor = textureLod(surface, samplePos, 0.0);\n"
+            "   outColor = texColor;\n"
+            "}\n";
+    DrawTexturedTriangle(vertShaderText, fragShaderText);
+}
+
 TEST_F(XglRenderTest, VSTexture)
 {
     // The expected result from this test is a green and red triangle;
