@@ -1677,7 +1677,7 @@ TEST_F(XglRenderTest, MixTriangle)
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location=0) out vec4 bar;\n"
             "layout (location=1) out vec4 foo;\n"
-            "layout (location=2) out vec4 scale;\n"
+            "layout (location=2) out float scale;\n"
             "vec2 vertices[3];\n"
             "void main() {\n"
             "      vertices[0] = vec2(-1.0, -1.0);\n"
@@ -1689,7 +1689,7 @@ TEST_F(XglRenderTest, MixTriangle)
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
             "   foo = colors[gl_VertexID % 3];\n"
             "   bar = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   scale.x = 0.0;\n"
+            "   scale = 1.0;\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
@@ -1699,9 +1699,9 @@ TEST_F(XglRenderTest, MixTriangle)
            "#extension GL_ARB_shading_language_420pack : enable\n"
            "layout (location = 1) in vec4 bar;\n"
            "layout (location = 0) in vec4 foo;\n"
-           "layout (location = 2) in vec4 scale;\n"
+           "layout (location = 2) in float scale;\n"
            "void main() {\n"
-           "   gl_FragColor = bar + foo * scale.x;\n"
+           "   gl_FragColor = bar * scale + foo * (1.0-scale);\n"
            "}\n";
 
     XglTestFramework::m_use_bil = true;
