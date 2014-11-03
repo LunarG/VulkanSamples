@@ -880,26 +880,29 @@ bool XglTestFramework::GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
 
     if (! shader->parse(&Resources, (m_compile_options & EOptionDefaultDesktop) ? 110 : 100, false, messages)) {
 
+        if (! (m_compile_options & EOptionSuppressInfolog)) {
+            puts(shader->getInfoLog());
+            puts(shader->getInfoDebugLog());
+        }
+
         return false; // something didn't work
     }
 
     program.addShader(shader);
 
-    if (! (m_compile_options & EOptionSuppressInfolog)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
-    }
 
     //
     // Program-level processing...
     //
 
-    if (! program.link(messages))
-        return false;
+    if (! program.link(messages)) {
 
-    if (! (m_compile_options & EOptionSuppressInfolog)) {
-        puts(program.getInfoLog());
-        puts(program.getInfoDebugLog());
+        if (! (m_compile_options & EOptionSuppressInfolog)) {
+            puts(shader->getInfoLog());
+            puts(shader->getInfoDebugLog());
+        }
+
+        return false;
     }
 
     if (m_compile_options & EOptionDumpReflection) {
