@@ -3,7 +3,7 @@ Layer Description and Status
 
 Overview:
 Layer libraries can be written to intercept or hook XGL entrypoints for various
-debug and validation purpose.  One or more XGL entrypoints can be defined in your Layer
+debug and validation purposes.  One or more XGL entrypoints can be defined in your Layer
 library.  Undefined entrypoints in the Layer library will be passed to the next Layer which
 may be the driver.  Multiple layer libraries can be chained (actually a hierarchy) together.
 xglEnumerateLayer can be called to list the available layer libraries.  xglGetProcAddr is

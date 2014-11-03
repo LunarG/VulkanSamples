@@ -64,10 +64,6 @@ function update_BIL () {
      cp $BASEDIR/BIL/ToLLVM/CMakeLists.txt $BASEDIR/LunarGLASS
      cp -r $BASEDIR/BIL/ToLLVM/Standalone $BASEDIR/LunarGLASS
      cp -r $BASEDIR/BIL/ToLLVM/FrontEnds/* $BASEDIR/LunarGLASS/Frontends/
-
-#     cd $BASEDIR
-#     tar cf bil.tar BIL
-#     scp bil.tar ns1:~dropbox/Courtney
    fi
 }
 

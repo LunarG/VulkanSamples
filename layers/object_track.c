@@ -1,5 +1,3 @@
-/* THIS FILE IS GENERATED.  DO NOT EDIT. */
-
 /*
  * XGL
  *

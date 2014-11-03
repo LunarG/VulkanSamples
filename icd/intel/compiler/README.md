@@ -10,7 +10,7 @@ It uses the following tools:
 
 For xglCreateShader, we primarily used the existing standalone device independent front end which can consume GLSL or BIL, and results in a separately linked shader object.
 
-For xglCreateGraphicsPipeline, we pulled over only the files needed to lower the shader object to ISA ans supporting metadata.  Much of the i965 DRI driver was removed or commented out for future use, and is still being actively bootstrapped.
+For xglCreateGraphicsPipeline, we pulled over only the files needed to lower the shader object to ISA and supporting metadata.  Much of the i965 DRI driver was removed or commented out for future use, and is still being actively bootstrapped.
 
 Currently only Vertex and Fragment shaders are supported.  Any shader that fits within the IO parameters you see tested in compiler_render_tests.cpp should work.  Buffers with bindings, samplers with bindings, interstage IO with locations, are all working.  Vertex input locations work if they are sequential and start from 0.  Fragment output locations only work for location 0.
 
