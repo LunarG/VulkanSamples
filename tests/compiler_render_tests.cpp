@@ -1722,10 +1722,10 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            //XYZ1( -1, -1, -1 )
-            "layout (location = 0) in vec4 pos;\n"
             //XYZ1( 0.f, 0.f, 0.f )
             "layout (location = 1) in vec4 inColor;\n"
+            //XYZ1( -1, -1, -1 )
+            "layout (location = 0) in vec4 pos;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
