@@ -1783,7 +1783,8 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
 TEST_F(XglRenderTest, TriVertFetchDeadAttr)
 {
     // This tests that attributes work in the presence of gl_VertexID
-    // and a dead attribute in position 1
+    // and a dead attribute in position 0. Draws a triangle with yellow,
+    // red and green corners, starting at top and going clockwise.
 
     static const char *vertShaderText =
             "#version 140\n"
@@ -1795,10 +1796,12 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   outColor = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   vec4 vertices[3];"
-            "      vertices[gl_VertexID % 3] = pos;\n"
-            "   gl_Position = vertices[(gl_VertexID + 3) % 3];\n"
+            "   outColor = inColor;\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-1.0, -1.0);\n"
+            "      vertices[1] = vec2( 1.0, -1.0);\n"
+            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
 
