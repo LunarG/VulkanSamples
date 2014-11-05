@@ -380,6 +380,10 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
         // LunarG: TODO - Need this??
         //_mesa_copy_linked_program_data((gl_shader_stage) stage, shProg, prog);
+        // For the moment, inline code from this call...
+        if (stage == MESA_SHADER_VERTEX) {
+            prog->UsesClipDistanceOut = shProg->Vert.UsesClipDistance;
+        }
 
         bool progress;
 
