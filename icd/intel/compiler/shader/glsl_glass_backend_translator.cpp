@@ -1015,12 +1015,20 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
                                              irVarMode, true);
 
             var->data.how_declared = ir_var_declared_in_block;
+            var->init_interface_type(irInterfaceType);
+
             // TODO: irInterfaceType->fields.structure[field].row_major;
 
-            const int layoutLocation = irInterfaceType->fields.structure[field].location;
-            if (layoutLocation >= 0 && layoutLocation < gla::MaxUserLayoutLocation) {
-               var->data.explicit_location = true;
-               var->data.location          = layoutLocation;
+            // location should not be set on a field of an anonymous block
+            assert(irInterfaceType->fields.structure[field].location == -1);
+
+            // Look up the binding info for each member
+            MetaType metaType;
+            decodeMdTypesEmitMdQualifiers(isIoMd(mdNode), mdNode, mdType, false, metaType);
+
+            if(metaType.location) {
+                var->data.explicit_binding = true;
+                var->data.binding = metaType.location;
             }
          }
       }
