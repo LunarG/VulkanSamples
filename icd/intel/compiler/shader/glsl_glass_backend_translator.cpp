@@ -1136,7 +1136,7 @@ MesaGlassTranslator::convertStructType(const llvm::Type*       structType,
 
          fields[index].interpolation = InterpolationQualifierToIR(metaType.interpMethod);
          fields[index].centroid      = metaType.interpLocation == EILCentroid;
-         fields[index].sample        = metaType.mdSampler != 0;
+         fields[index].sample        = metaType.interpLocation == EILSample;
          fields[index].row_major     = metaType.typeLayout == EMtlRowMajorMatrix;
       }
 
