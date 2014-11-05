@@ -457,7 +457,9 @@ static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
     assert(vs->out_count >= 2);
     attr_skip = 2;
     attr_count = vs->out_count - attr_skip;
-    assert(fs->in_count == attr_count);
+    // LunarG TODO: Redo this assert for user varyings only
+    // and then only assert that vs_out is greater than fs_in?
+    //assert(fs->in_count == attr_count);
     assert(fs->in_count <= 32);
 
     vue_offset = attr_skip / 2;
