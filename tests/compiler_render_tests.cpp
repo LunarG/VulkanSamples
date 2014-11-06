@@ -1059,11 +1059,14 @@ void XglRenderTest::CreatePipelineFSUniformBlockBinding(XGL_PIPELINE* pipeline, 
 //    assert (slots == bufferCount); // update as needed
 
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( bufferCount * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
-    for (int i = 0; i < bufferCount; ++i) {
+    for (int i = 0; i < bufferCount - 1; ++i) {
         // Note:  These are all constant buffers
         slotInfo[i].shaderEntityIndex = i;
         slotInfo[i].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
     }
+
+    slotInfo[bufferCount - 1].shaderEntityIndex = 18;
+    slotInfo[bufferCount - 1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
 
     ps_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
     ps_stage.shader.descriptorSetMapping[0].descriptorCount = bufferCount;
@@ -1261,14 +1264,19 @@ void XglRenderTest::CreatePipelineMultipleTexturesAndSamplers(XGL_PIPELINE* pipe
     // Assign the slots, note that only t0 and s0 will work as of writing this test
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( psSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
     int slotIndex = 0;
-    for (int i = 0; i < textureCount; ++i) {
+    for (int i = 0; i < textureCount - 1; ++i) {
         slotInfo[slotIndex].shaderEntityIndex = i;
         slotInfo[slotIndex++].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
     }
-    for (int i = 0; i < samplerCount; ++i) {
+    slotInfo[slotIndex].shaderEntityIndex = 12;
+    slotInfo[slotIndex++].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    for (int i = 0; i < samplerCount - 1; ++i) {
         slotInfo[slotIndex].shaderEntityIndex = i;
         slotInfo[slotIndex++].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
     }
+
+    slotInfo[slotIndex].shaderEntityIndex = 12;
+    slotInfo[slotIndex++].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
@@ -1915,7 +1923,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
             "layout (location = 0) in vec4 samplePos;\n"
             "layout (binding = 0) uniform sampler2D surface0;\n"
             "layout (binding = 1) uniform sampler2D surface1;\n"
-            "layout (binding = 2) uniform sampler2D surface2;\n"
+            "layout (binding = 12) uniform sampler2D surface2;\n"
             "void main() {\n"
             "   gl_FragColor = textureLod(surface2, samplePos.xy, 0.0);\n"
             "}\n";
@@ -1992,10 +2000,47 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
             "layout (std140, binding = 0) uniform redVal   { vec4 color; } myRedVal\n;"
             "layout (std140, binding = 1) uniform greenVal { vec4 color; } myGreenVal\n;"
             "layout (std140, binding = 2) uniform blueVal  { vec4 color; } myBlueVal\n;"
-            "layout (std140, binding = 3) uniform whiteVal { vec4 color; } myWhiteVal\n;"
+            "layout (std140, binding = 18) uniform whiteVal { vec4 color; } myWhiteVal\n;"
             "void main() {\n"
             "   gl_FragColor = myBlueVal.color;\n"
             "   gl_FragColor += myRedVal.color;\n"
+            "}\n";
+
+    XglTestFramework::m_use_bil = true;
+    DrawTriangleFSUniformBlockBinding(vertShaderText, fragShaderText);
+}
+
+TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
+{
+    // This test is the same as TriangleFSUniformBlockBinding, but
+    // it does not provide an instance name.
+    // The expected result from this test is a purple triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 430\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) uniform vec4 foo;\n"
+            "layout (location = 1) uniform vec4 bar;\n"
+            "layout (std140, binding = 0) uniform redVal   { vec4 red; };"
+            "layout (std140, binding = 1) uniform greenVal { vec4 green; };"
+            "layout (std140, binding = 2) uniform blueVal  { vec4 blue; };"
+            "layout (std140, binding = 18) uniform whiteVal { vec4 white; };"
+            "void main() {\n"
+            "   gl_FragColor = blue;\n"
+            "   gl_FragColor += red;\n"
             "}\n";
 
     XglTestFramework::m_use_bil = true;
