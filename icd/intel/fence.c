@@ -73,7 +73,8 @@ XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
     if (fence->x11) {
         const bool wait = (timeout_ns != 0);
 
-        return intel_wsi_x11_wait(fence->x11, fence->x11_serial, wait);
+        return intel_wsi_x11_wait(fence->x11, fence->x11_win,
+                fence->x11_serial, wait);
     }
 #endif
 

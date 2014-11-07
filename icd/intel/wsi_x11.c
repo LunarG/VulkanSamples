@@ -42,16 +42,8 @@
 #include "queue.h"
 #include "wsi_x11.h"
 
-struct intel_wsi_x11 {
-    xcb_connection_t *c;
-    xcb_window_t root;
-    xcb_randr_provider_t provider;
-    int root_depth;
-
-    int dri3_major, dri3_minor;
-    int present_major, present_minor;
-
-    int fd;
+struct intel_wsi_x11_window {
+    xcb_window_t window_id;
 
     xcb_present_event_t present_special_event_id;
     xcb_special_event_t *present_special_event;
@@ -64,6 +56,22 @@ struct intel_wsi_x11 {
         uint32_t serial;
         XGL_UINT64 msc;
     } remote;
+
+    struct intel_wsi_x11_window *next;
+};
+
+struct intel_wsi_x11 {
+    xcb_connection_t *c;
+    xcb_window_t root;
+    xcb_randr_provider_t provider;
+    int root_depth;
+
+    int dri3_major, dri3_minor;
+    int present_major, present_minor;
+
+    int fd;
+
+    struct intel_wsi_x11_window *windows;
 };
 
 /**
@@ -245,18 +253,19 @@ static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
 /**
  * Send a PresentSelectInput to select interested events.
  */
-static XGL_RESULT wsi_x11_present_select_input(struct intel_wsi_x11 *x11)
+static XGL_RESULT wsi_x11_present_select_input(struct intel_wsi_x11 *x11,
+                                               struct intel_wsi_x11_window *win)
 {
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
 
     /* create the event queue */
-    x11->present_special_event_id = xcb_generate_id(x11->c);
-    x11->present_special_event = xcb_register_for_special_xge(x11->c,
-            &xcb_present_id, x11->present_special_event_id, NULL);
+    win->present_special_event_id = xcb_generate_id(x11->c);
+    win->present_special_event = xcb_register_for_special_xge(x11->c,
+            &xcb_present_id, win->present_special_event_id, NULL);
 
     cookie = xcb_present_select_input_checked(x11->c,
-            x11->present_special_event_id, x11->root,
+            win->present_special_event_id, win->window_id,
             XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY);
 
     error = xcb_request_check(x11->c, cookie);
@@ -272,6 +281,7 @@ static XGL_RESULT wsi_x11_present_select_input(struct intel_wsi_x11 *x11)
  * Send a PresentPixmap.
  */
 static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
+                                         struct intel_wsi_x11_window *win,
                                          const XGL_WSI_X11_PRESENT_INFO *info)
 {
     struct intel_img *img = intel_img(info->srcImage);
@@ -285,9 +295,9 @@ static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
         options |= XCB_PRESENT_OPTION_COPY;
 
     cookie = xcb_present_pixmap(x11->c,
-            info->destWindow,
+            win->window_id,
             img->x11_pixmap,
-            ++x11->local.serial,
+            ++win->local.serial,
             0, /* valid-area */
             0, /* update-area */
             0, /* x-off */
@@ -314,10 +324,10 @@ static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
  * Send a PresentNotifyMSC for the current MSC.
  */
 static void wsi_x11_present_notify_msc(struct intel_wsi_x11 *x11,
-                                       xcb_randr_crtc_t crtc)
+                                       struct intel_wsi_x11_window *win)
 {
     /* cannot specify CRTC? */
-    xcb_present_notify_msc(x11->c, x11->root, ++x11->local.serial,
+    xcb_present_notify_msc(x11->c, win->window_id, ++win->local.serial,
             0, 0, 0);
 
     xcb_flush(x11->c);
@@ -327,6 +337,7 @@ static void wsi_x11_present_notify_msc(struct intel_wsi_x11 *x11,
  * Handle a Present event.
  */
 static void wsi_x11_present_event(struct intel_wsi_x11 *x11,
+                                  struct intel_wsi_x11_window *win,
                                   const xcb_present_generic_event_t *ev)
 {
     union {
@@ -336,18 +347,76 @@ static void wsi_x11_present_event(struct intel_wsi_x11 *x11,
 
     switch (u.ev->evtype) {
     case XCB_PRESENT_COMPLETE_NOTIFY:
-        x11->remote.serial = u.complete->serial;
-        x11->remote.msc = u.complete->msc;
+        win->remote.serial = u.complete->serial;
+        win->remote.msc = u.complete->msc;
         break;
     default:
         break;
     }
 }
 
+static struct intel_wsi_x11_window *wsi_x11_create_window(struct intel_wsi_x11 *x11,
+                                                          xcb_window_t win_id)
+{
+    struct intel_wsi_x11_window *win;
+
+    win = icd_alloc(sizeof(*win), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!win)
+        return NULL;
+
+    memset(win, 0, sizeof(*win));
+
+    win->window_id = win_id;
+
+    if (wsi_x11_present_select_input(x11, win) != XGL_SUCCESS) {
+        icd_free(win);
+        return NULL;
+    }
+
+    return win;
+}
+
+static void wsi_x11_destroy_window(struct intel_wsi_x11 *x11,
+                                   struct intel_wsi_x11_window *win)
+{
+    if (win->present_special_event)
+        xcb_unregister_for_special_event(x11->c, win->present_special_event);
+
+    icd_free(win);
+}
+
+static struct intel_wsi_x11_window *wsi_x11_lookup_window(struct intel_wsi_x11 *x11,
+                                                          xcb_window_t win_id)
+{
+    struct intel_wsi_x11_window *win = x11->windows;
+
+    while (win) {
+        if (win->window_id == win_id)
+            break;
+        win = win->next;
+    }
+
+    /* lookup failed */
+    if (!win) {
+        win = wsi_x11_create_window(x11, win_id);
+        if (win) {
+            win->next = x11->windows;
+            x11->windows = win;
+        }
+    }
+
+    return win;
+}
+
 void intel_wsi_x11_destroy(struct intel_wsi_x11 *x11)
 {
-    if (x11->present_special_event)
-        xcb_unregister_for_special_event(x11->c, x11->present_special_event);
+    struct intel_wsi_x11_window *win = x11->windows;
+
+    while (win) {
+        struct intel_wsi_x11_window *next = win->next;
+        wsi_x11_destroy_window(x11, win);
+        win = next;
+    }
 
     if (x11->fd >= 0)
         close(x11->fd);
@@ -356,26 +425,27 @@ void intel_wsi_x11_destroy(struct intel_wsi_x11 *x11)
 }
 
 XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
+                              struct intel_wsi_x11_window *win,
                               uint32_t serial, bool wait)
 {
-    while (x11->remote.serial < serial) {
+    while (win->remote.serial < serial) {
         xcb_present_generic_event_t *ev;
 
         if (wait) {
             ev = (xcb_present_generic_event_t *)
                 xcb_wait_for_special_event(x11->c,
-                        x11->present_special_event);
+                        win->present_special_event);
             if (!ev)
                 return XGL_ERROR_UNKNOWN;
         } else {
             ev = (xcb_present_generic_event_t *)
                 xcb_poll_for_special_event(x11->c,
-                        x11->present_special_event);
+                        win->present_special_event);
             if (!ev)
                 return XGL_NOT_READY;
         }
 
-        wsi_x11_present_event(x11, ev);
+        wsi_x11_present_event(x11, win, ev);
 
         free(ev);
     }
@@ -478,12 +548,6 @@ XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
         return XGL_ERROR_UNKNOWN;
     }
 
-    ret = wsi_x11_present_select_input(x11);
-    if (ret != XGL_SUCCESS) {
-        intel_wsi_x11_destroy(x11);
-        return ret;
-    }
-
     intel_gpu_associate_x11(gpu, x11, x11->fd);
 
     return XGL_SUCCESS;
@@ -497,16 +561,21 @@ XGL_RESULT XGLAPI intelWsiX11GetMSC(
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_wsi_x11 *x11 = dev->gpu->x11;
+    struct intel_wsi_x11_window *win;
     XGL_RESULT ret;
 
-    wsi_x11_present_notify_msc(x11, crtc);
+    win = wsi_x11_lookup_window(x11, window);
+    if (!win)
+        return XGL_ERROR_UNKNOWN;
+
+    wsi_x11_present_notify_msc(x11, win);
 
     /* wait for the event */
-    ret = intel_wsi_x11_wait(x11, x11->local.serial, -1);
+    ret = intel_wsi_x11_wait(x11, win, win->local.serial, -1);
     if (ret != XGL_SUCCESS)
         return ret;
 
-    *pMsc = x11->remote.msc;
+    *pMsc = win->remote.msc;
 
     return XGL_SUCCESS;
 }
@@ -539,14 +608,19 @@ XGL_RESULT XGLAPI intelWsiX11QueuePresent(
     struct intel_queue *queue = intel_queue(queue_);
     struct intel_fence *fence = intel_fence(fence_);
     struct intel_wsi_x11 *x11 = queue->dev->gpu->x11;
+    struct intel_wsi_x11_window *win;
     XGL_RESULT ret;
 
-    ret = wsi_x11_present_pixmap(x11, pPresentInfo);
+    win = wsi_x11_lookup_window(x11, pPresentInfo->destWindow);
+    if (!win)
+        return XGL_ERROR_UNKNOWN;
+
+    ret = wsi_x11_present_pixmap(x11, win, pPresentInfo);
     if (ret != XGL_SUCCESS)
         return ret;
 
     if (fence)
-        intel_fence_set_x11(fence, x11, x11->local.serial);
+        intel_fence_set_x11(fence, x11, win, win->local.serial);
 
     return XGL_SUCCESS;
 }

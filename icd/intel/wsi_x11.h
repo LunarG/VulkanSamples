@@ -31,10 +31,12 @@
 #include "intel.h"
 
 struct intel_wsi_x11;
+struct intel_wsi_x11_window;
 
 #ifdef ENABLE_WSI_X11
 
 XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
+                              struct intel_wsi_x11_window *win,
                               uint32_t serial, bool wait);
 
 void intel_wsi_x11_destroy(struct intel_wsi_x11 *x11);
@@ -63,6 +65,7 @@ XGL_RESULT XGLAPI intelWsiX11QueuePresent(
 #else /* ENABLE_WSI_X11 */
 
 static inline XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
+                                            struct intel_wsi_x11_window *win,
                                             uint32_t serial, bool wait)
 {
     return XGL_SUCCESS;
