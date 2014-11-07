@@ -1855,18 +1855,18 @@ TEST_F(XglRenderTest, TexturedTriangle)
     DrawTexturedTriangle(vertShaderText, fragShaderText);
 }
 
-TEST_F(XglRenderTest, TexturedTriangleCD)
+TEST_F(XglRenderTest, TexturedTriangleClip)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 330\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec2 samplePos;\n"
-            //"out gl_PerVertex {\n"
-            //"    vec4 gl_Position;\n"
-            //"    float gl_ClipDistance[1];\n"
-            //"};\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "    float gl_ClipDistance[1];\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -1876,7 +1876,11 @@ TEST_F(XglRenderTest, TexturedTriangleCD)
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 1.0, 0.0);\n"
             "      positions[2] = vec2( 1.0, 1.0);\n"
-            //"   gl_ClipDistance[0] = 0.0;\n"
+            "   float dists[3];\n"
+            "      dists[0] = 1.0;\n"
+            "      dists[1] = 1.0;\n"
+            "      dists[2] = -1.0;\n"
+            "   gl_ClipDistance[0] = dists[gl_VertexID % 3];\n"
             "   samplePos = positions[gl_VertexID % 3];\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
@@ -1894,7 +1898,7 @@ TEST_F(XglRenderTest, TexturedTriangleCD)
             "   outColor = texColor;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
+    XglTestFramework::m_use_bil = false;
     DrawTexturedTriangle(vertShaderText, fragShaderText);
 }
 
