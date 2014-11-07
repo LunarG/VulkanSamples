@@ -205,6 +205,7 @@ struct demo {
         XGL_GPU_MEMORY mem;
 
         XGL_COLOR_ATTACHMENT_VIEW view;
+        XGL_FENCE fence;
     } buffers[DEMO_BUFFER_COUNT];
 
     struct {
@@ -348,17 +349,22 @@ static void demo_draw(struct demo *demo)
     const XGL_WSI_X11_PRESENT_INFO present = {
         .destWindow = demo->window,
         .srcImage = demo->buffers[demo->current_buffer].image,
-        .async = false
+        .async = true,
+        .flip = false,
     };
+    XGL_FENCE fence = demo->buffers[demo->current_buffer].fence;
     XGL_RESULT err;
 
     demo_draw_build_cmd(demo);
+
+    err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((XGL_UINT64) 0));
+    assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
     err = xglQueueSubmit(demo->queue, 1, &demo->cmd,
             0, NULL, XGL_NULL_HANDLE);
     assert(!err);
 
-    err = xglWsiX11QueuePresent(demo->queue, &present, XGL_NULL_HANDLE);
+    err = xglWsiX11QueuePresent(demo->queue, &present, fence);
     assert(!err);
 
     demo->current_buffer = (demo->current_buffer + 1) % DEMO_BUFFER_COUNT;
@@ -373,6 +379,11 @@ static void demo_prepare_buffers(struct demo *demo)
             .width = demo->width,
             .height = demo->height,
         },
+        .flags = 0,
+    };
+    const XGL_FENCE_CREATE_INFO fence = {
+        .sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = NULL,
         .flags = 0,
     };
     XGL_RESULT err;
@@ -396,6 +407,10 @@ static void demo_prepare_buffers(struct demo *demo)
 
         err = xglCreateColorAttachmentView(demo->device,
                 &color_attachment_view, &demo->buffers[i].view);
+        assert(!err);
+
+        err = xglCreateFence(demo->device,
+                &fence, &demo->buffers[i].fence);
         assert(!err);
     }
 }
@@ -1324,6 +1339,7 @@ static void demo_cleanup(struct demo *demo)
     xglFreeMemory(demo->depth.mem);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        xglDestroyObject(demo->buffers[i].fence);
         xglDestroyObject(demo->buffers[i].view);
         xglDestroyObject(demo->buffers[i].image);
     }
