@@ -76,6 +76,7 @@ struct demo {
     XGL_CMD_BUFFER cmd;
 
     xcb_window_t window;
+    xcb_intern_atom_reply_t *atom_wm_delete_window;
 
     bool quit;
     XGL_UINT current_buffer;
@@ -723,6 +724,12 @@ static void demo_handle_event(struct demo *demo,
     case XCB_EXPOSE:
         demo_draw(demo);
         break;
+    case XCB_CLIENT_MESSAGE:
+        if((*(xcb_client_message_event_t*)event).data.data32[0] ==
+           (*demo->atom_wm_delete_window).atom) {
+            demo->quit = true;
+        }
+        break;
     case XCB_KEY_RELEASE:
         {
             const xcb_key_release_event_t *key =
@@ -731,6 +738,9 @@ static void demo_handle_event(struct demo *demo,
             if (key->detail == 0x9)
                 demo->quit = true;
         }
+        break;
+    case XCB_DESTROY_NOTIFY:
+        demo->quit = true;
         break;
     default:
         break;
@@ -761,7 +771,8 @@ static void demo_create_window(struct demo *demo)
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     value_list[0] = demo->screen->black_pixel;
     value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
-                    XCB_EVENT_MASK_EXPOSURE;
+                    XCB_EVENT_MASK_EXPOSURE |
+                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     xcb_create_window(demo->connection,
             XCB_COPY_FROM_PARENT,
@@ -770,6 +781,19 @@ static void demo_create_window(struct demo *demo)
             XCB_WINDOW_CLASS_INPUT_OUTPUT,
             demo->screen->root_visual,
             value_mask, value_list);
+
+    /* Magic code that will send notification when window is destroyed */
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(demo->connection, 1, 12,
+                                                      "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(demo->connection, cookie, 0);
+
+    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(demo->connection, 0, 16, "WM_DELETE_WINDOW");
+    demo->atom_wm_delete_window = xcb_intern_atom_reply(demo->connection, cookie2, 0);
+
+    xcb_change_property(demo->connection, XCB_PROP_MODE_REPLACE,
+                        demo->window, (*reply).atom, 4, 32, 1,
+                        &(*demo->atom_wm_delete_window).atom);
+    free(reply);
 
     xcb_map_window(demo->connection, demo->window);
 }
