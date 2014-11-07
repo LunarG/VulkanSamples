@@ -52,6 +52,9 @@ typedef struct _XGL_WSI_X11_PRESENT_INFO
      * xglWsiX11GetMSC(), potentially a round-trip to the server, to get the
      * current MSC first), or set \p target_msc to zero and set a "swap
      * interval".
+     *
+     * \p crtc can be XCB_NONE.  In that case, a suitable CRTC is picked based
+     * on \p destWindow.
      */
     xcb_randr_crtc_t crtc;
     XGL_UINT64 target_msc;
@@ -95,10 +98,12 @@ XGL_RESULT XGLAPI xglWsiX11AssociateConnection(
 
 /**
  * Return the current MSC (Media Stream Counter, incremented for each vblank)
- * of the CRTC.
+ * of \p crtc.  If crtc is \p XCB_NONE, a suitable CRTC is picked based on \p
+ * win.
  */
 XGL_RESULT XGLAPI xglWsiX11GetMSC(
     XGL_DEVICE                                  device,
+    xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     XGL_UINT64*                                 pMsc);
 

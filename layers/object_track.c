@@ -1286,11 +1286,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
 {
     ll_increment_use_count((XGL_VOID*)device);
     printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
-    XGL_RESULT result = nextTable.WsiX11GetMSC(device, crtc, pMsc);
+    XGL_RESULT result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
     return result;
 }
 

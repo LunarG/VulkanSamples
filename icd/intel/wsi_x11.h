@@ -45,6 +45,7 @@ XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
 
 XGL_RESULT XGLAPI intelWsiX11GetMSC(
     XGL_DEVICE                                  device,
+    xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     XGL_UINT64*                                 pMsc);
 
@@ -80,6 +81,7 @@ static inline XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
 
 static inline XGL_RESULT XGLAPI intelWsiX11GetMSC(
     XGL_DEVICE                                  device,
+    xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     XGL_UINT64*                                 pMsc)
 {

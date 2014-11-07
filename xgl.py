@@ -716,6 +716,7 @@ ext_wsi_x11 = (
 
     Proto("XGL_RESULT", "WsiX11GetMSC",
         (Param("XGL_DEVICE", "device"),
+         Param("xcb_window_t", "window"),
          Param("xcb_randr_crtc_t", "crtc"),
          Param("XGL_UINT64*", "pMsc"))),
 

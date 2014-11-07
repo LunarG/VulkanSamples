@@ -1326,10 +1326,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
 {
-    XGL_RESULT result = nextTable.WsiX11GetMSC(device, crtc, pMsc);
-    printf("xglWsiX11GetMSC(device = %p, crtc = %i, pMsc = %lu) = %s\n", (void*)device, crtc, *pMsc, string_XGL_RESULT(result));
+    XGL_RESULT result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
+    printf("xglWsiX11GetMSC(device = %p, window = %i, crtc = %i, pMsc = %lu) = %s\n", (void*)device, window, crtc, *pMsc, string_XGL_RESULT(result));
     return result;
 }
 
