@@ -2100,6 +2100,7 @@ TEST_F(XglRenderTest, ClipDistance)
             "#version 330 core\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location=0) out vec4 foo;\n"
             "out gl_PerVertex {\n"
             "    vec4 gl_Position;\n"
             "    float gl_ClipDistance[1];\n"
@@ -2109,7 +2110,15 @@ TEST_F(XglRenderTest, ClipDistance)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_ClipDistance[0] = 1.0;\n"
+            "vec4 colors[3];\n"
+            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "float dists[3];\n"
+            "      dists[0] = 1.0;\n"
+            "      dists[1] = 1.0;\n"
+            "      dists[2] = -1.0;\n"
+            "   gl_ClipDistance[0] = dists[gl_VertexID % 3];\n"
             "   //gl_ClipDistance[1] = 0.0;\n"
             "   //gl_ClipDistance[2] = 0.0;\n"
             "   //gl_ClipDistance[3] = 0.0;\n"
@@ -2117,6 +2126,7 @@ TEST_F(XglRenderTest, ClipDistance)
             "   //gl_ClipDistance[5] = 0.0;\n"
             "   //gl_ClipDistance[6] = 0.0;\n"
             "   //gl_ClipDistance[7] = 0.0;\n"
+            "   foo = colors[gl_VertexID % 3];\n"
             "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
             "}\n";
 
@@ -2124,8 +2134,9 @@ TEST_F(XglRenderTest, ClipDistance)
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 foo;\n"
             "void main() {\n"
-            "   gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   gl_FragColor = foo;\n"
             "}\n";
 
     XglTestFramework::m_use_bil = false;
