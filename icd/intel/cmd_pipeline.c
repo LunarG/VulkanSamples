@@ -454,15 +454,12 @@ static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
 
     /* VS outputs VUE header and position additionally */
-    assert(vs->out_count >= 2);
-    attr_skip = 2;
+    assert(vs->out_count >= fs->in_count + 2);
+    attr_skip = vs->out_count - fs->in_count;
     attr_count = vs->out_count - attr_skip;
-    // LunarG TODO: Redo this assert for user varyings only
-    // and then only assert that vs_out is greater than fs_in?
-    //assert(fs->in_count == attr_count);
     assert(fs->in_count <= 32);
 
-    vue_offset = attr_skip / 2;
+    vue_offset = (attr_skip + 1) / 2;
     vue_len = (attr_count + 1) / 2;
     if (!vue_len)
         vue_len = 1;
@@ -564,12 +561,15 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
                raster->cmd_clip_cull;
     }
 
+// LunarG GSF CLIP TODO
+#define CLIP_ENABLE 1
+
     dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
           GEN6_CLIP_DW2_XY_TEST_ENABLE |
           GEN6_CLIP_DW2_APIMODE_OGL |
           // LunarG GSF CLIP TODO
           //state->clip_plane_enable << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
-          1 << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
+          CLIP_ENABLE << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
           pipeline->provoking_vertex_tri << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
           pipeline->provoking_vertex_line << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
           pipeline->provoking_vertex_trifan << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
