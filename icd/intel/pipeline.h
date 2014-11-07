@@ -105,6 +105,8 @@ struct intel_pipeline_shader {
     XGL_FLAGS uses;
     uint32_t user_attributes_read;
 
+    XGL_BOOL enable_user_clip;
+
     XGL_UINT in_count;
     XGL_UINT out_count;
 

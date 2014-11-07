@@ -317,6 +317,8 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             }
             pipe_shader->user_attributes_read = user_attr_read;
 
+            pipe_shader->enable_user_clip = sh_prog->Vert.UsesClipDistance;
+
             // These are really best guesses, and will require more work to
             // understand as we turn on more features
             pipe_shader->in_count = data->base.urb_read_length;// = 1;

@@ -547,6 +547,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) |
                          (cmd_len - 2);
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_pipeline_shader *vs = &pipeline->vs;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
     const struct intel_raster_state *raster = cmd->bind.state.raster;
@@ -561,15 +562,10 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
                raster->cmd_clip_cull;
     }
 
-// LunarG GSF CLIP TODO
-#define CLIP_ENABLE 1
-
     dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
           GEN6_CLIP_DW2_XY_TEST_ENABLE |
           GEN6_CLIP_DW2_APIMODE_OGL |
-          // LunarG GSF CLIP TODO
-          //state->clip_plane_enable << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
-          CLIP_ENABLE << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
+          (vs->enable_user_clip ? 1 : 0) << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
           pipeline->provoking_vertex_tri << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
           pipeline->provoking_vertex_line << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
           pipeline->provoking_vertex_trifan << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
