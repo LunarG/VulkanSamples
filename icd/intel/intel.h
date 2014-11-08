@@ -48,6 +48,9 @@
 
 #define INTEL_GEN(gen) ((int) ((gen) * 100))
 
+#define INTEL_MAX_VERTEX_BINDING_COUNT 33
+#define INTEL_MAX_VERTEX_ELEMENT_COUNT (INTEL_MAX_VERTEX_BINDING_COUNT + 1)
+
 enum intel_debug_flags {
     INTEL_DEBUG_BATCH       = 1 << 0,
 

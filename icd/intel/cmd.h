@@ -182,8 +182,8 @@ struct intel_cmd_bind {
     } dyn_view;
 
     struct {
-        const struct intel_mem *mem[33];
-        XGL_GPU_SIZE offset[33];
+        const struct intel_mem *mem[INTEL_MAX_VERTEX_BINDING_COUNT];
+        XGL_GPU_SIZE offset[INTEL_MAX_VERTEX_BINDING_COUNT];
     } vertex;
 
     struct {
