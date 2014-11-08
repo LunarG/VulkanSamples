@@ -286,10 +286,7 @@ typedef enum _XGL_DESCRIPTOR_SET_SLOT_TYPE
     XGL_SLOT_SHADER_RESOURCE                                = 0x00000001,
     XGL_SLOT_SHADER_UAV                                     = 0x00000002,
     XGL_SLOT_SHADER_SAMPLER                                 = 0x00000003,
-// IMG CHANGE BEGIN - support for vertex input description
-    XGL_SLOT_VERTEX_INPUT                                   = 0x00000004,
-    XGL_SLOT_NEXT_DESCRIPTOR_SET                            = 0x00000005,
-// IMG CHANGE END
+    XGL_SLOT_NEXT_DESCRIPTOR_SET                            = 0x00000004,
 
     XGL_DESCRIPTOR_SET_SLOT_TYPE_BEGIN_RANGE                = XGL_SLOT_UNUSED,
     XGL_DESCRIPTOR_SET_SLOT_TYPE_END_RANGE                  = XGL_SLOT_NEXT_DESCRIPTOR_SET,
@@ -774,7 +771,15 @@ typedef enum _XGL_CHANNEL_FORMAT
 // IMG CHANGE BEGIN - support for vertex input description
     XGL_CH_FMT_R8G8B8                                       = 31,
     XGL_CH_FMT_R16G16B16                                    = 32,
-    XGL_MAX_CH_FMT                                          = XGL_CH_FMT_R16G16B16,
+
+    // optional? TBD'
+    XGL_CH_FMT_B10G10R10A2                                  = 33,
+    XGL_CH_FMT_R64                                          = 34,
+    XGL_CH_FMT_R64G64                                       = 35,
+    XGL_CH_FMT_R64G64B64                                    = 36,
+    XGL_CH_FMT_R64G64B64A64                                 = 37,
+
+    XGL_MAX_CH_FMT                                          = XGL_CH_FMT_R64G64B64A64,
 // IMG CHANGE END
     XGL_MAX_ENUM(_XGL_CHANNEL_FORMAT)
 } XGL_CHANNEL_FORMAT;
@@ -789,7 +794,11 @@ typedef enum _XGL_NUM_FORMAT
     XGL_NUM_FMT_FLOAT                                       = 5,
     XGL_NUM_FMT_SRGB                                        = 6,
     XGL_NUM_FMT_DS                                          = 7,
-    XGL_MAX_NUM_FMT                                         = XGL_NUM_FMT_DS,
+// IMG CHANGE BEGIN - support for vertex input description
+    XGL_NUM_FMT_USCALED                                     = 8,
+    XGL_NUM_FMT_SSCALED                                     = 9,
+    XGL_MAX_NUM_FMT                                         = XGL_NUM_FMT_SSCALED,
+// IMG CHANGE END
     XGL_MAX_ENUM(_XGL_NUM_FORMAT)
 } XGL_NUM_FORMAT;
 
@@ -1437,33 +1446,10 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
 
 // IMG CHANGE BEGIN - support for vertex input description
 
-// Example descriptor set mapping:
-//
-// {
-//     .descriptorCount = 4;
-//     .pDescriptorInfo[0] =
-//     {
-//         .slotObjectType = XGL_SLOT_VERTEX_INPUT;
-//         .shaderEntityIndex = 2;  // describes XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO.pVertexBindingDescriptions[2]
-//     }
-//     .pDescriptorInfo[1] =
-//     {
-//         .slotObjectType = XGL_SLOT_UNUSED;
-//         .shaderEntityIndex = 0;
-//     }
-//     .pDescriptorInfo[2] =
-//     {
-//         .slotObjectType = XGL_SLOT_VERTEX_INPUT;
-//         .shaderEntityIndex = 0;  // describes XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO.pVertexBindingDescriptions[0]
-//     }
-//     .pDescriptorInfo[3] =
-//     {
-//         .slotObjectType = XGL_SLOT_VERTEX_INPUT;
-//         .shaderEntityIndex = 1;  // describes XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO.pVertexBindingDescriptions[1]
-//     }
-// }
 //
 // The shader inputs are mapped to pVertexAttributeDescriptions using a decoration in the BIL.
+//
+// The binding parameter in xglCmdBindVertexBuffer describes the index into pVertexBindingDescriptions[]
 //
 //
 // Formats allowed for attributes (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION.format) will be detailed in
@@ -2191,6 +2177,14 @@ XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView);
+
+// IMG CHANGE BEGIN - support for vertex input description
+XGL_VOID XGLAPI xglCmdBindVertexData(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                offset,
+    XGL_UINT                                    binding);
+// IMG CHANGE END
 
 XGL_VOID XGLAPI xglCmdBindIndexData(
     XGL_CMD_BUFFER                              cmdBuffer,

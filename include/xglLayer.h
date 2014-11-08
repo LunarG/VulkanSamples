@@ -91,6 +91,7 @@ typedef XGL_VOID (XGLAPI *CmdBindPipelineDeltaType)(XGL_CMD_BUFFER cmdBuffer, XG
 typedef XGL_VOID (XGLAPI *CmdBindStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state);
 typedef XGL_VOID (XGLAPI *CmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset);
 typedef XGL_VOID (XGLAPI *CmdBindDynamicMemoryViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView);
+typedef XGL_VOID (XGLAPI *CmdBindVertexDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding);
 typedef XGL_VOID (XGLAPI *CmdBindIndexDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
 typedef XGL_VOID (XGLAPI *CmdBindAttachmentsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment);
 typedef XGL_VOID (XGLAPI *CmdPrepareMemoryRegionsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions);
@@ -221,6 +222,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     CmdBindStateObjectType CmdBindStateObject;
     CmdBindDescriptorSetType CmdBindDescriptorSet;
     CmdBindDynamicMemoryViewType CmdBindDynamicMemoryView;
+    CmdBindVertexDataType CmdBindVertexData;
     CmdBindIndexDataType CmdBindIndexData;
     CmdBindAttachmentsType CmdBindAttachments;
     CmdPrepareMemoryRegionsType CmdPrepareMemoryRegions;

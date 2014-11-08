@@ -72,14 +72,12 @@ struct intel_pipeline_rmap {
     XGL_UINT resource_count;
     XGL_UINT uav_count;
     XGL_UINT sampler_count;
-    XGL_UINT vb_count;
 
     /*
      * rt_count slots +
      * resource_count slots +
      * uav_count slots +
-     * sampler_count slots +
-     * vb_count slots
+     * sampler_count slots
      */
     struct intel_pipeline_rmap_slot *slots;
     XGL_UINT slot_count;

@@ -194,6 +194,8 @@ static void initLayerTable()
     nextTable.CmdBindDescriptorSet = fpCmdBindDescriptorSet;
     CmdBindDynamicMemoryViewType fpCmdBindDynamicMemoryView = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindDynamicMemoryView");
     nextTable.CmdBindDynamicMemoryView = fpCmdBindDynamicMemoryView;
+    CmdBindVertexDataType fpCmdBindVertexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindVertexData");
+    nextTable.CmdBindVertexData = fpCmdBindVertexData;
     CmdBindIndexDataType fpCmdBindIndexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindIndexData");
     nextTable.CmdBindIndexData = fpCmdBindIndexData;
     CmdBindAttachmentsType fpCmdBindAttachments = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindAttachments");
@@ -998,6 +1000,12 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdB
     }
 }
 
+XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
+{
+    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
+    printf("xglCmdBindVertexData(cmdBuffer = %p, mem = %p, offset = %i, binding = %d)\n", (void*)cmdBuffer, (void*)mem, offset, binding);
+}
+
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
     nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
@@ -1507,6 +1515,8 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
         return xglCmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", (const char *) funcName, sizeof("xglCmdBindDynamicMemoryView")))
         return xglCmdBindDynamicMemoryView;
+    else if (!strncmp("xglCmdBindVertexData", (const char *) funcName, sizeof("xglCmdBindVertexData")))
+        return xglCmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", (const char *) funcName, sizeof("xglCmdBindIndexData")))
         return xglCmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", (const char *) funcName, sizeof("xglCmdBindAttachments")))

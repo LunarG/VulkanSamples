@@ -57,7 +57,6 @@ struct demo {
 
     struct {
         XGL_GPU_MEMORY mem;
-        XGL_MEMORY_VIEW_ATTACH_INFO view;
 
         XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
         XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_bindings[1];
@@ -117,6 +116,8 @@ static void demo_draw_build_cmd(struct demo *demo)
                                      demo->depth_stencil);
 
     xglCmdBindAttachments(demo->cmd, 1, &color_attachment, &depth_stencil);
+
+    xglCmdBindVertexData(demo->cmd, demo->vertices.mem, 0, 0);
 
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
@@ -446,16 +447,6 @@ static void demo_prepare_vertices(struct demo *demo)
     err = xglUnmapMemory(demo->vertices.mem);
     assert(!err);
 
-    demo->vertices.view.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-    demo->vertices.view.pNext = NULL;
-    demo->vertices.view.mem = demo->vertices.mem;
-    demo->vertices.view.offset = 0;
-    demo->vertices.view.range = sizeof(vb);
-    demo->vertices.view.stride = sizeof(vb[0]);
-    demo->vertices.view.format.channelFormat = XGL_CH_FMT_UNDEFINED;
-    demo->vertices.view.format.numericFormat = XGL_NUM_FMT_UNDEFINED;
-    demo->vertices.view.state = XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY;
-
     demo->vertices.vi.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
     demo->vertices.vi.pNext = NULL;
     demo->vertices.vi.bindingCount = 1;
@@ -482,7 +473,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     const XGL_DESCRIPTOR_SET_CREATE_INFO descriptor_set = {
         .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO,
         .pNext = NULL,
-        .slots = DEMO_TEXTURE_COUNT * 2 + 1,
+        .slots = DEMO_TEXTURE_COUNT * 2,
     };
     XGL_RESULT err;
     XGL_UINT i;
@@ -491,7 +482,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     assert(!err);
 
     xglBeginDescriptorSetUpdate(demo->dset);
-    xglClearDescriptorSetSlots(demo->dset, 0, DEMO_TEXTURE_COUNT * 2 + 1);
+    xglClearDescriptorSetSlots(demo->dset, 0, DEMO_TEXTURE_COUNT * 2);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         const XGL_IMAGE_VIEW_ATTACH_INFO image_view = {
@@ -506,8 +497,6 @@ static void demo_prepare_descriptor_set(struct demo *demo)
         xglAttachImageViewDescriptors(demo->dset, 2 * i + 1, 1,
                 &image_view);
     }
-
-    xglAttachMemoryViewDescriptors(demo->dset, 2 * i, 1, &demo->vertices.view);
 
     xglEndDescriptorSetUpdate(demo->dset);
 }
@@ -587,8 +576,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     XGL_PIPELINE_DB_STATE_CREATE_INFO db;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fs;
-    XGL_DESCRIPTOR_SLOT_INFO vs_slots[DEMO_TEXTURE_COUNT * 2 + 1];
-    XGL_DESCRIPTOR_SLOT_INFO fs_slots[DEMO_TEXTURE_COUNT * 2 + 1];
+    XGL_DESCRIPTOR_SLOT_INFO fs_slots[DEMO_TEXTURE_COUNT * 2];
     XGL_RESULT err;
     XGL_UINT i;
 
@@ -613,10 +601,6 @@ static void demo_prepare_pipeline(struct demo *demo)
     db.sType = XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO;
     db.format = demo->depth.format;
 
-    memset(&vs_slots, 0, sizeof(vs_slots));
-    vs_slots[2 * DEMO_TEXTURE_COUNT].slotObjectType = XGL_SLOT_VERTEX_INPUT;
-    vs_slots[2 * DEMO_TEXTURE_COUNT].shaderEntityIndex = 0;
-
     memset(&fs_slots, 0, sizeof(fs_slots));
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         fs_slots[2 * i].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
@@ -629,16 +613,13 @@ static void demo_prepare_pipeline(struct demo *demo)
     vs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs.shader.shader = demo_prepare_vs(demo);
-    vs.shader.descriptorSetMapping[0].descriptorCount =
-        DEMO_TEXTURE_COUNT * 2 + 1;
-    vs.shader.descriptorSetMapping[0].pDescriptorInfo = vs_slots;
 
     memset(&fs, 0, sizeof(fs));
     fs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fs.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     fs.shader.shader = demo_prepare_fs(demo);
     fs.shader.descriptorSetMapping[0].descriptorCount =
-        DEMO_TEXTURE_COUNT * 2 + 1;
+        DEMO_TEXTURE_COUNT * 2;
     fs.shader.descriptorSetMapping[0].pDescriptorInfo = fs_slots;
 
     pipeline.pNext = (const XGL_VOID *) &vi;

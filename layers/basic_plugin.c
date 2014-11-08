@@ -92,6 +92,7 @@ static void initLayerTable()
     myTable.CmdBindStateObject = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdBindStateObject");
     myTable.CmdBindDescriptorSet = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdBindDescriptorSet");
     myTable.CmdBindDynamicMemoryView = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdBindDynamicMemoryView");
+    myTable.CmdBindVertexData = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdBindVertexData");
     myTable.CmdBindIndexData = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdBindIndexData");
     myTable.CmdBindAttachments = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdBindAttachments");
     myTable.CmdPrepareMemoryRegions = fpGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (const XGL_CHAR *) "xglCmdPrepareMemoryRegions");
@@ -337,6 +338,8 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XG
         return myTable.CmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", (const char *) pName, sizeof ("xglCmdBindDynamicMemoryView")))
         return myTable.CmdBindDynamicMemoryView;
+    else if (!strncmp("xglCmdBindVertexData", (const char *) pName, sizeof ("xglCmdBindVertexData")))
+        return myTable.CmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", (const char *) pName, sizeof ("xglCmdBindIndexData")))
         return myTable.CmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", (const char *) pName, sizeof ("xglCmdBindAttachments")))

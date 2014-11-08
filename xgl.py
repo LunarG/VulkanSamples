@@ -466,6 +466,12 @@ core = (
          Param("XGL_PIPELINE_BIND_POINT", "pipelineBindPoint"),
          Param("const XGL_MEMORY_VIEW_ATTACH_INFO*", "pMemView"))),
 
+    Proto("XGL_VOID", "CmdBindVertexData",
+        (Param("XGL_CMD_BUFFER", "cmdBuffer"),
+         Param("XGL_GPU_MEMORY", "mem"),
+         Param("XGL_GPU_SIZE", "offset"),
+         Param("XGL_UINT", "binding"))),
+
     Proto("XGL_VOID", "CmdBindIndexData",
         (Param("XGL_CMD_BUFFER", "cmdBuffer"),
          Param("XGL_GPU_MEMORY", "mem"),
@@ -814,6 +820,7 @@ icd_dispatch_table = (
     "CmdBindStateObject",
     "CmdBindDescriptorSet",
     "CmdBindDynamicMemoryView",
+    "CmdBindVertexData",
     "CmdBindIndexData",
     "CmdBindAttachments",
     "CmdPrepareMemoryRegions",

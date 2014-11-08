@@ -182,6 +182,11 @@ struct intel_cmd_bind {
     } dyn_view;
 
     struct {
+        const struct intel_mem *mem[33];
+        XGL_GPU_SIZE offset[33];
+    } vertex;
+
+    struct {
         const struct intel_mem *mem;
         XGL_GPU_SIZE offset;
         XGL_INDEX_TYPE type;
@@ -306,6 +311,12 @@ XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView);
+
+XGL_VOID XGLAPI intelCmdBindVertexData(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                offset,
+    XGL_UINT                                    binding);
 
 XGL_VOID XGLAPI intelCmdBindIndexData(
     XGL_CMD_BUFFER                              cmdBuffer,

@@ -252,6 +252,8 @@ static void initLayerTable()
     nextTable.CmdBindDescriptorSet = fpCmdBindDescriptorSet;
     CmdBindDynamicMemoryViewType fpCmdBindDynamicMemoryView = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindDynamicMemoryView");
     nextTable.CmdBindDynamicMemoryView = fpCmdBindDynamicMemoryView;
+    CmdBindVertexDataType fpCmdBindVertexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindVertexData");
+    nextTable.CmdBindVertexData = fpCmdBindVertexData;
     CmdBindIndexDataType fpCmdBindIndexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindIndexData");
     nextTable.CmdBindIndexData = fpCmdBindIndexData;
     CmdBindAttachmentsType fpCmdBindAttachments = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindAttachments");
@@ -986,6 +988,13 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdB
     ll_increment_use_count((XGL_VOID*)cmdBuffer);
     printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
     nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
+}
+
+XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
+{
+    ll_increment_use_count((XGL_VOID*)cmdBuffer);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)

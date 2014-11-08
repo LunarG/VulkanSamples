@@ -354,10 +354,6 @@ static XGL_BOOL verifyShaderSlotMapping(const XGL_UINT slot, const XGL_UINT slot
             if (MAPPING_SAMPLER != slotBinding)
                 error = XGL_TRUE;
             break;
-        case XGL_SLOT_VERTEX_INPUT:
-            if (MAPPING_MEMORY != slotBinding)
-                error = XGL_TRUE;
-            break;
         case XGL_SLOT_SHADER_UAV:
             if (MAPPING_MEMORY != slotBinding)
                 error = XGL_TRUE;
@@ -602,6 +598,8 @@ static void initLayerTable()
     nextTable.CmdBindDescriptorSet = fpCmdBindDescriptorSet;
     CmdBindDynamicMemoryViewType fpCmdBindDynamicMemoryView = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindDynamicMemoryView");
     nextTable.CmdBindDynamicMemoryView = fpCmdBindDynamicMemoryView;
+    CmdBindVertexDataType fpCmdBindVertexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindVertexData");
+    nextTable.CmdBindVertexData = fpCmdBindVertexData;
     CmdBindIndexDataType fpCmdBindIndexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindIndexData");
     nextTable.CmdBindIndexData = fpCmdBindIndexData;
     CmdBindAttachmentsType fpCmdBindAttachments = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindAttachments");
@@ -1246,6 +1244,11 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffe
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
 {
     nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
+}
+
+XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
+{
+    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)

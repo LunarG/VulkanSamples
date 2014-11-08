@@ -309,34 +309,6 @@ void XglRenderTest::InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride,
     this->m_vtxBufferView.mem    = m_vtxBufferMem;
     this->m_vtxBufferView.format.channelFormat = XGL_CH_FMT_UNDEFINED;
     this->m_vtxBufferView.format.numericFormat = XGL_NUM_FMT_UNDEFINED;
-
-    // open the command buffer
-    err = xglBeginCommandBuffer( m_cmdBuffer, 0 );
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_MEMORY_STATE_TRANSITION transition = {};
-    transition.mem = m_vtxBufferMem;
-    transition.oldState = XGL_MEMORY_STATE_DATA_TRANSFER;
-    transition.newState = XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY;
-    transition.offset = 0;
-    transition.regionSize = numVertices * vbStride;
-
-    // write transition to the command buffer
-    xglCmdPrepareMemoryRegions( m_cmdBuffer, 1, &transition );
-    this->m_vtxBufferView.state = XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY;
-
-    // finish recording the command buffer
-    err = xglEndCommandBuffer( m_cmdBuffer );
-    ASSERT_XGL_SUCCESS(err);
-
-    // this command buffer only uses the vertex buffer memory
-    m_numMemRefs = 1;
-    m_memRefs[0].flags = 0;
-    m_memRefs[0].mem = m_vtxBufferMem;
-
-    // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
-    ASSERT_XGL_SUCCESS(err);
 }
 
 // this function will create the vertex buffer and fill it with the mesh data
@@ -1039,22 +1011,11 @@ void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SH
     // bind memory to the descriptor set
     err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
 
-    // write the vertex buffer view to the descriptor set
-    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
-    xglEndDescriptorSetUpdate( m_rsrcDescSet );
-
-    const int slots = 1;
-    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
-    slotInfo[0].shaderEntityIndex = 0;
-    slotInfo[0].slotObjectType = XGL_SLOT_VERTEX_INPUT;
-
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs_stage.shader.shader = vs;
-    vs_stage.shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
-    vs_stage.shader.descriptorSetMapping[0].descriptorCount = slots;
+    vs_stage.shader.descriptorSetMapping[0].descriptorCount = 0;
     vs_stage.shader.linkConstBufferCount = 0;
     vs_stage.shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
@@ -1169,16 +1130,13 @@ void XglRenderTest::CreatePipelineWithVertexFetchAndMVP(XGL_PIPELINE* pipeline, 
 
     // write the vertex buffer view to the descriptor set
     xglBeginDescriptorSetUpdate( m_rsrcDescSet );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
-    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 1, 1, &m_constantBufferView );
+    xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_constantBufferView );
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 
-    const int slots = 2;
+    const int slots = 1;
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( slots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
     slotInfo[0].shaderEntityIndex = 0;
-    slotInfo[0].slotObjectType = XGL_SLOT_VERTEX_INPUT;
-    slotInfo[1].shaderEntityIndex = 0;
-    slotInfo[1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
 
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;

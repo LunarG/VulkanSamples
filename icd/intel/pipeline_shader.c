@@ -36,7 +36,6 @@ static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap
     const XGL_UINT resource_offset = rmap->rt_count;
     const XGL_UINT uav_offset = resource_offset + rmap->resource_count;
     const XGL_UINT sampler_offset = uav_offset + rmap->uav_count;
-    const XGL_UINT ve_offset = sampler_offset + rmap->sampler_count;
     struct intel_pipeline_rmap_slot *slot;
 
     switch (type) {
@@ -51,9 +50,6 @@ static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap
         break;
     case XGL_SLOT_SHADER_SAMPLER:
         slot = &rmap->slots[sampler_offset + index];
-        break;
-    case XGL_SLOT_VERTEX_INPUT:
-        slot = &rmap->slots[ve_offset + index];
         break;
     default:
         assert(!"unknown rmap slot type");
@@ -154,10 +150,6 @@ static void rmap_update_count(struct intel_pipeline_rmap *rmap,
         if (rmap->sampler_count < index + 1)
             rmap->sampler_count = index + 1;
         break;
-    case XGL_SLOT_VERTEX_INPUT:
-        if (rmap->vb_count < index + 1)
-            rmap->vb_count = index + 1;
-        break;
     default:
         assert(!"unknown rmap slot type");
         break;
@@ -234,7 +226,7 @@ static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
     rmap->rt_count = rt_count;
 
     rmap->slot_count = rmap->rt_count + rmap->resource_count +
-        rmap->uav_count + rmap->sampler_count + rmap->vb_count;
+        rmap->uav_count + rmap->sampler_count;
 
     rmap->slots = icd_alloc(sizeof(rmap->slots[0]) * rmap->slot_count,
             0, XGL_SYSTEM_ALLOC_INTERNAL);

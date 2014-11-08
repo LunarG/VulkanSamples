@@ -123,6 +123,7 @@ static const struct icd_dispatch_table intel_normal_dispatch_table = {
     .CmdBindStateObject = intelCmdBindStateObject,
     .CmdBindDescriptorSet = intelCmdBindDescriptorSet,
     .CmdBindDynamicMemoryView = intelCmdBindDynamicMemoryView,
+    .CmdBindVertexData = intelCmdBindVertexData,
     .CmdBindIndexData = intelCmdBindIndexData,
     .CmdBindAttachments = intelCmdBindAttachments,
     .CmdPrepareMemoryRegions = intelCmdPrepareMemoryRegions,
@@ -242,6 +243,7 @@ static const struct icd_dispatch_table intel_debug_dispatch_table = {
     .CmdBindStateObject = intelCmdBindStateObject,
     .CmdBindDescriptorSet = intelCmdBindDescriptorSet,
     .CmdBindDynamicMemoryView = intelCmdBindDynamicMemoryView,
+    .CmdBindVertexData = intelCmdBindVertexData,
     .CmdBindIndexData = intelCmdBindIndexData,
     .CmdBindAttachments = intelCmdBindAttachments,
     .CmdPrepareMemoryRegions = intelCmdPrepareMemoryRegions,
@@ -461,6 +463,8 @@ XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
         return disp_table->CmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", (const char *) pName, sizeof ("xglCmdBindDynamicMemoryView")))
         return disp_table->CmdBindDynamicMemoryView;
+    else if (!strncmp("xglCmdBindVertexData", (const char *) pName, sizeof ("xglCmdBindVertexData")))
+        return disp_table->CmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", (const char *) pName, sizeof ("xglCmdBindIndexData")))
         return disp_table->CmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", (const char *) pName, sizeof ("xglCmdBindAttachments")))

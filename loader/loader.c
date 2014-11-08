@@ -525,6 +525,7 @@ static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAdd
     tab->CmdBindStateObject = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindStateObject");
     tab->CmdBindDescriptorSet = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindDescriptorSet");
     tab->CmdBindDynamicMemoryView = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindDynamicMemoryView");
+    tab->CmdBindVertexData = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindVertexData");
     tab->CmdBindIndexData = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindIndexData");
     tab->CmdBindAttachments = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindAttachments");
     tab->CmdPrepareMemoryRegions = fpGPA(gpu, (const XGL_CHAR *) "xglCmdPrepareMemoryRegions");
@@ -980,6 +981,8 @@ LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_C
         return disp_table->CmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", (const char *) pName, sizeof ("xglCmdBindDynamicMemoryView")))
         return disp_table->CmdBindDynamicMemoryView;
+    else if (!strncmp("xglCmdBindVertexData", (const char *) pName, sizeof ("xglCmdBindVertexData")))
+        return disp_table->CmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", (const char *) pName, sizeof ("xglCmdBindIndexData")))
         return disp_table->CmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", (const char *) pName, sizeof ("xglCmdBindAttachments")))

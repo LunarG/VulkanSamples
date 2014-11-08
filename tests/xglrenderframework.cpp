@@ -462,11 +462,13 @@ void XglRenderFramework::GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil );
     xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
 
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
+    // bind pipeline and WVP (dynamic memory view)
     xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, *pipeline );
 
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
+    // bind pipeline and WVP (dynamic memory view)
     xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
+
+    xglCmdBindVertexData(m_cmdBuffer, m_vtxBufferView.mem, m_vtxBufferView.offset, 0);
 }
 
 void XglRenderFramework::GenerateClearAndPrepareBufferCmds()

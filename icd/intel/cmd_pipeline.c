@@ -1635,8 +1635,6 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
 static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_pipeline_rmap *rmap = pipeline->vs.rmap;
-    const struct intel_dset *dset = cmd->bind.dset.graphics;
     const uint8_t cmd_len = 1 + 4 * pipeline->vb_count;
     uint32_t *dw;
     XGL_UINT pos, i;
@@ -1653,24 +1651,6 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
     pos++;
 
     for (i = 0; i < pipeline->vb_count; i++) {
-        const XGL_UINT vb_offset = rmap->rt_count + rmap->resource_count +
-            rmap->uav_count + rmap->sampler_count;
-        const struct intel_pipeline_rmap_slot *slot = (i < rmap->vb_count) ?
-            &rmap->slots[vb_offset + i] : NULL;
-        struct intel_mem_view *view = NULL;
-
-        if (slot) {
-            switch (slot->path_len) {
-            case 1:
-                view = (dset->slots[slot->u.index].type ==
-                        INTEL_DSET_SLOT_MEM_VIEW) ?
-                    &dset->slots[slot->u.index].u.mem_view : NULL;
-                break;
-            default:
-                break;
-            }
-        }
-
         assert(pipeline->vb[i].strideInBytes <= 2048);
 
         dw[0] = i << GEN6_VB_STATE_DW0_INDEX__SHIFT |
@@ -1699,13 +1679,13 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
             break;
         }
 
-        if (view) {
-            const uint32_t begin = view->cmd[1];
-            const uint32_t end = view->mem->size - 1;
+        if (cmd->bind.vertex.mem[i]) {
+            const struct intel_mem *mem = cmd->bind.vertex.mem[i];
+            const XGL_GPU_SIZE offset = cmd->bind.vertex.offset[i];
 
             cmd_reserve_reloc(cmd, 2);
-            cmd_batch_reloc(cmd, pos + 1, view->mem->bo, begin, 0);
-            cmd_batch_reloc(cmd, pos + 2, view->mem->bo, end, 0);
+            cmd_batch_reloc(cmd, pos + 1, mem->bo, offset, 0);
+            cmd_batch_reloc(cmd, pos + 2, mem->bo, mem->size - 1, 0);
         } else {
             dw[0] |= GEN6_VB_STATE_DW0_IS_NULL;
             dw[1] = 0;
@@ -2759,6 +2739,19 @@ static void cmd_bind_compute_dyn_view(struct intel_cmd *cmd,
     intel_mem_view_init(&cmd->bind.dyn_view.compute, cmd->dev, info);
 }
 
+static void cmd_bind_vertex_data(struct intel_cmd *cmd,
+                                 const struct intel_mem *mem,
+                                 XGL_GPU_SIZE offset, XGL_UINT binding)
+{
+    if (binding >= ARRAY_SIZE(cmd->bind.vertex.mem)) {
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
+    }
+
+    cmd->bind.vertex.mem[binding] = mem;
+    cmd->bind.vertex.offset[binding] = offset;
+}
+
 static void cmd_bind_index_data(struct intel_cmd *cmd,
                                 const struct intel_mem *mem,
                                 XGL_GPU_SIZE offset, XGL_INDEX_TYPE type)
@@ -3051,6 +3044,18 @@ XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
         cmd->result = XGL_ERROR_INVALID_VALUE;
         break;
     }
+}
+
+XGL_VOID XGLAPI intelCmdBindVertexData(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_GPU_MEMORY                              mem_,
+    XGL_GPU_SIZE                                offset,
+    XGL_UINT                                    binding)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_mem *mem = intel_mem(mem_);
+
+    cmd_bind_vertex_data(cmd, mem, offset, binding);
 }
 
 XGL_VOID XGLAPI intelCmdBindIndexData(
