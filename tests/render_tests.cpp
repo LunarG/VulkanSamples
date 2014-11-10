@@ -61,6 +61,9 @@
 using namespace std;
 
 #include <xgl.h>
+#ifdef DEBUG_CALLBACK
+#include <xglDbg.h>
+#endif
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
@@ -72,7 +75,19 @@ using namespace std;
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "xglrenderframework.h"
-
+#ifdef DEBUG_CALLBACK
+XGL_VOID XGLAPI myDbgFunc(
+    XGL_DBG_MSG_TYPE     msgType,
+    XGL_VALIDATION_LEVEL validationLevel,
+    XGL_BASE_OBJECT      srcObject,
+    XGL_SIZE             location,
+    XGL_INT              msgCode,
+    const XGL_CHAR*      pMsg,
+    XGL_VOID*            pUserData)
+{
+    printf("DEBUG : %s\n", pMsg);
+}
+#endif
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
@@ -580,7 +595,9 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
     ASSERT_XGL_SUCCESS( err );
 
     // this command buffer only uses the vertex buffer memory
-    m_numMemRefs = 0;
+    m_numMemRefs = 1;
+    m_memRefs[0].flags = 0;
+    m_memRefs[0].mem = m_renderTarget->memory();
 //    m_memRefs[0].flags = 0;
 //    m_memRefs[0].mem = m_vtxBufferMemory;
 
@@ -1590,6 +1607,9 @@ struct xgltriangle_vs_uniform {
 
 void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText)
 {
+#ifdef DEBUG_CALLBACK
+    xglDbgRegisterMsgCallback(myDbgFunc, NULL);
+#endif
     // Create identity matrix
     int i;
     struct xgltriangle_vs_uniform data;

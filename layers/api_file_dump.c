@@ -1,3 +1,5 @@
+/* THIS FILE IS GENERATED.  DO NOT EDIT. */
+
 /*
  * XGL
  *
@@ -35,414 +37,8 @@ static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
 static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;
 
-// Block of code at start here for managing/tracking Pipeline state that this layer cares about
-// Just track 2 shaders for now
-#define VS 0
-#define FS 1
-#define DRAW 0
-#define DRAW_INDEXED 1
-#define DRAW_INDIRECT 2
-#define DRAW_INDEXED_INDIRECT 3
-#define NUM_DRAW_TYPES 4
-#define MAX_SLOTS 2048
-
-static uint64_t drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
-
-typedef struct _SHADER_DS_MAPPING {
-    XGL_UINT slotCount;
-    XGL_DESCRIPTOR_SLOT_INFO* pShaderMappingSlot;
-} SHADER_DS_MAPPING;
-
-typedef struct _PIPELINE_NODE {
-    XGL_PIPELINE           pipeline;
-    struct _PIPELINE_NODE* pNext;
-    SHADER_DS_MAPPING      dsMapping[2][XGL_MAX_DESCRIPTOR_SETS];
-} PIPELINE_NODE;
-
-typedef struct _PIPELINE_LL_HEADER {
-    XGL_STRUCTURE_TYPE sType;
-    const XGL_VOID*    pNext;
-} PIPELINE_LL_HEADER;
-
-static PIPELINE_NODE *pPipelineHead = NULL;
-static XGL_PIPELINE lastBoundPipeline = NULL;
-
-static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
-{
-    PIPELINE_NODE *pTrav = pPipelineHead;
-    while (pTrav) {
-        if (pTrav->pipeline == pipeline)
-            return pTrav;
-        pTrav = pTrav->pNext;
-    }
-    return NULL;
-}
-
-// Init the pipeline mapping info based on pipeline create info LL tree
-static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
-{
-    PIPELINE_LL_HEADER *pTrav = (PIPELINE_LL_HEADER*)pCreateInfo->pNext;
-    while (pTrav) {
-        if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pTrav->sType) {
-            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
-            if (XGL_SHADER_STAGE_VERTEX == pSSCI->shader.stage) {
-                for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-                    if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
-                        printf("DS ERROR: descriptorCount for Vertex Shader exceeds 2048 (%u), is this correct? Changing to 0\n", pSSCI->shader.descriptorSetMapping[i].descriptorCount);
-                        pSSCI->shader.descriptorSetMapping[i].descriptorCount = 0;
-                    }
-                    pPipeline->dsMapping[0][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
-                    // Deep copy DS Slot array
-                    pPipeline->dsMapping[0][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
-                    memcpy(pPipeline->dsMapping[0][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
-                }
-            }
-            else if (XGL_SHADER_STAGE_FRAGMENT == pSSCI->shader.stage) {
-                for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-                    if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
-                        printf("DS ERROR: descriptorCount for Frag Shader exceeds 2048 (%u), is this correct? Changing to 0\n", pSSCI->shader.descriptorSetMapping[i].descriptorCount);
-                        pSSCI->shader.descriptorSetMapping[i].descriptorCount = 0;
-                    }
-                    pPipeline->dsMapping[1][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
-                    // Deep copy DS Slot array
-                    pPipeline->dsMapping[1][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
-                    memcpy(pPipeline->dsMapping[1][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
-                }
-            }
-        }
-        pTrav = (PIPELINE_LL_HEADER*)pTrav->pNext;
-    }
-}
-
-// Block of code at start here specifically for managing/tracking DSs
-#define MAPPING_MEMORY  0x00000001
-#define MAPPING_IMAGE   0x00000002
-#define MAPPING_SAMPLER 0x00000004
-#define MAPPING_DS      0x00000008
-
-static char* stringSlotBinding(XGL_UINT binding)
-{
-    switch (binding)
-    {
-        case MAPPING_MEMORY:
-            return "Memory View";
-        case MAPPING_IMAGE:
-            return "Image View";
-        case MAPPING_SAMPLER:
-            return "Sampler";
-        default:
-            return "UNKNOWN DS BINDING";
-    }
-}
-
-typedef struct _DS_SLOT {
-    XGL_UINT                     slot;
-    XGL_DESCRIPTOR_SLOT_INFO     shaderSlotInfo[2];
-    // Only 1 of 4 possible slot mappings active
-    XGL_UINT                     activeMapping;
-    XGL_UINT                     mappingMask; // store record of different mappings used
-    XGL_MEMORY_VIEW_ATTACH_INFO  memView;
-    XGL_IMAGE_VIEW_ATTACH_INFO   imageView;
-    XGL_SAMPLER                  sampler;            
-} DS_SLOT;
-
-// Top-level node that points to start of DS
-typedef struct _DS_LL_HEAD {
-    XGL_DESCRIPTOR_SET dsID;
-    XGL_UINT           numSlots;
-    struct _DS_LL_HEAD *pNextDS;
-    DS_SLOT            *dsSlot; // Dynamically allocated array of DS_SLOTs
-    XGL_BOOL           updateActive; // Track if DS is in an update block
-} DS_LL_HEAD;
-
-// ptr to HEAD of LL of DSs
-static DS_LL_HEAD *pDSHead = NULL;
-// Last DS that was bound
-static XGL_DESCRIPTOR_SET lastBoundDS[XGL_MAX_DESCRIPTOR_SETS] = {NULL, NULL};
-
-// Return DS Head ptr for specified ds or else NULL
-static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
-{
-    DS_LL_HEAD *pTrav = pDSHead;
-    while (pTrav) {
-        if (pTrav->dsID == ds)
-            return pTrav;
-        pTrav = pTrav->pNextDS;
-    }
-    return NULL;
-}
-
-// Initialize a DS where all slots are UNUSED for all shaders
-static void initDS(DS_LL_HEAD *pDS)
-{
-    for (uint32_t i = 0; i < pDS->numSlots; i++) {
-        memset((void*)&pDS->dsSlot[i], 0, sizeof(DS_SLOT));
-        pDS->dsSlot[i].slot = i;
-    }
-}
-
-// Return XGL_TRUE if DS Exists and is within an xglBeginDescriptorSetUpdate() call sequence, otherwise XGL_FALSE
-static XGL_BOOL dsUpdate(XGL_DESCRIPTOR_SET ds)
-{
-    DS_LL_HEAD *pTrav = getDS(ds);
-    if (pTrav)
-        return pTrav->updateActive;
-    return XGL_FALSE;
-}
-
-// Clear specified slotCount DS Slots starting at startSlot
-// Return XGL_TRUE if DS is within a xglBeginDescriptorSetUpdate() call sequence, otherwise XGL_FALSE
-static XGL_BOOL clearDS(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount)
-{
-    DS_LL_HEAD *pTrav = getDS(descriptorSet);
-    if (!pTrav || ((startSlot + slotCount) > pTrav->numSlots)) {
-        // TODO : Log more meaningful error here
-        return XGL_FALSE;
-    }
-    for (uint32_t i = startSlot; i < slotCount; i++) {
-        memset((void*)&pTrav->dsSlot[i], 0, sizeof(DS_SLOT));
-    }
-    return XGL_TRUE;
-}
-
-static void dsSetMapping(DS_SLOT* pSlot, XGL_UINT mapping)
-{
-    pSlot->mappingMask   |= mapping;
-    pSlot->activeMapping = mapping;
-}
-
-static void noteSlotMapping(XGL_UINT32 mapping)
-{
-    if (MAPPING_MEMORY & mapping)
-        printf("\tMemory View previously mapped\n");
-    if (MAPPING_IMAGE & mapping)
-        printf("\tImage View previously mapped\n");
-    if (MAPPING_SAMPLER & mapping)
-        printf("\tSampler previously mapped\n");
-    if (MAPPING_DS & mapping)
-        printf("\tDESCRIPTOR SET ptr previously mapped\n");
-}
-
-static void dsSetMemMapping(DS_SLOT* pSlot, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
-{
-    if (pSlot->mappingMask) {
-        printf("DS INFO : While mapping Memory View to slot %u previous Mapping(s) identified:\n", pSlot->slot);
-        noteSlotMapping(pSlot->mappingMask);
-    }
-    memcpy(&pSlot->memView, pMemView, sizeof(XGL_MEMORY_VIEW_ATTACH_INFO));
-    dsSetMapping(pSlot, MAPPING_MEMORY);
-}
-
-static XGL_BOOL dsMemMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemViews)
-{
-    DS_LL_HEAD *pTrav = getDS(descriptorSet);
-    if (pTrav) {
-        if (pTrav->numSlots < (startSlot + slotCount)) {
-            return XGL_FALSE;
-        }
-        for (uint32_t i = 0; i < slotCount; i++) {
-            dsSetMemMapping(&pTrav->dsSlot[i+startSlot], &pMemViews[i]);
-        }
-    }
-    else
-        return XGL_FALSE;
-    return XGL_TRUE;
-}
-
-static void dsSetImageMapping(DS_SLOT* pSlot, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews)
-{
-    if (pSlot->mappingMask) {
-        printf("DS INFO : While mapping Image View to slot %u previous Mapping(s) identified:\n", pSlot->slot);
-        noteSlotMapping(pSlot->mappingMask);
-    }
-    memcpy(&pSlot->imageView, pImageViews, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
-    dsSetMapping(pSlot, MAPPING_IMAGE);
-}
-
-static XGL_BOOL dsImageMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews)
-{
-    DS_LL_HEAD *pTrav = getDS(descriptorSet);
-    if (pTrav) {
-        if (pTrav->numSlots < (startSlot + slotCount)) {
-            return XGL_FALSE;
-        }
-        for (uint32_t i = 0; i < slotCount; i++) {
-            dsSetImageMapping(&pTrav->dsSlot[i+startSlot], &pImageViews[i]);
-        }
-    }
-    else
-        return XGL_FALSE;
-    return XGL_TRUE;
-}
-
-static void dsSetSamplerMapping(DS_SLOT* pSlot, const XGL_SAMPLER sampler)
-{
-    if (pSlot->mappingMask) {
-        printf("DS INFO : While mapping Sampler to slot %u previous Mapping(s) identified:\n", pSlot->slot);
-        noteSlotMapping(pSlot->mappingMask);
-    }
-    pSlot->sampler = sampler;
-    dsSetMapping(pSlot, MAPPING_SAMPLER);
-}
-
-static XGL_BOOL dsSamplerMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_SAMPLER* pSamplers)
-{
-    DS_LL_HEAD *pTrav = getDS(descriptorSet);
-    if (pTrav) {
-        if (pTrav->numSlots < (startSlot + slotCount)) {
-            return XGL_FALSE;
-        }
-        for (uint32_t i = 0; i < slotCount; i++) {
-            dsSetSamplerMapping(&pTrav->dsSlot[i+startSlot], pSamplers[i]);
-        }
-    }
-    else
-        return XGL_FALSE;
-    return XGL_TRUE;
-}
-
-// Synch up currently bound pipeline settings with DS mappings
-static void synchDSMapping()
-{
-    // First verify that we have a bound pipeline
-    PIPELINE_NODE *pPipeTrav = getPipeline(lastBoundPipeline);
-    if (!pPipeTrav) {
-        printf("DS ERROR : Can't find last bound Pipeline %p!\n", (void*)lastBoundPipeline);
-    }
-    else {
-        for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-            DS_LL_HEAD *pDS;
-            if (lastBoundDS[i]) {
-                pDS = getDS(lastBoundDS[i]);
-                if (!pDS) {
-                    printf("DS ERROR : Can't find last bound DS %p. Did you need to bind DS to index %u?\n", (void*)lastBoundDS[i], i);
-                }
-                else { // We have a good DS & Pipeline, store pipeline mappings in DS
-                    for (uint32_t j = 0; j < 2; j++) { // j is shader selector
-                        for (uint32_t k = 0; k < XGL_MAX_DESCRIPTOR_SETS; k++) {
-                            if (pPipeTrav->dsMapping[j][k].slotCount > pDS->numSlots) {
-                                printf("DS ERROR : DS Mapping for shader %u has more slots (%u) than DS %p (%u)!\n", j, pPipeTrav->dsMapping[j][k].slotCount, (void*)pDS->dsID, pDS->numSlots);
-                            }
-                            else {
-                                for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][k].slotCount; r++) {
-                                    pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][k].pShaderMappingSlot[r];
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                printf("DS INFO : It appears that no DS was bound to index %u.\n", i);
-            }
-        }
-    }
-}
-
-// Checks to make sure that shader mapping matches slot binding
-// Print an ERROR and return XGL_FALSE if they don't line up
-static XGL_BOOL verifyShaderSlotMapping(const XGL_UINT slot, const XGL_UINT slotBinding, const XGL_UINT shaderStage, const XGL_DESCRIPTOR_SET_SLOT_TYPE shaderMapping)
-{
-    XGL_BOOL error = XGL_FALSE;
-    switch (shaderMapping)
-    {
-        case XGL_SLOT_SHADER_RESOURCE:
-            if (MAPPING_MEMORY != slotBinding && MAPPING_IMAGE != slotBinding)
-                error = XGL_TRUE;
-            break;
-        case XGL_SLOT_SHADER_SAMPLER:
-            if (MAPPING_SAMPLER != slotBinding)
-                error = XGL_TRUE;
-            break;
-        case XGL_SLOT_VERTEX_INPUT:
-            if (MAPPING_MEMORY != slotBinding)
-                error = XGL_TRUE;
-            break;
-        case XGL_SLOT_SHADER_UAV:
-            if (MAPPING_MEMORY != slotBinding)
-                error = XGL_TRUE;
-            break;
-        case XGL_SLOT_NEXT_DESCRIPTOR_SET:
-            if (MAPPING_DS != slotBinding)
-                error = XGL_TRUE;
-            break;
-        case XGL_SLOT_UNUSED:
-            break;
-        default:
-            printf("DS ERROR : For DS slot %u, unknown shader slot mapping w/ value %u\n", slot, shaderMapping);
-            return XGL_FALSE;
-    }
-    if (XGL_TRUE == error) {
-        printf("DS ERROR : DS Slot #%u binding of %s does not match %s shader mapping of %s\n", slot, stringSlotBinding(slotBinding), (shaderStage == VS) ? "Vtx" : "Frag", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(shaderMapping));
-        return XGL_FALSE;
-    }
-    return XGL_TRUE;
-}
-
-// Print details of DS config to stdout
-static void printDSConfig()
-{
-    uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
-    for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-        if (lastBoundDS[i]) {
-            DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
-            if (pDS) {
-                printf("DS INFO : Slot bindings for DS w/ %u slots at index %u (%p):\n", pDS->numSlots, i, (void*)pDS->dsID);
-                for (uint32_t j = 0; j < pDS->numSlots; j++) {
-                    switch (pDS->dsSlot[j].activeMapping)
-                    {
-                        case MAPPING_MEMORY:
-                            if (0 != skipUnusedCount) {// finish sequence of unused slots
-                                printf("----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
-                                skipUnusedCount = 0;
-                            }
-                            printf("----Slot %u\n    Mapped to Memory View %p:\n%s", j, (void*)&pDS->dsSlot[j].memView, xgl_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].memView, "        "));
-                            break;
-                        case MAPPING_IMAGE:
-                            if (0 != skipUnusedCount) {// finish sequence of unused slots
-                                printf("----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
-                                skipUnusedCount = 0;
-                            }
-                            printf("----Slot %u\n    Mapped to Image View %p:\n%s", j, (void*)&pDS->dsSlot[j].imageView, xgl_print_xgl_image_view_attach_info(&pDS->dsSlot[j].imageView, "        "));
-                            break;
-                        case MAPPING_SAMPLER:
-                            if (0 != skipUnusedCount) {// finish sequence of unused slots
-                                printf("----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
-                                skipUnusedCount = 0;
-                            }
-                            printf("----Slot %u\n    Mapped to Sampler Object %p (CAN PRINT DETAILS HERE)\n", j, (void*)pDS->dsSlot[j].sampler);
-                            break;
-                        default:
-                            if (!skipUnusedCount) // only report start of unused sequences
-                                printf("----Skipping slot(s) w/o a view attached...\n");
-                            skipUnusedCount++;
-                            break;
-                    }
-                    // For each shader type, check its mapping
-                    for (uint32_t k = 0; k < 2; k++) {
-                        if (XGL_SLOT_UNUSED != pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType) {
-                            printf("    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", (k == 0) ? "VS" : "FS", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
-                            verifyShaderSlotMapping(j, pDS->dsSlot[j].activeMapping, k, pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType);
-                        }
-                    }
-                }
-                if (0 != skipUnusedCount) {// finish sequence of unused slots
-                    printf("----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
-                    skipUnusedCount = 0;
-                }
-            }
-            else {
-                printf("DS ERROR : Can't find last bound DS %p. Did you need to bind DS to index %u?\n", (void*)lastBoundDS[i], i);
-            }
-        }
-    }
-}
-
-static void synchAndPrintDSConfig()
-{
-    synchDSMapping();
-    printDSConfig();
-}
+static FILE* pOutFile;
+static char* outFileName = "xgl_apidump.txt";
 
 static void initLayerTable()
 {
@@ -699,6 +295,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetGpuInfo(gpu = %p, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)gpu, string_XGL_PHYSICAL_GPU_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
@@ -708,12 +307,26 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateDevice(gpu = %p, pCreateInfo = %p, pDevice = %p) = %s\n", (void*)gpu, (void*)pCreateInfo, (void*)*pDevice, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_device_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
 {
     XGL_RESULT result = nextTable.DestroyDevice(device);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDestroyDevice(device = %p) = %s\n", (void*)device, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
@@ -723,6 +336,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetExtensionSupport(gpu = %p, pExtName = %p) = %s\n", (void*)gpu, (void*)pExtName, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
@@ -732,90 +348,167 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglEnumerateLayers(gpu = %p, maxLayerCount = %i, maxStringSize = %i, pOutLayers = %p, pOutLayerCount = %i) = %s\n", (void*)gpu, maxLayerCount, maxStringSize, (void*)pOutLayers, *pOutLayerCount, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, XGL_UINT queueIndex, XGL_QUEUE* pQueue)
 {
     XGL_RESULT result = nextTable.GetDeviceQueue(device, queueType, queueIndex, pQueue);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetDeviceQueue(device = %p, queueType = %s, queueIndex = %i, pQueue = %p) = %s\n", (void*)device, string_XGL_QUEUE_TYPE(queueType), queueIndex, (void*)pQueue, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, XGL_UINT cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, fence);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglQueueSubmit(queue = %p, cmdBufferCount = %i, pCmdBuffers = %p, memRefCount = %i, pMemRefs = %p, fence = %p) = %s\n", (void*)queue, cmdBufferCount, (void*)pCmdBuffers, memRefCount, (void*)pMemRefs, (void*)fence, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pMemRefs) {
+        pTmpStr = xgl_print_xgl_memory_ref(pMemRefs, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pMemRefs (%p)\n%s\n", (void*)pMemRefs, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(XGL_QUEUE queue, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs)
 {
     XGL_RESULT result = nextTable.QueueSetGlobalMemReferences(queue, memRefCount, pMemRefs);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglQueueSetGlobalMemReferences(queue = %p, memRefCount = %i, pMemRefs = %p) = %s\n", (void*)queue, memRefCount, (void*)pMemRefs, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pMemRefs) {
+        pTmpStr = xgl_print_xgl_memory_ref(pMemRefs, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pMemRefs (%p)\n%s\n", (void*)pMemRefs, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
 {
     XGL_RESULT result = nextTable.QueueWaitIdle(queue);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglQueueWaitIdle(queue = %p) = %s\n", (void*)queue, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
 {
     XGL_RESULT result = nextTable.DeviceWaitIdle(device);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDeviceWaitIdle(device = %p) = %s\n", (void*)device, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapCount(XGL_DEVICE device, XGL_UINT* pCount)
 {
     XGL_RESULT result = nextTable.GetMemoryHeapCount(device, pCount);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetMemoryHeapCount(device = %p, pCount = %i) = %s\n", (void*)device, *pCount, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapInfo(XGL_DEVICE device, XGL_UINT heapId, XGL_MEMORY_HEAP_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetMemoryHeapInfo(device, heapId, infoType, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetMemoryHeapInfo(device = %p, heapId = %i, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)device, heapId, string_XGL_MEMORY_HEAP_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglAllocMemory(device = %p, pAllocInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pAllocInfo, (void*)*pMem, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pAllocInfo) {
+        pTmpStr = xgl_print_xgl_memory_alloc_info(pAllocInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pAllocInfo (%p)\n%s\n", (void*)pAllocInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
 {
     XGL_RESULT result = nextTable.FreeMemory(mem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglFreeMemory(mem = %p) = %s\n", (void*)mem, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(XGL_GPU_MEMORY mem, XGL_MEMORY_PRIORITY priority)
 {
     XGL_RESULT result = nextTable.SetMemoryPriority(mem, priority);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglSetMemoryPriority(mem = %p, priority = %p) = %s\n", (void*)mem, (void*)priority, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglMapMemory(XGL_GPU_MEMORY mem, XGL_FLAGS flags, XGL_VOID** ppData)
 {
     XGL_RESULT result = nextTable.MapMemory(mem, flags, ppData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglMapMemory(mem = %p, flags = %i, ppData = %p) = %s\n", (void*)mem, flags, (void*)ppData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(XGL_GPU_MEMORY mem)
 {
     XGL_RESULT result = nextTable.UnmapMemory(mem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglUnmapMemory(mem = %p) = %s\n", (void*)mem, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(XGL_DEVICE device, const XGL_VOID* pSysMem, XGL_SIZE memSize, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglPinSystemMemory(device = %p, pSysMem = %p, memSize = %i, pMem = %p) = %s\n", (void*)device, (void*)pSysMem, memSize, (void*)pMem, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device, XGL_UINT rangeCount, const XGL_VIRTUAL_MEMORY_REMAP_RANGE* pRanges, XGL_UINT preWaitSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPreWaitSemaphores, XGL_UINT postSignalSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPostSignalSemaphores)
 {
     XGL_RESULT result = nextTable.RemapVirtualMemoryPages(device, rangeCount, pRanges, preWaitSemaphoreCount, pPreWaitSemaphores, postSignalSemaphoreCount, pPostSignalSemaphores);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglRemapVirtualMemoryPages(device = %p, rangeCount = %i, pRanges = %p, preWaitSemaphoreCount = %i, pPreWaitSemaphores = %p, postSignalSemaphoreCount = %i, pPostSignalSemaphores = %p) = %s\n", (void*)device, rangeCount, (void*)pRanges, preWaitSemaphoreCount, (void*)pPreWaitSemaphores, postSignalSemaphoreCount, (void*)pPostSignalSemaphores, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRanges) {
+        pTmpStr = xgl_print_xgl_virtual_memory_remap_range(pRanges, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRanges (%p)\n%s\n", (void*)pRanges, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
@@ -825,642 +518,1122 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetMultiGpuCompatibility(gpu0 = %p, gpu1 = %p, pInfo = %p) = %s\n", (void*)gpu0, (void*)gpu1, (void*)pInfo, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglOpenSharedMemory(device = %p, pOpenInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pMem, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pOpenInfo) {
+        pTmpStr = xgl_print_xgl_memory_open_info(pOpenInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pOpenInfo (%p)\n%s\n", (void*)pOpenInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
 {
     XGL_RESULT result = nextTable.OpenSharedQueueSemaphore(device, pOpenInfo, pSemaphore);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglOpenSharedQueueSemaphore(device = %p, pOpenInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pSemaphore, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(XGL_DEVICE device, const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglOpenPeerMemory(device = %p, pOpenInfo = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pMem, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pOpenInfo) {
+        pTmpStr = xgl_print_xgl_peer_memory_open_info(pOpenInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pOpenInfo (%p)\n%s\n", (void*)pOpenInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglOpenPeerImage(device = %p, pOpenInfo = %p, pImage = %p, pMem = %p) = %s\n", (void*)device, (void*)pOpenInfo, (void*)pImage, (void*)pMem, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pOpenInfo) {
+        pTmpStr = xgl_print_xgl_peer_image_open_info(pOpenInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pOpenInfo (%p)\n%s\n", (void*)pOpenInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
     XGL_RESULT result = nextTable.DestroyObject(object);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDestroyObject(object = %p) = %s\n", (void*)object, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(XGL_BASE_OBJECT object, XGL_OBJECT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetObjectInfo(object = %p, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)object, string_XGL_OBJECT_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
     XGL_RESULT result = nextTable.BindObjectMemory(object, mem, offset);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglBindObjectMemory(object = %p, mem = %p, offset = %i) = %s\n", (void*)object, (void*)mem, offset, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence)
 {
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateFence(device = %p, pCreateInfo = %p, pFence = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pFence, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_fence_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetFenceStatus(fence = %p) = %s\n", (void*)fence, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, XGL_UINT fenceCount, const XGL_FENCE* pFences, XGL_BOOL waitAll, XGL_UINT64 timeout)
 {
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglWaitForFences(device = %p, fenceCount = %i, pFences = %p, waitAll = %u, timeout = %lu) = %s\n", (void*)device, fenceCount, (void*)pFences, waitAll, timeout, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
 {
     XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateQueueSemaphore(device = %p, pCreateInfo = %p, pSemaphore = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSemaphore, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_queue_semaphore_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
 {
     XGL_RESULT result = nextTable.SignalQueueSemaphore(queue, semaphore);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglSignalQueueSemaphore(queue = %p, semaphore = %p) = %s\n", (void*)queue, (void*)semaphore, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
 {
     XGL_RESULT result = nextTable.WaitQueueSemaphore(queue, semaphore);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglWaitQueueSemaphore(queue = %p, semaphore = %p) = %s\n", (void*)queue, (void*)semaphore, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_EVENT_CREATE_INFO* pCreateInfo, XGL_EVENT* pEvent)
 {
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateEvent(device = %p, pCreateInfo = %p, pEvent = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pEvent, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_event_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(XGL_EVENT event)
 {
     XGL_RESULT result = nextTable.GetEventStatus(event);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetEventStatus(event = %p) = %s\n", (void*)event, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetEvent(XGL_EVENT event)
 {
     XGL_RESULT result = nextTable.SetEvent(event);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglSetEvent(event = %p) = %s\n", (void*)event, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetEvent(XGL_EVENT event)
 {
     XGL_RESULT result = nextTable.ResetEvent(event);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglResetEvent(event = %p) = %s\n", (void*)event, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo, XGL_QUERY_POOL* pQueryPool)
 {
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateQueryPool(device = %p, pCreateInfo = %p, pQueryPool = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pQueryPool, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_query_pool_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetQueryPoolResults(queryPool = %p, startQuery = %i, queryCount = %i, pDataSize = %i, pData = %p) = %s\n", (void*)queryPool, startQuery, queryCount, *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetFormatInfo(device = %p, format.channelFormat = %s, format.numericFormat = %s, infoType = %i, pDataSize = %i, pData = %p) = %s\n", (void*)device, string_XGL_CHANNEL_FORMAT(format.channelFormat), string_XGL_NUM_FORMAT(format.numericFormat), infoType, *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
 {
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateImage(device = %p, pCreateInfo = %p, pImage = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pImage, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_image_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglGetImageSubresourceInfo(image = %p, pSubresource = %p, infoType = %s, pDataSize = %i, pData = %p) = %s\n", (void*)image, (void*)pSubresource, string_XGL_SUBRESOURCE_INFO_TYPE(infoType), *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pSubresource) {
+        pTmpStr = xgl_print_xgl_image_subresource(pSubresource, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pSubresource (%p)\n%s\n", (void*)pSubresource, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateImageView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_image_view_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE device, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, XGL_COLOR_ATTACHMENT_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateColorAttachmentView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_color_attachment_view_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateDepthStencilView(device = %p, pCreateInfo = %p, pView = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pView, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_depth_stencil_view_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_SHADER_CREATE_INFO* pCreateInfo, XGL_SHADER* pShader)
 {
     XGL_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateShader(device = %p, pCreateInfo = %p, pShader = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pShader, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_shader_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-    // Create LL HEAD for this Pipeline
-    printf("DS INFO : Created Gfx Pipeline %p\n", (void*)*pPipeline);
-    PIPELINE_NODE *pTrav = pPipelineHead;
-    if (pTrav) {
-        while (pTrav->pNext)
-            pTrav = pTrav->pNext;
-        pTrav->pNext = (PIPELINE_NODE*)malloc(sizeof(PIPELINE_NODE));
-        pTrav = pTrav->pNext;
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateGraphicsPipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_graphics_pipeline_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
     }
-    else {
-        pTrav = (PIPELINE_NODE*)malloc(sizeof(PIPELINE_NODE));
-        pPipelineHead = pTrav;
-    }
-    memset((void*)pTrav, 0, sizeof(PIPELINE_NODE));
-    pTrav->pipeline = *pPipeline;
-    initPipeline(pTrav, pCreateInfo);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateComputePipeline(device = %p, pCreateInfo = %p, pPipeline = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pPipeline, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_compute_pipeline_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglStorePipeline(XGL_PIPELINE pipeline, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.StorePipeline(pipeline, pDataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglStorePipeline(pipeline = %p, pDataSize = %i, pData = %p) = %s\n", (void*)pipeline, *pDataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(XGL_DEVICE device, XGL_SIZE dataSize, const XGL_VOID* pData, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglLoadPipeline(device = %p, dataSize = %i, pData = %p, pPipeline = %p) = %s\n", (void*)device, dataSize, (void*)pData, (void*)pPipeline, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta)
 {
     XGL_RESULT result = nextTable.CreatePipelineDelta(device, p1, p2, delta);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreatePipelineDelta(device = %p, p1 = %p, p2 = %p, delta = %p) = %s\n", (void*)device, (void*)p1, (void*)p2, (void*)*delta, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateSampler(device = %p, pCreateInfo = %p, pSampler = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pSampler, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_sampler_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet)
 {
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
-    // Create LL chain
-    printf("DS INFO : Created Descriptor Set (DS) %p\n", (void*)*pDescriptorSet);
-    DS_LL_HEAD *pTrav = pDSHead;
-    if (pTrav) {
-        // Grow existing list
-        while (pTrav->pNextDS)
-            pTrav = pTrav->pNextDS;
-        pTrav->pNextDS = (DS_LL_HEAD*)malloc(sizeof(DS_LL_HEAD));
-        pTrav = pTrav->pNextDS;
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateDescriptorSet(device = %p, pCreateInfo = %p, pDescriptorSet = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pDescriptorSet, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_descriptor_set_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
     }
-    else { // Create new list
-        pTrav = (DS_LL_HEAD*)malloc(sizeof(DS_LL_HEAD));
-        pDSHead = pTrav;
-    }
-    pTrav->dsSlot = (DS_SLOT*)malloc(sizeof(DS_SLOT) * pCreateInfo->slots);
-    pTrav->dsID = *pDescriptorSet;
-    pTrav->numSlots = pCreateInfo->slots;
-    pTrav->pNextDS = NULL;
-    pTrav->updateActive = XGL_FALSE;
-    initDS(pTrav);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglBeginDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
 {
-    DS_LL_HEAD* pDS = getDS(descriptorSet);
-    if (!pDS) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : Specified Descriptor Set %p does not exist!\n", (void*)descriptorSet);
-    }
-    else {
-        pDS->updateActive = XGL_TRUE;
-    }
     nextTable.BeginDescriptorSetUpdate(descriptorSet);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglBeginDescriptorSetUpdate(descriptorSet = %p)\n", (void*)descriptorSet);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglEndDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
 {
-    if (!dsUpdate(descriptorSet)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglEndDescriptorSetUpdate()!\n", (void*)descriptorSet);
-    }
-    else {
-        DS_LL_HEAD* pDS = getDS(descriptorSet);
-        if (!pDS) {
-            printf("DS ERROR : Specified Descriptor Set %p does not exist!\n", (void*)descriptorSet);
-        }
-        else {
-            pDS->updateActive = XGL_FALSE;
-        }
-    }
     nextTable.EndDescriptorSetUpdate(descriptorSet);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglEndDescriptorSetUpdate(descriptorSet = %p)\n", (void*)descriptorSet);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachSamplerDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_SAMPLER* pSamplers)
 {
-    if (!dsUpdate(descriptorSet)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglAttachSamplerDescriptors()!\n", (void*)descriptorSet);
-    }
-    else {
-        if (!dsSamplerMapping(descriptorSet, startSlot, slotCount, pSamplers))
-            printf("DS ERROR : Unable to attach sampler descriptors to DS %p!\n", (void*)descriptorSet);
-    }
     nextTable.AttachSamplerDescriptors(descriptorSet, startSlot, slotCount, pSamplers);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglAttachSamplerDescriptors(descriptorSet = %p, startSlot = %i, slotCount = %i, pSamplers = %p)\n", (void*)descriptorSet, startSlot, slotCount, (void*)pSamplers);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachImageViewDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews)
 {
-    if (!dsUpdate(descriptorSet)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglAttachSamplerDescriptors()!\n", (void*)descriptorSet);
-    }
-    else {
-        if (!dsImageMapping(descriptorSet, startSlot, slotCount, pImageViews))
-            printf("DS ERROR : Unable to attach image view descriptors to DS %p!\n", (void*)descriptorSet);
-    }
     nextTable.AttachImageViewDescriptors(descriptorSet, startSlot, slotCount, pImageViews);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglAttachImageViewDescriptors(descriptorSet = %p, startSlot = %i, slotCount = %i, pImageViews = %p)\n", (void*)descriptorSet, startSlot, slotCount, (void*)pImageViews);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pImageViews) {
+        pTmpStr = xgl_print_xgl_image_view_attach_info(pImageViews, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pImageViews (%p)\n%s\n", (void*)pImageViews, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachMemoryViewDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemViews)
 {
-    if (!dsUpdate(descriptorSet)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglAttachSamplerDescriptors()!\n", (void*)descriptorSet);
-    }
-    else {
-        if (!dsMemMapping(descriptorSet, startSlot, slotCount, pMemViews))
-            printf("DS ERROR : Unable to attach memory view descriptors to DS %p!\n", (void*)descriptorSet);
-    }
     nextTable.AttachMemoryViewDescriptors(descriptorSet, startSlot, slotCount, pMemViews);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglAttachMemoryViewDescriptors(descriptorSet = %p, startSlot = %i, slotCount = %i, pMemViews = %p)\n", (void*)descriptorSet, startSlot, slotCount, (void*)pMemViews);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pMemViews) {
+        pTmpStr = xgl_print_xgl_memory_view_attach_info(pMemViews, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pMemViews (%p)\n%s\n", (void*)pMemViews, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachNestedDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_DESCRIPTOR_SET_ATTACH_INFO* pNestedDescriptorSets)
 {
-    if (!dsUpdate(descriptorSet)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglAttachSamplerDescriptors()!\n", (void*)descriptorSet);
-    }
     nextTable.AttachNestedDescriptors(descriptorSet, startSlot, slotCount, pNestedDescriptorSets);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglAttachNestedDescriptors(descriptorSet = %p, startSlot = %i, slotCount = %i, pNestedDescriptorSets = %p)\n", (void*)descriptorSet, startSlot, slotCount, (void*)pNestedDescriptorSets);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pNestedDescriptorSets) {
+        pTmpStr = xgl_print_xgl_descriptor_set_attach_info(pNestedDescriptorSets, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pNestedDescriptorSets (%p)\n%s\n", (void*)pNestedDescriptorSets, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
-// TODO : Does xglBeginDescriptorSetUpdate() have to be called before this function?
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount)
 {
-    if (!dsUpdate(descriptorSet)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : You must call xglBeginDescriptorSetUpdate(%p) before this call to xglClearDescriptorSetSlots()!\n", (void*)descriptorSet);
-    }
-    if (!clearDS(descriptorSet, startSlot, slotCount)) {
-        // TODO : This is where we should flag a REAL error
-        printf("DS ERROR : Unable to perform xglClearDescriptorSetSlots(%p, %u, %u) call!\n", descriptorSet, startSlot, slotCount);
-    }
     nextTable.ClearDescriptorSetSlots(descriptorSet, startSlot, slotCount);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglClearDescriptorSetSlots(descriptorSet = %p, startSlot = %i, slotCount = %i)\n", (void*)descriptorSet, startSlot, slotCount);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateViewportState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_viewport_state_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateRasterState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_raster_state_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateMsaaState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_msaa_state_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateColorBlendState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_color_blend_state_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateDepthStencilState(device = %p, pCreateInfo = %p, pState = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pState, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_depth_stencil_state_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer)
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCreateCommandBuffer(device = %p, pCreateInfo = %p, pCmdBuffer = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)*pCmdBuffer, string_XGL_RESULT(result));
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pCreateInfo) {
+        pTmpStr = xgl_print_xgl_cmd_buffer_create_info(pCreateInfo, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pCreateInfo (%p)\n%s\n", (void*)pCreateInfo, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_FLAGS flags)
 {
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, flags);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglBeginCommandBuffer(cmdBuffer = %p, flags = %i) = %s\n", (void*)cmdBuffer, flags, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     XGL_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglEndCommandBuffer(cmdBuffer = %p) = %s\n", (void*)cmdBuffer, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglResetCommandBuffer(cmdBuffer = %p) = %s\n", (void*)cmdBuffer, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline)
 {
-    if (getPipeline(pipeline)) {
-        lastBoundPipeline = pipeline;
-    }
-    else {
-        printf("DS ERROR : Attempt to bind Pipeline %p that doesn't exist!\n", (void*)pipeline);
-    }
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindPipeline(cmdBuffer = %p, pipelineBindPoint = %i, pipeline = %p)\n", (void*)cmdBuffer, pipelineBindPoint, (void*)pipeline);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
 {
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindPipelineDelta(cmdBuffer = %p, pipelineBindPoint = %i, delta = %p)\n", (void*)cmdBuffer, pipelineBindPoint, (void*)delta);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state)
 {
     nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindStateObject(cmdBuffer = %p, stateBindPoint = %i, state = %p)\n", (void*)cmdBuffer, stateBindPoint, (void*)state);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset)
 {
-    if (getDS(descriptorSet)) {
-        assert(index < XGL_MAX_DESCRIPTOR_SETS);
-        lastBoundDS[index] = descriptorSet;
-        printf("DS INFO : DS %p bound to DS index %u on pipeline %s\n", (void*)descriptorSet, index, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
-    }
-    else {
-        printf("DS ERROR : Attempt to bind DS %p that doesn't exist!\n", (void*)descriptorSet);
-    }
     nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, index, descriptorSet, slotOffset);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindDescriptorSet(cmdBuffer = %p, pipelineBindPoint = %i, index = %i, descriptorSet = %p, slotOffset = %i)\n", (void*)cmdBuffer, pipelineBindPoint, index, (void*)descriptorSet, slotOffset);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
 {
     nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindDynamicMemoryView(cmdBuffer = %p, pipelineBindPoint = %i, pMemView = %p)\n", (void*)cmdBuffer, pipelineBindPoint, (void*)pMemView);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pMemView) {
+        pTmpStr = xgl_print_xgl_memory_view_attach_info(pMemView, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pMemView (%p)\n%s\n", (void*)pMemView, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
     nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindIndexData(cmdBuffer = %p, mem = %p, offset = %i, indexType = %s)\n", (void*)cmdBuffer, (void*)mem, offset, string_XGL_INDEX_TYPE(indexType));
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(XGL_CMD_BUFFER cmdBuffer, XGL_UINT colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment)
 {
     nextTable.CmdBindAttachments(cmdBuffer, colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBindAttachments(cmdBuffer = %p, colorAttachmentCount = %i, pColorAttachments = %p, pDepthStencilAttachment = %p)\n", (void*)cmdBuffer, colorAttachmentCount, (void*)pColorAttachments, (void*)pDepthStencilAttachment);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pColorAttachments) {
+        pTmpStr = xgl_print_xgl_color_attachment_bind_info(pColorAttachments, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pColorAttachments (%p)\n%s\n", (void*)pColorAttachments, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
+    if (pDepthStencilAttachment) {
+        pTmpStr = xgl_print_xgl_depth_stencil_bind_info(pDepthStencilAttachment, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pDepthStencilAttachment (%p)\n%s\n", (void*)pDepthStencilAttachment, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions)
 {
     nextTable.CmdPrepareMemoryRegions(cmdBuffer, transitionCount, pStateTransitions);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdPrepareMemoryRegions(cmdBuffer = %p, transitionCount = %i, pStateTransitions = %p)\n", (void*)cmdBuffer, transitionCount, (void*)pStateTransitions);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pStateTransitions) {
+        pTmpStr = xgl_print_xgl_memory_state_transition(pStateTransitions, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pStateTransitions (%p)\n%s\n", (void*)pStateTransitions, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions)
 {
     nextTable.CmdPrepareImages(cmdBuffer, transitionCount, pStateTransitions);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdPrepareImages(cmdBuffer = %p, transitionCount = %i, pStateTransitions = %p)\n", (void*)cmdBuffer, transitionCount, (void*)pStateTransitions);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pStateTransitions) {
+        pTmpStr = xgl_print_xgl_image_state_transition(pStateTransitions, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pStateTransitions (%p)\n%s\n", (void*)pStateTransitions, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
-    printf("DS INFO : xglCmdDraw() call #%lu, reporting DS state:\n", drawCount[DRAW]++);
-    synchAndPrintDSConfig();
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDraw(cmdBuffer = %p, firstVertex = %i, vertexCount = %i, firstInstance = %i, instanceCount = %i)\n", (void*)cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
-    printf("DS INFO : xglCmdDrawIndexed() call #%lu, reporting DS state:\n", drawCount[DRAW_INDEXED]++);
-    synchAndPrintDSConfig();
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDrawIndexed(cmdBuffer = %p, firstIndex = %i, indexCount = %i, vertexOffset = %i, firstInstance = %i, instanceCount = %i)\n", (void*)cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride)
 {
-    printf("DS INFO : xglCmdDrawIndirect() call #%lu, reporting DS state:\n", drawCount[DRAW_INDIRECT]++);
-    synchAndPrintDSConfig();
     nextTable.CmdDrawIndirect(cmdBuffer, mem, offset, count, stride);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDrawIndirect(cmdBuffer = %p, mem = %p, offset = %i, count = %i, stride = %i)\n", (void*)cmdBuffer, (void*)mem, offset, count, stride);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride)
 {
-    printf("DS INFO : xglCmdDrawIndexedIndirect() call #%lu, reporting DS state:\n", drawCount[DRAW_INDEXED_INDIRECT]++);
-    synchAndPrintDSConfig();
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, mem, offset, count, stride);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDrawIndexedIndirect(cmdBuffer = %p, mem = %p, offset = %i, count = %i, stride = %i)\n", (void*)cmdBuffer, (void*)mem, offset, count, stride);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, XGL_UINT x, XGL_UINT y, XGL_UINT z)
 {
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDispatch(cmdBuffer = %p, x = %i, y = %i, z = %i)\n", (void*)cmdBuffer, x, y, z);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
     nextTable.CmdDispatchIndirect(cmdBuffer, mem, offset);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDispatchIndirect(cmdBuffer = %p, mem = %p, offset = %i)\n", (void*)cmdBuffer, (void*)mem, offset);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_GPU_MEMORY destMem, XGL_UINT regionCount, const XGL_MEMORY_COPY* pRegions)
 {
     nextTable.CmdCopyMemory(cmdBuffer, srcMem, destMem, regionCount, pRegions);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdCopyMemory(cmdBuffer = %p, srcMem = %p, destMem = %p, regionCount = %i, pRegions = %p)\n", (void*)cmdBuffer, (void*)srcMem, (void*)destMem, regionCount, (void*)pRegions);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRegions) {
+        pTmpStr = xgl_print_xgl_memory_copy(pRegions, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRegions (%p)\n%s\n", (void*)pRegions, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_IMAGE_COPY* pRegions)
 {
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdCopyImage(cmdBuffer = %p, srcImage = %p, destImage = %p, regionCount = %i, pRegions = %p)\n", (void*)cmdBuffer, (void*)srcImage, (void*)destImage, regionCount, (void*)pRegions);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRegions) {
+        pTmpStr = xgl_print_xgl_image_copy(pRegions, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRegions (%p)\n%s\n", (void*)pRegions, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyMemoryToImage(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
 {
     nextTable.CmdCopyMemoryToImage(cmdBuffer, srcMem, destImage, regionCount, pRegions);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdCopyMemoryToImage(cmdBuffer = %p, srcMem = %p, destImage = %p, regionCount = %i, pRegions = %p)\n", (void*)cmdBuffer, (void*)srcMem, (void*)destImage, regionCount, (void*)pRegions);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRegions) {
+        pTmpStr = xgl_print_xgl_memory_image_copy(pRegions, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRegions (%p)\n%s\n", (void*)pRegions, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_GPU_MEMORY destMem, XGL_UINT regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
 {
     nextTable.CmdCopyImageToMemory(cmdBuffer, srcImage, destMem, regionCount, pRegions);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdCopyImageToMemory(cmdBuffer = %p, srcImage = %p, destMem = %p, regionCount = %i, pRegions = %p)\n", (void*)cmdBuffer, (void*)srcImage, (void*)destMem, regionCount, (void*)pRegions);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRegions) {
+        pTmpStr = xgl_print_xgl_memory_image_copy(pRegions, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRegions (%p)\n%s\n", (void*)pRegions, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_STATE srcImageState, XGL_IMAGE destImage, XGL_IMAGE_STATE destImageState)
 {
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageState, destImage, destImageState);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdCloneImageData(cmdBuffer = %p, srcImage = %p, srcImageState = %p, destImage = %p, destImageState = %p)\n", (void*)cmdBuffer, (void*)srcImage, (void*)srcImageState, (void*)destImage, (void*)destImageState);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdUpdateMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const XGL_UINT32* pData)
 {
     nextTable.CmdUpdateMemory(cmdBuffer, destMem, destOffset, dataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdUpdateMemory(cmdBuffer = %p, destMem = %p, destOffset = %i, dataSize = %i, pData = %i)\n", (void*)cmdBuffer, (void*)destMem, destOffset, dataSize, *pData);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdFillMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, XGL_UINT32 data)
 {
     nextTable.CmdFillMemory(cmdBuffer, destMem, destOffset, fillSize, data);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdFillMemory(cmdBuffer = %p, destMem = %p, destOffset = %i, fillSize = %i, data = %i)\n", (void*)cmdBuffer, (void*)destMem, destOffset, fillSize, data);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_FLOAT color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
     nextTable.CmdClearColorImage(cmdBuffer, image, color, rangeCount, pRanges);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdClearColorImage(cmdBuffer = %p, image = %p, color = [%f, %f, %f, %f], rangeCount = %i, pRanges = %p)\n", (void*)cmdBuffer, (void*)image, color[0], color[1], color[2], color[3], rangeCount, (void*)pRanges);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRanges) {
+        pTmpStr = xgl_print_xgl_image_subresource_range(pRanges, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRanges (%p)\n%s\n", (void*)pRanges, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_UINT32 color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
     nextTable.CmdClearColorImageRaw(cmdBuffer, image, color, rangeCount, pRanges);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdClearColorImageRaw(cmdBuffer = %p, image = %p, color = [%i, %i, %i, %i], rangeCount = %i, pRanges = %p)\n", (void*)cmdBuffer, (void*)image, color[0], color[1], color[2], color[3], rangeCount, (void*)pRanges);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRanges) {
+        pTmpStr = xgl_print_xgl_image_subresource_range(pRanges, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRanges (%p)\n%s\n", (void*)pRanges, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_FLOAT depth, XGL_UINT32 stencil, XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
     nextTable.CmdClearDepthStencil(cmdBuffer, image, depth, stencil, rangeCount, pRanges);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdClearDepthStencil(cmdBuffer = %p, image = %p, depth = %f, stencil = %i, rangeCount = %i, pRanges = %p)\n", (void*)cmdBuffer, (void*)image, depth, stencil, rangeCount, (void*)pRanges);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRanges) {
+        pTmpStr = xgl_print_xgl_image_subresource_range(pRanges, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRanges (%p)\n%s\n", (void*)pRanges, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResolveImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT rectCount, const XGL_IMAGE_RESOLVE* pRects)
 {
     nextTable.CmdResolveImage(cmdBuffer, srcImage, destImage, rectCount, pRects);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdResolveImage(cmdBuffer = %p, srcImage = %p, destImage = %p, rectCount = %i, pRects = %p)\n", (void*)cmdBuffer, (void*)srcImage, (void*)destImage, rectCount, (void*)pRects);
+    fclose(pOutFile);
+    char *pTmpStr;
+    if (pRects) {
+        pTmpStr = xgl_print_xgl_image_resolve(pRects, "    ");
+        pOutFile = fopen(outFileName, "a");
+        fprintf(pOutFile, "   pRects (%p)\n%s\n", (void*)pRects, pTmpStr);
+        fclose(pOutFile);
+        free(pTmpStr);
+    }
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdSetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event)
 {
     nextTable.CmdSetEvent(cmdBuffer, event);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdSetEvent(cmdBuffer = %p, event = %p)\n", (void*)cmdBuffer, (void*)event);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event)
 {
     nextTable.CmdResetEvent(cmdBuffer, event);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdResetEvent(cmdBuffer = %p, event = %p)\n", (void*)cmdBuffer, (void*)event);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdMemoryAtomic(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_UINT64 srcData, XGL_ATOMIC_OP atomicOp)
 {
     nextTable.CmdMemoryAtomic(cmdBuffer, destMem, destOffset, srcData, atomicOp);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdMemoryAtomic(cmdBuffer = %p, destMem = %p, destOffset = %i, srcData = %lu, atomicOp = %p)\n", (void*)cmdBuffer, (void*)destMem, destOffset, srcData, (void*)atomicOp);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot, XGL_FLAGS flags)
 {
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdBeginQuery(cmdBuffer = %p, queryPool = %p, slot = %i, flags = %i)\n", (void*)cmdBuffer, (void*)queryPool, slot, flags);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdEndQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot)
 {
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdEndQuery(cmdBuffer = %p, queryPool = %p, slot = %i)\n", (void*)cmdBuffer, (void*)queryPool, slot);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount)
 {
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdResetQueryPool(cmdBuffer = %p, queryPool = %p, startQuery = %i, queryCount = %i)\n", (void*)cmdBuffer, (void*)queryPool, startQuery, queryCount);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
 {
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destMem, destOffset);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdWriteTimestamp(cmdBuffer = %p, timestampType = %s, destMem = %p, destOffset = %i)\n", (void*)cmdBuffer, string_XGL_TIMESTAMP_TYPE(timestampType), (void*)destMem, destOffset);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, const XGL_UINT32* pData)
 {
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdInitAtomicCounters(cmdBuffer = %p, pipelineBindPoint = %i, startCounter = %i, counterCount = %i, pData = %i)\n", (void*)cmdBuffer, pipelineBindPoint, startCounter, counterCount, *pData);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY srcMem, XGL_GPU_SIZE srcOffset)
 {
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcMem, srcOffset);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdLoadAtomicCounters(cmdBuffer = %p, pipelineBindPoint = %i, startCounter = %i, counterCount = %i, srcMem = %p, srcOffset = %i)\n", (void*)cmdBuffer, pipelineBindPoint, startCounter, counterCount, (void*)srcMem, srcOffset);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
 {
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destMem, destOffset);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdSaveAtomicCounters(cmdBuffer = %p, pipelineBindPoint = %i, startCounter = %i, counterCount = %i, destMem = %p, destOffset = %i)\n", (void*)cmdBuffer, pipelineBindPoint, startCounter, counterCount, (void*)destMem, destOffset);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel)
 {
     XGL_RESULT result = nextTable.DbgSetValidationLevel(device, validationLevel);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgSetValidationLevel(device = %p, validationLevel = %p) = %s\n", (void*)device, (void*)validationLevel, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
 {
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgRegisterMsgCallback(pfnMsgCallback = %p, pUserData = %p) = %s\n", (void*)pfnMsgCallback, (void*)pUserData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgUnregisterMsgCallback(pfnMsgCallback = %p) = %s\n", (void*)pfnMsgCallback, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(XGL_DEVICE device, XGL_INT msgCode, XGL_DBG_MSG_FILTER filter)
 {
     XGL_RESULT result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgSetMessageFilter(device = %p, msgCode = %i, filter = %p) = %s\n", (void*)device, msgCode, (void*)filter, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(XGL_BASE_OBJECT object, XGL_SIZE tagSize, const XGL_VOID* pTag)
 {
     XGL_RESULT result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgSetObjectTag(object = %p, tagSize = %i, pTag = %p) = %s\n", (void*)object, tagSize, (void*)pTag, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.DbgSetGlobalOption(dbgOption, dataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgSetGlobalOption(dbgOption = %p, dataSize = %i, pData = %p) = %s\n", (void*)dbgOption, dataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
     XGL_RESULT result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglDbgSetDeviceOption(device = %p, dbgOption = %p, dataSize = %i, pData = %p) = %s\n", (void*)device, (void*)dbgOption, dataSize, (void*)pData, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerBegin(XGL_CMD_BUFFER cmdBuffer, const XGL_CHAR* pMarker)
 {
     nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDbgMarkerBegin(cmdBuffer = %p, pMarker = %p)\n", (void*)cmdBuffer, (void*)pMarker);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
 {
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglCmdDbgMarkerEnd(cmdBuffer = %p)\n", (void*)cmdBuffer);
+    fclose(pOutFile);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
@@ -1469,24 +1642,36 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglWsiX11AssociateConnection(gpu = %p, pConnectionInfo = %p) = %s\n", (void*)gpu, (void*)pConnectionInfo, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
 {
     XGL_RESULT result = nextTable.WsiX11GetMSC(device, crtc, pMsc);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglWsiX11GetMSC(device = %p, crtc = %u, pMsc = %lu) = %s\n", (void*)device, crtc, *pMsc, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglWsiX11CreatePresentableImage(device = %p, pCreateInfo = %p, pImage = %p, pMem = %p) = %s\n", (void*)device, (void*)pCreateInfo, (void*)pImage, (void*)pMem, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+    pOutFile = fopen(outFileName, "a");
+    fprintf(pOutFile, "xglWsiX11QueuePresent(queue = %p, pPresentInfo = %p, fence = %p) = %s\n", (void*)queue, (void*)pPresentInfo, (void*)fence, string_XGL_RESULT(result));
+    fclose(pOutFile);
     return result;
 }
 

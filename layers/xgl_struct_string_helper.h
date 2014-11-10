@@ -785,8 +785,8 @@ char* xgl_print_xgl_pipeline_shader_stage_create_info(const XGL_PIPELINE_SHADER_
         str = (char*)malloc(sizeof(char)*1024);
         sprintf(str, "%ssType = %s\n%spNext = %p\n%sshader = %p\n", prefix, string_XGL_STRUCTURE_TYPE(pStruct->sType), prefix, (pStruct->pNext), prefix, (void*)&(pStruct->shader));
     } else {
-        str = (char*)malloc(sizeof(char)*2048);
         char *pTmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);
+        str = (char*)malloc(strlen(pTmpStr) + sizeof(char)*1024);
         sprintf(str, "%ssType = %s\n%spNext = %p\n%sshader = %p\n   %spNext (%p)\n%s\n", prefix, string_XGL_STRUCTURE_TYPE(pStruct->sType), prefix, (pStruct->pNext), prefix, (void*)&(pStruct->shader), prefix, (void*)pStruct->pNext, pTmpStr);
         free(pTmpStr);
     }
