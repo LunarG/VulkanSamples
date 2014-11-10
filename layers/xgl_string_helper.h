@@ -1111,6 +1111,9 @@ static const char* string_XGL_STRUCTURE_TYPE(XGL_STRUCTURE_TYPE input_value)
     case XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO:
         return "XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO";
 
+    case XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO:
+        return "XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO";
+
     case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO:
         return "XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO";
 
@@ -1146,6 +1149,9 @@ static const char* string_XGL_STRUCTURE_TYPE(XGL_STRUCTURE_TYPE input_value)
 
     case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
         return "XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO";
+
+    case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+        return "XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO";
 
     case XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO:
         return "XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO";
@@ -1438,6 +1444,9 @@ static const char* string_XGL_CHANNEL_FORMAT(XGL_CHANNEL_FORMAT input_value)
     case XGL_CH_FMT_R16G16:
         return "XGL_CH_FMT_R16G16";
 
+    case XGL_CH_FMT_R16G16B16:
+        return "XGL_CH_FMT_R16G16B16";
+
     case XGL_CH_FMT_R16G16B16A16:
         return "XGL_CH_FMT_R16G16B16A16";
 
@@ -1476,6 +1485,9 @@ static const char* string_XGL_CHANNEL_FORMAT(XGL_CHANNEL_FORMAT input_value)
 
     case XGL_CH_FMT_R8G8:
         return "XGL_CH_FMT_R8G8";
+
+    case XGL_CH_FMT_R8G8B8:
+        return "XGL_CH_FMT_R8G8B8";
 
     case XGL_CH_FMT_R8G8B8A8:
         return "XGL_CH_FMT_R8G8B8A8";
@@ -1736,5 +1748,26 @@ static const char* string_XGL_BLEND(XGL_BLEND input_value)
         return "Unhandled XGL_BLEND";
     }
     return "Unhandled XGL_BLEND";
+}
+
+
+static const char* string_XGL_VERTEX_INPUT_STEP_RATE(XGL_VERTEX_INPUT_STEP_RATE input_value)
+{
+    switch ((XGL_VERTEX_INPUT_STEP_RATE)input_value)
+    {
+
+    case XGL_VERTEX_INPUT_STEP_RATE_DRAW:
+        return "XGL_VERTEX_INPUT_STEP_RATE_DRAW";
+
+    case XGL_VERTEX_INPUT_STEP_RATE_INSTANCE:
+        return "XGL_VERTEX_INPUT_STEP_RATE_INSTANCE";
+
+    case XGL_VERTEX_INPUT_STEP_RATE_VERTEX:
+        return "XGL_VERTEX_INPUT_STEP_RATE_VERTEX";
+
+    default:
+        return "Unhandled XGL_VERTEX_INPUT_STEP_RATE";
+    }
+    return "Unhandled XGL_VERTEX_INPUT_STEP_RATE";
 }
 
