@@ -30,7 +30,6 @@
 #include <assert.h>
 #include <pthread.h>
 #include "xglLayer.h"
-#include "xgl_string_helper.h"
 #include "xgl_struct_string_helper.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;

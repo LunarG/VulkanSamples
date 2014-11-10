@@ -1,3 +1,26 @@
+#!/usr/bin/env python3
+#
+# XGL
+#
+# Copyright (C) 2014 LunarG, Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
 import argparse
 import os
 import sys
@@ -332,7 +355,7 @@ class StructWrapperGen:
     def _generateCppHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
-        header.append("#include <stdio.h>\n#include <%s>\n#include <%s_string_helper.h>\n" % (os.path.basename(self.header_filename), self.api))
+        header.append("#include <stdio.h>\n#include <%s>\n#include <%s_enum_string_helper.h>\n" % (os.path.basename(self.header_filename), self.api))
         return "".join(header)
         
     def _generateClassDefinition(self):
@@ -480,8 +503,8 @@ class StructWrapperGen:
                 tmp_p_out += '   %spNext (%p)\\n%s\\n"' 
                 tmp_p_args += ", prefix, (void*)pStruct->pNext, pTmpStr);\n"
                 sh_funcs.append('    } else {\n')
+                sh_funcs.append('        str = (char*)malloc(sizeof(char)*2048);\n')
                 sh_funcs.append('        char *pTmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
-                sh_funcs.append('        str = (char*)malloc(strlen(pTmpStr) + sizeof(char)*1024);\n')
                 sh_funcs.append('        sprintf(str, "')
                 sh_funcs.append('%s%s' % (tmp_p_out, tmp_p_args))
                 sh_funcs.append('        free(pTmpStr);\n')
@@ -612,9 +635,9 @@ class StructWrapperGen:
         header = []
         header.append("//#includes, #defines, globals and such...\n")
         for f in self.include_headers:
-            if 'xgl_string_helper' not in f:
+            if 'xgl_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
-        header.append('#include "xgl_string_helper.h"\n\n// Prototype for dynamic print function\n')
+        header.append('#include "xgl_enum_string_helper.h"\n\n// Prototype for dynamic print function\n')
         header.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix);\n")
         return "".join(header)
         
@@ -784,9 +807,9 @@ def main(argv=None):
     #print(typedef_dict)
     #print(struct_dict)
     if (opts.abs_out_dir is not None):
-        enum_filename = os.path.join(opts.abs_out_dir, os.path.basename(opts.input_file).strip(".h")+"_string_helper.h")
+        enum_filename = os.path.join(opts.abs_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
     else:
-        enum_filename = os.path.join(os.getcwd(), opts.rel_out_dir, os.path.basename(opts.input_file).strip(".h")+"_string_helper.h")
+        enum_filename = os.path.join(os.getcwd(), opts.rel_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
     enum_filename = os.path.abspath(enum_filename)
     if not os.path.exists(os.path.dirname(enum_filename)):
         print("Creating output dir %s" % os.path.dirname(enum_filename))
