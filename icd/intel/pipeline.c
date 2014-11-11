@@ -453,7 +453,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    cmd_len = 1 + 2 * __builtin_popcount(vs->user_attributes_read);
+    cmd_len = 1 + 2 * u_popcount(vs->user_attributes_read);
     if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID))
         cmd_len += 2;
 
