@@ -209,6 +209,8 @@ class HeaderFileParser:
             member_type = member_type.strip('const').strip()
         else:
             self.struct_dict[struct_type][num]['const'] = False
+        # TODO : There is a bug here where it seems that at the time we do this check,
+        #    the data is not in the types or typedef_rev_dict, so we never pass this if check
         if is_type(member_type, 'struct'):
             self.struct_dict[struct_type][num]['struct'] = True
         else:
@@ -225,7 +227,6 @@ class HeaderFileParser:
 
 # check if given identifier if of specified type_to_check
 def is_type(identifier, type_to_check):
-    #print("Checking if %s is type %s" % (identifier, type_to_check))
     if identifier in types_dict and type_to_check == types_dict[identifier]:
         return True
     if identifier in typedef_rev_dict:
@@ -468,46 +469,65 @@ class StructWrapperGen:
 
     def _generateStringHelperFunctions(self):
         sh_funcs = []
+        # We do two passes, first pass just generates prototypes for all the functsions
+        for s in self.struct_dict:
+            sh_funcs.append('char* %s(const %s* pStruct, const char* prefix);\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         for s in self.struct_dict:
             p_out = ""
             p_args = ""
+            stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
             # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext
             struct_char_count = 0 # TODO : Use this to vary size of memory allocations for strings?
-            has_pnext = False
             for m in self.struct_dict[s]:
-                if 'pNext' == self.struct_dict[s][m]['name']:
-                    has_pnext = True
+                if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
+                    stp_list.append(self.struct_dict[s][m])
                 struct_char_count += len(self.struct_dict[s][m]['name']) + 32
-            if 'graphics_pipeline_create' in s.lower(): # this is small struct w/ potentially large struct chain so bump it up
-                struct_char_count = 300
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix)\n{\n    char* str;\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
-            # when we have a pnext, have to handle dynamically printing struct trees
-            extra_indent = ''
-            if has_pnext:
-                sh_funcs.append('    if (!pStruct->pNext) {\n')
-                extra_indent = '    '
-            sh_funcs.append('    %sstr = (char*)malloc(sizeof(char)*1024);\n' % (extra_indent))
-            sh_funcs.append('    %ssprintf(str, "' % (extra_indent))
+            num_stps = len(stp_list);
+            total_strlen_str = ''
+            if 0 != num_stps:
+                sh_funcs.append("    char* tmpStr;\n")
+                sh_funcs.append('    char* extra_indent = (char*)malloc(strlen(prefix) + 2);\n')
+                sh_funcs.append('    strcpy(extra_indent, "  ");\n')
+                sh_funcs.append('    strncat(extra_indent, prefix, strlen(prefix));\n')
+                sh_funcs.append("    char dummy_char = '\\0';\n")
+                sh_funcs.append('    char* stp_strs[%i];\n' % num_stps)
+                for index in range(num_stps):
+                    if (stp_list[index]['ptr']):
+                        sh_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
+                        if 'pNext' == stp_list[index]['name']:
+                            sh_funcs.append('        stp_strs[%i] = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n' % index)
+                        else:
+                            sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
+                            sh_funcs.append('        sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                        sh_funcs.append('    }\n')
+                        sh_funcs.append("    else\n        stp_strs[%i] = &dummy_char;\n" % (index))
+                    elif stp_list[index]['array']: # TODO : For now just printing first element of array
+                        sh_funcs.append('    tmpStr = %s(&pStruct->%s[0], extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        sh_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
+                        sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s[0] (%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                    else:
+                        sh_funcs.append('    tmpStr = %s(&pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        sh_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
+                        sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                    total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
+            sh_funcs.append('    str = (char*)malloc(%ssizeof(char)*1024);\n' % (total_strlen_str))
+            sh_funcs.append('    sprintf(str, "')
             for m in sorted(self.struct_dict[s]):
                 (p_out1, p_args1) = self._get_struct_print_formatted(self.struct_dict[s][m])
                 p_out += p_out1
                 p_args += p_args1
-            # Store values up to this point to re-use in case of pnext below
-            tmp_p_out = p_out
-            tmp_p_args = p_args
             p_out += '"'
             p_args += ");\n"
             sh_funcs.append(p_out)
             sh_funcs.append(p_args)
-            if has_pnext:
-                tmp_p_out += '   %spNext (%p)\\n%s\\n"' 
-                tmp_p_args += ", prefix, (void*)pStruct->pNext, pTmpStr);\n"
-                sh_funcs.append('    } else {\n')
-                sh_funcs.append('        char *pTmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
-                sh_funcs.append('        str = (char*)malloc(strlen(pTmpStr) + sizeof(char)*1024);\n')
-                sh_funcs.append('        sprintf(str, "')
-                sh_funcs.append('%s%s' % (tmp_p_out, tmp_p_args))
-                sh_funcs.append('        free(pTmpStr);\n')
+            if 0 != num_stps:
+                sh_funcs.append('    for (uint32_t stp_index = 0; stp_index < %i; stp_index++) {\n' % num_stps)
+                sh_funcs.append('        if (0 < strlen(stp_strs[stp_index])) {\n')
+                sh_funcs.append('            strncat(str, stp_strs[stp_index], strlen(stp_strs[stp_index]));\n')
+                sh_funcs.append('            free(stp_strs[stp_index]);\n')
+                sh_funcs.append('        }\n')
                 sh_funcs.append('    }\n')
             sh_funcs.append("    return str;\n}\n")
         # Add function to dynamically print out unknown struct
@@ -637,7 +657,7 @@ class StructWrapperGen:
         for f in self.include_headers:
             if 'xgl_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
-        header.append('#include "xgl_enum_string_helper.h"\n\n// Prototype for dynamic print function\n')
+        header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
         header.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix);\n")
         return "".join(header)
         
@@ -800,6 +820,7 @@ def main(argv=None):
     enum_val_dict = hfp.get_enum_val_dict()
     enum_type_dict = hfp.get_enum_type_dict()
     struct_dict = hfp.get_struct_dict()
+    # TODO : Would like to validate struct data here to verify that all of the bools for struct members are correct at this point
     typedef_fwd_dict = hfp.get_typedef_fwd_dict()
     typedef_rev_dict = hfp.get_typedef_rev_dict()
     types_dict = hfp.get_types_dict()
