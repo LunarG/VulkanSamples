@@ -503,8 +503,8 @@ class StructWrapperGen:
                 tmp_p_out += '   %spNext (%p)\\n%s\\n"' 
                 tmp_p_args += ", prefix, (void*)pStruct->pNext, pTmpStr);\n"
                 sh_funcs.append('    } else {\n')
-                sh_funcs.append('        str = (char*)malloc(sizeof(char)*2048);\n')
                 sh_funcs.append('        char *pTmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
+                sh_funcs.append('        str = (char*)malloc(strlen(pTmpStr) + sizeof(char)*1024);\n')
                 sh_funcs.append('        sprintf(str, "')
                 sh_funcs.append('%s%s' % (tmp_p_out, tmp_p_args))
                 sh_funcs.append('        free(pTmpStr);\n')
