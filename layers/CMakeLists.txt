@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8.11)
 
 # NOTE : Initially generating helper files to both source and BIN dir to support checked-in and generated layers, need a better way to do this.
-add_custom_command(OUTPUT xgl_enum_string_helper.h xgl_struct_string_helper.h api_dump.c api_dump_file.c
+add_custom_command(OUTPUT generic_layer.c xgl_enum_string_helper.h xgl_struct_string_helper.h api_dump.c api_dump_file.c
 	COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py generic-layer > generic_layer.c
         COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_enum_string_helper ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_BINARY_DIR}/layers
         COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_struct_wrappers ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_BINARY_DIR}/layers
