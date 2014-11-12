@@ -171,7 +171,7 @@ class Subcommand(object):
                                  '    printf("Completed layered %s\\n");\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
-                elif "apidump" == layer:
+                elif "apidump" in layer:
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
                     ret_val = ''
@@ -183,7 +183,14 @@ class Subcommand(object):
                     if proto.ret != "XGL_VOID":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
-                    log_func = 'printf("xgl%s(' % proto.name
+                    f_open = ''
+                    f_close = ''
+                    if "file" in layer:
+                        f_open = 'pOutFile = fopen(outFileName, "a");\n    '
+                        log_func = 'fprintf(pOutFile, "xgl%s(' % proto.name
+                        f_close = '\n    fclose(pOutFile);'
+                    else:
+                        log_func = 'printf("xgl%s(' % proto.name
                     print_vals = ''
                     pindex = 0
                     for p in proto.params:
@@ -211,15 +218,18 @@ class Subcommand(object):
                             cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
                             log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
                             log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
-                            log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            if "file" in layer:
+                                log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            else:
+                                log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                             log_func += '\n        free(pTmpStr);\n    }'
                     if proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
                                  '    %snextTable.%s;\n'
-                                 '    %s\n'
+                                 '    %s%s%s\n'
                                  '%s'
-                                 '}' % (qual, decl, ret_val, proto.c_call(), log_func, stmt))
+                                 '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
                     else:
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
@@ -228,9 +238,9 @@ class Subcommand(object):
                                  '    pCurObj = gpuw;\n'
                                  '    pthread_once(&tabOnce, initLayerTable);\n'
                                  '    %snextTable.%s;\n'
-                                 '    %s\n'
+                                 '    %s%s%s\n'
                                  '%s'
-                                 '}' % (qual, decl, proto.params[0].name, ret_val, c_call, log_func, stmt))
+                                 '}' % (qual, decl, proto.params[0].name, ret_val, c_call, f_open, log_func, f_close, stmt))
                 elif "objecttracker" == layer:
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
@@ -362,6 +372,17 @@ class ApiDumpSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class ApiDumpFileSubcommand(Subcommand):
+    def generate_header(self):
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n\nstatic FILE* pOutFile;\nstatic char* outFileName = "xgl_apidump.txt";\n'
+
+    def generate_body(self):
+        body = [self._generate_layer_dispatch_table(),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "apidump-file"),
+                self._generate_layer_gpa_function()]
+
+        return "\n\n".join(body)
+
 class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
@@ -440,6 +461,7 @@ def main():
             "layer-dispatch" : LayerDispatchSubcommand,
             "generic-layer" : GenericLayerSubcommand,
             "api-dump" : ApiDumpSubcommand,
+            "api-dump-file" : ApiDumpFileSubcommand,
             "object-tracker" : ObjectTrackerSubcommand,
     }
 
