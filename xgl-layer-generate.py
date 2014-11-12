@@ -109,14 +109,17 @@ class Subcommand(object):
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
-        if "BOOL" in xgl_type:
+        if "BOOL" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
             return ("%u", name)
-        if True in [t in xgl_type for t in ["INT", "SIZE", "FLAGS", "MASK"]]:
+        if True in [t in xgl_type for t in ["INT", "SIZE", "FLAGS", "MASK", "xcb_window_t"]]:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             if '*' in xgl_type:
                 return ("%i", "*%s" % name)
             return ("%i", name)
+        # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
+        if "XGL_FORMAT" == xgl_type and "format" == name:
+            return ("{format.channelFormat = %s, format.numericFormat = %s}", "string_XGL_CHANNEL_FORMAT(format.channelFormat), string_XGL_NUM_FORMAT(format.numericFormat)")
         if last_create:
             return ("%p", "(void*)*%s" % name)
         return ("%p", "(void*)%s" % name)
@@ -175,7 +178,7 @@ class Subcommand(object):
                     stmt = ''
                     cis_param_index = [] # Store list of indices when func has struct params
                     create_func = False
-                    if 'Create' in proto.name:
+                    if 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
                         create_func = True
                     if proto.ret != "XGL_VOID":
                         ret_val = "XGL_RESULT result = "
@@ -192,7 +195,8 @@ class Subcommand(object):
                         print_vals += ', %s' % (pfi)
                         # TODO : Just want this to be simple check for params of STRUCT type
                         if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['XGL_CHAR', 'XGL_VOID', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'XGL_UINT32']]):
-                            cis_param_index.append(pindex)
+                            if 'Wsi' not in proto.name:
+                                cis_param_index.append(pindex)
                         pindex += 1
                     log_func = log_func.strip(', ')
                     if proto.ret != "XGL_VOID":
@@ -349,7 +353,7 @@ class GenericLayerSubcommand(Subcommand):
 
 class ApiDumpSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_string_helper.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n'
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
