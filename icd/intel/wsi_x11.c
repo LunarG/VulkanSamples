@@ -453,6 +453,28 @@ XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
     return XGL_SUCCESS;
 }
 
+static bool wsi_x11_is_format_presentable(struct intel_wsi_x11 *x11,
+                                          struct intel_dev *dev,
+                                          XGL_FORMAT format)
+{
+    /* this is what DDX expects */
+    switch (format.channelFormat) {
+    case XGL_CH_FMT_B5G6R5:
+        if (format.numericFormat == XGL_NUM_FMT_UNORM)
+            return true;
+        break;
+    case XGL_CH_FMT_B8G8R8A8:
+        if (format.numericFormat == XGL_NUM_FMT_UNORM ||
+            format.numericFormat == XGL_NUM_FMT_SRGB)
+            return true;
+        break;
+    default:
+        break;
+    }
+
+    return false;
+}
+
 /**
  * Create a presentable image.
  */
@@ -466,6 +488,12 @@ static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
     struct intel_img *img;
     struct intel_mem *mem;
     XGL_RESULT ret;
+
+    if (!wsi_x11_is_format_presentable(x11, dev, info->format)) {
+        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+                XGL_NULL_HANDLE, 0, 0, "invalid presentable image format");
+        return XGL_ERROR_INVALID_VALUE;
+    }
 
     /* create image */
     memset(&img_info, 0, sizeof(img_info));
