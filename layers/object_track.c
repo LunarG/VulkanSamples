@@ -29,69 +29,228 @@
 #include <pthread.h>
 #include "xglLayer.h"
 
+// Object type enumerant
+typedef enum _XGL_OBJECT_TYPE
+{
+    XGL_OBJECT_TYPE_DEVICE                     = 0,
+    XGL_OBJECT_TYPE_GPU_MEMORY                 = 1,
+    XGL_OBJECT_TYPE_FENCE                      = 2,
+    XGL_OBJECT_TYPE_QUEUE_SEMAPHORE            = 4,
+    XGL_OBJECT_TYPE_QUEUE                      = 5,
+    XGL_OBJECT_TYPE_EVENT                      = 6,
+    XGL_OBJECT_TYPE_QUERY_POOL                 = 7,
+    XGL_OBJECT_TYPE_IMAGE                      = 8,
+    XGL_OBJECT_TYPE_IMAGE_VIEW                 = 9,
+    XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW      = 10,
+    XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW         = 11,
+    XGL_OBJECT_TYPE_SHADER                     = 12,
+    XGL_OBJECT_TYPE_PIPELINE                   = 13,
+    XGL_OBJECT_TYPE_PIPELINE_DELTA             = 14,
+    XGL_OBJECT_TYPE_SAMPLER                    = 15,
+    XGL_OBJECT_TYPE_DESCRIPTOR_SET             = 16,
+    XGL_OBJECT_TYPE_VIEWPORT_STATE             = 17,
+    XGL_OBJECT_TYPE_RASTER_STATE               = 18,
+    XGL_OBJECT_TYPE_MSAA_STATE                 = 19,
+    XGL_OBJECT_TYPE_COLOR_BLEND_STATE          = 20,
+    XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE        = 21,
+    XGL_OBJECT_TYPE_CMD_BUFFER                 = 22,
+    XGL_OBJECT_TYPE_PHYSICAL_GPU               = 23,
+    XGL_OBJECT_TYPE_UNKNOWN                    = 24,
+    XGL_OBJECT_TYPE_BEGIN_RANGE                = XGL_OBJECT_TYPE_DEVICE,
+    XGL_OBJECT_TYPE_END_RANGE                  = XGL_OBJECT_TYPE_UNKNOWN,
+    XGL_NUM_OBJECT_TYPE                        = (XGL_OBJECT_TYPE_END_RANGE - XGL_OBJECT_TYPE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_OBJECT_TYPE)
+} XGL_OBJECT_TYPE;
+
+static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
+    switch (type)
+    {
+        case XGL_OBJECT_TYPE_DEVICE:
+            return "DEVICE";
+        case XGL_OBJECT_TYPE_GPU_MEMORY:
+            return "GPU_MEMORY";
+        case XGL_OBJECT_TYPE_FENCE:
+            return "FENCE";
+        case XGL_OBJECT_TYPE_QUEUE:
+            return "QUEUE";
+        case XGL_OBJECT_TYPE_QUEUE_SEMAPHORE:
+            return "QUEUE_SEMAPHORE";
+        case XGL_OBJECT_TYPE_EVENT:
+            return "EVENT";
+        case XGL_OBJECT_TYPE_QUERY_POOL:
+            return "QUERY_POOL";
+        case XGL_OBJECT_TYPE_IMAGE:
+            return "TYPE_IMAGE";
+        case XGL_OBJECT_TYPE_IMAGE_VIEW:
+            return "IMAGE_VIEW";
+        case XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
+            return "COLOR_ATTACHMENT_VIEW";
+        case XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
+            return "DEPTH_STENCIL_VIEW";
+        case XGL_OBJECT_TYPE_SHADER:
+            return "SHADER";
+        case XGL_OBJECT_TYPE_PIPELINE:
+            return "PIPELINE";
+        case XGL_OBJECT_TYPE_PIPELINE_DELTA:
+            return "PIPELINE_DELTA";
+        case XGL_OBJECT_TYPE_SAMPLER:
+            return "SAMPLER";
+        case XGL_OBJECT_TYPE_DESCRIPTOR_SET:
+            return "DESCRIPTOR_SET";
+        case XGL_OBJECT_TYPE_VIEWPORT_STATE:
+            return "VIEWPORT_STATE";
+        case XGL_OBJECT_TYPE_RASTER_STATE:
+            return "RASTER_STATE";
+        case XGL_OBJECT_TYPE_MSAA_STATE:
+            return "MSAA_STATE";
+        case XGL_OBJECT_TYPE_COLOR_BLEND_STATE:
+            return "COLOR_BLEND_STATE";
+        case XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE:
+            return "DEPTH_STENCIL_STATE";
+        case XGL_OBJECT_TYPE_CMD_BUFFER:
+            return "CMD_BUFFER";
+        case XGL_OBJECT_TYPE_PHYSICAL_GPU:
+            return "PHYSICAL_GPU";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
 static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;
 static long long unsigned int object_track_index = 0;
+// We maintain a "Global" list which links every object and a
+//  per-Object list which just links objects of a given type
+// The object node has both pointers so the actual nodes are shared between the two lists
 
 typedef struct _objNode {
     XGL_VOID        *pObj;
-    const char      *objType;
+    XGL_OBJECT_TYPE objType;
     uint64_t        numUses;
-    struct _objNode *pNext;
+    struct _objNode *pNextObj;
+    struct _objNode *pNextGlobal;
 } objNode;
-
-static objNode *pObjLLHead = NULL;
-
-static void ll_insert_obj(XGL_VOID* pObj, const char* type) {
+static objNode* pObjectHead[XGL_NUM_OBJECT_TYPE] = {0};
+static objNode* pGlobalHead = NULL;
+static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};
+static uint64_t numTotalObjs = 0;
+// Print global list and each individual object list
+static void ll_print_lists()
+{
+    objNode* pTrav = pGlobalHead;
+    printf("=====GLOBAL OBJECT LIST (%lu total objs):\n", numTotalObjs);
+    while (pTrav) {
+        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, (void*)pTrav->pNextGlobal);
+        pTrav = pTrav->pNextGlobal;
+    }
+    for (uint32_t i = 0; i < XGL_NUM_OBJECT_TYPE; i++) {
+        pTrav = pObjectHead[i];
+        if (pTrav) {
+            printf("=====%s OBJECT LIST (%lu objs):\n", string_XGL_OBJECT_TYPE(pTrav->objType), numObjs[i]);
+            while (pTrav) {
+                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, (void*)pTrav->pNextObj);
+                pTrav = pTrav->pNextObj;
+            }
+        }
+    }
+}
+static void ll_insert_obj(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
     objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));
     pNewObjNode->pObj = pObj;
-    pNewObjNode->objType = type;
+    pNewObjNode->objType = objType;
     pNewObjNode->numUses = 0;
-    pNewObjNode->pNext = pObjLLHead;
-    pObjLLHead = pNewObjNode;
+    // insert at front of global list
+    pNewObjNode->pNextGlobal = pGlobalHead;
+    pGlobalHead = pNewObjNode;
+    // insert at front of object list
+    pNewObjNode->pNextObj = pObjectHead[objType];
+    pObjectHead[objType] = pNewObjNode;
+    // increment obj counts
+    numObjs[objType]++;
+    numTotalObjs++;
+    printf("OBJ_STAT : %lu total objs & %lu %s objs.\n", numTotalObjs, numObjs[objType], string_XGL_OBJECT_TYPE(objType));
+    //ll_print_lists();
 }
 
-static void ll_increment_use_count(XGL_VOID* pObj) {
-    objNode *pTrav = pObjLLHead;
+static void ll_increment_use_count(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
+    objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
         if (pTrav->pObj == pObj) {
             pTrav->numUses++;
             return;
         }
-        pTrav = pTrav->pNext;
+        pTrav = pTrav->pNextObj;
     }
-    // If we do not find obj, insert it and then intrement count
-    printf("OBJ WARN : Unable to increment count for obj %p, will add to list as UNKNOWN type and increment count\n", pObj);
-    ll_insert_obj(pObj, "UNKNOWN");
-    ll_increment_use_count(pObj);
+    // If we do not find obj, insert it and then increment count
+    printf("OBJ WARN : Unable to increment count for obj %p, will add to list as %s type and increment count\n", pObj, string_XGL_OBJECT_TYPE(objType));
+    ll_insert_obj(pObj, objType);
+    ll_increment_use_count(pObj, objType);
 }
-static uint64_t ll_get_obj_uses(XGL_VOID* pObj) {
-    objNode *pTrav = pObjLLHead;
+static uint64_t ll_get_obj_uses(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
+    objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
         if (pTrav->pObj == pObj) {
             return pTrav->numUses;
         }
-        pTrav = pTrav->pNext;
+        pTrav = pTrav->pNextObj;
     }
     return 0;
 }
-static void ll_remove_obj(XGL_VOID* pObj) {
-    objNode *pTrav = pObjLLHead;
-    objNode *pPrev = pObjLLHead;
+// We usually don't know Obj type when we destroy it so have to fetch
+//  Type from global list w/ ll_destroy_obj()
+//   and then do the full removal from both lists w/ ll_remove_obj_type()
+static void ll_remove_obj_type(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
+    objNode *pTrav = pObjectHead[objType];
+    objNode *pPrev = pObjectHead[objType];
     while (pTrav) {
         if (pTrav->pObj == pObj) {
-            pPrev->pNext = pTrav->pNext;
-            if (pObjLLHead == pTrav)
-                pObjLLHead = pTrav->pNext;
-            printf("OBJ_STAT Removed %s obj %p that was used %lu times.\n", pTrav->objType, pTrav->pObj, pTrav->numUses);
-            free(pTrav);
+            pPrev->pNextObj = pTrav->pNextObj;
+            // update HEAD of Obj list as needed
+            if (pObjectHead[objType] == pTrav)
+                pObjectHead[objType] = pTrav->pNextObj;
+            assert(numObjs[objType] > 0);
+            numObjs[objType]--;
             return;
         }
         pPrev = pTrav;
-        pTrav = pTrav->pNext;
+        pTrav = pTrav->pNextObj;
     }
-    printf("ERROR : Unable to remove obj %p\n", pObj);
+    printf("OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list\n", pObj, string_XGL_OBJECT_TYPE(objType));
+}
+// Parse global list to find obj type, then remove obj from obj type list, finally
+//   remove obj from global list
+static void ll_destroy_obj(XGL_VOID* pObj) {
+    objNode *pTrav = pGlobalHead;
+    objNode *pPrev = pGlobalHead;
+    while (pTrav) {
+        if (pTrav->pObj == pObj) {
+            ll_remove_obj_type(pObj, pTrav->objType);
+            pPrev->pNextGlobal = pTrav->pNextGlobal;
+            // update HEAD of global list if needed
+            if (pGlobalHead == pTrav)
+                pGlobalHead = pTrav->pNextGlobal;
+            free(pTrav);
+            assert(numTotalObjs > 0);
+            numTotalObjs--;
+            printf("OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).\n", string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, pTrav->numUses, numTotalObjs, numObjs[pTrav->objType], string_XGL_OBJECT_TYPE(pTrav->objType));
+            return;
+        }
+        pPrev = pTrav;
+        pTrav = pTrav->pNextGlobal;
+    }
+    printf("OBJ ERROR : Unable to remove obj %p\n", pObj);
+}
+// Traverse global list and return type for given object
+static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
+    objNode *pTrav = pGlobalHead;
+    while (pTrav) {
+        if (pTrav->pObj == object)
+            return pTrav->objType;
+        pTrav = pTrav->pNextGlobal;
+    }
+    printf("OBJ ERROR : Attempting look-up on obj %p but it's NOT in the global list!\n", (void*)object);
+    return XGL_OBJECT_TYPE_UNKNOWN;
 }
 
 static void initLayerTable()
@@ -252,8 +411,6 @@ static void initLayerTable()
     nextTable.CmdBindDescriptorSet = fpCmdBindDescriptorSet;
     CmdBindDynamicMemoryViewType fpCmdBindDynamicMemoryView = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindDynamicMemoryView");
     nextTable.CmdBindDynamicMemoryView = fpCmdBindDynamicMemoryView;
-    CmdBindVertexDataType fpCmdBindVertexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindVertexData");
-    nextTable.CmdBindVertexData = fpCmdBindVertexData;
     CmdBindIndexDataType fpCmdBindIndexData = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindIndexData");
     nextTable.CmdBindIndexData = fpCmdBindIndexData;
     CmdBindAttachmentsType fpCmdBindAttachments = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglCmdBindAttachments");
@@ -348,8 +505,8 @@ static void initLayerTable()
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    ll_increment_use_count((XGL_VOID*)gpu);
-    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
+    ll_increment_use_count((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
+    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU));
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
@@ -359,13 +516,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    ll_increment_use_count((XGL_VOID*)gpu);
-    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
+    ll_increment_use_count((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
+    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU));
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     printf("OBJ[%llu] : CREATE XGL_DEVICE object %p\n", object_track_index++, (void*)*pDevice);
-    ll_insert_obj((XGL_VOID*)*pDevice, "XGL_DEVICE");
+    ll_insert_obj((XGL_VOID*)*pDevice, XGL_OBJECT_TYPE_DEVICE);
     return result;
 }
 
@@ -373,12 +530,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
 {
     XGL_RESULT result = nextTable.DestroyDevice(device);
     printf("OBJ[%llu] : DESTROY device object %p\n", object_track_index++, (void*)device);
-    ll_remove_obj((XGL_VOID*)device);
+    ll_remove_obj_type((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
     // Report any remaining objects in LL
-    objNode *pTrav = pObjLLHead;
+    objNode *pTrav = pGlobalHead;
     while (pTrav) {
-        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\n", pTrav->objType, pTrav->pObj, pTrav->numUses);
-        pTrav = pTrav->pNext;
+        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\n", string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, pTrav->numUses);
+        pTrav = pTrav->pNextGlobal;
     }
     return result;
 }
@@ -386,8 +543,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    ll_increment_use_count((XGL_VOID*)gpu);
-    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
+    ll_increment_use_count((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
+    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU));
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
@@ -397,8 +554,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    ll_increment_use_count((XGL_VOID*)gpu);
-    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
+    ll_increment_use_count((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
+    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU));
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
@@ -407,67 +564,67 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, XGL_UINT queueIndex, XGL_QUEUE* pQueue)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.GetDeviceQueue(device, queueType, queueIndex, pQueue);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, XGL_UINT cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
-    ll_increment_use_count((XGL_VOID*)queue);
-    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue));
+    ll_increment_use_count((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE);
+    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, fence);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(XGL_QUEUE queue, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs)
 {
-    ll_increment_use_count((XGL_VOID*)queue);
-    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue));
+    ll_increment_use_count((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE);
+    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.QueueSetGlobalMemReferences(queue, memRefCount, pMemRefs);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
 {
-    ll_increment_use_count((XGL_VOID*)queue);
-    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue));
+    ll_increment_use_count((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE);
+    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.QueueWaitIdle(queue);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.DeviceWaitIdle(device);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapCount(XGL_DEVICE device, XGL_UINT* pCount)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.GetMemoryHeapCount(device, pCount);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapInfo(XGL_DEVICE device, XGL_UINT heapId, XGL_MEMORY_HEAP_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.GetMemoryHeapInfo(device, heapId, infoType, pDataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_GPU_MEMORY* pMem)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     printf("OBJ[%llu] : CREATE XGL_GPU_MEMORY object %p\n", object_track_index++, (void*)*pMem);
-    ll_insert_obj((XGL_VOID*)*pMem, "XGL_GPU_MEMORY");
+    ll_insert_obj((XGL_VOID*)*pMem, XGL_OBJECT_TYPE_GPU_MEMORY);
     return result;
 }
 
@@ -475,46 +632,46 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
 {
     XGL_RESULT result = nextTable.FreeMemory(mem);
     printf("OBJ[%llu] : DESTROY mem object %p\n", object_track_index++, (void*)mem);
-    ll_remove_obj((XGL_VOID*)mem);
+    ll_remove_obj_type((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(XGL_GPU_MEMORY mem, XGL_MEMORY_PRIORITY priority)
 {
-    ll_increment_use_count((XGL_VOID*)mem);
-    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem));
+    ll_increment_use_count((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY);
+    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY));
     XGL_RESULT result = nextTable.SetMemoryPriority(mem, priority);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglMapMemory(XGL_GPU_MEMORY mem, XGL_FLAGS flags, XGL_VOID** ppData)
 {
-    ll_increment_use_count((XGL_VOID*)mem);
-    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem));
+    ll_increment_use_count((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY);
+    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY));
     XGL_RESULT result = nextTable.MapMemory(mem, flags, ppData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(XGL_GPU_MEMORY mem)
 {
-    ll_increment_use_count((XGL_VOID*)mem);
-    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem));
+    ll_increment_use_count((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY);
+    printf("OBJ[%llu] : USING mem object %p (%lu total uses)\n", object_track_index++, (void*)mem, ll_get_obj_uses((XGL_VOID*)mem, XGL_OBJECT_TYPE_GPU_MEMORY));
     XGL_RESULT result = nextTable.UnmapMemory(mem);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(XGL_DEVICE device, const XGL_VOID* pSysMem, XGL_SIZE memSize, XGL_GPU_MEMORY* pMem)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device, XGL_UINT rangeCount, const XGL_VIRTUAL_MEMORY_REMAP_RANGE* pRanges, XGL_UINT preWaitSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPreWaitSemaphores, XGL_UINT postSignalSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPostSignalSemaphores)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.RemapVirtualMemoryPages(device, rangeCount, pRanges, preWaitSemaphoreCount, pPreWaitSemaphores, postSignalSemaphoreCount, pPostSignalSemaphores);
     return result;
 }
@@ -522,8 +679,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device,
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
-    ll_increment_use_count((XGL_VOID*)gpu0);
-    printf("OBJ[%llu] : USING gpu0 object %p (%lu total uses)\n", object_track_index++, (void*)gpu0, ll_get_obj_uses((XGL_VOID*)gpu0));
+    ll_increment_use_count((XGL_VOID*)gpu0, XGL_OBJECT_TYPE_PHYSICAL_GPU);
+    printf("OBJ[%llu] : USING gpu0 object %p (%lu total uses)\n", object_track_index++, (void*)gpu0, ll_get_obj_uses((XGL_VOID*)gpu0, XGL_OBJECT_TYPE_PHYSICAL_GPU));
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
@@ -532,32 +689,32 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.OpenSharedQueueSemaphore(device, pOpenInfo, pSemaphore);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(XGL_DEVICE device, const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
     return result;
 }
@@ -566,729 +723,716 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
     XGL_RESULT result = nextTable.DestroyObject(object);
     printf("OBJ[%llu] : DESTROY object object %p\n", object_track_index++, (void*)object);
-    ll_remove_obj((XGL_VOID*)object);
+    ll_destroy_obj((XGL_VOID*)object);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(XGL_BASE_OBJECT object, XGL_OBJECT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)object);
-    printf("OBJ[%llu] : USING object object %p (%lu total uses)\n", object_track_index++, (void*)object, ll_get_obj_uses((XGL_VOID*)object));
+    ll_increment_use_count((XGL_VOID*)object, ll_get_obj_type(object));
+    printf("OBJ[%llu] : USING object object %p (%lu total uses)\n", object_track_index++, (void*)object, ll_get_obj_uses((XGL_VOID*)object, ll_get_obj_type(object)));
     XGL_RESULT result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
-    ll_increment_use_count((XGL_VOID*)object);
-    printf("OBJ[%llu] : USING object object %p (%lu total uses)\n", object_track_index++, (void*)object, ll_get_obj_uses((XGL_VOID*)object));
+    ll_increment_use_count((XGL_VOID*)object, ll_get_obj_type(object));
+    printf("OBJ[%llu] : USING object object %p (%lu total uses)\n", object_track_index++, (void*)object, ll_get_obj_uses((XGL_VOID*)object, ll_get_obj_type(object)));
     XGL_RESULT result = nextTable.BindObjectMemory(object, mem, offset);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
     printf("OBJ[%llu] : CREATE XGL_FENCE object %p\n", object_track_index++, (void*)*pFence);
-    ll_insert_obj((XGL_VOID*)*pFence, "XGL_FENCE");
+    ll_insert_obj((XGL_VOID*)*pFence, XGL_OBJECT_TYPE_FENCE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 {
-    ll_increment_use_count((XGL_VOID*)fence);
-    printf("OBJ[%llu] : USING fence object %p (%lu total uses)\n", object_track_index++, (void*)fence, ll_get_obj_uses((XGL_VOID*)fence));
+    ll_increment_use_count((XGL_VOID*)fence, XGL_OBJECT_TYPE_FENCE);
+    printf("OBJ[%llu] : USING fence object %p (%lu total uses)\n", object_track_index++, (void*)fence, ll_get_obj_uses((XGL_VOID*)fence, XGL_OBJECT_TYPE_FENCE));
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, XGL_UINT fenceCount, const XGL_FENCE* pFences, XGL_BOOL waitAll, XGL_UINT64 timeout)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
     printf("OBJ[%llu] : CREATE XGL_QUEUE_SEMAPHORE object %p\n", object_track_index++, (void*)*pSemaphore);
-    ll_insert_obj((XGL_VOID*)*pSemaphore, "XGL_QUEUE_SEMAPHORE");
+    ll_insert_obj((XGL_VOID*)*pSemaphore, XGL_OBJECT_TYPE_QUEUE_SEMAPHORE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
 {
-    ll_increment_use_count((XGL_VOID*)queue);
-    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue));
+    ll_increment_use_count((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE);
+    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.SignalQueueSemaphore(queue, semaphore);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
 {
-    ll_increment_use_count((XGL_VOID*)queue);
-    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue));
+    ll_increment_use_count((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE);
+    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.WaitQueueSemaphore(queue, semaphore);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_EVENT_CREATE_INFO* pCreateInfo, XGL_EVENT* pEvent)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     printf("OBJ[%llu] : CREATE XGL_EVENT object %p\n", object_track_index++, (void*)*pEvent);
-    ll_insert_obj((XGL_VOID*)*pEvent, "XGL_EVENT");
+    ll_insert_obj((XGL_VOID*)*pEvent, XGL_OBJECT_TYPE_EVENT);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(XGL_EVENT event)
 {
-    ll_increment_use_count((XGL_VOID*)event);
-    printf("OBJ[%llu] : USING event object %p (%lu total uses)\n", object_track_index++, (void*)event, ll_get_obj_uses((XGL_VOID*)event));
+    ll_increment_use_count((XGL_VOID*)event, XGL_OBJECT_TYPE_EVENT);
+    printf("OBJ[%llu] : USING event object %p (%lu total uses)\n", object_track_index++, (void*)event, ll_get_obj_uses((XGL_VOID*)event, XGL_OBJECT_TYPE_EVENT));
     XGL_RESULT result = nextTable.GetEventStatus(event);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetEvent(XGL_EVENT event)
 {
-    ll_increment_use_count((XGL_VOID*)event);
-    printf("OBJ[%llu] : USING event object %p (%lu total uses)\n", object_track_index++, (void*)event, ll_get_obj_uses((XGL_VOID*)event));
+    ll_increment_use_count((XGL_VOID*)event, XGL_OBJECT_TYPE_EVENT);
+    printf("OBJ[%llu] : USING event object %p (%lu total uses)\n", object_track_index++, (void*)event, ll_get_obj_uses((XGL_VOID*)event, XGL_OBJECT_TYPE_EVENT));
     XGL_RESULT result = nextTable.SetEvent(event);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetEvent(XGL_EVENT event)
 {
-    ll_increment_use_count((XGL_VOID*)event);
-    printf("OBJ[%llu] : USING event object %p (%lu total uses)\n", object_track_index++, (void*)event, ll_get_obj_uses((XGL_VOID*)event));
+    ll_increment_use_count((XGL_VOID*)event, XGL_OBJECT_TYPE_EVENT);
+    printf("OBJ[%llu] : USING event object %p (%lu total uses)\n", object_track_index++, (void*)event, ll_get_obj_uses((XGL_VOID*)event, XGL_OBJECT_TYPE_EVENT));
     XGL_RESULT result = nextTable.ResetEvent(event);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo, XGL_QUERY_POOL* pQueryPool)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     printf("OBJ[%llu] : CREATE XGL_QUERY_POOL object %p\n", object_track_index++, (void*)*pQueryPool);
-    ll_insert_obj((XGL_VOID*)*pQueryPool, "XGL_QUERY_POOL");
+    ll_insert_obj((XGL_VOID*)*pQueryPool, XGL_OBJECT_TYPE_QUERY_POOL);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)queryPool);
-    printf("OBJ[%llu] : USING queryPool object %p (%lu total uses)\n", object_track_index++, (void*)queryPool, ll_get_obj_uses((XGL_VOID*)queryPool));
+    ll_increment_use_count((XGL_VOID*)queryPool, XGL_OBJECT_TYPE_QUERY_POOL);
+    printf("OBJ[%llu] : USING queryPool object %p (%lu total uses)\n", object_track_index++, (void*)queryPool, ll_get_obj_uses((XGL_VOID*)queryPool, XGL_OBJECT_TYPE_QUERY_POOL));
     XGL_RESULT result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
     printf("OBJ[%llu] : CREATE XGL_IMAGE object %p\n", object_track_index++, (void*)*pImage);
-    ll_insert_obj((XGL_VOID*)*pImage, "XGL_IMAGE");
+    ll_insert_obj((XGL_VOID*)*pImage, XGL_OBJECT_TYPE_IMAGE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)image);
-    printf("OBJ[%llu] : USING image object %p (%lu total uses)\n", object_track_index++, (void*)image, ll_get_obj_uses((XGL_VOID*)image));
+    ll_increment_use_count((XGL_VOID*)image, XGL_OBJECT_TYPE_IMAGE);
+    printf("OBJ[%llu] : USING image object %p (%lu total uses)\n", object_track_index++, (void*)image, ll_get_obj_uses((XGL_VOID*)image, XGL_OBJECT_TYPE_IMAGE));
     XGL_RESULT result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
     printf("OBJ[%llu] : CREATE XGL_IMAGE_VIEW object %p\n", object_track_index++, (void*)*pView);
-    ll_insert_obj((XGL_VOID*)*pView, "XGL_IMAGE_VIEW");
+    ll_insert_obj((XGL_VOID*)*pView, XGL_OBJECT_TYPE_IMAGE_VIEW);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE device, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, XGL_COLOR_ATTACHMENT_VIEW* pView)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     printf("OBJ[%llu] : CREATE XGL_COLOR_ATTACHMENT_VIEW object %p\n", object_track_index++, (void*)*pView);
-    ll_insert_obj((XGL_VOID*)*pView, "XGL_COLOR_ATTACHMENT_VIEW");
+    ll_insert_obj((XGL_VOID*)*pView, XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_VIEW* pView)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     printf("OBJ[%llu] : CREATE XGL_DEPTH_STENCIL_VIEW object %p\n", object_track_index++, (void*)*pView);
-    ll_insert_obj((XGL_VOID*)*pView, "XGL_DEPTH_STENCIL_VIEW");
+    ll_insert_obj((XGL_VOID*)*pView, XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_SHADER_CREATE_INFO* pCreateInfo, XGL_SHADER* pShader)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
     printf("OBJ[%llu] : CREATE XGL_SHADER object %p\n", object_track_index++, (void*)*pShader);
-    ll_insert_obj((XGL_VOID*)*pShader, "XGL_SHADER");
+    ll_insert_obj((XGL_VOID*)*pShader, XGL_OBJECT_TYPE_SHADER);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     printf("OBJ[%llu] : CREATE XGL_PIPELINE object %p\n", object_track_index++, (void*)*pPipeline);
-    ll_insert_obj((XGL_VOID*)*pPipeline, "XGL_PIPELINE");
+    ll_insert_obj((XGL_VOID*)*pPipeline, XGL_OBJECT_TYPE_PIPELINE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     printf("OBJ[%llu] : CREATE XGL_PIPELINE object %p\n", object_track_index++, (void*)*pPipeline);
-    ll_insert_obj((XGL_VOID*)*pPipeline, "XGL_PIPELINE");
+    ll_insert_obj((XGL_VOID*)*pPipeline, XGL_OBJECT_TYPE_PIPELINE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglStorePipeline(XGL_PIPELINE pipeline, XGL_SIZE* pDataSize, XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)pipeline);
-    printf("OBJ[%llu] : USING pipeline object %p (%lu total uses)\n", object_track_index++, (void*)pipeline, ll_get_obj_uses((XGL_VOID*)pipeline));
+    ll_increment_use_count((XGL_VOID*)pipeline, XGL_OBJECT_TYPE_PIPELINE);
+    printf("OBJ[%llu] : USING pipeline object %p (%lu total uses)\n", object_track_index++, (void*)pipeline, ll_get_obj_uses((XGL_VOID*)pipeline, XGL_OBJECT_TYPE_PIPELINE));
     XGL_RESULT result = nextTable.StorePipeline(pipeline, pDataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(XGL_DEVICE device, XGL_SIZE dataSize, const XGL_VOID* pData, XGL_PIPELINE* pPipeline)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreatePipelineDelta(device, p1, p2, delta);
     printf("OBJ[%llu] : CREATE XGL_PIPELINE_DELTA object %p\n", object_track_index++, (void*)*delta);
-    ll_insert_obj((XGL_VOID*)*delta, "XGL_PIPELINE_DELTA");
+    ll_insert_obj((XGL_VOID*)*delta, XGL_OBJECT_TYPE_PIPELINE_DELTA);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     printf("OBJ[%llu] : CREATE XGL_SAMPLER object %p\n", object_track_index++, (void*)*pSampler);
-    ll_insert_obj((XGL_VOID*)*pSampler, "XGL_SAMPLER");
+    ll_insert_obj((XGL_VOID*)*pSampler, XGL_OBJECT_TYPE_SAMPLER);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
     printf("OBJ[%llu] : CREATE XGL_DESCRIPTOR_SET object %p\n", object_track_index++, (void*)*pDescriptorSet);
-    ll_insert_obj((XGL_VOID*)*pDescriptorSet, "XGL_DESCRIPTOR_SET");
+    ll_insert_obj((XGL_VOID*)*pDescriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglBeginDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.BeginDescriptorSetUpdate(descriptorSet);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglEndDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.EndDescriptorSetUpdate(descriptorSet);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachSamplerDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_SAMPLER* pSamplers)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.AttachSamplerDescriptors(descriptorSet, startSlot, slotCount, pSamplers);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachImageViewDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.AttachImageViewDescriptors(descriptorSet, startSlot, slotCount, pImageViews);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachMemoryViewDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemViews)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.AttachMemoryViewDescriptors(descriptorSet, startSlot, slotCount, pMemViews);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglAttachNestedDescriptors(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_DESCRIPTOR_SET_ATTACH_INFO* pNestedDescriptorSets)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.AttachNestedDescriptors(descriptorSet, startSlot, slotCount, pNestedDescriptorSets);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount)
 {
-    ll_increment_use_count((XGL_VOID*)descriptorSet);
-    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet));
+    ll_increment_use_count((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+    printf("OBJ[%llu] : USING descriptorSet object %p (%lu total uses)\n", object_track_index++, (void*)descriptorSet, ll_get_obj_uses((XGL_VOID*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET));
     nextTable.ClearDescriptorSetSlots(descriptorSet, startSlot, slotCount);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
     printf("OBJ[%llu] : CREATE XGL_VIEWPORT_STATE_OBJECT object %p\n", object_track_index++, (void*)*pState);
-    ll_insert_obj((XGL_VOID*)*pState, "XGL_VIEWPORT_STATE_OBJECT");
+    ll_insert_obj((XGL_VOID*)*pState, XGL_OBJECT_TYPE_VIEWPORT_STATE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
     printf("OBJ[%llu] : CREATE XGL_RASTER_STATE_OBJECT object %p\n", object_track_index++, (void*)*pState);
-    ll_insert_obj((XGL_VOID*)*pState, "XGL_RASTER_STATE_OBJECT");
+    ll_insert_obj((XGL_VOID*)*pState, XGL_OBJECT_TYPE_RASTER_STATE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
     printf("OBJ[%llu] : CREATE XGL_MSAA_STATE_OBJECT object %p\n", object_track_index++, (void*)*pState);
-    ll_insert_obj((XGL_VOID*)*pState, "XGL_MSAA_STATE_OBJECT");
+    ll_insert_obj((XGL_VOID*)*pState, XGL_OBJECT_TYPE_MSAA_STATE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
     printf("OBJ[%llu] : CREATE XGL_COLOR_BLEND_STATE_OBJECT object %p\n", object_track_index++, (void*)*pState);
-    ll_insert_obj((XGL_VOID*)*pState, "XGL_COLOR_BLEND_STATE_OBJECT");
+    ll_insert_obj((XGL_VOID*)*pState, XGL_OBJECT_TYPE_COLOR_BLEND_STATE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
     printf("OBJ[%llu] : CREATE XGL_DEPTH_STENCIL_STATE_OBJECT object %p\n", object_track_index++, (void*)*pState);
-    ll_insert_obj((XGL_VOID*)*pState, "XGL_DEPTH_STENCIL_STATE_OBJECT");
+    ll_insert_obj((XGL_VOID*)*pState, XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     printf("OBJ[%llu] : CREATE XGL_CMD_BUFFER object %p\n", object_track_index++, (void*)*pCmdBuffer);
-    ll_insert_obj((XGL_VOID*)*pCmdBuffer, "XGL_CMD_BUFFER");
+    ll_insert_obj((XGL_VOID*)*pCmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_FLAGS flags)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, flags);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     XGL_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, index, descriptorSet, slotOffset);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
-}
-
-XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
-{
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
-    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(XGL_CMD_BUFFER cmdBuffer, XGL_UINT colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBindAttachments(cmdBuffer, colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdPrepareMemoryRegions(cmdBuffer, transitionCount, pStateTransitions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdPrepareImages(cmdBuffer, transitionCount, pStateTransitions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDrawIndirect(cmdBuffer, mem, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, mem, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, XGL_UINT x, XGL_UINT y, XGL_UINT z)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDispatchIndirect(cmdBuffer, mem, offset);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_GPU_MEMORY destMem, XGL_UINT regionCount, const XGL_MEMORY_COPY* pRegions)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdCopyMemory(cmdBuffer, srcMem, destMem, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_IMAGE_COPY* pRegions)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyMemoryToImage(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdCopyMemoryToImage(cmdBuffer, srcMem, destImage, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_GPU_MEMORY destMem, XGL_UINT regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdCopyImageToMemory(cmdBuffer, srcImage, destMem, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_STATE srcImageState, XGL_IMAGE destImage, XGL_IMAGE_STATE destImageState)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageState, destImage, destImageState);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdUpdateMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const XGL_UINT32* pData)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdUpdateMemory(cmdBuffer, destMem, destOffset, dataSize, pData);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdFillMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, XGL_UINT32 data)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdFillMemory(cmdBuffer, destMem, destOffset, fillSize, data);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_FLOAT color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdClearColorImage(cmdBuffer, image, color, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_UINT32 color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdClearColorImageRaw(cmdBuffer, image, color, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_FLOAT depth, XGL_UINT32 stencil, XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdClearDepthStencil(cmdBuffer, image, depth, stencil, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResolveImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT rectCount, const XGL_IMAGE_RESOLVE* pRects)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdResolveImage(cmdBuffer, srcImage, destImage, rectCount, pRects);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdSetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdSetEvent(cmdBuffer, event);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdResetEvent(cmdBuffer, event);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdMemoryAtomic(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_UINT64 srcData, XGL_ATOMIC_OP atomicOp)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdMemoryAtomic(cmdBuffer, destMem, destOffset, srcData, atomicOp);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot, XGL_FLAGS flags)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdEndQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destMem, destOffset);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, const XGL_UINT32* pData)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY srcMem, XGL_GPU_SIZE srcOffset)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcMem, srcOffset);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destMem, destOffset);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.DbgSetValidationLevel(device, validationLevel);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
 {
-    ll_increment_use_count((XGL_VOID*)pfnMsgCallback);
-    printf("OBJ[%llu] : USING pfnMsgCallback object %p (%lu total uses)\n", object_track_index++, (void*)pfnMsgCallback, ll_get_obj_uses((XGL_VOID*)pfnMsgCallback));
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    ll_increment_use_count((XGL_VOID*)pfnMsgCallback);
-    printf("OBJ[%llu] : USING pfnMsgCallback object %p (%lu total uses)\n", object_track_index++, (void*)pfnMsgCallback, ll_get_obj_uses((XGL_VOID*)pfnMsgCallback));
     XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(XGL_DEVICE device, XGL_INT msgCode, XGL_DBG_MSG_FILTER filter)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(XGL_BASE_OBJECT object, XGL_SIZE tagSize, const XGL_VOID* pTag)
 {
-    ll_increment_use_count((XGL_VOID*)object);
-    printf("OBJ[%llu] : USING object object %p (%lu total uses)\n", object_track_index++, (void*)object, ll_get_obj_uses((XGL_VOID*)object));
+    ll_increment_use_count((XGL_VOID*)object, ll_get_obj_type(object));
+    printf("OBJ[%llu] : USING object object %p (%lu total uses)\n", object_track_index++, (void*)object, ll_get_obj_uses((XGL_VOID*)object, ll_get_obj_type(object)));
     XGL_RESULT result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)dbgOption);
-    printf("OBJ[%llu] : USING dbgOption object %p (%lu total uses)\n", object_track_index++, (void*)dbgOption, ll_get_obj_uses((XGL_VOID*)dbgOption));
     XGL_RESULT result = nextTable.DbgSetGlobalOption(dbgOption, dataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerBegin(XGL_CMD_BUFFER cmdBuffer, const XGL_CHAR* pMarker)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
 {
-    ll_increment_use_count((XGL_VOID*)cmdBuffer);
-    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer));
+    ll_increment_use_count((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+    printf("OBJ[%llu] : USING cmdBuffer object %p (%lu total uses)\n", object_track_index++, (void*)cmdBuffer, ll_get_obj_uses((XGL_VOID*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER));
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    ll_increment_use_count((XGL_VOID*)gpu);
-    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu));
+    ll_increment_use_count((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
+    printf("OBJ[%llu] : USING gpu object %p (%lu total uses)\n", object_track_index++, (void*)gpu, ll_get_obj_uses((XGL_VOID*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU));
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
@@ -1297,26 +1441,26 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
-    ll_increment_use_count((XGL_VOID*)device);
-    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device));
+    ll_increment_use_count((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE);
+    printf("OBJ[%llu] : USING device object %p (%lu total uses)\n", object_track_index++, (void*)device, ll_get_obj_uses((XGL_VOID*)device, XGL_OBJECT_TYPE_DEVICE));
     XGL_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
     printf("OBJ[%llu] : CREATE XGL_GPU_MEMORY object %p\n", object_track_index++, (void*)*pMem);
-    ll_insert_obj((XGL_VOID*)*pMem, "XGL_GPU_MEMORY");
+    ll_insert_obj((XGL_VOID*)*pMem, XGL_OBJECT_TYPE_GPU_MEMORY);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence)
 {
-    ll_increment_use_count((XGL_VOID*)queue);
-    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue));
+    ll_increment_use_count((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE);
+    printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
     return result;
 }
