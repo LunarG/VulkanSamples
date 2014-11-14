@@ -269,5 +269,13 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     WsiX11QueuePresentType WsiX11QueuePresent;
 } XGL_LAYER_DISPATCH_TABLE;
 
+// LL node for tree of dbg callback functions
+typedef struct _XGL_LAYER_DBG_FUNCTION_NODE
+{
+    XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback;
+    XGL_VOID *pUserData;
+    struct _XGL_LAYER_DBG_FUNCTION_NODE *pNext;
+} XGL_LAYER_DBG_FUNCTION_NODE;
+
 // ------------------------------------------------------------------------------------------------
 // API functions

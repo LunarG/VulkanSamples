@@ -27,107 +27,47 @@
 #include <string.h>
 #include <assert.h>
 #include <pthread.h>
-#include "xglLayer.h"
-
-// Object type enumerant
-typedef enum _XGL_OBJECT_TYPE
-{
-    XGL_OBJECT_TYPE_DEVICE                     = 0,
-    XGL_OBJECT_TYPE_GPU_MEMORY                 = 1,
-    XGL_OBJECT_TYPE_FENCE                      = 2,
-    XGL_OBJECT_TYPE_QUEUE_SEMAPHORE            = 4,
-    XGL_OBJECT_TYPE_QUEUE                      = 5,
-    XGL_OBJECT_TYPE_EVENT                      = 6,
-    XGL_OBJECT_TYPE_QUERY_POOL                 = 7,
-    XGL_OBJECT_TYPE_IMAGE                      = 8,
-    XGL_OBJECT_TYPE_IMAGE_VIEW                 = 9,
-    XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW      = 10,
-    XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW         = 11,
-    XGL_OBJECT_TYPE_SHADER                     = 12,
-    XGL_OBJECT_TYPE_PIPELINE                   = 13,
-    XGL_OBJECT_TYPE_PIPELINE_DELTA             = 14,
-    XGL_OBJECT_TYPE_SAMPLER                    = 15,
-    XGL_OBJECT_TYPE_DESCRIPTOR_SET             = 16,
-    XGL_OBJECT_TYPE_VIEWPORT_STATE             = 17,
-    XGL_OBJECT_TYPE_RASTER_STATE               = 18,
-    XGL_OBJECT_TYPE_MSAA_STATE                 = 19,
-    XGL_OBJECT_TYPE_COLOR_BLEND_STATE          = 20,
-    XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE        = 21,
-    XGL_OBJECT_TYPE_CMD_BUFFER                 = 22,
-    XGL_OBJECT_TYPE_PHYSICAL_GPU               = 23,
-    XGL_OBJECT_TYPE_UNKNOWN                    = 24,
-    XGL_OBJECT_TYPE_BEGIN_RANGE                = XGL_OBJECT_TYPE_DEVICE,
-    XGL_OBJECT_TYPE_END_RANGE                  = XGL_OBJECT_TYPE_UNKNOWN,
-    XGL_NUM_OBJECT_TYPE                        = (XGL_OBJECT_TYPE_END_RANGE - XGL_OBJECT_TYPE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_OBJECT_TYPE)
-} XGL_OBJECT_TYPE;
-
-static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
-    switch (type)
-    {
-        case XGL_OBJECT_TYPE_DEVICE:
-            return "DEVICE";
-        case XGL_OBJECT_TYPE_GPU_MEMORY:
-            return "GPU_MEMORY";
-        case XGL_OBJECT_TYPE_FENCE:
-            return "FENCE";
-        case XGL_OBJECT_TYPE_QUEUE:
-            return "QUEUE";
-        case XGL_OBJECT_TYPE_QUEUE_SEMAPHORE:
-            return "QUEUE_SEMAPHORE";
-        case XGL_OBJECT_TYPE_EVENT:
-            return "EVENT";
-        case XGL_OBJECT_TYPE_QUERY_POOL:
-            return "QUERY_POOL";
-        case XGL_OBJECT_TYPE_IMAGE:
-            return "TYPE_IMAGE";
-        case XGL_OBJECT_TYPE_IMAGE_VIEW:
-            return "IMAGE_VIEW";
-        case XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
-            return "COLOR_ATTACHMENT_VIEW";
-        case XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
-            return "DEPTH_STENCIL_VIEW";
-        case XGL_OBJECT_TYPE_SHADER:
-            return "SHADER";
-        case XGL_OBJECT_TYPE_PIPELINE:
-            return "PIPELINE";
-        case XGL_OBJECT_TYPE_PIPELINE_DELTA:
-            return "PIPELINE_DELTA";
-        case XGL_OBJECT_TYPE_SAMPLER:
-            return "SAMPLER";
-        case XGL_OBJECT_TYPE_DESCRIPTOR_SET:
-            return "DESCRIPTOR_SET";
-        case XGL_OBJECT_TYPE_VIEWPORT_STATE:
-            return "VIEWPORT_STATE";
-        case XGL_OBJECT_TYPE_RASTER_STATE:
-            return "RASTER_STATE";
-        case XGL_OBJECT_TYPE_MSAA_STATE:
-            return "MSAA_STATE";
-        case XGL_OBJECT_TYPE_COLOR_BLEND_STATE:
-            return "COLOR_BLEND_STATE";
-        case XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE:
-            return "DEPTH_STENCIL_STATE";
-        case XGL_OBJECT_TYPE_CMD_BUFFER:
-            return "CMD_BUFFER";
-        case XGL_OBJECT_TYPE_PHYSICAL_GPU:
-            return "PHYSICAL_GPU";
-        default:
-            return "UNKNOWN";
-    }
-}
+#include "object_track.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
 static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;
 static long long unsigned int object_track_index = 0;
+// Ptr to LL of dbg functions
+static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;
+static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
+    XGL_VALIDATION_LEVEL validationLevel,
+    XGL_BASE_OBJECT      srcObject,
+    XGL_SIZE             location,
+    XGL_INT              msgCode,
+    const XGL_CHAR*      pMsg)
+{
+    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
+    if (pTrav) {
+        while (pTrav) {
+            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
+            pTrav = pTrav->pNext;
+        }
+    }
+    else {
+        switch (msgType) {
+            case XGL_DBG_MSG_ERROR:
+                printf("OBJ ERROR : %s\n", pMsg);
+                break;
+            case XGL_DBG_MSG_WARNING:
+                printf("OBJ WARN : %s\n", pMsg);
+                break;
+            default:
+                printf("OBJ[%llu] : %s\n", object_track_index++, pMsg);
+                break;
+        }
+    }
+}
 // We maintain a "Global" list which links every object and a
 //  per-Object list which just links objects of a given type
 // The object node has both pointers so the actual nodes are shared between the two lists
-
 typedef struct _objNode {
-    XGL_VOID        *pObj;
-    XGL_OBJECT_TYPE objType;
-    uint64_t        numUses;
+    OBJTRACK_NODE   obj;
     struct _objNode *pNextObj;
     struct _objNode *pNextGlobal;
 } objNode;
@@ -141,15 +81,15 @@ static void ll_print_lists()
     objNode* pTrav = pGlobalHead;
     printf("=====GLOBAL OBJECT LIST (%lu total objs):\n", numTotalObjs);
     while (pTrav) {
-        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, (void*)pTrav->pNextGlobal);
+        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextGlobal);
         pTrav = pTrav->pNextGlobal;
     }
     for (uint32_t i = 0; i < XGL_NUM_OBJECT_TYPE; i++) {
         pTrav = pObjectHead[i];
         if (pTrav) {
-            printf("=====%s OBJECT LIST (%lu objs):\n", string_XGL_OBJECT_TYPE(pTrav->objType), numObjs[i]);
+            printf("=====%s OBJECT LIST (%lu objs):\n", string_XGL_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);
             while (pTrav) {
-                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, (void*)pTrav->pNextObj);
+                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextObj);
                 pTrav = pTrav->pNextObj;
             }
         }
@@ -157,9 +97,9 @@ static void ll_print_lists()
 }
 static void ll_insert_obj(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
     objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));
-    pNewObjNode->pObj = pObj;
-    pNewObjNode->objType = objType;
-    pNewObjNode->numUses = 0;
+    pNewObjNode->obj.pObj = pObj;
+    pNewObjNode->obj.objType = objType;
+    pNewObjNode->obj.numUses = 0;
     // insert at front of global list
     pNewObjNode->pNextGlobal = pGlobalHead;
     pGlobalHead = pNewObjNode;
@@ -176,22 +116,27 @@ static void ll_insert_obj(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
 static void ll_increment_use_count(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
     objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
-        if (pTrav->pObj == pObj) {
-            pTrav->numUses++;
+        if (pTrav->obj.pObj == pObj) {
+            pTrav->obj.numUses++;
             return;
         }
         pTrav = pTrav->pNextObj;
     }
     // If we do not find obj, insert it and then increment count
-    printf("OBJ WARN : Unable to increment count for obj %p, will add to list as %s type and increment count\n", pObj, string_XGL_OBJECT_TYPE(objType));
+#define OBJTRACK_UNKNOWN_OBJECT -1
+    char* str;
+    str = (char*)malloc(sizeof(char)*1024);
+    sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count\n", pObj, string_XGL_OBJECT_TYPE(objType));
+    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, str);
+
     ll_insert_obj(pObj, objType);
     ll_increment_use_count(pObj, objType);
 }
 static uint64_t ll_get_obj_uses(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
     objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
-        if (pTrav->pObj == pObj) {
-            return pTrav->numUses;
+        if (pTrav->obj.pObj == pObj) {
+            return pTrav->obj.numUses;
         }
         pTrav = pTrav->pNextObj;
     }
@@ -204,7 +149,7 @@ static void ll_remove_obj_type(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {
     objNode *pTrav = pObjectHead[objType];
     objNode *pPrev = pObjectHead[objType];
     while (pTrav) {
-        if (pTrav->pObj == pObj) {
+        if (pTrav->obj.pObj == pObj) {
             pPrev->pNextObj = pTrav->pNextObj;
             // update HEAD of Obj list as needed
             if (pObjectHead[objType] == pTrav)
@@ -224,8 +169,8 @@ static void ll_destroy_obj(XGL_VOID* pObj) {
     objNode *pTrav = pGlobalHead;
     objNode *pPrev = pGlobalHead;
     while (pTrav) {
-        if (pTrav->pObj == pObj) {
-            ll_remove_obj_type(pObj, pTrav->objType);
+        if (pTrav->obj.pObj == pObj) {
+            ll_remove_obj_type(pObj, pTrav->obj.objType);
             pPrev->pNextGlobal = pTrav->pNextGlobal;
             // update HEAD of global list if needed
             if (pGlobalHead == pTrav)
@@ -233,7 +178,7 @@ static void ll_destroy_obj(XGL_VOID* pObj) {
             free(pTrav);
             assert(numTotalObjs > 0);
             numTotalObjs--;
-            printf("OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).\n", string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, pTrav->numUses, numTotalObjs, numObjs[pTrav->objType], string_XGL_OBJECT_TYPE(pTrav->objType));
+            printf("OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).\n", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));
             return;
         }
         pPrev = pTrav;
@@ -245,8 +190,8 @@ static void ll_destroy_obj(XGL_VOID* pObj) {
 static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
     objNode *pTrav = pGlobalHead;
     while (pTrav) {
-        if (pTrav->pObj == object)
-            return pTrav->objType;
+        if (pTrav->obj.pObj == object)
+            return pTrav->obj.objType;
         pTrav = pTrav->pNextGlobal;
     }
     printf("OBJ ERROR : Attempting look-up on obj %p but it's NOT in the global list!\n", (void*)object);
@@ -534,7 +479,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
     // Report any remaining objects in LL
     objNode *pTrav = pGlobalHead;
     while (pTrav) {
-        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\n", string_XGL_OBJECT_TYPE(pTrav->objType), pTrav->pObj, pTrav->numUses);
+        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\n", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);
         pTrav = pTrav->pNextGlobal;
     }
     return result;
@@ -1374,12 +1319,33 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, X
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
 {
+    // This layer intercepts callbacks
+    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));
+    if (!pNewDbgFuncNode)
+        return XGL_ERROR_OUT_OF_MEMORY;
+    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
+    pNewDbgFuncNode->pUserData = pUserData;
+    pNewDbgFuncNode->pNext = pDbgFunctionHead;
+    pDbgFunctionHead = pNewDbgFuncNode;
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
+    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
+    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
+    while (pTrav) {
+        if (pTrav->pfnMsgCallback == pfnMsgCallback) {
+            pPrev->pNext = pTrav->pNext;
+            if (pDbgFunctionHead == pTrav)
+                pDbgFunctionHead = pTrav->pNext;
+            free(pTrav);
+            break;
+        }
+        pPrev = pTrav;
+        pTrav = pTrav->pNext;
+    }
     XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
     return result;
 }
@@ -1463,6 +1429,33 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
     printf("OBJ[%llu] : USING queue object %p (%lu total uses)\n", object_track_index++, (void*)queue, ll_get_obj_uses((XGL_VOID*)queue, XGL_OBJECT_TYPE_QUEUE));
     XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
     return result;
+}
+
+XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)
+{
+    return numObjs[type];
+}
+
+XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray)
+{
+    // This bool flags if we're pulling all objs or just a single class of objs
+    XGL_BOOL bAllObjs = (type == XGL_OBJECT_TYPE_ANY);
+    // Check the count first thing
+    XGL_UINT64 maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];
+    if (objCount > maxObjCount) {
+        printf("OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_XGL_OBJECT_TYPE(type));
+        return XGL_ERROR_INVALID_VALUE;
+    }
+    objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];
+    for (XGL_UINT64 i = 0; i < objCount; i++) {
+        if (!pTrav) {
+            printf("OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.\n", string_XGL_OBJECT_TYPE(type), maxObjCount, i, objCount);
+            return XGL_ERROR_UNKNOWN;
+        }
+        memcpy(&pObjNodeArray[i], pTrav, sizeof(OBJTRACK_NODE));
+        pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;
+    }
+    return XGL_SUCCESS;
 }
 
 XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)
