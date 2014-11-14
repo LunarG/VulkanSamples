@@ -7,17 +7,17 @@ project(glvreplay_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/thirdparty/xgl/inc/)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../../../include)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 set(OS_REPLAYER_LIBS
-    ${SRC_DIR}/thirdparty/xgl/lib/xgl64.lib
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.dll
 )
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 set(OS_REPLAYER_LIBS
-    ${SRC_DIR}/thirdparty/xgl/lib/libXGL.so
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.so
     xcb
 )
 endif()

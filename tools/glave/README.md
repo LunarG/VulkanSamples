@@ -28,6 +28,8 @@ cmake -G "Visual Studio 10 2010 Win64" ..
 
 ###Building on Linux (make)###
 ```
+Glave is built as part of top level Cmake for XGL project.
+To build Glave only:
 cd tools/glave
 mkdir glv_build
 cd glv_build
@@ -50,7 +52,7 @@ cd glv_build
 Example to trace the spinning cube demo from sample implementation
 export LIBXGL_DRIVERS_PATH=/home/jon/dbuild/icd/intel
 export LD_LIBRARY_PATH=/home/jon/dbuild/loader
-./glvtrace64 -p /home/jon/xgl/dbuild/demos/cube -l0 /home/jon/glave/glv_build/libglvtrace_xgl64.so -o glvtrace_cube.glv -w /home/jon/xgl/dbuild/demos
+./glvtrace64 -p /home/jon/xgl/dbuild/demos/cube -l0 /home/jon/xgl/glv_build/libglvtrace_xgl64.so -o glvtrace_cube.glv -w /home/jon/xgl/dbuild/demos
 Trace file is in "glvtrace_cube.glv".
 
 Rather than giving command line options, can instead put tracer options in a

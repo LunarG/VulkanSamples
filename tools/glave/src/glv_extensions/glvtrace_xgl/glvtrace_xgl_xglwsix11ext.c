@@ -35,6 +35,7 @@ static XGL_RESULT ( XGLAPI * real_xglWsiX11AssociateConnection)(
 
 static XGL_RESULT ( XGLAPI * real_xglWsiX11GetMSC)(
     XGL_DEVICE                                  device,
+    xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     XGL_UINT64*                                 pMsc) = xglWsiX11GetMSC;
 
@@ -130,6 +131,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglWsiX11AssociateConnection(
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI  __HOOKED_xglWsiX11GetMSC(
     XGL_DEVICE                                  device,
+    xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     XGL_UINT64*                                 pMsc)
 {
@@ -138,10 +140,11 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI  __HOOKED_xglWsiX11GetMSC(
     struct_xglWsiX11GetMSC* pPacket;
     SEND_ENTRYPOINT_ID(xglWsiX11GetMSC);
     CREATE_TRACE_PACKET(xglWsiX11GetMSC, sizeof(XGL_UINT64));
-    result = real_xglWsiX11GetMSC(device, crtc, pMsc);
+    result = real_xglWsiX11GetMSC(device, window, crtc, pMsc);
     pPacket = interpret_body_as_xglWsiX11GetMSC(pHeader);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMsc), sizeof(XGL_UINT64), pMsc);
     pPacket->device = device;
+    pPacket->window = window;
     pPacket->crtc = crtc;
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pMsc));

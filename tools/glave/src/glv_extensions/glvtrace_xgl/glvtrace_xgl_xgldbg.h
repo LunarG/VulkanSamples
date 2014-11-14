@@ -24,8 +24,8 @@
  **************************************************************************/
 #pragma once
 
-#include "xgl/inc/xgl.h"
-#include "xgl/inc/xglDbg.h"
+#include "xgl.h"
+#include "xglDbg.h"
 
 void AttachHooks_xgldbg();
 void DetachHooks_xgldbg();

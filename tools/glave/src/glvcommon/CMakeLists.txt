@@ -31,7 +31,7 @@ if (NOT MSVC)
     add_compiler_flag("-fPIC")
 endif()
 
-add_library(${PROJECT_NAME} ${SRC_LIST} ${HDRS})
+add_library(${PROJECT_NAME} STATIC ${SRC_LIST} ${HDRS})
 
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")

@@ -20,8 +20,8 @@
  */
 #pragma once
 
-#include "xgl/inc/xgl.h"
-#include "xgl/inc/xglWsiX11Ext.h"
+#include "xgl.h"
+#include "xglWsiX11Ext.h"
 void AttachHooks_xglwsix11ext();
 void DetachHooks_xglwsix11ext();
 
@@ -44,6 +44,7 @@ XGL_RESULT XGLAPI  __HOOKED_xglWsiX11AssociateConnection(
 
 XGL_RESULT XGLAPI  __HOOKED_xglWsiX11GetMSC(
     XGL_DEVICE                                  device,
+    xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     XGL_UINT64*                                 pMsc);
 

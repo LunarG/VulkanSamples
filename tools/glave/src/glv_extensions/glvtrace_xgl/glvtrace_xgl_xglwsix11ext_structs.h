@@ -21,7 +21,7 @@
  */
 #pragma once
 
-#include "xgl/inc/xglWsiX11Ext.h"
+#include "xglWsiX11Ext.h"
 #include "glv_trace_packet_utils.h"
 
 //=============================================================================
@@ -64,6 +64,7 @@ static struct_xglWsiX11CreatePresentableImage* interpret_body_as_xglWsiX11Create
 typedef struct struct_xglWsiX11GetMSC{
     glv_trace_packet_header* pHeader;
     XGL_DEVICE device;
+    xcb_window_t window;
     xcb_randr_crtc_t crtc;
     XGL_UINT64* pMsc;
     XGL_RESULT result;

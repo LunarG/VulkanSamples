@@ -1888,7 +1888,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglWsiX11GetMSC:
         {
             struct_xglWsiX11GetMSC *pPacket = interpret_body_as_xglWsiX11GetMSC(packet);
-            replayResult = m_xglFuncs.real_xglWsiX11GetMSC(remap(pPacket->device), pPacket->crtc, pPacket->pMsc);
+            replayResult = m_xglFuncs.real_xglWsiX11GetMSC(remap(pPacket->device), pPacket->window, pPacket->crtc, pPacket->pMsc);
             CHECK_RETURN_VALUE(xglWsiX11GetMSC);
             break;
         }

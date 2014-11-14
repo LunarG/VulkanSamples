@@ -7,7 +7,7 @@ project(glvtrace_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/thirdparty/xgl/inc/)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../../../include)
 
 set(SRC_LIST
     ${SRC_LIST}
@@ -41,7 +41,7 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 target_link_libraries(${PROJECT_NAME} 
     glvcommon
-    ${SRC_DIR}/thirdparty/xgl/lib/libXGL.so.0
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.so
     -shared
     -ldl
 )
@@ -50,7 +50,7 @@ endif()
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 target_link_libraries(${PROJECT_NAME} 
     glvcommon
-    ${SRC_DIR}/thirdparty/xgl/lib/libXGL.dll
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.dll
 )
 endif()
 

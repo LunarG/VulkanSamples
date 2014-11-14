@@ -33,9 +33,9 @@
 #include "glvreplay_factory.h"
 #include "glv_trace_packet_identifiers.h"
 
-#include "xgl/inc/xgl.h"
-#include "xgl/inc/xglDbg.h"
-#include "xgl/inc/xglWsiX11Ext.h"
+#include "xgl.h"
+#include "xglDbg.h"
+#include "xglWsiX11Ext.h"
 
 class ApiReplay {
 public:
@@ -694,6 +694,7 @@ struct xglFuncs {
     type_xglWsiX11AssociateConnection real_xglWsiX11AssociateConnection;
     typedef XGL_RESULT (XGLAPI * type_xglWsiX11GetMSC)(
             XGL_DEVICE                                  device,
+            xcb_window_t                                window,
             xcb_randr_crtc_t                            crtc,
             XGL_UINT64*                                 pMsc);
     type_xglWsiX11GetMSC real_xglWsiX11GetMSC;

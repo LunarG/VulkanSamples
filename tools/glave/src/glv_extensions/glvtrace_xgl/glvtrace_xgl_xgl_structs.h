@@ -24,7 +24,7 @@
  **************************************************************************/
 #pragma once
 
-#include "xgl/inc/xgl.h"
+#include "xgl.h"
 #include "glv_trace_packet_utils.h"
 
 static const char* string_XGL_RESULT(XGL_RESULT result)
