@@ -1,0 +1,61 @@
+cmake_minimum_required(VERSION 2.8)
+
+# this project is currently only available on Linux
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+
+project(glvtrace_xgl)
+
+include("${SRC_DIR}/build_options.cmake")
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/thirdparty/xgl/inc/)
+
+set(SRC_LIST
+    ${SRC_LIST}
+    glvtrace_xgl.c
+    glvtrace_xgl_xgl.c
+    glvtrace_xgl_xgldbg.c
+    glvtrace_xgl_xglwsix11ext.c
+)
+
+set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE C)
+
+set (HDR_LIST
+    glvtrace_xgl_packet_id.h
+    glvtrace_xgl_xgl.h
+    glvtrace_xgl_xgl_structs.h
+    glvtrace_xgl_xgldbg.h
+    glvtrace_xgl_xgldbg_structs.h
+    glvtrace_xgl_xglwsix11ext.h
+    glvtrace_xgl_xglwsix11ext_structs.h
+)
+
+include_directories(
+    ${SRC_DIR}
+    ${SRC_DIR}/glvcommon
+    ${SRC_DIR}/glvtrace
+    ${SRC_DIR}/thirdparty
+)
+
+add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+target_link_libraries(${PROJECT_NAME} 
+    glvcommon
+    ${SRC_DIR}/thirdparty/xgl/lib/libXGL.so.0
+    -shared
+    -ldl
+)
+endif()
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+target_link_libraries(${PROJECT_NAME} 
+    glvcommon
+    ${SRC_DIR}/thirdparty/xgl/lib/libXGL.dll
+)
+endif()
+
+build_options_finalize()
+
+set_target_properties(glvtrace_xgl PROPERTIES LINKER_LANGUAGE C)
+
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
