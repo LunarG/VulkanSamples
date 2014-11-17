@@ -1631,7 +1631,6 @@ TEST_F(XglRenderTest, GreenTriangle)
            "   gl_FragColor = vec4(0,1,0,1);\n"
            "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
@@ -1673,7 +1672,6 @@ TEST_F(XglRenderTest, MixTriangle)
            "   gl_FragColor = bar * scale + foo * (1.0-scale);\n"
            "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
 
@@ -1703,7 +1701,6 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
             "   gl_FragColor = color;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
@@ -1737,7 +1734,6 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
             "   gl_FragColor = color;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
@@ -1775,7 +1771,6 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
             "   gl_FragColor = color;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleWithVertexFetch(vertShaderText, fragShaderText);
 }
 
@@ -1812,7 +1807,6 @@ TEST_F(XglRenderTest, TexturedTriangle)
             "   outColor = texColor;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTexturedTriangle(vertShaderText, fragShaderText);
 }
 
@@ -1859,8 +1853,15 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
             "   outColor = texColor;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = false;
+    bool backupBIL = XglTestFramework::m_use_bil;
+    if (XglTestFramework::m_use_bil) {
+        XglTestFramework::m_use_bil = false;
+        printf("Forcing GLSL for TexturedTriangleClip\n");
+    }
+
     DrawTexturedTriangle(vertShaderText, fragShaderText);
+
+    XglTestFramework::m_use_bil = backupBIL;
 }
 
 TEST_F(XglRenderTest, VSTexture)
@@ -1896,7 +1897,6 @@ TEST_F(XglRenderTest, VSTexture)
             "   gl_FragColor = texColor;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTexturedTriangle(vertShaderText, fragShaderText);
 }
 
@@ -1939,7 +1939,6 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
             "   gl_FragColor = textureLod(surface2, samplePos.xy, 0.0);\n"
             "}\n";
 
-   XglTestFramework::m_use_bil = true;
    int textureCount = g_TextureCount;
    int samplerCount = g_SamplerCount;
    DrawSamplerBindingsTriangle(vertShaderText, fragShaderText, textureCount, samplerCount);
@@ -1978,7 +1977,6 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
             "   gl_FragColor = inColor;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleVSUniformBlock(vertShaderText, fragShaderText);
 }
 
@@ -2017,7 +2015,6 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
             "   gl_FragColor += myRedVal.color;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleFSUniformBlockBinding(vertShaderText, fragShaderText);
 }
 
@@ -2054,7 +2051,6 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
             "   gl_FragColor += red;\n"
             "}\n";
 
-    XglTestFramework::m_use_bil = true;
     DrawTriangleFSUniformBlockBinding(vertShaderText, fragShaderText);
 }
 
