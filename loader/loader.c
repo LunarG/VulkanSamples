@@ -753,7 +753,7 @@ static void loader_deactivate_layer()
     }
 }
 
-extern XGL_UINT ActivateLayers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
+extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
 {
     XGL_UINT gpu_index;
     XGL_UINT count;
