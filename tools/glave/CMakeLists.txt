@@ -16,15 +16,9 @@ endif()
 find_package(PythonLibs REQUIRED)
 find_package(PythonInterp REQUIRED)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-set(GEN_API "xgl")
-else()
-set(GEN_API "mantle")
-endif()
+set(CODE_GEN_DIR "glv_extensions/glave_xgl_gen")
 
-set(CODE_GEN_DIR "glv_extensions/glave_${GEN_API}_gen")
-
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/code_gen.py --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/src/${CODE_GEN_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/${GEN_API}/inc/${GEN_API}.h)
+#execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../xgl-helper.py --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/src/${CODE_GEN_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../include/xgl.h)
 
 
 message("")
