@@ -61,6 +61,9 @@
 using namespace std;
 
 #include <xgl.h>
+#ifdef PRINT_OBJECTS
+#include "../layers/object_track.h"
+#endif
 #ifdef DEBUG_CALLBACK
 #include <xglDbg.h>
 #endif
@@ -85,7 +88,18 @@ XGL_VOID XGLAPI myDbgFunc(
     const XGL_CHAR*      pMsg,
     XGL_VOID*            pUserData)
 {
-    printf("DEBUG : %s\n", pMsg);
+    switch (msgType)
+    {
+        case XGL_DBG_MSG_WARNING:
+            printf("CALLBACK WARNING : %s\n", pMsg);
+            break;
+        case XGL_DBG_MSG_ERROR:
+            printf("CALLBACK ERROR : %s\n", pMsg);
+            break;
+        default:
+            printf("EATING Msg of type %u\n", msgType);
+            break;
+    }
 }
 #endif
 //--------------------------------------------------------------------------------------
@@ -486,11 +500,6 @@ void XglRenderTest::InitSampler()
 
     err = xglCreateSampler(device(),&samplerCreateInfo, &m_sampler);
     ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderTest::DrawRotatedTriangleTest()
-{
-    // TODO : This test will pass a matrix into VS to affect triangle orientation.
 }
 
 void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fragShaderText)
@@ -1599,9 +1608,22 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     }
 
     InitConstantBuffer(bufSize, sizeof(XGL_FLOAT), (const void*) &data);
-
     DrawTriangleVSUniform(vertShaderText, fragShaderText, 1);
     RotateTriangleVSUniform(Projection, View, Model);
+#ifdef PRINT_OBJECTS
+    //XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)
+    OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjectCount");
+    XGL_UINT64 numObjects = pObjTrackGetObjectCount(XGL_OBJECT_TYPE_ANY);
+    //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjects");
+    printf("DEBUG : Number of Objects : %lu\n", numObjects);
+    OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjects");
+    OBJTRACK_NODE* pObjNodeArray = (OBJTRACK_NODE*)malloc(sizeof(OBJTRACK_NODE)*numObjects);
+    pObjTrackGetObjs(XGL_OBJECT_TYPE_ANY, numObjects, pObjNodeArray);
+    for (i=0; i < numObjects; i++) {
+        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_XGL_OBJECT_TYPE(pObjNodeArray[i].objType), pObjNodeArray[i].pObj, pObjNodeArray[i].numUses);
+    }
+    free(pObjNodeArray);
+#endif
 }
 
 TEST_F(XglRenderTest, XGLTriangle_FragColor)
@@ -1702,11 +1724,6 @@ TEST_F(XglRenderTest, GreenTriangle)
 
     DrawTriangleTest(vertShaderText, fragShaderText);
 }
-
-TEST_F(XglRenderTest, RotatedTriangle) {
-    DrawRotatedTriangleTest();
-}
-
 
 TEST_F(XglRenderTest, TriangleWithVertexFetch)
 {

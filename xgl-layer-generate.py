@@ -242,20 +242,67 @@ class Subcommand(object):
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, ret_val, c_call, f_open, log_func, f_close, stmt))
                 elif "objecttracker" == layer:
+                    obj_type_mapping = {"XGL_PHYSICAL_GPU" : "XGL_OBJECT_TYPE_PHYSICAL_GPU", "XGL_DEVICE" : "XGL_OBJECT_TYPE_DEVICE",
+                                        "XGL_QUEUE" : "XGL_OBJECT_TYPE_QUEUE", "XGL_QUEUE_SEMAPHORE" : "XGL_OBJECT_TYPE_QUEUE_SEMAPHORE",
+                                        "XGL_GPU_MEMORY" : "XGL_OBJECT_TYPE_GPU_MEMORY", "XGL_FENCE" : "XGL_OBJECT_TYPE_FENCE",
+                                        "XGL_QUERY_POOL" : "XGL_OBJECT_TYPE_QUERY_POOL", "XGL_EVENT" : "XGL_OBJECT_TYPE_EVENT",
+                                        "XGL_IMAGE" : "XGL_OBJECT_TYPE_IMAGE", "XGL_DESCRIPTOR_SET" : "XGL_OBJECT_TYPE_DESCRIPTOR_SET",
+                                        "XGL_CMD_BUFFER" : "XGL_OBJECT_TYPE_CMD_BUFFER", "XGL_SAMPLER" : "XGL_OBJECT_TYPE_SAMPLER",
+                                        "XGL_PIPELINE" : "XGL_OBJECT_TYPE_PIPELINE", "XGL_PIPELINE_DELTA" : "XGL_OBJECT_TYPE_PIPELINE_DELTA",
+                                        "XGL_SHADER" : "XGL_OBJECT_TYPE_SHADER", "XGL_IMAGE_VIEW" : "XGL_OBJECT_TYPE_IMAGE_VIEW",
+                                        "XGL_COLOR_ATTACHMENT_VIEW" : "XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW", "XGL_DEPTH_STENCIL_VIEW" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW",
+                                        "XGL_VIEWPORT_STATE_OBJECT" : "XGL_OBJECT_TYPE_VIEWPORT_STATE", "XGL_RASTER_STATE_OBJECT" : "XGL_OBJECT_TYPE_RASTER_STATE",
+                                        "XGL_MSAA_STATE_OBJECT" : "XGL_OBJECT_TYPE_MSAA_STATE", "XGL_COLOR_BLEND_STATE_OBJECT" : "XGL_OBJECT_TYPE_COLOR_BLEND_STATE",
+                                        "XGL_DEPTH_STENCIL_STATE_OBJECT" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE", "XGL_BASE_OBJECT" : "ll_get_obj_type(object)",
+                                        "XGL_OBJECT" : "ll_get_obj_type(object)"}
+
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
+                    p0_type = proto.params[0].ty
                     create_line = ''
                     destroy_line = ''
-                    using_line = '    ll_increment_use_count((XGL_VOID*)%s);\n    printf("OBJ[%%llu] : USING %s object %%p (%%lu total uses)\\n", object_track_index++, (void*)%s, ll_get_obj_uses((XGL_VOID*)%s));\n' % (param0_name, param0_name, param0_name, param0_name)
-                    if 'Create' in proto.name or 'Alloc' in proto.name:
-                        create_line = '    printf("OBJ[%%llu] : CREATE %s object %%p\\n", object_track_index++, (void*)*%s);\n    ll_insert_obj((XGL_VOID*)*%s, "%s");\n' % (proto.params[-1].ty.strip('*'), proto.params[-1].name, proto.params[-1].name, proto.params[-1].ty.strip('*'))
-                    if 'Destroy' in proto.name or 'Free' in proto.name:
-                        destroy_line = '    printf("OBJ[%%llu] : DESTROY %s object %%p\\n", object_track_index++, (void*)%s);\n    ll_remove_obj((XGL_VOID*)%s);\n' % (param0_name, param0_name, param0_name)
+                    if 'DbgRegisterMsgCallback' in proto.name:
+                        using_line =  '    // This layer intercepts callbacks\n'
+                        using_line += '    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));\n'
+                        using_line += '    if (!pNewDbgFuncNode)\n'
+                        using_line += '        return XGL_ERROR_OUT_OF_MEMORY;\n'
+                        using_line += '    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;\n'
+                        using_line += '    pNewDbgFuncNode->pUserData = pUserData;\n'
+                        using_line += '    pNewDbgFuncNode->pNext = pDbgFunctionHead;\n'
+                        using_line += '    pDbgFunctionHead = pNewDbgFuncNode;\n'
+                    elif 'DbgUnregisterMsgCallback' in proto.name:
+                        using_line =  '    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;\n'
+                        using_line += '    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;\n'
+                        using_line += '    while (pTrav) {\n'
+                        using_line += '        if (pTrav->pfnMsgCallback == pfnMsgCallback) {\n'
+                        using_line += '            pPrev->pNext = pTrav->pNext;\n'
+                        using_line += '            if (pDbgFunctionHead == pTrav)\n'
+                        using_line += '                pDbgFunctionHead = pTrav->pNext;\n'
+                        using_line += '            free(pTrav);\n'
+                        using_line += '            break;\n'
+                        using_line += '        }\n'
+                        using_line += '        pPrev = pTrav;\n'
+                        using_line += '        pTrav = pTrav->pNext;\n'
+                        using_line += '    }\n'
+                    elif 'GlobalOption' in proto.name:
                         using_line = ''
-                    if 'DestroyDevice' in proto.name:
-                        destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pObjLLHead;\n    while (pTrav) {\n'
-                        destroy_line += '        printf("OBJ ERROR : %s object %p has not been destroyed (was used %lu times).\\n", pTrav->objType, pTrav->pObj, pTrav->numUses);\n'
-                        destroy_line += '        pTrav = pTrav->pNext;\n    }\n'
+                    else:
+                        using_line = '    ll_increment_use_count((XGL_VOID*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                    if 'Create' in proto.name or 'Alloc' in proto.name:
+                        create_line = '    ll_insert_obj((XGL_VOID*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*')])
+                    if 'DestroyObject' in proto.name:
+                        destroy_line = '    ll_destroy_obj((XGL_VOID*)%s);\n' % (param0_name)
+                        using_line = ''
+                    else:
+                        if 'Destroy' in proto.name or 'Free' in proto.name:
+                            destroy_line = '    ll_remove_obj_type((XGL_VOID*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                            using_line = ''
+                        if 'DestroyDevice' in proto.name:
+                            destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
+                            destroy_line += '        char str[1024];\n'
+                            destroy_line += '        sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
+                            destroy_line += '        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
+                            destroy_line += '        pTrav = pTrav->pNextGlobal;\n    }\n'
                     ret_val = ''
                     stmt = ''
                     if proto.ret != "XGL_VOID":
@@ -291,7 +338,42 @@ class Subcommand(object):
 
         return "\n\n".join(funcs)
 
-    def _generate_layer_gpa_function(self, prefix="xgl"):
+    def _generate_extensions(self):
+        exts = []
+        exts.append('XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)')
+        exts.append('{')
+        exts.append('    return (type == XGL_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];')
+        exts.append('}')
+        exts.append('')
+        exts.append('XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray)')
+        exts.append('{')
+        exts.append("    // This bool flags if we're pulling all objs or just a single class of objs")
+        exts.append('    XGL_BOOL bAllObjs = (type == XGL_OBJECT_TYPE_ANY);')
+        exts.append('    // Check the count first thing')
+        exts.append('    XGL_UINT64 maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];')
+        exts.append('    if (objCount > maxObjCount) {')
+        exts.append('        char str[1024];')
+        exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_XGL_OBJECT_TYPE(type));')
+        exts.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_OBJCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
+        exts.append('        return XGL_ERROR_INVALID_VALUE;')
+        exts.append('    }')
+        exts.append('    objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];')
+        exts.append('    for (XGL_UINT64 i = 0; i < objCount; i++) {')
+        exts.append('        if (!pTrav) {')
+        exts.append('            char str[1024];')
+        exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_XGL_OBJECT_TYPE(type), maxObjCount, i, objCount);')
+        exts.append('            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
+        exts.append('            return XGL_ERROR_UNKNOWN;')
+        exts.append('        }')
+        exts.append('        memcpy(&pObjNodeArray[i], pTrav, sizeof(OBJTRACK_NODE));')
+        exts.append('        pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;')
+        exts.append('    }')
+        exts.append('    return XGL_SUCCESS;')
+        exts.append('}')
+
+        return "\n".join(exts)
+
+    def _generate_layer_gpa_function(self, prefix="xgl", extensions=[]):
         func_body = []
         func_body.append("XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)\n"
                          "{\n"
@@ -302,6 +384,10 @@ class Subcommand(object):
                          "    pthread_once(&tabOnce, initLayerTable);\n\n"
                          '    if (!strncmp("xglGetProcAddr", (const char *) funcName, sizeof("xglGetProcAddr")))\n'
                          '        return xglGetProcAddr;')
+        if 0 != len(extensions):
+            for ext_name in extensions:
+                func_body.append('    else if (!strncmp("%s", (const char *) funcName, sizeof("%s")))\n'
+                                 '        return %s;' % (ext_name, ext_name, ext_name))
         for name in xgl.icd_dispatch_table:
             if name == "GetProcAddr":
                 continue
@@ -387,63 +473,191 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>')
-        header_txt.append('#include "xglLayer.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;')
-        header_txt.append('static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\nstatic long long unsigned int object_track_index = 0;\n')
-        header_txt.append('typedef struct _objNode {')
-        header_txt.append('    XGL_VOID        *pObj;')
-        header_txt.append('    const char      *objType;')
-        header_txt.append('    uint64_t        numUses;')
-        header_txt.append('    struct _objNode *pNext;')
-        header_txt.append('} objNode;\n')
-        header_txt.append('static objNode *pObjLLHead = NULL;\n')
-        header_txt.append('static void ll_insert_obj(XGL_VOID* pObj, const char* type) {')
-        header_txt.append('    objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));')
-        header_txt.append('    pNewObjNode->pObj = pObj;')
-        header_txt.append('    pNewObjNode->objType = type;')
-        header_txt.append('    pNewObjNode->numUses = 0;')
-        header_txt.append('    pNewObjNode->pNext = pObjLLHead;')
-        header_txt.append('    pObjLLHead = pNewObjNode;')
-        header_txt.append('}\n')
-        header_txt.append('static void ll_increment_use_count(XGL_VOID* pObj) {')
-        header_txt.append('    objNode *pTrav = pObjLLHead;')
-        header_txt.append('    while (pTrav) {')
-        header_txt.append('        if (pTrav->pObj == pObj) {')
-        header_txt.append('            pTrav->numUses++;')
-        header_txt.append('            return;')
+        header_txt.append('#include "object_track.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;')
+        header_txt.append('static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\nstatic long long unsigned int object_track_index = 0;')
+        header_txt.append('// Ptr to LL of dbg functions')
+        header_txt.append('static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;')
+        header_txt.append('// Utility function to handle reporting')
+        header_txt.append('//  If callbacks are enabled, use them, otherwise use printf')
+        header_txt.append('static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
+        header_txt.append('    XGL_VALIDATION_LEVEL validationLevel,')
+        header_txt.append('    XGL_BASE_OBJECT      srcObject,')
+        header_txt.append('    XGL_SIZE             location,')
+        header_txt.append('    XGL_INT              msgCode,')
+        header_txt.append('    const XGL_CHAR*      pLayerPrefix,')
+        header_txt.append('    const XGL_CHAR*      pMsg)')
+        header_txt.append('{')
+        header_txt.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;')
+        header_txt.append('    if (pTrav) {')
+        header_txt.append('        while (pTrav) {')
+        header_txt.append('            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);')
+        header_txt.append('            pTrav = pTrav->pNext;')
         header_txt.append('        }')
-        header_txt.append('        pTrav = pTrav->pNext;')
         header_txt.append('    }')
-        header_txt.append('    // If we do not find obj, insert it and then intrement count')
-        header_txt.append('    printf("OBJ WARN : Unable to increment count for obj %p, will add to list as UNKNOWN type and increment count\\n", pObj);')
-        header_txt.append('    ll_insert_obj(pObj, "UNKNOWN");')
-        header_txt.append('    ll_increment_use_count(pObj);')
-        header_txt.append('}')
-        header_txt.append('static uint64_t ll_get_obj_uses(XGL_VOID* pObj) {')
-        header_txt.append('    objNode *pTrav = pObjLLHead;')
-        header_txt.append('    while (pTrav) {')
-        header_txt.append('        if (pTrav->pObj == pObj) {')
-        header_txt.append('            return pTrav->numUses;')
+        header_txt.append('    else {')
+        header_txt.append('        switch (msgType) {')
+        header_txt.append('            case XGL_DBG_MSG_ERROR:')
+        header_txt.append('                printf("{%s}ERROR : %s\\n", pLayerPrefix, pMsg);')
+        header_txt.append('                break;')
+        header_txt.append('            case XGL_DBG_MSG_WARNING:')
+        header_txt.append('                printf("{%s}WARN : %s\\n", pLayerPrefix, pMsg);')
+        header_txt.append('                break;')
+        header_txt.append('            case XGL_DBG_MSG_PERF_WARNING:')
+        header_txt.append('                printf("{%s}PERF_WARN : %s\\n", pLayerPrefix, pMsg);')
+        header_txt.append('                break;')
+        header_txt.append('            default:')
+        header_txt.append('                printf("{%s}INFO : %s\\n", pLayerPrefix, pMsg);')
+        header_txt.append('                break;')
         header_txt.append('        }')
-        header_txt.append('        pTrav = pTrav->pNext;')
+        header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('// We maintain a "Global" list which links every object and a')
+        header_txt.append('//  per-Object list which just links objects of a given type')
+        header_txt.append('// The object node has both pointers so the actual nodes are shared between the two lists')
+        header_txt.append('typedef struct _objNode {')
+        header_txt.append('    OBJTRACK_NODE   obj;')
+        header_txt.append('    struct _objNode *pNextObj;')
+        header_txt.append('    struct _objNode *pNextGlobal;')
+        header_txt.append('} objNode;')
+        header_txt.append('static objNode *pObjectHead[XGL_NUM_OBJECT_TYPE] = {0};')
+        header_txt.append('static objNode *pGlobalHead = NULL;')
+        header_txt.append('static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};')
+        header_txt.append('static uint64_t numTotalObjs = 0;')
+        header_txt.append('// Debug function to print global list and each individual object list')
+        header_txt.append('static void ll_print_lists()')
+        header_txt.append('{')
+        header_txt.append('    objNode* pTrav = pGlobalHead;')
+        header_txt.append('    printf("=====GLOBAL OBJECT LIST (%lu total objs):\\n", numTotalObjs);')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextGlobal);')
+        header_txt.append('        pTrav = pTrav->pNextGlobal;')
+        header_txt.append('    }')
+        header_txt.append('    for (uint32_t i = 0; i < XGL_NUM_OBJECT_TYPE; i++) {')
+        header_txt.append('        pTrav = pObjectHead[i];')
+        header_txt.append('        if (pTrav) {')
+        header_txt.append('            printf("=====%s OBJECT LIST (%lu objs):\\n", string_XGL_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);')
+        header_txt.append('            while (pTrav) {')
+        header_txt.append('                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextObj);')
+        header_txt.append('                pTrav = pTrav->pNextObj;')
+        header_txt.append('            }')
+        header_txt.append('        }')
+        header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('static void ll_insert_obj(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('    objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));')
+        header_txt.append('    pNewObjNode->obj.pObj = pObj;')
+        header_txt.append('    pNewObjNode->obj.objType = objType;')
+        header_txt.append('    pNewObjNode->obj.numUses = 0;')
+        header_txt.append('    // insert at front of global list')
+        header_txt.append('    pNewObjNode->pNextGlobal = pGlobalHead;')
+        header_txt.append('    pGlobalHead = pNewObjNode;')
+        header_txt.append('    // insert at front of object list')
+        header_txt.append('    pNewObjNode->pNextObj = pObjectHead[objType];')
+        header_txt.append('    pObjectHead[objType] = pNewObjNode;')
+        header_txt.append('    // increment obj counts')
+        header_txt.append('    numObjs[objType]++;')
+        header_txt.append('    numTotalObjs++;')
+        header_txt.append('    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    //ll_print_lists();')
+        header_txt.append('}')
+        header_txt.append('// Traverse global list and return type for given object')
+        header_txt.append('static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {')
+        header_txt.append('    objNode *pTrav = pGlobalHead;')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == object)')
+        header_txt.append('            return pTrav->obj.objType;')
+        header_txt.append('        pTrav = pTrav->pNextGlobal;')
+        header_txt.append('    }')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Attempting look-up on obj %p but it is NOT in the global list!", (void*)object);')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, OBJTRACK_MISSING_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    return XGL_OBJECT_TYPE_UNKNOWN;')
+        header_txt.append('}')
+        header_txt.append('static uint64_t ll_get_obj_uses(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            return pTrav->obj.numUses;')
+        header_txt.append('        }')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
         header_txt.append('    return 0;')
         header_txt.append('}')
-        header_txt.append('static void ll_remove_obj(XGL_VOID* pObj) {')
-        header_txt.append('    objNode *pTrav = pObjLLHead;')
-        header_txt.append('    objNode *pPrev = pObjLLHead;')
+        header_txt.append('static void ll_increment_use_count(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
-        header_txt.append('        if (pTrav->pObj == pObj) {')
-        header_txt.append('            pPrev->pNext = pTrav->pNext;')
-        header_txt.append('            if (pObjLLHead == pTrav)')
-        header_txt.append('                pObjLLHead = pTrav->pNext;')
-        header_txt.append('            printf("OBJ_STAT Removed %s obj %p that was used %lu times.\\n", pTrav->objType, pTrav->pObj, pTrav->numUses);')
-        header_txt.append('            free(pTrav);')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            pTrav->obj.numUses++;')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);')
+        header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('            return;')
+        header_txt.append('        }')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
+        header_txt.append('    }')
+        header_txt.append('    // If we do not find obj, insert it and then increment count')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('')
+        header_txt.append('    ll_insert_obj(pObj, objType);')
+        header_txt.append('    ll_increment_use_count(pObj, objType);')
+        header_txt.append('}')
+        header_txt.append('// We usually do not know Obj type when we destroy it so have to fetch')
+        header_txt.append('//  Type from global list w/ ll_destroy_obj()')
+        header_txt.append('//   and then do the full removal from both lists w/ ll_remove_obj_type()')
+        header_txt.append('static void ll_remove_obj_type(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('    objNode *pPrev = pObjectHead[objType];')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            pPrev->pNextObj = pTrav->pNextObj;')
+        header_txt.append('            // update HEAD of Obj list as needed')
+        header_txt.append('            if (pObjectHead[objType] == pTrav)')
+        header_txt.append('                pObjectHead[objType] = pTrav->pNextObj;')
+        header_txt.append('            assert(numObjs[objType] > 0);')
+        header_txt.append('            numObjs[objType]--;')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "OBJ[%llu] : DESTROY %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);')
+        header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            return;')
         header_txt.append('        }')
         header_txt.append('        pPrev = pTrav;')
-        header_txt.append('        pTrav = pTrav->pNext;')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
-        header_txt.append('    printf("ERROR : Unable to remove obj %p\\n", pObj);')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list", pObj, string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
+        header_txt.append('}')
+        header_txt.append('// Parse global list to find obj type, then remove obj from obj type list, finally')
+        header_txt.append('//   remove obj from global list')
+        header_txt.append('static void ll_destroy_obj(XGL_VOID* pObj) {')
+        header_txt.append('    objNode *pTrav = pGlobalHead;')
+        header_txt.append('    objNode *pPrev = pGlobalHead;')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            ll_remove_obj_type(pObj, pTrav->obj.objType);')
+        header_txt.append('            pPrev->pNextGlobal = pTrav->pNextGlobal;')
+        header_txt.append('            // update HEAD of global list if needed')
+        header_txt.append('            if (pGlobalHead == pTrav)')
+        header_txt.append('                pGlobalHead = pTrav->pNextGlobal;')
+        header_txt.append('            free(pTrav);')
+        header_txt.append('            assert(numTotalObjs > 0);')
+        header_txt.append('            numTotalObjs--;')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));')
+        header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('            return;')
+        header_txt.append('        }')
+        header_txt.append('        pPrev = pTrav;')
+        header_txt.append('        pTrav = pTrav->pNextGlobal;')
+        header_txt.append('    }')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to remove obj %p. Was it created? Has it already been destroyed?", pObj);')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_DESTROY_OBJECT_FAILED, "OBJTRACK", str);')
         header_txt.append('}')
 
         return "\n".join(header_txt)
@@ -451,7 +665,8 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "objecttracker"),
-                self._generate_layer_gpa_function()]
+                self._generate_extensions(),
+                self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
 
         return "\n\n".join(body)
     

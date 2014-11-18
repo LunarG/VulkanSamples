@@ -23,6 +23,18 @@
  */
 
 #include "xglLayer.h"
+// Object Tracker ERROR codes
+typedef enum _OBJECT_TRACK_ERROR
+{
+    OBJTRACK_NONE                          = 0, // Used for INFO & other non-error messages
+    OBJTRACK_UNKNOWN_OBJECT                = 1, // Updating uses of object that's not in global object list
+    OBJTRACK_INTERNAL_ERROR                = 2, // Bug with data tracking within the layer
+    OBJTRACK_DESTROY_OBJECT_FAILED         = 3, // Couldn't find object to be destroyed
+    OBJTRACK_MISSING_OBJECT                = 4, // Attempted look-up on object that isn't in global object list
+    OBJTRACK_OBJECT_LEAK                   = 5, // OBJECT was not correctly freed/destroyed
+    OBJTRACK_OBJCOUNT_MAX_EXCEEDED         = 6, // Request for Object data in excess of max obj count
+} OBJECT_TRACK_ERROR;
+
 
 // Object type enum
 typedef enum _XGL_OBJECT_TYPE
@@ -120,3 +132,6 @@ typedef struct _OBJTRACK_NODE {
 // prototype for extension functions
 XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type);
 XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray);
+// Func ptr typedefs
+typedef XGL_UINT64 (*OBJ_TRACK_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
+typedef XGL_RESULT (*OBJ_TRACK_GET_OBJECTS)(XGL_OBJECT_TYPE, XGL_UINT64, OBJTRACK_NODE*);

@@ -41,6 +41,7 @@ public:
     void DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem);
 
     XGL_DEVICE device() {return m_device->device();}
+    XGL_PHYSICAL_GPU gpu() {return objs[0];}
     void CreateShader(XGL_PIPELINE_SHADER_STAGE stage, const char *shader_code, XGL_SHADER *pshader);
     void InitPipeline();
     void InitMesh( XGL_UINT32 numVertices, XGL_GPU_SIZE vbStride, const void* vertices );
