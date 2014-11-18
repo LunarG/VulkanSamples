@@ -169,6 +169,7 @@ class Subcommand(object):
                                  '    pthread_once(&tabOnce, initLayerTable);\n'
                                  '    %snextTable.%s;\n'
                                  '    printf("Completed layered %s\\n");\n'
+                                 '    fflush(stdout);\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
                 elif "apidump" in layer:
@@ -208,7 +209,7 @@ class Subcommand(object):
                     log_func = log_func.strip(', ')
                     if proto.ret != "XGL_VOID":
                         log_func += ') = %s\\n"'
-                        print_vals += ', string_XGL_RESULT(result)' 
+                        print_vals += ', string_XGL_RESULT(result)'
                     else:
                         log_func += ')\\n"'
                     log_func = '%s%s);' % (log_func, print_vals)
@@ -222,6 +223,7 @@ class Subcommand(object):
                                 log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                             else:
                                 log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                log_func += '\n        fflush(stdout);\n'
                             log_func += '\n        free(pTmpStr);\n    }'
                     if proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
@@ -669,7 +671,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
 
         return "\n\n".join(body)
-    
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
