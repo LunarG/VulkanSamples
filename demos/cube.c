@@ -1189,13 +1189,17 @@ static void demo_run(struct demo *demo)
         if (event) {
             demo_handle_event(demo, event);
             free(event);
-        }
+        } else if (!demo->pause){
 
         // Wait for work to finish before updating MVP.
         xglDeviceWaitIdle(demo->device);
         demo_update_data_buffer(demo);
 
-        demo_draw(demo);
+            demo_draw(demo);
+
+            // Wait for work to finish before updating MVP.
+            xglDeviceWaitIdle(demo->device);
+        }
     }
 }
 
