@@ -56,6 +56,8 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
 {
     int nSlots = m_memorySlots.size() + m_imageSlots.size() + m_samplerSlots.size();
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( nSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    memset(slotInfo,0,nSlots*sizeof(XGL_DESCRIPTOR_SLOT_INFO));
+
     for (int i=0; i<nSlots; i++)
     {
         slotInfo[i].slotObjectType = XGL_SLOT_UNUSED;
@@ -147,7 +149,10 @@ protected:
     XGL_IMAGE_VIEW             m_textureView;
 
 };
-XglTextureObj::XglTextureObj(XglDevice *device)
+XglTextureObj::XglTextureObj(XglDevice *device):
+    m_texture(XGL_NULL_HANDLE),
+    m_textureMem(XGL_NULL_HANDLE),
+    m_textureView(XGL_NULL_HANDLE)
 {
     m_device = device;
     const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
@@ -157,6 +162,7 @@ XglTextureObj::XglTextureObj(XglDevice *device)
     XGL_RESULT err;
     XGL_UINT i;
 
+    memset(&m_textureViewInfo,0,sizeof(m_textureViewInfo));
 
     m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
 
@@ -318,6 +324,9 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     m_device = device;
     m_numVertices = constantCount;
     m_stride = constantSize;
+
+    memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
+    memset(&m_constantBufferMem,0,sizeof(m_constantBufferMem));
 
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = constantCount * constantSize;
