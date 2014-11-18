@@ -1140,7 +1140,7 @@ static void demo_handle_event(struct demo *demo,
     u_int8_t event_code = event->response_type & 0x7f;
     switch (event_code) {
     case XCB_EXPOSE:
-        demo_draw(demo);
+        // TODO: Resize window
         break;
     case XCB_CLIENT_MESSAGE:
         if((*(xcb_client_message_event_t*)event).data.data32[0] ==
@@ -1181,20 +1181,21 @@ static void demo_run(struct demo *demo)
     while (!demo->quit) {
         xcb_generic_event_t *event;
 
-        event = xcb_poll_for_event(demo->connection);
+        if (demo->pause) {
+            event = xcb_wait_for_event(demo->connection);
+        } else {
+            event = xcb_poll_for_event(demo->connection);
+        }
         if (event) {
             demo_handle_event(demo, event);
             free(event);
-        } else if (!demo->pause){
-            // Wait for work to finish before updating MVP.
-            xglDeviceWaitIdle(demo->device);
-
-            demo_update_data_buffer(demo);
-
-            demo_update_data_buffer(demo);
-
-            demo_draw(demo);
         }
+
+        // Wait for work to finish before updating MVP.
+        xglDeviceWaitIdle(demo->device);
+        demo_update_data_buffer(demo);
+
+        demo_draw(demo);
     }
 }
 
