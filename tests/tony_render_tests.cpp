@@ -1102,7 +1102,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     RotateTriangleVSUniform(Projection, View, Model, MVPBuffer);
 }
 
-TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
+TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1152,7 +1152,6 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
 
-    // vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_VERTEX_INPUT, (XGL_OBJECT) &meshBuffer.m_constantBufferView);
     vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &MVPBuffer.m_constantBufferView);
 
     XglPipelineObj pipelineobj(m_device);
@@ -1161,7 +1160,6 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
 
     XglDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AttachMemoryView(&MVPBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer.m_constantBufferMem);
     m_memoryRefManager.AddMemoryRef(&MVPBuffer.m_constantBufferMem);
@@ -1248,7 +1246,65 @@ TEST_F(XglRenderTest, VSTexture)
 
 }
 
-TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
+TEST_F(XglRenderTest, FSTriangle)
+{
+    // The expected result from this test is a red and green checkered triangle
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec2 samplePos;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 1.0, 0.0);\n"
+            "      positions[2] = vec2( 1.0, 1.0);\n"
+            "   samplePos = positions[gl_VertexID % 3];\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec2 samplePos;\n"
+            "layout (binding = 0) uniform sampler2D surface;\n"
+            "layout (location=0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   vec4 texColor = textureLod(surface, samplePos, 0.0);\n"
+            "   outColor = texColor;\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
+    XglSamplerObj sampler(m_device);
+    XglTextureObj texture(m_device);
+
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
+    ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachImageView(&texture.m_textureViewInfo);
+    descriptorSet.AttachSampler(&sampler.m_sampler);
+
+    m_memoryRefManager.AddMemoryRef(&texture.m_textureMem);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+}
+
+TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1258,14 +1314,13 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
             "    mat4 mvp;\n"
             "} myBufferVals;\n"
             "layout (location=0) in vec4 pos;\n"
-            "layout (location=1) in vec4 inColor;\n"
-            "layout (location=0) out vec2 UVout;\n"
+            "layout (location=0) out vec2 UV;\n"
             "void main() {\n"
             "   vec2 positions[3];"
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 0.25, 0.1);\n"
             "      positions[2] = vec2( 0.1, 0.25);\n"
-            "   UVout = positions[gl_VertexID % 3];\n"
+            "   UV = positions[gl_VertexID % 3];\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
             "}\n";
 
@@ -1275,10 +1330,9 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (binding=0) uniform sampler2D surface;\n"
             "layout (location=0) out vec4 outColor;\n"
-            "layout (location=0) in vec2 UVin;\n"
+            "layout (location=0) in vec2 UV;\n"
             "void main() {\n"
-            "    outColor= textureLod(surface, UVin, 0.0);\n"
-            "    outColor= vec4(1.0,0.0,0.0,1.0);\n"
+            "    outColor= textureLod(surface, UV, 0.0);\n"
             "}\n";
     glm::mat4 Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
 
@@ -1312,7 +1366,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
 
     // vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_VERTEX_INPUT, (XGL_OBJECT) &meshBuffer.m_constantBufferView);
     vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &mvpBuffer.m_constantBufferView);
-    // ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
     ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
 
     XglPipelineObj pipelineobj(m_device);
@@ -1320,8 +1374,9 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+
     descriptorSet.AttachMemoryView(&mvpBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
+    // descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
     descriptorSet.AttachImageView(&texture.m_textureViewInfo);
     descriptorSet.AttachSampler(&sampler.m_sampler);
 
