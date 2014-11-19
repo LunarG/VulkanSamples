@@ -366,11 +366,13 @@ void XglTestFramework::RecordImage(XglImage *image)
     if (strcmp(test_info->name(), m_testName.c_str())) {
         filestream << test_info->name();
         m_testName.assign(test_info->name());
-        m_frameNum = 1;
+        m_frameNum = 2;
+        filename = filestream.str();
     }
     else {
         filestream << test_info->name() << "-" << m_frameNum;
         m_frameNum++;
+        filename = filestream.str();
     }
 
 
