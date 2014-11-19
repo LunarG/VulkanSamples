@@ -80,7 +80,7 @@ BOOL glv_init_time()
 
 uint64_t glv_get_time()
 {
-#if defined(VOGL_USE_LINUX_API)
+#if defined(GLV_USE_LINUX_API)
     extern int g_reliable_rdtsc;
     if (g_reliable_rdtsc == -1)
         init_rdtsc();
