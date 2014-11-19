@@ -1,6 +1,5 @@
-# the use of CMAKE_CURRENT_SOURCE_DIR pollutes the source tree
 add_custom_command(OUTPUT icd-dispatch-table.h
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-dispatch-table > ${CMAKE_CURRENT_SOURCE_DIR}/icd-dispatch-table.h
+	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-dispatch-table > icd-dispatch-table.h
 	           DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py
 	                   ${PROJECT_SOURCE_DIR}/xgl.py)
 
@@ -24,6 +23,12 @@ if (UNIX)
 endif()
 
 pkg_check_modules(ICD REQUIRED ${ICD_REQUIRED_MODULES})
+
+# icd-dispatch-table.h was generated in ${CMAKE_CURRENT_BINARY_DIR}
+set(ICD_INCLUDE_DIRS
+	${ICD_INCLUDE_DIRS}
+	${CMAKE_CURRENT_BINARY_DIR}
+	CACHE INTERNAL "")
 
 include_directories(
 	${ICD_INCLUDE_DIRS}
