@@ -219,8 +219,13 @@ void glv_PrintTraceMessage(int _level, const char* _body)
         printf("%s: %s", levelHeader, _body);
     }
 
-#if defined(_DEBUG) && defined(WIN32)
+#if defined(_DEBUG)
+#if defined(WIN32)
     OutputDebugString(_body);
+#elif defined(PLATFORM_LINUX)
+    if (g_pLogFile != NULL)
+        printf("%s: %s", levelHeader, _body);
+#endif
 #endif
 
 }
