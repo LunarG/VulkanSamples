@@ -545,6 +545,7 @@ void XglRenderTest::DrawTriangleTest()
     }
     ASSERT_XGL_SUCCESS(err);
 
+    memset(&vs_stage, 0, sizeof(vs_stage));
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
@@ -588,6 +589,7 @@ void XglRenderTest::DrawTriangleTest()
     }
     ASSERT_XGL_SUCCESS(err);
 
+    memset(&ps_stage, 0, sizeof(ps_stage));
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;

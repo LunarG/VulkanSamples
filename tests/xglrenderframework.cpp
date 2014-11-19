@@ -362,7 +362,7 @@ void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADE
     xglAttachMemoryViewDescriptors( m_rsrcDescSet, 0, 1, &m_vtxBufferView );
     xglEndDescriptorSetUpdate( m_rsrcDescSet );
 #endif
-
+    memset(&vs_stage, 0, sizeof(vs_stage));
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
@@ -373,6 +373,7 @@ void XglRenderFramework::CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADE
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
+    memset(&ps_stage, 0, sizeof(ps_stage));
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;

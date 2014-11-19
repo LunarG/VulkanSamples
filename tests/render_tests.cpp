@@ -1020,6 +1020,7 @@ void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SH
     // bind memory to the descriptor set
     err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
 
+    memset(&vs_stage, 0, sizeof(vs_stage));
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
@@ -1030,6 +1031,7 @@ void XglRenderTest::CreatePipelineWithVertexFetch(XGL_PIPELINE* pipeline, XGL_SH
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
+    memset(&ps_stage, 0, sizeof(ps_stage));
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
@@ -1147,6 +1149,7 @@ void XglRenderTest::CreatePipelineWithVertexFetchAndMVP(XGL_PIPELINE* pipeline, 
     slotInfo[0].shaderEntityIndex = 0;
     slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
 
+    memset(&vs_stage, 0, sizeof(vs_stage));
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
@@ -1158,6 +1161,7 @@ void XglRenderTest::CreatePipelineWithVertexFetchAndMVP(XGL_PIPELINE* pipeline, 
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
+    memset(&ps_stage, 0, sizeof(ps_stage));
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
@@ -1270,6 +1274,7 @@ void XglRenderTest::CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER v
     slotInfo[0].shaderEntityIndex = 0;
     slotInfo[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
 
+    memset(&vs_stage, 0, sizeof(vs_stage));
     vs_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage.pNext = XGL_NULL_HANDLE;
     vs_stage.shader.stage = XGL_SHADER_STAGE_VERTEX;
@@ -1281,6 +1286,7 @@ void XglRenderTest::CreatePipelineVSUniform(XGL_PIPELINE* pipeline, XGL_SHADER v
     vs_stage.shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     vs_stage.shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
+    memset(&ps_stage, 0, sizeof(ps_stage));
     ps_stage.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage.pNext = &vs_stage;
     ps_stage.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
