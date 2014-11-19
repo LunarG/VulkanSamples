@@ -11,11 +11,9 @@ git clone https://github.com/KhronosGroup/GL-Next.git
 ###External dependencies###
 * XGL
   XGL headers retrieved in place (tools/glave/../../include) by Cmake
-  XGL library retrieved in place (tools/glave/../../<build_dir>/loader by Cmake
+  XGL library retrieved in place (tools/glave/../../\<build_dir\>/loader by Cmake
 * Python 3.4  (Ubuntu package python3.4-dev)
 * Qt 5        (Ubuntu package qt5-default) (only needed for glave debugger)
-* Mantle (headers and library from AMD's Mantle SDK which is under NDA)
-  * Place in src/thirdparty/mantle ( ONLY needed if using Mantle API)
 
 ###Building on Windows###
 ```
@@ -40,8 +38,14 @@ make
 ###Building on Linux (QtCreator)###
 ```
 open tools/glave/CMakeLists.txt with QtCreater
+
+For Debug Builds:
 Cmake options: -DCMAKE_BUILD_TYPE=Debug -DBUILD_X64=On
-Change build directory from the suggested 'gl5-debugger' to 'glv_build' (if you want to maintain consistency with the Windows build)
+Change build directory from the suggested 'GL-Next/tools/glave-build/' to 'GL-Next/dbuild/tools/glave'
+
+For Release Builds:
+Cmake Options: -DCMAKE_BUILD_TYPE=Release -DBUILD_X64=On
+Change build directory from the suggested 'GL-Next/tools/glave-build/' to 'GL-Next/build/tools/glave'
 ```
 
 ###Running tracer###
