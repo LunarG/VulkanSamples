@@ -40,6 +40,7 @@
 
 #define GLVTRACER_EXPORT __declspec(dllexport)
 #define GLVTRACER_STDCALL __stdcall
+#define GLVTRACER_CDECL __cdecl
 #define GLVTRACER_EXIT void __cdecl
 #define GLVTRACER_ENTRY void
 #define GLVTRACER_LEAVE void
@@ -48,6 +49,7 @@
 
 #define GLVTRACER_EXPORT __attribute__ ((visibility ("default")))
 #define GLVTRACER_STDCALL
+#define GLVTRACER_CDECL
 #define GLVTRACER_EXIT void
 #define GLVTRACER_ENTRY void __attribute__ ((constructor))
 #define GLVTRACER_LEAVE void __attribute__ ((destructor))

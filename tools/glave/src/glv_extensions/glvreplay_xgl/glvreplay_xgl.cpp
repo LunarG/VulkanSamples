@@ -29,7 +29,7 @@ ApiReplay* g_pReplayer = NULL;
 
 extern "C"
 {
-GLVTRACER_EXPORT int __cdecl Initialize(glv_replay::Display* pDisplay, unsigned int debugLevel)
+GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, unsigned int debugLevel)
 {
     try
     {
@@ -45,7 +45,7 @@ GLVTRACER_EXPORT int __cdecl Initialize(glv_replay::Display* pDisplay, unsigned 
     return result;
 }
 
-GLVTRACER_EXPORT void __cdecl Deinitialize()
+GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
 {
     if (g_pReplayer != NULL)
     {
@@ -54,7 +54,7 @@ GLVTRACER_EXPORT void __cdecl Deinitialize()
     }
 }
 
-GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT __cdecl Replay(glv_trace_packet_header* pPacket)
+GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_packet_header* pPacket)
 {
     glv_replay::GLV_REPLAY_RESULT result = glv_replay::GLV_REPLAY_ERROR;
     if (g_pReplayer != NULL)
