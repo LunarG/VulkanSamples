@@ -34,7 +34,6 @@ message("")
 
 add_subdirectory(src/thirdparty/getopt)
 add_subdirectory(src/glvcommon)
-add_subdirectory(src/glvinception)
 add_subdirectory(src/glvtrace)
 add_subdirectory(src/glvreplay)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
