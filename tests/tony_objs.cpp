@@ -1,26 +1,4 @@
-class XglDescriptorSetObj
-{
-public:
-    XglDescriptorSetObj(XglDevice *device);
-    void AttachMemoryView( XGL_MEMORY_VIEW_ATTACH_INFO* memoryView);
-    void AttachSampler( XGL_SAMPLER* sampler);
-    void AttachImageView( XGL_IMAGE_VIEW_ATTACH_INFO* imageView);
-    void BindCommandBuffer(XGL_CMD_BUFFER commandBuffer);
-    XGL_DESCRIPTOR_SLOT_INFO * GetSlotInfo(vector<int>slots, vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types, vector<XGL_OBJECT>objs );
-
-protected:
-    XGL_DESCRIPTOR_SET_CREATE_INFO       m_descriptorInfo;
-    XGL_DESCRIPTOR_SET                   m_rsrcDescSet;
-    XGL_GPU_MEMORY                       m_descriptor_set_mem;
-    XglDevice                           *m_device;
-    int                                  m_nextSlot;
-    vector<int>                          m_memorySlots;
-    vector<XGL_MEMORY_VIEW_ATTACH_INFO*> m_memoryViews;
-    vector<int>                          m_samplerSlots;
-    vector<XGL_SAMPLER*>                 m_samplers;
-    vector<int>                          m_imageSlots;
-    vector<XGL_IMAGE_VIEW_ATTACH_INFO*>  m_imageViews;
-};
+#include "xglrenderframework.h"
 
 XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
 {
@@ -106,7 +84,7 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     XGL_RESULT err;
 
     // Create descriptor set for a uniform resource
-    m_descriptorInfo = {};
+    memset(&m_descriptorInfo,0,sizeof(m_descriptorInfo));
     m_descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
     m_descriptorInfo.slots = m_nextSlot;
 
@@ -136,19 +114,7 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 }
 
-class XglTextureObj
-{
-public:
-    XglTextureObj(XglDevice *device);
-    XGL_IMAGE                  m_texture;
-    XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
-    XGL_GPU_MEMORY             m_textureMem;
 
-protected:
-    XglDevice                 *m_device;
-    XGL_IMAGE_VIEW             m_textureView;
-
-};
 XglTextureObj::XglTextureObj(XglDevice *device):
     m_texture(XGL_NULL_HANDLE),
     m_textureMem(XGL_NULL_HANDLE),
@@ -268,23 +234,14 @@ XglTextureObj::XglTextureObj(XglDevice *device):
 
 }
 
-class XglSamplerObj
-{
-public:
-    XglSamplerObj(XglDevice *device);
-    XGL_SAMPLER m_sampler;
 
-protected:
-     XGL_SAMPLER_CREATE_INFO m_samplerCreateInfo = {};
-     XglDevice *m_device;
-
-};
 
 XglSamplerObj::XglSamplerObj(XglDevice *device)
 {
     XGL_RESULT err = XGL_SUCCESS;
 
     m_device = device;
+    memset(&m_samplerCreateInfo,0,sizeof(m_samplerCreateInfo));
     m_samplerCreateInfo.sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     m_samplerCreateInfo.magFilter = XGL_TEX_FILTER_NEAREST;
     m_samplerCreateInfo.minFilter = XGL_TEX_FILTER_NEAREST;
@@ -303,19 +260,6 @@ XglSamplerObj::XglSamplerObj(XglDevice *device)
 
 }
 
-class XglConstantBufferObj
-{
-public:
-    XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data);
-    void SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_STATE newState);
-    XGL_MEMORY_VIEW_ATTACH_INFO     m_constantBufferView;
-    XGL_GPU_MEMORY                  m_constantBufferMem;
-
-protected:
-    XglDevice                      *m_device;
-    int                             m_numVertices;
-    int                             m_stride;
-};
 XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data)
 {
     XGL_RESULT err = XGL_SUCCESS;
@@ -390,31 +334,6 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
     ASSERT_XGL_SUCCESS(err);
 }
 
-class XglShaderObj
-{
-public:
-    XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage );
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo(XglDescriptorSetObj descriptorSet);
-    void BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XGL_OBJECT object);
-    void BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XGL_OBJECT object);
-    void BindShaderEntitySlotToSampler(int slot, XGL_OBJECT object);
-
-protected:
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO stage_info;
-    XGL_SHADER m_shader;
-    XGL_PIPELINE_SHADER_STAGE m_stage;
-    XglDevice *m_device;
-    vector<int>    m_memSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_memTypes;
-    vector<XGL_OBJECT> m_memObjs;
-    vector<int>    m_samplerSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_samplerTypes;
-    vector<XGL_OBJECT> m_samplerObjs;
-    vector<int>    m_imageSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_imageTypes;
-    vector<XGL_OBJECT> m_imageObjs;
-
-};
 
 XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescriptorSetObj descriptorSet)
 {
@@ -541,36 +460,6 @@ void XglShaderObj::CreateShaderBIL(XGL_PIPELINE_SHADER_STAGE stage,
     *pshader = shader;
 }
 #endif
-class XglPipelineObj
-{
-public:
-    XglPipelineObj(XglDevice *device);
-    void BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj descriptorSet);
-    void AddShader(XglShaderObj* shaderObj);
-    void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
-    void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
-    void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
-
-protected:
-    XGL_PIPELINE pipeline;
-    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi_state;
-    XGL_PIPELINE_IA_STATE_CREATE_INFO ia_state;
-    XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state;
-    XGL_PIPELINE_CB_STATE cb_state;
-    XGL_PIPELINE_DB_STATE_CREATE_INFO db_state;
-    XGL_FORMAT render_target_format;
-    XGL_GPU_MEMORY m_pipe_mem;
-    XglDevice *m_device;
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION *m_vi_binding;
-    int m_vi_binding_count;
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *m_vi_attribs;
-    int m_vi_attrib_count;
-    vector<XglShaderObj*> m_shaderObjs;
-    vector<XglConstantBufferObj*> m_vertexBufferObjs;
-    vector<int> m_vertexBufferBindings;
-    int m_vertexBufferCount;
-
-};
 
 XglPipelineObj::XglPipelineObj(XglDevice *device)
 {
@@ -579,46 +468,39 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_device = device;
     m_vi_attrib_count = m_vi_binding_count = m_vertexBufferCount = 0;
 
-    ia_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,  // sType
-        XGL_NULL_HANDLE,                                         // pNext
-        XGL_TOPOLOGY_TRIANGLE_LIST,                        // XGL_PRIMITIVE_TOPOLOGY
-        XGL_FALSE,                                         // disableVertexReuse
-        XGL_PROVOKING_VERTEX_LAST,                         // XGL_PROVOKING_VERTEX_CONVENTION
-        XGL_FALSE,                                         // primitiveRestartEnable
-        0                                                  // primitiveRestartIndex
-    };
+    m_ia_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
+    m_ia_state.pNext = XGL_NULL_HANDLE;
+    m_ia_state.topology = XGL_TOPOLOGY_TRIANGLE_LIST;
+    m_ia_state.disableVertexReuse = XGL_FALSE;
+    m_ia_state.provokingVertex = XGL_PROVOKING_VERTEX_LAST;
+    m_ia_state.primitiveRestartEnable = XGL_FALSE;
+    m_ia_state.primitiveRestartIndex = 0;
 
-    rs_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
-        &ia_state,
-        XGL_FALSE,                                          // depthClipEnable
-        XGL_FALSE,                                          // rasterizerDiscardEnable
-        1.0                                                 // pointSize
-    };
+    m_rs_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
+    m_rs_state.pNext = &m_ia_state;
+    m_rs_state.depthClipEnable = XGL_FALSE;
+    m_rs_state.rasterizerDiscardEnable = XGL_FALSE;
+    m_rs_state.pointSize = 1.0;
 
-    render_target_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    render_target_format.numericFormat = XGL_NUM_FMT_UNORM;
-    cb_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
-        &rs_state,
-        XGL_FALSE,                                          // alphaToCoverageEnable
-        XGL_FALSE,                                          // dualSourceBlendEnable
-        XGL_LOGIC_OP_COPY,                                  // XGL_LOGIC_OP
-        {                                                   // XGL_PIPELINE_CB_ATTACHMENT_STATE
-            {
-                XGL_FALSE,                                  // blendEnable
-                render_target_format,                        // XGL_FORMAT
-                0xF                                         // channelWriteMask
-            }
-        }
-    };
+    m_render_target_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    m_render_target_format.numericFormat = XGL_NUM_FMT_UNORM;
 
-   db_state = {
-        XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
-        &cb_state,
-        {XGL_CH_FMT_R32, XGL_NUM_FMT_DS}                    // XGL_FORMAT
-    };
+    memset(&m_cb_state,0,sizeof(m_cb_state));
+    m_cb_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
+    m_cb_state.pNext = &m_rs_state;
+    m_cb_state.alphaToCoverageEnable = XGL_FALSE;
+    m_cb_state.dualSourceBlendEnable = XGL_FALSE;
+    m_cb_state.logicOp = XGL_LOGIC_OP_COPY;
+
+    m_cb_attachment_state.blendEnable = XGL_FALSE;
+    m_cb_attachment_state.format = m_render_target_format;
+    m_cb_attachment_state.channelWriteMask = 0xF;
+    m_cb_state.attachment[0] = m_cb_attachment_state;
+
+    m_db_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
+    m_db_state.pNext = &m_cb_state,
+    m_db_state.format.channelFormat = XGL_CH_FMT_R32;
+    m_db_state.format.numericFormat = XGL_NUM_FMT_DS;
 
 
 };
@@ -650,7 +532,7 @@ void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer,
 void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj descriptorSet)
 {
     XGL_RESULT err;
-    XGL_VOID* head_ptr = &db_state;
+    XGL_VOID* head_ptr = &m_db_state;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
 
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shaderCreateInfo;
@@ -665,26 +547,24 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
 
     if (m_vi_attrib_count && m_vi_binding_count)
     {
-        vi_state = {
-            XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO, // sType;
-            head_ptr,                                            // pNext;
-            m_vi_binding_count,                                                    // bindingCount
-            m_vi_binding,                                          // pVertexBindingDescriptions;
-            m_vi_attrib_count,                                                    // attributeCount; // number of attributes
-            m_vi_attribs                                            // pVertexAttributeDescriptions;
-        };
-        head_ptr = &vi_state;
+        m_vi_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+        m_vi_state.pNext = head_ptr;
+        m_vi_state.bindingCount = m_vi_binding_count;
+        m_vi_state.pVertexBindingDescriptions = m_vi_binding;
+        m_vi_state.attributeCount = m_vi_attrib_count;
+        m_vi_state.pVertexAttributeDescriptions = m_vi_attribs;
+        head_ptr = &m_vi_state;
     }
 
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = head_ptr;
     info.flags = 0;
 
-    err = xglCreateGraphicsPipeline(m_device->device(), &info, &pipeline);
+    err = xglCreateGraphicsPipeline(m_device->device(), &info, &m_pipeline);
 
-    err = m_device->AllocAndBindGpuMemory(pipeline, "Pipeline", &m_pipe_mem);
+    err = m_device->AllocAndBindGpuMemory(m_pipeline, "Pipeline", &m_pipe_mem);
 
-    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline );
 
 
     for (int i=0; i < m_vertexBufferCount; i++)
@@ -692,22 +572,9 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
         xglCmdBindVertexData(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.mem, m_vertexBufferObjs[i]->m_constantBufferView.offset, m_vertexBufferBindings[i]);
     }
 
-
-    // xglCmdBindVertexData(m_cmdBuffer, meshBuffer.m_constantBufferView.mem, meshBuffer.m_constantBufferView.offset, 0);
 }
 
-class XglMemoryRefManager{
-public:
-    XglMemoryRefManager();
-    void AddMemoryRef(XGL_GPU_MEMORY* memoryRef);
-    XGL_MEMORY_REF* GetMemoryRefList();
-    int GetNumRefs();
 
-protected:
-    int m_numRefs;
-    vector<XGL_GPU_MEMORY*> m_bufferObjs;
-
-};
 XglMemoryRefManager::XglMemoryRefManager() {
 
 }

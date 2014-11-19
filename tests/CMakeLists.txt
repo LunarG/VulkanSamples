@@ -15,6 +15,7 @@ SET(COMMON_CPP
     xglgpu.cpp
     xgldevice.cpp
     xglimage.cpp
+    tony_objs.cpp
     xglrenderframework.cpp
     xgltestframework.cpp
    )
