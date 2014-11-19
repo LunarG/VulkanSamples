@@ -95,7 +95,7 @@ class Subcommand(object):
         pass
 
     # Return set of printf '%' qualifier and input to that qualifier
-    def _get_printf_params(self, xgl_type, name, last_create):
+    def _get_printf_params(self, xgl_type, name, output_param):
         # TODO : Need ENUM and STRUCT checks here
         if "_TYPE" in xgl_type: # TODO : This should be generic ENUM check
             return ("%s", "string_%s(%s)" % (xgl_type.strip('const ').strip('*'), name))
@@ -120,7 +120,7 @@ class Subcommand(object):
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
         if "XGL_FORMAT" == xgl_type and "format" == name:
             return ("{format.channelFormat = %s, format.numericFormat = %s}", "string_XGL_CHANNEL_FORMAT(format.channelFormat), string_XGL_NUM_FORMAT(format.numericFormat)")
-        if last_create:
+        if output_param:
             return ("%p", "(void*)*%s" % name)
         return ("%p", "(void*)%s" % name)
 
@@ -178,9 +178,11 @@ class Subcommand(object):
                     ret_val = ''
                     stmt = ''
                     cis_param_index = [] # Store list of indices when func has struct params
-                    create_func = False
-                    if 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
-                        create_func = True
+                    create_params = 0 # Num of params at end of function that are created and returned as output values
+                    if 'WsiX11CreatePresentableImage' in proto.name:
+                        create_params = -2
+                    elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
+                        create_params = -1
                     if proto.ret != "XGL_VOID":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
@@ -195,10 +197,14 @@ class Subcommand(object):
                     print_vals = ''
                     pindex = 0
                     for p in proto.params:
-                        if p.name == proto.params[-1].name and create_func: # last param of create func
-                            (pft, pfi) = self._get_printf_params(p.ty, p.name, True)
-                        else:
-                            (pft, pfi) = self._get_printf_params(p.ty, p.name, False)
+                        # TODO : Need to handle xglWsiX11CreatePresentableImage for which the last 2 params are returned vals
+                        cp = False
+                        if 0 != create_params:
+                            # If this is any of the N last params of the func, treat as output
+                            for y in range(-1, create_params-1, -1):
+                                if p.name == proto.params[y].name:
+                                    cp = True
+                        (pft, pfi) = self._get_printf_params(p.ty, p.name, cp)
                         log_func += '%s = %s, ' % (p.name, pft)
                         print_vals += ', %s' % (pfi)
                         # TODO : Just want this to be simple check for params of STRUCT type
