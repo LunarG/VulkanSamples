@@ -36,6 +36,7 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define u_popcount(u) __builtin_popcount(u)
+#define u_popcountll(u) __builtin_popcountll(u)
 
 #define STATIC_ASSERT(expr) do {            \
     (void) sizeof(char[1 - 2 * !(expr)]);   \

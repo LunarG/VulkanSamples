@@ -443,54 +443,17 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
 static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
                                        uint32_t body[13])
 {
-    const struct intel_pipeline_shader *vs = &cmd->bind.pipeline.graphics->vs;
-    const struct intel_pipeline_shader *fs = &cmd->bind.pipeline.graphics->fs;
-    XGL_UINT attr_skip, attr_count;
-    XGL_UINT vue_offset, vue_len;
-    XGL_UINT i;
-    uint32_t dw1;
+    XGL_UINT sbe_offset;
+    XGL_INT i;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    /* VS outputs VUE header and position additionally */
-    assert(vs->out_count >= fs->in_count + 2);
-    attr_skip = vs->out_count - fs->in_count;
-    attr_count = vs->out_count - attr_skip;
-    assert(fs->in_count <= 32);
+    sbe_offset = cmd->bind.pipeline.graphics->cmd_sbe_body_offset;
 
-    vue_offset = (attr_skip + 1) / 2;
-    vue_len = (attr_count + 1) / 2;
-    if (!vue_len)
-        vue_len = 1;
-
-    dw1 = fs->in_count << GEN7_SBE_DW1_ATTR_COUNT__SHIFT |
-          vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT |
-          vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
-
-    body[0] = dw1;
-
-    for (i = 0; i < 8; i++) {
-        uint16_t hi, lo;
-
-        /* no attr swizzles */
-        if (i * 2 + 1 < fs->in_count) {
-            hi = i * 2 + 1;
-            lo = i * 2;
-        } else if (i * 2 < fs->in_count) {
-            hi = 0;
-            lo = i * 2;
-        } else {
-            hi = 0;
-            lo = 0;
-        }
-
-        body[1 + i] = hi << GEN7_SBE_ATTR_HIGH__SHIFT | lo;
+    for (i = 0; i < 13; i++) {
+        uint32_t b = cmd->bind.pipeline.graphics->cmds[sbe_offset + i];
+        body[i] = b;
     }
-
-    body[9] = 0; /* point sprite enables */
-    body[10] = 0; /* constant interpolation enables */
-    body[11] = 0; /* WrapShortest enables */
-    body[12] = 0;
 }
 
 static void gen6_3DSTATE_SF(struct intel_cmd *cmd)
@@ -525,19 +488,6 @@ static void gen7_3DSTATE_SF(struct intel_cmd *cmd)
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) |
             (cmd_len - 2);
     gen7_fill_3DSTATE_SF_body(cmd, &dw[1]);
-}
-
-static void gen7_3DSTATE_SBE(struct intel_cmd *cmd)
-{
-    const uint8_t cmd_len = 14;
-    uint32_t *dw;
-
-    CMD_ASSERT(cmd, 7, 7.5);
-
-    cmd_batch_pointer(cmd, cmd_len, &dw);
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) |
-            (cmd_len - 2);
-    gen7_fill_3DSTATE_SBE_body(cmd, &dw[1]);
 }
 
 static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
@@ -2029,7 +1979,6 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 
         gen6_3DSTATE_CLIP(cmd);
         gen7_3DSTATE_SF(cmd);
-        gen7_3DSTATE_SBE(cmd);
         gen7_3DSTATE_WM(cmd);
         gen7_3DSTATE_PS(cmd);
     } else {

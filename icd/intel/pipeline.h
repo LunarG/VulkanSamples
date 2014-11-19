@@ -101,9 +101,12 @@ struct intel_pipeline_shader {
      * can go away after the pipeline is created
      */
     XGL_FLAGS uses;
-    uint32_t user_attributes_read;
+    uint64_t inputs_read;
+    uint64_t outputs_written;
+    XGL_UINT outputs_offset;
 
     XGL_BOOL enable_user_clip;
+    XGL_BOOL reads_user_clip;
 
     XGL_UINT in_count;
     XGL_UINT out_count;
@@ -182,6 +185,7 @@ struct intel_pipeline {
 
     uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
     XGL_UINT cmd_len;
+    XGL_UINT cmd_sbe_body_offset;
 };
 
 static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)

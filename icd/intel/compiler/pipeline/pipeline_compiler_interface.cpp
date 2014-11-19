@@ -316,15 +316,27 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             if (data->uses_instanceid)
                 pipe_shader->uses |= INTEL_SHADER_USE_IID;
 
-            uint32_t user_attr_read = 0;
+            assert(VERT_ATTRIB_MAX - VERT_ATTRIB_GENERIC0 < 64);
+            uint64_t user_attr_read = 0;
             for (int i=VERT_ATTRIB_GENERIC0; i < VERT_ATTRIB_MAX; i++) {
                 if (data->inputs_read & BITFIELD64_BIT(i)) {
-                    user_attr_read |= (1 << (i - VERT_ATTRIB_GENERIC0));
+                    user_attr_read |= (1L << (i - VERT_ATTRIB_GENERIC0));
                 }
             }
-            pipe_shader->user_attributes_read = user_attr_read;
+            pipe_shader->inputs_read = user_attr_read;
 
             pipe_shader->enable_user_clip = sh_prog->Vert.UsesClipDistance;
+
+            assert(VARYING_SLOT_MAX - VARYING_SLOT_CLIP_DIST0 < 64);
+            uint64_t varyings_written = 0;
+            for (int i=VARYING_SLOT_CLIP_DIST0; i < VARYING_SLOT_MAX; i++) {
+                if (data->base.vue_map.varying_to_slot[i] >= 0) {
+                    varyings_written |= (1 << (i - VARYING_SLOT_CLIP_DIST0));
+                }
+            }
+            pipe_shader->outputs_written = varyings_written;
+
+            pipe_shader->outputs_offset = BRW_SF_URB_ENTRY_READ_OFFSET * 2;
 
             // These are really best guesses, and will require more work to
             // understand as we turn on more features
@@ -367,6 +379,18 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             memcpy(pipe_shader->pCode, get_wm_program(brw->shader_prog), pipe_shader->codeSize);
 
             struct brw_wm_prog_data *data = get_wm_prog_data(brw->shader_prog);
+
+            assert(VARYING_SLOT_MAX - VARYING_SLOT_CLIP_DIST0 < 64);
+            uint64_t varyings_read = 0;
+            for (int i=VARYING_SLOT_CLIP_DIST0; i < VARYING_SLOT_MAX; i++) {
+                if (data->urb_setup[i] >= 0) {
+                    varyings_read |= (1 << (i - VARYING_SLOT_CLIP_DIST0));
+                }
+            }
+            pipe_shader->inputs_read = varyings_read;
+
+            pipe_shader->reads_user_clip = data->urb_setup[VARYING_SLOT_CLIP_DIST0] >= 0 ||
+                                           data->urb_setup[VARYING_SLOT_CLIP_DIST1] >= 0;
 
             pipe_shader->surface_count = data->base.binding_table.size_bytes / 4;
             pipe_shader->urb_grf_start = data->first_curbe_grf;

@@ -453,7 +453,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    cmd_len = 1 + 2 * u_popcount(vs->user_attributes_read);
+    cmd_len = 1 + 2 * u_popcountll(vs->inputs_read);
     if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID))
         cmd_len += 2;
 
@@ -468,7 +468,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     /* VERTEX_ELEMENT_STATE */
     for (i = 0; i < info->vi.attributeCount; i++) {
-        if (!(vs->user_attributes_read & (1 << i)))
+        if (!(vs->inputs_read & (1L << i)))
             continue;
         const XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr =
             &info->vi.pVertexAttributeDescriptions[i];
@@ -521,6 +521,97 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
         dw += 2;
     }
+}
+
+static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
+{
+    const struct intel_pipeline_shader *fs = &pipeline->fs;
+    const struct intel_pipeline_shader *vs = &pipeline->vs;
+    uint8_t cmd_len;
+    uint32_t *body;
+    XGL_UINT attr_skip, attr_count;
+    XGL_UINT vue_offset, vue_len;
+    XGL_UINT i;
+
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
+
+    cmd_len = 14;
+
+    body = pipeline_cmd_ptr(pipeline, cmd_len);
+    pipeline->cmd_sbe_body_offset = body - pipeline->cmds + 1;
+
+    /* VS outputs VUE header and position additionally */
+    assert(vs->out_count >= fs->in_count + 2);
+    assert(!fs->reads_user_clip || vs->enable_user_clip);
+    attr_skip = vs->outputs_offset;
+    if (vs->enable_user_clip != fs->reads_user_clip) {
+        attr_skip += 2;
+    }
+    assert(vs->out_count >= attr_skip);
+    attr_count = vs->out_count - attr_skip;
+
+    // LUNARG TODO: We currently are only handling 16 attrs;
+    // ultimately, we need to handle 32
+    assert(fs->in_count <= 16);
+    assert(attr_count <= 16);
+
+    vue_offset = attr_skip / 2;
+    vue_len = (attr_count + 1) / 2;
+    if (!vue_len)
+        vue_len = 1;
+
+    body[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) |
+            (cmd_len - 2);
+
+    // LUNARG TODO: If the attrs needed by the FS are exactly
+    // what is written by the VS, we don't need to enable
+    // swizzling, improving performance. Even if we swizzle,
+    // we can improve performance by reducing vue_len to
+    // just include the values needed by the FS:
+    // vue_len = ceiling((max_vs_out + 1)/2)
+
+    body[1] = GEN7_SBE_DW1_ATTR_SWIZZLE_ENABLE |
+          fs->in_count << GEN7_SBE_DW1_ATTR_COUNT__SHIFT |
+          vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT |
+          vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
+
+    uint16_t vs_slot[fs->in_count];
+    XGL_INT fs_in = 0;
+    XGL_INT vs_out = - (vue_offset * 2 - vs->outputs_offset);
+    for (i=0; i < 64; i++) {
+        if (fs->inputs_read & (1L << i)) {
+            assert(vs_out >= 0);
+            assert(fs_in < fs->in_count);
+            vs_slot[fs_in] = vs_out;
+            fs_in += 1;
+        }
+        if (vs->outputs_written & (1L << i)) {
+            vs_out += 1;
+        }
+    }
+
+    for (i = 0; i < 8; i++) {
+        uint16_t hi, lo;
+
+        /* no attr swizzles */
+        if (i * 2 + 1 < fs->in_count) {
+            lo = vs_slot[i * 2];
+            hi = vs_slot[i * 2 + 1];
+        } else if (i * 2 < fs->in_count) {
+            lo = vs_slot[i * 2];
+            hi = 0;
+        } else {
+            hi = 0;
+            lo = 0;
+        }
+
+        body[2 + i] = hi << GEN7_SBE_ATTR_HIGH__SHIFT | lo;
+    }
+
+    body[10] = 0; /* point sprite enables */
+    body[11] = 0; /* constant interpolation enables */
+    body[12] = 0; /* WrapShortest enables */
+    body[13] = 0;
 }
 
 static void pipeline_build_gs(struct intel_pipeline *pipeline,
@@ -600,6 +691,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
             sizeof(pipeline->vb[0]) * pipeline->vb_count);
 
     pipeline_build_vertex_elements(pipeline, info);
+    pipeline_build_fragment_SBE(pipeline);
 
     if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
         pipeline_build_urb_alloc_gen7(pipeline, info);
