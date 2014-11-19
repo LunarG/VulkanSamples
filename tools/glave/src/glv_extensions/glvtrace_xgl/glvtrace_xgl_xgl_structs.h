@@ -1068,6 +1068,15 @@ static struct_xglCreateGraphicsPipeline* interpret_body_as_xglCreateGraphicsPipe
 
                     break;
                 }
+                case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+                {
+                    XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pNext->pNext;
+                    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pVi = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *) pNext;
+                    *ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);
+                    pVi->pVertexBindingDescriptions = (XGL_VERTEX_INPUT_BINDING_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexBindingDescriptions);
+                    pVi->pVertexAttributeDescriptions = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexAttributeDescriptions);
+                    break;
+                }
                 default:
                     assert(!"Encountered an unexpected type in pipeline state list");
             }

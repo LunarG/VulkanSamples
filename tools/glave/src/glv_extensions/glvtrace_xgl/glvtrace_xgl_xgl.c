@@ -2271,9 +2271,6 @@ static size_t calculate_pipeline_state_size(const XGL_VOID* pState)
     {
         switch (pNext->sType)
         {
-            //case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
-            //    totalStateSize += sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO);
-            //    break;
             case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
                 totalStateSize += sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);
                 break;
@@ -2295,9 +2292,13 @@ static size_t calculate_pipeline_state_size(const XGL_VOID* pState)
                 totalStateSize += (sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO) + calculate_pipeline_shader_size(&pShaderStage->shader));
                 break;
             }
-            //case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
-            //    totalStateSize += sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO);
-            //   break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+            {
+                const XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO* pVi = (const XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pNext;
+                totalStateSize += sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO) + pVi->bindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION)
+                                    + pVi->attributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION);
+                break;
+            }
             default:
                 assert(0);
         }
@@ -2361,6 +2362,21 @@ static void add_pipeline_state_to_trace_packet(glv_trace_packet_header* pHeader,
                 pInPacket = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) pInNow;
                 add_pipeline_shader_to_trace_packet(pHeader, &pPacket->shader, &pInPacket->shader);
                 finalize_pipeline_shader_address(pHeader, &pPacket->shader);
+                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
+                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
+                break;
+            }
+            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+            {
+                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pPacket = NULL;
+                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pIn = NULL;
+                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO), pInNow);
+                pPacket = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*) *ppOutNow;
+                pIn = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*) pInNow;
+                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pVertexBindingDescriptions, pIn->bindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION), pIn->pVertexBindingDescriptions);
+                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexBindingDescriptions));
+                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pVertexAttributeDescriptions, pIn->attributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION), pIn->pVertexAttributeDescriptions);
+                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexAttributeDescriptions));
                 ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
                 glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
                 break;
