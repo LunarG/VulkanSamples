@@ -122,4 +122,4 @@ typedef glv_trace_packet_marker_checkpoint glv_trace_packet_marker_api_boundary;
 typedef glv_trace_packet_marker_checkpoint glv_trace_packet_marker_api_group_begin;
 typedef glv_trace_packet_marker_checkpoint glv_trace_packet_marker_api_group_end;
 
-typedef GLV_TRACER_ID (APIENTRY *funcptr_GLV_GetTracerId)();
+typedef GLV_TRACER_ID (__cdecl *funcptr_GLV_GetTracerId)();

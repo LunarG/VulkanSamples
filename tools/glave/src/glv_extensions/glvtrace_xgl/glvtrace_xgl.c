@@ -34,7 +34,7 @@
 #include "glvtrace_xgl_xglwsix11ext.h"
 
 // this is needed to be loaded by glvtrace
-GLVTRACER_EXPORT GLV_TRACER_ID GLVTRACER_STDCALL GLV_GetTracerId(void)
+GLVTRACER_EXPORT GLV_TRACER_ID __cdecl GLV_GetTracerId(void)
 {
     return GLV_TID_XGL;
 }

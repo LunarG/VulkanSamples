@@ -43,9 +43,12 @@ enum GLV_REPLAY_RESULT
 };
 
 // entrypoints that must be exposed by each replayer library
-typedef int (*funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay, unsigned int debugLevel);
-typedef void (*funcptr_glvreplayer_deinitialize)();
-typedef glv_replay::GLV_REPLAY_RESULT (*funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
+extern "C"
+{
+typedef int (__cdecl *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay, unsigned int debugLevel);
+typedef void (__cdecl *funcptr_glvreplayer_deinitialize)();
+typedef glv_replay::GLV_REPLAY_RESULT (__cdecl *funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
+}
 
 struct glv_trace_packet_replay_library
 {
