@@ -174,7 +174,14 @@ typedef struct _PIPELINE_NODE {
     SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS][XGL_MAX_DESCRIPTOR_SETS];
 } PIPELINE_NODE;
 
+typedef struct _SAMPLER_NODE {
+    XGL_SAMPLER              sampler;
+    XGL_SAMPLER_CREATE_INFO  createInfo;
+    struct _SAMPLER_NODE     *pNext;
+} SAMPLER_NODE;
+
 static PIPELINE_NODE *pPipelineHead = NULL;
+static SAMPLER_NODE *pSamplerHead = NULL;
 static XGL_PIPELINE lastBoundPipeline = NULL;
 
 static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
@@ -183,6 +190,18 @@ static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
     while (pTrav) {
         if (pTrav->pipeline == pipeline)
             return pTrav;
+        pTrav = pTrav->pNext;
+    }
+    return NULL;
+}
+
+// For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
+static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
+{
+    SAMPLER_NODE *pTrav = pSamplerHead;
+    while (pTrav) {
+        if (sampler == pTrav->sampler)
+            return &pTrav->createInfo;
         pTrav = pTrav->pNext;
     }
     return NULL;
@@ -537,7 +556,7 @@ static void printDSConfig()
                                 strcat(ds_config_str, tmp_str);
                                 skipUnusedCount = 0;
                             }
-                            sprintf(tmp_str, "----Slot %u\n    Mapped to Sampler Object %p (CAN PRINT DETAILS HERE)\n", j, (void*)pDS->dsSlot[j].sampler);
+                            sprintf(tmp_str, "----Slot %u\n    Mapped to Sampler Object %p:\n%s", j, (void*)pDS->dsSlot[j].sampler, xgl_print_xgl_sampler_create_info(getSamplerCreateInfo(pDS->dsSlot[j].sampler), "        "));
                             strcat(ds_config_str, tmp_str);
                             break;
                         default:
@@ -1172,6 +1191,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    // TODO : Save sampler create info here and associate it with SAMPLER
+    SAMPLER_NODE *pNewNode = (SAMPLER_NODE*)malloc(sizeof(SAMPLER_NODE));
+    pNewNode->sampler = *pSampler;
+    memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO));
+    pNewNode->pNext = pSamplerHead;
+    pSamplerHead = pNewNode;
     return result;
 }
 
