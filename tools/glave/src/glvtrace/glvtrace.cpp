@@ -210,11 +210,12 @@ int main(int argc, char* argv[])
         BOOL validArgs = TRUE;
         if (g_settings.program == NULL || strlen(g_settings.program) == 0)
         {
-            glv_LogError("Missing parameter: Don't know the program to trace.\n");
-            validArgs = FALSE;
+            glv_LogInfo("No program (-p) parameter found: Running glvtrace as server.\n");
+            g_settings.arguments = NULL;
         }
         else
         {
+            glv_LogInfo("Running glvtrace as parent process will spawn child process: %s\n", g_settings.program);
             if (g_settings.working_dir == NULL || strlen(g_settings.working_dir) == 0)
             {
                 CHAR buf[4096];
@@ -241,24 +242,36 @@ int main(int argc, char* argv[])
         glv_tracelog_set_log_file(glv_FileLike_create_file(fopen(g_settings.tracelogfile, "w+")));
     }
 
-    {
-        // Create and start the process.
+    unsigned int serverIndex = 0;
+    do {
+        // Create and start the process or run in server mode
 
         BOOL procStarted = TRUE;
         glv_process_info procInfo;
         memset(&procInfo, 0, sizeof(glv_process_info));
-        procInfo.exeName = glv_allocate_and_copy(g_settings.program);
-        procInfo.processArgs = glv_allocate_and_copy(g_settings.arguments);
-        procInfo.workingDirectory = glv_allocate_and_copy(g_settings.working_dir);
-        procInfo.traceFilename = glv_allocate_and_copy(g_settings.output_trace);
+        if (g_settings.program != NULL)
+        {
+            procInfo.exeName = glv_allocate_and_copy(g_settings.program);
+            procInfo.processArgs = glv_allocate_and_copy(g_settings.arguments);
+            procInfo.workingDirectory = glv_allocate_and_copy(g_settings.working_dir);
+            procInfo.traceFilename = glv_allocate_and_copy(g_settings.output_trace);
+        } else
+        {
+            char *pExtension = strrchr(g_settings.output_trace, '.');
+            char *basename = glv_allocate_and_copy_n(g_settings.output_trace, (pExtension == NULL) ? strlen(g_settings.output_trace) : pExtension - g_settings.output_trace - 1);
+            char num[16];
+            snprintf(num, 16, "%u", serverIndex);
+            procInfo.traceFilename = glv_copy_and_append(basename, num, pExtension);
+        }
         procInfo.parentThreadId = glv_platform_get_thread_id();
 
         // setup tracers
         procInfo.tracerCount = PrepareTracers(&g_settings, &procInfo.pCaptureThreads);
 
 #if defined(WIN32)
-        // call CreateProcess to launch the application
-        procStarted = glv_process_spawn(&procInfo);
+        if (g_settings.program != NULL)
+            // call CreateProcess to launch the application
+            procStarted = glv_process_spawn(&procInfo);
 #endif
 
         if (procStarted == TRUE && procInfo.tracerCount > 0)
@@ -276,7 +289,8 @@ int main(int argc, char* argv[])
 
 #if defined(PLATFORM_LINUX)
         // in linux we want to spawn the process AFTER setting up LD_PRELOAD (which happens in the loop above)
-        procStarted = glv_process_spawn(&procInfo);
+        if (g_settings.program != NULL)
+            procStarted = glv_process_spawn(&procInfo);
 #endif
 
         if (procStarted == FALSE)
@@ -286,7 +300,8 @@ int main(int argc, char* argv[])
         else
         {
             // create watchdog thread to monitor existence of remote process
-            procInfo.watchdogThread = glv_platform_create_thread(Process_RunWatchdogThread, &procInfo);
+            if (g_settings.program != NULL)
+                procInfo.watchdogThread = glv_platform_create_thread(Process_RunWatchdogThread, &procInfo);
 
 #if defined(PLATFORM_LINUX)
             // Sync wait for local threads and remote process to complete.
@@ -295,7 +310,8 @@ int main(int argc, char* argv[])
                 glv_platform_sync_wait_for_thread(&(procInfo.pCaptureThreads[i].recordingThread));
             }
 
-            glv_platform_sync_wait_for_thread(&procInfo.watchdogThread);
+            if (g_settings.program != NULL)
+                glv_platform_sync_wait_for_thread(&procInfo.watchdogThread);
 #else
             glv_platform_resume_thread(&procInfo.hThread);
 
@@ -305,7 +321,8 @@ int main(int argc, char* argv[])
         }
 
         glv_process_info_delete(&procInfo);
-    }
+        serverIndex++;
+    } while (g_settings.program == NULL);
 
     glv_SettingInfo_delete(g_settings_info, num_settings);
     glv_free(g_default_settings.output_trace);

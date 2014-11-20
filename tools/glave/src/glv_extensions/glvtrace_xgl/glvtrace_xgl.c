@@ -39,10 +39,20 @@ GLVTRACER_EXPORT GLV_TRACER_ID GLVTRACER_CDECL GLV_GetTracerId(void)
     return GLV_TID_XGL;
 }
 
+GLVTRACER_LEAVE _Unload(void);
+
+#ifdef PLATFORM_LINUX
+static void glv_sighandler(int signum, siginfo_t *info, void *ptr)
+{
+   glv_LogInfo("glvtrace_xgl library handle signal %d\n", signum);
+    _Unload();
+    kill(0, signum);
+}
+#endif
+
 GLVTRACER_EXIT TrapExit(void)
 {
-    int i = 0;
-    ++i;
+    glv_LogInfo("glvtrace_xgl TrapExit\n");
 }
 
 extern
@@ -51,11 +61,11 @@ GLVTRACER_ENTRY _Load(void)
     // only do the hooking and networking if the tracer is NOT loaded by glvtrace
     if (glv_is_loaded_into_glvtrace() == FALSE)
     {
-        gMessageStream = glv_MessageStream_create(TRUE, "", GLV_BASE_PORT + GLV_TID_XGL);
+        gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_XGL);
         glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));
 //        glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));
         glv_tracelog_set_tracer_id(GLV_TID_XGL);
-        glv_LogInfo("glvtrace_xgl loaded into PID %d\n", glv_get_pid());
+        glv_LogInfo("glvtrace_xgl library loaded into PID %d\n", glv_get_pid());
         atexit(TrapExit);
 
         // If you need to debug startup, build with this set to true, then attach and change it to false.
@@ -69,6 +79,14 @@ GLVTRACER_ENTRY _Load(void)
         AttachHooks();
         AttachHooks_xgldbg();
         AttachHooks_xglwsix11ext();
+#else
+        struct sigaction act;
+        memset(&act, 0 , sizeof(act));
+        act.sa_sigaction = glv_sighandler;
+        act.sa_flags = SA_SIGINFO | SA_RESETHAND;
+        sigaction(SIGINT, &act, NULL);
+        sigaction(SIGTERM, &act, NULL);
+        sigaction(SIGABRT, &act, NULL);
 #endif
     }
 }
@@ -78,6 +96,7 @@ GLVTRACER_LEAVE _Unload(void)
     // only do the hooking and networking if the tracer is NOT loaded by glvtrace
     if (glv_is_loaded_into_glvtrace() == FALSE)
     {
+        glv_LogInfo("glvtrace_xgl library unloaded from PID %d\n", glv_get_pid());
         DetachHooks();
         DetachHooks_xgldbg();
         DetachHooks_xglwsix11ext();

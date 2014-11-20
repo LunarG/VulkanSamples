@@ -182,6 +182,7 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
     }
 
     // Fo reals.
+    glv_LogInfo("Listening for socket connections on port %s\n", pStream->mPort);
     pStream->mSocket = accept(listenSocket, NULL, NULL);
     closesocket(listenSocket);
 
@@ -220,7 +221,7 @@ BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
 
     hr = getaddrinfo(pStream->mAddress, pStream->mPort, &hostAddrInfo, &pStream->mHostAddressInfo);
     if (hr != 0) {
-        glv_LogError("Client: Failed getaddrinfo\n");
+        glv_LogError("Client: Failed getaddrinfo result=%d\n", hr);
         return FALSE;
     }
 

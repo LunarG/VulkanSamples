@@ -107,8 +107,7 @@ GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunRecordTraceThread(LPVOID _threadInfo)
 {
     glv_process_capture_trace_thread_info* pInfo = (glv_process_capture_trace_thread_info*)_threadInfo;
 
-    MessageStream* pMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + pInfo->tracerId);
-
+    MessageStream* pMessageStream = glv_MessageStream_create(TRUE, "", GLV_BASE_PORT + pInfo->tracerId);
     if (pMessageStream == NULL)
     {
         glv_LogError("Thread_CaptureTrace() cannot create message stream\n");

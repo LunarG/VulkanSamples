@@ -35,6 +35,7 @@
 #include <sys/time.h>
 #include <sys/prctl.h>
 #include <dlfcn.h>
+#include <signal.h>
 #include "wintypes.h"
 #define APIENTRY
 #define Sleep(n) usleep(n * 1000)
