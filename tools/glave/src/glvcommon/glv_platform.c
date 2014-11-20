@@ -285,6 +285,17 @@ void glv_platform_delete_thread(glv_thread* pThread)
 #endif
 }
 
+void glv_platform_thread_once(void *ctl, void (* func) (void))
+{
+    assert(func != NULL);
+    assert(ctl != NULL);
+#if defined(PLATFORM_LINUX)
+    pthread_once((pthread_once_t *) ctl, func);
+#elif defined(WIN32)
+    InitOnceExecuteOnce(ctl, func);
+#endif
+}
+
 void glv_create_critical_section(GLV_CRITICAL_SECTION* pCriticalSection)
 {
 #if defined(WIN32)

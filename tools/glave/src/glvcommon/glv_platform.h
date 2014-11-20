@@ -100,6 +100,7 @@ glv_thread glv_platform_create_thread(GLV_THREAD_ROUTINE_RETURN_TYPE(*start_rout
 void glv_platform_resume_thread(glv_thread* pThread);
 void glv_platform_sync_wait_for_thread(glv_thread* pThread);
 void glv_platform_delete_thread(glv_thread* pThread);
+void glv_platform_thread_once(void *ctl, void (* func) (void));
 
 void glv_create_critical_section(GLV_CRITICAL_SECTION* pCriticalSection);
 void glv_enter_critical_section(GLV_CRITICAL_SECTION* pCriticalSection);
