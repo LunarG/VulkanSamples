@@ -496,7 +496,10 @@ class StructWrapperGen:
                     if (stp_list[index]['ptr']):
                         sh_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
-                            sh_funcs.append('        stp_strs[%i] = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n' % index)
+                            sh_funcs.append('        tmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
+                            sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % index)
+                            sh_funcs.append('        sprintf(stp_strs[%i], "   %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
+                            sh_funcs.append('        free(tmpStr);\n')
                         else:
                             sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(prefix));\n' % (index))
@@ -523,7 +526,7 @@ class StructWrapperGen:
             sh_funcs.append(p_out)
             sh_funcs.append(p_args)
             if 0 != num_stps:
-                sh_funcs.append('    for (uint32_t stp_index = 0; stp_index < %i; stp_index++) {\n' % num_stps)
+                sh_funcs.append('    for (int32_t stp_index = %i; stp_index >= 0; stp_index--) {\n' % (num_stps-1))
                 sh_funcs.append('        if (0 < strlen(stp_strs[stp_index])) {\n')
                 sh_funcs.append('            strncat(str, stp_strs[stp_index], strlen(stp_strs[stp_index]));\n')
                 sh_funcs.append('            free(stp_strs[stp_index]);\n')
