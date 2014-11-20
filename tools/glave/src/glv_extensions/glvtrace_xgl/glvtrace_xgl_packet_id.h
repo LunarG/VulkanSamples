@@ -26,26 +26,19 @@
 #include "glv_trace_packet_utils.h"
 #include "glv_interconnect.h"
 
-#define SEND_ENTRYPOINT_ID(entrypoint) \
-    FileLike* pFile; \
-    pFile = glv_FileLike_create_msg(gMessageStream); \
-    glv_trace_set_trace_file(pFile); \
-    glv_TraceInfo(#entrypoint "\n");
+#define SEND_ENTRYPOINT_ID(entrypoint) ;
+//#define SEND_ENTRYPOINT_ID(entrypoint) glv_TraceInfo(#entrypoint "\n");
 
-#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) \
-    FileLike* pFile; \
-    pFile = glv_FileLike_create_msg(gMessageStream); \
-    glv_trace_set_trace_file(pFile); \
-    glv_TraceInfo(entrypoint, __VA_ARGS__);
+#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) ;
+//#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) glv_TraceInfo(entrypoint, __VA_ARGS__);
 
 #define CREATE_TRACE_PACKET(entrypoint, buffer_bytes_needed) \
     pHeader = glv_create_trace_packet(GLV_TID_XGL, GLV_TPI_XGL_##entrypoint, sizeof(struct_##entrypoint), buffer_bytes_needed);
 
 #define FINISH_TRACE_PACKET() \
     glv_finalize_trace_packet(pHeader); \
-    glv_write_trace_packet(pHeader, pFile); \
-    glv_delete_trace_packet(&pHeader); \
-    GLV_DELETE(pFile);
+    glv_write_trace_packet(pHeader, glv_trace_get_trace_file()); \
+    glv_delete_trace_packet(&pHeader);
 
 enum GLV_TRACE_PACKET_ID_XGL
 {

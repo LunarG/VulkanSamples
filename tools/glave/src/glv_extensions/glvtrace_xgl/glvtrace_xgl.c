@@ -52,6 +52,7 @@ GLVTRACER_ENTRY _Load(void)
     if (glv_is_loaded_into_glvtrace() == FALSE)
     {
         gMessageStream = glv_MessageStream_create(TRUE, "", GLV_BASE_PORT + GLV_TID_XGL);
+        glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));
 //        glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));
         glv_tracelog_set_tracer_id(GLV_TID_XGL);
         glv_LogInfo("glvtrace_xgl loaded into PID %d\n", glv_get_pid());
@@ -80,14 +81,14 @@ GLVTRACER_LEAVE _Unload(void)
         DetachHooks();
         DetachHooks_xgldbg();
         DetachHooks_xglwsix11ext();
-
-        glv_trace_packet_header* pHeader = glv_create_trace_packet(GLV_GetTracerId(), GLV_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
-        glv_finalize_trace_packet(pHeader);
-        FileLike* pFileLike = glv_FileLike_create_msg(gMessageStream);
-        glv_write_trace_packet(pHeader, pFileLike);
-        glv_delete_trace_packet(&pHeader);
-        glv_free(pFileLike);
-
+        if (glv_trace_get_trace_file() != NULL) {
+            glv_trace_packet_header* pHeader = glv_create_trace_packet(GLV_GetTracerId(), GLV_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
+            glv_finalize_trace_packet(pHeader);
+            glv_write_trace_packet(pHeader, glv_trace_get_trace_file());
+            glv_delete_trace_packet(&pHeader);
+            glv_free(glv_trace_get_trace_file());
+            glv_trace_set_trace_file(NULL);
+        }
         if (gMessageStream)
             glv_MessageStream_destroy(&gMessageStream);
 
