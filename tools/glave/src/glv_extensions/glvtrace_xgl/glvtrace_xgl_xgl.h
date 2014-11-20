@@ -27,9 +27,12 @@
 
 void AttachHooks();
 void DetachHooks();
+void InitTracer();
+
 
 // Pointers to real functions and declarations of hooked functions
 #ifdef WIN32
+extern INIT_ONCE gInitOnce;
 #define __HOOKED_xglInitAndEnumerateGpus hooked_xglInitAndEnumerateGpus
 #define __HOOKED_xglGetGpuInfo hooked_xglGetGpuInfo
 #define __HOOKED_xglCreateDevice hooked_xglCreateDevice
@@ -134,7 +137,8 @@ void DetachHooks();
 #define __HOOKED_xglCmdLoadAtomicCounters hooked_xglCmdLoadAtomicCounters
 #define __HOOKED_xglCmdSaveAtomicCounters hooked_xglCmdSaveAtomicCounters
 
-#elif defined(__linux__)
+#elif defined(PLATFORM_LINUX)
+extern pthread_once_t gInitOnce;
 #define __HOOKED_xglInitAndEnumerateGpus xglInitAndEnumerateGpus
 #define __HOOKED_xglGetGpuInfo xglGetGpuInfo
 #define __HOOKED_xglCreateDevice xglCreateDevice

@@ -23,6 +23,7 @@
  *
  **************************************************************************/
 #include "glv_platform.h"
+#include "glvtrace_xgl_xgl.h"
 #include "glvtrace_xgl_xgldbg.h"
 #include "glvtrace_xgl_xgldbg_structs.h"
 #include "glvtrace_xgl_packet_id.h"
@@ -165,6 +166,9 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglDbgRegisterMsgCallback(
     glv_trace_packet_header* pHeader;
     XGL_RESULT result;
     struct_xglDbgRegisterMsgCallback* pPacket;
+
+    glv_platform_thread_once(&gInitOnce, InitTracer);
+
     SEND_ENTRYPOINT_ID(xglDbgRegisterMsgCallback);
     CREATE_TRACE_PACKET(xglDbgRegisterMsgCallback, 0);
     result = real_xglDbgRegisterMsgCallback(pfnMsgCallback, pUserData);
@@ -182,6 +186,9 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglDbgUnregisterMsgCallback(
     glv_trace_packet_header* pHeader;
     XGL_RESULT result;
     struct_xglDbgUnregisterMsgCallback* pPacket;
+
+    glv_platform_thread_once(&gInitOnce, InitTracer);
+
     SEND_ENTRYPOINT_ID(xglDbgUnregisterMsgCallback);
     CREATE_TRACE_PACKET(xglDbgUnregisterMsgCallback, 0);
     result = real_xglDbgUnregisterMsgCallback(pfnMsgCallback);
@@ -241,6 +248,9 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglDbgSetGlobalOption(
     glv_trace_packet_header* pHeader;
     XGL_RESULT result;
     struct_xglDbgSetGlobalOption* pPacket;
+
+    glv_platform_thread_once(&gInitOnce, InitTracer);
+
     SEND_ENTRYPOINT_ID(xglDbgSetGlobalOption);
     CREATE_TRACE_PACKET(xglDbgSetGlobalOption, dataSize);
     result = real_xglDbgSetGlobalOption(dbgOption, dataSize, pData);

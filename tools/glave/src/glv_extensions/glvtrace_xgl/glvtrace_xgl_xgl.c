@@ -968,6 +968,19 @@ void DetachHooks()
     }
 #endif
 }
+#ifdef WIN32
+INIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;
+#elif defined(PLATFORM_LINUX)
+pthread_once_t gInitOnce = PTHREAD_ONCE_INIT;
+#endif
+
+void InitTracer()
+{
+    gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_XGL);
+    glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));
+//    glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));
+    glv_tracelog_set_tracer_id(GLV_TID_XGL);
+}
 
 // GPU initialization
 
@@ -984,6 +997,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglInitAndEnumerateGpus(
     struct_xglInitAndEnumerateGpus* pPacket;
     SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);
 
+    glv_platform_thread_once(&gInitOnce, InitTracer);
     if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)
     {
         glv_platform_get_next_lib_sym((void **) &real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");

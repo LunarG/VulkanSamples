@@ -61,10 +61,6 @@ GLVTRACER_ENTRY _Load(void)
     // only do the hooking and networking if the tracer is NOT loaded by glvtrace
     if (glv_is_loaded_into_glvtrace() == FALSE)
     {
-        gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_XGL);
-        glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));
-//        glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));
-        glv_tracelog_set_tracer_id(GLV_TID_XGL);
         glv_LogInfo("glvtrace_xgl library loaded into PID %d\n", glv_get_pid());
         atexit(TrapExit);
 
