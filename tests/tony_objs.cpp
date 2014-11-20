@@ -7,23 +7,23 @@ XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
 
 }
 
-void XglDescriptorSetObj::AttachMemoryView(XGL_MEMORY_VIEW_ATTACH_INFO* memoryView)
+void XglDescriptorSetObj::AttachMemoryView(XglConstantBufferObj *constantBuffer)
 {
-    m_memoryViews.push_back(memoryView);
+    m_memoryViews.push_back(&constantBuffer->m_constantBufferView);
     m_memorySlots.push_back(m_nextSlot);
     m_nextSlot++;
 
 }
-void XglDescriptorSetObj::AttachSampler(XGL_SAMPLER* sampler)
+void XglDescriptorSetObj::AttachSampler(XglSamplerObj *sampler)
 {
-    m_samplers.push_back(sampler);
+    m_samplers.push_back(&sampler->m_sampler);
     m_samplerSlots.push_back(m_nextSlot);
     m_nextSlot++;
 
 }
-void XglDescriptorSetObj::AttachImageView(XGL_IMAGE_VIEW_ATTACH_INFO* imageView)
+void XglDescriptorSetObj::AttachImageView(XglTextureObj *texture)
 {
-    m_imageViews.push_back(imageView);
+    m_imageViews.push_back(&texture->m_textureViewInfo);
     m_imageSlots.push_back(m_nextSlot);
     m_nextSlot++;
 
@@ -33,12 +33,12 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
                                                            vector<XGL_OBJECT>objs )
 {
     int nSlots = m_memorySlots.size() + m_imageSlots.size() + m_samplerSlots.size();
-    XGL_DESCRIPTOR_SLOT_INFO *slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( nSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
-    memset(slotInfo,0,nSlots*sizeof(XGL_DESCRIPTOR_SLOT_INFO));
+    m_slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( nSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
+    memset(m_slotInfo,0,nSlots*sizeof(XGL_DESCRIPTOR_SLOT_INFO));
 
     for (int i=0; i<nSlots; i++)
     {
-        slotInfo[i].slotObjectType = XGL_SLOT_UNUSED;
+        m_slotInfo[i].slotObjectType = XGL_SLOT_UNUSED;
     }
 
     for (int i=0; i<slots.size(); i++)
@@ -47,35 +47,35 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
         {
             if ( (XGL_OBJECT) m_memoryViews[j] == objs[i])
             {
-                slotInfo[m_memorySlots[j]].shaderEntityIndex = slots[i];
-                slotInfo[m_memorySlots[j]].slotObjectType = types[i];
+                m_slotInfo[m_memorySlots[j]].shaderEntityIndex = slots[i];
+                m_slotInfo[m_memorySlots[j]].slotObjectType = types[i];
             }
         }
         for (int j=0; j<m_imageSlots.size(); j++)
         {
             if ( (XGL_OBJECT) m_imageViews[j] == objs[i])
             {
-                slotInfo[m_imageSlots[j]].shaderEntityIndex = slots[i];
-                slotInfo[m_imageSlots[j]].slotObjectType = types[i];
+                m_slotInfo[m_imageSlots[j]].shaderEntityIndex = slots[i];
+                m_slotInfo[m_imageSlots[j]].slotObjectType = types[i];
             }
         }
         for (int j=0; j<m_samplerSlots.size(); j++)
         {
             if ( (XGL_OBJECT) m_samplers[j] == objs[i])
             {
-                slotInfo[m_samplerSlots[j]].shaderEntityIndex = slots[i];
-                slotInfo[m_samplerSlots[j]].slotObjectType = types[i];
+                m_slotInfo[m_samplerSlots[j]].shaderEntityIndex = slots[i];
+                m_slotInfo[m_samplerSlots[j]].slotObjectType = types[i];
             }
         }
     }
 
     for (int i=0;i<nSlots;i++)
     {
-        printf("SlotInfo[%d]:  Index = %d, Type = %d\n",i,slotInfo[i].shaderEntityIndex, slotInfo[i].slotObjectType);
+        printf("SlotInfo[%d]:  Index = %d, Type = %d\n",i,m_slotInfo[i].shaderEntityIndex, m_slotInfo[i].slotObjectType);
         fflush(stdout);
     }
 
-    return(slotInfo);
+    return(m_slotInfo);
 
 }
 
@@ -384,25 +384,25 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     return stageInfo;
 }
 
-void XglShaderObj::BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XGL_OBJECT object)
+void XglShaderObj::BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer)
 {
     m_memSlots.push_back(slot);
     m_memTypes.push_back(type);
-    m_memObjs.push_back(object);
+    m_memObjs.push_back((XGL_OBJECT) &constantBuffer->m_constantBufferView);
 
 }
-void XglShaderObj::BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XGL_OBJECT object)
+void XglShaderObj::BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture)
 {
     m_imageSlots.push_back(slot);
     m_imageTypes.push_back(type);
-    m_imageObjs.push_back(object);
+    m_imageObjs.push_back((XGL_OBJECT) &texture->m_textureViewInfo);
 
 }
-void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XGL_OBJECT object)
+void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sampler)
 {
     m_samplerSlots.push_back(slot);
     m_samplerTypes.push_back(XGL_SLOT_SHADER_SAMPLER);
-    m_samplerObjs.push_back(object);
+    m_samplerObjs.push_back(sampler->m_sampler);
 
 }
 XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPELINE_SHADER_STAGE stage)
@@ -466,7 +466,8 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     XGL_RESULT err;
 
     m_device = device;
-    m_vi_attrib_count = m_vi_binding_count = m_vertexBufferCount = 0;
+    m_vi_state.attributeCount = m_vi_state.bindingCount = 0;
+    m_vertexBufferCount = 0;
 
     m_ia_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
     m_ia_state.pNext = XGL_NULL_HANDLE;
@@ -512,14 +513,14 @@ void XglPipelineObj::AddShader(XglShaderObj* shader)
 
 void XglPipelineObj::AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count)
 {
-    m_vi_attribs = vi_attrib;
-    m_vi_attrib_count = count;
+    m_vi_state.pVertexAttributeDescriptions = vi_attrib;
+    m_vi_state.attributeCount = count;
 }
 
 void XglPipelineObj::AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count)
 {
-    m_vi_binding = vi_binding;
-    m_vi_binding_count = count;
+    m_vi_state.pVertexBindingDescriptions = vi_binding;
+    m_vi_state.bindingCount = count;
 }
 
 void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding)
@@ -545,14 +546,10 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
         head_ptr = shaderCreateInfo;
     }
 
-    if (m_vi_attrib_count && m_vi_binding_count)
+    if (m_vi_state.attributeCount && m_vi_state.bindingCount)
     {
         m_vi_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
         m_vi_state.pNext = head_ptr;
-        m_vi_state.bindingCount = m_vi_binding_count;
-        m_vi_state.pVertexBindingDescriptions = m_vi_binding;
-        m_vi_state.attributeCount = m_vi_attrib_count;
-        m_vi_state.pVertexAttributeDescriptions = m_vi_attribs;
         head_ptr = &m_vi_state;
     }
 
@@ -578,8 +575,11 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
 XglMemoryRefManager::XglMemoryRefManager() {
 
 }
-void XglMemoryRefManager::AddMemoryRef(XGL_GPU_MEMORY *memoryRef) {
-    m_bufferObjs.push_back(memoryRef);
+void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
+    m_bufferObjs.push_back(&constantBuffer->m_constantBufferMem);
+}
+void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
+    m_bufferObjs.push_back(&texture->m_textureMem);
 }
 XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
 

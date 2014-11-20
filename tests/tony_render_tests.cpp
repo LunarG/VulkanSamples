@@ -626,15 +626,15 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &constantBuffer.m_constantBufferView);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &constantBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&constantBuffer.m_constantBufferView);
-    m_memoryRefManager.AddMemoryRef(&constantBuffer.m_constantBufferMem);
+    descriptorSet.AttachMemoryView(&constantBuffer);
+    m_memoryRefManager.AddMemoryRef(&constantBuffer);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
@@ -927,14 +927,14 @@ TEST_F(XglRenderTest, TriangleTwoFSUniforms)
     const float constants[constantCount] =  { 1.0, 0.0, 0.0, 1.0,
                                               0.0, 0.0, 1.0, 1.0 };
     XglConstantBufferObj constantBuffer(m_device,constantCount, sizeof(constants[0]), (const void*) constants);
-    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &constantBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &constantBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&constantBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&constantBuffer);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -978,7 +978,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&meshBuffer);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
          sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
@@ -1041,17 +1041,17 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
 
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &MVPBuffer.m_constantBufferView);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &MVPBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     // Create descriptor set and attach the constant buffer to it
-    XglDescriptorSetObj descriptorSet(m_device);   XGL_RESULT err = XGL_SUCCESS;
-    descriptorSet.AttachMemoryView(&MVPBuffer.m_constantBufferView);
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&MVPBuffer);
 
-    m_memoryRefManager.AddMemoryRef(&MVPBuffer.m_constantBufferMem);
+    m_memoryRefManager.AddMemoryRef(&MVPBuffer);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
@@ -1157,7 +1157,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&meshBuffer);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
          sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
@@ -1230,7 +1230,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&meshBuffer);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
          sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
@@ -1302,17 +1302,17 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
 
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &MVPBuffer.m_constantBufferView);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &MVPBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&MVPBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&MVPBuffer);
 
-    m_memoryRefManager.AddMemoryRef(&meshBuffer.m_constantBufferMem);
-    m_memoryRefManager.AddMemoryRef(&MVPBuffer.m_constantBufferMem);
+    m_memoryRefManager.AddMemoryRef(&meshBuffer);
+    m_memoryRefManager.AddMemoryRef(&MVPBuffer);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
             sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
@@ -1378,18 +1378,18 @@ TEST_F(XglRenderTest, VSTexture)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    vs.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
-    vs.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
+    vs.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    vs.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachImageView(&texture.m_textureViewInfo);
-    descriptorSet.AttachSampler(&sampler.m_sampler);
+    descriptorSet.AttachImageView(&texture);
+    descriptorSet.AttachSampler(&sampler);
 
-    m_memoryRefManager.AddMemoryRef(&texture.m_textureMem);
+    m_memoryRefManager.AddMemoryRef(&texture);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1436,18 +1436,18 @@ TEST_F(XglRenderTest, TexturedTriangle)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
-    ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachImageView(&texture.m_textureViewInfo);
-    descriptorSet.AttachSampler(&sampler.m_sampler);
+    descriptorSet.AttachImageView(&texture);
+    descriptorSet.AttachSampler(&sampler);
 
-    m_memoryRefManager.AddMemoryRef(&texture.m_textureMem);
+    m_memoryRefManager.AddMemoryRef(&texture);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1504,18 +1504,18 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
-    ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachImageView(&texture.m_textureViewInfo);
-    descriptorSet.AttachSampler(&sampler.m_sampler);
+    descriptorSet.AttachImageView(&texture);
+    descriptorSet.AttachSampler(&sampler);
 
-    m_memoryRefManager.AddMemoryRef(&texture.m_textureMem);
+    m_memoryRefManager.AddMemoryRef(&texture);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1561,18 +1561,18 @@ TEST_F(XglRenderTest, FSTriangle)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
-    ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachImageView(&texture.m_textureViewInfo);
-    descriptorSet.AttachSampler(&sampler.m_sampler);
+    descriptorSet.AttachImageView(&texture);
+    descriptorSet.AttachSampler(&sampler);
 
-    m_memoryRefManager.AddMemoryRef(&texture.m_textureMem);
+    m_memoryRefManager.AddMemoryRef(&texture);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1629,14 +1629,14 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
                                          1.0, 1.0, 1.0, 1.0 };
 
     XglConstantBufferObj colorBuffer(m_device, valCount, sizeof(bufferVals[0]), (const void*) bufferVals);
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &colorBuffer.m_constantBufferView);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &colorBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&colorBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&colorBuffer);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1704,26 +1704,26 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
     XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
-    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &redBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &redBuffer);
 
     XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
-    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &greenBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, &greenBuffer);
 
     XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
-    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &blueBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, &blueBuffer);
 
     XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
-    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &whiteBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&redBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&greenBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&blueBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&whiteBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&redBuffer);
+    descriptorSet.AttachMemoryView(&greenBuffer);
+    descriptorSet.AttachMemoryView(&blueBuffer);
+    descriptorSet.AttachMemoryView(&whiteBuffer);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1788,26 +1788,26 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
     XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
-    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &redBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &redBuffer);
 
     XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
-    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &greenBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, &greenBuffer);
 
     XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
-    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &blueBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, &blueBuffer);
 
     XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
-    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &whiteBuffer.m_constantBufferView);
+    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&redBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&greenBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&blueBuffer.m_constantBufferView);
-    descriptorSet.AttachMemoryView(&whiteBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&redBuffer);
+    descriptorSet.AttachMemoryView(&greenBuffer);
+    descriptorSet.AttachMemoryView(&blueBuffer);
+    descriptorSet.AttachMemoryView(&whiteBuffer);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
@@ -1875,9 +1875,9 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     XglTextureObj texture(m_device);
 
     // vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_VERTEX_INPUT, (XGL_OBJECT) &meshBuffer.m_constantBufferView);
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &mvpBuffer.m_constantBufferView);
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
-    ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &mvpBuffer);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
@@ -1885,14 +1885,13 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     XglDescriptorSetObj descriptorSet(m_device);
 
-    descriptorSet.AttachMemoryView(&mvpBuffer.m_constantBufferView);
-    // descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
-    descriptorSet.AttachImageView(&texture.m_textureViewInfo);
-    descriptorSet.AttachSampler(&sampler.m_sampler);
+    descriptorSet.AttachMemoryView(&mvpBuffer);
+    descriptorSet.AttachImageView(&texture);
+    descriptorSet.AttachSampler(&sampler);
 
-    m_memoryRefManager.AddMemoryRef(&meshBuffer.m_constantBufferMem);
-    m_memoryRefManager.AddMemoryRef(&mvpBuffer.m_constantBufferMem);
-    m_memoryRefManager.AddMemoryRef(&texture.m_textureMem);
+    m_memoryRefManager.AddMemoryRef(&meshBuffer);
+    m_memoryRefManager.AddMemoryRef(&mvpBuffer);
+    m_memoryRefManager.AddMemoryRef(&texture);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
             sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
