@@ -189,11 +189,13 @@ class Subcommand(object):
                     f_open = ''
                     f_close = ''
                     if "file" in layer:
-                        f_open = 'pOutFile = fopen(outFileName, "a");\n    '
+                        f_open = 'pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "a");\n    '
                         log_func = 'fprintf(pOutFile, "xgl%s(' % proto.name
-                        f_close = '\n    fclose(pOutFile);'
+                        f_close = '\n    fclose(pOutFile);\n    pthread_mutex_unlock( &file_lock );'
                     else:
+                        f_open = 'pthread_mutex_lock( &print_lock );\n    '
                         log_func = 'printf("xgl%s(' % proto.name
+                        f_close = '\n    pthread_mutex_unlock( &print_lock );'
                     print_vals = ''
                     pindex = 0
                     for p in proto.params:
@@ -457,7 +459,7 @@ class GenericLayerSubcommand(Subcommand):
 
 class ApiDumpSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\npthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;\n'
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
@@ -468,7 +470,7 @@ class ApiDumpSubcommand(Subcommand):
 
 class ApiDumpFileSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n\nstatic FILE* pOutFile;\nstatic char* outFileName = "xgl_apidump.txt";\n'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n\nstatic FILE* pOutFile;\nstatic char* outFileName = "xgl_apidump.txt";\npthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;\n'
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
