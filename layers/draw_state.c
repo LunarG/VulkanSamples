@@ -69,15 +69,89 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
         }
     }
 }
+// Return the size of the underlying struct based on struct type
+static XGL_SIZE sTypeStructSize(XGL_STRUCTURE_TYPE sType)
+{
+    switch (sType)
+    {
+        case XGL_STRUCTURE_TYPE_APPLICATION_INFO:
+            return sizeof(XGL_APPLICATION_INFO);
+        case XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO:
+            return sizeof(XGL_DEVICE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO:
+            return sizeof(XGL_MEMORY_ALLOC_INFO);
+        case XGL_STRUCTURE_TYPE_MEMORY_OPEN_INFO:
+            return sizeof(XGL_MEMORY_OPEN_INFO);
+        case XGL_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO:
+            return sizeof(XGL_PEER_MEMORY_OPEN_INFO);
+        case XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO:
+            return sizeof(XGL_MEMORY_VIEW_ATTACH_INFO);
+        case XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO:
+            return sizeof(XGL_IMAGE_VIEW_ATTACH_INFO);
+        case XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION:
+            return sizeof(XGL_MEMORY_STATE_TRANSITION);
+        case XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO:
+            return sizeof(XGL_IMAGE_VIEW_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO:
+            return sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO:
+            return sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO:
+            return sizeof(XGL_SHADER_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
+            return sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO:
+            return sizeof(XGL_SAMPLER_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO:
+            return sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO:
+            return sizeof(XGL_RASTER_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO:
+            return sizeof(XGL_MSAA_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO:
+            return sizeof(XGL_COLOR_BLEND_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO:
+            return sizeof(XGL_DEPTH_STENCIL_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO:
+            return sizeof(XGL_CMD_BUFFER_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO:
+            return sizeof(XGL_EVENT_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO:
+            return sizeof(XGL_FENCE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO:
+            return sizeof(XGL_QUEUE_SEMAPHORE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO:
+            return sizeof(XGL_QUEUE_SEMAPHORE_OPEN_INFO);
+        case XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO:
+            return sizeof(XGL_QUERY_POOL_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
+            return sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_DB_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_CB_STATE);
+        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO:
+            return sizeof(XGL_IMAGE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO:
+            return sizeof(XGL_LAYER_CREATE_INFO);
+        default:
+            return 0;
+    }
+}
+
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
 // Just track 2 shaders for now
-#define VS 0
-#define FS 1
-#define DRAW 0
-#define DRAW_INDEXED 1
-#define DRAW_INDIRECT 2
-#define DRAW_INDEXED_INDIRECT 3
-#define NUM_DRAW_TYPES 4
+#define XGL_NUM_GRAPHICS_SHADERS XGL_SHADER_STAGE_COMPUTE
 #define MAX_SLOTS 2048
 
 static uint64_t drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
@@ -87,16 +161,18 @@ typedef struct _SHADER_DS_MAPPING {
     XGL_DESCRIPTOR_SLOT_INFO* pShaderMappingSlot;
 } SHADER_DS_MAPPING;
 
-typedef struct _PIPELINE_NODE {
-    XGL_PIPELINE           pipeline;
-    struct _PIPELINE_NODE* pNext;
-    SHADER_DS_MAPPING      dsMapping[2][XGL_MAX_DESCRIPTOR_SETS];
-} PIPELINE_NODE;
-
 typedef struct _PIPELINE_LL_HEADER {
     XGL_STRUCTURE_TYPE sType;
     const XGL_VOID*    pNext;
 } PIPELINE_LL_HEADER;
+
+typedef struct _PIPELINE_NODE {
+    XGL_PIPELINE           pipeline;
+    struct _PIPELINE_NODE  *pNext;
+    PIPELINE_LL_HEADER     *pCreateTree; // Ptr to shadow of data in create tree
+    // 1st dimension of array is shader type
+    SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS][XGL_MAX_DESCRIPTOR_SETS];
+} PIPELINE_NODE;
 
 static PIPELINE_NODE *pPipelineHead = NULL;
 static XGL_PIPELINE lastBoundPipeline = NULL;
@@ -115,37 +191,31 @@ static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 // Init the pipeline mapping info based on pipeline create info LL tree
 static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
 {
+    // First init create info, we'll shadow the structs as we go down the tree
+    pPipeline->pCreateTree = (PIPELINE_LL_HEADER*)malloc(sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
+    memcpy(pPipeline->pCreateTree, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
+    PIPELINE_LL_HEADER *pShadowTrav = pPipeline->pCreateTree;
     PIPELINE_LL_HEADER *pTrav = (PIPELINE_LL_HEADER*)pCreateInfo->pNext;
     while (pTrav) {
+        // Shadow the struct
+        pShadowTrav->pNext = (PIPELINE_LL_HEADER*)malloc(sTypeStructSize(pTrav->sType));
+        // Typically pNext is const so have to cast to avoid warning when we modify it here
+        memcpy((void*)pShadowTrav->pNext, pTrav, sTypeStructSize(pTrav->sType));
+        pShadowTrav = (PIPELINE_LL_HEADER*)pShadowTrav->pNext;
+        // Special copy of DS Mapping info
         if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pTrav->sType) {
             XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
-            if (XGL_SHADER_STAGE_VERTEX == pSSCI->shader.stage) {
-                for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-                    if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
-                        char str[1024];
-                        sprintf(str, "descriptorCount for Vertex Shader exceeds 2048 (%u), is this correct? Changing to 0", pSSCI->shader.descriptorSetMapping[i].descriptorCount);
-                        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pPipeline, 0, DRAWSTATE_DESCRIPTOR_MAX_EXCEEDED, "DS", str);
-                        pSSCI->shader.descriptorSetMapping[i].descriptorCount = 0;
-                    }
-                    pPipeline->dsMapping[0][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
-                    // Deep copy DS Slot array
-                    pPipeline->dsMapping[0][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
-                    memcpy(pPipeline->dsMapping[0][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[0][i].slotCount);
+            for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
+                if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
+                    char str[1024];
+                    sprintf(str, "descriptorCount for %s exceeds 2048 (%u), is this correct? Changing to 0", string_XGL_PIPELINE_SHADER_STAGE(pSSCI->shader.stage), pSSCI->shader.descriptorSetMapping[i].descriptorCount);
+                    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pPipeline, 0, DRAWSTATE_DESCRIPTOR_MAX_EXCEEDED, "DS", str);
+                    pSSCI->shader.descriptorSetMapping[i].descriptorCount = 0;
                 }
-            }
-            else if (XGL_SHADER_STAGE_FRAGMENT == pSSCI->shader.stage) {
-                for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
-                    if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
-                        char str[1024];
-                        sprintf(str, "descriptorCount for Frag Shader exceeds 2048 (%u), is this correct? Changing to 0", pSSCI->shader.descriptorSetMapping[i].descriptorCount);
-                        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pPipeline, 0, DRAWSTATE_DESCRIPTOR_MAX_EXCEEDED, "DS", str);
-                        pSSCI->shader.descriptorSetMapping[i].descriptorCount = 0;
-                    }
-                    pPipeline->dsMapping[1][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
-                    // Deep copy DS Slot array
-                    pPipeline->dsMapping[1][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
-                    memcpy(pPipeline->dsMapping[1][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[1][i].slotCount);
-                }
+                pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
+                // Deep copy DS Slot array
+                pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
+                memcpy(pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
             }
         }
         pTrav = (PIPELINE_LL_HEADER*)pTrav->pNext;
@@ -175,7 +245,7 @@ static char* stringSlotBinding(XGL_UINT binding)
 
 typedef struct _DS_SLOT {
     XGL_UINT                     slot;
-    XGL_DESCRIPTOR_SLOT_INFO     shaderSlotInfo[2];
+    XGL_DESCRIPTOR_SLOT_INFO     shaderSlotInfo[XGL_NUM_GRAPHICS_SHADERS];
     // Only 1 of 4 possible slot mappings active
     XGL_UINT                     activeMapping;
     XGL_UINT                     mappingMask; // store record of different mappings used
@@ -366,7 +436,7 @@ static void synchDSMapping()
                     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_DS_BOUND, "DS", str);
                 }
                 else { // We have a good DS & Pipeline, store pipeline mappings in DS
-                    for (uint32_t j = 0; j < 2; j++) { // j is shader selector
+                    for (uint32_t j = 0; j < XGL_NUM_GRAPHICS_SHADERS; j++) { // j is shader selector
                         for (uint32_t k = 0; k < XGL_MAX_DESCRIPTOR_SETS; k++) {
                             if (pPipeTrav->dsMapping[j][k].slotCount > pDS->numSlots) {
                                 sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u)!", j, pPipeTrav->dsMapping[j][k].slotCount, (void*)pDS->dsID, pDS->numSlots);
@@ -421,7 +491,7 @@ static XGL_BOOL verifyShaderSlotMapping(const XGL_UINT slot, const XGL_UINT slot
             return XGL_FALSE;
     }
     if (XGL_TRUE == error) {
-        sprintf(str, "DS Slot #%u binding of %s does not match %s shader mapping of %s", slot, stringSlotBinding(slotBinding), (shaderStage == VS) ? "Vtx" : "Frag", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(shaderMapping));
+        sprintf(str, "DS Slot #%u binding of %s does not match %s shader mapping of %s", slot, stringSlotBinding(slotBinding), string_XGL_PIPELINE_SHADER_STAGE(shaderStage), string_XGL_DESCRIPTOR_SET_SLOT_TYPE(shaderMapping));
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_MAPPING_MISMATCH, "DS", str);
         return XGL_FALSE;
     }
@@ -479,9 +549,9 @@ static void printDSConfig()
                             break;
                     }
                     // For each shader type, check its mapping
-                    for (uint32_t k = 0; k < 2; k++) {
+                    for (uint32_t k = 0; k < XGL_NUM_GRAPHICS_SHADERS; k++) {
                         if (XGL_SLOT_UNUSED != pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType) {
-                            sprintf(tmp_str, "    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", (k == 0) ? "VS" : "FS", string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
+                            sprintf(tmp_str, "    Shader type %s has %s slot type mapping to shaderEntityIndex %u\n", string_XGL_PIPELINE_SHADER_STAGE(k), string_XGL_DESCRIPTOR_SET_SLOT_TYPE(pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType), pDS->dsSlot[j].shaderSlotInfo[k].shaderEntityIndex);
                             strcat(ds_config_str, tmp_str);
                             verifyShaderSlotMapping(j, pDS->dsSlot[j].activeMapping, k, pDS->dsSlot[j].shaderSlotInfo[k].slotObjectType);
                         }

@@ -43,3 +43,14 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_CLEAR_DS_FAILED               = 15, // Error while attempting ClearDS
     DRAWSTATE_INVALID_PIPELINE              = 16, // Invalid DS referenced
 } DRAW_STATE_ERROR;
+
+typedef enum _DRAW_TYPE
+{
+    DRAW                  = 0,
+    DRAW_INDEXED          = 1,
+    DRAW_INDIRECT         = 2,
+    DRAW_INDEXED_INDIRECT = 3,
+    DRAW_BEGIN_RANGE      = DRAW,
+    DRAW_END_RANGE        = DRAW_INDEXED_INDIRECT,
+    NUM_DRAW_TYPES        = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
+} DRAW_TYPE;
