@@ -995,9 +995,9 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglInitAndEnumerateGpus(
     XGL_RESULT result;
     uint64_t startTime;
     struct_xglInitAndEnumerateGpus* pPacket;
-    SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);
 
     glv_platform_thread_once(&gInitOnce, InitTracer);
+    SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);
     if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)
     {
         glv_platform_get_next_lib_sym((void **) &real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");
