@@ -1181,6 +1181,81 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 2);
     QueueCommandBuffer(NULL, 0);
 }
+
+TEST_F(XglRenderTest, TriVertFetchDeadAttr)
+{
+    // This tests that attributes work in the presence of gl_VertexID
+    // and a dead attribute in position 0. Draws a triangle with yellow,
+    // red and green corners, starting at top and going clockwise.
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            //XYZ1( -1, -1, -1 )
+            "layout (location = 0) in vec4 pos;\n"
+            //XYZ1( 0.f, 0.f, 0.f )
+            "layout (location = 1) in vec4 inColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-1.0, -1.0);\n"
+            "      vertices[1] = vec2( 1.0, -1.0);\n"
+            "      vertices[2] = vec2( 0.0,  1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "void main() {\n"
+            "   gl_FragColor = color;\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+    };
+
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+
+    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputBindings(&vi_binding,1);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 2);
+    QueueCommandBuffer(NULL, 0);
+
+}
+
 TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
@@ -1501,6 +1576,242 @@ TEST_F(XglRenderTest, FSTriangle)
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
+}
+
+TEST_F(XglRenderTest, TriangleVSUniformBlock)
+{
+    // The expected result from this test is a blue triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "layout (std140, binding = 0) uniform bufferVals {\n"
+            "    vec4 red;\n"
+            "    vec4 green;\n"
+            "    vec4 blue;\n"
+            "    vec4 white;\n"
+            "} myBufferVals;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   outColor = myBufferVals.blue;\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 inColor;\n"
+            "void main() {\n"
+            "   gl_FragColor = inColor;\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
+
+    // Let's populate our buffer with the following:
+    //     vec4 red;
+    //     vec4 green;
+    //     vec4 blue;
+    //     vec4 white;
+    const int valCount = 4 * 4;
+    const float bufferVals[valCount] = { 1.0, 0.0, 0.0, 1.0,
+                                         0.0, 1.0, 0.0, 1.0,
+                                         0.0, 0.0, 1.0, 1.0,
+                                         1.0, 1.0, 1.0, 1.0 };
+
+    XglConstantBufferObj colorBuffer(m_device, valCount, sizeof(bufferVals[0]), (const void*) bufferVals);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &colorBuffer.m_constantBufferView);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&colorBuffer.m_constantBufferView);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+
+}
+
+TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
+{
+    // This test allows the shader to select which buffer it is
+    // pulling from using layout binding qualifier.
+    // There are corresponding changes in the compiler stack that
+    // will select the buffer using binding directly.
+    // The binding number should match the slot number set up by
+    // the application.
+    // The expected result from this test is a purple triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform redVal   { vec4 color; } myRedVal\n;"
+            "layout (std140, binding = 1) uniform greenVal { vec4 color; } myGreenVal\n;"
+            "layout (std140, binding = 2) uniform blueVal  { vec4 color; } myBlueVal\n;"
+            "layout (std140, binding = 18) uniform whiteVal { vec4 color; } myWhiteVal\n;"
+            "void main() {\n"
+            "   gl_FragColor = myBlueVal.color;\n"
+            "   gl_FragColor += myRedVal.color;\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
+
+    // We're going to create a number of uniform buffers, and then allow
+    // the shader to select which it wants to read from with a binding
+
+    // Let's populate the buffers with a single color each:
+    //    layout (std140, binding = 0) uniform bufferVals { vec4 red;   } myRedVal;
+    //    layout (std140, binding = 1) uniform bufferVals { vec4 green; } myGreenVal;
+    //    layout (std140, binding = 2) uniform bufferVals { vec4 blue;  } myBlueVal;
+    //    layout (std140, binding = 3) uniform bufferVals { vec4 white; } myWhiteVal;
+
+    const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
+    const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
+    const float blueVals[4]  = { 0.0, 0.0, 1.0, 1.0 };
+    const float whiteVals[4] = { 1.0, 1.0, 1.0, 1.0 };
+
+    const int redCount   = sizeof(redVals)   / sizeof(float);
+    const int greenCount = sizeof(greenVals) / sizeof(float);
+    const int blueCount  = sizeof(blueVals)  / sizeof(float);
+    const int whiteCount = sizeof(whiteVals) / sizeof(float);
+
+    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &redBuffer.m_constantBufferView);
+
+    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &greenBuffer.m_constantBufferView);
+
+    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &blueBuffer.m_constantBufferView);
+
+    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &whiteBuffer.m_constantBufferView);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&redBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&greenBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&blueBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&whiteBuffer.m_constantBufferView);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+
+}
+
+TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
+{
+    // This test is the same as TriangleFSUniformBlockBinding, but
+    // it does not provide an instance name.
+    // The expected result from this test is a purple triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 430\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) uniform vec4 foo;\n"
+            "layout (location = 1) uniform vec4 bar;\n"
+            "layout (std140, binding = 0) uniform redVal   { vec4 red; };"
+            "layout (std140, binding = 1) uniform greenVal { vec4 green; };"
+            "layout (std140, binding = 2) uniform blueVal  { vec4 blue; };"
+            "layout (std140, binding = 18) uniform whiteVal { vec4 white; };"
+            "void main() {\n"
+            "   gl_FragColor = blue;\n"
+            "   gl_FragColor += red;\n"
+            "}\n";
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
+
+    // We're going to create a number of uniform buffers, and then allow
+    // the shader to select which it wants to read from with a binding
+
+    // Let's populate the buffers with a single color each:
+    //    layout (std140, binding = 0) uniform bufferVals { vec4 red;   } myRedVal;
+    //    layout (std140, binding = 1) uniform bufferVals { vec4 green; } myGreenVal;
+    //    layout (std140, binding = 2) uniform bufferVals { vec4 blue;  } myBlueVal;
+    //    layout (std140, binding = 3) uniform bufferVals { vec4 white; } myWhiteVal;
+
+    const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
+    const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
+    const float blueVals[4]  = { 0.0, 0.0, 1.0, 1.0 };
+    const float whiteVals[4] = { 1.0, 1.0, 1.0, 1.0 };
+
+    const int redCount   = sizeof(redVals)   / sizeof(float);
+    const int greenCount = sizeof(greenVals) / sizeof(float);
+    const int blueCount  = sizeof(blueVals)  / sizeof(float);
+    const int whiteCount = sizeof(whiteVals) / sizeof(float);
+
+    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &redBuffer.m_constantBufferView);
+
+    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &greenBuffer.m_constantBufferView);
+
+    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &blueBuffer.m_constantBufferView);
+
+    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &whiteBuffer.m_constantBufferView);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&redBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&greenBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&blueBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&whiteBuffer.m_constantBufferView);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+
 }
 
 TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
