@@ -210,7 +210,9 @@ void glv_finalize_trace_packet(glv_trace_packet_header* pHeader)
 
 void glv_write_trace_packet(const glv_trace_packet_header* pHeader, FileLike* pFile)
 {
-    glv_FileLike_WriteRaw(pFile, pHeader, (size_t)pHeader->size);
+    BOOL res = glv_FileLike_WriteRaw(pFile, pHeader, (size_t)pHeader->size);
+    if (!res)
+        glv_LogError("Failed to send trace packet index %u packetId %u size %u\n", pHeader->global_packet_index, pHeader->packet_id, pHeader->size);
 }
 
 //=============================================================================
