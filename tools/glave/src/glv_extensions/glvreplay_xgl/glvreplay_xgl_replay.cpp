@@ -1021,7 +1021,9 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case  GLV_TPI_XGL_xglGetFenceStatus:
         {
             struct_xglGetFenceStatus* pPacket = interpret_body_as_xglGetFenceStatus(packet);
-            replayResult = m_xglFuncs.real_xglGetFenceStatus(remap(pPacket->fence));
+            do {
+                replayResult = m_xglFuncs.real_xglGetFenceStatus(remap(pPacket->fence));
+            } while (replayResult != pPacket->result  && pPacket->result == XGL_SUCCESS);
             CHECK_RETURN_VALUE(xglGetFenceStatus);
             break;
         }
@@ -1075,19 +1077,10 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case  GLV_TPI_XGL_xglGetEventStatus:
         {
             struct_xglGetEventStatus* pPacket = interpret_body_as_xglGetEventStatus(packet);
-            replayResult = m_xglFuncs.real_xglGetEventStatus(remap(pPacket->event));
-            if (replayResult != pPacket->result)
-            {
-                glv_LogWarn("Mismatched return from xglGetEventStatus() traced result %s, replay result %s\n",
-                string_XGL_RESULT(pPacket->result), string_XGL_RESULT(replayResult));
-                returnValue = glv_replay::GLV_REPLAY_BAD_RETURN;
-            }
-
-            if (replayResult != XGL_EVENT_SET && replayResult != XGL_EVENT_RESET)
-            {
-                glv_LogWarn("xglGetEventStatus() returned failed result %s\n", string_XGL_RESULT(replayResult));
-                returnValue = glv_replay::GLV_REPLAY_CALL_ERROR;
-            }
+            do {
+                replayResult = m_xglFuncs.real_xglGetEventStatus(remap(pPacket->event));
+            } while ((pPacket->result == XGL_EVENT_SET || pPacket->result == XGL_EVENT_RESET) && replayResult != pPacket->result);
+            CHECK_RETURN_VALUE(xglCreateEvent);
             break;
         }
         case  GLV_TPI_XGL_xglSetEvent:
