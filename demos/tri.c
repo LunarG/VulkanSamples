@@ -243,7 +243,7 @@ static void demo_prepare_depth(struct demo *demo)
         .flags = 0,
     };
     XGL_MEMORY_REQUIREMENTS mem_reqs;
-    XGL_SIZE mem_reqs_size;
+    XGL_SIZE mem_reqs_size= sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_RESULT err;
 
     demo->depth.format = depth_format;
@@ -345,7 +345,7 @@ static void demo_prepare_textures(struct demo *demo)
             .minLod = 0.0f,
         };
         XGL_MEMORY_REQUIREMENTS mem_reqs;
-        XGL_SIZE mem_reqs_size;
+        XGL_SIZE mem_reqs_size= sizeof(XGL_MEMORY_REQUIREMENTS);
 
         /* create sampler */
         err = xglCreateSampler(demo->device, &sampler,
