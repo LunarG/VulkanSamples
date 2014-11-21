@@ -45,6 +45,12 @@ static uint32_t mem_get_state_caches(const struct intel_mem *mem,
 
     switch (state) {
     case XGL_MEMORY_STATE_DATA_TRANSFER:
+        /*
+         * because of meta, this may imply GPU render/sample in addition to
+         * CPU read/write
+         */
+        caches = MEM_CACHE | RENDER_CACHE | SAMPLER_CACHE;
+        break;
     case XGL_MEMORY_STATE_INDEX_DATA:
     case XGL_MEMORY_STATE_INDIRECT_ARG:
     case XGL_MEMORY_STATE_WRITE_TIMESTAMP:
@@ -72,34 +78,6 @@ static uint32_t mem_get_state_caches(const struct intel_mem *mem,
     return caches;
 }
 
-static uint32_t cmd_get_mem_flush_flags(const struct intel_cmd *cmd,
-                                        const struct intel_mem *mem,
-                                        uint32_t old_caches,
-                                        uint32_t new_caches)
-{
-    uint32_t flags = 0;
-
-    /* not dirty */
-    if (!(old_caches & (MEM_CACHE | DATA_WRITE_CACHE)))
-        return 0;
-
-    if ((old_caches & DATA_WRITE_CACHE) &&
-        (new_caches & ~(DATA_READ_CACHE | DATA_WRITE_CACHE))) {
-        if (cmd_gen(cmd) >= INTEL_GEN(7))
-            flags |= GEN7_PIPE_CONTROL_DC_FLUSH_ENABLE;
-    }
-
-    if ((new_caches & DATA_READ_CACHE) && old_caches != DATA_WRITE_CACHE)
-        flags |= GEN6_PIPE_CONTROL_CONSTANT_CACHE_INVALIDATE;
-
-    if (!flags)
-        return 0;
-
-    flags |= GEN6_PIPE_CONTROL_CS_STALL;
-
-    return flags;
-}
-
 static uint32_t img_get_state_caches(const struct intel_img *img,
                                      XGL_IMAGE_STATE state)
 {
@@ -107,7 +85,8 @@ static uint32_t img_get_state_caches(const struct intel_img *img,
 
     switch (state) {
     case XGL_IMAGE_STATE_DATA_TRANSFER:
-        caches = MEM_CACHE;
+        /* as in XGL_MEMORY_STATE_DATA_TRANSFER */
+        caches = MEM_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
     case XGL_IMAGE_STATE_GRAPHICS_SHADER_WRITE_ONLY:
     case XGL_IMAGE_STATE_COMPUTE_SHADER_WRITE_ONLY:
@@ -146,10 +125,10 @@ static uint32_t img_get_state_caches(const struct intel_img *img,
     return caches;
 }
 
-static uint32_t cmd_get_img_flush_flags(const struct intel_cmd *cmd,
-                                        const struct intel_img *img,
-                                        uint32_t old_caches,
-                                        uint32_t new_caches)
+static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
+                                    uint32_t old_caches,
+                                    uint32_t new_caches,
+                                    bool is_ds)
 {
     uint32_t flags = 0;
 
@@ -158,7 +137,7 @@ static uint32_t cmd_get_img_flush_flags(const struct intel_cmd *cmd,
         return 0;
 
     if ((old_caches & RENDER_CACHE) && (new_caches & ~RENDER_CACHE)) {
-        if (img->layout.format.numericFormat == XGL_NUM_FMT_DS)
+        if (is_ds)
             flags |= GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH;
         else
             flags |= GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH;
@@ -197,9 +176,10 @@ XGL_VOID XGLAPI intelCmdPrepareMemoryRegions(
         const XGL_MEMORY_STATE_TRANSITION *trans = &pStateTransitions[i];
         struct intel_mem *mem = intel_mem(trans->mem);
 
-        flush_flags |= cmd_get_mem_flush_flags(cmd, mem,
+        flush_flags |= cmd_get_flush_flags(cmd,
                 mem_get_state_caches(mem, trans->oldState),
-                mem_get_state_caches(mem, trans->newState));
+                mem_get_state_caches(mem, trans->newState),
+                false);
     }
 
     cmd_batch_flush(cmd, flush_flags);
@@ -218,9 +198,10 @@ XGL_VOID XGLAPI intelCmdPrepareImages(
         const XGL_IMAGE_STATE_TRANSITION *trans = &pStateTransitions[i];
         struct intel_img *img = intel_img(trans->image);
 
-        flush_flags |= cmd_get_img_flush_flags(cmd, img,
+        flush_flags |= cmd_get_flush_flags(cmd,
                 img_get_state_caches(img, trans->oldState),
-                img_get_state_caches(img, trans->newState));
+                img_get_state_caches(img, trans->newState),
+                (img->layout.format.numericFormat == XGL_NUM_FMT_DS));
     }
 
     cmd_batch_flush(cmd, flush_flags);
