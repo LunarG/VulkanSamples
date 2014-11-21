@@ -33,6 +33,8 @@
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
 static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;
+// Could be smarter about locking with unique locks for various tasks, but just using one for now
+pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
 // Ptr to LL of dbg functions
 static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;
 // Utility function to handle reporting
@@ -45,6 +47,7 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     const XGL_CHAR*      pLayerPrefix,
     const XGL_CHAR*      pMsg)
 {
+    pthread_mutex_lock(&globalLock);
     XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
     if (pTrav) {
         while (pTrav) {
@@ -68,6 +71,7 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
                 break;
         }
     }
+    pthread_mutex_unlock(&globalLock);
 }
 // Return the size of the underlying struct based on struct type
 static XGL_SIZE sTypeStructSize(XGL_STRUCTURE_TYPE sType)
@@ -224,6 +228,7 @@ static DYNAMIC_STATE_NODE* pLastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {0
 // Viewport state create info doesn't have sType so we have to pass in BIND_POINT
 static void insertDynamicState(const XGL_STATE_OBJECT state, const PIPELINE_LL_HEADER* pCreateInfo, const XGL_STATE_BIND_POINT sType)
 {
+    pthread_mutex_lock(&globalLock);
     // Insert new node at head of appropriate LL
     DYNAMIC_STATE_NODE* pStateNode = (DYNAMIC_STATE_NODE*)malloc(sizeof(DYNAMIC_STATE_NODE));
     pStateNode->pNext = pDynamicStateHead[sType];
@@ -232,11 +237,13 @@ static void insertDynamicState(const XGL_STATE_OBJECT state, const PIPELINE_LL_H
     pStateNode->sType = sType;
     pStateNode->pCreateInfo = (PIPELINE_LL_HEADER*)malloc(dynStateCreateInfoSize(sType));
     memcpy(pStateNode->pCreateInfo, pCreateInfo, dynStateCreateInfoSize(sType));
+    pthread_mutex_unlock(&globalLock);
 }
 // Set the last bound dynamic state of given type
 // TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
 static void setLastBoundDynamicState(const XGL_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
 {
+    pthread_mutex_lock(&globalLock);
     DYNAMIC_STATE_NODE* pTrav = pDynamicStateHead[sType];
     while (pTrav && (state != pTrav->stateObj)) {
         pTrav = pTrav->pNext;
@@ -247,10 +254,12 @@ static void setLastBoundDynamicState(const XGL_STATE_OBJECT state, const XGL_STA
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
     }
     pLastBoundDynamicState[sType] = pTrav;
+    pthread_mutex_unlock(&globalLock);
 }
 // Print the last bound dynamic state
 static void printDynamicState()
 {
+    pthread_mutex_lock(&globalLock);
     char str[1024];
     for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
         if (pLastBoundDynamicState[i]) {
@@ -271,32 +280,42 @@ static void printDynamicState()
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
         }
     }
+    pthread_mutex_unlock(&globalLock);
 }
 // Retrieve pipeline node ptr for given pipeline object
 static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 {
+    pthread_mutex_lock(&globalLock);
     PIPELINE_NODE *pTrav = pPipelineHead;
     while (pTrav) {
-        if (pTrav->pipeline == pipeline)
+        if (pTrav->pipeline == pipeline) {
+            pthread_mutex_unlock(&globalLock);
             return pTrav;
+        }
         pTrav = pTrav->pNext;
     }
+    pthread_mutex_unlock(&globalLock);
     return NULL;
 }
 
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
 static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 {
+    pthread_mutex_lock(&globalLock);
     SAMPLER_NODE *pTrav = pSamplerHead;
     while (pTrav) {
-        if (sampler == pTrav->sampler)
+        if (sampler == pTrav->sampler) {
+            pthread_mutex_unlock(&globalLock);
             return &pTrav->createInfo;
+        }
         pTrav = pTrav->pNext;
     }
+    pthread_mutex_unlock(&globalLock);
     return NULL;
 }
 
 // Init the pipeline mapping info based on pipeline create info LL tree
+//  Threading note : Calls to this function should wrapped in mutex
 static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
 {
     // First init create info, we'll shadow the structs as we go down the tree
@@ -393,12 +412,16 @@ static XGL_UINT lastBoundSlotOffset[XGL_MAX_DESCRIPTOR_SETS] = {0, 0};
 // Return DS Head ptr for specified ds or else NULL
 static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
 {
+    pthread_mutex_lock(&globalLock);
     DS_LL_HEAD *pTrav = pDSHead;
     while (pTrav) {
-        if (pTrav->dsID == ds)
+        if (pTrav->dsID == ds) {
+            pthread_mutex_unlock(&globalLock);
             return pTrav;
+        }
         pTrav = pTrav->pNextDS;
     }
+    pthread_mutex_unlock(&globalLock);
     return NULL;
 }
 
@@ -421,17 +444,20 @@ static XGL_BOOL dsUpdate(XGL_DESCRIPTOR_SET ds)
 }
 
 // Clear specified slotCount DS Slots starting at startSlot
-// Return XGL_TRUE if DS is within a xglBeginDescriptorSetUpdate() call sequence, otherwise XGL_FALSE
+// Return XGL_TRUE if DS exists and is successfully cleared to 0s
 static XGL_BOOL clearDS(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount)
 {
     DS_LL_HEAD *pTrav = getDS(descriptorSet);
+    pthread_mutex_lock(&globalLock);
     if (!pTrav || ((startSlot + slotCount) > pTrav->numSlots)) {
         // TODO : Log more meaningful error here
+        pthread_mutex_unlock(&globalLock);
         return XGL_FALSE;
     }
     for (uint32_t i = startSlot; i < slotCount; i++) {
         memset((void*)&pTrav->dsSlot[i], 0, sizeof(DS_SLOT));
     }
+    pthread_mutex_unlock(&globalLock);
     return XGL_TRUE;
 }
 
@@ -561,6 +587,7 @@ static void synchDSMapping()
     }
     else {
         // Synch Descriptor Set Mapping
+        pthread_mutex_lock(&globalLock);
         for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
             DS_LL_HEAD *pDS;
             if (lastBoundDS[i]) {
@@ -612,6 +639,7 @@ static void synchDSMapping()
                 free(tmpStr);
             }
         }
+        pthread_mutex_unlock(&globalLock);
     }
 }
 
@@ -660,6 +688,7 @@ static void printDSConfig()
     uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
     char tmp_str[1024];
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
+    pthread_mutex_lock(&globalLock);
     for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
         if (lastBoundDS[i]) {
             DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
@@ -727,6 +756,7 @@ static void printDSConfig()
             }
         }
     }
+    pthread_mutex_unlock(&globalLock);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
 }
 
@@ -1298,6 +1328,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pPipeline, 0, DRAWSTATE_NONE, "DS", str);
+    pthread_mutex_lock(&globalLock);
     PIPELINE_NODE *pTrav = pPipelineHead;
     if (pTrav) {
         while (pTrav->pNext)
@@ -1312,6 +1343,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     memset((void*)pTrav, 0, sizeof(PIPELINE_NODE));
     pTrav->pipeline = *pPipeline;
     initPipeline(pTrav, pCreateInfo);
+    pthread_mutex_unlock(&globalLock);
     return result;
 }
 
@@ -1342,12 +1374,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
-    // TODO : Save sampler create info here and associate it with SAMPLER
+    pthread_mutex_lock(&globalLock);
     SAMPLER_NODE *pNewNode = (SAMPLER_NODE*)malloc(sizeof(SAMPLER_NODE));
     pNewNode->sampler = *pSampler;
     memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO));
     pNewNode->pNext = pSamplerHead;
     pSamplerHead = pNewNode;
+    pthread_mutex_unlock(&globalLock);
     return result;
 }
 
@@ -1358,6 +1391,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, con
     char str[1024];
     sprintf(str, "Created Descriptor Set (DS) %p", (void*)*pDescriptorSet);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDescriptorSet, 0, DRAWSTATE_NONE, "DS", str);
+    pthread_mutex_lock(&globalLock);
     DS_LL_HEAD *pTrav = pDSHead;
     if (pTrav) {
         // Grow existing list
@@ -1376,6 +1410,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, con
     pTrav->pNextDS = NULL;
     pTrav->updateActive = XGL_FALSE;
     initDS(pTrav);
+    pthread_mutex_unlock(&globalLock);
     return result;
 }
 
@@ -1586,8 +1621,10 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffe
 {
     if (getDS(descriptorSet)) {
         assert(index < XGL_MAX_DESCRIPTOR_SETS);
+        pthread_mutex_lock(&globalLock);
         lastBoundDS[index] = descriptorSet;
         lastBoundSlotOffset[index] = slotOffset;
+        pthread_mutex_unlock(&globalLock);
         char str[1024];
         sprintf(str, "DS %p bound to DS index %u on pipeline %s", (void*)descriptorSet, index, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_NONE, "DS", str);
