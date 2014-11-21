@@ -148,7 +148,26 @@ static XGL_SIZE sTypeStructSize(XGL_STRUCTURE_TYPE sType)
             return 0;
     }
 }
-
+// Return the size of the underlying struct based on Bind Point enum
+//  Have to do this b/c VIEWPORT doesn't have sType in its createinfo struct
+static XGL_SIZE dynStateCreateInfoSize(XGL_STRUCTURE_TYPE sType)
+{
+    switch (sType)
+    {
+        case XGL_STATE_BIND_VIEWPORT:
+            return sizeof(XGL_VIEWPORT_STATE_CREATE_INFO);
+        case XGL_STATE_BIND_RASTER:
+            return sizeof(XGL_RASTER_STATE_CREATE_INFO);
+        case XGL_STATE_BIND_DEPTH_STENCIL:
+            return sizeof(XGL_DEPTH_STENCIL_STATE_CREATE_INFO);
+        case XGL_STATE_BIND_COLOR_BLEND:
+            return sizeof(XGL_COLOR_BLEND_STATE_CREATE_INFO);
+        case XGL_STATE_BIND_MSAA:
+            return sizeof(XGL_MSAA_STATE_CREATE_INFO);
+        default:
+            return 0;
+    }
+}
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
 // Just track 2 shaders for now
 #define XGL_NUM_GRAPHICS_SHADERS XGL_SHADER_STAGE_COMPUTE
@@ -169,7 +188,7 @@ typedef struct _PIPELINE_LL_HEADER {
 typedef struct _PIPELINE_NODE {
     XGL_PIPELINE           pipeline;
     struct _PIPELINE_NODE  *pNext;
-    PIPELINE_LL_HEADER     *pCreateTree; // Ptr to shadow of data in create tree
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
     // 1st dimension of array is shader type
     SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS][XGL_MAX_DESCRIPTOR_SETS];
     // Vtx input info (if any)
@@ -185,12 +204,75 @@ typedef struct _SAMPLER_NODE {
     struct _SAMPLER_NODE     *pNext;
 } SAMPLER_NODE;
 
+typedef struct _DYNAMIC_STATE_NODE {
+    XGL_STATE_OBJECT     stateObj;
+    XGL_STATE_BIND_POINT sType; // Extra data as VIEWPORT CreateInfo doesn't have sType
+    PIPELINE_LL_HEADER   *pCreateInfo;
+    struct _DYNAMIC_STATE_NODE *pNext;
+} DYNAMIC_STATE_NODE;
+
+// TODO : Should be tracking lastBound per cmdBuffer and when draws occur, report based on that cmd buffer lastBound
 static PIPELINE_NODE *pPipelineHead = NULL;
 static SAMPLER_NODE *pSamplerHead = NULL;
 static XGL_PIPELINE lastBoundPipeline = NULL;
 #define MAX_BINDING 0xFFFFFFFF
 static XGL_UINT lastVtxBinding = MAX_BINDING;
 
+static DYNAMIC_STATE_NODE* pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
+static DYNAMIC_STATE_NODE* pLastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {0};
+
+// Viewport state create info doesn't have sType so we have to pass in BIND_POINT
+static void insertDynamicState(const XGL_STATE_OBJECT state, const PIPELINE_LL_HEADER* pCreateInfo, const XGL_STATE_BIND_POINT sType)
+{
+    // Insert new node at head of appropriate LL
+    DYNAMIC_STATE_NODE* pStateNode = (DYNAMIC_STATE_NODE*)malloc(sizeof(DYNAMIC_STATE_NODE));
+    pStateNode->pNext = pDynamicStateHead[sType];
+    pDynamicStateHead[sType] = pStateNode;
+    pStateNode->stateObj = state;
+    pStateNode->sType = sType;
+    pStateNode->pCreateInfo = (PIPELINE_LL_HEADER*)malloc(dynStateCreateInfoSize(sType));
+    memcpy(pStateNode->pCreateInfo, pCreateInfo, dynStateCreateInfoSize(sType));
+}
+// Set the last bound dynamic state of given type
+// TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
+static void setLastBoundDynamicState(const XGL_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
+{
+    DYNAMIC_STATE_NODE* pTrav = pDynamicStateHead[sType];
+    while (pTrav && (state != pTrav->stateObj)) {
+        pTrav = pTrav->pNext;
+    }
+    if (!pTrav) {
+        char str[1024];
+        sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
+    }
+    pLastBoundDynamicState[sType] = pTrav;
+}
+// Print the last bound dynamic state
+static void printDynamicState()
+{
+    char str[1024];
+    for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
+        if (pLastBoundDynamicState[i]) {
+            sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_XGL_STATE_BIND_POINT(i), pLastBoundDynamicState[i]->stateObj);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
+            switch (pLastBoundDynamicState[i]->sType)
+            {
+                case XGL_STATE_BIND_VIEWPORT:
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", xgl_print_xgl_viewport_state_create_info((XGL_VIEWPORT_STATE_CREATE_INFO*)pLastBoundDynamicState[i]->pCreateInfo, "  "));
+                    break;
+                default:
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pLastBoundDynamicState[i]->pCreateInfo, "  "));
+                    break;
+            }
+        }
+        else {
+            sprintf(str, "No dynamic state of type %s bound", string_XGL_STATE_BIND_POINT(i));
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
+        }
+    }
+}
+// Retrieve pipeline node ptr for given pipeline object
 static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 {
     PIPELINE_NODE *pTrav = pPipelineHead;
@@ -218,9 +300,9 @@ static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
 {
     // First init create info, we'll shadow the structs as we go down the tree
-    pPipeline->pCreateTree = (PIPELINE_LL_HEADER*)malloc(sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
+    pPipeline->pCreateTree = (XGL_GRAPHICS_PIPELINE_CREATE_INFO*)malloc(sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
     memcpy(pPipeline->pCreateTree, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
-    PIPELINE_LL_HEADER *pShadowTrav = pPipeline->pCreateTree;
+    PIPELINE_LL_HEADER *pShadowTrav = (PIPELINE_LL_HEADER*)pPipeline->pCreateTree;
     PIPELINE_LL_HEADER *pTrav = (PIPELINE_LL_HEADER*)pCreateInfo->pNext;
     while (pTrav) {
         // Shadow the struct
@@ -455,7 +537,18 @@ static XGL_BOOL dsSamplerMapping(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT star
         return XGL_FALSE;
     return XGL_TRUE;
 }
-
+// Print the last bound Gfx Pipeline
+static void printPipeline()
+{
+    PIPELINE_NODE *pPipeTrav = getPipeline(lastBoundPipeline);
+    if (!pPipeTrav) {
+        // nothing to print
+    }
+    else {
+        char* pipeStr = xgl_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "{DS}");
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr);
+    }
+}
 // Synch up currently bound pipeline settings with DS mappings
 static void synchDSMapping()
 {
@@ -641,6 +734,8 @@ static void synchAndPrintDSConfig()
 {
     synchDSMapping();
     printDSConfig();
+    printPipeline();
+    printDynamicState();
 }
 
 static void initLayerTable()
@@ -1407,30 +1502,35 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET d
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
+    insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_VIEWPORT);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
+    insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_RASTER);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
+    insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_MSAA);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
+    insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_COLOR_BLEND);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
+    insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_DEPTH_STENCIL);
     return result;
 }
 
@@ -1478,6 +1578,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffe
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state)
 {
+    setLastBoundDynamicState(state, stateBindPoint);
     nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
 }
 

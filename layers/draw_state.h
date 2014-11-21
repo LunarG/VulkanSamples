@@ -43,6 +43,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_CLEAR_DS_FAILED               = 15, // Error while attempting ClearDS
     DRAWSTATE_INVALID_PIPELINE              = 16, // Invalid DS referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS       = 17, // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
+    DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT  = 18, // Invalid dyn state object
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
