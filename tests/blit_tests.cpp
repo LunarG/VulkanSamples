@@ -350,7 +350,7 @@ TEST_F(XglBlitTest, ClearColorImageBasic)
 
     {
         XGL_SUBRESOURCE_LAYOUT layout;
-        XGL_SIZE layout_size;
+        XGL_SIZE layout_size= sizeof(layout);
         XGL_UINT x, y;
         void *data;
 
@@ -428,7 +428,7 @@ TEST_F(XglBlitTest, ClearDepthStencilBasic)
      */
     {
         XGL_SUBRESOURCE_LAYOUT layout;
-        XGL_SIZE layout_size;
+        XGL_SIZE layout_size = sizeof(layout);
         XGL_UINT x, y;
         void *data;
 

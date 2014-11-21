@@ -322,7 +322,7 @@ void XglRenderTest::InitTexture(int textureSlot, int* color)
             view.minLod = 0.0f;
 
         XGL_MEMORY_REQUIREMENTS mem_reqs;
-        XGL_SIZE mem_reqs_size;
+        XGL_SIZE mem_reqs_size= sizeof(XGL_MEMORY_REQUIREMENTS);
 
         /* create image */
         err = xglCreateImage(device(), &image, &m_texture[textureSlot]);
@@ -360,7 +360,7 @@ void XglRenderTest::InitTexture(int textureSlot, int* color)
             .arraySlice = 0,
         };
         XGL_SUBRESOURCE_LAYOUT layout;
-        XGL_SIZE layout_size;
+        XGL_SIZE layout_size = sizeof(layout);
         XGL_VOID *data;
         XGL_INT x, y;
 

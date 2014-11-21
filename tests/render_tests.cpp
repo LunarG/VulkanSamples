@@ -413,7 +413,7 @@ void XglRenderTest::InitTexture()
             view.minLod = 0.0f;
 
         XGL_MEMORY_REQUIREMENTS mem_reqs;
-        XGL_SIZE mem_reqs_size;
+        XGL_SIZE mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
 
         /* create sampler */
         err = xglCreateSampler(device(), &sampler, &m_sampler);
@@ -1409,7 +1409,7 @@ void XglRenderTest::InitDepthStencil()
     XGL_MEMORY_ALLOC_INFO mem_alloc;
     XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view;
     XGL_MEMORY_REQUIREMENTS mem_reqs;
-    XGL_SIZE mem_reqs_size;
+    XGL_SIZE mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
 
     // Clean up default state created by framework
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
