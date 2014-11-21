@@ -2876,12 +2876,12 @@ static void cmd_draw(struct intel_cmd *cmd,
                 vertex_start, instance_count, instance_start, vertex_base);
     }
 
-    if (intel_debug & INTEL_DEBUG_NOCACHE)
-        cmd_batch_flush_all(cmd);
-
     cmd->bind.draw_count++;
     /* need to re-emit all workarounds */
     cmd->bind.wa_flags = 0;
+
+    if (intel_debug & INTEL_DEBUG_NOCACHE)
+        cmd_batch_flush_all(cmd);
 }
 
 void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
@@ -2917,14 +2917,14 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
         gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
     }
 
-    if (intel_debug & INTEL_DEBUG_NOCACHE)
-        cmd_batch_flush_all(cmd);
-
     cmd->bind.draw_count++;
     /* need to re-emit all workarounds */
     cmd->bind.wa_flags = 0;
 
     cmd->bind.meta = NULL;
+
+    if (intel_debug & INTEL_DEBUG_NOCACHE)
+        cmd_batch_flush_all(cmd);
 }
 
 XGL_VOID XGLAPI intelCmdBindPipeline(
