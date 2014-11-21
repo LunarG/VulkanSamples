@@ -796,7 +796,8 @@ struct gl_program
 {
    GLuint Id;
    GLubyte *String;  /**< Null-terminated program text */
-   GLint RefCount;
+   // LunarG: Remove - XGL does not use reference counts
+   // GLint RefCount;
    GLenum Target;    /**< GL_VERTEX/FRAGMENT_PROGRAM_ARB, GL_GEOMETRY_PROGRAM_NV */
    GLenum Format;    /**< String encoding format */
 
@@ -1088,7 +1089,8 @@ struct gl_shader
    gl_shader_stage Stage;
    GLuint Name;  /**< AKA the handle */
    GLchar *Label;   /**< GL_KHR_debug */
-   GLint RefCount;  /**< Reference count */
+   // LunarG: Remove - XGL does not use reference counts
+   // GLint RefCount;
    GLboolean DeletePending;
    GLboolean CompileStatus;
    const GLchar *Source;  /**< BIL or GLSL source code */
@@ -1322,7 +1324,8 @@ struct gl_shader_program
    GLenum Type;  /**< Always GL_SHADER_PROGRAM (internal token) */
    GLuint Name;  /**< aka handle or ID */
    GLchar *Label;   /**< GL_KHR_debug */
-   GLint RefCount;  /**< Reference count */
+   // LunarG: Remove - XGL does not use reference counts
+   // GLint RefCount;
    GLboolean DeletePending;
 
    /**
