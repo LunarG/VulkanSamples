@@ -7,7 +7,7 @@ project(glvtrace_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../../../include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 
 set(SRC_LIST
     ${SRC_LIST}

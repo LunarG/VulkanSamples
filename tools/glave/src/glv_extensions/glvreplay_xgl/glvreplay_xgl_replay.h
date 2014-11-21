@@ -58,6 +58,8 @@ public:
     // XGL_DEVICE get_device() { return m_dev[m_gpuIdx];}
 #if defined(WIN32)
     HWND get_window_handle() { return m_windowHandle; }
+#elif defined(PLATFORM_LINUX)
+    xcb_window_t get_window_handle() { return m_XcbWindow; }
 #endif
 private:
     XGL_RESULT init_xgl(const unsigned int gpu_idx);

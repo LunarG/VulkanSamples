@@ -24,7 +24,6 @@
  **************************************************************************/
 #include "glvreplay_xgl_replay.h"
 
-
 extern "C" {
 #include "glvtrace_xgl_xgl_structs.h"
 #include "glvtrace_xgl_xgldbg_structs.h"
@@ -201,7 +200,10 @@ int xglDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsign
 {
 #if defined(WIN32)
     m_windowHandle = hWindow;
+#elif defined(PLATFORM_LINUX)
+    m_XcbWindow = hWindow;
 #endif
+
     m_windowWidth = width;
     m_windowHeight = height;
     return 0;

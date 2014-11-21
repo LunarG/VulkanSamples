@@ -30,8 +30,9 @@ extern "C"{
 
 #if defined(WIN32)
 typedef HWND glv_window_handle;
-#else
-typedef void* glv_window_handle;
+#elif defined(PLATFORM_LINUX)
+#include <xcb/xcb.h>
+typedef xcb_window_t glv_window_handle;
 #endif
 
 /* classes to abstract the display and initialization of rendering API for presenting
