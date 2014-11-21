@@ -305,6 +305,59 @@ TEST_F(XglBlitTest, CopyMemory)
     xglFreeMemory(dst);
 }
 
+TEST_F(XglBlitTest, CopyMemoryHazard)
+{
+    XGL_GPU_MEMORY mem[3];
+    XGL_MEMORY_COPY region;
+    XGL_MEMORY_STATE_TRANSITION transition;
+    XGL_RESULT err;
+    void *data;
+    XGL_UINT i;
+
+    ClearMemoryRefs();
+
+    for (i = 0; i < 3; i++) {
+        mem[i] = AddMemory(256, false);
+        ASSERT_NE((XGL_GPU_MEMORY) XGL_NULL_HANDLE, mem[i]);
+
+        err = xglMapMemory(mem[i], 0, &data);
+        ASSERT_XGL_SUCCESS(err);
+        ((char *) data)[0] = 5 * (i + 1);
+        xglUnmapMemory(mem[i]);
+    }
+
+    region.srcOffset = 0;
+    region.destOffset = 0;
+    region.copySize = 1;
+
+    BeginCmd();
+
+    xglCmdCopyMemory(m_cmd, mem[0], mem[1], 1, &region);
+
+    memset(&transition, 0, sizeof(transition));
+    transition.sType = XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION;
+    transition.mem = mem[1];
+    transition.oldState = XGL_MEMORY_STATE_DATA_TRANSFER;
+    transition.newState = XGL_MEMORY_STATE_DATA_TRANSFER;
+    transition.offset = region.destOffset;
+    transition.regionSize = region.copySize;
+    xglCmdPrepareMemoryRegions(m_cmd, 1, &transition);
+
+    xglCmdCopyMemory(m_cmd, mem[1], mem[2], 1, &region);
+
+    EndAndSubmitCmd();
+
+    err = xglMapMemory(mem[2], 0, &data);
+    ASSERT_XGL_SUCCESS(err);
+
+    ASSERT_EQ(5, ((const unsigned char *) data)[0]);
+
+    xglUnmapMemory(mem[2]);
+
+    for (i = 0; i < 3; i++)
+        xglFreeMemory(mem[i]);
+}
+
 TEST_F(XglBlitTest, ClearColorImageBasic)
 {
     const XGL_FLOAT color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
