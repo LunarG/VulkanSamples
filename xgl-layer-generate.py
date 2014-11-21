@@ -189,7 +189,10 @@ class Subcommand(object):
                     f_open = ''
                     f_close = ''
                     if "file" in layer:
-                        f_open = 'pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "a");\n    '
+                        file_mode = "a"
+                        if 'CreateDevice' in proto.name:
+                            file_mode = "w"
+                        f_open = 'pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
                         log_func = 'fprintf(pOutFile, "xgl%s(' % proto.name
                         f_close = '\n    fclose(pOutFile);\n    pthread_mutex_unlock( &file_lock );'
                     else:
