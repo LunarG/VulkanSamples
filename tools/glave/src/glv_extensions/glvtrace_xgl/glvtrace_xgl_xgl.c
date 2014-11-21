@@ -1724,21 +1724,18 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetObjectInfo(
     glv_trace_packet_header* pHeader;
     XGL_RESULT result;
     struct_xglGetObjectInfo* pPacket;
-    uint64_t startTime;
+    XGL_SIZE dataSizeIn = (pDataSize == NULL) ? 0 : *pDataSize;
     SEND_ENTRYPOINT_ID(xglGetObjectInfo);
-    startTime = glv_get_time();
-    result = real_xglGetObjectInfo(object, infoType, pDataSize, pData);
-    // since don't know the size of *pDataSize potentially until after the call create trace packet post call
     CREATE_TRACE_PACKET(xglGetObjectInfo, ((pDataSize != NULL) ? sizeof(XGL_SIZE) : 0) + ((pDataSize != NULL)? *pDataSize : 0));
-    pHeader->entrypoint_begin_time = startTime;
+    result = real_xglGetObjectInfo(object, infoType, pDataSize, pData);
     pPacket = interpret_body_as_xglGetObjectInfo(pHeader);
     pPacket->object = object;
 	pPacket->infoType = infoType;
-	glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(XGL_SIZE), pDataSize);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(XGL_SIZE), &dataSizeIn);
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
-    if (pDataSize && pData)
+    if (pData)
     {
-	    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), *pDataSize, pData);
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), dataSizeIn, pData);
         glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
     }
     pPacket->result = result;
@@ -2074,6 +2071,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetImageSubresourceInfo(
 {
     glv_trace_packet_header* pHeader;
     XGL_RESULT result;
+    XGL_SIZE dataSizeIn = (pDataSize == NULL) ? 0 : *pDataSize;
     struct_xglGetImageSubresourceInfo* pPacket;
     SEND_ENTRYPOINT_ID(xglGetImageSubresourceInfo);
     CREATE_TRACE_PACKET(xglGetImageSubresourceInfo, ((pSubresource != NULL) ? sizeof(XGL_IMAGE_SUBRESOURCE) : 0) + ((pDataSize != NULL ) ? sizeof(XGL_SIZE) : 0) + ((pDataSize != NULL && pData != NULL) ? *pDataSize : 0));
@@ -2082,12 +2080,15 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetImageSubresourceInfo(
     pPacket->image = image;
 	glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubresource), sizeof(XGL_IMAGE_SUBRESOURCE), pSubresource);
     pPacket->infoType = infoType;
-	glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(XGL_SIZE), pDataSize);
-	glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, pData);
-    pPacket->result = result;
-	glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubresource));
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(XGL_SIZE), &dataSizeIn);
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubresource));
 	glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
-	glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
+    if (pData != NULL)
+    {
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), dataSizeIn, pData);
+        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
+    }
+    pPacket->result = result;
     FINISH_TRACE_PACKET();
     return result;
 }
