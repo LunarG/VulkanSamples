@@ -11,7 +11,14 @@ if (POLICY CMP0020)
    cmake_policy(SET CMP0020 OLD)
 endif()
 
-find_package(Qt5 COMPONENTS Widgets Gui Core REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Gui Core QUIET)
+
+if(NOT Qt5_FOUND)
+# After Qt5.3 is installed, you may need to add the following to the cmake command line:
+# -DQt5_DIR=/home/<username>/Qt/5.3/gcc_64/lib/cmake/Qt5
+message(WARNING "WARNING: glvdebug will be excluded because Qt5 was not found.")
+else()
+
 find_package(Threads REQUIRED)
 find_package(X11 REQUIRED)
 
@@ -127,3 +134,4 @@ if (MSVC)
 endif()
 
 build_options_finalize()
+endif(NOT Qt5_FOUND)
