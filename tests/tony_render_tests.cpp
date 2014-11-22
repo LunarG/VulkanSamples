@@ -1577,6 +1577,91 @@ TEST_F(XglRenderTest, FSTriangle)
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 }
+TEST_F(XglRenderTest, SamplerBindingsTriangle)
+{
+    // This test sets bindings on the samplers
+    // For now we are asserting that sampler and texture pairs
+    // march in lock step, and are set via GLSL binding.  This can
+    // and will probably change.
+    // The sampler bindings should match the sampler and texture slot
+    // number set up by the application.
+    // This test will result in a blue triangle
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 samplePos;\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   vec2 positions[3];"
+            "      positions[0] = vec2( 0.0, 0.0);\n"
+            "      positions[1] = vec2( 1.0, 0.0);\n"
+            "      positions[2] = vec2( 1.0, 1.0);\n"
+            "   samplePos = vec4(positions[gl_VertexID % 3], 0.0, 0.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 samplePos;\n"
+            "layout (binding = 0) uniform sampler2D surface0;\n"
+            "layout (binding = 1) uniform sampler2D surface1;\n"
+            "layout (binding = 12) uniform sampler2D surface2;\n"
+            "void main() {\n"
+            "   gl_FragColor = textureLod(surface2, samplePos.xy, 0.0);\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
+
+    XglSamplerObj sampler1(m_device);
+    XglSamplerObj sampler2(m_device);
+    XglSamplerObj sampler3(m_device);
+
+    XglTextureObj texture1(m_device); // Red
+    texture1.ChangeColors(0xffff0000,0xffff0000);
+    XglTextureObj texture2(m_device); // Green
+    texture2.ChangeColors(0xff00ff00,0xff00ff00);
+    XglTextureObj texture3(m_device); // Blue
+    texture3.ChangeColors(0xff0000ff,0xff0000ff);
+
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture1);
+    ps.BindShaderEntitySlotToSampler(0, &sampler1);
+
+    ps.BindShaderEntitySlotToImage(1, XGL_SLOT_SHADER_RESOURCE, &texture2);
+    ps.BindShaderEntitySlotToSampler(1, &sampler2);
+
+    ps.BindShaderEntitySlotToImage(12, XGL_SLOT_SHADER_RESOURCE, &texture3);
+    ps.BindShaderEntitySlotToSampler(12, &sampler3);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachImageView(&texture1);
+    descriptorSet.AttachSampler(&sampler1);
+    descriptorSet.AttachImageView(&texture2);
+    descriptorSet.AttachSampler(&sampler2);
+    descriptorSet.AttachImageView(&texture3);
+    descriptorSet.AttachSampler(&sampler3);
+
+    m_memoryRefManager.AddMemoryRef(&texture1);
+    m_memoryRefManager.AddMemoryRef(&texture2);
+    m_memoryRefManager.AddMemoryRef(&texture3);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+
+}
 
 TEST_F(XglRenderTest, TriangleVSUniformBlock)
 {
