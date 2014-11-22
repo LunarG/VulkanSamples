@@ -73,6 +73,8 @@ private:
     void emit_vs_copy_mem();
     void emit_copy_mem();
     void emit_copy_img();
+    void emit_copy_mem_to_img();
+
     void emit_clear_color();
     void emit_clear_depth();
     void *codegen(uint32_t *code_size);
@@ -445,6 +447,27 @@ void intel_meta_compiler::emit_copy_img()
     emit_render_target_write(mrf, base_mrf, 10, false);
 }
 
+void intel_meta_compiler::emit_copy_mem_to_img()
+{
+    const struct brw_reg mrf =
+        retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
+
+    emit_compute_frag_coord();
+    emit_add(temps[0], frag_y, src_offset_y);
+    emit_add(temps[1], frag_x, src_offset_x);
+
+    /* convert (x, y) to linear offset */
+    emit_mul(temps[2], temps[0], dst_extent_width);
+    emit_add(mrf, temps[2], temps[1]);
+    emit_texture_lookup(texels[0], SHADER_OPCODE_TXF, base_mrf, 2);
+
+    emit_mov(offset(mrf, 0), offset(texels[0], 0));
+    emit_mov(offset(mrf, 2), offset(texels[0], 2));
+    emit_mov(offset(mrf, 4), offset(texels[0], 4));
+    emit_mov(offset(mrf, 6), offset(texels[0], 6));
+    emit_render_target_write(mrf, base_mrf, 8, false);
+}
+
 void intel_meta_compiler::emit_clear_color()
 {
     const struct brw_reg mrf =
@@ -520,7 +543,7 @@ void *intel_meta_compiler::compile(brw_blorp_prog_data *prog_data,
         emit_clear_color();
         break;
     case INTEL_DEV_META_FS_COPY_MEM_TO_IMG:
-        emit_clear_color();
+        emit_copy_mem_to_img();
         break;
     case INTEL_DEV_META_FS_CLEAR_COLOR:
         emit_clear_color();
