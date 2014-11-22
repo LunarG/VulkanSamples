@@ -507,6 +507,99 @@ TEST_F(XglBlitTest, ClearColorImageBasic)
     delete img;
 }
 
+TEST_F(XglBlitTest, CopyImageBasic)
+{
+    const XGL_FLOAT color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+    const XGL_UINT width = 64;
+    const XGL_UINT height = 64;
+    XglImage *src, *dst;
+    XGL_FORMAT format;
+    XGL_IMAGE_SUBRESOURCE subres;
+    XGL_IMAGE_SUBRESOURCE_RANGE subres_range;
+    XGL_IMAGE_STATE_TRANSITION transition;
+    XGL_RESULT err;
+
+    format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    format.numericFormat = XGL_NUM_FMT_UNORM;
+
+    subres.aspect = XGL_IMAGE_ASPECT_COLOR;
+    subres.mipLevel = 0;
+    subres.arraySlice = 0;
+
+    subres_range.aspect = XGL_IMAGE_ASPECT_COLOR;
+    subres_range.baseMipLevel = 0;
+    subres_range.mipLevels = 1;
+    subres_range.baseArraySlice = 0;
+    subres_range.arraySize = 1;
+
+    src = new XglImage(m_device);
+    src->init(width, height, format, XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+    dst = new XglImage(m_device);
+    dst->init(width, height, format, XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+
+    ClearMemoryRefs();
+    AddMemoryRef(src->memory(), false);
+    AddMemoryRef(dst->memory(), false);
+
+    BeginCmd();
+
+    transition.image = src->image();
+    transition.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+    transition.newState = XGL_IMAGE_STATE_CLEAR;
+    transition.subresourceRange = subres_range;
+    xglCmdPrepareImages(m_cmd, 1, &transition);
+
+    xglCmdClearColorImage(m_cmd, src->image(), color, 1, &subres_range);
+
+    transition.oldState = XGL_IMAGE_STATE_CLEAR;
+    transition.newState = XGL_IMAGE_STATE_DATA_TRANSFER;
+    xglCmdPrepareImages(m_cmd, 1, &transition);
+
+    transition.image = dst->image();
+    transition.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+    transition.newState = XGL_IMAGE_STATE_DATA_TRANSFER;
+    xglCmdPrepareImages(m_cmd, 1, &transition);
+
+    XGL_IMAGE_COPY copy;
+    memset(&copy, 0, sizeof(copy));
+    copy.srcSubresource = subres;
+    copy.destSubresource = subres;
+    copy.extent.width = width;
+    copy.extent.height = height;
+    copy.extent.depth = 1;
+    xglCmdCopyImage(m_cmd, src->image(), dst->image(), 1, &copy);
+
+    EndAndSubmitCmd();
+
+    {
+        XGL_SUBRESOURCE_LAYOUT layout;
+        XGL_SIZE layout_size;
+        void *data;
+        XGL_UINT x, y;
+
+        err = dst->MapMemory(&data);
+        ASSERT_XGL_SUCCESS(err);
+
+        err = xglGetImageSubresourceInfo(dst->image(), &subres,
+                XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
+        ASSERT_XGL_SUCCESS(err);
+        ASSERT_EQ(sizeof(layout), layout_size);
+
+        for (y = 0; y < height; y++) {
+            const XGL_UINT *real = (const XGL_UINT *)
+                ((char *) data + layout.offset + layout.rowPitch * y);
+
+            for (x = 0; x < width; x++)
+                ASSERT_EQ(0xff00ff00, real[x]) << "location:" << x << "," << y << ": 0x" << std::hex << real[x] << '\n';
+        }
+
+        dst->UnmapMemory();
+    }
+
+    delete src;
+    delete dst;
+}
+
 TEST_F(XglBlitTest, ClearDepthStencilBasic)
 {
     const XGL_FLOAT clear_depth = 0.4f;
