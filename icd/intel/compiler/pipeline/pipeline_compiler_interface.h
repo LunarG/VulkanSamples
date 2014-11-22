@@ -35,9 +35,12 @@ extern "C" {
 
 #include "dev.h"
 
+struct brw_context;
 struct intel_gpu;
 struct intel_ir;
 struct intel_pipeline_shader;
+
+struct brw_context *intel_create_brw_context(const struct intel_gpu *gpu);
 
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
                                          const struct intel_gpu *gpu,

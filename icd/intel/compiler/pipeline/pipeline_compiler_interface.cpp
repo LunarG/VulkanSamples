@@ -266,6 +266,17 @@ static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
 
 extern "C" {
 
+struct brw_context *intel_create_brw_context(const struct intel_gpu *gpu)
+{
+    // create a brw_context
+    struct brw_context *brw = rzalloc(NULL, struct brw_context);
+
+    // allocate sub structures on the stack
+    initialize_brw_context(brw, gpu);
+
+    return brw;
+}
+
 // invoke backend compiler to generate ISA and supporting data structures
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
@@ -275,11 +286,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
     XGL_RESULT status = XGL_SUCCESS;
 
-    // create a brw_context
-    struct brw_context *brw = rzalloc(NULL, struct brw_context);
-
-    // allocate sub structures on the stack
-    initialize_brw_context(brw, gpu);
+    struct brw_context *brw = intel_create_brw_context(gpu);
 
     // LunarG : TODO - should this have been set for us somewhere?
     sh_prog->Type = sh_prog->Shaders[0]->Stage;
@@ -407,14 +414,10 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 void intel_disassemble_kernel(const struct intel_gpu *gpu,
                               const void *kernel, XGL_SIZE size)
 {
-    struct brw_context brw;
     struct brw_compile c;
 
-    memset(&brw, 0, sizeof(brw));
-    initialize_brw_context(&brw, gpu);
-
     memset(&c, 0, sizeof(c));
-    c.brw = &brw;
+    c.brw = intel_create_brw_context(gpu);
     c.store = (struct brw_instruction *) kernel;
 
     brw_dump_compile(&c, stderr, 0, size);

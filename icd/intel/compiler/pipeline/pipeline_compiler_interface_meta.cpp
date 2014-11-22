@@ -32,72 +32,6 @@
 #include "compiler/pipeline/brw_blorp_blit_eu.h"
 #include "compiler/pipeline/brw_blorp.h"
 
-static void initialize_brw_context(struct brw_context *brw,
-                                   const struct intel_gpu *gpu)
-{
-
-    // create a stripped down context for compilation
-    initialize_mesa_context_to_defaults(&brw->ctx);
-
-    //
-    // init the things pulled from DRI in brwCreateContext
-    //
-    struct brw_device_info *devInfo = rzalloc(brw, struct brw_device_info);
-    switch (intel_gpu_gen(gpu)) {
-    case INTEL_GEN(7.5):
-        devInfo->gen = 7;
-        devInfo->is_haswell = true;
-        break;
-    case INTEL_GEN(7):
-        devInfo->gen = 7;
-        break;
-    case INTEL_GEN(6):
-        devInfo->gen = 6;
-        break;
-    default:
-        assert(!"unsupported GEN");
-        break;
-    }
-
-    devInfo->gt = gpu->gt;
-    devInfo->has_llc = true;
-    devInfo->has_pln = true;
-    devInfo->has_compr4 = true;
-    devInfo->has_negative_rhw_bug = false;
-    devInfo->needs_unlit_centroid_workaround = true;
-
-    // hand code values until we have something to pull from
-    // use brw_device_info_hsw_gt3
-    brw->intelScreen = rzalloc(brw, struct intel_screen);
-    brw->intelScreen->devinfo = devInfo;
-
-    brw->gen = brw->intelScreen->devinfo->gen;
-    brw->gt = brw->intelScreen->devinfo->gt;
-    brw->is_g4x = brw->intelScreen->devinfo->is_g4x;
-    brw->is_baytrail = brw->intelScreen->devinfo->is_baytrail;
-    brw->is_haswell = brw->intelScreen->devinfo->is_haswell;
-    brw->has_llc = brw->intelScreen->devinfo->has_llc;
-    brw->has_pln = brw->intelScreen->devinfo->has_pln;
-    brw->has_compr4 = brw->intelScreen->devinfo->has_compr4;
-    brw->has_negative_rhw_bug = brw->intelScreen->devinfo->has_negative_rhw_bug;
-    brw->needs_unlit_centroid_workaround =
-       brw->intelScreen->devinfo->needs_unlit_centroid_workaround;
-
-    brw->vs.base.stage = MESA_SHADER_VERTEX;
-    brw->gs.base.stage = MESA_SHADER_GEOMETRY;
-    brw->wm.base.stage = MESA_SHADER_FRAGMENT;
-
-    //
-    // init what remains of intel_screen
-    //
-    brw->intelScreen->deviceID = 0;
-    brw->intelScreen->program_id = 0;
-
-    brw_vec4_alloc_reg_set(brw->intelScreen);
-
-    brw->shader_prog = brw_new_shader_program(&brw->ctx, 0);
-}
-
 class intel_meta_compiler : public brw_blorp_eu_emitter
 {
 public:
@@ -378,9 +312,7 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,
                                               enum intel_dev_meta_shader id)
 {
-    struct brw_context *brw = rzalloc(NULL, struct brw_context);
-
-    initialize_brw_context(brw, gpu);
+    struct brw_context *brw = intel_create_brw_context(gpu);
 
     intel_meta_compiler c(brw, id);
     brw_blorp_prog_data prog_data;
