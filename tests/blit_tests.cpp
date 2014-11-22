@@ -600,6 +600,78 @@ TEST_F(XglBlitTest, CopyImageBasic)
     delete dst;
 }
 
+TEST_F(XglBlitTest, CopyMemoryToImageBasic)
+{
+    const XGL_UINT width = 64;
+    const XGL_UINT height = 64;
+    XGL_FORMAT format;
+    XGL_GPU_MEMORY mem;
+    XglImage *img;
+    XGL_MEMORY_IMAGE_COPY region;
+    XGL_RESULT err;
+    XGL_UINT x, y;
+    void *data;
+
+    format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    format.numericFormat = XGL_NUM_FMT_UNORM;
+
+    ClearMemoryRefs();
+
+    mem = AddMemory(width * height * 4, true);
+    ASSERT_NE((XGL_GPU_MEMORY) XGL_NULL_HANDLE, mem);
+
+    err = xglMapMemory(mem, 0, &data);
+    ASSERT_XGL_SUCCESS(err);
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++)
+            *((uint32_t *) data + y * width + x) = y << 16 | x;
+    }
+
+    xglUnmapMemory(mem);
+
+    img = new XglImage(m_device);
+    img->init(width, height, format, XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+
+    AddMemoryRef(img->memory(), false);
+
+    BeginCmd();
+
+    memset(&region, 0, sizeof(region));
+    region.imageSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
+    region.imageExtent.width = width;
+    region.imageExtent.height = height;
+    region.imageExtent.depth = 1;
+    xglCmdCopyMemoryToImage(m_cmd, mem, img->image(), 1, &region);
+
+    EndAndSubmitCmd();
+
+    {
+        XGL_SUBRESOURCE_LAYOUT layout;
+        XGL_SIZE layout_size = sizeof(layout);
+
+        err = img->MapMemory(&data);
+        ASSERT_XGL_SUCCESS(err);
+
+        err = xglGetImageSubresourceInfo(img->image(),
+                &region.imageSubresource, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+                &layout_size, &layout);
+        ASSERT_XGL_SUCCESS(err);
+        ASSERT_EQ(sizeof(layout), layout_size);
+
+        for (y = 0; y < height; y++) {
+            const uint32_t *real = (const uint32_t *)
+                ((char *) data + layout.offset + layout.rowPitch * y);
+
+            for (x = 0; x < width; x++) {
+                ASSERT_EQ(y << 16 | x, real[x]) <<
+                    "at (" << x << ", " << y << ")\n";
+            }
+        }
+
+        img->UnmapMemory();
+    }
+}
+
 TEST_F(XglBlitTest, ClearDepthStencilBasic)
 {
     const XGL_FLOAT clear_depth = 0.4f;
