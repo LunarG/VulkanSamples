@@ -32,6 +32,15 @@
 #include "compiler/pipeline/brw_blorp_blit_eu.h"
 #include "compiler/pipeline/brw_blorp.h"
 
+enum sampler_param {
+    SAMPLER_PARAM_HOLE,
+    SAMPLER_PARAM_ZERO,
+    SAMPLER_PARAM_X,
+    SAMPLER_PARAM_Y,
+    SAMPLER_PARAM_LAYER,
+    SAMPLER_PARAM_LOD,
+};
+
 class intel_meta_compiler : public brw_blorp_eu_emitter
 {
 public:
@@ -56,9 +65,14 @@ private:
     int alloc_temp_regs(int grf);
 
     void emit_compute_frag_coord();
+    void emit_sampler_payload(const struct brw_reg &mrf,
+                              const enum sampler_param *params,
+                              XGL_UINT param_count);
+
     void emit_vs_fill_mem();
     void emit_vs_copy_mem();
     void emit_copy_mem();
+    void emit_copy_img();
     void emit_clear_color();
     void emit_clear_depth();
     void *codegen(uint32_t *code_size);
@@ -232,6 +246,41 @@ void intel_meta_compiler::emit_compute_frag_coord()
     emit_add(frag_y, stride(y, 2, 4, 0), brw_imm_v(0x11001100));
 }
 
+void intel_meta_compiler::emit_sampler_payload(const struct brw_reg &mrf,
+                                               const enum sampler_param *params,
+                                               XGL_UINT param_count)
+{
+    int mrf_offset = 0;
+    XGL_UINT i;
+
+    for (i = 0; i < param_count; i++) {
+        switch (params[i]) {
+        case SAMPLER_PARAM_HOLE:
+            break;
+        case SAMPLER_PARAM_ZERO:
+            emit_mov(offset(mrf, mrf_offset), brw_imm_ud(0));
+            break;
+        case SAMPLER_PARAM_X:
+            emit_add(offset(mrf, mrf_offset), frag_x, src_offset_x);
+            break;
+        case SAMPLER_PARAM_Y:
+            emit_add(offset(mrf, mrf_offset), frag_y, src_offset_y);
+            break;
+        case SAMPLER_PARAM_LAYER:
+            emit_mov(offset(mrf, mrf_offset), src_layer);
+            break;
+        case SAMPLER_PARAM_LOD:
+            emit_mov(offset(mrf, mrf_offset), src_lod);
+            break;
+        default:
+            assert(!"unknown sampler parameter");
+            break;
+        }
+
+        mrf_offset += 2;
+    }
+}
+
 void intel_meta_compiler::emit_vs_fill_mem()
 {
     const struct brw_reg mrf =
@@ -321,6 +370,81 @@ void intel_meta_compiler::emit_copy_mem()
     emit_render_target_write(mrf, base_mrf, 8, false);
 }
 
+void intel_meta_compiler::emit_copy_img()
+{
+    const struct brw_reg mrf =
+        retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
+    enum sampler_param params[8];
+    XGL_UINT param_count = 0;
+    int mrf_offset;
+
+    if (brw->gen >= 7) {
+        params[param_count++] = SAMPLER_PARAM_X;
+        params[param_count++] = SAMPLER_PARAM_LOD;
+
+        switch (id) {
+        case INTEL_DEV_META_FS_COPY_1D:
+            params[param_count++] = SAMPLER_PARAM_ZERO;
+            break;
+        case INTEL_DEV_META_FS_COPY_1D_ARRAY:
+            params[param_count++] = SAMPLER_PARAM_LAYER;
+            break;
+        case INTEL_DEV_META_FS_COPY_2D:
+            params[param_count++] = SAMPLER_PARAM_Y;
+            params[param_count++] = SAMPLER_PARAM_ZERO;
+            break;
+        case INTEL_DEV_META_FS_COPY_2D_ARRAY:
+            params[param_count++] = SAMPLER_PARAM_Y;
+            params[param_count++] = SAMPLER_PARAM_LAYER;
+            break;
+        case INTEL_DEV_META_FS_COPY_2D_MS:
+            /* TODO */
+            break;
+        default:
+            break;
+        }
+    } else {
+        params[param_count++] = SAMPLER_PARAM_X;
+
+        switch (id) {
+        case INTEL_DEV_META_FS_COPY_1D:
+            params[param_count++] = SAMPLER_PARAM_ZERO;
+            params[param_count++] = SAMPLER_PARAM_HOLE;
+            break;
+        case INTEL_DEV_META_FS_COPY_1D_ARRAY:
+            params[param_count++] = SAMPLER_PARAM_LAYER;
+            params[param_count++] = SAMPLER_PARAM_ZERO;
+            break;
+        case INTEL_DEV_META_FS_COPY_2D:
+            params[param_count++] = SAMPLER_PARAM_Y;
+            params[param_count++] = SAMPLER_PARAM_ZERO;
+            break;
+        case INTEL_DEV_META_FS_COPY_2D_ARRAY:
+            params[param_count++] = SAMPLER_PARAM_Y;
+            params[param_count++] = SAMPLER_PARAM_LAYER;
+            break;
+        case INTEL_DEV_META_FS_COPY_2D_MS:
+            /* TODO */
+            break;
+        default:
+            break;
+        }
+
+        params[param_count++] = SAMPLER_PARAM_LOD;
+    }
+
+    emit_compute_frag_coord();
+    emit_sampler_payload(mrf, params, param_count);
+    emit_texture_lookup(texels[0], SHADER_OPCODE_TXF,
+            base_mrf, param_count * 2);
+
+    emit_mov(offset(mrf, 0), offset(texels[0], 0));
+    emit_mov(offset(mrf, 2), offset(texels[0], 2));
+    emit_mov(offset(mrf, 4), offset(texels[0], 4));
+    emit_mov(offset(mrf, 6), offset(texels[0], 6));
+    emit_render_target_write(mrf, base_mrf, 10, false);
+}
+
 void intel_meta_compiler::emit_clear_color()
 {
     const struct brw_reg mrf =
@@ -386,7 +510,7 @@ void *intel_meta_compiler::compile(brw_blorp_prog_data *prog_data,
     case INTEL_DEV_META_FS_COPY_2D:
     case INTEL_DEV_META_FS_COPY_2D_ARRAY:
     case INTEL_DEV_META_FS_COPY_2D_MS:
-        emit_clear_color();
+        emit_copy_img();
         break;
     case INTEL_DEV_META_FS_COPY_1D_TO_MEM:
     case INTEL_DEV_META_FS_COPY_1D_ARRAY_TO_MEM:
