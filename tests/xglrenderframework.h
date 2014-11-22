@@ -137,6 +137,7 @@ class XglTextureObj
 {
 public:
     XglTextureObj(XglDevice *device);
+    void ChangeColors(uint32_t color1, uint32_t color2);
     XGL_IMAGE                  m_texture;
     XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
     XGL_GPU_MEMORY             m_textureMem;
@@ -144,6 +145,9 @@ public:
 protected:
     XglDevice                 *m_device;
     XGL_IMAGE_VIEW             m_textureView;
+    int                        m_texHeight;
+    int                        m_texWidth;
+    int                        m_rowPitch;
 
 };
 

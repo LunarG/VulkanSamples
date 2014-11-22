@@ -114,7 +114,6 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 }
 
-
 XglTextureObj::XglTextureObj(XglDevice *device):
     m_texture(XGL_NULL_HANDLE),
     m_textureMem(XGL_NULL_HANDLE),
@@ -122,8 +121,8 @@ XglTextureObj::XglTextureObj(XglDevice *device):
 {
     m_device = device;
     const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
-    const XGL_INT tex_width = 16;
-    const XGL_INT tex_height = 16;
+    m_texWidth = 16;
+    m_texHeight = 16;
     const uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
     XGL_RESULT err;
     XGL_UINT i;
@@ -137,7 +136,7 @@ XglTextureObj::XglTextureObj(XglDevice *device):
         .pNext = NULL,
         .imageType = XGL_IMAGE_2D,
         .format = tex_format,
-        .extent = { tex_width, tex_height, 1 },
+        .extent = { m_texWidth, m_texHeight, 1 },
         .mipLevels = 1,
         .arraySize = 1,
         .samples = 1,
@@ -217,13 +216,14 @@ XglTextureObj::XglTextureObj(XglDevice *device):
     err = xglGetImageSubresourceInfo(m_texture, &subres,
             XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
     assert(!err && layout_size == sizeof(layout));
+    m_rowPitch = layout.rowPitch;
 
     err = xglMapMemory(m_textureMem, 0, &data);
     assert(!err);
 
-    for (y = 0; y < tex_height; y++) {
+    for (y = 0; y < m_texHeight; y++) {
         uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
-        for (x = 0; x < tex_width; x++)
+        for (x = 0; x < m_texWidth; x++)
             row[x] = tex_colors[(x & 1) ^ (y & 1)];
     }
 
@@ -234,7 +234,24 @@ XglTextureObj::XglTextureObj(XglDevice *device):
 
 }
 
+void XglTextureObj::ChangeColors(uint32_t color1, uint32_t color2)
+{
+    XGL_RESULT err;
+    const uint32_t tex_colors[2] = { color1, color2 };
+    XGL_VOID *data;
 
+    err = xglMapMemory(m_textureMem, 0, &data);
+    assert(!err);
+
+    for (int y = 0; y < m_texHeight; y++) {
+        uint32_t *row = (uint32_t *) ((char *) data + m_rowPitch * y);
+        for (int x = 0; x < m_texWidth; x++)
+            row[x] = tex_colors[(x & 1) ^ (y & 1)];
+    }
+
+    err = xglUnmapMemory(m_textureMem);
+    assert(!err);
+}
 
 XglSamplerObj::XglSamplerObj(XglDevice *device)
 {
