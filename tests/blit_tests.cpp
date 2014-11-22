@@ -242,6 +242,40 @@ TEST_F(XglBlitTest, FillMemory)
     xglFreeMemory(mem);
 }
 
+TEST_F(XglBlitTest, FillMemoryLarge)
+{
+    const XGL_GPU_SIZE size = 32 * 1024 * 1024;
+    XGL_GPU_MEMORY mem;
+    XGL_RESULT err;
+    XGL_GPU_SIZE offset;
+    const char *data;
+
+    ClearMemoryRefs();
+
+    mem = AddMemory(size, false);
+    ASSERT_NE((XGL_GPU_MEMORY) XGL_NULL_HANDLE, mem);
+
+    BeginCmd();
+    xglCmdFillMemory(m_cmd, mem, 0, size / 2, 0x01234567);
+    xglCmdFillMemory(m_cmd, mem, size / 2, size / 2, 0x89abcdef);
+    EndAndSubmitCmd();
+
+    err = xglMapMemory(mem, 0, (void **) &data);
+    ASSERT_XGL_SUCCESS(err);
+
+    for (offset = 0; offset < size / 2; offset += 4) {
+        ASSERT_EQ(0x01234567, *((const XGL_UINT32 *) (data + offset))) <<
+            "Offset is: " << offset;
+    }
+    for (; offset < size; offset += 4) {
+        ASSERT_EQ(0x89abcdef, *((const XGL_UINT32 *) (data + offset))) <<
+            "Offset is: " << offset;
+    }
+
+    xglUnmapMemory(mem);
+    xglFreeMemory(mem);
+}
+
 TEST_F(XglBlitTest, CopyMemory)
 {
     XGL_GPU_MEMORY src, dst;
@@ -356,6 +390,50 @@ TEST_F(XglBlitTest, CopyMemoryHazard)
 
     for (i = 0; i < 3; i++)
         xglFreeMemory(mem[i]);
+}
+
+TEST_F(XglBlitTest, CopyMemoryLarge)
+{
+    const XGL_GPU_SIZE size = 32 * 1024 * 1024;
+    XGL_GPU_MEMORY src, dst;
+    XGL_MEMORY_COPY region;
+    XGL_RESULT err;
+    void *data;
+    XGL_UINT i;
+
+    ClearMemoryRefs();
+
+    src = AddMemory(size, false);
+    ASSERT_NE((XGL_GPU_MEMORY) XGL_NULL_HANDLE, src);
+
+    err = xglMapMemory(src, 0, &data);
+    ASSERT_XGL_SUCCESS(err);
+    for (i = 0; i < size / 4; i++)
+        ((uint32_t *) data)[i] = i;
+    xglUnmapMemory(src);
+
+    dst = AddMemory(size, false);
+    ASSERT_NE((XGL_GPU_MEMORY) XGL_NULL_HANDLE, dst);
+
+    region.srcOffset = 0;
+    region.destOffset = 0;
+    region.copySize = size;
+
+    BeginCmd();
+
+    xglCmdCopyMemory(m_cmd, src, dst, 1, &region);
+
+    EndAndSubmitCmd();
+
+    err = xglMapMemory(dst, 0, &data);
+    ASSERT_XGL_SUCCESS(err);
+
+    for (i = 0; i < size / 4; i++)
+        ASSERT_EQ(i, ((const uint32_t *) data)[i]);
+
+    xglUnmapMemory(dst);
+    xglFreeMemory(src);
+    xglFreeMemory(dst);
 }
 
 TEST_F(XglBlitTest, ClearColorImageBasic)
