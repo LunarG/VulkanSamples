@@ -291,35 +291,12 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
     return shader_id;
 }
 
-/**
- * Return the suitable format for copying between memories.  The
- * format is sampleable, renderable, and the offsets and copy size are
- * multiples of the format size.
- */
-static XGL_CHANNEL_FORMAT cmd_meta_mem_channel_format(const struct intel_cmd *cmd,
-                                                      XGL_GPU_SIZE src_offset,
-                                                      XGL_GPU_SIZE dst_offset,
-                                                      XGL_GPU_SIZE size,
-                                                      XGL_SIZE *format_size)
+static bool cmd_meta_mem_dword_aligned(const struct intel_cmd *cmd,
+                                       XGL_GPU_SIZE src_offset,
+                                       XGL_GPU_SIZE dst_offset,
+                                       XGL_GPU_SIZE size)
 {
-    const XGL_GPU_SIZE align = (src_offset | dst_offset | size) & 0xf;
-
-    if (align & 0x1) {
-        *format_size = 1;
-        return XGL_CH_FMT_R8;
-    } else if (align & 0x2) {
-        *format_size = 2;
-        return XGL_CH_FMT_R16;
-    } else if (align & 0x4) {
-        *format_size = 4;
-        return XGL_CH_FMT_R32;
-    } else if (align & 0x8) {
-        *format_size = 8;
-        return XGL_CH_FMT_R32G32;
-    } else {
-        *format_size = 16;
-        return XGL_CH_FMT_R32G32B32A32;
-    }
+    return !((src_offset | dst_offset | size) & 0x3);
 }
 
 static XGL_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
@@ -369,9 +346,8 @@ XGL_VOID XGLAPI intelCmdCopyMemory(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
-    meta.mode = INTEL_CMD_META_FS_RECT;
+    meta.mode = INTEL_CMD_META_VS_POINTS;
 
-    meta.shader_id = INTEL_DEV_META_FS_COPY_MEM;
     meta.height = 1;
     meta.samples = 1;
 
@@ -381,10 +357,40 @@ XGL_VOID XGLAPI intelCmdCopyMemory(
     for (i = 0; i < regionCount; i++) {
         const XGL_MEMORY_COPY *region = &pRegions[i];
         XGL_CHANNEL_FORMAT ch;
-        XGL_SIZE format_size;
 
-        ch = cmd_meta_mem_channel_format(cmd, region->srcOffset,
-                region->destOffset, region->copySize, &format_size);
+        meta.src.x = region->srcOffset;
+        meta.dst.x = region->destOffset;
+        meta.width = region->copySize;
+
+        if (cmd_meta_mem_dword_aligned(cmd, region->srcOffset,
+                    region->destOffset, region->copySize)) {
+            meta.shader_id = INTEL_DEV_META_VS_COPY_MEM;
+            meta.src.x /= 4;
+            meta.dst.x /= 4;
+            meta.width /= 4;
+
+            /*
+             * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to
+             * be 16
+             */
+            ch = XGL_CH_FMT_R32G32B32A32;
+        } else {
+            if (cmd_gen(cmd) == INTEL_GEN(6)) {
+                intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                        XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                        "unaligned xglCmdCopyMemory unsupported");
+                cmd->result = XGL_ERROR_UNKNOWN;
+                continue;
+            }
+
+            meta.shader_id = INTEL_DEV_META_VS_COPY_MEM_UNALIGNED;
+
+            /*
+             * INTEL_DEV_META_VS_COPY_MEM_UNALIGNED is untyped but expects the
+             * stride to be 4
+             */
+            ch = XGL_CH_FMT_R8G8B8A8;
+        }
 
         if (format.channelFormat != ch) {
             format.channelFormat = ch;
@@ -392,10 +398,6 @@ XGL_VOID XGLAPI intelCmdCopyMemory(
             cmd_meta_set_src_for_mem(cmd, src, format, &meta);
             cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
         }
-
-        meta.src.x = region->srcOffset / format_size;
-        meta.dst.x = region->destOffset / format_size;
-        meta.width = region->copySize / format_size;
 
         cmd_draw_meta(cmd, &meta);
     }
@@ -612,33 +614,40 @@ XGL_VOID XGLAPI intelCmdUpdateMemory(
     struct intel_mem *dst = intel_mem(destMem);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
-    XGL_SIZE format_size;
     uint32_t *ptr;
     uint32_t offset;
+
+    /* must be 4-byte aligned */
+    if ((destOffset | dataSize) & 3) {
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
+    }
 
     /* write to dynamic state writer first */
     offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, 32,
             (dataSize + 3) / 4, &ptr);
     memcpy(ptr, pData, dataSize);
 
-    format.channelFormat = cmd_meta_mem_channel_format(cmd,
-            offset, destOffset, dataSize, &format_size);
-    format.numericFormat = XGL_NUM_FMT_UINT;
-
     memset(&meta, 0, sizeof(meta));
-    meta.mode = INTEL_CMD_META_FS_RECT;
+    meta.mode = INTEL_CMD_META_VS_POINTS;
 
-    meta.shader_id = INTEL_DEV_META_FS_COPY_MEM;
+    meta.shader_id = INTEL_DEV_META_VS_COPY_MEM;
+
+    meta.src.x = offset / 4;
+    meta.dst.x = destOffset / 4;
+    meta.width = dataSize / 4;
+    meta.height = 1;
+    meta.samples = 1;
+
+    /*
+     * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to be 16
+     */
+    format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    format.numericFormat = XGL_NUM_FMT_UINT;
 
     cmd_meta_set_src_for_writer(cmd, INTEL_CMD_WRITER_STATE,
             offset + dataSize, format, &meta);
     cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
-
-    meta.src.x = offset / format_size;
-    meta.dst.x = destOffset / format_size;
-    meta.width = dataSize / format_size;
-    meta.height = 1;
-    meta.samples = 1;
 
     cmd_draw_meta(cmd, &meta);
 }
@@ -654,7 +663,6 @@ XGL_VOID XGLAPI intelCmdFillMemory(
     struct intel_mem *dst = intel_mem(destMem);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
-    XGL_SIZE format_size;
 
     /* must be 4-byte aligned */
     if ((destOffset | fillSize) & 3) {
@@ -663,24 +671,24 @@ XGL_VOID XGLAPI intelCmdFillMemory(
     }
 
     memset(&meta, 0, sizeof(meta));
-    meta.mode = INTEL_CMD_META_FS_RECT;
+    meta.mode = INTEL_CMD_META_VS_POINTS;
 
-    meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
+    meta.shader_id = INTEL_DEV_META_VS_FILL_MEM;
 
     meta.clear_val[0] = data;
-    meta.clear_val[1] = data;
-    meta.clear_val[2] = data;
-    meta.clear_val[3] = data;
 
-    format.channelFormat = cmd_meta_mem_channel_format(cmd,
-            0, destOffset, fillSize, &format_size);;
-    format.numericFormat = XGL_NUM_FMT_UINT;
-    cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
-
-    meta.dst.x = destOffset / format_size;
-    meta.width = fillSize / format_size;
+    meta.dst.x = destOffset / 4;
+    meta.width = fillSize / 4;
     meta.height = 1;
     meta.samples = 1;
+
+    /*
+     * INTEL_DEV_META_VS_FILL_MEM is untyped but expects the stride to be 16
+     */
+    format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    format.numericFormat = XGL_NUM_FMT_UINT;
+
+    cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
 
     cmd_draw_meta(cmd, &meta);
 }
