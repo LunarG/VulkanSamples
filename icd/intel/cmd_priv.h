@@ -77,7 +77,28 @@ struct intel_cmd_reloc {
 
 struct intel_ds_view;
 
+enum intel_cmd_meta_mode {
+    /*
+     * Draw POINTLIST of (width - 1) vertices with only VS enabled.  The
+     * vertex id is from 0 to (width - 1).
+     */
+    INTEL_CMD_META_VS_POINTS,
+
+    /*
+     * Draw a RECTLIST from (dst.x, dst.y) to (dst.x + width, dst.y + height)
+     * with only FS enabled.
+     */
+    INTEL_CMD_META_FS_RECT,
+
+    /*
+     * Draw a RECTLIST from (dst.x, dst.y) to (dst.x + width, dst.y + height)
+     * with only depth/stencil enabled.
+     */
+    INTEL_CMD_META_DEPTH_STENCIL_RECT,
+};
+
 struct intel_cmd_meta {
+    enum intel_cmd_meta_mode mode;
     enum intel_dev_meta_shader shader_id;
 
     struct {

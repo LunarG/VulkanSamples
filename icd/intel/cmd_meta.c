@@ -369,6 +369,7 @@ XGL_VOID XGLAPI intelCmdCopyMemory(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_COPY_MEM;
     meta.height = 1;
@@ -430,6 +431,7 @@ XGL_VOID XGLAPI intelCmdCopyImage(
     }
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     cmd_meta_set_src_for_img(cmd, src,
             (raw_copy) ? raw_format : src->layout.format,
@@ -487,6 +489,7 @@ XGL_VOID XGLAPI intelCmdCopyMemoryToImage(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_COPY_MEM_TO_IMG;
     meta.samples = img->samples;
@@ -536,6 +539,7 @@ XGL_VOID XGLAPI intelCmdCopyImageToMemory(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     format = cmd_meta_img_raw_format(cmd, img->layout.format);
     cmd_meta_set_src_for_img(cmd, img, format, XGL_IMAGE_ASPECT_COLOR, &meta);
@@ -622,6 +626,7 @@ XGL_VOID XGLAPI intelCmdUpdateMemory(
     format.numericFormat = XGL_NUM_FMT_UINT;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_COPY_MEM;
 
@@ -658,6 +663,7 @@ XGL_VOID XGLAPI intelCmdFillMemory(
     }
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
 
@@ -743,6 +749,7 @@ XGL_VOID XGLAPI intelCmdClearColorImage(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
     meta.samples = img->samples;
@@ -772,6 +779,7 @@ XGL_VOID XGLAPI intelCmdClearColorImageRaw(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
     meta.samples = img->samples;
@@ -801,6 +809,7 @@ XGL_VOID XGLAPI intelCmdClearDepthStencil(
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_DEPTH_STENCIL_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_DEPTH;
     meta.samples = img->samples;
@@ -837,6 +846,7 @@ XGL_VOID XGLAPI intelCmdResolveImage(
     }
 
     memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_FS_RECT;
 
     switch (src->samples) {
     case 2:

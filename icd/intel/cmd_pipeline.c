@@ -2007,7 +2007,7 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
     cc_offset = 0;
     cc_vp_offset = 0;
 
-    if (meta->dst.valid) {
+    if (meta->mode == INTEL_CMD_META_FS_RECT) {
         /* BLEND_STATE */
         blend_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLEND,
                 GEN6_ALIGNMENT_BLEND_STATE * 4, 2, &dw);
@@ -2015,27 +2015,29 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
         dw[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT | 0x3;
     }
 
-    if (meta->ds.state) {
-        const uint32_t blend_color[4] = { 0, 0, 0, 0 };
+    if (meta->mode != INTEL_CMD_META_VS_POINTS) {
+        if (meta->ds.state) {
+            const uint32_t blend_color[4] = { 0, 0, 0, 0 };
 
-        /* DEPTH_STENCIL_STATE */
-        ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, meta->ds.state);
+            /* DEPTH_STENCIL_STATE */
+            ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, meta->ds.state);
 
-        /* COLOR_CALC_STATE */
-        cc_offset = gen6_COLOR_CALC_STATE(cmd,
-                meta->ds.state->cmd_stencil_ref, blend_color);
+            /* COLOR_CALC_STATE */
+            cc_offset = gen6_COLOR_CALC_STATE(cmd,
+                    meta->ds.state->cmd_stencil_ref, blend_color);
 
-        /* CC_VIEWPORT */
-        cc_vp_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
-                GEN6_ALIGNMENT_CC_VIEWPORT * 4, 2, &dw);
-        dw[0] = u_fui(0.0f);
-        dw[1] = u_fui(1.0f);
-    } else {
-        /* DEPTH_STENCIL_STATE */
-        ds_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
-                GEN6_ALIGNMENT_DEPTH_STENCIL_STATE * 4,
-                GEN6_DEPTH_STENCIL_STATE__SIZE, &dw);
-        memset(dw, 0, sizeof(*dw) * GEN6_DEPTH_STENCIL_STATE__SIZE);
+            /* CC_VIEWPORT */
+            cc_vp_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
+                    GEN6_ALIGNMENT_CC_VIEWPORT * 4, 2, &dw);
+            dw[0] = u_fui(0.0f);
+            dw[1] = u_fui(1.0f);
+        } else {
+            /* DEPTH_STENCIL_STATE */
+            ds_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
+                    GEN6_ALIGNMENT_DEPTH_STENCIL_STATE * 4,
+                    GEN6_DEPTH_STENCIL_STATE__SIZE, &dw);
+            memset(dw, 0, sizeof(*dw) * GEN6_DEPTH_STENCIL_STATE__SIZE);
+        }
     }
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
@@ -2072,6 +2074,9 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
     uint32_t offset;
 
     CMD_ASSERT(cmd, 6, 7.5);
+
+    if (meta->mode == INTEL_CMD_META_DEPTH_STENCIL_RECT)
+        return;
 
     /* SURFACE_STATEs */
     if (meta->src.valid) {
@@ -2110,12 +2115,16 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
             2, binding_table);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS,
-                offset);
+        const int subop = (meta->mode == INTEL_CMD_META_VS_POINTS) ?
+            GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_VS :
+            GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS;
+        gen7_3dstate_pointer(cmd, subop, offset);
     } else {
         /* 3DSTATE_BINDING_TABLE_POINTERS */
-        gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
+        if (meta->mode == INTEL_CMD_META_VS_POINTS)
+            gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, offset, 0, 0);
+        else
+            gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
     }
 }
 
@@ -2134,6 +2143,7 @@ static void gen6_meta_urb(struct intel_cmd *cmd)
 
 static void gen7_meta_urb(struct intel_cmd *cmd)
 {
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
@@ -2142,7 +2152,7 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     cmd_batch_pointer(cmd, 10, &dw);
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (2 - 2);
-    dw[1] = 0;
+    dw[1] = (meta->mode == INTEL_CMD_META_VS_POINTS);
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (2 - 2);
@@ -2158,7 +2168,7 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (2 - 2);
-    dw[1] = 1;
+    dw[1] = (meta->mode == INTEL_CMD_META_FS_RECT);
 
     cmd_wa_gen7_pre_vs_depth_stall_write(cmd);
 
@@ -2193,44 +2203,64 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    /* write vertices */
-    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH) {
-        XGL_FLOAT vertices[3][3];
+    switch (meta->mode) {
+    case INTEL_CMD_META_VS_POINTS:
+        cmd_batch_pointer(cmd, 3, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) | (3 - 2);
+        dw[1] = GEN6_VE_STATE_DW0_VALID;
+        dw[2] = GEN6_VFCOMP_STORE_VID << GEN6_VE_STATE_DW1_COMP0__SHIFT |
+                GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP1__SHIFT |
+                GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP2__SHIFT |
+                GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+        return;
+        break;
+    case INTEL_CMD_META_FS_RECT:
+        {
+            XGL_UINT vertices[3][2];
 
-        vertices[0][0] = (XGL_FLOAT) (meta->dst.x + meta->width);
-        vertices[0][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
-        vertices[0][2] = u_uif(meta->clear_val[0]);
-        vertices[1][0] = (XGL_FLOAT) meta->dst.x;
-        vertices[1][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
-        vertices[1][2] = u_uif(meta->clear_val[0]);
-        vertices[2][0] = (XGL_FLOAT) meta->dst.x;
-        vertices[2][1] = (XGL_FLOAT) meta->dst.y;
-        vertices[2][2] = u_uif(meta->clear_val[0]);
+            vertices[0][0] = meta->dst.x + meta->width;
+            vertices[0][1] = meta->dst.y + meta->height;
+            vertices[1][0] = meta->dst.x;
+            vertices[1][1] = meta->dst.y + meta->height;
+            vertices[2][0] = meta->dst.x;
+            vertices[2][1] = meta->dst.y;
 
-        vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
-                sizeof(vertices) / 4, (const uint32_t *) vertices);
+            vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
+                    sizeof(vertices) / 4, (const uint32_t *) vertices);
 
-        vb_end = vb_start + sizeof(vertices) - 1;
-        vb_stride = sizeof(vertices[0]);
-        ve_z_source = GEN6_VFCOMP_STORE_SRC;
-        ve_format = GEN6_FORMAT_R32G32B32_FLOAT;
-    } else {
-        XGL_UINT vertices[3][2];
+            vb_end = vb_start + sizeof(vertices) - 1;
+            vb_stride = sizeof(vertices[0]);
+            ve_z_source = GEN6_VFCOMP_STORE_0;
+            ve_format = GEN6_FORMAT_R32G32_USCALED;
+        }
+        break;
+    case INTEL_CMD_META_DEPTH_STENCIL_RECT:
+        {
+            XGL_FLOAT vertices[3][3];
 
-        vertices[0][0] = meta->dst.x + meta->width;
-        vertices[0][1] = meta->dst.y + meta->height;
-        vertices[1][0] = meta->dst.x;
-        vertices[1][1] = meta->dst.y + meta->height;
-        vertices[2][0] = meta->dst.x;
-        vertices[2][1] = meta->dst.y;
+            vertices[0][0] = (XGL_FLOAT) (meta->dst.x + meta->width);
+            vertices[0][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
+            vertices[0][2] = u_uif(meta->clear_val[0]);
+            vertices[1][0] = (XGL_FLOAT) meta->dst.x;
+            vertices[1][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
+            vertices[1][2] = u_uif(meta->clear_val[0]);
+            vertices[2][0] = (XGL_FLOAT) meta->dst.x;
+            vertices[2][1] = (XGL_FLOAT) meta->dst.y;
+            vertices[2][2] = u_uif(meta->clear_val[0]);
 
-        vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
-                sizeof(vertices) / 4, (const uint32_t *) vertices);
+            vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
+                    sizeof(vertices) / 4, (const uint32_t *) vertices);
 
-        vb_end = vb_start + sizeof(vertices) - 1;
-        vb_stride = sizeof(vertices[0]);
-        ve_z_source = GEN6_VFCOMP_STORE_0;
-        ve_format = GEN6_FORMAT_R32G32_USCALED;
+            vb_end = vb_start + sizeof(vertices) - 1;
+            vb_stride = sizeof(vertices[0]);
+            ve_z_source = GEN6_VFCOMP_STORE_SRC;
+            ve_format = GEN6_FORMAT_R32G32B32_FLOAT;
+        }
+        break;
+    default:
+        assert(!"unknown meta mode");
+        return;
+        break;
     }
 
     /* 3DSTATE_VERTEX_BUFFERS */
@@ -2250,7 +2280,7 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
     /* 3DSTATE_VERTEX_ELEMENTS */
     cmd_batch_pointer(cmd, 5, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) | (5 - 2);
-    dw[1] = GEN6_VE_STATE_DW0_VALID,
+    dw[1] = GEN6_VE_STATE_DW0_VALID;
     dw[2] = GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP0__SHIFT | /* Reserved */
             GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP1__SHIFT | /* Render Target Array Index */
             GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP2__SHIFT | /* Viewport Index */
@@ -2263,29 +2293,102 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
             GEN6_VFCOMP_STORE_1_FP << GEN6_VE_STATE_DW1_COMP3__SHIFT;
 }
 
-static void gen6_meta_disabled(struct intel_cmd *cmd)
+static uint32_t gen6_meta_vs_constants(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
+    /* one GPR */
+    XGL_UINT consts[8];
+    XGL_UINT const_count;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    switch (meta->shader_id) {
+    default:
+        assert(!"unknown meta shader id");
+        const_count = 0;
+        break;
+    }
+
+    /* this can be skipped but it makes state dumping prettier */
+    memset(&consts[const_count], 0, sizeof(consts[0]) * (8 - const_count));
+
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32, 8, consts);
+}
+
+static void gen6_meta_vs(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    const struct intel_pipeline_shader *sh =
+        intel_dev_get_meta_shader(cmd->dev, meta->shader_id);
+    uint32_t offset, *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    if (meta->mode != INTEL_CMD_META_VS_POINTS) {
+        XGL_UINT cmd_len;
+
+        /* 3DSTATE_CONSTANT_VS */
+        cmd_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 7 : 5;
+        cmd_batch_pointer(cmd, cmd_len, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (cmd_len - 2);
+        memset(&dw[1], 0, sizeof(*dw) * (cmd_len - 1));
+
+        /* 3DSTATE_VS */
+        cmd_batch_pointer(cmd, 6, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (6 - 2);
+        memset(&dw[1], 0, sizeof(*dw) * (6 - 1));
+
+        return;
+    }
+
+    assert(meta->dst.valid && sh->uses == INTEL_SHADER_USE_VID);
+
+    /* 3DSTATE_CONSTANT_VS */
+    offset = gen6_meta_vs_constants(cmd);
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        cmd_batch_pointer(cmd, 7, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (7 - 2);
+        dw[1] = 1 << GEN7_PCB_ANY_DW1_PCB0_SIZE__SHIFT;
+        dw[2] = 0;
+        dw[3] = offset;
+        dw[4] = 0;
+        dw[5] = 0;
+        dw[6] = 0;
+    } else {
+        cmd_batch_pointer(cmd, 5, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (5 - 2) |
+            GEN6_PCB_ANY_DW0_PCB0_VALID;
+        dw[1] = offset;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+    }
+
+    /* 3DSTATE_VS */
+    offset = emit_shader(cmd, sh);
+    cmd_batch_pointer(cmd, 6, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (6 - 2);
+    dw[1] = offset;
+    dw[2] = GEN6_THREADDISP_SPF |
+            (sh->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+             sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+    dw[3] = 0;
+    dw[4] = sh->urb_grf_start << GEN6_VS_DW4_URB_GRF_START__SHIFT |
+            1 << GEN6_VS_DW4_URB_READ_LEN__SHIFT;
+
+    dw[5] = GEN6_VS_DW5_CACHE_DISABLE |
+            GEN6_VS_DW5_VS_ENABLE;
+    if (cmd_gen(cmd) >= INTEL_GEN(7.5))
+        dw[5] |= (70 - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
+    else
+        dw[5] |= (24 - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
+}
+
+static void gen6_meta_disabled(struct intel_cmd *cmd)
+{
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
-
-    /* 3DSTATE_CONSTANT_VS */
-    cmd_batch_pointer(cmd, 5, &dw);
-    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (5 - 2);
-    dw[1] = 0;
-    dw[2] = 0;
-    dw[3] = 0;
-    dw[4] = 0;
-
-    /* 3DSTATE_VS */
-    cmd_batch_pointer(cmd, 6, &dw);
-    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (6 - 2);
-    dw[1] = 0;
-    dw[2] = 0;
-    dw[3] = 0;
-    dw[4] = 0;
-    dw[5] = 0;
 
     /* 3DSTATE_CONSTANT_GS */
     cmd_batch_pointer(cmd, 5, &dw);
@@ -2305,58 +2408,18 @@ static void gen6_meta_disabled(struct intel_cmd *cmd)
     dw[5] = GEN6_GS_DW5_STATISTICS;
     dw[6] = 0;
 
-    /* 3DSTATE_CLIP */
-    cmd_batch_pointer(cmd, 4, &dw);
-    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (4 - 2);
-    dw[1] = 0;
-    dw[2] = 0;
-    dw[3] = 0;
-
     /* 3DSTATE_SF */
     cmd_batch_pointer(cmd, 20, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (20 - 2);
     dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
     memset(&dw[2], 0, 18 * sizeof(*dw));
-
-    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH) {
-        /* 3DSTATE_CONSTANT_PS */
-        cmd_batch_pointer(cmd, 5, &dw);
-        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (5 - 2);
-        dw[1] = 0;
-        dw[2] = 0;
-        dw[3] = 0;
-        dw[4] = 0;
-
-        /* 3DSTATE_WM */
-        cmd_batch_pointer(cmd, 9, &dw);
-        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (9 - 2);
-        dw[1] = 0;
-        dw[2] = 0;
-        dw[3] = 0;
-        dw[4] = 0;
-        dw[5] = (40 - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
-        dw[6] = 0;
-        dw[7] = 0;
-        dw[8] = 0;
-    }
 }
 
 static void gen7_meta_disabled(struct intel_cmd *cmd)
 {
-    const struct intel_cmd_meta *meta = cmd->bind.meta;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
-
-    /* 3DSTATE_CONSTANT_VS */
-    cmd_batch_pointer(cmd, 7, &dw);
-    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (7 - 2);
-    memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
-
-    /* 3DSTATE_VS */
-    cmd_batch_pointer(cmd, 6, &dw);
-    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (6 - 2);
-    memset(&dw[1], 0, sizeof(*dw) * (6 - 1));
 
     /* 3DSTATE_CONSTANT_HS */
     cmd_batch_pointer(cmd, 7, &dw);
@@ -2398,11 +2461,6 @@ static void gen7_meta_disabled(struct intel_cmd *cmd)
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) | (3 - 2);
     memset(&dw[1], 0, sizeof(*dw) * (3 - 1));
 
-    /* 3DSTATE_CLIP */
-    cmd_batch_pointer(cmd, 4, &dw);
-    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (4 - 2);
-    memset(&dw[1], 0, sizeof(*dw) * (4 - 1));
-
     /* 3DSTATE_SF */
     cmd_batch_pointer(cmd, 7, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (7 - 2);
@@ -2413,30 +2471,24 @@ static void gen7_meta_disabled(struct intel_cmd *cmd)
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) | (14 - 2);
     dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
     memset(&dw[2], 0, sizeof(*dw) * (14 - 2));
+}
 
-    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH) {
-        /* 3DSTATE_WM */
-        cmd_batch_pointer(cmd, 3, &dw);
-        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (3 - 2);
-        memset(&dw[1], 0, sizeof(*dw) * (3 - 1));
+static void gen6_meta_clip(struct intel_cmd *cmd)
+{
+    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    uint32_t *dw;
 
-        /* 3DSTATE_CONSTANT_GS */
-        cmd_batch_pointer(cmd, 7, &dw);
-        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (7 - 2);
-        memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
-
-        /* 3DSTATE_PS */
-        cmd_batch_pointer(cmd, 8, &dw);
-        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (8 - 2);
-        dw[1] = 0;
+    /* 3DSTATE_CLIP */
+    cmd_batch_pointer(cmd, 4, &dw);
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (4 - 2);
+    dw[1] = 0;
+    if (meta->mode == INTEL_CMD_META_VS_POINTS) {
+        dw[2] = GEN6_CLIP_DW2_CLIP_ENABLE |
+                GEN6_CLIP_DW2_CLIPMODE_REJECT_ALL;
+    } else {
         dw[2] = 0;
-        dw[3] = 0;
-        dw[4] = GEN7_PS_DW4_8_PIXEL_DISPATCH | /* required to avoid hangs */
-                (48 - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
-        dw[5] = 0;
-        dw[6] = 0;
-        dw[7] = 0;
     }
+    dw[3] = 0;
 }
 
 static void gen6_meta_wm(struct intel_cmd *cmd)
@@ -2566,8 +2618,30 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
 
     CMD_ASSERT(cmd, 6, 6);
 
-    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH)
+    if (meta->mode != INTEL_CMD_META_FS_RECT) {
+        /* 3DSTATE_CONSTANT_PS */
+        cmd_batch_pointer(cmd, 5, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (5 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+
+        /* 3DSTATE_WM */
+        cmd_batch_pointer(cmd, 9, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (9 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = 0;
+        dw[5] = (40 - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
+        dw[6] = 0;
+        dw[7] = 0;
+        dw[8] = 0;
+
         return;
+    }
+
     /* a normal color write */
     assert(meta->dst.valid && !sh->uses);
 
@@ -2619,8 +2693,32 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 
     CMD_ASSERT(cmd, 7, 7.5);
 
-    if (meta->shader_id == INTEL_DEV_META_FS_CLEAR_DEPTH)
+    if (meta->mode != INTEL_CMD_META_FS_RECT) {
+        /* 3DSTATE_WM */
+        cmd_batch_pointer(cmd, 3, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (3 - 2);
+        memset(&dw[1], 0, sizeof(*dw) * (3 - 1));
+
+        /* 3DSTATE_CONSTANT_GS */
+        cmd_batch_pointer(cmd, 7, &dw);
+        dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (7 - 2);
+        memset(&dw[1], 0, sizeof(*dw) * (7 - 1));
+
+        /* 3DSTATE_PS */
+        cmd_batch_pointer(cmd, 8, &dw);
+        dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (8 - 2);
+        dw[1] = 0;
+        dw[2] = 0;
+        dw[3] = 0;
+        dw[4] = GEN7_PS_DW4_8_PIXEL_DISPATCH | /* required to avoid hangs */
+                (48 - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+        dw[5] = 0;
+        dw[6] = 0;
+        dw[7] = 0;
+
         return;
+    }
+
     /* a normal color write */
     assert(meta->dst.valid && !sh->uses);
 
@@ -2899,7 +2997,9 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         gen7_meta_urb(cmd);
         gen6_meta_vf(cmd);
+        gen6_meta_vs(cmd);
         gen7_meta_disabled(cmd);
+        gen6_meta_clip(cmd);
         gen6_meta_wm(cmd);
         gen7_meta_ps(cmd);
         gen6_meta_depth_buffer(cmd);
@@ -2907,16 +3007,28 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
         cmd_wa_gen7_post_command_cs_stall(cmd);
         cmd_wa_gen7_post_command_depth_stall(cmd);
 
-        gen7_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
+        if (meta->mode == INTEL_CMD_META_VS_POINTS) {
+            gen7_3DPRIMITIVE(cmd, GEN6_3DPRIM_POINTLIST, false,
+                    meta->width, 0, 1, 0, 0);
+        } else {
+            gen7_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
+        }
     } else {
         gen6_meta_urb(cmd);
         gen6_meta_vf(cmd);
+        gen6_meta_vs(cmd);
         gen6_meta_disabled(cmd);
+        gen6_meta_clip(cmd);
         gen6_meta_wm(cmd);
         gen6_meta_ps(cmd);
         gen6_meta_depth_buffer(cmd);
 
-        gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
+        if (meta->mode == INTEL_CMD_META_VS_POINTS) {
+            gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_POINTLIST, false,
+                    meta->width, 0, 1, 0, 0);
+        } else {
+            gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
+        }
     }
 
     cmd->bind.draw_count++;
