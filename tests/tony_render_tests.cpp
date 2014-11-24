@@ -180,8 +180,7 @@ static const Vertex g_vb_solid_face_colors_Data[] =
 class XglRenderTest : public XglRenderFramework
 {
 public:
-    void InitTexture();
-    void InitSampler();
+
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  XglConstantBufferObj constantBuffer);
@@ -1776,7 +1775,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     //    layout (std140, binding = 0) uniform bufferVals { vec4 red;   } myRedVal;
     //    layout (std140, binding = 1) uniform bufferVals { vec4 green; } myGreenVal;
     //    layout (std140, binding = 2) uniform bufferVals { vec4 blue;  } myBlueVal;
-    //    layout (std140, binding = 3) uniform bufferVals { vec4 white; } myWhiteVal;
+    //    layout (std140, binding = 18) uniform bufferVals { vec4 white; } myWhiteVal;
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -1798,7 +1797,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, &blueBuffer);
 
     XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
-    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
+    ps.BindShaderEntitySlotToMemory(18, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
