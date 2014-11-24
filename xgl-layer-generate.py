@@ -192,14 +192,14 @@ class Subcommand(object):
                         file_mode = "a"
                         if 'CreateDevice' in proto.name:
                             file_mode = "w"
-                        f_open = 'pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-                        log_func = 'fprintf(pOutFile, "xgl%s(' % proto.name
+                        f_open = 'unsigned int tid = pthread_self();\n    pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
+                        log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
                         f_close = '\n    fclose(pOutFile);\n    pthread_mutex_unlock( &file_lock );'
                     else:
-                        f_open = 'pthread_mutex_lock( &print_lock );\n    '
-                        log_func = 'printf("xgl%s(' % proto.name
+                        f_open = 'unsigned int tid = pthread_self();\n    pthread_mutex_lock( &print_lock );\n    '
+                        log_func = 'printf("t{%%u} xgl%s(' % proto.name
                         f_close = '\n    pthread_mutex_unlock( &print_lock );'
-                    print_vals = ''
+                    print_vals = ', getTIDIndex()'
                     pindex = 0
                     for p in proto.params:
                         # TODO : Need to handle xglWsiX11CreatePresentableImage for which the last 2 params are returned vals
@@ -234,7 +234,7 @@ class Subcommand(object):
                                 log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                             else:
                                 log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                log_func += '\n        fflush(stdout);\n'
+                                log_func += '\n        fflush(stdout);'
                             log_func += '\n        free(pTmpStr);\n    }'
                     if proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
@@ -462,7 +462,26 @@ class GenericLayerSubcommand(Subcommand):
 
 class ApiDumpSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\npthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;\n'
+        header_txt = []
+        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\npthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;\n')
+        header_txt.append('#define MAX_TID 513')
+        header_txt.append('static pthread_t tidMapping[MAX_TID] = {0};')
+        header_txt.append('static uint32_t maxTID = 0;')
+        header_txt.append('// Map actual TID to an index value and return that index')
+        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
+        header_txt.append('static uint32_t getTIDIndex() {')
+        header_txt.append('    pthread_t tid = pthread_self();')
+        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
+        header_txt.append('        if (tid == tidMapping[i])')
+        header_txt.append('            return i;')
+        header_txt.append('    }')
+        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
+        header_txt.append('    uint32_t retVal = (uint32_t)maxTID;')
+        header_txt.append('    tidMapping[maxTID++] = tid;')
+        header_txt.append('    assert(maxTID < MAX_TID);')
+        header_txt.append('    return retVal;')
+        header_txt.append('}')
+        return "\n".join(header_txt)
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
@@ -473,7 +492,26 @@ class ApiDumpSubcommand(Subcommand):
 
 class ApiDumpFileSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n\nstatic FILE* pOutFile;\nstatic char* outFileName = "xgl_apidump.txt";\npthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;\n'
+        header_txt = []
+        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n\nstatic FILE* pOutFile;\nstatic char* outFileName = "xgl_apidump.txt";\npthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;\n')
+        header_txt.append('#define MAX_TID 513')
+        header_txt.append('static pthread_t tidMapping[MAX_TID] = {0};')
+        header_txt.append('static uint32_t maxTID = 0;')
+        header_txt.append('// Map actual TID to an index value and return that index')
+        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
+        header_txt.append('static uint32_t getTIDIndex() {')
+        header_txt.append('    pthread_t tid = pthread_self();')
+        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
+        header_txt.append('        if (tid == tidMapping[i])')
+        header_txt.append('            return i;')
+        header_txt.append('    }')
+        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
+        header_txt.append('    uint32_t retVal = (uint32_t)maxTID;')
+        header_txt.append('    tidMapping[maxTID++] = tid;')
+        header_txt.append('    assert(maxTID < MAX_TID);')
+        header_txt.append('    return retVal;')
+        header_txt.append('}')
+        return "\n".join(header_txt)
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
