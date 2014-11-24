@@ -73,7 +73,9 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
         char * libxgl_drivers_path = (char *) (NULL);
         char * env_display = (char *) NULL;
         char * ld_library_path = (char *) NULL;
-
+        char * args[128];
+        const char delim[]= " \t";
+        unsigned int idx;
         // inside new process
         // change process name so the the tracer DLLs will behave as expected when loaded.
         // NOTE: Must be 15 characters or less.
@@ -130,13 +132,23 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
             envp[3] = NULL;
         }
 
-        glv_LogInfo("exec process=%s args=%s \n     env0:%s env2:%s env3:%s\n",
-                pInfo->exeName, pInfo->processArgs, (envp[0] == NULL) ? "" : envp[0],
+        args[0] = pInfo->exeName;
+        args[127] = NULL;
+        idx = 1;
+        args[idx] = strtok(pInfo->processArgs, delim);
+        while ( args[idx] != NULL && idx < 128)
+        {
+            idx++;
+            args[idx] = strtok(NULL, delim);
+        }
+        glv_LogInfo("exec process=%s argc=%u \n     env0:%s env2:%s env3:%s\n",
+                pInfo->exeName, idx, (envp[0] == NULL) ? "" : envp[0],
                 (envp[2] == NULL) ? "" : envp[2],
                 (envp[3] == NULL) ? "" : envp[3]);
         extern char **environ;
         environ = envp;
-        if (execl(pInfo->exeName, pInfo->exeName, pInfo->processArgs, (char *) 0) < 0)
+
+        if (execv(pInfo->exeName, args) < 0)
         {
             glv_LogError("Failed to spawn process.\n");
             return FALSE;
