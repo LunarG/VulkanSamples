@@ -69,11 +69,11 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
         }
     }
 
-    for (int i=0;i<nSlots;i++)
-    {
-        printf("SlotInfo[%d]:  Index = %d, Type = %d\n",i,m_slotInfo[i].shaderEntityIndex, m_slotInfo[i].slotObjectType);
-        fflush(stdout);
-    }
+    // for (int i=0;i<nSlots;i++)
+    // {
+    //    printf("SlotInfo[%d]:  Index = %d, Type = %d\n",i,m_slotInfo[i].shaderEntityIndex, m_slotInfo[i].slotObjectType);
+    //    fflush(stdout);
+    // }
 
     return(m_slotInfo);
 
