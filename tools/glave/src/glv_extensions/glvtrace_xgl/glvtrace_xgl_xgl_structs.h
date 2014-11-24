@@ -1535,6 +1535,21 @@ static struct_xglCmdBindIndexData* interpret_body_as_xglCmdBindIndexData(glv_tra
     return pPacket;
 }
 
+typedef struct struct_xglCmdBindVertexData {
+    glv_trace_packet_header*  header;
+    XGL_CMD_BUFFER cmdBuffer;
+    XGL_GPU_MEMORY mem;
+    XGL_GPU_SIZE   offset;
+    XGL_UINT binding;
+} struct_xglCmdBindVertexData;
+
+static struct_xglCmdBindVertexData* interpret_body_as_xglCmdBindVertexData(glv_trace_packet_header*  pHeader)
+{
+    struct_xglCmdBindVertexData* pPacket = (struct_xglCmdBindVertexData*)pHeader->pBody;
+    pPacket->header = pHeader;
+    return pPacket;
+}
+
 typedef struct struct_xglCmdBindAttachments {
     glv_trace_packet_header*  header;
     XGL_CMD_BUFFER                     cmdBuffer;

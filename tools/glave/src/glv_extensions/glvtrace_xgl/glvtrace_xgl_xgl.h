@@ -106,6 +106,7 @@ extern INIT_ONCE gInitOnce;
 #define __HOOKED_xglCmdBindDescriptorSet hooked_xglCmdBindDescriptorSet
 #define __HOOKED_xglCmdBindDynamicMemoryView hooked_xglCmdBindDynamicMemoryView
 #define __HOOKED_xglCmdBindIndexData hooked_xglCmdBindIndexData
+#define __HOOKED_xglCmdBindVertexData hooked_xglCmdBindVertexData
 #define __HOOKED_xglCmdBindAttachments hooked_xglCmdBindAttachments
 #define __HOOKED_xglCmdPrepareMemoryRegions hooked_xglCmdPrepareMemoryRegions
 #define __HOOKED_xglCmdPrepareImages hooked_xglCmdPrepareImages
@@ -212,6 +213,7 @@ extern pthread_once_t gInitOnce;
 #define __HOOKED_xglCmdBindDescriptorSet xglCmdBindDescriptorSet
 #define __HOOKED_xglCmdBindDynamicMemoryView xglCmdBindDynamicMemoryView
 #define __HOOKED_xglCmdBindIndexData xglCmdBindIndexData
+#define __HOOKED_xglCmdBindVertexData xglCmdBindVertexData
 #define __HOOKED_xglCmdBindAttachments xglCmdBindAttachments
 #define __HOOKED_xglCmdPrepareMemoryRegions xglCmdPrepareMemoryRegions
 #define __HOOKED_xglCmdPrepareImages xglCmdPrepareImages
@@ -633,6 +635,12 @@ XGL_VOID XGLAPI __HOOKED_xglCmdBindIndexData(
     XGL_GPU_MEMORY mem,
     XGL_GPU_SIZE   offset,
     XGL_INDEX_TYPE indexType);
+
+XGL_VOID XGLAPI __HOOKED_xglCmdBindVertexData(
+    XGL_CMD_BUFFER  cmdBuffer,
+    XGL_GPU_MEMORY  mem,
+    XGL_GPU_SIZE    offset,
+    XGL_UINT        binding);
 
 XGL_VOID XGLAPI __HOOKED_xglCmdBindAttachments(
     XGL_CMD_BUFFER                         cmdBuffer,

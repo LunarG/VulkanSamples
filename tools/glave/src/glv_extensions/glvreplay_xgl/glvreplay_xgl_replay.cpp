@@ -457,6 +457,7 @@ void xglFuncs::init_funcs(void * handle)
     real_xglCmdBindDescriptorSet = (type_xglCmdBindDescriptorSet)(glv_platform_get_library_entrypoint(handle, "xglCmdBindDescriptorSet"));
     real_xglCmdBindDynamicMemoryView = (type_xglCmdBindDynamicMemoryView)(glv_platform_get_library_entrypoint(handle, "xglCmdBindDynamicMemoryView"));
     real_xglCmdBindIndexData = (type_xglCmdBindIndexData)(glv_platform_get_library_entrypoint(handle, "xglCmdBindIndexData"));
+    real_xglCmdBindVertexData = (type_xglCmdBindVertexData)(glv_platform_get_library_entrypoint(handle, "xglCmdBindVertexData"));
     real_xglCmdBindAttachments = (type_xglCmdBindAttachments)(glv_platform_get_library_entrypoint(handle, "xglCmdBindAttachments"));
     real_xglCmdPrepareMemoryRegions = (type_xglCmdPrepareMemoryRegions)(glv_platform_get_library_entrypoint(handle, "xglCmdPrepareMemoryRegions"));
     real_xglCmdPrepareImages = (type_xglCmdPrepareImages)(glv_platform_get_library_entrypoint(handle, "xglCmdPrepareImages"));
@@ -1551,6 +1552,12 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         {
             struct_xglCmdBindIndexData* pPacket = interpret_body_as_xglCmdBindIndexData(packet);
              m_xglFuncs.real_xglCmdBindIndexData(remap(pPacket->cmdBuffer), remap(pPacket->mem), pPacket->offset, pPacket->indexType);
+            break;
+        }
+        case GLV_TPI_XGL_xglCmdBindVertexData:
+        {
+            struct_xglCmdBindVertexData* pPacket = interpret_body_as_xglCmdBindVertexData(packet);
+             m_xglFuncs.real_xglCmdBindVertexData(remap(pPacket->cmdBuffer), remap(pPacket->mem), pPacket->offset, pPacket->binding);
             break;
         }
         case GLV_TPI_XGL_xglCmdBindAttachments:

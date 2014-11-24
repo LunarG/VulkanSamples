@@ -411,6 +411,12 @@ static XGL_VOID( XGLAPI * real_xglCmdBindIndexData)(
     XGL_GPU_SIZE   offset,
     XGL_INDEX_TYPE indexType) = xglCmdBindIndexData;
 
+static XGL_VOID( XGLAPI * real_xglCmdBindVertexData)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_GPU_MEMORY mem,
+    XGL_GPU_SIZE   offset,
+    XGL_UINT binding) = xglCmdBindVertexData;
+
 static XGL_VOID( XGLAPI * real_xglCmdBindAttachments)(
     XGL_CMD_BUFFER                         cmdBuffer,
     XGL_UINT                               colorTargetCount,
@@ -691,6 +697,7 @@ void AttachHooks()
         hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdBindDescriptorSet, hooked_xglCmdBindDescriptorSet);
         hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdBindDynamicMemoryView, hooked_xglCmdBindDynamicMemoryView);
         hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdBindIndexData, hooked_xglCmdBindIndexData);
+        hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdBindVertexData, hooked_xglCmdBindVertexData);
         hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdBindAttachments, hooked_xglCmdBindAttachments);
         hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdPrepareMemoryRegions, hooked_xglCmdPrepareMemoryRegions);
         hookSuccess &= Mhook_SetHook((PVOID*)&real_xglCmdPrepareImages, hooked_xglCmdPrepareImages);
@@ -808,6 +815,7 @@ void AttachHooks()
     hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdBindDescriptorSet, "xglCmdBindDescriptorSet");
     hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdBindDynamicMemoryView, "xglCmdBindDynamicMemoryView");
     hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdBindIndexData, "xglCmdBindIndexData");
+    hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdBindVertexData, "xglCmdBindVertexData");
     hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdBindAttachments, "xglCmdBindAttachments");
     hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdPrepareMemoryRegions, "xglCmdPrepareMemoryRegions");
     hookSuccess &= glv_platform_get_next_lib_sym((PVOID*)&real_xglCmdPrepareImages, "xglCmdPrepareImages");
@@ -929,6 +937,7 @@ void DetachHooks()
         unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdBindDescriptorSet);
         unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdBindDynamicMemoryView);
         unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdBindIndexData);
+        unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdBindVertexData);
         unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdBindAttachments);
         unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdPrepareMemoryRegions);
         unhookSuccess &= Mhook_Unhook((PVOID*)&real_xglCmdPrepareImages);
@@ -2988,6 +2997,24 @@ GLVTRACER_EXPORT XGL_VOID XGLAPI __HOOKED_xglCmdBindIndexData(
     pPacket->mem = mem;
     pPacket->offset = offset;
     pPacket->indexType = indexType;
+    FINISH_TRACE_PACKET();
+}
+
+GLVTRACER_EXPORT XGL_VOID XGLAPI __HOOKED_xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer,
+                                                               XGL_GPU_MEMORY mem,
+                                                               XGL_GPU_SIZE offset,
+                                                               XGL_UINT binding)
+{
+    glv_trace_packet_header* pHeader;
+    struct_xglCmdBindVertexData* pPacket;
+    SEND_ENTRYPOINT_ID(xglCmdBindVertexData);
+    CREATE_TRACE_PACKET(xglCmdBindVertexData, 0);
+    real_xglCmdBindVertexData(cmdBuffer, mem, offset, binding);
+    pPacket = interpret_body_as_xglCmdBindVertexData(pHeader);
+    pPacket->cmdBuffer = cmdBuffer;
+    pPacket->mem = mem;
+    pPacket->offset = offset;
+    pPacket->binding = binding;
     FINISH_TRACE_PACKET();
 }
 

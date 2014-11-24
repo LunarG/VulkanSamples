@@ -118,6 +118,7 @@ enum GLV_TRACE_PACKET_ID_XGL
     GLV_TPI_XGL_xglCmdBindDescriptorSet,
     GLV_TPI_XGL_xglCmdBindDynamicMemoryView,
     GLV_TPI_XGL_xglCmdBindIndexData,
+    GLV_TPI_XGL_xglCmdBindVertexData,
     GLV_TPI_XGL_xglCmdBindAttachments,
     GLV_TPI_XGL_xglCmdPrepareMemoryRegions,
     GLV_TPI_XGL_xglCmdPrepareImages,

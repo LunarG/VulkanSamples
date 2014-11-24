@@ -452,6 +452,12 @@ struct xglFuncs {
             XGL_GPU_SIZE   offset,
             XGL_INDEX_TYPE indexType);
     type_xglCmdBindIndexData real_xglCmdBindIndexData;
+    typedef XGL_VOID( XGLAPI * type_xglCmdBindVertexData)(
+            XGL_CMD_BUFFER  cmdBuffer,
+            XGL_GPU_MEMORY  mem,
+            XGL_GPU_SIZE    offset,
+            XGL_UINT        binding);
+    type_xglCmdBindVertexData real_xglCmdBindVertexData;
     typedef XGL_VOID( XGLAPI * type_xglCmdBindAttachments)(
             XGL_CMD_BUFFER                         cmdBuffer,
             XGL_UINT                               colorTargetCount,
