@@ -456,23 +456,32 @@ static void synchDSMapping()
                 }
                 else { // We have a good DS & Pipeline, store pipeline mappings in DS
                     for (uint32_t j = 0; j < XGL_NUM_GRAPHICS_SHADERS; j++) { // j is shader selector
-                        for (uint32_t k = 0; k < XGL_MAX_DESCRIPTOR_SETS; k++) {
-                            if (pPipeTrav->dsMapping[j][k].slotCount > pDS->numSlots) {
-                                sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u)!", j, pPipeTrav->dsMapping[j][k].slotCount, (void*)pDS->dsID, pDS->numSlots);
-                                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_SLOT_NUM_MISMATCH, "DS", str);
-                            }
-                            else {
-                                for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][k].slotCount; r++) {
-                                    pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][k].pShaderMappingSlot[r];
-                                }
+                        if (pPipeTrav->dsMapping[j][i].slotCount > pDS->numSlots) {
+                            sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u)!", j, pPipeTrav->dsMapping[j][i].slotCount, (void*)pDS->dsID, pDS->numSlots);
+                            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_SLOT_NUM_MISMATCH, "DS", str);
+                        }
+                        else {
+                            for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][i].slotCount; r++) {
+                                pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][i].pShaderMappingSlot[r];
                             }
                         }
                     }
                 }
             }
             else {
-                sprintf(str, "It appears that no DS was bound to index %u.", i);
-                layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_DS_BOUND, "DS", str);
+                // Verify that no shader is mapping this DS
+                uint32_t dsUsed = 0;
+                for (uint32_t j = 0; j < XGL_NUM_GRAPHICS_SHADERS; j++) { // j is shader selector
+                    if (pPipeTrav->dsMapping[j][i].slotCount > 0) {
+                        dsUsed = 1;
+                        sprintf(str, "No DS was bound to index %u, but shader type %s has slots bound to that DS.", i, string_XGL_PIPELINE_SHADER_STAGE(j));
+                        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_DS_BOUND, "DS", str);
+                    }
+                }
+                if (0 == dsUsed) {
+                    sprintf(str, "It appears that no DS was bound to index %u, but no shaders are using that DS so this is not an issue.", i);
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
+                }
             }
         }
     }
