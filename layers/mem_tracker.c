@@ -254,6 +254,7 @@ static XGL_BOOL validateCBMemRef(const XGL_CMD_BUFFER cb, XGL_UINT memRefCount, 
                 layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
                 found = 1;
                 foundCount++;
+                break;
             }
         }
         if (!found) {
@@ -419,11 +420,12 @@ static XGL_BOOL deleteGlobalCBList()
     XGL_BOOL result = XGL_TRUE;
     GLOBAL_CB_NODE* pCBTrav = pGlobalCBHead;
     while (pCBTrav) {
-        XGL_BOOL tmpResult = deleteGlobalCBNode(pCBTrav->cmdBuffer);
+        XGL_CMD_BUFFER cbToDelete = pCBTrav->cmdBuffer;
+        pCBTrav = pCBTrav->pNextGlobalCBNode;
+        XGL_BOOL tmpResult = deleteGlobalCBNode(cbToDelete);
         // If any result is FALSE, final result should be FALSE
         if ((XGL_FALSE ==  tmpResult) || (XGL_FALSE == result))
             result = XGL_FALSE;
-        pCBTrav = pCBTrav->pNextGlobalCBNode;
     }
     return result;
 }
@@ -774,7 +776,7 @@ static void printGlobalCB()
         sprintf(str, "Details of Global CB list w/ HEAD at %p:", (void*)pTrav);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         while (pTrav) {
-            sprintf(str, "    Global CB Node (%p) has CB %p, fence %p, and pMemObjList %p", (void*)pTrav, (void*)pTrav->cmdBuffer, (void*)pTrav->fence, (void*)pTrav->pMemObjList);
+            sprintf(str, "    Global CB Node (%p) w/ pNextGlobalCBNode (%p) has CB %p, fence %p, and pMemObjList %p", (void*)pTrav, (void*)pTrav->pNextGlobalCBNode, (void*)pTrav->cmdBuffer, (void*)pTrav->fence, (void*)pTrav->pMemObjList);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
             MINI_NODE* pMemObjTrav = pTrav->pMemObjList;
             while (pMemObjTrav) {
@@ -1188,9 +1190,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_M
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
 {
-    // TODO : Pick up frees here
-    //   Make sure mem object is unbound from any other objects
-    //   Make sure mem object not referenced by any queued command buffers
+    /* From spec : A memory object is freed by calling xglFreeMemory() when it is no longer needed. Before
+     * freeing a memory object, an application must ensure the memory object is unbound from
+     * all API objects referencing it and that it is not referenced by any queued command buffers
+     */
     if (XGL_FALSE == freeMemNode(mem)) {
         char str[1024];
         sprintf(str, "Issue while freeing mem obj %p", (void*)mem);
