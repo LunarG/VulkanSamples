@@ -15,7 +15,6 @@ SET(COMMON_CPP
     xglgpu.cpp
     xgldevice.cpp
     xglimage.cpp
-    tony_objs.cpp
     xglrenderframework.cpp
     xgltestframework.cpp
    )
@@ -72,18 +71,6 @@ set_target_properties(xgl_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
-
-add_executable(xgl_tony_render_tests tony_render_tests.cpp ${COMMON_CPP} displayengine.cpp)
-set_target_properties(xgl_tony_render_tests
-   PROPERTIES
-   COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_tony_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
-
-add_executable(xgl_compiler_render_tests compiler_render_tests.cpp ${COMMON_CPP} displayengine.cpp)
-set_target_properties(xgl_compiler_render_tests
-   PROPERTIES
-   COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_compiler_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(xgl_blit_tests blit_tests.cpp ${COMMON_CPP} displayengine.cpp)
 set_target_properties(xgl_blit_tests
