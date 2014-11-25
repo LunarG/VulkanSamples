@@ -1,12 +1,12 @@
 cmake_minimum_required (VERSION 2.8.11)
 
 add_custom_command(OUTPUT generic_layer.c xgl_enum_string_helper.h xgl_struct_string_helper.h api_dump.c api_dump_file.c object_track.c
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py generic-layer > generic_layer.c
+	COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py Generic > generic_layer.c
 	COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_enum_string_helper ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
 	COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_struct_wrappers ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py api-dump > api_dump.c
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py api-dump-file > api_dump_file.c
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py object-tracker > object_track.c
+        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ApiDump > api_dump.c
+        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ApiDumpFile > api_dump_file.c
+        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ObjectTracker > object_track.c
 	           DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py
 	                   ${PROJECT_SOURCE_DIR}/xgl-helper.py
                            ${PROJECT_SOURCE_DIR}/xgl.py)

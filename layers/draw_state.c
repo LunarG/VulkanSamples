@@ -942,7 +942,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
             return XGL_ERROR_INVALID_POINTER;
         // This layer compatible with all GPUs
         *pOutLayerCount = 1;
-        strncpy(pOutLayers[0], "draw_state", maxStringSize);
+        strncpy(pOutLayers[0], "DrawState", maxStringSize);
         return XGL_SUCCESS;
     }
 }

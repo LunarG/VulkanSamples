@@ -138,14 +138,15 @@ class Subcommand(object):
     %s;
 };""" % ";\n    ".join(entries)
 
-    def _generate_dispatch_entrypoints(self, qual="", layer="generic"):
+    def _generate_dispatch_entrypoints(self, qual="", layer="Generic"):
         if qual:
             qual += " "
 
+        layer_name = layer
         funcs = []
         for proto in self.protos:
             if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
-                if "generic" == layer:
+                if "Generic" == layer:
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
                     ret_val = ''
@@ -194,7 +195,7 @@ class Subcommand(object):
                                  '    fflush(stdout);\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
-                elif "apidump" in layer:
+                elif "APIDump" in layer:
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
                     ret_val = ''
@@ -210,7 +211,7 @@ class Subcommand(object):
                         stmt = "    return result;\n"
                     f_open = ''
                     f_close = ''
-                    if "file" in layer:
+                    if "File" in layer:
                         file_mode = "a"
                         if 'CreateDevice' in proto.name:
                             file_mode = "w"
@@ -296,7 +297,7 @@ class Subcommand(object):
                                  '    %s%s%s\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, ret_val, c_call, f_open, log_func, f_close, stmt))
-                elif "objecttracker" == layer:
+                elif "ObjectTracker" == layer:
                     obj_type_mapping = {"XGL_PHYSICAL_GPU" : "XGL_OBJECT_TYPE_PHYSICAL_GPU", "XGL_DEVICE" : "XGL_OBJECT_TYPE_DEVICE",
                                         "XGL_QUEUE" : "XGL_OBJECT_TYPE_QUEUE", "XGL_QUEUE_SEMAPHORE" : "XGL_OBJECT_TYPE_QUEUE_SEMAPHORE",
                                         "XGL_GPU_MEMORY" : "XGL_OBJECT_TYPE_GPU_MEMORY", "XGL_FENCE" : "XGL_OBJECT_TYPE_FENCE",
@@ -518,7 +519,7 @@ class GenericLayerSubcommand(Subcommand):
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "generic"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "Generic"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -548,7 +549,7 @@ class ApiDumpSubcommand(Subcommand):
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "apidump"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -578,7 +579,7 @@ class ApiDumpFileSubcommand(Subcommand):
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "apidump-file"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpFile"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -778,7 +779,7 @@ class ObjectTrackerSubcommand(Subcommand):
 
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "objecttracker"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "ObjectTracker"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
 
@@ -788,10 +789,10 @@ def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
             "layer-dispatch" : LayerDispatchSubcommand,
-            "generic-layer" : GenericLayerSubcommand,
-            "api-dump" : ApiDumpSubcommand,
-            "api-dump-file" : ApiDumpFileSubcommand,
-            "object-tracker" : ObjectTrackerSubcommand,
+            "Generic" : GenericLayerSubcommand,
+            "ApiDump" : ApiDumpSubcommand,
+            "ApiDumpFile" : ApiDumpFileSubcommand,
+            "ObjectTracker" : ObjectTrackerSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
