@@ -42,6 +42,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DS_NESTED_DS_ATTACH_FAILED    = 14, // Error while attempting to Attach Nested DS mapping to DS Slot
     DRAWSTATE_CLEAR_DS_FAILED               = 15, // Error while attempting ClearDS
     DRAWSTATE_INVALID_PIPELINE              = 16, // Invalid DS referenced
+    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS       = 17, // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE

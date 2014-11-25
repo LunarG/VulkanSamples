@@ -172,6 +172,11 @@ typedef struct _PIPELINE_NODE {
     PIPELINE_LL_HEADER     *pCreateTree; // Ptr to shadow of data in create tree
     // 1st dimension of array is shader type
     SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS][XGL_MAX_DESCRIPTOR_SETS];
+    // Vtx input info (if any)
+    XGL_UINT                                vtxBindingCount;   // number of bindings
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
+    XGL_UINT                                vtxAttributeCount; // number of attributes
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {
@@ -183,6 +188,8 @@ typedef struct _SAMPLER_NODE {
 static PIPELINE_NODE *pPipelineHead = NULL;
 static SAMPLER_NODE *pSamplerHead = NULL;
 static XGL_PIPELINE lastBoundPipeline = NULL;
+#define MAX_BINDING 0xFFFFFFFF
+static XGL_UINT lastVtxBinding = MAX_BINDING;
 
 static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 {
@@ -221,9 +228,10 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
         // Typically pNext is const so have to cast to avoid warning when we modify it here
         memcpy((void*)pShadowTrav->pNext, pTrav, sTypeStructSize(pTrav->sType));
         pShadowTrav = (PIPELINE_LL_HEADER*)pShadowTrav->pNext;
+        // TODO : Now that we shadow whole create info, the special copies are just a convenience that can be done away with once shadow is complete and correct
         // Special copy of DS Mapping info
         if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pTrav->sType) {
-            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
+            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *pSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
             for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
                 if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
                     char str[1024];
@@ -236,6 +244,18 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
                 pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
                 memcpy(pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
             }
+        }
+        else if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pTrav->sType) {
+            // Special copy of Vtx info
+            XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pVICI = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav;
+            pPipeline->vtxBindingCount = pVICI->bindingCount;
+            uint32_t allocSize = pPipeline->vtxBindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION);
+            pPipeline->pVertexBindingDescriptions = (XGL_VERTEX_INPUT_BINDING_DESCRIPTION*)malloc(allocSize);
+            memcpy(pPipeline->pVertexBindingDescriptions, pVICI->pVertexAttributeDescriptions, allocSize);
+            pPipeline->vtxAttributeCount = pVICI->attributeCount;
+            allocSize = pPipeline->vtxAttributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION);
+            pPipeline->pVertexAttributeDescriptions = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION*)malloc(allocSize);
+            memcpy(pPipeline->pVertexAttributeDescriptions, pVICI->pVertexAttributeDescriptions, allocSize);
         }
         pTrav = (PIPELINE_LL_HEADER*)pTrav->pNext;
     }
@@ -447,6 +467,7 @@ static void synchDSMapping()
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS", str);
     }
     else {
+        // Synch Descriptor Set Mapping
         for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
             DS_LL_HEAD *pDS;
             if (lastBoundDS[i]) {
@@ -481,9 +502,21 @@ static void synchDSMapping()
                     }
                 }
                 if (0 == dsUsed) {
-                    sprintf(str, "It appears that no DS was bound to index %u, but no shaders are using that DS so this is not an issue.", i);
+                    sprintf(str, "No DS was bound to index %u, but no shaders are using that DS so this is not an issue.", i);
                     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
                 }
+            }
+        }
+        // Verify Vtx binding
+        if (MAX_BINDING != lastVtxBinding) {
+            if (lastVtxBinding >= pPipeTrav->vtxBindingCount) {
+                sprintf(str, "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", lastVtxBinding, (pPipeTrav->vtxBindingCount - 1));
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
+            }
+            else {
+                char *tmpStr = xgl_print_xgl_vertex_input_binding_description(&pPipeTrav->pVertexBindingDescriptions[lastVtxBinding], "{DS}INFO : ");
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr);
+                free(tmpStr);
             }
         }
     }
@@ -1462,6 +1495,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdB
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
 {
+    lastVtxBinding = binding;
     nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
 }
 
