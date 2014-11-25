@@ -1280,7 +1280,15 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(XGL_DEVICE device, const XGL
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
     // TODO : Verify that no memory is bound to this object at time of destruction
-    GLOBAL_OBJECT_NODE* pTrav = getGlobalObjectNode(object);
+    GLOBAL_OBJECT_NODE* pTrav = pGlobalObjectHead;
+    GLOBAL_OBJECT_NODE* pPrev = pTrav;
+    // First locate node in global list along with prev node
+    while (pTrav) {
+        if (object == pTrav->object)
+            break;
+        pPrev = pTrav;
+        pTrav = pTrav->pNext;
+    }
     if (pTrav) {
         if (pTrav->pMemNode) {
             char str[1024];
@@ -1291,7 +1299,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
         }
         if (pGlobalObjectHead == pTrav) // update HEAD if needed
             pGlobalObjectHead = pTrav->pNext;
-        // Delete the obj node
+        // Delete the obj node from global list
+        pPrev->pNext = pTrav->pNext;
         free(pTrav);
     }
     XGL_RESULT result = nextTable.DestroyObject(object);
