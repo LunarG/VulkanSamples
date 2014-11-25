@@ -284,8 +284,9 @@ typedef struct _DS_LL_HEAD {
 
 // ptr to HEAD of LL of DSs
 static DS_LL_HEAD *pDSHead = NULL;
-// Last DS that was bound
+// Last DS that was bound, and slotOffset for the binding
 static XGL_DESCRIPTOR_SET lastBoundDS[XGL_MAX_DESCRIPTOR_SETS] = {NULL, NULL};
+static XGL_UINT lastBoundSlotOffset[XGL_MAX_DESCRIPTOR_SETS] = {0, 0};
 
 // Return DS Head ptr for specified ds or else NULL
 static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
@@ -455,14 +456,15 @@ static void synchDSMapping()
                     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_DS_BOUND, "DS", str);
                 }
                 else { // We have a good DS & Pipeline, store pipeline mappings in DS
+                    XGL_UINT slotOffset = lastBoundSlotOffset[i];
                     for (uint32_t j = 0; j < XGL_NUM_GRAPHICS_SHADERS; j++) { // j is shader selector
-                        if (pPipeTrav->dsMapping[j][i].slotCount > pDS->numSlots) {
-                            sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u)!", j, pPipeTrav->dsMapping[j][i].slotCount, (void*)pDS->dsID, pDS->numSlots);
+                        if (pPipeTrav->dsMapping[j][i].slotCount > (pDS->numSlots - slotOffset)) {
+                            sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u) minus slotOffset (%u) (%u slots available)!", j, pPipeTrav->dsMapping[j][i].slotCount, (void*)pDS->dsID, pDS->numSlots, slotOffset, (pDS->numSlots - slotOffset));
                             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_SLOT_NUM_MISMATCH, "DS", str);
                         }
                         else {
                             for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][i].slotCount; r++) {
-                                pDS->dsSlot[r].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][i].pShaderMappingSlot[r];
+                                pDS->dsSlot[r+slotOffset].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][i].pShaderMappingSlot[r];
                             }
                         }
                     }
@@ -535,8 +537,9 @@ static void printDSConfig()
     for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
         if (lastBoundDS[i]) {
             DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
+            XGL_UINT slotOffset = lastBoundSlotOffset[i];
             if (pDS) {
-                sprintf(tmp_str, "DS INFO : Slot bindings for DS w/ %u slots at index %u (%p):\n", pDS->numSlots, i, (void*)pDS->dsID);
+                sprintf(tmp_str, "DS INFO : Slot bindings for DS[%u] (%p) - %u slots and slotOffset %u:\n", i, (void*)pDS->dsID, pDS->numSlots, slotOffset);
                 strcat(ds_config_str, tmp_str);
                 for (uint32_t j = 0; j < pDS->numSlots; j++) {
                     switch (pDS->dsSlot[j].activeMapping)
@@ -1439,6 +1442,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffe
     if (getDS(descriptorSet)) {
         assert(index < XGL_MAX_DESCRIPTOR_SETS);
         lastBoundDS[index] = descriptorSet;
+        lastBoundSlotOffset[index] = slotOffset;
         char str[1024];
         sprintf(str, "DS %p bound to DS index %u on pipeline %s", (void*)descriptorSet, index, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_NONE, "DS", str);
