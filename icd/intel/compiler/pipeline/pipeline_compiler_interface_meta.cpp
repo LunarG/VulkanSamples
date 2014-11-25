@@ -40,8 +40,18 @@ public:
     void *compile(brw_blorp_prog_data *prog_data, uint32_t *code_size);
 
 private:
-    void alloc_regs();
-    void alloc_pcb_regs(int grf);
+    void alloc_regs()
+    {
+        int grf = base_grf;
+
+        grf = alloc_pcb_regs(grf);
+        grf = alloc_temp_regs(grf);
+
+        assert(grf <= 128);
+    }
+
+    int alloc_pcb_regs(int grf);
+    int alloc_temp_regs(int grf);
 
     void emit_compute_frag_coord();
     void emit_copy_mem();
@@ -58,6 +68,7 @@ private:
     const int base_grf;
     const int base_mrf;
 
+    /* pushed consts */
     struct brw_reg clear_vals[4];
 
     struct brw_reg src_offset_x;
@@ -68,6 +79,7 @@ private:
     struct brw_reg dst_mem_offset;
     struct brw_reg dst_extent_width;
 
+    /* temps */
     struct brw_reg frag_x;
     struct brw_reg frag_y;
 
@@ -81,10 +93,10 @@ intel_meta_compiler::intel_meta_compiler(struct brw_context *brw,
                                          enum intel_dev_meta_shader id)
     : brw_blorp_eu_emitter(brw), brw(brw), id(id),
       poison(brw_imm_ud(0x12345678)),
-      r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UW)),
-      r1(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UW)),
+      r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD)),
+      r1(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD)),
       base_grf(2), /* skipping r0 and r1 */
-      base_mrf(2)
+      base_mrf(1)
 {
     int i;
 
@@ -100,9 +112,9 @@ intel_meta_compiler::intel_meta_compiler(struct brw_context *brw,
     dst_extent_width = poison;
 }
 
-void intel_meta_compiler::alloc_pcb_regs(int grf)
+int intel_meta_compiler::alloc_pcb_regs(int grf)
 {
-    /* clears are special */
+    /* clears have no src */
     switch (id) {
     case INTEL_DEV_META_FS_CLEAR_COLOR:
     case INTEL_DEV_META_FS_CLEAR_DEPTH:
@@ -110,7 +122,8 @@ void intel_meta_compiler::alloc_pcb_regs(int grf)
         clear_vals[1] = retype(brw_vec1_grf(grf, 1), BRW_REGISTER_TYPE_UD);
         clear_vals[2] = retype(brw_vec1_grf(grf, 2), BRW_REGISTER_TYPE_UD);
         clear_vals[3] = retype(brw_vec1_grf(grf, 3), BRW_REGISTER_TYPE_UD);
-        return;
+        return grf + 1;
+        break;
     default:
         break;
     }
@@ -149,24 +162,22 @@ void intel_meta_compiler::alloc_pcb_regs(int grf)
     default:
         break;
     }
+
+    return grf + 1;
 }
 
-void intel_meta_compiler::alloc_regs(void)
+int intel_meta_compiler::alloc_temp_regs(int grf)
 {
-    int grf = base_grf;
     int i;
 
-    alloc_pcb_regs(grf);
+    frag_x = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UW);
     grf++;
 
-    frag_x = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
-    grf += 2;
-
-    frag_y = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
-    grf += 2;
+    frag_y = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UW);
+    grf++;
 
     for (i = 0; i < ARRAY_SIZE(texels); i++) {
-        texels[i] = retype(vec16(brw_vec8_grf(grf, 0)), BRW_REGISTER_TYPE_UD);
+        texels[i] = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
         grf += 8;
     }
 
@@ -175,67 +186,55 @@ void intel_meta_compiler::alloc_regs(void)
 
     tmp2 = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
     grf += 2;
+
+    return grf;
 }
 
 void intel_meta_compiler::emit_compute_frag_coord()
 {
-    emit_add(vec16(retype(frag_x, BRW_REGISTER_TYPE_UW)),
-            stride(suboffset(r1, 4), 2, 4, 0), brw_imm_v(0x10101010));
-    emit_add(vec16(retype(frag_y, BRW_REGISTER_TYPE_UW)),
-            stride(suboffset(r1, 5), 2, 4, 0), brw_imm_v(0x11001100));
+    const struct brw_reg x = retype(suboffset(r1, 2), BRW_REGISTER_TYPE_UW);
+    const struct brw_reg y = suboffset(x, 1);
+
+    emit_add(frag_x, stride(x, 2, 4, 0), brw_imm_v(0x10101010));
+    emit_add(frag_y, stride(y, 2, 4, 0), brw_imm_v(0x11001100));
 }
 
 void intel_meta_compiler::emit_copy_mem()
 {
-    struct brw_reg mrf = retype(vec16(brw_message_reg(base_mrf)),
-                                BRW_REGISTER_TYPE_UD);
-    int mrf_offset = 0;
-    int i;
+    const struct brw_reg mrf =
+        retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
 
     emit_compute_frag_coord();
+    emit_add(mrf, frag_x, src_offset_x);
+    emit_texture_lookup(texels[0], SHADER_OPCODE_TXF, base_mrf, 2);
 
-    emit_add(offset(mrf, mrf_offset),
-            retype(frag_x, BRW_REGISTER_TYPE_UW),
-            retype(src_offset_x, BRW_REGISTER_TYPE_UW));
-    mrf_offset += 2;
-
-    emit_texture_lookup(texels[0], SHADER_OPCODE_TXF, base_mrf, mrf_offset);
-
-    mrf_offset = 0;
-    for (i = 0; i < 4; i++) {
-        emit_mov(offset(mrf, mrf_offset), offset(texels[0], i * 2));
-        mrf_offset += 2;
-    }
-    emit_render_target_write(mrf, base_mrf, mrf_offset, false);
+    emit_mov(offset(mrf, 0), offset(texels[0], 0));
+    emit_mov(offset(mrf, 2), offset(texels[0], 2));
+    emit_mov(offset(mrf, 4), offset(texels[0], 4));
+    emit_mov(offset(mrf, 6), offset(texels[0], 6));
+    emit_render_target_write(mrf, base_mrf, 8, false);
 }
 
 void intel_meta_compiler::emit_clear_color()
 {
-    struct brw_reg mrf = retype(vec16(brw_message_reg(base_mrf)),
-                                BRW_REGISTER_TYPE_UD);
-    int mrf_offset = 0;
-    int i;
+    const struct brw_reg mrf =
+        retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
 
-    for (i = 0; i < 4; i++) {
-        emit_mov(offset(mrf, mrf_offset), clear_vals[i]);
-        mrf_offset += 2;
-    }
-
-    emit_render_target_write(mrf, base_mrf, mrf_offset, false);
+    emit_mov(offset(mrf, 0), clear_vals[0]);
+    emit_mov(offset(mrf, 2), clear_vals[1]);
+    emit_mov(offset(mrf, 4), clear_vals[2]);
+    emit_mov(offset(mrf, 6), clear_vals[3]);
+    emit_render_target_write(mrf, base_mrf, 8, false);
 }
 
 void intel_meta_compiler::emit_clear_depth()
 {
-    struct brw_reg mrf = retype(vec16(brw_message_reg(base_mrf)),
-                                BRW_REGISTER_TYPE_UD);
-    /* skip colors */
-    int mrf_offset = 4 * 2;
+    const struct brw_reg mrf =
+        retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
 
-    /* oDepth */
-    emit_mov(offset(mrf, mrf_offset), clear_vals[0]);
-    mrf_offset += 2;
-
-    emit_render_target_write(mrf, base_mrf, mrf_offset, false);
+    /* skip color and write oDepth only */
+    emit_mov(offset(mrf, 8), clear_vals[0]);
+    emit_render_target_write(mrf, base_mrf, 10, false);
 }
 
 void *intel_meta_compiler::codegen(uint32_t *code_size)
@@ -319,16 +318,17 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
 
     sh->pCode = c.compile(&prog_data, &sh->codeSize);
 
+    sh->in_count = 0;
     sh->out_count = 1;
+    sh->uses = 0;
     sh->surface_count = BRW_BLORP_NUM_BINDING_TABLE_ENTRIES;
     sh->urb_grf_start = prog_data.first_curbe_grf;
 
     switch (id) {
     case INTEL_DEV_META_FS_CLEAR_DEPTH:
-        sh->uses = INTEL_SHADER_USE_COMPUTED_DEPTH;
+        sh->uses |= INTEL_SHADER_USE_COMPUTED_DEPTH;
         break;
     default:
-        sh->uses = 0;
         break;
     }
 
