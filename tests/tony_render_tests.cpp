@@ -812,40 +812,6 @@ TEST_F(XglRenderTest, BIL_GreenTriangle)
     XglTestFramework::m_use_bil = saved_use_bil;
 }
 
-TEST_F(XglRenderTest, TriangleFragUniform)
-{
-
-    static const char *vertShaderText =
-            "#version 130\n"
-            "out vec4 color;\n"
-            "out vec4 scale;\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "vec2 vertices[3];\n"
-            "      vertices[0] = vec2(-0.5, -0.5);\n"
-            "      vertices[1] = vec2( 0.5, -0.5);\n"
-            "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "vec4 colors[3];\n"
-            "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
-            "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   color = colors[gl_VertexID % 3];\n"
-            "   scale = vec4(1.0, 1.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
-
-    static const char *fragShaderText =
-            "#version 130\n"
-            "in vec4 color;\n"
-            "in vec4 scale;\n"
-            "uniform vec4 foo;\n"
-            "void main() {\n"
-            "   gl_FragColor = color * scale + foo;\n"
-            "}\n";
-
-    DrawTriangleTest(vertShaderText, fragShaderText);
-}
-
 TEST_F(XglRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =
