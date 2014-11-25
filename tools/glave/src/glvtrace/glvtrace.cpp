@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
         } else
         {
             char *pExtension = strrchr(g_settings.output_trace, '.');
-            char *basename = glv_allocate_and_copy_n(g_settings.output_trace, (pExtension == NULL) ? strlen(g_settings.output_trace) : pExtension - g_settings.output_trace - 1);
+            char *basename = glv_allocate_and_copy_n(g_settings.output_trace, (pExtension == NULL) ? strlen(g_settings.output_trace) : pExtension - g_settings.output_trace);
             char num[16];
             snprintf(num, 16, "%u", serverIndex);
             procInfo.traceFilename = glv_copy_and_append(basename, num, pExtension);

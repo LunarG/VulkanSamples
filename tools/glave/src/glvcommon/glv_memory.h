@@ -98,7 +98,8 @@ static char* glv_allocate_and_copy_n(const char* _src, int _count)
 #ifdef WIN32
     strncpy_s(retVal, bufferSize, _src, _count);
 #else // linux
-    strncpy(retVal, _src, bufferSize);
+    strncpy(retVal, _src, _count);
+    retVal[_count] = '\0';
 #endif
 
     return retVal;
