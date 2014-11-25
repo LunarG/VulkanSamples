@@ -45,15 +45,19 @@ private:
         int grf = base_grf;
 
         grf = alloc_pcb_regs(grf);
+        grf = alloc_input_regs(grf);
         grf = alloc_temp_regs(grf);
 
         assert(grf <= 128);
     }
 
     int alloc_pcb_regs(int grf);
+    int alloc_input_regs(int grf);
     int alloc_temp_regs(int grf);
 
     void emit_compute_frag_coord();
+    void emit_vs_fill_mem();
+    void emit_vs_copy_mem();
     void emit_copy_mem();
     void emit_clear_color();
     void emit_clear_depth();
@@ -78,6 +82,9 @@ private:
 
     struct brw_reg dst_mem_offset;
     struct brw_reg dst_extent_width;
+
+    /* inputs */
+    struct brw_reg vid;
 
     /* temps */
     struct brw_reg frag_x;
@@ -110,12 +117,25 @@ intel_meta_compiler::intel_meta_compiler(struct brw_context *brw,
 
     dst_mem_offset = poison;
     dst_extent_width = poison;
+
+    vid = poison;
 }
 
 int intel_meta_compiler::alloc_pcb_regs(int grf)
 {
     /* clears have no src */
     switch (id) {
+    case INTEL_DEV_META_VS_FILL_MEM:
+        dst_mem_offset = retype(brw_vec1_grf(grf, 0), BRW_REGISTER_TYPE_UD);
+        clear_vals[0] = retype(brw_vec1_grf(grf, 1), BRW_REGISTER_TYPE_UD);
+        return grf + 1;
+        break;
+    case INTEL_DEV_META_VS_COPY_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
+        dst_mem_offset = retype(brw_vec1_grf(grf, 0), BRW_REGISTER_TYPE_UD);
+        src_offset_x = retype(brw_vec1_grf(grf, 1), BRW_REGISTER_TYPE_UD);
+        return grf + 1;
+        break;
     case INTEL_DEV_META_FS_CLEAR_COLOR:
     case INTEL_DEV_META_FS_CLEAR_DEPTH:
         clear_vals[0] = retype(brw_vec1_grf(grf, 0), BRW_REGISTER_TYPE_UD);
@@ -166,6 +186,21 @@ int intel_meta_compiler::alloc_pcb_regs(int grf)
     return grf + 1;
 }
 
+int intel_meta_compiler::alloc_input_regs(int grf)
+{
+    switch (id) {
+    case INTEL_DEV_META_VS_FILL_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
+        vid = retype(brw_vec1_grf(grf, 0), BRW_REGISTER_TYPE_UD);
+        break;
+    default:
+        break;
+    }
+
+    return grf + 1;
+}
+
 int intel_meta_compiler::alloc_temp_regs(int grf)
 {
     int i;
@@ -197,6 +232,79 @@ void intel_meta_compiler::emit_compute_frag_coord()
 
     emit_add(frag_x, stride(x, 2, 4, 0), brw_imm_v(0x10101010));
     emit_add(frag_y, stride(y, 2, 4, 0), brw_imm_v(0x11001100));
+}
+
+void intel_meta_compiler::emit_vs_fill_mem()
+{
+    const struct brw_reg mrf =
+        retype(vec1(brw_message_reg(base_mrf)), BRW_REGISTER_TYPE_UD);
+    int mrf_offset = 0;
+    bool use_header;
+    int i;
+
+    if (brw->gen >= 7) {
+        use_header = false;
+    } else {
+        emit_mov_8(offset(vec8(mrf), mrf_offset), r0);
+        mrf_offset += 1;
+
+        use_header = true;
+    }
+
+    emit_add_8(offset(mrf, mrf_offset), dst_mem_offset, vid);
+    mrf_offset += 1;
+
+    emit_mov_8(offset(mrf, mrf_offset), clear_vals[0]);
+    mrf_offset += 1;
+
+    emit_scattered_write(SHADER_OPCODE_DWORD_SCATTERED_WRITE,
+            base_mrf, mrf_offset, 1, use_header);
+
+    emit_urb_write_eot(base_mrf);
+}
+
+void intel_meta_compiler::emit_vs_copy_mem()
+{
+    const struct brw_reg mrf =
+        retype(vec1(brw_message_reg(base_mrf)), BRW_REGISTER_TYPE_UD);
+    int mrf_offset = 0;
+    enum opcode op_read, op_write;
+    bool use_header;
+    int i;
+
+    if (id == INTEL_DEV_META_VS_COPY_MEM) {
+        op_read = SHADER_OPCODE_DWORD_SCATTERED_READ;
+        op_write = SHADER_OPCODE_DWORD_SCATTERED_WRITE;
+    } else {
+        op_read = SHADER_OPCODE_BYTE_SCATTERED_READ;
+        op_write = SHADER_OPCODE_BYTE_SCATTERED_WRITE;
+    }
+
+    if (brw->gen >= 7) {
+        use_header = false;
+    } else {
+        emit_mov_8(offset(vec8(mrf), mrf_offset), r0);
+        mrf_offset += 1;
+
+        use_header = true;
+    }
+
+    emit_add_8(offset(mrf, mrf_offset), src_offset_x, vid);
+    mrf_offset += 1;
+    emit_scattered_read(tmp1, op_read,
+            base_mrf, mrf_offset, 1, use_header);
+
+    /* prepare to set up dst offset */
+    mrf_offset -= 1;
+
+    emit_add_8(offset(mrf, mrf_offset), dst_mem_offset, vid);
+    mrf_offset += 1;
+    emit_mov_8(offset(mrf, mrf_offset), tmp1);
+    mrf_offset += 1;
+
+    emit_scattered_write(op_write, base_mrf, mrf_offset, 1, use_header);
+
+    emit_urb_write_eot(base_mrf);
 }
 
 void intel_meta_compiler::emit_copy_mem()
@@ -265,6 +373,13 @@ void *intel_meta_compiler::compile(brw_blorp_prog_data *prog_data,
     alloc_regs();
 
     switch (id) {
+    case INTEL_DEV_META_VS_FILL_MEM:
+        emit_vs_fill_mem();
+        break;
+    case INTEL_DEV_META_VS_COPY_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
+        emit_vs_copy_mem();
+        break;
     case INTEL_DEV_META_FS_COPY_MEM:
         emit_copy_mem();
         break;
@@ -325,6 +440,12 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
     sh->urb_grf_start = prog_data.first_curbe_grf;
 
     switch (id) {
+    case INTEL_DEV_META_VS_FILL_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
+        sh->in_count = 1;
+        sh->uses |= INTEL_SHADER_USE_VID;
+        break;
     case INTEL_DEV_META_FS_CLEAR_DEPTH:
         sh->uses |= INTEL_SHADER_USE_COMPUTED_DEPTH;
         break;

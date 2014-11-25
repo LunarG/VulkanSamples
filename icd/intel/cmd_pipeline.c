@@ -2326,6 +2326,17 @@ static uint32_t gen6_meta_vs_constants(struct intel_cmd *cmd)
     CMD_ASSERT(cmd, 6, 7.5);
 
     switch (meta->shader_id) {
+    case INTEL_DEV_META_VS_FILL_MEM:
+        consts[0] = meta->dst.x;
+        consts[1] = meta->clear_val[0];
+        const_count = 2;
+        break;
+    case INTEL_DEV_META_VS_COPY_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
+        consts[0] = meta->dst.x;
+        consts[1] = meta->src.x;
+        const_count = 2;
+        break;
     default:
         assert(!"unknown meta shader id");
         const_count = 0;

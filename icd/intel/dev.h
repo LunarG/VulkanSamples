@@ -38,6 +38,27 @@ struct intel_winsys;
 
 enum intel_dev_meta_shader {
     /*
+     * This expects an ivec2 to be pushed:
+     *
+     *  .x is memory offset
+     *  .y is fill value
+     *
+     * as well as GEN6_VFCOMP_STORE_VID.
+     */
+    INTEL_DEV_META_VS_FILL_MEM,
+
+    /*
+     * These expect an ivec2 to be pushed:
+     *
+     *  .x is dst memory offset
+     *  .y is src memory offset
+     *
+     * as well as GEN6_VFCOMP_STORE_VID.
+     */
+    INTEL_DEV_META_VS_COPY_MEM,
+    INTEL_DEV_META_VS_COPY_MEM_UNALIGNED,
+
+    /*
      * These expect an ivec4 to be pushed:
      *
      *  .xy is added to fragment coord to form (u, v)
