@@ -29,6 +29,31 @@
 #include "sampler.h"
 #include "dset.h"
 
+static bool dset_img_state_read_only(XGL_IMAGE_STATE state)
+{
+    switch (state) {
+    case XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY:
+    case XGL_IMAGE_STATE_COMPUTE_SHADER_READ_ONLY:
+    case XGL_IMAGE_STATE_MULTI_SHADER_READ_ONLY:
+    case XGL_IMAGE_STATE_TARGET_AND_SHADER_READ_ONLY:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool dset_mem_state_read_only(XGL_MEMORY_STATE state)
+{
+    switch (state) {
+    case XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY:
+    case XGL_MEMORY_STATE_COMPUTE_SHADER_READ_ONLY:
+    case XGL_MEMORY_STATE_MULTI_SHADER_READ_ONLY:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static void dset_destroy(struct intel_obj *obj)
 {
     struct intel_dset *dset = intel_dset_from_obj(obj);
@@ -104,6 +129,7 @@ XGL_VOID XGLAPI intelAttachSamplerDescriptors(
         struct intel_sampler *sampler = intel_sampler(pSamplers[i]);
 
         slot->type = INTEL_DSET_SLOT_SAMPLER;
+        slot->read_only = true;
         slot->u.sampler = sampler;
     }
 }
@@ -123,6 +149,7 @@ XGL_VOID XGLAPI intelAttachImageViewDescriptors(
         struct intel_img_view *view = intel_img_view(info->view);
 
         slot->type = INTEL_DSET_SLOT_IMG_VIEW;
+        slot->read_only = dset_img_state_read_only(info->state);
         slot->u.img_view = view;
     }
 }
@@ -141,6 +168,7 @@ XGL_VOID XGLAPI intelAttachMemoryViewDescriptors(
         const XGL_MEMORY_VIEW_ATTACH_INFO *info = &pMemViews[i];
 
         slot->type = INTEL_DSET_SLOT_MEM_VIEW;
+        slot->read_only = dset_mem_state_read_only(info->state);
         intel_mem_view_init(&slot->u.mem_view, dset->dev, info);
     }
 }
@@ -160,6 +188,7 @@ XGL_VOID XGLAPI intelAttachNestedDescriptors(
         struct intel_dset *nested = intel_dset(info->descriptorSet);
 
         slot->type = INTEL_DSET_SLOT_NESTED;
+        slot->read_only = true;
         slot->u.nested.dset = nested;
         slot->u.nested.slot_offset = info->slotOffset;
     }
@@ -177,6 +206,7 @@ XGL_VOID XGLAPI intelClearDescriptorSetSlots(
         struct intel_dset_slot *slot = &dset->slots[startSlot + i];
 
         slot->type = INTEL_DSET_SLOT_UNUSED;
+        slot->read_only = true;
         slot->u.unused = NULL;
     }
 }

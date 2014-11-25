@@ -1582,6 +1582,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                 const XGL_UINT slot_offset = cmd->bind.dset.graphics_offset;
                 const struct intel_dset_slot *dset_slot =
                     &dset->slots[slot_offset + slot->u.index];
+                const uint32_t reloc_flags =
+                    (dset_slot->read_only) ? 0 : INTEL_RELOC_WRITE;
 
                 switch (dset_slot->type) {
                 case INTEL_DSET_SLOT_IMG_VIEW:
@@ -1593,7 +1595,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                     cmd_reserve_reloc(cmd, 1);
                     cmd_surface_reloc(cmd, offset, 1,
                             dset_slot->u.img_view->img->obj.mem->bo,
-                            dset_slot->u.img_view->cmd[1], 0);
+                            dset_slot->u.img_view->cmd[1], reloc_flags);
                     break;
                 case INTEL_DSET_SLOT_MEM_VIEW:
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
@@ -1604,7 +1606,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                     cmd_reserve_reloc(cmd, 1);
                     cmd_surface_reloc(cmd, offset, 1,
                             dset_slot->u.mem_view.mem->bo,
-                            dset_slot->u.mem_view.cmd[1], 0);
+                            dset_slot->u.mem_view.cmd[1], reloc_flags);
                     break;
                 case INTEL_DSET_SLOT_SAMPLER:
                     assert(0 == cmd->bind.dset.graphics_offset);

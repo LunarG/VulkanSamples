@@ -44,6 +44,7 @@ struct intel_dset;
 
 struct intel_dset_slot {
     enum intel_dset_slot_type type;
+    bool read_only;
 
     union {
         const void *unused;
