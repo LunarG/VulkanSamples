@@ -153,7 +153,29 @@ class Subcommand(object):
                     if proto.ret != "XGL_VOID":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
-                    if proto.params[0].ty != "XGL_PHYSICAL_GPU":
+                    if proto.name == "EnumerateLayers":
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    if (gpu != NULL) {\n'
+                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '        printf("At start of layered %s\\n");\n'
+                                 '        pCurObj = gpuw;\n'
+                                 '        pthread_once(&tabOnce, initLayerTable);\n'
+                                 '        %snextTable.%s;\n'
+                                 '        printf("Completed layered %s\\n");\n'
+                                 '        fflush(stdout);\n'
+                                 '    %s'
+                                 '    } else {\n'
+                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                                 '            return XGL_ERROR_INVALID_POINTER;\n'
+                                 '        // This layer compatible with all GPUs\n'
+                                 '        *pOutLayerCount = 1;\n'
+                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        return XGL_SUCCESS;\n'
+                                 '    }\n'
+                                     '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt, layer))
+                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
                                  '    %snextTable.%s;\n'
@@ -236,7 +258,27 @@ class Subcommand(object):
                                 log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                                 log_func += '\n        fflush(stdout);'
                             log_func += '\n        free(pTmpStr);\n    }'
-                    if proto.params[0].ty != "XGL_PHYSICAL_GPU":
+                    if proto.name == "EnumerateLayers":
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    if (gpu != NULL) {\n'
+                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '        pCurObj = gpuw;\n'
+                                 '        pthread_once(&tabOnce, initLayerTable);\n'
+                                 '        %snextTable.%s;\n'
+                                 '        %s    %s    %s\n'
+                                 '    %s'
+                                 '    } else {\n'
+                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                                 '            return XGL_ERROR_INVALID_POINTER;\n'
+                                 '        // This layer compatible with all GPUs\n'
+                                 '        *pOutLayerCount = 1;\n'
+                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        return XGL_SUCCESS;\n'
+                                 '    }\n'
+                                     '}' % (qual, decl, proto.params[0].name, ret_val, c_call,f_open, log_func, f_close, stmt, layer))
+                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
                                  '    %snextTable.%s;\n'
@@ -321,7 +363,28 @@ class Subcommand(object):
                     if proto.ret != "XGL_VOID":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
-                    if proto.params[0].ty != "XGL_PHYSICAL_GPU":
+                    if proto.name == "EnumerateLayers":
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    if (gpu != NULL) {\n'
+                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '    %s'
+                                 '        pCurObj = gpuw;\n'
+                                 '        pthread_once(&tabOnce, initLayerTable);\n'
+                                 '        %snextTable.%s;\n'
+                                 '    %s%s'
+                                 '    %s'
+                                 '    } else {\n'
+                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                                 '            return XGL_ERROR_INVALID_POINTER;\n'
+                                 '        // This layer compatible with all GPUs\n'
+                                 '        *pOutLayerCount = 1;\n'
+                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        return XGL_SUCCESS;\n'
+                                 '    }\n'
+                                     '}' % (qual, decl, proto.params[0].name, using_line, ret_val, c_call, create_line, destroy_line, stmt, layer))
+                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
                                  '%s'

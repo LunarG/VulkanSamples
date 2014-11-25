@@ -929,11 +929,22 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount)
 {
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
-    XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
-    return result;
+    if (gpu != NULL)
+    {
+        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
+        pCurObj = gpuw;
+        pthread_once(&tabOnce, initLayerTable);
+        XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount);
+        return result;
+    } else
+    {
+        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
+            return XGL_ERROR_INVALID_POINTER;
+        // This layer compatible with all GPUs
+        *pOutLayerCount = 1;
+        strncpy(pOutLayers[0], "draw_state", maxStringSize);
+        return XGL_SUCCESS;
+    }
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, XGL_UINT queueIndex, XGL_QUEUE* pQueue)
