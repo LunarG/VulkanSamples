@@ -15,13 +15,13 @@
 #  define XGL_LAYER_EXPORT
 #endif
 
-typedef XGL_VOID * (XGLAPI *GetProcAddrType)(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
 typedef XGL_RESULT (XGLAPI *InitAndEnumerateGpusType)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *GetGpuInfoType)(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
+typedef XGL_VOID * (XGLAPI *GetProcAddrType)(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
 typedef XGL_RESULT (XGLAPI *CreateDeviceType)(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice);
 typedef XGL_RESULT (XGLAPI *DestroyDeviceType)(XGL_DEVICE device);
 typedef XGL_RESULT (XGLAPI *GetExtensionSupportType)(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName);
-typedef XGL_RESULT (XGLAPI *EnumerateLayersType)(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount);
+typedef XGL_RESULT (XGLAPI *EnumerateLayersType)(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount, XGL_VOID* pReserved);
 typedef XGL_RESULT (XGLAPI *GetDeviceQueueType)(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, XGL_UINT queueIndex, XGL_QUEUE* pQueue);
 typedef XGL_RESULT (XGLAPI *QueueSubmitType)(XGL_QUEUE queue, XGL_UINT cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *QueueSetGlobalMemReferencesType)(XGL_QUEUE queue, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs);

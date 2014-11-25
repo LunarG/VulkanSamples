@@ -180,6 +180,39 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount, XGL_VOID* pReserved)
+{
+    if (gpu != NULL)
+    {
+        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
+        printf("At start of wrapped xglEnumerateLayers() call w/ gpu: %p\n", gpu);
+        pCurObj = gpuw;
+        pthread_once(&tabOnce, initLayerTable);
+        XGL_RESULT result = myTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
+        return result;
+    } else
+    {
+        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pReserved == NULL)
+            return XGL_ERROR_INVALID_POINTER;
+
+        // Example of a layer that is only compatible with Intel's GPUs
+        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT*) pReserved;
+        GetGpuInfoType fpGetGpuInfo;
+        XGL_PHYSICAL_GPU_PROPERTIES gpuProps;
+        XGL_SIZE dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
+        fpGetGpuInfo = gpuw->pGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, (const XGL_CHAR *) "xglGetGpuInfo");
+        fpGetGpuInfo((XGL_PHYSICAL_GPU) gpuw->nextObject, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
+        if (gpuProps.vendorId == 0x8086)
+        {
+            *pOutLayerCount = 1;
+            strncpy(pOutLayers[0], "Basic", maxStringSize);
+        } else
+        {
+            *pOutLayerCount = 0;
+        }
+        return XGL_SUCCESS;
+    }
+}
 XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName) {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     if (gpu == NULL)

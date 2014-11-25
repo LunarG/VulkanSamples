@@ -658,7 +658,7 @@ static bool find_layer_name(struct loader_icd *icd, XGL_UINT gpu_index, const ch
         }
         else {
             XGL_SIZE cnt;
-            fpEnumerateLayers(NULL, 16, 256, layers, &cnt); //gpu would be icd->gpus + gpu_index
+            fpEnumerateLayers(NULL, 16, 256, layers, &cnt, (XGL_VOID *) icd->gpus + gpu_index);
             for (unsigned int i = 0; i < cnt; i++) {
                 if (!strcmp((char *) layers[i], layer_name)) {
                     dlclose(handle);
@@ -1176,7 +1176,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     return (count > 0) ? XGL_SUCCESS : res;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount)
+LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount, XGL_VOID* pReserved)
 {
     XGL_SIZE count = loader.scanned_layer_count;
     // TODO handle layers per GPU, multiple icds

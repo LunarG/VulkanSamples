@@ -880,7 +880,7 @@ typedef enum _XGL_STRUCTURE_TYPE
 // IMG CHANGE BEGIN - support for vertex input description
     XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 34,
 // IMG CHANGE END
-    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                   = 35,
+    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 35,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1133,7 +1133,7 @@ typedef struct _XGL_LAYER_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;                      // Should be XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
     XGL_UINT                                layerCount;
-    const XGL_CHAR *const*                  ppActiveLayerNames;         // layer library name of form libXGLLayer<Name>.so
+    const XGL_CHAR *const*                  ppActiveLayerNames;         // layer name from the layer's xglEnumerateLayers())
 } XGL_LAYER_CREATE_INFO;
 
 typedef struct _XGL_PHYSICAL_GPU_QUEUE_PROPERTIES
@@ -1756,10 +1756,6 @@ typedef struct _XGL_DISPATCH_INDIRECT_CMD
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-XGL_VOID * XGLAPI xglGetProcAddr(
-    XGL_PHYSICAL_GPU gpu,
-    const XGL_CHAR * pName);
-
 // GPU initialization
 
 XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
@@ -1774,6 +1770,10 @@ XGL_RESULT XGLAPI xglGetGpuInfo(
     XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData);
+
+XGL_VOID * XGLAPI xglGetProcAddr(
+    XGL_PHYSICAL_GPU                            gpu,
+    const XGL_CHAR*                             pName);
 
 // Device functions
 
@@ -1793,11 +1793,12 @@ XGL_RESULT XGLAPI xglGetExtensionSupport(
 
 // Layer discovery function
 XGL_RESULT XGLAPI xglEnumerateLayers(
-    XGL_PHYSICAL_GPU gpu,
-    XGL_SIZE maxLayerCount,
-    XGL_SIZE maxStringSize,
-    XGL_CHAR* const* pOutLayers,
-    XGL_SIZE* pOutLayerCount);
+    XGL_PHYSICAL_GPU                            gpu,
+    XGL_SIZE                                    maxLayerCount,
+    XGL_SIZE                                    maxStringSize,
+    XGL_CHAR* const*                            pOutLayers,
+    XGL_SIZE*                                   pOutLayerCount,
+    XGL_VOID*                                   pReserved);
 
 // Queue functions
 
