@@ -87,7 +87,7 @@ static void cmd_meta_set_dst_for_mem(struct intel_cmd *cmd,
 
     meta->dst.reloc_target = (intptr_t) mem->bo;
     meta->dst.reloc_offset = 0;
-    meta->dst.reloc_flags = 0;
+    meta->dst.reloc_flags = INTEL_RELOC_WRITE;
 }
 
 static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
@@ -179,7 +179,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
     meta->dst.reloc_target = (intptr_t) img->obj.mem->bo;
     meta->dst.reloc_offset = 0;
-    meta->dst.reloc_flags = 0;
+    meta->dst.reloc_flags = INTEL_RELOC_WRITE;
 
     intel_rt_view_destroy(rt);
 }
