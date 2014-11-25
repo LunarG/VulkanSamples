@@ -97,6 +97,7 @@ void glv_MessageStream_destroy(MessageStream** ppStream)
         (*ppStream)->mHostAddressInfo = NULL;
     }
 
+    glv_LogInfo("Destroyed socket connection\n");
 #if defined(WIN32)
     WSACleanup();
 #endif
@@ -191,6 +192,7 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
         return FALSE;
     }
 
+    glv_LogInfo("Connected on port %s\n", pStream->mPort);
     if (glv_MessageStream_Handshake(pStream))
     {
         // TODO: The SendBuffer can cause big delays in sending messages back to the client.
@@ -401,7 +403,7 @@ BOOL glv_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len)
                     return FALSE;
                 } else {
                     // I don't do partial reads--once I start receiving I wait for everything.
-                    glv_LogDebug("Sleep on partial socket recv (%u bytes / %u), error num %d\n", totalDataRead, _len, pStream->mErrorNum);
+                    //glv_LogDebug("Sleep on partial socket recv (%u bytes / %u), error num %d\n", totalDataRead, _len, pStream->mErrorNum);
                     Sleep(1);
                 }
                 // I've split these into two blocks because one of them is expected and the other isn't.
