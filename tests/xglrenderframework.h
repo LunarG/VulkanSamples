@@ -57,6 +57,8 @@ public:
     void GenerateClearAndPrepareBufferCmds();
     void GenerateBindRenderTargetCmd();
     void GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
+    void GenerateBindStateAndPipelineCmds();
+
 
 protected:
     XGL_APPLICATION_INFO            app_info;
@@ -192,7 +194,7 @@ protected:
 class XglShaderObj
 {
 public:
-    XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage );
+    XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework);
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo(XglDescriptorSetObj descriptorSet);
     void BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer);
     void BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture);
