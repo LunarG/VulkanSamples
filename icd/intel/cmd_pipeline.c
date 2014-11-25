@@ -2141,6 +2141,7 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
 
 static void gen6_meta_urb(struct intel_cmd *cmd)
 {
+    const int vs_entry_count = (cmd->dev->gpu->gt == 2) ? 256 : 128;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
@@ -2148,13 +2149,14 @@ static void gen6_meta_urb(struct intel_cmd *cmd)
     /* 3DSTATE_URB */
     cmd_batch_pointer(cmd, 3, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_URB) | (3 - 2);
-    dw[1] = 128 << GEN6_URB_DW1_VS_ENTRY_COUNT__SHIFT;
+    dw[1] = vs_entry_count << GEN6_URB_DW1_VS_ENTRY_COUNT__SHIFT;
     dw[2] = 0;
 }
 
 static void gen7_meta_urb(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
+    int vs_entry_count;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
@@ -2183,12 +2185,22 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
 
     cmd_wa_gen7_pre_vs_depth_stall_write(cmd);
 
+    switch (cmd_gen(cmd)) {
+    case INTEL_GEN(7.5):
+        vs_entry_count = (cmd->dev->gpu->gt >= 2) ? 1664 : 640;
+        break;
+    case INTEL_GEN(7):
+    default:
+        vs_entry_count = (cmd->dev->gpu->gt == 2) ? 704 : 512;
+        break;
+    }
+
     /* 3DSTATE_URB_x */
     cmd_batch_pointer(cmd, 8, &dw);
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (2 - 2);
     dw[1] = 1 << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
-            512;
+            vs_entry_count;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (2 - 2);
