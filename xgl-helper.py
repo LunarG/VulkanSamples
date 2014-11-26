@@ -308,6 +308,8 @@ class StructWrapperGen:
         self.header_filename = os.path.join(out_dir, self.api+"_struct_wrappers.h")
         self.class_filename = os.path.join(out_dir, self.api+"_struct_wrappers.cpp")
         self.string_helper_filename = os.path.join(out_dir, self.api+"_struct_string_helper.h")
+        self.string_helper_no_addr_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr.h")
+        self.no_addr = False
         self.hfg = CommonFileGen(self.header_filename)
         self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
@@ -317,6 +319,13 @@ class StructWrapperGen:
         
     def set_include_headers(self, include_headers):
         self.include_headers = include_headers
+
+    def set_no_addr(self, no_addr):
+        self.no_addr = no_addr
+        if self.no_addr:
+            self.shg = CommonFileGen(self.string_helper_no_addr_filename)
+        else:
+            self.shg = CommonFileGen(self.string_helper_filename)
 
     # Return class name for given struct name
     def get_class_name(self, struct_name):
@@ -454,7 +463,6 @@ class StructWrapperGen:
         elif 'INT' in struct_member['type']:
             print_type = "i"
         elif struct_member['ptr']:
-            #cast_type = ""
             pass
         else:
             #print("Unhandled struct type: %s" % struct_member['type'])
@@ -465,6 +473,9 @@ class StructWrapperGen:
             member_post = "[i]"
         print_out = "%%s%s%s = %%%s%s" % (member_name, member_print_post, print_type, postfix) # section of print that goes inside of quotes
         print_arg = ", %s,%s %s(%s%s%s)%s" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
+        if self.no_addr and "p" == print_type:
+            print_out = "%%s%s%s = addr\\n" % (member_name, member_print_post) # section of print that goes inside of quotes
+            print_arg = ", %s" % (pre_var_name)
         return (print_out, print_arg)
 
     def _generateStringHelperFunctions(self):
@@ -498,22 +509,34 @@ class StructWrapperGen:
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('        tmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % index)
-                            sh_funcs.append('        sprintf(stp_strs[%i], "   %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
+                            if self.no_addr:
+                                sh_funcs.append('        sprintf(stp_strs[%i], "   %%spNext (addr)\\n%%s", prefix, tmpStr);\n' % index)
+                            else:
+                                sh_funcs.append('        sprintf(stp_strs[%i], "   %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
                             sh_funcs.append('        free(tmpStr);\n')
                         else:
                             sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(prefix));\n' % (index))
-                            sh_funcs.append('        sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                            if self.no_addr:
+                                sh_funcs.append('        sprintf(stp_strs[%i], " %%s%s (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
+                            else:
+                                sh_funcs.append('        sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                         sh_funcs.append('    }\n')
                         sh_funcs.append("    else\n        stp_strs[%i] = &dummy_char;\n" % (index))
                     elif stp_list[index]['array']: # TODO : For now just printing first element of array
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s[0], extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
-                        sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s[0] (%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                        if self.no_addr:
+                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s[0] (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
+                        else:
+                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s[0] (%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     else:
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
-                        sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                        if self.no_addr:
+                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
+                        else:
+                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
             sh_funcs.append('    str = (char*)malloc(%ssizeof(char)*1024);\n' % (total_strlen_str))
             sh_funcs.append('    sprintf(str, "')
@@ -852,6 +875,9 @@ def main(argv=None):
         sw.generateHeader()
         print("Generating struct wrapper class to %s" % sw.class_filename)
         sw.generateBody()
+        sw.generateStringHelper()
+        # Generate a 2nd helper file that excludes addrs
+        sw.set_no_addr(True)
         sw.generateStringHelper()
     if opts.gen_cmake:
         cmg = CMakeGen(sw, os.path.dirname(enum_filename))
