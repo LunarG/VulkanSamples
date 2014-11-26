@@ -92,8 +92,7 @@ private:
 
     struct brw_reg texels[4];
 
-    struct brw_reg tmp1;
-    struct brw_reg tmp2;
+    struct brw_reg temps[4];
 };
 
 intel_meta_compiler::intel_meta_compiler(struct brw_context *brw,
@@ -216,11 +215,10 @@ int intel_meta_compiler::alloc_temp_regs(int grf)
         grf += 8;
     }
 
-    tmp1 = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
-    grf += 2;
-
-    tmp2 = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
-    grf += 2;
+    for (i = 0; i < ARRAY_SIZE(temps); i++) {
+        temps[i] = retype(brw_vec8_grf(grf, 0), BRW_REGISTER_TYPE_UD);
+        grf += 2;
+    }
 
     return grf;
 }
@@ -291,7 +289,7 @@ void intel_meta_compiler::emit_vs_copy_mem()
 
     emit_add_8(offset(mrf, mrf_offset), src_offset_x, vid);
     mrf_offset += 1;
-    emit_scattered_read(tmp1, op_read,
+    emit_scattered_read(temps[0], op_read,
             base_mrf, mrf_offset, 1, use_header);
 
     /* prepare to set up dst offset */
@@ -299,7 +297,7 @@ void intel_meta_compiler::emit_vs_copy_mem()
 
     emit_add_8(offset(mrf, mrf_offset), dst_mem_offset, vid);
     mrf_offset += 1;
-    emit_mov_8(offset(mrf, mrf_offset), tmp1);
+    emit_mov_8(offset(mrf, mrf_offset), temps[0]);
     mrf_offset += 1;
 
     emit_scattered_write(op_write, base_mrf, mrf_offset, 1, use_header);
