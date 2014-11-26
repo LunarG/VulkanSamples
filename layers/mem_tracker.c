@@ -1081,6 +1081,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
         sprintf(str, "Issue deleting global CB list in xglDestroyDevice()");
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
+    // Report any memory leaks
+    GLOBAL_MEM_OBJ_NODE* pTrav = pGlobalMemObjHead;
+    while (pTrav) {
+        sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling xglFreeMemory(%p) prior to xglDestroyDevice().", pTrav->mem, pTrav->mem);
+        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pTrav->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+        pTrav = pTrav->pNextGlobalNode;
+    }
     XGL_RESULT result = nextTable.DestroyDevice(device);
     return result;
 }

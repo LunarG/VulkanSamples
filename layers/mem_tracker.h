@@ -39,5 +39,6 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_DESTROY_OBJECT_ERROR          = 11, // Destroying an object that has a memory reference
     MEMTRACK_MEMORY_BINDING_ERROR          = 12, // Error during one of many calls that bind memory to object or CB
     MEMTRACK_OUT_OF_MEMORY_ERROR           = 13, // malloc failed
+    MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
 } MEM_TRACK_ERROR;
 
