@@ -328,7 +328,8 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             // These are really best guesses, and will require more work to
             // understand as we turn on more features
-            pipe_shader->in_count = data->base.urb_read_length;// = 1;
+            pipe_shader->in_count = u_popcount(user_attr_read) +
+                    ((data->uses_vertexid || data->uses_instanceid) ? 1 : 0);
             pipe_shader->out_count = data->base.vue_map.num_slots;// = 2;
             pipe_shader->urb_grf_start = data->base.dispatch_grf_start_reg;// = 1;
             pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
