@@ -1,5 +1,5 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.2, Spinning Cube, 31 Oct 2014*
+*Version 0.3, 26 Nov 2014*
 
 This project provides *open source* components for the XGL Ecosystem.
 
@@ -14,27 +14,35 @@ The following components are available:
 - Proposed Reference [*Validation Layers*](https://github.com/KhronosGroup/GL-Next/tree/master/layers/)
   - [Object Tracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/object_track.c)
   - [Draw State](https://github.com/KhronosGroup/GL-Next/blob/master/layers/draw_state.c)
-- *GLAVE Debugger* ([API Dump](https://github.com/KhronosGroup/GL-Next/blob/master/layers/api_dump.c) only)
+  - [MemTracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/mem_tracker.c)
+- *GLAVE Debugger* 
+  - API Dump (generated)
+  - APIDumpFile (generated)
 - [*Sample Drivers*](https://github.com/KhronosGroup/GL-Next/tree/master/icd)
   - [Common Infrastructure](https://github.com/KhronosGroup/GL-Next/tree/master/icd/common)
   - [Implementation for Intel GPUs](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel)
 
+## New
+
+- Added APIDumpFile to write APIDump directly to a file
+- Added MemTracker validation layer
+- Added various turn-on tests for variety of driver / compiler features
+- Fix to wsiPresent to avoid deadlock with X server
+- Misc. fixes to layers and Intel sample driver
+
 ## How to Build and Run
 
-This release demonstrates a spinning textured cube as an example of the
-vertical slice of XGL functionality running on Ubuntu 14.10 with an Intel
-GPU.
 [BUILD.md](https://github.com/KhronosGroup/GL-Next/tree/master/BUILD.md)
 includes directions for building all the components, running the validation tests and running the demo applications.
 
-Information on how to enable the API Dump and Validation layers is in
+Information on how to enable the various Debug and Validation layers is in
 [layers/README.md](https://github.com/KhronosGroup/GL-Next/tree/master/layers/README.md).
 
 ## References
 This version of the components are written based on the following preliminary specs and proposals:
 - [**XGL Programers Reference**, 1 Jul 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/AMD/Explicit%20GL%20Programming%20Guide%20and%20API%20Reference.pdf)
 - [**BIL**, version 1.0, revision 18](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
-- [**IMG's Fixed Function Proposal**, 28 Oct 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/IMG/xgl_vertex_input_description2_img.h)
+- [**IMG's Fixed Function Proposal**, 13 Nov 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/XGL/accepted/xgl_fixed_function_vertex_fetch_proposal.txt)
 - [**Valve's Loader Proposal**, 7 Oct 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/Valve/xglLayers.pptx)
 
 ## License
