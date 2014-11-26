@@ -1,7 +1,8 @@
-Layer Description and Status
-10/22/2014
+#Layer Description and Status
+*26 Nov 2014*
 
-Overview:
+##Overview
+
 Layer libraries can be written to intercept or hook XGL entrypoints for various
 debug and validation purposes.  One or more XGL entrypoints can be defined in your Layer
 library.  Undefined entrypoints in the Layer library will be passed to the next Layer which
@@ -9,50 +10,77 @@ may be the driver.  Multiple layer libraries can be chained (actually a hierarch
 xglEnumerateLayer can be called to list the available layer libraries.  xglGetProcAddr is
 used internally by the Layers and ICD Loader to initialize dispatch tables. Layers are
 activated at xglCreateDevice time. xglCreateDevice createInfo struct is extended to allow
-a list of layers to be activated.  Layer libraries can alternatively be LD_PRELOADed.
+a list of layers to be activated.  Layer libraries can alternatively be LD_PRELOADed depending
+upon how they are implemented.
 
-Layer library example code:
+## Layer library example code
+
 include/xglLayer.h  - header file for layer code
-layer/basic_plugin.c  - simple example wrapping three entrypoints. Single global dispatch
-                        table for either single gpu/device or multi-gpu with same activated
-                        layers for each device. Can be LD_PRELOADed individually.
-<build dir>/layer/generic_layer.c  - auto generated example wrapping all XGL entrypoints.
+layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows layer features:
+                       - Multiple dispatch tables for supporting multiple GPUs.
+                       - Example layer extension function shown.
+                       - Layer extension advertised by xglGetExtension().
+                       - xglEnumerateLayers() supports loader layer name queries and call interception
+                       - Can be LD_PRELOADed individually
+<build dir>/layer/generic_layer.c (name=Generic) - auto generated example wrapping all XGL entrypoints.
                                      Single global dispatch table. Can be LD_PRELOADed.
 <build dir>/layer/api_dump.c - print out API calls along with parameter values
 <build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats
 
-Using Layers:
+## Using Layers
+
 1) Build XGL loader  and i965 icd driver using normal steps (cmake and make)
-
 2) Place libXGLLayer<name>.so in the same directory as your XGL test or app:
-  cp build/layer/libXGLLayerBasic.so build/layer/libXGLLayerGeneric.so build/tests
+   cp build/layer/libXGLLayerBasic.so build/layer/libXGLLayerGeneric.so build/tests
 This is required for the Icd loader to be able to scan and enumerate your library.
-
-3) Specify which Layers to activate by using xglCreateDevice XGL_LAYER_CREATE_INFO struct or
-environment variable LIBXGL_LAYER_LIBS
-   export LIBXGL_LAYER_LIBS=libXGLLayerBasic.so:LibXGLLayerGeneric.so
+3) Specify which Layers to activate by using xglCreateDevice XGL_LAYER_CREATE_INFO struct or environment variable LIBXGL_LAYER_NAMES
+   export LIBXGL_LAYER_NAMES=Basic:Generic;
    cd build/tests; ./xglinfo
 
+## Tips for writing new layers
 
-Status:
-Current Features:
--scanning of available Layers during xglInitAndEnumerateGpus
--xglEnumerateLayers and xglGetProcAddr supported APIs in xgl.h, ICD loader and i965 driver
--multiple layers in a hierarchy supported
--layer enumeration supported
+1) Must implement xglGetProcAddr() (aka GPA);
+2) Must have a local dispatch table to call next layer (see xglLayer.h);
+3) Should implement xglEnumerateLayers() returning layer name when gpu == NULL;
+    otherwise layer name is extracted from library filename by the Loader;
+4) gpu objects must be unwrapped (gpu->nextObject) when passed to next layer;
+5) next layers GPA can be found in the wrapped gpu object;
+6) Loader calls a layer's GPA first  so initialization should occur here;
+7) all entrypoints can be wrapped but only will be called after layer is activated
+    via the first xglCreatDevice;
+8) entrypoint names can be any name as specified by the layers xglGetProcAddr
+    implementation; exceptions are xglGetProcAddr and xglEnumerateLayers,
+    which must have the correct name since the Loader calls these entrypoints;
+9) entrypoint names must be exported to the dynamic loader with XGL_LAYER_EXPORT;
+10) For LD_PRELOAD support: a)entrypoint names should be offical xgl names and
+    b) initialization should occur on any call with a gpu object (Loader type
+    initialization must be done if implementing xglInitAndEnumerateGpus).
+11) Implement xglGetExtension() if you want to advertise a layer extension
+    (only available after the layer is activated);
+12) Layer naming convention is camel case same name as in library: libXGLLayer<name>.so
+
+## Status
+
+### Current Features
+
+-scanning of available Layers during xglInitAndEnumerateGpus;
+-layer names retrieved via xglEnumerateLayers();
+-xglEnumerateLayers and xglGetProcAddr supported APIs in xgl.h, ICD loader and i965 driver;
+-multiple layers in a hierarchy supported;
+-layer enumeration supported per GPU;
 -layers  activated per gpu and per icd driver: separate  dispatch table and layer library
-   list in loader for each gpu or icd driver
+   list in loader for each gpu or icd driver;
 -activation via xglCreateDevice extension struct in CreateInfo or via env var
-   (LIBXGL_LAYER_LIBS)
--layer libraries can be LD_PRELOADed
+   (LIBXGL_LAYER_NAMES);
+-layer libraries can be LD_PRELOADed if implemented correctly;
 
-Current known issues:
--layer libraries don't support multiple dispatch tables for multi-gpus
--layers with extension APIs not yet tested or supported
+### Current known issues
+
+-layer libraries (except Basic) don't support multiple dispatch tables for multi-gpus;
 -layer libraries not yet include loader init functionality for full LD_PRELOAD of
-    entire API including xglInitAndEnumerate
+    entire API including xglInitAndEnumerateGpus;
+-Since Layers aren't activated until xglCreateDevice, any calls to xglGetExtension()
+    will not report layer extensions unless implemented in the layer;
+-layer extensions do NOT need to be enabled in xglCreateDevice to be available;
 -no support for apps registering layers, must be discovered via initial scan
--no support for Loader discovering from layer and driver which layers support which
-  gpus/drivers: any layer can be use any gpu right now
--xglEnumerateLayers doesn't qualify Layers based on gpu, but enumerates all that were scanned
 
