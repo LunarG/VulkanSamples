@@ -95,7 +95,7 @@ protected:
         err = xglInitAndEnumerateGpus(&app_info, NULL,
                                       MAX_GPUS, &this->gpu_count, objs);
         ASSERT_XGL_SUCCESS(err);
-        ASSERT_GE(1, this->gpu_count) << "No GPU available";
+        ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
         this->m_device = new XglDevice(0, objs[0]);
     }

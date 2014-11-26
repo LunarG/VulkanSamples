@@ -166,7 +166,7 @@ void XglBlitTest::SetUp()
 
     err = xglInitAndEnumerateGpus(&app_info, NULL, 1, &count, &gpu);
     ASSERT_XGL_SUCCESS(err);
-    ASSERT_GE(1, count) << "No GPU available";
+    ASSERT_GE(count, 1) << "No GPU available";
 
     m_device = new XglDevice(0, gpu);
     m_device->get_device_queue();
