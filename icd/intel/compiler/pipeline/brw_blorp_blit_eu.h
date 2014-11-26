@@ -52,6 +52,21 @@ protected:
                                  unsigned msg_length,
                                  bool use_header);
 
+   void emit_scattered_write(enum opcode opcode,
+                             unsigned msg_reg_nr,
+                             unsigned msg_length,
+                             int dispatch_width,
+                             bool use_header);
+
+   void emit_scattered_read(const struct brw_reg &dst,
+                            enum opcode opcode,
+                            unsigned msg_reg_nr,
+                            unsigned msg_length,
+                            int dispatch_width,
+                            bool use_header);
+
+   void emit_urb_write_eot(unsigned base_mrf);
+
    void emit_combine(enum opcode combine_opcode,
                      const struct brw_reg &dst,
                      const struct brw_reg &src_1,

@@ -376,6 +376,24 @@ brw_untyped_surface_read(struct brw_compile *p,
                          unsigned msg_length,
                          unsigned response_length);
 
+void
+brw_scattered_write(struct brw_compile *p,
+                    struct brw_reg dest,
+                    struct brw_reg mrf,
+                    unsigned bind_table_index,
+                    unsigned msg_length,
+                    bool header_present,
+                    bool in_dwords);
+
+void
+brw_scattered_read(struct brw_compile *p,
+                   struct brw_reg dest,
+                   struct brw_reg mrf,
+                   unsigned bind_table_index,
+                   unsigned msg_length,
+                   bool header_present,
+                   bool in_dwords);
+
 /***********************************************************************
  * brw_eu_util.c:
  */

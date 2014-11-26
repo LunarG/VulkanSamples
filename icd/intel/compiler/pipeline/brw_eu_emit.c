@@ -2705,6 +2705,110 @@ brw_untyped_surface_read(struct brw_compile *p,
       insn->header.access_mode == BRW_ALIGN_1);
 }
 
+static void
+brw_scattered_op(struct brw_compile *p,
+                 struct brw_instruction *insn,
+                 bool read, bool in_dwords)
+{
+    struct brw_context *brw = p->brw;
+    uint32_t simd_mode;
+
+    if (brw->gen >= 7) {
+        int msg_type;
+
+        if (read) {
+            msg_type = (in_dwords) ?
+                GEN7_DATAPORT_DC_DWORD_SCATTERED_READ :
+                GEN7_DATAPORT_DC_BYTE_SCATTERED_READ;
+        } else {
+            msg_type = (in_dwords) ?
+                GEN7_DATAPORT_DC_DWORD_SCATTERED_WRITE :
+                GEN7_DATAPORT_DC_BYTE_SCATTERED_WRITE;
+        }
+
+        insn->bits3.gen7_dp.msg_type = msg_type;
+    } else {
+        assert(in_dwords);
+
+        if (read) {
+            insn->bits3.gen6_dp.msg_type =
+                GEN6_DATAPORT_READ_MESSAGE_DWORD_SCATTERED_READ;
+        } else {
+            insn->bits3.gen6_dp.msg_type =
+                GEN6_DATAPORT_WRITE_MESSAGE_DWORD_SCATTERED_WRITE;
+        }
+    }
+
+    if (in_dwords) {
+        simd_mode = (insn->header.execution_size == BRW_EXECUTE_16) ?
+            (0x3 << 8) : (0x2 << 8);
+    } else {
+        simd_mode = (insn->header.execution_size == BRW_EXECUTE_16) ?
+            (0x1 << 8) : (0x0 << 8);
+    }
+
+    insn->bits3.ud |= simd_mode;
+}
+
+void
+brw_scattered_write(struct brw_compile *p,
+                    struct brw_reg dest,
+                    struct brw_reg mrf,
+                    unsigned bind_table_index,
+                    unsigned msg_length,
+                    bool header_present,
+                    bool in_dwords)
+{
+   struct brw_context *brw = p->brw;
+   struct brw_instruction *insn = next_insn(p, BRW_OPCODE_SEND);
+   enum brw_message_target sfid;
+
+   brw_set_dest(p, insn, retype(dest, BRW_REGISTER_TYPE_UD));
+   brw_set_src0(p, insn, retype(mrf, BRW_REGISTER_TYPE_UD));
+
+   if (brw->gen >= 7)
+       sfid = GEN7_SFID_DATAPORT_DATA_CACHE;
+   else
+       sfid = GEN6_SFID_DATAPORT_RENDER_CACHE;
+
+   brw_set_message_descriptor(p, insn, sfid, msg_length, 0,
+           header_present, false);
+   brw_scattered_op(p, insn, false, in_dwords);
+
+   insn->bits3.gen6_dp.binding_table_index = bind_table_index;
+}
+
+void
+brw_scattered_read(struct brw_compile *p,
+                   struct brw_reg dest,
+                   struct brw_reg mrf,
+                   unsigned bind_table_index,
+                   unsigned msg_length,
+                   bool header_present,
+                   bool in_dwords)
+{
+   struct brw_context *brw = p->brw;
+   struct brw_instruction *insn = next_insn(p, BRW_OPCODE_SEND);
+   enum brw_message_target sfid;
+   unsigned rlen;
+
+   brw_set_dest(p, insn, retype(dest, BRW_REGISTER_TYPE_UD));
+   brw_set_src0(p, insn, retype(mrf, BRW_REGISTER_TYPE_UD));
+
+   if (brw->gen >= 7)
+       sfid = GEN7_SFID_DATAPORT_DATA_CACHE;
+   else
+       sfid = GEN6_SFID_DATAPORT_RENDER_CACHE;
+
+   rlen = (insn->header.execution_size == BRW_EXECUTE_16) ? 2 : 1;
+
+   brw_set_message_descriptor(p, insn, sfid, msg_length, rlen,
+           header_present, false);
+   brw_scattered_op(p, insn, true, in_dwords);
+
+   insn->bits3.gen6_dp.binding_table_index = bind_table_index;
+}
+
 // LunarG : TODO - shader time??
 /**
  * This instruction is generated as a single-channel align1 instruction by

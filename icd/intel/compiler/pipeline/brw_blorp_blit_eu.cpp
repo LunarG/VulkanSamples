@@ -112,6 +112,82 @@ brw_blorp_eu_emitter::emit_render_target_write(const struct brw_reg &src0,
 }
 
 void
+brw_blorp_eu_emitter::emit_scattered_write(enum opcode opcode,
+                                           unsigned msg_reg_nr,
+                                           unsigned msg_length,
+                                           int dispatch_width,
+                                           bool use_header)
+{
+   assert(opcode == SHADER_OPCODE_DWORD_SCATTERED_WRITE ||
+          (brw->gen >= 7 && opcode == SHADER_OPCODE_BYTE_SCATTERED_WRITE));
+
+   fs_inst *inst = new (mem_ctx) fs_inst(opcode);
+
+   inst->dst = brw_vecn_reg(dispatch_width,
+           BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_NULL, 0);
+   inst->base_mrf = msg_reg_nr;
+   inst->mlen = msg_length;
+   inst->header_present = use_header;
+   inst->target = BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX;
+
+   insts.push_tail(inst);
+}
+
+void
+brw_blorp_eu_emitter::emit_scattered_read(const struct brw_reg &dst,
+                                          enum opcode opcode,
+                                          unsigned msg_reg_nr,
+                                          unsigned msg_length,
+                                          int dispatch_width,
+                                          bool use_header)
+{
+   assert(opcode == SHADER_OPCODE_DWORD_SCATTERED_READ ||
+          (brw->gen >= 7 && opcode == SHADER_OPCODE_BYTE_SCATTERED_READ));
+
+   fs_inst *inst = new (mem_ctx) fs_inst(opcode);
+
+   switch (dispatch_width) {
+   case 1:
+   default:
+       inst->dst = vec1(dst);
+       break;
+   case 2:
+       inst->dst = vec2(dst);
+       break;
+   case 4:
+       inst->dst = vec4(dst);
+       break;
+   case 8:
+       inst->dst = vec8(dst);
+       break;
+   case 16:
+       inst->dst = vec16(dst);
+       break;
+   }
+
+   inst->base_mrf = msg_reg_nr;
+   inst->mlen = msg_length;
+   inst->header_present = use_header;
+   inst->target = BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX;
+
+   insts.push_tail(inst);
+}
+
+void
+brw_blorp_eu_emitter::emit_urb_write_eot(unsigned base_mrf)
+{
+   fs_inst *inst = new (mem_ctx) fs_inst(VS_OPCODE_URB_WRITE);
+
+   inst->base_mrf = base_mrf;
+   /* header will be added by gen6_resolve_implied_move() */
+   inst->mlen = 1;
+   inst->header_present = true;
+   inst->eot = true;
+
+   insts.push_tail(inst);
+}
+
+void
 brw_blorp_eu_emitter::emit_combine(enum opcode combine_opcode,
                                    const struct brw_reg &dst,
                                    const struct brw_reg &src_1,

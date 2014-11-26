@@ -94,6 +94,36 @@ fs_generator::patch_discard_jumps_to_fb_writes()
 }
 
 void
+fs_generator::generate_scattered_write(fs_inst *inst,
+                                       const struct brw_reg &dst)
+{
+    brw_scattered_write(p,
+            dst,
+            brw_message_reg(inst->base_mrf),
+            inst->target,
+            inst->mlen,
+            inst->header_present,
+            (inst->opcode == SHADER_OPCODE_DWORD_SCATTERED_WRITE));
+
+   brw_mark_surface_used(&c->prog_data.base, inst->target);
+}
+
+void
+fs_generator::generate_scattered_read(fs_inst *inst,
+                                      const struct brw_reg &dst)
+{
+    brw_scattered_read(p,
+            dst,
+            brw_message_reg(inst->base_mrf),
+            inst->target,
+            inst->mlen,
+            inst->header_present,
+            (inst->opcode == SHADER_OPCODE_DWORD_SCATTERED_READ));
+
+   brw_mark_surface_used(&c->prog_data.base, inst->target);
+}
+
+void
 fs_generator::generate_fb_write(fs_inst *inst)
 {
    bool eot = inst->eot;
@@ -1794,6 +1824,26 @@ fs_generator::generate_code(exec_list *instructions, FILE *dump_file)
           * we've emitted any discards.  If not, this will emit no code.
           */
          patch_discard_jumps_to_fb_writes();
+         break;
+
+      case SHADER_OPCODE_DWORD_SCATTERED_WRITE:
+      case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
+         generate_scattered_write(inst, dst);
+         break;
+      case SHADER_OPCODE_DWORD_SCATTERED_READ:
+      case SHADER_OPCODE_BYTE_SCATTERED_READ:
+         generate_scattered_read(inst, dst);
+         break;
+      case VS_OPCODE_URB_WRITE:
+         brw_urb_WRITE(p,
+                 brw_null_reg(), /* dest */
+                 inst->base_mrf, /* starting mrf reg nr */
+                 brw_vec8_grf(0, 0), /* src */
+                 (inst->eot) ? BRW_URB_WRITE_EOT_COMPLETE : BRW_URB_WRITE_NO_FLAGS,
+                 inst->mlen,
+                 0,
+                 inst->offset,
+                 BRW_URB_SWIZZLE_INTERLEAVE);
          break;
 
       default:
