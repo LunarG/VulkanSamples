@@ -52,9 +52,10 @@ set(UI_HEADER_LIST
     glvdebug.h
     glvdebug_qtimelineview.h
     glvdebug_QReplayWidget.h
+    glvdebug_QTraceFileModel.h
    )
 
-# these are for non-QOBJECT headers
+# These is for all headers
 set(HEADER_LIST
     glvdebug.h
     glvdebug_settings.h
@@ -65,6 +66,8 @@ set(HEADER_LIST
     glvdebug_timelineitem.h
     glvdebug_timelinemodel.h
     glvdebug_qtimelineview.h
+    glvdebug_QReplayWidget.h
+    glvdebug_QTraceFileModel.h
    )
 
 set(FORM_LIST

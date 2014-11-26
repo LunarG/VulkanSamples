@@ -26,7 +26,7 @@
 
 #include "glvdebug_controller.h"
 #include "glvdebug_view.h"
-
+#include "glvdebug_QTraceFileModel.h"
 #include "glvreplay_seq.h"
 
 extern "C" {
@@ -34,6 +34,7 @@ extern "C" {
 }
 
 static glvdebug_view* s_pView;
+static glvdebug_QTraceFileModel* m_pTraceFileModel;
 
 bool glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView)
 {
@@ -55,8 +56,11 @@ bool glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFile
     //pView->add_custom_state_viewer(new QWidget(), QString("Buffers"));
     //pView->add_custom_state_viewer(new QWidget(), QString("Vertex Arrays"));
 
-    pView->set_replay_widget_available(true);
-    pView->set_replay_widget_enabled(true);
+    s_pView->set_replay_widget_available(true);
+    s_pView->set_replay_widget_enabled(true);
+
+    m_pTraceFileModel = new glvdebug_QTraceFileModel(NULL, pTraceFileInfo);
+    s_pView->set_calltree_model(m_pTraceFileModel);
 
     return true;
 }
@@ -128,5 +132,6 @@ void glvdebug_controller_unload_trace_file()
     if (s_pView != NULL)
     {
         s_pView->set_replay_widget_available(false);
+        s_pView->set_calltree_model(NULL);
     }
 }

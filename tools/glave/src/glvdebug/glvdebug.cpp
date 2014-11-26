@@ -38,6 +38,7 @@
 #include "glvdebug.h"
 #include "glvdebug_settings.h"
 #include "glvdebug_output.h"
+
 #include "glvdebug_controller.h"
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -63,6 +64,7 @@ glvdebug::glvdebug(QWidget *parent)
     // always save/resave so the file will either be created or so that new settings will be added
 //    g_settings.save(g_SETTINGS_FILE);
 
+    memset(&m_traceFileInfo, 0, sizeof(glvdebug_trace_file_info));
     memset(m_pReplayers, 0, sizeof(glv_replay::glv_trace_packet_replay_library*) * GLV_MAX_TRACER_ID_ARRAY_SIZE);
 
     this->move(g_settings.window_position_left, g_settings.window_position_top);
@@ -85,6 +87,8 @@ glvdebug::glvdebug(QWidget *parent)
 
     ui->mainToolBar->addWidget(m_pGenerateTraceButton);
     ui->mainToolBar->addWidget(m_pPlayButton);
+
+    ui->treeView->setModel(NULL);
 
     // setup timeline
     m_pTimeline = new glvdebug_QTimelineView();
@@ -170,6 +174,10 @@ void glvdebug::set_replay_widget_enabled(bool enabled)
     }
 }
 
+void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
+{
+    ui->treeView->setModel(pModel);
+}
 
 void glvdebug::reset_view()
 {
@@ -425,7 +433,11 @@ bool glvdebug::open_trace_file(const std::string &filename)
         m_traceFileInfo.pFile = NULL;
     }
 
-//    bool bOpened = glvdebug_controller_load_trace_file(filename.c_str(), this);
+    //// setup api call tree
+    //if (bOpened)
+    //{
+    //    bOpened = glvdebug_controller_load_trace_file(filename.c_str(), this);
+    //}
 
     if (!bOpened)
     {
@@ -464,7 +476,7 @@ bool glvdebug::load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget*
     unsigned int windowWidth = 800;
     unsigned int windowHeight = 600;
     WId hWindow = pReplayWidget->winId();
-    windowWidth  = pReplayWidget->geometry().width();
+    windowWidth = pReplayWidget->geometry().width();
     windowHeight = pReplayWidget->geometry().height();
 
     // load any API specific driver libraries and init replayer objects

@@ -23,7 +23,8 @@
  *************************************************************************/
 #pragma once
 
-// Ideally, most of these will be implemented in a multi-threaded manner.
+class glvdebug_QTraceFileModel;
+
 class glvdebug_view
 {
 public:
@@ -33,7 +34,7 @@ public:
     virtual void output_warning(QString message, bool bRefresh = true) = 0;
     virtual void output_error(QString message, bool bRefresh = true) = 0;
 
-    //virtual void set_calltree_model(glvdebug_QApiCallTreeModel* pModel) = 0;
+    virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel) = 0;
 
     //virtual void set_timeline_model(glvdebug_QTimelineModel* pModel) = 0;
 

@@ -40,6 +40,7 @@ extern "C" {
 #include "glvdebug_trace_file_utils.h"
 #include "glvdebug_qtimelineview.h"
 
+#include "glvdebug_qtracefilemodel.h"
 #include "glvdebug_QReplayWidget.h"
 
 
@@ -82,6 +83,7 @@ public:
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false);
     virtual void set_replay_widget_available(bool available);
     virtual void set_replay_widget_enabled(bool enabled);
+    virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel);
 
 public slots:
 
