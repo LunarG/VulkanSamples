@@ -1036,7 +1036,7 @@ fs_visitor::emit_fragcoord_interpolation(ir_variable *ir)
 {
    fs_reg *reg = new(this->mem_ctx) fs_reg(this, ir->type);
    fs_reg wpos = *reg;
-   bool flip = !ir->data.origin_upper_left ^ c->key.render_to_fbo;
+   bool flip = ir->data.origin_upper_left;
 
    /* gl_FragCoord.x */
    if (ir->data.pixel_center_integer) {
