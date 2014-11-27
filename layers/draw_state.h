@@ -56,3 +56,8 @@ typedef enum _DRAW_TYPE
     DRAW_END_RANGE        = DRAW_INDEXED_INDIRECT,
     NUM_DRAW_TYPES        = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
 } DRAW_TYPE;
+
+//prototypes for extension functions
+XGL_VOID drawStateDumpDotFile(char* outFileName);
+// Func ptr typedef
+typedef XGL_VOID (*DRAW_STATE_DUMP_DOT_FILE)(char*);

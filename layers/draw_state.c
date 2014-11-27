@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include "xgl_struct_string_helper.h"
+#include "xgl_struct_graphviz_helper.h"
 #include "draw_state.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
@@ -47,7 +48,6 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     const XGL_CHAR*      pLayerPrefix,
     const XGL_CHAR*      pMsg)
 {
-    pthread_mutex_lock(&globalLock);
     XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
     if (pTrav) {
         while (pTrav) {
@@ -71,7 +71,6 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
                 break;
         }
     }
-    pthread_mutex_unlock(&globalLock);
 }
 // Return the size of the underlying struct based on struct type
 static XGL_SIZE sTypeStructSize(XGL_STRUCTURE_TYPE sType)
@@ -216,6 +215,8 @@ typedef struct _DYNAMIC_STATE_NODE {
 } DYNAMIC_STATE_NODE;
 
 // TODO : Should be tracking lastBound per cmdBuffer and when draws occur, report based on that cmd buffer lastBound
+//   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
+//   to that same cmd buffer by separate thread are not changing state from underneath us
 static PIPELINE_NODE *pPipelineHead = NULL;
 static SAMPLER_NODE *pSamplerHead = NULL;
 static XGL_PIPELINE lastBoundPipeline = NULL;
@@ -329,6 +330,8 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
         // Typically pNext is const so have to cast to avoid warning when we modify it here
         memcpy((void*)pShadowTrav->pNext, pTrav, sTypeStructSize(pTrav->sType));
         pShadowTrav = (PIPELINE_LL_HEADER*)pShadowTrav->pNext;
+        // For deep copy DS Mapping into shadow
+        XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *pShadowShaderCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pShadowTrav;
         // TODO : Now that we shadow whole create info, the special copies are just a convenience that can be done away with once shadow is complete and correct
         // Special copy of DS Mapping info
         if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pTrav->sType) {
@@ -341,9 +344,13 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
                     pSSCI->shader.descriptorSetMapping[i].descriptorCount = 0;
                 }
                 pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
-                // Deep copy DS Slot array
+                // Deep copy DS Slot array into our shortcut data structure
                 pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
                 memcpy(pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
+                // Deep copy into shadow tree
+                pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
+                pShadowShaderCI->shader.descriptorSetMapping[i].pDescriptorInfo = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount);
+                memcpy((XGL_DESCRIPTOR_SLOT_INFO*)pShadowShaderCI->shader.descriptorSetMapping[i].pDescriptorInfo, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount);
             }
         }
         else if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pTrav->sType) {
@@ -575,6 +582,108 @@ static void printPipeline()
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr);
     }
 }
+// Dump subgraph w/ DS info
+static void dsDumpDot(FILE* pOutFile)
+{
+    const int i = 0; // hard-coding to just the first DS index for now
+    uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
+    DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
+    XGL_UINT slotOffset = lastBoundSlotOffset[i];
+    if (pDS) {
+        fprintf(pOutFile, "subgraph DS_SLOTS\n{\nlabel=\"DS0 Slots\"\n");
+        // First create simple array node as central DS reference point
+        fprintf(pOutFile, "\"DS0_MEMORY\" [\nlabel = <<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD PORT=\"ds2\">DS0 Memory</TD></TR>");
+        uint32_t j;
+        char label[1024];
+        for (j = 0; j < pDS->numSlots; j++) {
+            fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", j, j);
+        }
+        fprintf(pOutFile, "</TABLE>>\n];\n");
+        // Now tie each slot to its info
+        for (j = 0; j < pDS->numSlots; j++) {
+            switch (pDS->dsSlot[j].activeMapping)
+            {
+                case MAPPING_MEMORY:
+                    /*
+                    if (0 != skipUnusedCount) {// finish sequence of unused slots
+                        sprintf(tmp_str, "----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
+                        strcat(ds_config_str, tmp_str);
+                        skipUnusedCount = 0;
+                    }*/
+                    sprintf(label, "MemAttachInfo Slot%u", j);
+                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].memView, label));
+                    fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
+                    break;
+                case MAPPING_IMAGE:
+                    /*if (0 != skipUnusedCount) {// finish sequence of unused slots
+                        sprintf(tmp_str, "----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
+                        strcat(ds_config_str, tmp_str);
+                        skipUnusedCount = 0;
+                    }*/
+                    sprintf(label, "ImageAttachInfo Slot%u", j);
+                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_attach_info(&pDS->dsSlot[j].imageView, label));
+                    fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
+                    break;
+                case MAPPING_SAMPLER:
+                    /*if (0 != skipUnusedCount) {// finish sequence of unused slots
+                        sprintf(tmp_str, "----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
+                        strcat(ds_config_str, tmp_str);
+                        skipUnusedCount = 0;
+                    }*/
+                    sprintf(label, "ImageAttachInfo Slot%u", j);
+                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(getSamplerCreateInfo(pDS->dsSlot[j].sampler), label));
+                    fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
+                    break;
+                default:
+                    /*if (!skipUnusedCount) {// only report start of unused sequences
+                        sprintf(tmp_str, "----Skipping slot(s) w/o a view attached...\n");
+                        strcat(ds_config_str, tmp_str);
+                    }*/
+                    skipUnusedCount++;
+                    break;
+            }
+
+        }
+        /*if (0 != skipUnusedCount) {// finish sequence of unused slots
+            sprintf(tmp_str, "----Skipped %u slot%s w/o a view attached...\n", skipUnusedCount, (1 != skipUnusedCount) ? "s" : "");
+            strcat(ds_config_str, tmp_str);
+            skipUnusedCount = 0;
+        }*/
+        fprintf(pOutFile, "}\n");
+    }
+}
+// Dump a GraphViz dot file showing the pipeline
+static void dumpDotFile(char *outFileName)
+{
+    PIPELINE_NODE *pPipeTrav = getPipeline(lastBoundPipeline);
+    if (pPipeTrav) {
+        FILE* pOutFile;
+        pOutFile = fopen(outFileName, "w");
+        fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
+        fprintf(pOutFile, "subgraph PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
+        fprintf(pOutFile, "%s", xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD"));
+        fprintf(pOutFile, "}\n");
+        // TODO : Add dynamic state dump here
+        fprintf(pOutFile, "subgraph dynamicState\n{\nlabel=\"Non-Orthogonal XGL State\"\n");
+        for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
+            if (pLastBoundDynamicState[i]) {
+                switch (pLastBoundDynamicState[i]->sType)
+                {
+                    case XGL_STATE_BIND_VIEWPORT:
+                        fprintf(pOutFile, "%s", xgl_gv_print_xgl_viewport_state_create_info((XGL_VIEWPORT_STATE_CREATE_INFO*)pLastBoundDynamicState[i]->pCreateInfo, "VIEWPORT State"));
+                        break;
+                    default:
+                        fprintf(pOutFile, "%s", dynamic_gv_display(pLastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(pLastBoundDynamicState[i]->sType)));
+                        break;
+                }
+            }
+        }
+        fprintf(pOutFile, "}\n"); // close dynamicState subgraph
+        dsDumpDot(pOutFile);
+        fprintf(pOutFile, "}\n"); // close main graph "g"
+        fclose(pOutFile);
+    }
+}
 // Synch up currently bound pipeline settings with DS mappings
 static void synchDSMapping()
 {
@@ -587,7 +696,6 @@ static void synchDSMapping()
     }
     else {
         // Synch Descriptor Set Mapping
-        pthread_mutex_lock(&globalLock);
         for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
             DS_LL_HEAD *pDS;
             if (lastBoundDS[i]) {
@@ -639,7 +747,6 @@ static void synchDSMapping()
                 free(tmpStr);
             }
         }
-        pthread_mutex_unlock(&globalLock);
     }
 }
 
@@ -688,7 +795,6 @@ static void printDSConfig()
     uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
     char tmp_str[1024];
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
-    pthread_mutex_lock(&globalLock);
     for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
         if (lastBoundDS[i]) {
             DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
@@ -756,7 +862,6 @@ static void printDSConfig()
             }
         }
     }
-    pthread_mutex_unlock(&globalLock);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
 }
 
@@ -766,6 +871,11 @@ static void synchAndPrintDSConfig()
     printDSConfig();
     printPipeline();
     printDynamicState();
+    static int autoDumpOnce = 1;
+    if (autoDumpOnce) {
+        autoDumpOnce = 0;
+        dumpDotFile("pipeline_dump.dot");
+    }
 }
 
 static void initLayerTable()
@@ -1919,6 +2029,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
     return result;
 }
 
+XGL_VOID drawStateDumpDotFile(char* outFileName)
+{
+    dumpDotFile(outFileName);
+}
+
 XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
@@ -1951,6 +2066,8 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
         return xglQueueWaitIdle;
     else if (!strncmp("xglDeviceWaitIdle", (const char *) funcName, sizeof("xglDeviceWaitIdle")))
         return xglDeviceWaitIdle;
+    else if (!strncmp("drawStateDumpDotFile", (const char *) funcName, sizeof("drawStateDumpDotFile")))
+        return drawStateDumpDotFile;
     else if (!strncmp("xglGetMemoryHeapCount", (const char *) funcName, sizeof("xglGetMemoryHeapCount")))
         return xglGetMemoryHeapCount;
     else if (!strncmp("xglGetMemoryHeapInfo", (const char *) funcName, sizeof("xglGetMemoryHeapInfo")))

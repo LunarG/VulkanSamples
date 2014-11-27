@@ -483,6 +483,7 @@ class StructWrapperGen:
         # We do two passes, first pass just generates prototypes for all the functsions
         for s in self.struct_dict:
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix);\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+        sh_funcs.append('\n')
         for s in self.struct_dict:
             p_out = ""
             p_args = ""
@@ -780,6 +781,7 @@ class EnumCodeGen:
 class CMakeGen:
     def __init__(self, struct_wrapper=None, out_dir=None):
         self.sw = struct_wrapper
+        self.include_headers = []
         self.add_lib_file_list = self.sw.get_file_list()
         self.out_dir = out_dir
         self.out_file = os.path.join(self.out_dir, "CMakeLists.txt")
@@ -801,35 +803,255 @@ class CMakeGen:
         return "\n".join(body)
 
 class GraphVizGen:
-    def __init__(self, struct_dict=None):
-        self.struc_dict = struct_dict
-        self.out_file = os.path.join(os.getcwd(), "struct_gv.dot")
+    def __init__(self, struct_dict, prefix, out_dir):
+        self.struct_dict = struct_dict
+        self.api = prefix
+        self.out_file = os.path.join(out_dir, self.api+"_struct_graphviz_helper.h")
         self.gvg = CommonFileGen(self.out_file)
-        
+
     def generate(self):
+        self.gvg.setCopyright("//This is the copyright\n")
         self.gvg.setHeader(self._generateHeader())
         self.gvg.setBody(self._generateBody())
-        self.gvg.setFooter('}')
+        #self.gvg.setFooter('}')
         self.gvg.generate()
-        
+
+    def set_include_headers(self, include_headers):
+        self.include_headers = include_headers
+
     def _generateHeader(self):
-        hdr = []
-        hdr.append('digraph g {\ngraph [\nrankdir = "LR"\n];')
-        hdr.append('node [\nfontsize = "16"\nshape = "plaintext"\n];')
-        hdr.append('edge [\n];\n')
-        return "\n".join(hdr)
-        
+        header = []
+        header.append("//#includes, #defines, globals and such...\n")
+        for f in self.include_headers:
+            if 'xgl_enum_string_helper' not in f:
+                header.append("#include <%s>\n" % f)
+        #header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
+        header.append("\nchar* dynamic_gv_display(const XGL_VOID* pStruct, const char* prefix);\n")
+        return "".join(header)
+
+    def _get_gv_func_name(self, struct):
+        return "%s_gv_print_%s" % (self.api, struct.lower().strip("_"))
+
+    # Return elements to create formatted string for given struct member
+    def _get_struct_gv_print_formatted(self, struct_member, pre_var_name="", postfix = "\\n", struct_var_name="pStruct", struct_ptr=True, print_array=False, port_label=""):
+        struct_op = "->"
+        pre_var_name = '"%s "' % struct_member['full_type']
+        if not struct_ptr:
+            struct_op = "."
+        member_name = struct_member['name']
+        print_type = "p"
+        cast_type = ""
+        member_post = ""
+        array_index = ""
+        member_print_post = ""
+        if struct_member['array'] and 'CHAR' in struct_member['type']: # just print char array as string
+            print_type = "s"
+            print_array = False
+        elif struct_member['array'] and not print_array:
+            # Just print base address of array when not full print_array
+            cast_type = "(void*)"
+        elif is_type(struct_member['type'], 'enum'):
+            cast_type = "string_%s" % struct_member['type']
+            print_type = "s"
+        elif is_type(struct_member['type'], 'struct'): # print struct address for now
+            cast_type = "(void*)"
+            if not struct_member['ptr']:
+                cast_type = "(void*)&"
+        elif 'BOOL' in struct_member['type']:
+            print_type = "s"
+            member_post = ' ? "TRUE" : "FALSE"'
+        elif 'FLOAT' in struct_member['type']:
+            print_type = "f"
+        elif 'UINT64' in struct_member['type']:
+            print_type = "lu"
+        elif 'UINT8' in struct_member['type']:
+            print_type = "hu"
+        elif True in [ui_str in struct_member['type'] for ui_str in ['UINT', '_SIZE', '_FLAGS', '_SAMPLE_MASK']]:
+            print_type = "u"
+        elif 'INT' in struct_member['type']:
+            print_type = "i"
+        elif struct_member['ptr']:
+            pass
+        else:
+            #print("Unhandled struct type: %s" % struct_member['type'])
+            cast_type = "(void*)"
+        if print_array and struct_member['array']:
+            member_print_post = "[%u]"
+            array_index = " i,"
+            member_post = "[i]"
+        print_out = "<TR><TD>%%s%s%s</TD><TD%s>%%%s%s</TD></TR>" % (member_name, member_print_post, port_label, print_type, postfix) # section of print that goes inside of quotes
+        print_arg = ", %s,%s %s(%s%s%s)%s" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
+        return (print_out, print_arg)
+
     def _generateBody(self):
-        body = []
-        for s in self.struc_dict:
-            field_num = 1
-            body.append('"%s" [\nlabel = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">%s</TD></TR>' % (s, typedef_fwd_dict[s]))
-            for m in sorted(self.struc_dict[s]):
-                body.append('<TR><TD PORT="f%i">%s</TD><TD PORT="f%i">%s</TD></TR>' % (field_num, self.struc_dict[s][m]['full_type'], field_num+1, self.struc_dict[s][m]['name']))
-                field_num += 2
-            body.append('</TABLE>>\n];\n')
-        return "".join(body)
-                
+        gv_funcs = []
+        array_func_list = [] # structs for which we'll generate an array version of their print function
+        array_func_list.append('xgl_descriptor_slot_info')
+        # For first pass, generate prototype
+        for s in self.struct_dict:
+            gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+            if s.lower().strip("_") in array_func_list:
+                gv_funcs.append('char* %s_array(XGL_UINT count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+        gv_funcs.append('\n')
+        for s in self.struct_dict:
+            p_out = ""
+            p_args = ""
+            stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
+            # the fields below are a super-hacky way for now to get port labels into GV output, TODO : Clean this up!            
+            pl_dict = {}
+            struct_num = 0
+            # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext            
+            for m in sorted(self.struct_dict[s]):
+                if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
+                    stp_list.append(self.struct_dict[s][m])
+                    if 'pNext' == self.struct_dict[s][m]['name']:
+                        pl_dict[m] = ' PORT=\\"pNext\\"'
+                    else:
+                        pl_dict[m] = ' PORT=\\"struct%i\\"' % struct_num
+                    struct_num += 1
+            gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+            num_stps = len(stp_list);
+            total_strlen_str = ''
+            if 0 != num_stps:
+                gv_funcs.append("    char* tmpStr;\n")
+                gv_funcs.append("    char nodeName[100];\n")
+                gv_funcs.append("    char dummy_char = '\\0';\n")
+                gv_funcs.append('    char* stp_strs[%i];\n' % num_stps)
+                for index in range(num_stps):
+                    if (stp_list[index]['ptr']):
+                        if 'pDescriptorInfo' == stp_list[index]['name']:
+                            gv_funcs.append('    if (pStruct->pDescriptorInfo && (0 != pStruct->descriptorCount)) {\n')
+                        else:
+                            gv_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
+                        if 'pNext' == stp_list[index]['name']:
+                            gv_funcs.append('        sprintf(nodeName, "pNext_%p", (void*)pStruct->pNext);\n')
+                            gv_funcs.append('        tmpStr = dynamic_gv_display((XGL_VOID*)pStruct->pNext, nodeName);\n')
+                            gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % index)
+                            gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":pNext -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % index)
+                            gv_funcs.append('        free(tmpStr);\n')
+                        else:
+                            gv_funcs.append('        sprintf(nodeName, "%s_%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
+                            if 'pDescriptorInfo' == stp_list[index]['name']:
+                                gv_funcs.append('        tmpStr = %s_array(pStruct->descriptorCount, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            else:
+                                gv_funcs.append('        tmpStr = %s(pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
+                            gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
+                        gv_funcs.append('    }\n')
+                        gv_funcs.append("    else\n        stp_strs[%i] = &dummy_char;\n" % (index))
+                    elif stp_list[index]['array']: # TODO : For now just printing first element of array
+                        gv_funcs.append('    sprintf(nodeName, "%s_%%p", (void*)&pStruct->%s[0]);\n' % (stp_list[index]['name'], stp_list[index]['name']))
+                        gv_funcs.append('    tmpStr = %s(&pStruct->%s[0], nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
+                        gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
+                    else:
+                        gv_funcs.append('    sprintf(nodeName, "%s_%%p", (void*)&pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
+                        gv_funcs.append('    tmpStr = %s(&pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
+                        gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
+                    total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
+            gv_funcs.append('    str = (char*)malloc(%ssizeof(char)*2048);\n' % (total_strlen_str))
+            gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"2\\">%s (%p)</TD></TR>')
+            p_args = ", myNodeName, myNodeName, pStruct"
+            for m in sorted(self.struct_dict[s]):
+                plabel = ""
+                if m in pl_dict:
+                    plabel = pl_dict[m]
+                (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
+                p_out += p_out1
+                p_args += p_args1
+            p_out += '</TABLE>>\\n];\\n\\n"'
+            p_args += ");\n"
+            gv_funcs.append(p_out)
+            gv_funcs.append(p_args)
+            if 0 != num_stps:
+                gv_funcs.append('    for (int32_t stp_index = %i; stp_index >= 0; stp_index--) {\n' % (num_stps-1))
+                gv_funcs.append('        if (0 < strlen(stp_strs[stp_index])) {\n')
+                gv_funcs.append('            strncat(str, stp_strs[stp_index], strlen(stp_strs[stp_index]));\n')
+                gv_funcs.append('            free(stp_strs[stp_index]);\n')
+                gv_funcs.append('        }\n')
+                gv_funcs.append('    }\n')
+            gv_funcs.append("    return str;\n}\n")
+            if s.lower().strip("_") in array_func_list:
+                gv_funcs.append('char* %s_array(XGL_UINT count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                gv_funcs.append('    str = (char*)malloc(sizeof(char)*1024*count);\n')
+                gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
+                gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
+                gv_funcs.append('        sprintf(tmpStr, "');
+                p_args = ""
+                p_out = ""
+                for m in sorted(self.struct_dict[s]):
+                    if 2 == m: # TODO : Hard-coded hack to skip last element of union for xgl_descriptor_slot_info struct
+                        continue
+                    plabel = ""
+                    (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
+                    if 0 == m: # Add array index notation at end of first row (TODO : ROWSPAN# should be dynamic based on number of elements, but hard-coding for now)
+                        p_out1 = '%s<TD ROWSPAN=\\"2\\" PORT=\\"slot%%u\\">%%u</TD></TR>' % (p_out1[:-5])
+                        p_args1 += ', i, i'
+                    p_out += p_out1
+                    p_args += p_args1
+                p_out += '"'
+                p_args += ");\n"
+                p_args = p_args.replace('->', '[i].')
+                gv_funcs.append(p_out);
+                gv_funcs.append(p_args);
+                gv_funcs.append('        strncat(str, tmpStr, strlen(tmpStr));\n')
+                gv_funcs.append('    }\n')
+                gv_funcs.append('    strncat(str, "</TABLE>>\\n];\\n\\n", 20);\n')
+                # TODO : Another hard-coded hack.  Tie these slots to "magical" DS0_MEMORY slots that should appear separately
+                gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
+                gv_funcs.append('        sprintf(tmpStr, "\\"%s\\":slot%u -> \\"DS0_MEMORY\\":slot%u [];\\n", myNodeName, i, i);\n')
+                gv_funcs.append('        strncat(str, tmpStr, strlen(tmpStr));\n')
+                gv_funcs.append('    }\n')
+                gv_funcs.append('    return str;\n}\n')
+        # Add function to dynamically print out unknown struct
+        gv_funcs.append("char* dynamic_gv_display(const XGL_VOID* pStruct, const char* nodeName)\n{\n")
+        gv_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
+        gv_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
+        gv_funcs.append("    switch (sType)\n    {\n")
+        for e in enum_type_dict:
+            if "_STRUCTURE_TYPE" in e:
+                for v in sorted(enum_type_dict[e]):
+                    struct_name = v.replace("_STRUCTURE_TYPE", "")
+                    print_func_name = self._get_gv_func_name(struct_name)
+                    # TODO : Hand-coded fixes for some exceptions
+                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                        struct_name = 'XGL_PIPELINE_CB_STATE'
+                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
+                        struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
+                        print_func_name = self._get_gv_func_name(struct_name)
+                    elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
+                        struct_name = 'XGL_QUEUE_SEMAPHORE_OPEN_INFO'
+                        print_func_name = self._get_gv_func_name(struct_name)
+                    gv_funcs.append('        case %s:\n' % (v))
+                    gv_funcs.append('            return %s((%s*)pStruct, nodeName);\n' % (print_func_name, struct_name))
+                    #gv_funcs.append('        }\n')
+                    #gv_funcs.append('        break;\n')
+                gv_funcs.append("    }\n")
+        gv_funcs.append("}")
+        return "".join(gv_funcs)
+
+
+
+
+
+#    def _generateHeader(self):
+#        hdr = []
+#        hdr.append('digraph g {\ngraph [\nrankdir = "LR"\n];')
+#        hdr.append('node [\nfontsize = "16"\nshape = "plaintext"\n];')
+#        hdr.append('edge [\n];\n')
+#        return "\n".join(hdr)
+#        
+#    def _generateBody(self):
+#        body = []
+#        for s in self.struc_dict:
+#            field_num = 1
+#            body.append('"%s" [\nlabel = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">%s</TD></TR>' % (s, typedef_fwd_dict[s]))
+#            for m in sorted(self.struc_dict[s]):
+#                body.append('<TR><TD PORT="f%i">%s</TD><TD PORT="f%i">%s</TD></TR>' % (field_num, self.struc_dict[s][m]['full_type'], field_num+1, self.struc_dict[s][m]['name']))
+#                field_num += 2
+#            body.append('</TABLE>>\n];\n')
+#        return "".join(body)
 
 def main(argv=None):
     opts = handle_args()
@@ -883,7 +1105,8 @@ def main(argv=None):
         cmg = CMakeGen(sw, os.path.dirname(enum_filename))
         cmg.generate()
     if opts.gen_graphviz:
-        gv = GraphVizGen(struct_dict)
+        gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_filename))
+        gv.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_filename),"stdint.h","stdio.h","stdlib.h"])
         gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)
@@ -892,83 +1115,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
-    
-    
-## Example class for GR_APPLICATION_INFO struct
-##include <mantle.h>    
-#    
-#class gr_application_info_struct_wrapper {
-#public:
-#    // Constructors
-#    gr_application_info_struct_wrapper();
-#    gr_application_info_struct_wrapper(GR_APPLICATION_INFO* pInStruct);
-#    // Destructor
-#    virtual ~gr_application_info_struct_wrapper();
-#    
-#    void display_txt()
-#    // get functions    
-#    // set functions for every non-const struct member
-#        
-#private:
-#    GR_APPLICATION_INFO m_struct;
-#};
-#
-#gr_application_info_struct_wrapper::gr_application_info_struct_wrapper() : m_struct() {}
-#
-#// Output struct address on single line
-#gr_application_info_struct_wrapper::display_single_txt()
-#{
-#    printf(" GR_APPLICATION_INFO = %p", &m_struct);
-#}
-#// Output struct in txt format
-#gr_application_info_struct_wrapper::display_txt()
-#{
-#    printf("GR_APPLICATION_INFO struct contents:\n");
-#    printf("    pAppName: %s\n", m_struct.pAppName);
-#    printf("    appVersion: %i\n", m_struct.appVersion);
-#    printf("    pEngineNmae: %s\n", m_struct.pEngineName);
-#    printf("    engineVersion: %i\n", m_struct.engineVersion);
-#    printf("    apiVersion: %i\n", m_struct.apiVersion);
-#}
-#// Output struct including detailed info on pointed-to structs
-#gr_application_info_struct_wrapper::display_full_txt()
-#{
-#    
-#    printf("%*s%GR_APPLICATION_INFO struct contents:\n", indent, "");
-#    printf("    pAppName: %s\n", m_struct.pAppName);
-#    printf("    appVersion: %i\n", m_struct.appVersion);
-#    printf("    pEngineNmae: %s\n", m_struct.pEngineName);
-#    printf("    engineVersion: %i\n", m_struct.engineVersion);
-#    printf("    apiVersion: %i\n", m_struct.apiVersion);
-#}
-
-
-# Example of helper function to pretty-print enum info
-#static const char* string_GR_RESULT_CODE(GR_RESULT result)
-#{
-#    switch ((GR_RESULT_CODE)result)
-#    {
-#    // Return codes for successful operation execution
-#    case GR_SUCCESS:
-#        return "GR_SUCCESS";
-#    case GR_UNSUPPORTED:
-#        return "GR_UNSUPPORTED";
-#    case GR_NOT_READY:
-#        return "GR_NOT_READY";
-#    case GR_TIMEOUT:
-#        return "GR_TIMEOUT";
-#    }
-#    return "Unhandled GR_RESULT_CODE";
-#}
-
-# Dynamic print function
-# void dynamic_display_full_txt(XGL_STRUCTURE_TYPE sType, void* pStruct, uint32_t indent)
-# {
-#     switch (sType)
-#     {
-#         case XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO:
-#             xgl_color_blend_state_create_info_struct_wrapper swc((XGL_COLOR_BLEND_STATE_CREATE_INFO*)pStruct);
-#             swc.set_indent(indent);
-#             swc.display_full_txt();
-#     }
-# }
