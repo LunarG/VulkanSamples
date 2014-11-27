@@ -1,5 +1,5 @@
 #Layer Description and Status
-*26 Nov 2014*
+*27 Nov 2014*
 
 ##Overview
 
@@ -15,6 +15,7 @@ upon how they are implemented.
 
 ## Layer library example code
 
+Note that some layers are code-generated and will therefore exist in the <build dir>
 include/xglLayer.h  - header file for layer code
 layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows layer features:
                        - Multiple dispatch tables for supporting multiple GPUs.
@@ -25,7 +26,11 @@ layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows la
 <build dir>/layer/generic_layer.c (name=Generic) - auto generated example wrapping all XGL entrypoints.
                                      Single global dispatch table. Can be LD_PRELOADed.
 <build dir>/layer/api_dump.c - print out API calls along with parameter values
-<build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats
+<build dir>/layer/api_dump_file.c - Write API calls along with parameter values to xgl_apidump.txt file.
+<build dir>/layer/api_dump_no_addr.c - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
+<build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats. Individually track objects by category.  XGL_OBJECT_TYPE enum defined in object_track.h.  If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.  Provides custom interface to query number of live objects of given type "XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)" and a secondary call to return an array of those objects "XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray)".
+layer/draw_state.c - Report the Descriptor Set, Pipeline State, and dynamic state at each Draw call.  If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layer/mem_tracker.c - Track GPU Memory and any binding it has to objects and/or Cmd Buffers.  Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time.  If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ## Using Layers
 
