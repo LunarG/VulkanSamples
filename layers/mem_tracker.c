@@ -1289,10 +1289,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(XGL_DEVICE device, const XGL
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
-    // TODO : Verify that no memory is bound to this object at time of destruction
+    // First check if this is a CmdBuffer
+    if (NULL != getGlobalCBNode((XGL_CMD_BUFFER)object)) {
+        deleteGlobalCBNode((XGL_CMD_BUFFER)object);
+    }
+    // Now locate node in global list along with prev node
     GLOBAL_OBJECT_NODE* pTrav = pGlobalObjectHead;
     GLOBAL_OBJECT_NODE* pPrev = pTrav;
-    // First locate node in global list along with prev node
     while (pTrav) {
         if (object == pTrav->object)
             break;
@@ -1301,11 +1304,19 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
     }
     if (pTrav) {
         if (pTrav->pMemNode) {
-            char str[1024];
-            sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE)", object, (void*)pTrav->pMemNode->mem, object);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
-            // From the spec : If an object has previous memory binding, it is required to unbind memory from an API object before it is destroyed.
-            clearObjectBinding(object);
+            // Wsi allocated Memory is tied to image object so clear the binding and free that memory automatically
+            if (0 == pTrav->pMemNode->allocInfo.allocationSize) { // Wsi allocated memory has NULL allocInfo w/ 0 size
+                XGL_GPU_MEMORY memToFree = pTrav->pMemNode->mem;
+                clearObjectBinding(object);
+                freeMemNode(memToFree);
+            }
+            else {
+                char str[1024];
+                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE)", object, (void*)pTrav->pMemNode->mem, object);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
+                // From the spec : If an object has previous memory binding, it is required to unbind memory from an API object before it is destroyed.
+                clearObjectBinding(object);
+            }
         }
         if (pGlobalObjectHead == pTrav) // update HEAD if needed
             pGlobalObjectHead = pTrav->pNext;
