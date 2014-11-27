@@ -153,8 +153,17 @@ static void demo_draw(struct demo *demo)
     err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((XGL_UINT64) 0));
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
+    XGL_MEMORY_REF memRefs[4];
+    memRefs[0].mem = demo->depth.mem;
+    memRefs[0].flags = 0;
+    memRefs[1].mem = demo->textures[0].mem;
+    memRefs[1].flags = 0;
+    memRefs[2].mem = demo->buffers[0].mem;
+    memRefs[2].flags = 0;
+    memRefs[3].mem = demo->buffers[1].mem;
+    memRefs[3].flags = 0;
     err = xglQueueSubmit(demo->queue, 1, &demo->cmd,
-            0, NULL, XGL_NULL_HANDLE);
+            4, memRefs, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
@@ -903,12 +912,14 @@ static void demo_cleanup(struct demo *demo)
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         xglDestroyObject(demo->textures[i].view);
+        xglBindObjectMemory(demo->textures[i].image, 0, XGL_NULL_HANDLE);
         xglDestroyObject(demo->textures[i].image);
         xglFreeMemory(demo->textures[i].mem);
         xglDestroyObject(demo->textures[i].sampler);
     }
 
     xglDestroyObject(demo->depth.view);
+    xglBindObjectMemory(demo->depth.image, 0, XGL_NULL_HANDLE);
     xglDestroyObject(demo->depth.image);
     xglFreeMemory(demo->depth.mem);
 
