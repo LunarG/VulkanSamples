@@ -292,7 +292,7 @@ void glv_platform_thread_once(void *ctl, void (* func) (void))
 #if defined(PLATFORM_LINUX)
     pthread_once((pthread_once_t *) ctl, func);
 #elif defined(WIN32)
-    InitOnceExecuteOnce(ctl, func);
+    InitOnceExecuteOnce((PINIT_ONCE) ctl, (PINIT_ONCE_FN) func, NULL, NULL);
 #endif
 }
 
