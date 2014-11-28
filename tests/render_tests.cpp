@@ -61,6 +61,9 @@
 using namespace std;
 
 #include <xgl.h>
+#ifdef DUMP_STATE_DOT
+#include "../layers/draw_state.h"
+#endif
 #ifdef PRINT_OBJECTS
 #include "../layers/object_track.h"
 #endif
@@ -558,7 +561,10 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
-
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest.dot");
+#endif
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
 
@@ -655,7 +661,10 @@ void XglRenderTest::DrawTriangleTwoUniformsFS(const char *vertShaderText, const 
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
-
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triUniFS.dot");
+#endif
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
 
@@ -745,7 +754,10 @@ void XglRenderTest::DrawTriangleVSUniform(const char *vertShaderText, const char
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
-
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triVSUni.dot");
+#endif
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, numTris*3, 0, 1 );
 
@@ -931,7 +943,10 @@ void XglRenderTest::DrawTriangleWithVertexFetchAndMVP(const char *vertShaderText
     ClearDepthStencil(1.0f); // HACK for now
     GenerateBindRenderTargetCmd();
     GenerateBindStateAndPipelineCmds(&pipeline);
-
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triVtxFetchAndMVP.dot");
+#endif
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, 12*3, 0, 1 );
 
@@ -1535,7 +1550,10 @@ void XglRenderTest::DrawTriangleWithVertexFetch(const char *vertShaderText, cons
 
 //    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 //    xglCmdBindDynamicMemoryView( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS,  &m_constantBufferView );
-
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triVtxFetch.dot");
+#endif
     // render the cube
     xglCmdDraw( m_cmdBuffer, 0, 12*3, 0, 1 );
 
