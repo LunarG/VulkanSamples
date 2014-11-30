@@ -177,6 +177,35 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
     memcpy(meta->dst.surface, rt->cmd, sizeof(rt->cmd[0]) * rt->cmd_len);
     meta->dst.surface_len = rt->cmd_len;
 
+    /* adjust width/height */
+    if (icd_format_is_compressed(img->layout.format)) {
+        XGL_INT w, h;
+
+        if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+            w = GEN_EXTRACT(meta->dst.surface[2], GEN7_SURFACE_DW2_WIDTH);
+            h = GEN_EXTRACT(meta->dst.surface[2], GEN7_SURFACE_DW2_HEIGHT);
+            meta->dst.surface[2] &= ~(GEN7_SURFACE_DW2_WIDTH__MASK |
+                                      GEN7_SURFACE_DW2_HEIGHT__MASK);
+        } else {
+            w = GEN_EXTRACT(meta->dst.surface[2], GEN6_SURFACE_DW2_WIDTH);
+            h = GEN_EXTRACT(meta->dst.surface[2], GEN6_SURFACE_DW2_HEIGHT);
+            meta->dst.surface[2] &= ~(GEN6_SURFACE_DW2_WIDTH__MASK |
+                                      GEN6_SURFACE_DW2_HEIGHT__MASK);
+        }
+
+        /* note that the width/height fields have the real values minus 1 */
+        w = (w + img->layout.block_width) / img->layout.block_width - 1;
+        h = (h + img->layout.block_height) / img->layout.block_height - 1;
+
+        if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+            meta->dst.surface[2] |= GEN_SHIFT32(w, GEN7_SURFACE_DW2_WIDTH) |
+                                    GEN_SHIFT32(h, GEN7_SURFACE_DW2_HEIGHT);
+        } else {
+            meta->dst.surface[2] |= GEN_SHIFT32(w, GEN6_SURFACE_DW2_WIDTH) |
+                                    GEN_SHIFT32(h, GEN6_SURFACE_DW2_HEIGHT);
+        }
+    }
+
     meta->dst.reloc_target = (intptr_t) img->obj.mem->bo;
     meta->dst.reloc_offset = 0;
     meta->dst.reloc_flags = INTEL_RELOC_WRITE;
