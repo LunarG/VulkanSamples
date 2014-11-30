@@ -97,8 +97,8 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
         /* well, we do not enable 3DSTATE_VF_STATISTICS yet */
         GEN6_REG_IA_PRIMITIVES_COUNT,
         GEN6_REG_IA_VERTICES_COUNT,
-        (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN6_REG_HS_INVOCATION_COUNT : 0,
-        (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN6_REG_DS_INVOCATION_COUNT : 0,
+        (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN7_REG_HS_INVOCATION_COUNT : 0,
+        (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN7_REG_DS_INVOCATION_COUNT : 0,
         0,
     };
     XGL_UINT i;
