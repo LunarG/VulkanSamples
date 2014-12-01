@@ -40,7 +40,7 @@ extern "C" {
 #include "glvdebug_trace_file_utils.h"
 #include "glvdebug_qtimelineview.h"
 
-#include "glvdebug_qtracefilemodel.h"
+#include "glvdebug_QTraceFileModel.h"
 #include "glvdebug_QReplayWidget.h"
 
 

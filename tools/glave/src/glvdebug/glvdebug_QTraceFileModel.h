@@ -67,19 +67,19 @@ public:
                             case GLV_TPI_MARKER_API_GROUP_END:
                             case GLV_TPI_MARKER_TERMINATE_PROCESS:
                             default:
-                                return QVariant(packet_id);
+                            return QVariant((unsigned int) packet_id);
                         }
                     }
                 case 1:
                     return QVariant(m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->tracer_id);
                 case 2:
-                    return QVariant(m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->global_packet_index);
+                    return QVariant((unsigned long long) m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->global_packet_index);
                 case 3:
-                    return QVariant(m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->entrypoint_begin_time);
+                    return QVariant((unsigned long long) m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->entrypoint_begin_time);
                 case 4:
-                    return QVariant(m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->entrypoint_end_time);
+                    return QVariant((unsigned long long) m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->entrypoint_end_time);
                 case 5:
-                    return QVariant(m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->size);
+                    return QVariant((unsigned long long) m_pTraceFileInfo->pPacketOffsets[index.row()].pHeader->size);
                 }
             }
             else
