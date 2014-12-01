@@ -26,7 +26,6 @@
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
-#include <stdio.h> /* for printf */
 #include "genhw/genhw.h"
 #include "dset.h"
 #include "img.h"
@@ -1012,17 +1011,72 @@ static void gen7_3dstate_pointer(struct intel_cmd *cmd,
     dw[1] = offset;
 }
 
-static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd,
-                                 const struct intel_blend_state *state)
+static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd)
 {
     const uint8_t cmd_align = GEN6_ALIGNMENT_BLEND_STATE;
     const uint8_t cmd_len = XGL_MAX_COLOR_ATTACHMENTS * 2;
+    const XGL_PIPELINE_CB_STATE *cb = &cmd->bind.pipeline.graphics->cb_state;
+    const struct intel_blend_state *blend = cmd->bind.state.blend;
+    uint32_t dw[XGL_MAX_COLOR_ATTACHMENTS * 2];
+    int i;
 
     CMD_ASSERT(cmd, 6, 7.5);
-    STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
+    STATIC_ASSERT(ARRAY_SIZE(blend->cmd_blend) >= XGL_MAX_COLOR_ATTACHMENTS);
 
-    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLEND,
-            cmd_align, cmd_len, state->cmd);
+    for (i = 0; i < XGL_MAX_COLOR_ATTACHMENTS; i++) {
+        const XGL_PIPELINE_CB_ATTACHMENT_STATE *att = &cb->attachment[i];
+        uint32_t dw0, dw1;
+
+        dw0 = 0;
+        dw1 = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
+              GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
+              GEN6_BLEND_DW1_POST_BLEND_CLAMP;
+
+        if (cb->logicOp != XGL_LOGIC_OP_COPY) {
+            int logicop;
+
+            switch (cb->logicOp) {
+            case XGL_LOGIC_OP_CLEAR:            logicop = GEN6_LOGICOP_CLEAR; break;
+            case XGL_LOGIC_OP_AND:              logicop = GEN6_LOGICOP_AND; break;
+            case XGL_LOGIC_OP_AND_REVERSE:      logicop = GEN6_LOGICOP_AND_REVERSE; break;
+            case XGL_LOGIC_OP_AND_INVERTED:     logicop = GEN6_LOGICOP_AND_INVERTED; break;
+            case XGL_LOGIC_OP_NOOP:             logicop = GEN6_LOGICOP_NOOP; break;
+            case XGL_LOGIC_OP_XOR:              logicop = GEN6_LOGICOP_XOR; break;
+            case XGL_LOGIC_OP_OR:               logicop = GEN6_LOGICOP_OR; break;
+            case XGL_LOGIC_OP_NOR:              logicop = GEN6_LOGICOP_NOR; break;
+            case XGL_LOGIC_OP_EQUIV:            logicop = GEN6_LOGICOP_EQUIV; break;
+            case XGL_LOGIC_OP_INVERT:           logicop = GEN6_LOGICOP_INVERT; break;
+            case XGL_LOGIC_OP_OR_REVERSE:       logicop = GEN6_LOGICOP_OR_REVERSE; break;
+            case XGL_LOGIC_OP_COPY_INVERTED:    logicop = GEN6_LOGICOP_COPY_INVERTED; break;
+            case XGL_LOGIC_OP_OR_INVERTED:      logicop = GEN6_LOGICOP_OR_INVERTED; break;
+            case XGL_LOGIC_OP_NAND:             logicop = GEN6_LOGICOP_NAND; break;
+            case XGL_LOGIC_OP_SET:              logicop = GEN6_LOGICOP_SET; break;
+            default:
+                assert(!"unknown logic op");
+                logicop = GEN6_LOGICOP_CLEAR;
+                break;
+            }
+
+            dw1 |= GEN6_BLEND_DW1_LOGICOP_ENABLE |
+                   logicop << GEN6_BLEND_DW1_LOGICOP_FUNC__SHIFT;
+        } else if (att->blendEnable && blend) {
+            dw0 |= blend->cmd_blend[i];
+        }
+
+        if (!(att->channelWriteMask & 0x1))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_R;
+        if (!(att->channelWriteMask & 0x2))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_G;
+        if (!(att->channelWriteMask & 0x4))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_B;
+        if (!(att->channelWriteMask & 0x8))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_A;
+
+        dw[2 * i] = dw0;
+        dw[2 * i + 1] = dw1;
+    }
+
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLEND, cmd_align, cmd_len, dw);
 }
 
 static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
@@ -1301,13 +1355,12 @@ static void gen6_cc_states(struct intel_cmd *cmd)
 
     CMD_ASSERT(cmd, 6, 6);
 
-    if (blend) {
-        blend_offset = gen6_BLEND_STATE(cmd, blend);
+    blend_offset = gen6_BLEND_STATE(cmd);
+
+    if (blend)
         memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
-    } else {
-        blend_offset = 0;
+    else
         memset(blend_color, 0, sizeof(blend_color));
-    }
 
     if (ds) {
         ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
@@ -1372,15 +1425,14 @@ static void gen7_cc_states(struct intel_cmd *cmd)
     if (!blend && !ds)
         return;
 
-    if (blend) {
-        offset = gen6_BLEND_STATE(cmd, blend);
-        gen7_3dstate_pointer(cmd,
-                GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, offset);
+    offset = gen6_BLEND_STATE(cmd);
+    gen7_3dstate_pointer(cmd,
+            GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, offset);
 
+    if (blend)
         memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
-    } else {
+    else
         memset(blend_color, 0, sizeof(blend_color));
-    }
 
     if (ds) {
         offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);

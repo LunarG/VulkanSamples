@@ -70,8 +70,8 @@ struct intel_msaa_state {
 struct intel_blend_state {
     struct intel_obj obj;
 
-    /* BLEND_STATE */
-    uint32_t cmd[XGL_MAX_COLOR_ATTACHMENTS * 2];
+    /* a part of BLEND_STATE */
+    uint32_t cmd_blend[XGL_MAX_COLOR_ATTACHMENTS];
     /* a part of COLOR_CALC_STATE */
     uint32_t cmd_blend_color[4];
 };

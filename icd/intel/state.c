@@ -447,7 +447,7 @@ blend_state_init(struct intel_blend_state *state,
 
    for (i = 0; i < ARRAY_SIZE(info->attachment); i++) {
       const XGL_COLOR_ATTACHMENT_BLEND_STATE *att = &info->attachment[i];
-      uint32_t *dw = &state->cmd[2 * i];
+      uint32_t *dw = &state->cmd_blend[i];
 
       if (att->blendEnable) {
          dw[0] = 1 << 31 |
@@ -463,9 +463,6 @@ blend_state_init(struct intel_blend_state *state,
              att->destBlendAlpha != att->destBlendColor)
              dw[0] |= 1 << 30;
       }
-
-      dw[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
-              0x3;
    }
 
    memcpy(state->cmd_blend_color, info->blendConst, sizeof(info->blendConst));
