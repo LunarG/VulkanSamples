@@ -540,7 +540,7 @@ public:
     void AddShader(XglShaderObj* shaderObj);
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
     void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
-    void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer);
+    void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
 
 protected:
     XGL_PIPELINE pipeline;
@@ -558,6 +558,7 @@ protected:
     int m_vi_attrib_count;
     vector<XglShaderObj*> m_shaderObjs;
     vector<XglConstantBufferObj*> m_vertexBufferObjs;
+    vector<int> m_vertexBufferBindings;
     int m_vertexBufferCount;
 
 };
@@ -630,9 +631,10 @@ void XglPipelineObj::AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION
     m_vi_binding_count = count;
 }
 
-void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer)
+void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding)
 {
     m_vertexBufferObjs.push_back(vertexDataBuffer);
+    m_vertexBufferBindings.push_back(binding);
     m_vertexBufferCount++;
 }
 
@@ -678,7 +680,7 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
 
     for (int i=0; i < m_vertexBufferCount; i++)
     {
-        xglCmdBindVertexData(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.mem, m_vertexBufferObjs[i]->m_constantBufferView.offset, i);
+        xglCmdBindVertexData(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.mem, m_vertexBufferObjs[i]->m_constantBufferView.offset, m_vertexBufferBindings[i]);
     }
 
 

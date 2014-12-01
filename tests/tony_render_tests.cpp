@@ -1040,7 +1040,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 12);
     QueueCommandBuffer(NULL, 0);
@@ -1184,6 +1184,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
 
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ClearDepthStencil(1.0f);
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 12);
@@ -1346,6 +1347,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
 
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ClearDepthStencil(1.0f);
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 12);
