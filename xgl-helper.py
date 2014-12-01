@@ -495,6 +495,7 @@ class StructWrapperGen:
                     stp_list.append(self.struct_dict[s][m])
                 struct_char_count += len(self.struct_dict[s][m]['name']) + 32
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix)\n{\n    char* str;\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            sh_funcs.append("    size_t len;\n")
             num_stps = len(stp_list);
             total_strlen_str = ''
             if 0 != num_stps:
@@ -509,38 +510,43 @@ class StructWrapperGen:
                         sh_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('        tmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
-                            sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % index)
+                            sh_funcs.append('        len = 256+strlen(tmpStr);\n')
+                            sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);\n' % index)
                             if self.no_addr:
-                                sh_funcs.append('        sprintf(stp_strs[%i], "   %%spNext (addr)\\n%%s", prefix, tmpStr);\n' % index)
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, "   %%spNext (addr)\\n%%s", prefix, tmpStr);\n' % index)
                             else:
-                                sh_funcs.append('        sprintf(stp_strs[%i], "   %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, "   %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
                             sh_funcs.append('        free(tmpStr);\n')
                         else:
                             sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                            sh_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(prefix));\n' % (index))
+                            sh_funcs.append('        len = 256+strlen(tmpStr)+strlen(prefix);\n')
+                            sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);\n' % (index))
                             if self.no_addr:
-                                sh_funcs.append('        sprintf(stp_strs[%i], " %%s%s (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
                             else:
-                                sh_funcs.append('        sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                         sh_funcs.append('    }\n')
                         sh_funcs.append("    else\n        stp_strs[%i] = &dummy_char;\n" % (index))
                     elif stp_list[index]['array']: # TODO : For now just printing first element of array
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s[0], extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        sh_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
+                        sh_funcs.append('    len = 256+strlen(tmpStr);\n')
+                        sh_funcs.append('    stp_strs[%i] = (char*)malloc(len);\n' % (index))
                         if self.no_addr:
-                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s[0] (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
+                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
                         else:
-                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s[0] (%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     else:
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        sh_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr));\n' % (index))
+                        sh_funcs.append('    len = 256+strlen(tmpStr);\n')
+                        sh_funcs.append('    stp_strs[%i] = (char*)malloc(len);\n' % (index))
                         if self.no_addr:
-                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
+                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (addr)\\n%%s", prefix, tmpStr);\n' % (index, stp_list[index]['name']))
                         else:
-                            sh_funcs.append('    sprintf(stp_strs[%i], " %%s%s (%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
-            sh_funcs.append('    str = (char*)malloc(%ssizeof(char)*1024);\n' % (total_strlen_str))
-            sh_funcs.append('    sprintf(str, "')
+            sh_funcs.append('    len = %ssizeof(char)*1024;\n' % (total_strlen_str))
+            sh_funcs.append('    str = (char*)malloc(len);\n')
+            sh_funcs.append('    snprintf(str, len, "')
             for m in sorted(self.struct_dict[s]):
                 (p_out1, p_args1) = self._get_struct_print_formatted(self.struct_dict[s][m])
                 p_out += p_out1
