@@ -56,11 +56,11 @@ public:
                         switch (packet_id)
                         {
                             case GLV_TPI_MESSAGE:
-                            {
-                                glv_trace_packet_message* msgPacket = glv_interpret_body_as_trace_packet_message(pHeader);
-                                return QString(msgPacket->message);
-                                break;
-                            }
+//                            {
+//                                glv_trace_packet_message* msgPacket = glv_interpret_body_as_trace_packet_message(pHeader);
+//                                return QString(msgPacket->message);
+//                                break;
+//                            }
                             case GLV_TPI_MARKER_CHECKPOINT:
                             case GLV_TPI_MARKER_API_BOUNDARY:
                             case GLV_TPI_MARKER_API_GROUP_BEGIN:
