@@ -23,6 +23,7 @@ layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows la
                        - Layer extension advertised by xglGetExtension().
                        - xglEnumerateLayers() supports loader layer name queries and call interception
                        - Can be LD_PRELOADed individually
+layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers  per library
 <build dir>/layer/generic_layer.c (name=Generic) - auto generated example wrapping all XGL entrypoints.
                                      Single global dispatch table. Can be LD_PRELOADed.
 <build dir>/layer/api_dump.c - print out API calls along with parameter values
@@ -63,6 +64,9 @@ This is required for the Icd loader to be able to scan and enumerate your librar
 11) Implement xglGetExtension() if you want to advertise a layer extension
     (only available after the layer is activated);
 12) Layer naming convention is camel case same name as in library: libXGLLayer<name>.so
+13) For multiple layers in one library should implement a separate GetProcAddr for each
+    layer and export them to dynamic loader;  function name is <layerName>GetProcAddr().
+    Main xglGetProcAddr() should also be implemented.
 
 ## Status
 

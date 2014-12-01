@@ -821,7 +821,10 @@ extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
             nextGpuObj->nextObject = gpuObj;
             gpuObj = nextGpuObj;
 
-            nextGPA = dlsym(icd->layer_libs[gpu_index][i].lib_handle, "xglGetProcAddr");
+            char funcStr[256];
+            snprintf(funcStr, 256, "%sGetProcAddr",icd->layer_libs[gpu_index][i].name);
+            if ((nextGPA = dlsym(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
+                nextGPA = dlsym(icd->layer_libs[gpu_index][i].lib_handle, "xglGetProcAddr");
             if (!nextGPA) {
                 loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to find xglGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
                 continue;

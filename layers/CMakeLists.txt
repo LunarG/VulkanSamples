@@ -25,6 +25,7 @@ set (CMAKE_CXX_FLAGS "-std=c++11")
 
 add_library (XGLLayerBasic SHARED basic.cpp)
 add_library (XGLLayerGeneric SHARED generic_layer.c)
+add_library (XGLLayerMulti SHARED multi.cpp)
 add_library (XGLLayerObjectTracker SHARED object_track.c object_track.h)
 add_library (XGLLayerAPIDump SHARED api_dump.c xgl_enum_string_helper.h xgl_struct_string_helper.h)
 add_library (XGLLayerAPIDumpFile SHARED api_dump_file.c xgl_enum_string_helper.h xgl_struct_string_helper.h)
