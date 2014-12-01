@@ -1584,17 +1584,17 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
             }
 
             // adjust depth stencil target
-            const XGL_DEPTH_STENCIL_BIND_INFO* pDepthAttachment = pPacket->pDepthAttachment;
+            const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment = pPacket->pDepthStencilAttachment;
             XGL_DEPTH_STENCIL_BIND_INFO depthTarget;
-            if (pDepthAttachment != NULL)
+            if (pDepthStencilAttachment != NULL)
             {
-                memcpy(&depthTarget, pPacket->pDepthAttachment, sizeof(XGL_DEPTH_STENCIL_BIND_INFO));
-                depthTarget.view = remap(pPacket->pDepthAttachment->view);
-                pDepthAttachment = &depthTarget;
+                memcpy(&depthTarget, pPacket->pDepthStencilAttachment, sizeof(XGL_DEPTH_STENCIL_BIND_INFO));
+                depthTarget.view = remap(pPacket->pDepthStencilAttachment->view);
+                pDepthStencilAttachment = &depthTarget;
             }
 
             // make call
-             m_xglFuncs.real_xglCmdBindAttachments(remap(pPacket->cmdBuffer), pPacket->colorAttachmentCount, pColorAttachments, pDepthAttachment);
+             m_xglFuncs.real_xglCmdBindAttachments(remap(pPacket->cmdBuffer), pPacket->colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);
 
             // cleanup
             if (allocatedColorAttachments)

@@ -196,6 +196,40 @@ static XGL_DEVICE_CREATE_INFO* intepret_XGL_DEVICE_CREATE_INFO(glv_trace_packet_
 //=============================================================================
 // entrypoints
 
+typedef struct struct_xglGetProcAddr {
+    glv_trace_packet_header*    header;
+    XGL_PHYSICAL_GPU            gpu;
+    const XGL_CHAR*             pName;
+    XGL_VOID*                   result;
+} struct_xglGetProcAddr;
+
+static struct_xglGetProcAddr* interpret_body_as_xglGetProcAddr(glv_trace_packet_header*  pHeader)
+{
+    struct_xglGetProcAddr* pPacket = (struct_xglGetProcAddr*)pHeader->pBody;
+    pPacket->header = pHeader;
+    pPacket->pName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pName);
+    return pPacket;
+}
+
+typedef struct struct_xglEnumerateLayers {
+    glv_trace_packet_header*    header;
+    XGL_PHYSICAL_GPU            gpu;
+    XGL_SIZE                    maxLayerCount;
+    XGL_SIZE                    maxStringSize;
+    XGL_CHAR* const*            pOutLayers;
+    XGL_SIZE*                   pOutLayerCount;
+    XGL_RESULT                  result;
+} struct_xglEnumerateLayers;
+
+static struct_xglEnumerateLayers* interpret_body_as_xglEnumerateLayers(glv_trace_packet_header*  pHeader)
+{
+    struct_xglEnumerateLayers* pPacket = (struct_xglEnumerateLayers*)pHeader->pBody;
+    pPacket->header = pHeader;
+    pPacket->pOutLayers = (XGL_CHAR* const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pOutLayers);
+    pPacket->pOutLayerCount = (XGL_SIZE*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pOutLayerCount);
+    return pPacket;
+}
+
 typedef struct struct_xglInitAndEnumerateGpus {
     glv_trace_packet_header*    header;
     const XGL_APPLICATION_INFO* pAppInfo;
@@ -1555,7 +1589,7 @@ typedef struct struct_xglCmdBindAttachments {
     XGL_CMD_BUFFER                     cmdBuffer;
     XGL_UINT                           colorAttachmentCount;
     const XGL_COLOR_ATTACHMENT_BIND_INFO*  pColorAttachments;
-    const XGL_DEPTH_STENCIL_BIND_INFO* pDepthAttachment;
+    const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment;
 } struct_xglCmdBindAttachments;
 
 static struct_xglCmdBindAttachments* interpret_body_as_xglCmdBindAttachments(glv_trace_packet_header*  pHeader)
@@ -1563,7 +1597,7 @@ static struct_xglCmdBindAttachments* interpret_body_as_xglCmdBindAttachments(glv
     struct_xglCmdBindAttachments* pPacket = (struct_xglCmdBindAttachments*)pHeader->pBody;
     pPacket->header = pHeader;
     pPacket->pColorAttachments = (const XGL_COLOR_ATTACHMENT_BIND_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pColorAttachments);
-    pPacket->pDepthAttachment = (const XGL_DEPTH_STENCIL_BIND_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pDepthAttachment);
+    pPacket->pDepthStencilAttachment = (const XGL_DEPTH_STENCIL_BIND_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pDepthStencilAttachment);
     return pPacket;
 }
 

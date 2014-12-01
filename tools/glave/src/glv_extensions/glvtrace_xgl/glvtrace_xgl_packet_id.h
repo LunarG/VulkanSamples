@@ -47,11 +47,13 @@
 enum GLV_TRACE_PACKET_ID_XGL
 {
     // xgl.h
-    GLV_TPI_XGL_xglInitAndEnumerateGpus = GLV_TPI_BEGIN_API_HERE,
+    GLV_TPI_XGL_xglGetProcAddr = GLV_TPI_BEGIN_API_HERE,
+    GLV_TPI_XGL_xglInitAndEnumerateGpus,
     GLV_TPI_XGL_xglGetGpuInfo,
     GLV_TPI_XGL_xglCreateDevice,
     GLV_TPI_XGL_xglDestroyDevice,
     GLV_TPI_XGL_xglGetExtensionSupport,
+    GLV_TPI_XGL_xglEnumerateLayers,
     GLV_TPI_XGL_xglGetDeviceQueue,
     GLV_TPI_XGL_xglQueueSubmit,
     GLV_TPI_XGL_xglQueueSetGlobalMemReferences,

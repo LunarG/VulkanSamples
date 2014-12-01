@@ -495,6 +495,694 @@ class Subcommand(object):
         func_body.append("}\n")
         return "\n".join(func_body)
 
+    def _generate_trace_func_ptrs(self):
+        func_ptrs = []
+        func_ptrs.append('// Pointers to real functions and declarations of hooked functions')
+        func_ptrs.append('#ifdef WIN32')
+        func_ptrs.append('extern INIT_ONCE gInitOnce;')
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                func_ptrs.append('#define __HOOKED_xgl%s hooked_xgl%s' % (proto.name, proto.name))
+
+        func_ptrs.append('\n#elif defined(PLATFORM_LINUX)')
+        func_ptrs.append('extern pthread_once_t gInitOnce;')
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                func_ptrs.append('#define __HOOKED_xgl%s xgl%s' % (proto.name, proto.name))
+
+        func_ptrs.append('#endif\n')
+        return "\n".join(func_ptrs)
+
+    def _generate_trace_func_protos(self):
+        func_protos = []
+        func_protos.append('// Hooked function prototypes\n')
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                func_protos.append('%s;' % proto.c_func(prefix="__HOOKED_xgl", attr="XGLAPI"))
+
+        return "\n".join(func_protos)
+
+    def _generate_func_ptr_assignments(self):
+        func_ptr_assign = []
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                func_ptr_assign.append('static %s( XGLAPI * real_xgl%s)(' % (proto.ret, proto.name))
+                for p in proto.params:
+                    if 'color' == p.name:
+                        func_ptr_assign.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
+                    else:
+                        func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
+                func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ') = xgl%s;\n' % (proto.name))
+        func_ptr_assign.append('static BOOL isHooked = FALSE;\n')
+        return "\n".join(func_ptr_assign)
+
+    def _generate_attach_hooks(self):
+        hooks_txt = []
+        hooks_txt.append('void AttachHooks()\n{\n   BOOL hookSuccess = TRUE;\n#if defined(WIN32)')
+        hooks_txt.append('    Mhook_BeginMultiOperation(FALSE);')
+        hooks_txt.append('    if (real_xglInitAndEnumerateGpus != NULL)')
+        hooks_txt.append('    {\n        isHooked = TRUE;')
+        hook_operator = '='
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                hooks_txt.append('        hookSuccess %s Mhook_SetHook((PVOID*)&real_xgl%s, hooked_xgl%s);' % (hook_operator, proto.name, proto.name))
+                hook_operator = '&='
+        hooks_txt.append('    }\n')
+        hooks_txt.append('    if (!hookSuccess)\n    {')
+        hooks_txt.append('        glv_LogError("Failed to hook XGL.");\n    }\n')
+        hooks_txt.append('    Mhook_EndMultiOperation();\n')
+        hooks_txt.append('#elif defined(__linux__)')
+        hooks_txt.append('    if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)')
+        hooks_txt.append('        hookSuccess = glv_platform_get_next_lib_sym((PVOID*)&real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");')
+        hooks_txt.append('    isHooked = TRUE;')
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name and 'InitAndEnumerateGpus' not in proto.name:
+                hooks_txt.append('    hookSuccess %s glv_platform_get_next_lib_sym((PVOID*)&real_xgl%s, "xgl%s");' % (hook_operator, proto.name, proto.name))
+        hooks_txt.append('    if (!hookSuccess)\n    {')
+        hooks_txt.append('        glv_LogError("Failed to hook XGL.");\n    }\n')
+        hooks_txt.append('#endif\n}\n')
+        return "\n".join(hooks_txt)
+
+    def _generate_detach_hooks(self):
+        hooks_txt = []
+        hooks_txt.append('void DetachHooks()\n{\n#ifdef __linux__\n    return;\n#elif defined(WIN32)')
+        hooks_txt.append('    BOOL unhookSuccess = TRUE;\n    if (real_xglGetGpuInfo != NULL)\n    {')
+        hook_operator = '='
+        for proto in self.protos:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                hooks_txt.append('        unhookSuccess %s Mhook_Unhook((PVOID*)&real_xgl%s);' % (hook_operator, proto.name))
+                hook_operator = '&='
+        hooks_txt.append('    }\n    isHooked = FALSE;\n')
+        hooks_txt.append('    if (!unhookSuccess)\n    {')
+        hooks_txt.append('        glv_LogError("Failed to unhook XGL.");\n    }')
+        hooks_txt.append('#endif\n}')
+        hooks_txt.append('#ifdef WIN32\nINIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;\n#elif defined(PLATFORM_LINUX)\npthread_once_t gInitOnce = PTHREAD_ONCE_INIT;\n#endif\n')
+        return "\n".join(hooks_txt)
+
+    def _generate_init_tracer(self):
+        init_tracer = []
+        init_tracer.append('void InitTracer()\n{')
+        init_tracer.append('    gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_XGL);')
+        init_tracer.append('    glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));')
+        init_tracer.append('//    glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));')
+        init_tracer.append('    glv_tracelog_set_tracer_id(GLV_TID_XGL);\n}\n')
+        return "\n".join(init_tracer)
+
+    # InitAndEnumerateGpus is unique enough that it gets custom generation code
+    def _gen_iande_gpus(self):
+        iae_body = []
+        iae_body.append('GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglInitAndEnumerateGpus(')
+        iae_body.append('    const XGL_APPLICATION_INFO* pAppInfo,')
+        iae_body.append('    const XGL_ALLOC_CALLBACKS* pAllocCb,')
+        iae_body.append('    XGL_UINT maxGpus,')
+        iae_body.append('    XGL_UINT* pGpuCount,')
+        iae_body.append('    XGL_PHYSICAL_GPU* pGpus)')
+        iae_body.append('{')
+        iae_body.append('    glv_trace_packet_header* pHeader;')
+        iae_body.append('    XGL_RESULT result;')
+        iae_body.append('    uint64_t startTime;')
+        iae_body.append('    struct_xglInitAndEnumerateGpus* pPacket;')
+        iae_body.append('')
+        iae_body.append('    glv_platform_thread_once(&gInitOnce, InitTracer);')
+        iae_body.append('    SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);')
+        iae_body.append('    if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)')
+        iae_body.append('    {')
+        iae_body.append('        glv_platform_get_next_lib_sym((void **) &real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");')
+        iae_body.append('    }')
+        iae_body.append('    startTime = glv_get_time();')
+        iae_body.append('    result = real_xglInitAndEnumerateGpus(pAppInfo, pAllocCb, maxGpus, pGpuCount, pGpus);')
+        iae_body.append('')
+        iae_body.append('    // since we do not know how many gpus will be found must create trace packet after calling xglInit')
+        iae_body.append('    CREATE_TRACE_PACKET(xglInitAndEnumerateGpus, calc_size_XGL_APPLICATION_INFO(pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS))')
+        iae_body.append('        + sizeof(XGL_UINT) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(XGL_PHYSICAL_GPU) : 0));')
+        iae_body.append('    pHeader->entrypoint_begin_time = startTime;')
+        iae_body.append('    if (isHooked == FALSE) {')
+        iae_body.append('        AttachHooks();')
+        iae_body.append('        AttachHooks_xgldbg();')
+        iae_body.append('        AttachHooks_xglwsix11ext();')
+        iae_body.append('    }')
+        iae_body.append('    pPacket = interpret_body_as_xglInitAndEnumerateGpus(pHeader);')
+        iae_body.append('    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);')
+        iae_body.append('    if (pAllocCb) {')
+        iae_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pAllocCb);')
+        iae_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocCb));')
+        iae_body.append('    }')
+        iae_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpuCount), sizeof(XGL_UINT), pGpuCount);')
+        iae_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpuCount));')
+        iae_body.append('    if (pGpuCount && pGpus)')
+        iae_body.append('    {')
+        iae_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), sizeof(XGL_PHYSICAL_GPU) * *pGpuCount, pGpus);')
+        iae_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpus));')
+        iae_body.append('    }')
+        iae_body.append('    pPacket->maxGpus = maxGpus;')
+        iae_body.append('    pPacket->result = result;')
+        iae_body.append('    FINISH_TRACE_PACKET();')
+        iae_body.append('    return result;')
+        iae_body.append('}\n')
+        return "\n".join(iae_body)
+
+    def _gen_unmap_memory(self):
+        um_body = []
+        um_body.append('GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglUnmapMemory(')
+        um_body.append('    XGL_GPU_MEMORY mem)')
+        um_body.append('{')
+        um_body.append('    glv_trace_packet_header* pHeader;')
+        um_body.append('    XGL_RESULT result;')
+        um_body.append('    struct_xglUnmapMemory* pPacket;')
+        um_body.append('    XGLAllocInfo *entry;')
+        um_body.append('    SEND_ENTRYPOINT_PARAMS("xglUnmapMemory(mem %p)\\n", mem);')
+        um_body.append('    // insert into packet the data that was written by CPU between the xglMapMemory call and here')
+        um_body.append('    // Note must do this prior to the real xglUnMap() or else may get a FAULT')
+        um_body.append('    entry = find_mem_info_entry(mem);')
+        um_body.append('    CREATE_TRACE_PACKET(xglUnmapMemory, (entry) ? entry->size : 0);')
+        um_body.append('    pPacket = interpret_body_as_xglUnmapMemory(pHeader);')
+        um_body.append('    if (entry)')
+        um_body.append('    {')
+        um_body.append('        assert(entry->handle == mem);')
+        um_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pData), entry->size, entry->pData);')
+        um_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));')
+        um_body.append('        entry->pData = NULL;')
+        um_body.append('    }')
+        um_body.append('    result = real_xglUnmapMemory(mem);')
+        um_body.append('    pPacket->mem = mem;')
+        um_body.append('    pPacket->result = result;')
+        um_body.append('    FINISH_TRACE_PACKET();')
+        um_body.append('    return result;')
+        um_body.append('}\n')
+        return "\n".join(um_body)
+
+#EL == EnumerateLayers
+#I think this another case where you have to make the real call prior to CREATE_TRACE_PACKET(). SInce you
+#don't know how many layers will be returned  or how big the strings will be. Alternatively, could be
+#on the safe side of CREATE_TRACE_PACKET with maxStringSize*maxLayerCount.
+#EL also needs a loop where add a trace buffer  for each layer, depending on how you CREATE_TRACE_PACKET.
+
+    def _generate_trace_funcs(self):
+        func_body = []
+        for proto in self.protos:
+            if 'InitAndEnumerateGpus' == proto.name:
+                func_body.append(self._gen_iande_gpus())
+            elif 'UnmapMemory' == proto.name:
+                func_body.append(self._gen_unmap_memory())
+            elif 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+                packet_update_txt = ''
+                return_txt = ''
+                packet_size = ''
+                in_data_size = False # flag when we need to capture local input size variable for in/out size
+                buff_ptr_indices = []
+                func_body.append('GLVTRACER_EXPORT %s XGLAPI __HOOKED_xgl%s(' % (proto.ret, proto.name))
+                for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 is NULL
+                    if 'color' == p.name:
+                        func_body.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
+                    else:
+                        func_body.append('    %s %s,' % (p.ty, p.name))
+                    if '*' in p.ty and 'pSysMem' != p.name:
+                        if 'pData' == p.name:
+                            if 'dataSize' == proto.params[proto.params.index(p)-1].name:
+                                packet_size += 'dataSize + '
+                            elif 'counterCount' == proto.params[proto.params.index(p)-1].name:
+                                packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
+                            else:
+                                packet_size += '((pDataSize != NULL && pData != NULL) ? *pDataSize : 0) + '
+                        elif '**' in p.ty and 'VOID' in p.ty:
+                            packet_size += 'sizeof(XGL_VOID*) + '
+                        elif 'VOID' in p.ty:
+                            packet_size += 'sizeof(%s) + ' % p.name
+                        elif 'CHAR' in p.ty:
+                            packet_size += '((%s != NULL) ? strlen((const char *)%s) + 1 : 0) + ' % (p.name, p.name)
+                        elif 'DEVICE_CREATE_INFO' in p.ty:
+                            packet_size += 'calc_size_XGL_DEVICE_CREATE_INFO(pCreateInfo) + '
+                        elif 'pDataSize' in p.name:
+                            packet_size += '((pDataSize != NULL) ? sizeof(XGL_SIZE) : 0) + '
+                            in_data_size = True;
+                        elif 'IMAGE_SUBRESOURCE' in p.ty and 'pSubresource' == p.name:
+                            packet_size += '((pSubresource != NULL) ? sizeof(XGL_IMAGE_SUBRESOURCE) : 0) + '
+                        else:
+                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
+                        buff_ptr_indices.append(proto.params.index(p))
+                    else:
+                        if 'color' == p.name:
+                            packet_update_txt += '    memcpy((void*)pPacket->color, color, 4 * sizeof(XGL_UINT32));\n'
+                        else:
+                            packet_update_txt += '    pPacket->%s = %s;\n' % (p.name, p.name)
+                    if 'Count' in p.name and proto.params[-1].name != p.name and p.name not in ['queryCount', 'vertexCount', 'indexCount', 'startCounter'] and proto.name not in ['CmdLoadAtomicCounters', 'CmdSaveAtomicCounters']:
+                        packet_size += '%s*' % p.name
+                if '' == packet_size:
+                    packet_size = '0'
+                else:
+                    packet_size = packet_size.strip(' + ')
+                func_body[-1] = func_body[-1].replace(',', ')')
+                func_body.append('{\n    glv_trace_packet_header* pHeader;')
+                if 'VOID' not in proto.ret or '*' in proto.ret:
+                    func_body.append('    %s result;' % proto.ret)
+                    return_txt = 'result = '
+                if in_data_size:
+                    func_body.append('    XGL_SIZE dataSizeIn = (pDataSize == NULL) ? 0 : *pDataSize;')
+                func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
+                func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                if 'EnumerateLayers' == proto.name:
+                    func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                    func_body.append('    XGL_SIZE totStringSize = 0;')
+                    func_body.append('    uint32_t i = 0;')
+                    func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
+                    func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen((const char*)pOutLayers[i]) + 1: 0;')
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize);' % (proto.name))
+                elif proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                    func_body.append('    size_t customSize;')
+                    if 'CreateShader' == proto.name:
+                        func_body.append('    customSize = (pCreateInfo != NULL) ? pCreateInfo->codeSize : 0;')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateShader, sizeof(XGL_SHADER_CREATE_INFO) + sizeof(XGL_SHADER) + customSize);')
+                    elif 'CreateGraphicsPipeline' == proto.name:
+                        func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateGraphicsPipeline, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize);')
+                    else: #'CreateComputePipeline'
+                        func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateComputePipeline, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize + calculate_pipeline_shader_size(&pCreateInfo->cs));')
+                    func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                else:
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, packet_size))
+                    func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
+                func_body.append(packet_update_txt.strip('\n'))
+                if 'MapMemory' == proto.name: # Custom code for MapMem case
+                    func_body.append('    if (ppData != NULL)')
+                    func_body.append('    {')
+                    func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->ppData), sizeof(XGL_VOID*), *ppData);')
+                    func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->ppData));')
+                    func_body.append('        add_data_to_mem_info(mem, *ppData);')
+                    func_body.append('    }')
+                    func_body.append('    pPacket->result = result;')
+                    func_body.append('    FINISH_TRACE_PACKET();')
+                else:
+                    # TODO : Clean this up.  Too much custom code and branching.
+                    for idx in buff_ptr_indices:
+                        if 'DEVICE_CREATE_INFO' in proto.params[idx].ty:
+                            func_body.append('    add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo);')
+                        elif 'CHAR' in proto.params[idx].ty:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen((const char *)%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
+                        elif 'Count' in proto.params[idx-1].name and 'queryCount' != proto.params[idx-1].name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
+                        elif 'dataSize' == proto.params[idx].name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
+                        elif 'pDataSize' == proto.params[idx].name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(XGL_SIZE), &dataSizeIn);' % (proto.params[idx].name))
+                        elif 'pData' == proto.params[idx].name:
+                            if 'dataSize' == proto.params[idx-1].name:
+                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
+                            elif in_data_size:
+                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSizeIn, %s);' % (proto.params[idx].name, proto.params[idx].name))
+                            else:
+                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, %s);' % (proto.params[idx].name, proto.params[idx].name))
+                        else:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
+                    # Some custom add_* and finalize_* function calls for Create* API calls
+                    if proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                        if 'CreateShader' == proto.name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), customSize, pCreateInfo->pCode);')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
+                        elif 'CreateGraphicsPipeline' == proto.name:
+                            func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (XGL_VOID**)&pPacket->pCreateInfo->pNext, pCreateInfo->pNext);')
+                        else:
+                            func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (XGL_VOID**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
+                            func_body.append('    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs);')
+                            func_body.append('    finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);')
+                    if 'VOID' not in proto.ret or '*' in proto.ret:
+                        func_body.append('    pPacket->result = result;')
+                    for idx in buff_ptr_indices:
+                        if 'DEVICE_CREATE_INFO' not in proto.params[idx].ty:
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s));' % (proto.params[idx].name))
+                    func_body.append('    FINISH_TRACE_PACKET();')
+                    if 'AllocMemory' in proto.name:
+                        func_body.append('    add_new_handle_to_mem_info(*pMem, pAllocInfo->allocationSize, NULL);')
+                    elif 'FreeMemory' in proto.name:
+                        func_body.append('    rm_handle_from_mem_info(mem);')
+                if 'VOID' not in proto.ret or '*' in proto.ret:
+                    func_body.append('    return result;')
+                func_body.append('}\n')
+        return "\n".join(func_body)
+
+    def _generate_helper_funcs(self):
+        hf_body = []
+        hf_body.append('// Support for shadowing CPU mapped memory')
+        hf_body.append('typedef struct _XGLAllocInfo {')
+        hf_body.append('    XGL_GPU_SIZE   size;')
+        hf_body.append('    XGL_GPU_MEMORY handle;')
+        hf_body.append('    XGL_VOID       *pData;')
+        hf_body.append('    BOOL           valid;')
+        hf_body.append('} XGLAllocInfo;')
+        hf_body.append('typedef struct _XGLMemInfo {')
+        hf_body.append('    unsigned int numEntrys;')
+        hf_body.append('    XGLAllocInfo *pEntrys;')
+        hf_body.append('    XGLAllocInfo *pLastMapped;')
+        hf_body.append('    unsigned int capacity;')
+        hf_body.append('} XGLMemInfo;')
+        hf_body.append('')
+        hf_body.append('static XGLMemInfo mInfo = {0, NULL, NULL, 0};')
+        hf_body.append('')
+        hf_body.append('static void init_mem_info_entrys(XGLAllocInfo *ptr, const unsigned int num)')
+        hf_body.append('{')
+        hf_body.append('    unsigned int i;')
+        hf_body.append('    for (i = 0; i < num; i++)')
+        hf_body.append('    {')
+        hf_body.append('        XGLAllocInfo *entry = ptr + i;')
+        hf_body.append('        entry->pData = NULL;')
+        hf_body.append('        entry->size  = 0;')
+        hf_body.append('        entry->handle = NULL;')
+        hf_body.append('        entry->valid = FALSE;')
+        hf_body.append('    }')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void init_mem_info()')
+        hf_body.append('{')
+        hf_body.append('    mInfo.numEntrys = 0;')
+        hf_body.append('    mInfo.capacity = 1024;')
+        hf_body.append('    mInfo.pLastMapped = NULL;')
+        hf_body.append('')
+        hf_body.append('    mInfo.pEntrys = GLV_NEW_ARRAY(XGLAllocInfo, mInfo.capacity);')
+        hf_body.append('')
+        hf_body.append('    if (mInfo.pEntrys == NULL)')
+        hf_body.append('        glv_LogError("init_mem_info()  malloc failed\\n");')
+        hf_body.append('    else')
+        hf_body.append('        init_mem_info_entrys(mInfo.pEntrys, mInfo.capacity);')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void delete_mem_info()')
+        hf_body.append('{')
+        hf_body.append('    GLV_DELETE(mInfo.pEntrys);')
+        hf_body.append('    mInfo.pEntrys = NULL;')
+        hf_body.append('    mInfo.numEntrys = 0;')
+        hf_body.append('    mInfo.capacity = 0;')
+        hf_body.append('    mInfo.pLastMapped = NULL;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static XGLAllocInfo * get_mem_info_entry()')
+        hf_body.append('{')
+        hf_body.append('    unsigned int i;')
+        hf_body.append('    XGLAllocInfo *entry;')
+        hf_body.append('    if (mInfo.numEntrys > mInfo.capacity)')
+        hf_body.append('    {')
+        hf_body.append('        glv_LogError("get_mem_info_entry() bad internal state numEntrys\\n");')
+        hf_body.append('        return NULL;')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    if (mInfo.numEntrys == mInfo.capacity)')
+        hf_body.append('    {  // grow the array 2x')
+        hf_body.append('        mInfo.capacity *= 2;')
+        hf_body.append('        mInfo.pEntrys = (XGLAllocInfo *) GLV_REALLOC(mInfo.pEntrys, mInfo.capacity * sizeof(XGLAllocInfo));')
+        hf_body.append('        //init the newly added entrys')
+        hf_body.append('        init_mem_info_entrys(mInfo.pEntrys + mInfo.capacity / 2, mInfo.capacity / 2);')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    assert(mInfo.numEntrys < mInfo.capacity);')
+        hf_body.append('    entry = mInfo.pEntrys;')
+        hf_body.append('    for (i = 0; i < mInfo.capacity; i++)')
+        hf_body.append('    {')
+        hf_body.append('        if ((entry + i)->valid == FALSE)')
+        hf_body.append('            return entry + i;')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    glv_LogError("get_mem_info_entry() did not find an entry\\n");')
+        hf_body.append('    return NULL;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static XGLAllocInfo * find_mem_info_entry(const XGL_GPU_MEMORY handle)')
+        hf_body.append('{')
+        hf_body.append('    XGLAllocInfo *entry = mInfo.pEntrys;')
+        hf_body.append('    unsigned int i;')
+        hf_body.append('    if (mInfo.pLastMapped && mInfo.pLastMapped->handle == handle && mInfo.pLastMapped->valid)')
+        hf_body.append('        return mInfo.pLastMapped;')
+        hf_body.append('    for (i = 0; i < mInfo.numEntrys; i++)')
+        hf_body.append('    {')
+        hf_body.append('        if ((entry + i)->valid && (handle == (entry + i)->handle))')
+        hf_body.append('            return entry + i;')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    return NULL;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void add_new_handle_to_mem_info(const XGL_GPU_MEMORY handle, XGL_GPU_SIZE size, XGL_VOID *pData)')
+        hf_body.append('{')
+        hf_body.append('    XGLAllocInfo *entry;')
+        hf_body.append('')
+        hf_body.append('    if (mInfo.capacity == 0)')
+        hf_body.append('        init_mem_info();')
+        hf_body.append('')
+        hf_body.append('    entry = get_mem_info_entry();')
+        hf_body.append('    if (entry)')
+        hf_body.append('    {')
+        hf_body.append('        entry->valid = TRUE;')
+        hf_body.append('        entry->handle = handle;')
+        hf_body.append('        entry->size = size;')
+        hf_body.append('        entry->pData = pData;   // NOTE: xglFreeMemory will free this mem, so no malloc()')
+        hf_body.append('        mInfo.numEntrys++;')
+        hf_body.append('    }')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void add_data_to_mem_info(const XGL_GPU_MEMORY handle, XGL_VOID *pData)')
+        hf_body.append('{')
+        hf_body.append('    XGLAllocInfo *entry = find_mem_info_entry(handle);')
+        hf_body.append('')
+        hf_body.append('    if (entry)')
+        hf_body.append('    {')
+        hf_body.append('        entry->pData = pData;')
+        hf_body.append('    }')
+        hf_body.append('    mInfo.pLastMapped = entry;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void rm_handle_from_mem_info(const XGL_GPU_MEMORY handle)')
+        hf_body.append('{')
+        hf_body.append('    XGLAllocInfo *entry = find_mem_info_entry(handle);')
+        hf_body.append('')
+        hf_body.append('    if (entry)')
+        hf_body.append('    {')
+        hf_body.append('        entry->valid = FALSE;')
+        hf_body.append('        entry->pData = NULL;')
+        hf_body.append('        entry->size = 0;')
+        hf_body.append('        entry->handle = NULL;')
+        hf_body.append('')
+        hf_body.append('        mInfo.numEntrys--;')
+        hf_body.append('        if (entry == mInfo.pLastMapped)')
+        hf_body.append('            mInfo.pLastMapped = NULL;')
+        hf_body.append('        if (mInfo.numEntrys == 0)')
+        hf_body.append('            delete_mem_info();')
+        hf_body.append('    }')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static size_t calculate_pipeline_shader_size(const XGL_PIPELINE_SHADER* shader)')
+        hf_body.append('{')
+        hf_body.append('    size_t size = 0;')
+        hf_body.append('    XGL_UINT i, j;')
+        hf_body.append('    ')
+        hf_body.append('    size += sizeof(XGL_PIPELINE_SHADER);')
+        hf_body.append('    // descriptor sets')
+        hf_body.append('    for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        hf_body.append('    {')
+        hf_body.append('        for (j = 0; j < shader->descriptorSetMapping[i].descriptorCount; j++)')
+        hf_body.append('        {')
+        hf_body.append('            size += sizeof(XGL_DESCRIPTOR_SLOT_INFO);')
+        hf_body.append('            if (shader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
+        hf_body.append('            {')
+        hf_body.append('                size += sizeof(XGL_DESCRIPTOR_SET_MAPPING);')
+        hf_body.append('            }')
+        hf_body.append('        }')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    // constant buffers')
+        hf_body.append('    if (shader->linkConstBufferCount > 0 && shader->pLinkConstBufferInfo != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        XGL_UINT i;')
+        hf_body.append('        for (i = 0; i < shader->linkConstBufferCount; i++)')
+        hf_body.append('        {')
+        hf_body.append('            size += sizeof(XGL_LINK_CONST_BUFFER);')
+        hf_body.append('            size += shader->pLinkConstBufferInfo[i].bufferSize;')
+        hf_body.append('        }')
+        hf_body.append('    }')
+        hf_body.append('    return size;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void add_pipeline_shader_to_trace_packet(glv_trace_packet_header* pHeader, XGL_PIPELINE_SHADER* packetShader, const XGL_PIPELINE_SHADER* paramShader)')
+        hf_body.append('{')
+        hf_body.append('    XGL_UINT i, j;')
+        hf_body.append('    // descriptor sets')
+        hf_body.append('    for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        hf_body.append('    {')
+        hf_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo), sizeof(XGL_DESCRIPTOR_SLOT_INFO)* paramShader->descriptorSetMapping[i].descriptorCount, paramShader->descriptorSetMapping[i].pDescriptorInfo);')
+        hf_body.append('        for (j = 0; j < paramShader->descriptorSetMapping[i].descriptorCount; j++)')
+        hf_body.append('        {')
+        hf_body.append('            if (paramShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet), sizeof(XGL_DESCRIPTOR_SET_MAPPING), paramShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
+        hf_body.append('            }')
+        hf_body.append('        }')
+        hf_body.append('        packetShader->descriptorSetMapping[i].descriptorCount = paramShader->descriptorSetMapping[i].descriptorCount;')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    // constant buffers')
+        hf_body.append('    if (paramShader->linkConstBufferCount > 0 && paramShader->pLinkConstBufferInfo != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->pLinkConstBufferInfo), sizeof(XGL_LINK_CONST_BUFFER) * paramShader->linkConstBufferCount, paramShader->pLinkConstBufferInfo);')
+        hf_body.append('        for (i = 0; i < paramShader->linkConstBufferCount; i++)')
+        hf_body.append('        {')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->pLinkConstBufferInfo[i].pBufferData), packetShader->pLinkConstBufferInfo[i].bufferSize, paramShader->pLinkConstBufferInfo[i].pBufferData);')
+        hf_body.append('        }')
+        hf_body.append('    }')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void finalize_pipeline_shader_address(glv_trace_packet_header* pHeader, const XGL_PIPELINE_SHADER* packetShader)')
+        hf_body.append('{')
+        hf_body.append('    XGL_UINT i, j;')
+        hf_body.append('    // descriptor sets')
+        hf_body.append('    for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        hf_body.append('    {')
+        hf_body.append('        for (j = 0; j < packetShader->descriptorSetMapping[i].descriptorCount; j++)')
+        hf_body.append('        {')
+        hf_body.append('            if (packetShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
+        hf_body.append('            {')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet));')
+        hf_body.append('            }')
+        hf_body.append('        }')
+        hf_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo));')
+        hf_body.append('    }')
+        hf_body.append('')
+        hf_body.append('    // constant buffers')
+        hf_body.append('    if (packetShader->linkConstBufferCount > 0 && packetShader->pLinkConstBufferInfo != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        for (i = 0; i < packetShader->linkConstBufferCount; i++)')
+        hf_body.append('        {')
+        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(packetShader->pLinkConstBufferInfo[i].pBufferData));')
+        hf_body.append('        }')
+        hf_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(packetShader->pLinkConstBufferInfo));')
+        hf_body.append('    }')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static size_t calculate_pipeline_state_size(const XGL_VOID* pState)')
+        hf_body.append('{')
+        hf_body.append('    const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pNext = pState;')
+        hf_body.append('    size_t totalStateSize = 0;')
+        hf_body.append('    while (pNext)')
+        hf_body.append('    {')
+        hf_body.append('        switch (pNext->sType)')
+        hf_body.append('        {')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:')
+        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);')
+        hf_body.append('                break;')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:')
+        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO);')
+        hf_body.append('                break;')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:')
+        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO);')
+        hf_body.append('                break;')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:')
+        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_DB_STATE_CREATE_INFO);')
+        hf_body.append('                break;')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:')
+        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_CB_STATE);')
+        hf_body.append('                break;')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pShaderStage = (const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext;')
+        hf_body.append('                totalStateSize += (sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO) + calculate_pipeline_shader_size(&pShaderStage->shader));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                const XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO* pVi = (const XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pNext;')
+        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO) + pVi->bindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION)')
+        hf_body.append('                                    + pVi->attributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION);')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            default:')
+        hf_body.append('                assert(0);')
+        hf_body.append('        }')
+        hf_body.append('        pNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO*)pNext->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return totalStateSize;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void add_pipeline_state_to_trace_packet(glv_trace_packet_header* pHeader, XGL_VOID** ppOut, const XGL_VOID* pIn)')
+        hf_body.append('{')
+        hf_body.append('    const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pInNow = pIn;')
+        hf_body.append('    XGL_GRAPHICS_PIPELINE_CREATE_INFO** ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)ppOut;')
+        hf_body.append('    while (pInNow != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        XGL_GRAPHICS_PIPELINE_CREATE_INFO** ppOutNow = ppOutNext;')
+        hf_body.append('        ppOutNext = NULL;')
+        hf_body.append('')
+        hf_body.append('        switch (pInNow->sType)')
+        hf_body.append('        {')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO), pInNow);')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO), pInNow);')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO), pInNow);')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_DB_STATE_CREATE_INFO), pInNow);')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_CB_STATE), pInNow);')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacket = NULL;')
+        hf_body.append('                XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pInPacket = NULL;')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO), pInNow);')
+        hf_body.append('                pPacket = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) *ppOutNow;')
+        hf_body.append('                pInPacket = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) pInNow;')
+        hf_body.append('                add_pipeline_shader_to_trace_packet(pHeader, &pPacket->shader, &pInPacket->shader);')
+        hf_body.append('                finalize_pipeline_shader_address(pHeader, &pPacket->shader);')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pPacket = NULL;')
+        hf_body.append('                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pIn = NULL;')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO), pInNow);')
+        hf_body.append('                pPacket = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*) *ppOutNow;')
+        hf_body.append('                pIn = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*) pInNow;')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pVertexBindingDescriptions, pIn->bindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION), pIn->pVertexBindingDescriptions);')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexBindingDescriptions));')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pVertexAttributeDescriptions, pIn->attributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION), pIn->pVertexAttributeDescriptions);')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexAttributeDescriptions));')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            default:')
+        hf_body.append('                assert(!"Encountered an unexpected type in pipeline state list");')
+        hf_body.append('        }')
+        hf_body.append('        pInNow = (XGL_GRAPHICS_PIPELINE_CREATE_INFO*)pInNow->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return;')
+        hf_body.append('}')
+        return "\n".join(hf_body)
+
+
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
         return '#include <xglLayer.h>\n#include "loader.h"'
@@ -811,6 +1499,49 @@ class ObjectTrackerSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class GlaveTraceHeader(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_packet_id.h"\n')
+        header_txt.append('void AttachHooks();')
+        header_txt.append('void DetachHooks();')
+        header_txt.append('void InitTracer();\n')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_trace_func_ptrs(),
+                self._generate_trace_func_protos()]
+
+        return "\n".join(body)
+
+class GlaveTraceC(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include "glv_platform.h"')
+        header_txt.append('#include "glv_common.h"')
+        header_txt.append('#include "glvtrace_xgl_xgl.h"')
+        header_txt.append('#include "glvtrace_xgl_xgldbg.h"')
+        header_txt.append('#include "glvtrace_xgl_xglwsix11ext.h"')
+        header_txt.append('#include "glv_interconnect.h"')
+        header_txt.append('#include "glv_filelike.h"')
+        header_txt.append('#ifdef WIN32')
+        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
+        header_txt.append('#endif')
+        header_txt.append('#include "glv_trace_packet_utils.h"')
+        header_txt.append('#include <stdio.h>\n')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_func_ptr_assignments(),
+                self._generate_attach_hooks(),
+                self._generate_detach_hooks(),
+                self._generate_init_tracer(),
+                self._generate_helper_funcs(),
+                self._generate_trace_funcs()]
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -820,6 +1551,8 @@ def main():
             "ApiDumpFile" : ApiDumpFileSubcommand,
             "ApiDumpNoAddr" : ApiDumpNoAddrSubcommand,
             "ObjectTracker" : ObjectTrackerSubcommand,
+            "glave-trace-h" : GlaveTraceHeader,
+            "glave-trace-c" : GlaveTraceC,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
