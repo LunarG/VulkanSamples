@@ -83,7 +83,7 @@ static struct {
     bool scanned;
     struct loader_icd *icds;
     bool layer_scanned;
-    char layer_dirs[4096];
+    char *layer_dirs;
     unsigned int scanned_layer_count;
     char *scanned_layer_names[MAX_LAYER_LIBRARIES];
     struct loader_msg_callback *msg_callbacks;
@@ -375,25 +375,45 @@ static void loader_icd_scan(void)
 }
 
 #ifndef DEFAULT_XGL_LAYERS_PATH
-// TODO: Is this a good default locations
+// TODO: Are these good default locations?
 #define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
 #endif
 
-static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs)
+static void layer_lib_scan(const char * libInPaths)
 {
     const char *p, *next;
-    char *libPaths = &loader.layer_dirs[0];
+    char *libPaths;
     DIR *curdir;
     struct dirent *dent;
     int len, i;
     char temp_str[1024];
 
+    len = 0;
+    loader.layer_dirs = NULL;
     if (libInPaths){
-        strncpy(libPaths, libInPaths, sizeof(loader.layer_dirs));
+        len = strlen(libInPaths);
+        p = libInPaths;
     }
     else {
-        *libPaths = '\0';
+        if (geteuid() == getuid()) {
+            p = getenv("LIBXGL_LAYERS_PATH");
+            if (p != NULL)
+                len = strlen(p);
+        }
     }
+
+    if (len == 0) {
+        len = strlen(DEFAULT_XGL_LAYERS_PATH);
+        p = DEFAULT_XGL_LAYERS_PATH;
+    }
+
+    if (len == 0) {
+        // Have no paths to search
+        return;
+    }
+    loader.layer_dirs = malloc(len+1);
+    strncpy(loader.layer_dirs, p, len);
+    libPaths = loader.layer_dirs;
 
     /* cleanup any previously scanned libraries */
     for (i = 0; i < loader.scanned_layer_count; i++) {
@@ -402,9 +422,6 @@ static void layer_lib_scan(const char * libInPaths, const bool useDefaultDirs)
         loader.scanned_layer_names[i] = NULL;
     }
     loader.scanned_layer_count = 0;
-
-    if (useDefaultDirs)
-       strncat(libPaths, DEFAULT_XGL_LAYERS_PATH, sizeof(loader.layer_dirs) - sizeof(DEFAULT_XGL_LAYERS_PATH));
 
     for (p = libPaths; *p; p = next) {
        next = strchr(p, ':');
@@ -1172,7 +1189,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
 
     /* get layer libraries */
     if (!loader.layer_scanned)
-        layer_lib_scan(NULL, true);
+        layer_lib_scan(NULL);
 
     *pGpuCount = count;
 
