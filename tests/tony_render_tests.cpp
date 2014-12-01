@@ -1010,7 +1010,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    // meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
@@ -1311,7 +1311,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVPAndTexture)
 
     // vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_VERTEX_INPUT, (XGL_OBJECT) &meshBuffer.m_constantBufferView);
     vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &mvpBuffer.m_constantBufferView);
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
+    // ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &texture.m_textureViewInfo);
     ps.BindShaderEntitySlotToSampler(0, (XGL_OBJECT) &sampler.m_sampler);
 
     XglPipelineObj pipelineobj(m_device);
