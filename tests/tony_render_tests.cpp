@@ -1080,11 +1080,11 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     glm::mat4 MVP = Projection * View * Model;
     const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
 
-    XglConstantBufferObj constantBuffer(m_device, matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+    XglConstantBufferObj MVPBuffer(m_device, matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
 
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &constantBuffer.m_constantBufferView);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &MVPBuffer.m_constantBufferView);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
@@ -1092,14 +1092,14 @@ TEST_F(XglRenderTest, TriangleVSUniform)
 
     // Create descriptor set and attach the constant buffer to it
     XglDescriptorSetObj descriptorSet(m_device);   XGL_RESULT err = XGL_SUCCESS;
-    descriptorSet.AttachMemoryView(&constantBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&MVPBuffer.m_constantBufferView);
 
-    m_memoryRefManager.AddMemoryRef(&constantBuffer.m_constantBufferMem);
+    m_memoryRefManager.AddMemoryRef(&MVPBuffer.m_constantBufferMem);
 
     GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    RotateTriangleVSUniform(Projection, View, Model, constantBuffer);
+    RotateTriangleVSUniform(Projection, View, Model, MVPBuffer);
 }
 
 TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
@@ -1148,23 +1148,23 @@ TEST_F(XglRenderTest, TriangleWithVertexFetchAndMVP)
 
     const int buf_size = sizeof(MVP) / sizeof(XGL_FLOAT);
 
-    XglConstantBufferObj constantBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+    XglConstantBufferObj MVPBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX );
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT);
 
     // vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_VERTEX_INPUT, (XGL_OBJECT) &meshBuffer.m_constantBufferView);
-    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &constantBuffer.m_constantBufferView);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, (XGL_OBJECT) &MVPBuffer.m_constantBufferView);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AttachMemoryView(&constantBuffer.m_constantBufferView);
+    descriptorSet.AttachMemoryView(&MVPBuffer.m_constantBufferView);
     descriptorSet.AttachMemoryView(&meshBuffer.m_constantBufferView);
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer.m_constantBufferMem);
-    m_memoryRefManager.AddMemoryRef(&constantBuffer.m_constantBufferMem);
+    m_memoryRefManager.AddMemoryRef(&MVPBuffer.m_constantBufferMem);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
             sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
