@@ -346,6 +346,10 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
     struct intel_winsys *winsys = cmd->dev->winsys;
     XGL_UINT i;
 
+    /* no matching intel_cmd_begin() */
+    if (!cmd->writers[INTEL_CMD_WRITER_BATCH].ptr)
+        return XGL_ERROR_INCOMPLETE_COMMAND_BUFFER;
+
     cmd_batch_end(cmd);
 
     /* TODO we need a more "explicit" winsys */
