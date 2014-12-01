@@ -187,6 +187,7 @@ intel_winsys_create_for_fd(int fd)
    drm_intel_bufmgr_gem_enable_fenced_relocs(winsys->bufmgr);
 
    drm_intel_bufmgr_gem_enable_reuse(winsys->bufmgr);
+   drm_intel_bufmgr_gem_set_vma_cache_size(winsys->bufmgr, 1024);
 
    return winsys;
 }
