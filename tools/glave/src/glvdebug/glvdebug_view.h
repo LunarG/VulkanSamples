@@ -24,6 +24,8 @@
 #pragma once
 
 class glvdebug_QTraceFileModel;
+struct glvdebug_trace_file_info;
+class QWidget;
 
 class glvdebug_view
 {
@@ -35,6 +37,7 @@ public:
     virtual void output_error(QString message, bool bRefresh = true) = 0;
 
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel) = 0;
+    virtual void enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo) = 0;
 
     //virtual void set_timeline_model(glvdebug_QTimelineModel* pModel) = 0;
 

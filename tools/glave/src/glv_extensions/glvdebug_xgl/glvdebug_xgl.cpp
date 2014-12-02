@@ -26,7 +26,6 @@
 
 #include "glvdebug_controller.h"
 #include "glvdebug_view.h"
-#include "glvdebug_QTraceFileModel.h"
 #include "glvreplay_seq.h"
 
 extern "C" {
@@ -34,14 +33,15 @@ extern "C" {
 }
 
 static glvdebug_view* s_pView;
-static glvdebug_QTraceFileModel* m_pTraceFileModel;
 
-bool glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView)
+extern "C"
+{
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView)
 {
     return false;
 }
 
-bool glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView)
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView)
 {
     assert(pTraceFileInfo != NULL);
     assert(pView != NULL);
@@ -59,13 +59,12 @@ bool glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFile
     s_pView->set_replay_widget_available(true);
     s_pView->set_replay_widget_enabled(true);
 
-    m_pTraceFileModel = new glvdebug_QTraceFileModel(NULL, pTraceFileInfo);
-    s_pView->set_calltree_model(m_pTraceFileModel);
+    s_pView->enable_default_calltree_model(pTraceFileInfo);
 
     return true;
 }
 
-bool glvdebug_controller_play_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glv_replay::glv_trace_packet_replay_library** ppReplayers)
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_play_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glv_replay::glv_trace_packet_replay_library** ppReplayers)
 {
     glvdebug_trace_file_packet_offsets* pCurPacket;
     unsigned int res;
@@ -127,11 +126,12 @@ bool glvdebug_controller_play_trace_file(glvdebug_trace_file_info* pTraceFileInf
     return true;
 }
 
-void glvdebug_controller_unload_trace_file()
+GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_unload_trace_file()
 {
     if (s_pView != NULL)
     {
         s_pView->set_replay_widget_available(false);
         s_pView->set_calltree_model(NULL);
     }
+}
 }

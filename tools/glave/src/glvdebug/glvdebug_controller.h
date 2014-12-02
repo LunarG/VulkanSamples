@@ -27,10 +27,29 @@
 
 #include "glvreplay_factory.h"
 
-bool glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView);
+extern "C"
+{
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView);
 
-bool glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
 
-bool glvdebug_controller_play_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glv_replay::glv_trace_packet_replay_library** ppReplayers);
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_play_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glv_replay::glv_trace_packet_replay_library** ppReplayers);
 
-void glvdebug_controller_unload_trace_file();
+GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_unload_trace_file(void);
+
+// entrypoints that must be exposed by each controller library
+typedef bool (GLVTRACER_CDECL *funcptr_glvdebug_controller_load_trace_file)(const char* traceFile, glvdebug_view* pView);
+typedef bool (GLVTRACER_CDECL *funcptr_glvdebug_controller_process_trace_file)(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
+typedef bool (GLVTRACER_CDECL *funcptr_glvdebug_controller_play_trace_file)(glvdebug_trace_file_info* pTraceFileInfo, glv_replay::glv_trace_packet_replay_library** ppReplayers);
+typedef void (GLVTRACER_CDECL *funcptr_glvdebug_controller_unload_trace_file)(void);
+
+struct glvdebug_controller
+{
+    void* pLibrary;
+    funcptr_glvdebug_controller_load_trace_file LoadTraceFile;
+    funcptr_glvdebug_controller_process_trace_file ProcessTraceFile;
+    funcptr_glvdebug_controller_play_trace_file PlayTraceFile;
+    funcptr_glvdebug_controller_unload_trace_file UnloadTraceFile;
+};
+
+}

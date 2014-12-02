@@ -48,26 +48,27 @@ typedef struct GLV_TRACER_REPLAYER_INFO
     GLV_TRACER_ID tracerId;
     BOOL needsReplayer;
     const char* const replayerLibraryName;
+    const char* const debuggerLibraryname;
 } GLV_TRACER_REPLAYER_INFO;
 
 // The index here should match the value of the GLV_TRACER_ID
 static const GLV_TRACER_REPLAYER_INFO gs_tracerReplayerInfo[GLV_MAX_TRACER_ID_ARRAY_SIZE] = {
-    {GLV_TID_RESERVED, FALSE, ""},
-    {GLV_TID_GL_FPS, FALSE, ""},
-    {GLV_TID_MANTLE, TRUE, GLV_LIBRARY_NAME(glvreplay_mantle)},
-    {GLV_TID_XGL, TRUE, GLV_LIBRARY_NAME(glvreplay_xgl)},
-    {GLV_TID_MANTLE_PERF, FALSE, ""},
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
-    {GLV_TID_RESERVED, FALSE, ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""},
+    {GLV_TID_GL_FPS, FALSE, "", ""},
+    {GLV_TID_MANTLE, TRUE, GLV_LIBRARY_NAME(glvreplay_mantle), ""},
+    {GLV_TID_XGL, TRUE, GLV_LIBRARY_NAME(glvreplay_xgl), GLV_LIBRARY_NAME(glvdebug_xgl)},
+    {GLV_TID_MANTLE_PERF, FALSE, "", ""},
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
+    {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
 };
 
 typedef enum _GLV_TRACE_PACKET_ID

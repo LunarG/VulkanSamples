@@ -1,0 +1,61 @@
+cmake_minimum_required(VERSION 2.8)
+
+# this project is currently only available on Linux
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+
+project(glvdebug_xgl)
+
+include("${SRC_DIR}/build_options.cmake")
+
+find_package(Qt5 COMPONENTS Widgets Gui Core QUIET)
+
+if(NOT Qt5_FOUND)
+# After Qt5.3 is installed, you may need to add the following to the cmake command line:
+# -DQt5_DIR=/home/<username>/Qt/5.3/gcc_64/lib/cmake/Qt5
+message(WARNING "WARNING: glvdebug_xgl will be excluded because Qt5 was not found.")
+else()
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+set(OS_REPLAYER_LIBS
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.dll
+)
+endif()
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+set(OS_REPLAYER_LIBS
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.so
+    xcb
+)
+endif()
+
+set(SRC_LIST
+    ${SRC_LIST}
+    glvdebug_xgl.cpp
+)
+
+set(HDR_LIST
+    ${SRC_DIR}/glvdebug/glvdebug_controller.h
+    ${SRC_DIR}/glvdebug/glvdebug_QTraceFileModel.h
+)
+
+include_directories(
+    ${SRC_DIR}/glvcommon
+    ${SRC_DIR}/glvdebug
+    ${SRC_DIR}/glvreplay
+    ${SRC_DIR}/thirdparty
+    ${Qt5Widgets_INCLUDE_DIRS}
+)
+
+add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
+
+target_link_libraries(${PROJECT_NAME} 
+    ${OS_REPLAYER_LIBS}
+    glvcommon
+)
+
+build_options_finalize()
+
+endif(NOT Qt5_FOUND)
+endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")

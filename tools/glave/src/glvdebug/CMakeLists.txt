@@ -37,11 +37,11 @@ set(SRC_LIST
     glvdebug.cpp
     glvdebug_settings.cpp
     glvdebug_output.cpp
-    glvdebug_controller_opengl.cpp
     glvdebug_trace_file_utils.cpp
     glvdebug_qtimelineview.cpp
     glvdebug_timelineitem.cpp
     glvdebug_timelinemodel.cpp
+    glvdebug_controller_factory.cpp
     ${SRC_DIR}/glvreplay/glvreplay_seq.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
    )
@@ -65,6 +65,7 @@ set(HEADER_LIST
     glvdebug_trace_file_utils.h
     glvdebug_timelineitem.h
     glvdebug_timelinemodel.h
+    glvdebug_controller_factory.h
     glvdebug_qtimelineview.h
     glvdebug_QReplayWidget.h
     glvdebug_QTraceFileModel.h

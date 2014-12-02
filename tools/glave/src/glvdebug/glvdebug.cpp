@@ -39,7 +39,7 @@
 #include "glvdebug_settings.h"
 #include "glvdebug_output.h"
 
-#include "glvdebug_controller.h"
+#include "glvdebug_controller_factory.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // globals
@@ -49,6 +49,8 @@ static QString g_PROJECT_NAME = "GLV Debugger";
 glvdebug::glvdebug(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::glvdebug),
+      m_pTraceFileModel(NULL),
+      m_pController(NULL),
       m_pReplayProcess(new QProcess()),
       m_pReplayWidget(NULL),
       m_pGenerateTraceButton(NULL),
@@ -179,6 +181,12 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
     ui->treeView->setModel(pModel);
 }
 
+void glvdebug::enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo)
+{
+    m_pTraceFileModel = new glvdebug_QTraceFileModel(NULL, pTraceFileInfo);
+    set_calltree_model(m_pTraceFileModel);
+}
+
 void glvdebug::reset_view()
 {
     while (ui->stateTabWidget->count() > 0)
@@ -252,7 +260,7 @@ void glvdebug::playCurrentTraceFile()
     // update UI
     m_pPlayButton->setEnabled(false);
 
-    glvdebug_controller_play_trace_file(&m_traceFileInfo, m_pReplayers);
+    m_pController->PlayTraceFile(&m_traceFileInfo, m_pReplayers);
 
     m_pPlayButton->setEnabled(true);
 
@@ -287,7 +295,17 @@ void glvdebug::on_action_Close_triggered()
 
 void glvdebug::close_trace_file()
 {
-    glvdebug_controller_unload_trace_file();
+    if (m_pController != NULL)
+    {
+        m_pController->UnloadTraceFile();
+        glvdebug_controller_factory::Unload(&m_pController);
+    }
+
+    if (m_pTraceFileModel != NULL)
+    {
+        delete m_pTraceFileModel;
+        m_pTraceFileModel = NULL;
+    }
 
     // Clean up replayers
     if (m_pReplayers != NULL)
@@ -410,12 +428,18 @@ bool glvdebug::open_trace_file(const std::string &filename)
             }
 
             // populate the UI based on trace file info
-            if (bOpened)
+            if (bOpened && !load_controllers(&m_traceFileInfo))
             {
-                bOpened = glvdebug_controller_process_trace_file(&m_traceFileInfo, this);
+                glvdebug_output_error("Failed to load necessary debug controllers.");
+                bOpened = false;
             }
 
-            if (m_pReplayWidget != NULL)
+            if (bOpened)
+            {
+                bOpened = m_pController->ProcessTraceFile(&m_traceFileInfo, this);
+            }
+
+            if (bOpened && m_pReplayWidget != NULL)
             {
                 if (!load_replayers(&m_traceFileInfo, m_pReplayWidget))
                 {
@@ -424,6 +448,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
                 }
             }
         }
+
 
         // TODO: We don't really want to close the trace file yet.
         // I think we want to keep it open so that we can dynamically read from it. 
@@ -533,6 +558,46 @@ bool glvdebug::load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget*
     }
 
     return true;
+}
+
+bool glvdebug::load_controllers(glvdebug_trace_file_info* pTraceFileInfo)
+{
+    if (pTraceFileInfo->header.tracer_count == 0)
+    {
+        glv_LogError("No API specified in tracefile for replaying.\n");
+        return false;
+    }
+
+    for (int i = 0; i < pTraceFileInfo->header.tracer_count; i++)
+    {
+        uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i];
+
+        const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
+
+        if (pReplayerInfo->tracerId != tracerId)
+        {
+            glv_LogError("Replayer info for TracerId (%d) failed consistency check.\n", tracerId);
+            assert(!"TracerId in GLV_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
+        }
+        else if (strlen(pReplayerInfo->debuggerLibraryname) != 0)
+        {
+            // Have our factory create the necessary controller
+            m_pController = glvdebug_controller_factory::Load(pReplayerInfo->debuggerLibraryname);
+
+            if (m_pController != NULL)
+            {
+                // Only one controller needs to be loaded, so break from loop
+                break;
+            }
+            else
+            {
+                // controller failed to be created
+                glv_LogError("Couldn't create controller for TracerId %d.\n", tracerId);
+            }
+        }
+    }
+
+    return m_pController != NULL;
 }
 
 void glvdebug::reset_tracefile_ui()
