@@ -49,7 +49,6 @@ struct app_dev {
 
     XGL_UINT heap_count;
     XGL_MEMORY_HEAP_PROPERTIES *heap_props;
-    XGL_QUEUE queues[MAX_QUEUE_TYPES];
 
     XGL_FORMAT_PROPERTIES format_props[XGL_MAX_CH_FMT][XGL_MAX_NUM_FMT];
 };
@@ -311,31 +310,6 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
         err = xglGetExtensionSupport(gpu->obj, known_extensions[i]);
         if (!err)
             gpu->extensions[gpu->extension_count++] = known_extensions[i];
-    }
-}
-
-static const char *xgl_qtype_string(XGL_QUEUE_TYPE qtype) {
-    switch (qtype) {
-#define STR(r) case r: return #r
-    STR(XGL_QUEUE_TYPE_GRAPHICS);
-    STR(XGL_QUEUE_TYPE_COMPUTE);
-    STR(XGL_QUEUE_TYPE_DMA);
-    default: return "UNKNOWN_RESULT";
-    }
-}
-
-// TODO: May need to extend to more than one queue per type
-void app_dev_init_queue(struct app_dev *dev, XGL_QUEUE_TYPE qtype)
-{
-    XGL_RESULT err;
-
-    /* abort before we go past the end of our queue array */
-    assert(qtype < MAX_QUEUE_TYPES);
-
-    err = xglGetDeviceQueue(dev->obj, qtype, 0, &dev->queues[qtype]);
-    if (err) {
-        printf("xglGetDeviceQueue: %s queue #%d: Failed\n",
-               xgl_qtype_string(qtype), 0);
     }
 }
 
