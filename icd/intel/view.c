@@ -230,6 +230,19 @@ static int winsys_tiling_to_surface_tiling(enum intel_tiling_mode tiling)
     }
 }
 
+static int channel_swizzle_to_scs(XGL_CHANNEL_SWIZZLE swizzle)
+{
+    switch (swizzle) {
+    case XGL_CHANNEL_SWIZZLE_ZERO:  return GEN75_SCS_ZERO;
+    case XGL_CHANNEL_SWIZZLE_ONE:   return GEN75_SCS_ONE;
+    case XGL_CHANNEL_SWIZZLE_R:     return GEN75_SCS_RED;
+    case XGL_CHANNEL_SWIZZLE_G:     return GEN75_SCS_GREEN;
+    case XGL_CHANNEL_SWIZZLE_B:     return GEN75_SCS_BLUE;
+    case XGL_CHANNEL_SWIZZLE_A:     return GEN75_SCS_ALPHA;
+    default: assert(!"unknown swizzle"); return GEN75_SCS_ZERO;
+    }
+}
+
 static void surface_state_tex_gen7(const struct intel_gpu *gpu,
                                    const struct intel_img *img,
                                    XGL_IMAGE_VIEW_TYPE type,
@@ -238,6 +251,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
                                    unsigned num_levels,
                                    unsigned first_layer,
                                    unsigned num_layers,
+                                   XGL_CHANNEL_MAPPING swizzles,
                                    bool is_rt,
                                    uint32_t dw[8])
 {
@@ -423,10 +437,16 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
    dw[7] = 0;
 
    if (intel_gpu_gen(gpu) >= INTEL_GEN(7.5)) {
-      dw[7] |= GEN75_SCS_RED   << GEN75_SURFACE_DW7_SCS_R__SHIFT |
-               GEN75_SCS_GREEN << GEN75_SURFACE_DW7_SCS_G__SHIFT |
-               GEN75_SCS_BLUE  << GEN75_SURFACE_DW7_SCS_B__SHIFT |
-               GEN75_SCS_ALPHA << GEN75_SURFACE_DW7_SCS_A__SHIFT;
+      dw[7] |=
+          channel_swizzle_to_scs(swizzles.r) << GEN75_SURFACE_DW7_SCS_R__SHIFT |
+          channel_swizzle_to_scs(swizzles.g) << GEN75_SURFACE_DW7_SCS_G__SHIFT |
+          channel_swizzle_to_scs(swizzles.b) << GEN75_SURFACE_DW7_SCS_B__SHIFT |
+          channel_swizzle_to_scs(swizzles.a) << GEN75_SURFACE_DW7_SCS_A__SHIFT;
+   } else {
+        assert(swizzles.r == XGL_CHANNEL_SWIZZLE_R &&
+               swizzles.g == XGL_CHANNEL_SWIZZLE_G &&
+               swizzles.b == XGL_CHANNEL_SWIZZLE_B &&
+               swizzles.a == XGL_CHANNEL_SWIZZLE_A);
    }
 }
 
@@ -1081,6 +1101,7 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
     struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
     XGL_UINT mip_levels, array_size;
+    XGL_CHANNEL_MAPPING state_swizzles;
 
     if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
         info->subresourceRange.baseArraySlice >= img->array_size ||
@@ -1104,14 +1125,37 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
     view->obj.destroy = img_view_destroy;
 
     view->img = img;
-    view->swizzles = info->channels;
     view->min_lod = info->minLod;
+
+    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
+        state_swizzles = info->channels;
+        view->shader_swizzles.r = XGL_CHANNEL_SWIZZLE_R;
+        view->shader_swizzles.g = XGL_CHANNEL_SWIZZLE_G;
+        view->shader_swizzles.b = XGL_CHANNEL_SWIZZLE_B;
+        view->shader_swizzles.a = XGL_CHANNEL_SWIZZLE_A;
+    } else {
+        state_swizzles.r = XGL_CHANNEL_SWIZZLE_R;
+        state_swizzles.g = XGL_CHANNEL_SWIZZLE_G;
+        state_swizzles.b = XGL_CHANNEL_SWIZZLE_B;
+        state_swizzles.a = XGL_CHANNEL_SWIZZLE_A;
+        view->shader_swizzles = info->channels;
+    }
+
+    /* shader_swizzles is ignored by the compiler */
+    if (view->shader_swizzles.r != XGL_CHANNEL_SWIZZLE_R ||
+        view->shader_swizzles.g != XGL_CHANNEL_SWIZZLE_G ||
+        view->shader_swizzles.b != XGL_CHANNEL_SWIZZLE_B ||
+        view->shader_swizzles.a != XGL_CHANNEL_SWIZZLE_A) {
+        intel_dev_log(dev, XGL_DBG_MSG_WARNING,
+                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                "image data swizzling is ignored");
+    }
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_tex_gen7(dev->gpu, img, info->viewType, info->format,
                 info->subresourceRange.baseMipLevel, mip_levels,
                 info->subresourceRange.baseArraySlice, array_size,
-                false, view->cmd);
+                state_swizzles, false, view->cmd);
         view->cmd_len = 8;
     } else {
         surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
@@ -1142,6 +1186,12 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
                                 const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO *info,
                                 struct intel_rt_view **view_ret)
 {
+    static const XGL_CHANNEL_MAPPING identity_channel_mapping = {
+        .r = XGL_CHANNEL_SWIZZLE_R,
+        .g = XGL_CHANNEL_SWIZZLE_G,
+        .b = XGL_CHANNEL_SWIZZLE_B,
+        .a = XGL_CHANNEL_SWIZZLE_A,
+    };
     struct intel_img *img = intel_img(info->image);
     struct intel_rt_view *view;
 
@@ -1159,7 +1209,7 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
                 img_type_to_view_type(img->type),
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
-                true, view->cmd);
+                identity_channel_mapping, true, view->cmd);
         view->cmd_len = 8;
     } else {
         surface_state_tex_gen6(dev->gpu, img,

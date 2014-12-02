@@ -57,8 +57,8 @@ struct intel_img_view {
 
     struct intel_img *img;
 
-    XGL_CHANNEL_MAPPING swizzles;
     XGL_FLOAT min_lod;
+    XGL_CHANNEL_MAPPING shader_swizzles;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
