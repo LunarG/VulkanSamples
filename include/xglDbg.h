@@ -100,6 +100,15 @@ typedef XGL_VOID (XGLAPI *XGL_DBG_MSG_CALLBACK_FUNCTION)(
     XGL_VOID*            pUserData);
 
 // Debug functions
+typedef XGL_RESULT (XGLAPI *DbgSetValidationLevelType)(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel);
+typedef XGL_RESULT (XGLAPI *DbgRegisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
+typedef XGL_RESULT (XGLAPI *DbgUnregisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
+typedef XGL_RESULT (XGLAPI *DbgSetMessageFilterType)(XGL_DEVICE device, XGL_INT msgCode, XGL_DBG_MSG_FILTER filter);
+typedef XGL_RESULT (XGLAPI *DbgSetObjectTagType)(XGL_BASE_OBJECT object, XGL_SIZE tagSize, const XGL_VOID* pTag);
+typedef XGL_RESULT (XGLAPI *DbgSetGlobalOptionType)(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData);
+typedef XGL_RESULT (XGLAPI *DbgSetDeviceOptionType)(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData);
+typedef XGL_VOID (XGLAPI *CmdDbgMarkerBeginType)(XGL_CMD_BUFFER cmdBuffer, const XGL_CHAR* pMarker);
+typedef XGL_VOID (XGLAPI *CmdDbgMarkerEndType)(XGL_CMD_BUFFER cmdBuffer);
 
 XGL_RESULT XGLAPI xglDbgSetValidationLevel(
     XGL_DEVICE           device,
