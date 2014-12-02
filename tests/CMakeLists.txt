@@ -7,10 +7,6 @@ if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
 endif()
 
-SET(COMMON
-    common.c
-    )
-
 SET(COMMON_CPP
     xglgpu.cpp
     xgldevice.cpp
@@ -53,7 +49,7 @@ include_directories(
     )
 
 
-add_executable(xglinfo xglinfo.c ${COMMON})
+add_executable(xglinfo xglinfo.c)
 add_executable(xglbase init.cpp ${COMMON_CPP})
 set_target_properties(xglbase
    PROPERTIES
