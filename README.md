@@ -1,5 +1,5 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.3, 26 Nov 2014*
+*Version 0.4, 2 Dec 2014*
 
 This project provides *open source* components for the XGL Ecosystem.
 
@@ -16,7 +16,7 @@ The following components are available:
   - [Draw State](https://github.com/KhronosGroup/GL-Next/blob/master/layers/draw_state.c)
   - [MemTracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/mem_tracker.c)
 - *GLAVE Debugger* 
-  - API Dump (generated)
+  - APIDump (generated)
   - APIDumpFile (generated)
 - [*Sample Drivers*](https://github.com/KhronosGroup/GL-Next/tree/master/icd)
   - [Common Infrastructure](https://github.com/KhronosGroup/GL-Next/tree/master/icd/common)
@@ -24,11 +24,11 @@ The following components are available:
 
 ## New
 
-- Added APIDumpFile to write APIDump directly to a file
-- Added MemTracker validation layer
-- Added various turn-on tests for variety of driver / compiler features
-- Fix to wsiPresent to avoid deadlock with X server
-- Misc. fixes to layers and Intel sample driver
+- Added mutex to APIDump, APIDumpFile and DrawState to prevent apparent threading issues using printf
+- Fix support for {Fill,Copy}Memory
+- MemTracker can report issues to application via debug callback
+- Update test infrastructure to improve ease of writing new tests. Add image comparison feature for regression testing. Requires ImageMagick library.
+- Misc. fixes to demos, layers and Intel sample driver
 
 ## How to Build and Run
 
