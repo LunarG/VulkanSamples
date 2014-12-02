@@ -2,9 +2,14 @@ include (FindPkgConfig)
 
 find_package (OpenGL REQUIRED)
 find_package (GLUT REQUIRED)
-find_package(ImageMagick REQUIRED MagickWand)
+find_package(ImageMagick COMPONENTS MagickWand)
+
 if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
+endif()
+
+if(NOT ImageMagick_FOUND)
+    message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev")
 endif()
 
 SET(COMMON_CPP
@@ -36,7 +41,7 @@ set(TEST_LIBRARIES
    OGLCompiler
    OSDependent
    BIL
-   MagickWand
+   ${ImageMagick_LIBRARIES}
    )
 
 include_directories(
@@ -45,9 +50,13 @@ include_directories(
     "${GLSLANG_PREFIX}/glslang/Include"
     "${GLSLANG_PREFIX}/glslang/Public"
     "${GLSLANG_PREFIX}/BIL"
-    "/usr/include/ImageMagick"
+    ${ImageMagick_INCLUDE_DIRS}
     )
 
+add_definitions(
+    -DMAGICKCORE_QUANTUM_DEPTH=16
+    -DMAGICKCORE_HDRI_ENABLE=0
+    )
 
 add_executable(xglbase init.cpp ${COMMON_CPP})
 set_target_properties(xglbase

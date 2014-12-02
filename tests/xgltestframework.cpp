@@ -25,7 +25,7 @@
 //#include "ShaderLang.h"
 #include "GlslangToBil.h"
 #include <math.h>
-#include <ImageMagick/wand/MagickWand.h>
+#include <wand/MagickWand.h>
 
 // Command-line options
 enum TOptions {
