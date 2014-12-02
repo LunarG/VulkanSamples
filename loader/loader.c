@@ -1181,23 +1181,71 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
 
 LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount, XGL_VOID* pReserved)
 {
-    XGL_SIZE count = loader.scanned_layer_count;
-    // TODO handle layers per GPU, multiple icds
+    XGL_UINT gpu_index;
+    XGL_UINT count = 0;
+    char *lib_name;
+    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+    void *handle;
+    EnumerateLayersType fpEnumerateLayers;
+    XGL_CHAR layer_buf[16][256];
+    XGL_CHAR * layers[16];
 
-    if (pOutLayerCount == NULL)
+    if (pOutLayerCount == NULL || pOutLayers == NULL)
         return XGL_ERROR_INVALID_POINTER;
 
-    if (maxLayerCount < loader.scanned_layer_count)
-        count = maxLayerCount;
+    for (int i = 0; i < 16; i++)
+         layers[i] = &layer_buf[i][0];
+
+    for (unsigned int j = 0; j < loader.scanned_layer_count && count < maxLayerCount; j++) {
+        lib_name = loader.scanned_layer_names[j];
+        if ((handle = dlopen(lib_name, RTLD_LAZY)) == NULL)
+            continue;
+        if ((fpEnumerateLayers = dlsym(handle, "xglEnumerateLayers")) == NULL) {
+            //use default layer name based on library name libXGLLayer<name>.so
+            char *pEnd, *cpyStr;
+            int siz;
+            dlclose(handle);
+            lib_name = basename(lib_name);
+            pEnd = strrchr(lib_name, '.');
+            siz = pEnd - lib_name - strlen("libXGLLayer") + 1;
+            if (pEnd == NULL || siz <= 0)
+                continue;
+            cpyStr = malloc(siz);
+            if (cpyStr == NULL) {
+                free(cpyStr);
+                continue;
+            }
+            strncpy(cpyStr, lib_name + strlen("libXGLLayer"), siz);
+            cpyStr[siz - 1] = '\0';
+            if (siz > maxStringSize)
+                siz = maxStringSize;
+            strncpy((char *) (pOutLayers[count]), cpyStr, siz);
+            pOutLayers[count][siz - 1] = '\0';
+            count++;
+            free(cpyStr);
+        }
+        else {
+            XGL_SIZE cnt;
+            XGL_UINT n;
+            XGL_RESULT res;
+            n = (maxStringSize < 256) ? maxStringSize : 256;
+            res = fpEnumerateLayers(NULL, 16, n, layers, &cnt, (XGL_VOID *) icd->gpus + gpu_index);
+            dlclose(handle);
+            if (res != XGL_SUCCESS)
+                continue;
+            if (cnt + count > maxLayerCount)
+                cnt = maxLayerCount - count;
+            for (unsigned int i = count; i < cnt + count; i++) {
+                strncpy((char *) (pOutLayers[i]), (char *) layers[i - count], n);
+                if (n > 0)
+                    pOutLayers[i - count][n - 1] = '\0';
+            }
+            count += cnt;
+        }
+    }
+
     *pOutLayerCount = count;
 
-    if (pOutLayers == NULL)
-        return XGL_SUCCESS;
-    for (XGL_SIZE i = 0; i < count; i++) {
-        strncpy((char *) (pOutLayers[i]), loader.scanned_layer_names[i], maxStringSize);
-        if (maxStringSize > 0)
-            pOutLayers[i][maxStringSize - 1] = '\0';
-    }
     return XGL_SUCCESS;
 }
 
