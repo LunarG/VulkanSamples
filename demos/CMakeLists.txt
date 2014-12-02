@@ -34,6 +34,8 @@ include_directories (
 link_directories(${XCB_LIBRARY_DIRS})
 link_libraries(${XCB_LIBRARIES} XGL png m)
 
+add_executable(xglinfo xglinfo.c)
+
 add_executable(tri tri.c)
 target_link_libraries(tri)
 
