@@ -145,6 +145,23 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
          * Since the above "consume" inputs, update argv
          * so that it contains the trimmed list of args for glutInit
          */
+        if (strncmp("--help", argv[i], 6) == 0) {
+            printf("\nOther options:\n");
+            printf("\t--show-images\n"
+                   "\t\tDisplay test images in viewer after tests complete.\n");
+            printf("\t--save-images\n"
+                   "\t\tSave tests images as ppm files in current working directory.\n"
+                   "\t\tUsed to generate golden images for compare-images.\n");
+            printf("\t--compare-images\n"
+                   "\t\tCompare test images to 'golden' image in golden folder.\n"
+                   "\t\tAlso saves the generated test image in current working directory.\n"
+                   "\t\tSignal test failure if different.\n");
+            printf("\t--use-BIL\n"
+                   "\t\tUse BIL code path (default).\n");
+            printf("\t--no-BIL\n"
+                   "\t\tUse built-in GLSL compiler rather than BIL code path.\n");
+        }
+
         argv[n] = argv[i];
         n++;
     }
