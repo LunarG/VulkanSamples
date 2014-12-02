@@ -47,6 +47,7 @@ extern "C"
 {
 typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay, unsigned int debugLevel);
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_deinitialize)();
+typedef glv_trace_packet_header* (GLVTRACER_CDECL *funcptr_glvreplayer_interpret)(glv_trace_packet_header* pPacket);
 typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
 }
 
@@ -55,6 +56,7 @@ struct glv_trace_packet_replay_library
     void* pLibrary;
     funcptr_glvreplayer_initialize Initialize;
     funcptr_glvreplayer_deinitialize Deinitialize;
+    funcptr_glvreplayer_interpret Interpret;
     funcptr_glvreplayer_replay Replay;
 };
 

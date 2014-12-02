@@ -427,13 +427,43 @@ bool glvdebug::open_trace_file(const std::string &filename)
                 glv_LogError("Trace file version %su is older than minimum compatible version (%su).\nYou'll need to make a new trace file, or use an older replayer.\n", m_traceFileInfo.header.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
             }
 
-            // populate the UI based on trace file info
-            if (bOpened && !load_controllers(&m_traceFileInfo))
+            if (!load_controllers(&m_traceFileInfo))
             {
                 glvdebug_output_error("Failed to load necessary debug controllers.");
                 bOpened = false;
             }
+            else
+            {
+                // interpret the trace file packets
+                for (unsigned int i = 0; i < m_traceFileInfo.packetCount; i++)
+                {
+                    glvdebug_trace_file_packet_offsets* pOffsets = &m_traceFileInfo.pPacketOffsets[i];
+                    switch (pOffsets->pHeader->packet_id) {
+                        case GLV_TPI_MESSAGE:
+                            m_traceFileInfo.pPacketOffsets[i].pHeader = glv_interpret_body_as_trace_packet_message(pOffsets->pHeader)->pHeader;
+                            break;
+                        case GLV_TPI_MARKER_CHECKPOINT:
+                            break;
+                        case GLV_TPI_MARKER_API_BOUNDARY:
+                            break;
+                        case GLV_TPI_MARKER_API_GROUP_BEGIN:
+                            break;
+                        case GLV_TPI_MARKER_API_GROUP_END:
+                            break;
+                        case GLV_TPI_MARKER_TERMINATE_PROCESS:
+                            break;
+                        //TODO processing code for all the above cases
+                        default:
+                        {
+                            glv_trace_packet_header* pHeader = m_pController->InterpretTracePacket(m_traceFileInfo.pPacketOffsets[i].pHeader);
+                            assert(pHeader != NULL);
+                            m_traceFileInfo.pPacketOffsets[i].pHeader = pHeader;
+                        }
+                    }
+                }
+            }
 
+            // populate the UI based on trace file info
             if (bOpened)
             {
                 bOpened = m_pController->ProcessTraceFile(&m_traceFileInfo, this);

@@ -63,9 +63,11 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
         pReplayer->pLibrary = pLibrary;
         pReplayer->Initialize = (funcptr_glvreplayer_initialize)glv_platform_get_library_entrypoint(pLibrary, "Initialize");
         pReplayer->Deinitialize = (funcptr_glvreplayer_deinitialize)glv_platform_get_library_entrypoint(pLibrary, "Deinitialize");
+        pReplayer->Interpret = (funcptr_glvreplayer_interpret)glv_platform_get_library_entrypoint(pLibrary, "Interpret");
         pReplayer->Replay = (funcptr_glvreplayer_replay)glv_platform_get_library_entrypoint(pLibrary, "Replay");
         assert(pReplayer->Initialize != NULL);
         assert(pReplayer->Deinitialize != NULL);
+        assert(pReplayer->Interpret != NULL);
         assert(pReplayer->Replay != NULL);
     }
 

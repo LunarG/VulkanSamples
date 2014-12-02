@@ -25,6 +25,11 @@
 #include "glvreplay_xgl.h"
 #include "glvreplay_xgl_replay.h"
 
+extern "C"
+{
+#include "glvtrace_xgl_packet_id.h"
+}
+
 ApiReplay* g_pReplayer = NULL;
 
 extern "C"
@@ -52,6 +57,18 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
         delete g_pReplayer;
         g_pReplayer = NULL;
     }
+}
+
+GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL Interpret(glv_trace_packet_header* pPacket)
+{
+    // Attempt to interpret the packet as an XGL packet
+    glv_trace_packet_header* pInterpretedHeader = interpret_trace_packet_xgl(pPacket);
+    if (pInterpretedHeader == NULL)
+    {
+        glv_LogWarn("Unrecognized XGL packet_id: %u\n", pPacket->packet_id);
+    }
+
+    return pInterpretedHeader;
 }
 
 GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_packet_header* pPacket)

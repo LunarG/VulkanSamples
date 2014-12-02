@@ -96,7 +96,7 @@ int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[])
                 if (packet->packet_id >= GLV_TPI_BEGIN_API_HERE)
                 {
                     // replay the API packet
-                    res = replayer->Replay(packet);
+                    res = replayer->Replay(replayer->Interpret(packet));
                     if (res != GLV_REPLAY_SUCCESS)
                     {
                         glv_LogError("Failed to replay packet_id %d.\n",packet->packet_id);

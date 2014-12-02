@@ -44,6 +44,7 @@ include_directories(
     ${SRC_DIR}/glvcommon
     ${SRC_DIR}/glvdebug
     ${SRC_DIR}/glvreplay
+    ${SRC_DIR}/glv_extensions/glvtrace_xgl
     ${SRC_DIR}/thirdparty
     ${Qt5Widgets_INCLUDE_DIRS}
 )

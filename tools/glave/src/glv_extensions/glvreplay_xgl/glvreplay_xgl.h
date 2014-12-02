@@ -30,5 +30,6 @@ extern "C"
 {
 GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, unsigned int debugLevel);
 GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize();
+GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL Interpret(glv_trace_packet_header* pPacket);
 GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_packet_header* pPacket);
 }

@@ -21,6 +21,11 @@
  * THE SOFTWARE.
  *
  *************************************************************************/
+extern "C" {
+#include "glv_trace_packet_utils.h"
+#include "glvtrace_xgl_packet_id.h"
+}
+
 #include <assert.h>
 #include <QWidget>
 
@@ -28,14 +33,11 @@
 #include "glvdebug_view.h"
 #include "glvreplay_seq.h"
 
-extern "C" {
-#include "glv_trace_packet_utils.h"
-}
-
 static glvdebug_view* s_pView;
 
 extern "C"
 {
+
 GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView)
 {
     return false;
@@ -69,21 +71,21 @@ GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_play_trace_file(glvdeb
     glvdebug_trace_file_packet_offsets* pCurPacket;
     unsigned int res;
     glv_replay::glv_trace_packet_replay_library *replayer;
-    //glv_trace_packet_message* msgPacket;
+//    glv_trace_packet_message* msgPacket;
 
     for (unsigned int i = 0; i < pTraceFileInfo->packetCount; i++)
     {
         pCurPacket = &pTraceFileInfo->pPacketOffsets[i];
         switch (pCurPacket->pHeader->packet_id) {
             case GLV_TPI_MESSAGE:
-                //msgPacket = glv_interpret_body_as_trace_packet_message(pCurPacket->pHeader);
-                //if(msgPacket->type == TLLWarn) {
-                //    s_pView->output_warning(msgPacket->message);
-                //} else if(msgPacket->type == TLLError) {
-                //    s_pView->output_error(msgPacket->message);
-                //} else {
-                //    s_pView->output_message(msgPacket->message);
-                //}
+//                msgPacket = (glv_trace_packet_message*)pCurPacket->pHeader;
+//                if(msgPacket->type == TLLWarn) {
+//                    s_pView->output_warning(msgPacket->message);
+//                } else if(msgPacket->type == TLLError) {
+//                    s_pView->output_error(msgPacket->message);
+//                } else {
+//                    s_pView->output_message(msgPacket->message);
+//                }
                 break;
             case GLV_TPI_MARKER_CHECKPOINT:
                 break;
@@ -134,4 +136,17 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_unload_trace_file()
         s_pView->set_calltree_model(NULL);
     }
 }
+
+GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL glvdebug_controller_interpret_trace_packet(glv_trace_packet_header* pHeader)
+{
+    // Attempt to interpret the packet as an XGL packet
+    glv_trace_packet_header* pInterpretedHeader = interpret_trace_packet_xgl(pHeader);
+    if (pInterpretedHeader == NULL)
+    {
+        glv_LogWarn("Unrecognized XGL packet_id: %u\n", pHeader->packet_id);
+    }
+
+    return pInterpretedHeader;
+}
+
 }

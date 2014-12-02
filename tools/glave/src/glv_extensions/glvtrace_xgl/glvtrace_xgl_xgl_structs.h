@@ -2030,3 +2030,4 @@ static struct_xglCmdSaveAtomicCounters* interpret_body_as_xglCmdSaveAtomicCounte
     pPacket->header = pHeader;
     return pPacket;
 }
+
