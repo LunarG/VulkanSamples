@@ -604,9 +604,11 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
 
     // Create a descriptor set with requested number of slots
     err = xglCreateDescriptorSet( m_device->device(), &m_descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err);
 
     // Bind memory to the descriptor set
     err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+    ASSERT_XGL_SUCCESS(err);
 
     xglBeginDescriptorSetUpdate( m_rsrcDescSet );
     xglClearDescriptorSetSlots(m_rsrcDescSet, 0, m_nextSlot);
@@ -788,6 +790,7 @@ XglSamplerObj::XglSamplerObj(XglDevice *device)
     m_samplerCreateInfo.borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE;
 
     err = xglCreateSampler(m_device->device(),&m_samplerCreateInfo, &m_sampler);
+    assert(!err);
 
 }
 
@@ -824,12 +827,15 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
     err = xglAllocMemory(m_device->device(), &alloc_info, &m_constantBufferMem);
+    assert(!err);
 
     err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
+    assert(!err);
 
     memcpy(pData, data, alloc_info.allocationSize);
 
     err = xglUnmapMemory(m_constantBufferMem);
+    assert(!err);
 
     // set up the memory view for the constant buffer
     this->m_constantBufferView.stride = 16;
@@ -1060,6 +1066,7 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;
         err = xglCreateShader(m_device->device(), &createInfo, &m_shader);
+        assert(!err);
     }
 }
 
@@ -1160,8 +1167,10 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
     info.flags = 0;
 
     err = xglCreateGraphicsPipeline(m_device->device(), &info, &m_pipeline);
+    assert(!err);
 
     err = m_device->AllocAndBindGpuMemory(m_pipeline, "Pipeline", &m_pipe_mem);
+    assert(!err);
 
     xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline );
 
