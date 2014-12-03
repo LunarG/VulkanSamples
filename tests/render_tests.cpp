@@ -1254,6 +1254,82 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
 
 }
 
+TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
+{
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 pos;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "layout (location = 1) out vec4 outColor2;\n"
+            "void main() {\n"
+            "   gl_Position = pos;\n"
+            "   outColor = vec4(0.9, 0.9, 0.9, 1.0);\n"
+            "   outColor2 = vec4(0.2, 0.2, 0.4, 1.0);\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            //"#version 140\n"
+            "#version 330\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            //"#extension GL_ARB_fragment_coord_conventions : enable\n"
+            //"layout (pixel_center_integer) in vec4 gl_FragCoord;\n"
+            "layout (location = 0) in vec4 color;\n"
+            "layout (location = 1) in vec4 color2;\n"
+            "void main() {\n"
+            "    vec2 pos = mod(gl_FragCoord.xy, vec2(50.0)) - vec2(25.0);\n"
+            "    float dist_squared = dot(pos, pos);\n"
+            "    if (dist_squared < 100.0)\n"
+            "        discard;\n"
+            "    gl_FragColor = (dist_squared < 400.0)\n"
+            "        ? color\n"
+            "        : color2;\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&meshBuffer);
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+    };
+
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+
+    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputBindings(&vi_binding,1);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+
+    GenericDrawTriangleTest(pipelineobj, descriptorSet, 2);
+    QueueCommandBuffer(NULL, 0);
+
+}
+
+
 TEST_F(XglRenderTest, TriangleVSUniform)
 {
     static const char *vertShaderText =
