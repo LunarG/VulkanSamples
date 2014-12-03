@@ -34,7 +34,6 @@
 #include <xglDbg.h>
 #include <xglLayer.h>
 
-#include "icd-dispatch-table.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define ICD_EXPORT __attribute__((visibility("default")))

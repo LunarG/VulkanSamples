@@ -29,8 +29,9 @@
 #define DISPATCH_H
 
 #include "intel.h"
+#include "xglLayer.h"
 
-const struct icd_dispatch_table *intel_dispatch_get(bool debug);
-void intelSetDispatch(struct icd_dispatch_table * dispatch, bool debug);
+const XGL_LAYER_DISPATCH_TABLE *intel_dispatch_get(bool debug);
+void intelSetDispatch(XGL_LAYER_DISPATCH_TABLE * dispatch, bool debug);
 XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
 #endif /* DISPATCH_H */

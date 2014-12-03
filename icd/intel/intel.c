@@ -76,7 +76,7 @@ static void intel_debug_init(void)
 
 ICD_EXPORT XGL_VOID xglSetDispatch(XGL_LAYER_DISPATCH_TABLE *dispatch, XGL_BOOL debug)
 {
-    struct icd_dispatch_table * disp = (struct icd_dispatch_table *) dispatch;
+    XGL_LAYER_DISPATCH_TABLE * disp = (XGL_LAYER_DISPATCH_TABLE *) dispatch;
     intelSetDispatch(disp, debug);
 }
 

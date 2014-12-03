@@ -104,7 +104,7 @@ class Subcommand(object):
             proto = proto_map[name]
             entries.append(proto.c_typedef(attr="XGLAPI"))
 
-        return """struct icd_dispatch_table {
+        return """XGL_LAYER_DISPATCH_TABLE {
     %s;
 };""" % ";\n    ".join(entries)
 
@@ -282,11 +282,11 @@ class IcdDispatchDummyImplSubcommand(Subcommand):
             initializer.append(".%s = %s%s" %
                     (proto.name, prefix, proto.name))
 
-        return """const struct icd_dispatch_table %s_normal_dispatch_table = {
+        return """const XGL_LAYER_DISPATCH_TABLE %s_normal_dispatch_table = {
     %s,
 };
 
-const struct icd_dispatch_table %s_debug_dispatch_table = {
+const XGL_LAYER_DISPATCH_TABLE %s_debug_dispatch_table = {
     %s,
 };""" % (self.prefix, ",\n    ".join(initializer),
          self.prefix, ",\n    ".join(initializer))

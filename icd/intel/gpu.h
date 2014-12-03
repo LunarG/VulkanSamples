@@ -55,7 +55,7 @@ struct intel_wsi_x11;
  * intel_gpu is the only object that does not inherit from intel_base.
  */
 struct intel_gpu {
-    const struct icd_dispatch_table *dispatch;
+    const XGL_LAYER_DISPATCH_TABLE *dispatch;
 
     struct intel_gpu *next;
 

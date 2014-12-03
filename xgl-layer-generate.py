@@ -124,20 +124,6 @@ class Subcommand(object):
             return ("%p", "(void*)*%s" % name)
         return ("%p", "(void*)%s" % name)
 
-    def _generate_icd_dispatch_table(self):
-        proto_map = {}
-        for proto in self.protos:
-            proto_map[proto.name] = proto
-
-        entries = []
-        for name in xgl.icd_dispatch_table:
-            proto = proto_map[name]
-            entries.append(proto.c_typedef(attr="XGLAPI"))
-
-        return """struct icd_dispatch_table {
-    %s;
-};""" % ";\n    ".join(entries)
-
     def _generate_dispatch_entrypoints(self, qual="", layer="Generic", no_addr=False):
         if qual:
             qual += " "

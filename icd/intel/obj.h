@@ -51,7 +51,7 @@ struct intel_base_dbg {
 };
 
 struct intel_base {
-    const struct icd_dispatch_table *dispatch;
+    const XGL_LAYER_DISPATCH_TABLE *dispatch;
 
     struct intel_base_dbg *dbg;
 

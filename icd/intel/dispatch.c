@@ -46,7 +46,7 @@
 #include "wsi_x11.h"
 #include "dispatch.h"
 
-static const struct icd_dispatch_table intel_normal_dispatch_table = {
+static const XGL_LAYER_DISPATCH_TABLE intel_normal_dispatch_table = {
     .GetProcAddr = intelGetProcAddr,
     .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
     .GetGpuInfo = intelGetGpuInfo,
@@ -166,7 +166,7 @@ static const struct icd_dispatch_table intel_normal_dispatch_table = {
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,
 };
 
-static const struct icd_dispatch_table intel_debug_dispatch_table = {
+static const XGL_LAYER_DISPATCH_TABLE intel_debug_dispatch_table = {
     .GetProcAddr = intelGetProcAddr,
     .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
     .GetGpuInfo = intelGetGpuInfo,
@@ -290,28 +290,28 @@ static const struct icd_dispatch_table intel_debug_dispatch_table = {
     .WsiX11QueuePresent = intelWsiX11QueuePresent,
 };
 
-static struct icd_dispatch_table *debug_dispatch = (struct icd_dispatch_table *) &intel_debug_dispatch_table;
-static struct icd_dispatch_table *normal_dispatch = (struct icd_dispatch_table *) &intel_normal_dispatch_table;
+static XGL_LAYER_DISPATCH_TABLE *debug_dispatch = (XGL_LAYER_DISPATCH_TABLE *) &intel_debug_dispatch_table;
+static XGL_LAYER_DISPATCH_TABLE *normal_dispatch = (XGL_LAYER_DISPATCH_TABLE *) &intel_normal_dispatch_table;
 
-const struct icd_dispatch_table *intel_dispatch_get(bool debug)
+const XGL_LAYER_DISPATCH_TABLE *intel_dispatch_get(bool debug)
 {
 
     return (debug) ? debug_dispatch : normal_dispatch;
 }
 
-void intelSetDispatch(struct icd_dispatch_table * dispatch, bool debug)
+void intelSetDispatch(XGL_LAYER_DISPATCH_TABLE * dispatch, bool debug)
 {
     if (debug)
-        debug_dispatch = (dispatch == NULL) ? (struct icd_dispatch_table *) &intel_debug_dispatch_table : dispatch;
+        debug_dispatch = (dispatch == NULL) ? (XGL_LAYER_DISPATCH_TABLE *) &intel_debug_dispatch_table : dispatch;
     else
-        normal_dispatch = (dispatch == NULL) ? (struct icd_dispatch_table *) &intel_normal_dispatch_table : dispatch;
+        normal_dispatch = (dispatch == NULL) ? (XGL_LAYER_DISPATCH_TABLE *) &intel_normal_dispatch_table : dispatch;
 }
 
 //TODO  since loader now has a dispatch table and it is used at first initAndEnumerate
 // probably can remove the normal and debug icd dispatch table  and have GPA use hardcoded function names
 XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
 {
-    const struct icd_dispatch_table *disp_table = * (const struct icd_dispatch_table * const *) gpu;
+    const XGL_LAYER_DISPATCH_TABLE *disp_table = * (const XGL_LAYER_DISPATCH_TABLE * const *) gpu;
 
    if (!strncmp("xglGetProcAddr", (const char *) pName, sizeof("xglGetProcAddr")))
         return disp_table->GetProcAddr;
