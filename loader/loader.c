@@ -412,7 +412,11 @@ static void layer_lib_scan(const char * libInPaths)
         return;
     }
     loader.layer_dirs = malloc(len+1);
-    strncpy(loader.layer_dirs, p, len);
+    if (loader.layer_dirs == NULL)
+        return;
+
+    // Alloc passed, so we know there is enough space to hold the string, don't need strncpy
+    strcpy(loader.layer_dirs, p);
     libPaths = loader.layer_dirs;
 
     /* cleanup any previously scanned libraries */
