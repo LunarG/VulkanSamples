@@ -153,6 +153,7 @@ class XglTextureObj
 {
 public:
     XglTextureObj(XglDevice *device);
+    ~XglTextureObj();
     void ChangeColors(uint32_t color1, uint32_t color2);
     XGL_IMAGE                  m_texture;
     XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
@@ -171,6 +172,7 @@ class XglSamplerObj
 {
 public:
     XglSamplerObj(XglDevice *device);
+    ~XglSamplerObj();
     XGL_SAMPLER m_sampler;
 
 protected:
@@ -210,6 +212,7 @@ class XglShaderObj
 {
 public:
     XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework);
+    ~XglShaderObj();
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo(XglDescriptorSetObj *descriptorSet);
     void BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer);
     void BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture);
@@ -236,6 +239,7 @@ class XglPipelineObj
 {
 public:
     XglPipelineObj(XglDevice *device);
+    ~XglPipelineObj();
     void BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet);
     void AddShader(XglShaderObj* shaderObj);
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);

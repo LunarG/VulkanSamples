@@ -753,6 +753,10 @@ XglTextureObj::XglTextureObj(XglDevice *device):
     m_textureViewInfo.view = m_textureView;
 
 }
+XglTextureObj::~XglTextureObj()
+{
+       if (m_texture != XGL_NULL_HANDLE) xglDestroyObject(m_texture);
+}
 
 void XglTextureObj::ChangeColors(uint32_t color1, uint32_t color2)
 {
@@ -796,6 +800,10 @@ XglSamplerObj::XglSamplerObj(XglDevice *device)
     err = xglCreateSampler(m_device->device(),&m_samplerCreateInfo, &m_sampler);
     assert(!err);
 
+}
+XglSamplerObj::~XglSamplerObj()
+{
+    if (m_sampler != XGL_NULL_HANDLE) xglDestroyObject(m_sampler);
 }
 
 /*
@@ -1073,7 +1081,10 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         assert(!err);
     }
 }
-
+XglShaderObj::~XglShaderObj()
+{
+    if (m_shader != XGL_NULL_HANDLE) xglDestroyObject(m_shader);
+}
 XglPipelineObj::XglPipelineObj(XglDevice *device)
 {
     XGL_RESULT err;
@@ -1184,7 +1195,10 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
         m_vertexBufferObjs[i]->Bind(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.offset,  m_vertexBufferBindings[i]);
     }
 }
-
+XglPipelineObj::~XglPipelineObj()
+{
+       if (m_pipeline != XGL_NULL_HANDLE) xglDestroyObject(m_pipeline);
+}
 
 XglMemoryRefManager::XglMemoryRefManager() {
 
