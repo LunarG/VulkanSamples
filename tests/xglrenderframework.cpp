@@ -629,6 +629,10 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
     xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 }
+XglDescriptorSetObj::~XglDescriptorSetObj()
+{
+    if (m_rsrcDescSet != XGL_NULL_HANDLE) xglDestroyObject(m_rsrcDescSet);
+}
 
 XglTextureObj::XglTextureObj(XglDevice *device):
     m_texture(XGL_NULL_HANDLE),

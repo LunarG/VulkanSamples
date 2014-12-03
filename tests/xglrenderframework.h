@@ -183,6 +183,7 @@ class XglDescriptorSetObj
 {
 public:
     XglDescriptorSetObj(XglDevice *device);
+    ~XglDescriptorSetObj();
     void AttachMemoryView(XglConstantBufferObj* constantBuffer);
     void AttachSampler( XglSamplerObj* sampler);
     void AttachImageView( XglTextureObj* texture);
