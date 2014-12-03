@@ -858,6 +858,10 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
     this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
 }
+XglConstantBufferObj::~XglConstantBufferObj()
+{
+    if (m_constantBufferMem != XGL_NULL_HANDLE) xglFreeMemory(m_constantBufferMem);
+}
 
 void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding)
 {
