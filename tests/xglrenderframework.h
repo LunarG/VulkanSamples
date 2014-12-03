@@ -53,7 +53,6 @@ public:
     void InitFramework();
     void ShutdownFramework();
     void InitState();
-    void CreateDefaultPipeline(XGL_PIPELINE* pipeline, XGL_SHADER vs, XGL_SHADER ps);
     void GenerateClearAndPrepareBufferCmds();
     void GenerateBindRenderTargetCmd();
     void GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline);
