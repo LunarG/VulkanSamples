@@ -1062,32 +1062,6 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         err = xglCreateShader(m_device->device(), &createInfo, &m_shader);
     }
 }
-#if 0
-void XglShaderObj::CreateShaderBIL(XGL_PIPELINE_SHADER_STAGE stage,
-                                                  const char *shader_code,
-                                                  XGL_SHADER *pshader)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-    std::vector<unsigned int> bil;
-    XGL_SHADER_CREATE_INFO createInfo;
-    size_t shader_len;
-    XGL_SHADER shader;
-
-    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
-
-    // Use Reference GLSL to BIL compiler
-    GLSLtoBIL(stage, shader_code, bil);
-    createInfo.pCode = bil.data();
-    createInfo.codeSize = bil.size() * sizeof(unsigned int);
-    createInfo.flags = 0;
-    err = xglCreateShader(device(), &createInfo, &shader);
-
-    ASSERT_XGL_SUCCESS(err);
-
-    *pshader = shader;
-}
-#endif
 
 XglPipelineObj::XglPipelineObj(XglDevice *device)
 {
