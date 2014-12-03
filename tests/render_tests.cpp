@@ -218,7 +218,7 @@ public:
     void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  XglConstantBufferObj constantBuffer);
-    void GenericDrawTriangleTest(XglPipelineObj pipelineobj, XglDescriptorSetObj descriptorSet, int numTris);
+    void GenericDrawTriangleTest(XglPipelineObj pipelineobj, XglDescriptorSetObj *descriptorSet, int numTris);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
 
     void ClearDepthStencil(XGL_FLOAT value);
@@ -266,7 +266,7 @@ protected:
 };
 
 
-void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj pipelineobj, XglDescriptorSetObj descriptorSet,int numTris)
+void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj pipelineobj, XglDescriptorSetObj *descriptorSet,int numTris)
 {
     XGL_RESULT err = XGL_SUCCESS;
 
@@ -284,7 +284,7 @@ void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj pipelineobj, XglDescr
     GenerateBindStateAndPipelineCmds();
 
     pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,descriptorSet);
-    descriptorSet.BindCommandBuffer(m_cmdBuffer);
+    descriptorSet->BindCommandBuffer(m_cmdBuffer);
 
     // render the triangle
     xglCmdDraw( m_cmdBuffer, 0, 3*numTris, 0, 1 );
@@ -344,7 +344,7 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triUniFS.dot");
 #endif
-    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,descriptorSet);
+    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,&descriptorSet);
     descriptorSet.BindCommandBuffer(m_cmdBuffer);
 
     // render the triangle
@@ -677,7 +677,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     descriptorSet.AttachMemoryView(&constantBuffer);
     m_memoryRefManager.AddMemoryRef(&constantBuffer);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
     RotateTriangleVSUniform(Projection, View, Model, constantBuffer);
@@ -953,7 +953,7 @@ TEST_F(XglRenderTest, TriangleTwoFSUniforms)
     XglDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AttachMemoryView(&constantBuffer);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -1017,7 +1017,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 2);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 2);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -1362,7 +1362,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 2);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 2);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -1493,7 +1493,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
 
     m_memoryRefManager.AddMemoryRef(&MVPBuffer);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
     RotateTriangleVSUniform(Projection, View, Model, MVPBuffer);
@@ -1549,7 +1549,7 @@ TEST_F(XglRenderTest, MixTriangle)
 
     XglDescriptorSetObj descriptorSet(m_device);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 }
 
@@ -1618,7 +1618,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 2);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 2);
     QueueCommandBuffer(NULL, 0);
 }
 
@@ -1775,7 +1775,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ClearDepthStencil(1.0f);
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 12);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 12);
 
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
@@ -1831,7 +1831,7 @@ TEST_F(XglRenderTest, VSTexture)
 
     m_memoryRefManager.AddMemoryRef(&texture);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -1889,7 +1889,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
 
     m_memoryRefManager.AddMemoryRef(&texture);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 }
 TEST_F(XglRenderTest, TexturedTriangleClip)
@@ -1957,7 +1957,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
 
     m_memoryRefManager.AddMemoryRef(&texture);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 }
 TEST_F(XglRenderTest, FSTriangle)
@@ -2014,7 +2014,7 @@ TEST_F(XglRenderTest, FSTriangle)
 
     m_memoryRefManager.AddMemoryRef(&texture);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 }
 TEST_F(XglRenderTest, SamplerBindingsTriangle)
@@ -2098,7 +2098,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     m_memoryRefManager.AddMemoryRef(&texture2);
     m_memoryRefManager.AddMemoryRef(&texture3);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -2163,7 +2163,7 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     XglDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AttachMemoryView(&colorBuffer);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -2250,7 +2250,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     descriptorSet.AttachMemoryView(&blueBuffer);
     descriptorSet.AttachMemoryView(&whiteBuffer);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -2334,7 +2334,7 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     descriptorSet.AttachMemoryView(&blueBuffer);
     descriptorSet.AttachMemoryView(&whiteBuffer);
 
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 1);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 1);
     QueueCommandBuffer(NULL, 0);
 
 }
@@ -2439,7 +2439,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ClearDepthStencil(1.0f);
-    GenericDrawTriangleTest(pipelineobj, descriptorSet, 12);
+    GenericDrawTriangleTest(pipelineobj, &descriptorSet, 12);
 
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 

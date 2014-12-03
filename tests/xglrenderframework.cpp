@@ -954,7 +954,7 @@ void XglIndexBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset)
     xglCmdBindIndexData(cmdBuffer, this->m_constantBufferMem, offset, m_indexType);
 }
 
-XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescriptorSetObj descriptorSet)
+XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescriptorSetObj *descriptorSet)
 {
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *stageInfo = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) calloc( 1,sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO) );
@@ -997,7 +997,7 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
             allObjs.insert(allObjs.end(), m_samplerObjs.begin(), m_samplerObjs.end());
         }
 
-         slotInfo = descriptorSet.GetSlotInfo(allSlots, allTypes, allObjs);
+         slotInfo = descriptorSet->GetSlotInfo(allSlots, allTypes, allObjs);
          stageInfo->shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
     }
     return stageInfo;
@@ -1139,7 +1139,7 @@ void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer,
     m_vertexBufferCount++;
 }
 
-void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj descriptorSet)
+void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet)
 {
     XGL_RESULT err;
     XGL_VOID* head_ptr = &m_db_state;
