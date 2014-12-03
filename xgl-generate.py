@@ -118,19 +118,44 @@ class Subcommand(object):
                 continue
             decl = proto.c_func(prefix="xgl", attr="XGLAPI")
             stmt = "(*disp)->%s" % proto.c_call()
-            if proto.ret != "XGL_VOID":
-                stmt = "return " + stmt
             if proto.name == "CreateDevice" and qual == "LOADER_EXPORT ":
                 funcs.append("%s%s\n"
                          "{\n"
                          "    loader_activate_layers(%s, %s);\n"
                          "    XGL_BASE_LAYER_OBJECT* wrapped_obj = (XGL_BASE_LAYER_OBJECT*)%s;\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
-                         "            (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj->baseObject;\n"
+                         "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"
+                         "            (const XGL_LAYER_DISPATCH_TABLE **) wrapped_obj->baseObject;\n"
                          "    %s = wrapped_obj->nextObject;\n"
-                         "    %s;\n"
-                         "}" % (qual, decl, proto.params[0].name, proto.params[1].name, proto.params[0].name, proto.params[0].name, stmt))
+                         "    XGL_RESULT res = %s;\n"
+                         "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
+                         "    return res;\n"
+                         "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
+                                proto.params[0].name, proto.params[0].name, stmt,
+                                proto.params[-1].name))
+            elif xgl.does_function_create_object(proto.name) and qual == "LOADER_EXPORT ":
+                funcs.append("%s%s\n"
+                         "{\n"
+                         "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"
+                         "        (const XGL_LAYER_DISPATCH_TABLE **) %s;\n"
+                         "    XGL_RESULT res = %s;\n"
+                         "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
+                         "    return res;\n"
+                         "}" % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name))
+            elif proto.name == "GetMultiGpuCompatibility" and qual == "LOADER_EXPORT ":
+                funcs.append("%s%s\n"
+                         "{\n"
+                         "    XGL_BASE_LAYER_OBJECT* wrapped_obj0 = (XGL_BASE_LAYER_OBJECT*)%s;\n"
+                         "    XGL_BASE_LAYER_OBJECT* wrapped_obj1 = (XGL_BASE_LAYER_OBJECT*)%s;\n"
+                         "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
+                         "        (const XGL_LAYER_DISPATCH_TABLE * const *) wrapped_obj0->baseObject;\n"
+                         "    %s = wrapped_obj0->nextObject;\n"
+                         "    %s = wrapped_obj1->nextObject;\n"
+                         "    return %s;\n"
+                         "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
+                                proto.params[0].name, proto.params[1].name, stmt))
             elif proto.params[0].ty != "XGL_PHYSICAL_GPU" or qual != "LOADER_EXPORT ":
+                if proto.ret != "XGL_VOID":
+                    stmt = "return " + stmt
                 funcs.append("%s%s\n"
                          "{\n"
                          "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
@@ -138,6 +163,8 @@ class Subcommand(object):
                          "    %s;\n"
                          "}" % (qual, decl, proto.params[0].name, stmt))
             else:
+                if proto.ret != "XGL_VOID":
+                    stmt = "return " + stmt
                 funcs.append("%s%s\n"
                          "{\n"
                          "    XGL_BASE_LAYER_OBJECT* wrapped_obj = (XGL_BASE_LAYER_OBJECT*)%s;\n"

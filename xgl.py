@@ -869,6 +869,39 @@ icd_dispatch_table = (
     "WsiX11QueuePresent",
 )
 
+def does_function_create_object(name):
+    return name in (
+        "CreateDevice",
+        "GetDeviceQueue",
+        "AllocMemory",
+        "PinSystemMemory",
+        "OpenSharedMemory",
+        "OpenSharedQueueSemaphore",
+        "OpenPeerMemory",
+        "OpenPeerImage",
+        "CreateFence",
+        "CreateQueueSemaphore",
+        "CreateEvent",
+        "CreateQueryPool",
+        "CreateImage",
+        "CreateImageView",
+        "CreateColorAttachmentView",
+        "CreateDepthStencilView",
+        "CreateShader",
+        "CreateGraphicsPipeline",
+        "CreateComputePipeline",
+        "LoadPipeline",
+        "CreatePipelineDelta",
+        "CreateSampler",
+        "CreateDescriptorSet",
+        "CreateViewportState",
+        "CreateRasterState",
+        "CreateMsaaState",
+        "CreateColorBlendState",
+        "CreateDepthStencilState",
+        "CreateCommandBuffer",
+        "WsiX11CreatePresentableImage")
+
 def is_name_dispatchable(name):
     return name not in (
         "GetProcAddr",

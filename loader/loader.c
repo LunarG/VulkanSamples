@@ -41,8 +41,6 @@
 #include <assert.h>
 #include "loader.h"
 
-typedef XGL_VOID (* SetDispatchType)(XGL_LAYER_DISPATCH_TABLE * disp, XGL_BOOL debug);
-
 struct loader_layers {
     void *lib_handle;
     char name[256];
@@ -65,7 +63,6 @@ struct loader_icd {
 
     GetProcAddrType GetProcAddr;
     InitAndEnumerateGpusType InitAndEnumerateGpus;
-    SetDispatchType SetDispatch;
 
     struct loader_icd *next;
 };
@@ -226,7 +223,6 @@ loader_icd_create(const char *filename)
 } while (0)
     LOOKUP(icd, GetProcAddr);
     LOOKUP(icd, InitAndEnumerateGpus);
-    LOOKUP(icd, SetDispatch);
 #undef LOOKUP
 
     return icd;
@@ -792,7 +788,6 @@ static void loader_deactivate_layer()
         if (icd->loader_dispatch)
             free(icd->loader_dispatch);
         icd->loader_dispatch = NULL;
-        icd->SetDispatch(NULL, true);
         for (XGL_UINT j = 0; j < icd->gpu_count; j++) {
             if (icd->layer_count[j] > 0) {
                 for (XGL_UINT i = 0; i < icd->layer_count[j]; i++) {
@@ -1178,7 +1173,6 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
                 loader_init_dispatch_table(icd->loader_dispatch + i, getProcAddr, gpus[i]);
                 const XGL_LAYER_DISPATCH_TABLE * *disp = (const XGL_LAYER_DISPATCH_TABLE *  *) gpus[i];
                 *disp = icd->loader_dispatch + i;
-                icd->SetDispatch(icd->loader_dispatch + i, true);
             }
 
             count += n;
