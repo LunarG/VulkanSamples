@@ -299,16 +299,6 @@ const XGL_LAYER_DISPATCH_TABLE *intel_dispatch_get(bool debug)
     return (debug) ? debug_dispatch : normal_dispatch;
 }
 
-void intelSetDispatch(XGL_LAYER_DISPATCH_TABLE * dispatch, bool debug)
-{
-    if (debug)
-        debug_dispatch = (dispatch == NULL) ? (XGL_LAYER_DISPATCH_TABLE *) &intel_debug_dispatch_table : dispatch;
-    else
-        normal_dispatch = (dispatch == NULL) ? (XGL_LAYER_DISPATCH_TABLE *) &intel_normal_dispatch_table : dispatch;
-}
-
-//TODO  since loader now has a dispatch table and it is used at first initAndEnumerate
-// probably can remove the normal and debug icd dispatch table  and have GPA use hardcoded function names
 XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
 {
     const XGL_LAYER_DISPATCH_TABLE *disp_table = * (const XGL_LAYER_DISPATCH_TABLE * const *) gpu;
