@@ -1022,6 +1022,119 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
 }
 
+TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
+{
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout(location = 0) in vec4 pos;\n"
+            "layout(location = 1) in vec4 inColor;\n"
+            "layout(location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   gl_Position = pos;\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout(location = 0) in vec4 color;\n"
+            "void main() {\n"
+            "   gl_FragColor = color;\n"
+            "}\n";
+
+    const Vertex g_vbData[] =
+    {
+        // first tri
+        { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },  // LL: black
+        { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },   // LR: red
+        { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },  // UL: green
+
+        // second tri
+        { XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },  // UL: green
+        { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },   // LR: red
+        { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },   // UR: yellow
+    };
+
+    const uint16_t g_idxData[6] = {
+        0, 1, 2,
+        3, 4, 5,
+    };
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    meshBuffer.SetMemoryState(m_cmdBuffer, XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+
+    XglIndexBufferObj indexBuffer(m_device);
+    indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), XGL_INDEX_16, g_idxData);
+    indexBuffer.SetMemoryState(m_cmdBuffer, XGL_MEMORY_STATE_INDEX_DATA);
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+    };
+
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
+    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+
+    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputBindings(&vi_binding,1);
+
+    XGL_RESULT err = XGL_SUCCESS;
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    // Build command buffer
+    // TODO: SetMemoryState above also uses this command buffer, do we need to make sure
+    // that job is complete? Or maybe we shouldn't queue those actions?
+    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    GenerateClearAndPrepareBufferCmds();
+    GenerateBindRenderTargetCmd();
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest.dot");
+#endif
+    GenerateBindStateAndPipelineCmds();
+
+    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,descriptorSet);
+    descriptorSet.BindCommandBuffer(m_cmdBuffer);
+
+    meshBuffer.Bind(m_cmdBuffer, 0, 0);
+    indexBuffer.Bind(m_cmdBuffer, /* offset */ 0);
+
+    // render two triangles
+    xglCmdDrawIndexed(m_cmdBuffer, 0, 6, 0, 0, 1);
+
+    // finalize recording of the command buffer
+    err = xglEndCommandBuffer( m_cmdBuffer );
+    ASSERT_XGL_SUCCESS( err );
+
+    QueueCommandBuffer(NULL, 0);
+
+}
+
 TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
 {
     // This tests gl_FragCoord
