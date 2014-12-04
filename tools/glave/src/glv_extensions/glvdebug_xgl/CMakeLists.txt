@@ -33,11 +33,18 @@ endif()
 set(SRC_LIST
     ${SRC_LIST}
     glvdebug_xgl.cpp
+    ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
 )
+
+# This should only contain headers that define a QOBJECT
+# Typically that means just headers for UI objects
+set(UI_HEADER_LIST
+    ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
+   )
 
 set(HDR_LIST
     ${SRC_DIR}/glvdebug/glvdebug_controller.h
-    ${SRC_DIR}/glvdebug/glvdebug_QTraceFileModel.h
+    ${SRC_DIR}/glvreplay/glvreplay_factory.h
 )
 
 include_directories(
@@ -49,9 +56,15 @@ include_directories(
     ${Qt5Widgets_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
+QT5_WRAP_CPP(QT_GEN_HEADER_MOC_LIST ${UI_HEADER_LIST})
+
+add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST}
+    ${QT_GEN_HEADER_MOC_LIST}
+)
 
 target_link_libraries(${PROJECT_NAME} 
+    Qt5::Widgets
+    Qt5::Core
     ${OS_REPLAYER_LIBS}
     glvcommon
 )

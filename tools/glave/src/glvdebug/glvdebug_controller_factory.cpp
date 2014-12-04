@@ -17,8 +17,11 @@ glvdebug_controller* glvdebug_controller_factory::Load(const char* filename)
     void* pLibrary = glv_platform_open_library(controllerPath);
     if (pLibrary == NULL)
     {
+        glvdebug_output_error(QString("Failed to load controller '%1'").arg(controllerPath).toStdString().c_str());
+#if defined(PLATFORM_LINUX)
         char* error = dlerror();
-        glv_LogError("Failed to load controller '%s: %s'\n", controllerPath, error);
+        glvdebug_output_error(error);
+#endif
         glv_free(controllerPath);
         return NULL;
     }

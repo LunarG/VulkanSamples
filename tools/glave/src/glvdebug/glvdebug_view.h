@@ -44,9 +44,6 @@ public:
     // \return tab index of state viewer
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false) = 0;
 
-    virtual void set_replay_widget_available(bool available) = 0;
-    virtual void set_replay_widget_enabled(bool enabled) = 0;
-
     //virtual void set_statetree_model(glvdebug_QStateTreeModel* pModel) = 0;
 
 };

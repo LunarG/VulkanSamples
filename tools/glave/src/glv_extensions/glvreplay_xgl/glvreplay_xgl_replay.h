@@ -728,6 +728,7 @@ public:
     xglDisplay * get_display() {return m_display;}
     glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);
     glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);
+
 private:
     struct xglFuncs m_xglFuncs;
     void copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange);

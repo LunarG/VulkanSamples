@@ -41,8 +41,6 @@ extern "C" {
 #include "glvdebug_qtimelineview.h"
 #include "glvdebug_controller.h"
 #include "glvdebug_QTraceFileModel.h"
-#include "glvdebug_QReplayWidget.h"
-
 
 namespace Ui
 {
@@ -81,8 +79,6 @@ public:
     virtual void output_warning(QString message, bool bRefresh = true);
     virtual void output_error(QString message, bool bRefresh = true);
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false);
-    virtual void set_replay_widget_available(bool available);
-    virtual void set_replay_widget_enabled(bool enabled);
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel);
     virtual void enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo);
 
@@ -140,13 +136,9 @@ private:
     glvdebug_trace_file_info m_traceFileInfo;
     glvdebug_QTraceFileModel* m_pTraceFileModel;
 
-    glv_replay::ReplayFactory m_replayerFactory;
-    glv_replay::glv_trace_packet_replay_library* m_pReplayers[GLV_MAX_TRACER_ID_ARRAY_SIZE];
-
     glvdebug_controller* m_pController;
 
     QProcess *m_pReplayProcess;
-    glvdebug_QReplayWidget* m_pReplayWidget;
     QToolButton *m_pGenerateTraceButton;
     QToolButton *m_pPlayButton;
 
