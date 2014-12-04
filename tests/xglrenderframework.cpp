@@ -227,6 +227,7 @@ void XglRenderFramework::GenerateClearAndPrepareBufferCmds()
     xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
     m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
 }
+
 XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
 {
     m_device = device;
@@ -241,6 +242,7 @@ void XglDescriptorSetObj::AttachMemoryView(XglConstantBufferObj *constantBuffer)
     m_nextSlot++;
 
 }
+
 void XglDescriptorSetObj::AttachSampler(XglSamplerObj *sampler)
 {
     m_samplers.push_back(&sampler->m_sampler);
@@ -248,6 +250,7 @@ void XglDescriptorSetObj::AttachSampler(XglSamplerObj *sampler)
     m_nextSlot++;
 
 }
+
 void XglDescriptorSetObj::AttachImageView(XglTextureObj *texture)
 {
     m_imageViews.push_back(&texture->m_textureViewInfo);
@@ -255,6 +258,7 @@ void XglDescriptorSetObj::AttachImageView(XglTextureObj *texture)
     m_nextSlot++;
 
 }
+
 XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
                                                            vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types,
                                                            vector<XGL_OBJECT>objs )
@@ -342,6 +346,7 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
     xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
 }
+
 XglDescriptorSetObj::~XglDescriptorSetObj()
 {
     if (m_rsrcDescSet != XGL_NULL_HANDLE) xglDestroyObject(m_rsrcDescSet);
@@ -466,6 +471,7 @@ XglTextureObj::XglTextureObj(XglDevice *device):
     m_textureViewInfo.view = m_textureView;
 
 }
+
 XglTextureObj::~XglTextureObj()
 {
        if (m_texture != XGL_NULL_HANDLE) xglDestroyObject(m_texture);
@@ -514,6 +520,7 @@ XglSamplerObj::XglSamplerObj(XglDevice *device)
     assert(!err);
 
 }
+
 XglSamplerObj::~XglSamplerObj()
 {
     if (m_sampler != XGL_NULL_HANDLE) xglDestroyObject(m_sampler);
@@ -571,6 +578,7 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
     this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
 }
+
 XglConstantBufferObj::~XglConstantBufferObj()
 {
     if (m_constantBufferMem != XGL_NULL_HANDLE) xglFreeMemory(m_constantBufferMem);
@@ -739,6 +747,7 @@ void XglShaderObj::BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLO
     m_memObjs.push_back((XGL_OBJECT) &constantBuffer->m_constantBufferView);
 
 }
+
 void XglShaderObj::BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture)
 {
     m_imageSlots.push_back(slot);
@@ -746,6 +755,7 @@ void XglShaderObj::BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT
     m_imageObjs.push_back((XGL_OBJECT) &texture->m_textureViewInfo);
 
 }
+
 void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sampler)
 {
     m_samplerSlots.push_back(slot);
@@ -753,6 +763,7 @@ void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sample
     m_samplerObjs.push_back(sampler->m_sampler);
 
 }
+
 XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework)
 {
     XGL_RESULT err = XGL_SUCCESS;
@@ -798,10 +809,12 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         assert(!err);
     }
 }
+
 XglShaderObj::~XglShaderObj()
 {
     if (m_shader != XGL_NULL_HANDLE) xglDestroyObject(m_shader);
 }
+
 XglPipelineObj::XglPipelineObj(XglDevice *device)
 {
     XGL_RESULT err;
@@ -912,6 +925,7 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
         m_vertexBufferObjs[i]->Bind(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.offset,  m_vertexBufferBindings[i]);
     }
 }
+
 XglPipelineObj::~XglPipelineObj()
 {
        if (m_pipeline != XGL_NULL_HANDLE) xglDestroyObject(m_pipeline);
@@ -920,12 +934,15 @@ XglPipelineObj::~XglPipelineObj()
 XglMemoryRefManager::XglMemoryRefManager() {
 
 }
+
 void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
     m_bufferObjs.push_back(&constantBuffer->m_constantBufferMem);
 }
+
 void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
     m_bufferObjs.push_back(&texture->m_textureMem);
 }
+
 XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
 
     XGL_MEMORY_REF *localRefs;
