@@ -882,6 +882,71 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
     ASSERT_XGL_SUCCESS(err);
 }
 
+XglIndexBufferObj::XglIndexBufferObj(XglDevice *device)
+    : XglConstantBufferObj(device)
+{
+
+}
+
+void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE indexType, const void* data)
+{
+    XGL_RESULT err = XGL_SUCCESS;
+    XGL_UINT8 *pData;
+    XGL_MEMORY_ALLOC_INFO           alloc_info = {};
+    XGL_FORMAT viewFormat;
+
+    m_numVertices = numIndexes;
+    m_indexType = indexType;
+    viewFormat.numericFormat = XGL_NUM_FMT_UINT;
+    switch (indexType) {
+    case XGL_INDEX_8:
+        m_stride = 1;
+        viewFormat.channelFormat = XGL_CH_FMT_R8;
+        break;
+    case XGL_INDEX_16:
+        m_stride = 2;
+        viewFormat.channelFormat = XGL_CH_FMT_R16;
+        break;
+    case XGL_INDEX_32:
+        m_stride = 4;
+        viewFormat.channelFormat = XGL_CH_FMT_R32;
+        break;
+    }
+
+    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.allocationSize = numIndexes * m_stride;
+    alloc_info.alignment = 0;
+    alloc_info.heapCount = 1;
+    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
+
+    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
+    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+
+    err = xglAllocMemory(m_device->device(), &alloc_info, &m_constantBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
+    ASSERT_XGL_SUCCESS(err);
+
+    memcpy(pData, data, alloc_info.allocationSize);
+
+    err = xglUnmapMemory(m_constantBufferMem);
+    ASSERT_XGL_SUCCESS(err);
+
+    // set up the memory view for the constant buffer
+    this->m_constantBufferView.stride = m_stride;
+    this->m_constantBufferView.range  = alloc_info.allocationSize;
+    this->m_constantBufferView.offset = 0;
+    this->m_constantBufferView.mem    = m_constantBufferMem;
+    this->m_constantBufferView.format.channelFormat = viewFormat.channelFormat;
+    this->m_constantBufferView.format.numericFormat = viewFormat.numericFormat;
+    this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
+}
+
+void XglIndexBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset)
+{
+    xglCmdBindIndexData(cmdBuffer, this->m_constantBufferMem, offset, m_indexType);
+}
 
 XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescriptorSetObj descriptorSet)
 {

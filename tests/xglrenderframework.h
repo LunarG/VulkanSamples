@@ -137,6 +137,18 @@ protected:
     int                             m_numVertices;
     int                             m_stride;
 };
+
+class XglIndexBufferObj : public XglConstantBufferObj
+{
+public:
+    XglIndexBufferObj(XglDevice *device);
+    void CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE dataFormat, const void* data);
+    void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset);
+
+protected:
+    XGL_INDEX_TYPE  m_indexType;
+};
+
 class XglTextureObj
 {
 public:
