@@ -38,12 +38,7 @@ static glvdebug_view* s_pView;
 extern "C"
 {
 
-GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(const char* traceFile, glvdebug_view* pView)
-{
-    return false;
-}
-
-GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_process_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView)
+GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView)
 {
     assert(pTraceFileInfo != NULL);
     assert(pView != NULL);

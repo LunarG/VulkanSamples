@@ -466,9 +466,10 @@ bool glvdebug::open_trace_file(const std::string &filename)
             // populate the UI based on trace file info
             if (bOpened)
             {
-                bOpened = m_pController->ProcessTraceFile(&m_traceFileInfo, this);
+                bOpened = m_pController->LoadTraceFile(&m_traceFileInfo, this);
             }
 
+            // load available replayers
             if (bOpened && m_pReplayWidget != NULL)
             {
                 if (!load_replayers(&m_traceFileInfo, m_pReplayWidget))
@@ -488,15 +489,10 @@ bool glvdebug::open_trace_file(const std::string &filename)
         m_traceFileInfo.pFile = NULL;
     }
 
-    //// setup api call tree
-    //if (bOpened)
-    //{
-    //    bOpened = glvdebug_controller_load_trace_file(filename.c_str(), this);
-    //}
-
     if (!bOpened)
     {
         glvdebug_output_message("...FAILED!");
+        close_trace_file();
     }
     else
     {
