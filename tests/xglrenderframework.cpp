@@ -791,6 +791,17 @@ XglSamplerObj::XglSamplerObj(XglDevice *device)
 
 }
 
+/*
+ * Basic ConstantBuffer constructor. Then use create methods to fill in the details.
+ */
+XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
+{
+    m_device = device;
+
+    memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
+    memset(&m_constantBufferMem,0,sizeof(m_constantBufferMem));
+}
+
 XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data)
 {
     XGL_RESULT err = XGL_SUCCESS;
