@@ -152,30 +152,61 @@ static void cmd_meta_adjust_compressed_dst(struct intel_cmd *cmd,
                                            const struct intel_img *img,
                                            struct intel_cmd_meta *meta)
 {
-    XGL_INT w, h;
+    XGL_INT w, h, layer;
+    unsigned x_offset, y_offset;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         w = GEN_EXTRACT(meta->dst.surface[2], GEN7_SURFACE_DW2_WIDTH);
         h = GEN_EXTRACT(meta->dst.surface[2], GEN7_SURFACE_DW2_HEIGHT);
-        meta->dst.surface[2] &= ~(GEN7_SURFACE_DW2_WIDTH__MASK |
-                                  GEN7_SURFACE_DW2_HEIGHT__MASK);
+        layer = GEN_EXTRACT(meta->dst.surface[4],
+                GEN7_SURFACE_DW4_MIN_ARRAY_ELEMENT);
     } else {
         w = GEN_EXTRACT(meta->dst.surface[2], GEN6_SURFACE_DW2_WIDTH);
         h = GEN_EXTRACT(meta->dst.surface[2], GEN6_SURFACE_DW2_HEIGHT);
-        meta->dst.surface[2] &= ~(GEN6_SURFACE_DW2_WIDTH__MASK |
-                                  GEN6_SURFACE_DW2_HEIGHT__MASK);
+        layer = GEN_EXTRACT(meta->dst.surface[4],
+                GEN6_SURFACE_DW4_MIN_ARRAY_ELEMENT);
     }
 
     /* note that the width/height fields have the real values minus 1 */
     w = (w + img->layout.block_width) / img->layout.block_width - 1;
     h = (h + img->layout.block_height) / img->layout.block_height - 1;
 
+    /* adjust width and height */
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        meta->dst.surface[2] &= ~(GEN7_SURFACE_DW2_WIDTH__MASK |
+                                  GEN7_SURFACE_DW2_HEIGHT__MASK);
         meta->dst.surface[2] |= GEN_SHIFT32(w, GEN7_SURFACE_DW2_WIDTH) |
                                 GEN_SHIFT32(h, GEN7_SURFACE_DW2_HEIGHT);
     } else {
+        meta->dst.surface[2] &= ~(GEN6_SURFACE_DW2_WIDTH__MASK |
+                                  GEN6_SURFACE_DW2_HEIGHT__MASK);
         meta->dst.surface[2] |= GEN_SHIFT32(w, GEN6_SURFACE_DW2_WIDTH) |
                                 GEN_SHIFT32(h, GEN6_SURFACE_DW2_HEIGHT);
+    }
+
+    if (!layer)
+        return;
+
+    meta->dst.reloc_offset = intel_layout_get_slice_tile_offset(&img->layout,
+            0, layer, &x_offset, &y_offset);
+
+    /*
+     * The lower 2 bits (or 1 bit for Y) are missing.  This may be a problem
+     * for small images (16x16 or smaller).  We will need to adjust the
+     * drawing rectangle instead.
+     */
+    x_offset = (x_offset / img->layout.block_width) >> 2;
+    y_offset = (y_offset / img->layout.block_height) >> 1;
+
+    /* adjust min array element and X/Y offsets */
+    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+        meta->dst.surface[4] &= ~GEN7_SURFACE_DW4_MIN_ARRAY_ELEMENT__MASK;
+        meta->dst.surface[5] |= GEN_SHIFT32(x_offset, GEN7_SURFACE_DW5_X_OFFSET) |
+                                GEN_SHIFT32(y_offset, GEN7_SURFACE_DW5_Y_OFFSET);
+    } else {
+        meta->dst.surface[4] &= ~GEN6_SURFACE_DW4_MIN_ARRAY_ELEMENT__MASK;
+        meta->dst.surface[5] |= GEN_SHIFT32(x_offset, GEN6_SURFACE_DW5_X_OFFSET) |
+                                GEN_SHIFT32(y_offset, GEN6_SURFACE_DW5_Y_OFFSET);
     }
 }
 
