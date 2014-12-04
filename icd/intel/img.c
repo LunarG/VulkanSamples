@@ -202,6 +202,8 @@ XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
 
             *pDataSize = sizeof(XGL_SUBRESOURCE_LAYOUT);
 
+            if (pData == NULL)
+                return ret;
             layout->offset = intel_layout_mem_to_linear(&img->layout, x, y);
             layout->size = intel_layout_get_slice_size(&img->layout,
                     pSubresource->mipLevel);
