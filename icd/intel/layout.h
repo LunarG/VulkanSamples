@@ -292,4 +292,9 @@ intel_layout_get_slice_pos(const struct intel_layout *layout,
          layout->bo_height * layout->block_height);
 }
 
+unsigned
+intel_layout_get_slice_tile_offset(const struct intel_layout *layout,
+                                   unsigned level, unsigned slice,
+                                   unsigned *x_offset, unsigned *y_offset);
+
 #endif /* LAYOUT_H */
