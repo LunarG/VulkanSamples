@@ -841,6 +841,12 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
 }
 
+void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding)
+{
+    xglCmdBindVertexData(cmdBuffer, this->m_constantBufferMem, offset, binding);
+}
+
+
 void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_STATE newState)
 {
     if (this->m_constantBufferView.state == newState)
@@ -1123,9 +1129,8 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
 
     for (int i=0; i < m_vertexBufferCount; i++)
     {
-        xglCmdBindVertexData(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.mem, m_vertexBufferObjs[i]->m_constantBufferView.offset, m_vertexBufferBindings[i]);
+        m_vertexBufferObjs[i]->Bind(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.offset,  m_vertexBufferBindings[i]);
     }
-
 }
 
 
