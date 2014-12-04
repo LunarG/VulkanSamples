@@ -26,6 +26,7 @@
 class glvdebug_QTraceFileModel;
 struct glvdebug_trace_file_info;
 class QWidget;
+class QToolButton;
 
 class glvdebug_view
 {
@@ -44,6 +45,7 @@ public:
     // \return tab index of state viewer
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false) = 0;
 
+    virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled) = 0;
     //virtual void set_statetree_model(glvdebug_QStateTreeModel* pModel) = 0;
 
 };

@@ -33,14 +33,16 @@ endif()
 set(SRC_LIST
     ${SRC_LIST}
     glvdebug_xgl.cpp
+    glvdebug_xgl_qcontroller.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
 )
 
 # This should only contain headers that define a QOBJECT
 # Typically that means just headers for UI objects
 set(UI_HEADER_LIST
+    glvdebug_xgl_qcontroller.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
-   )
+)
 
 set(HDR_LIST
     ${SRC_DIR}/glvdebug/glvdebug_controller.h

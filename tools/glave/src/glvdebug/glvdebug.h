@@ -79,6 +79,7 @@ public:
     virtual void output_warning(QString message, bool bRefresh = true);
     virtual void output_error(QString message, bool bRefresh = true);
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false);
+    virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled);
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel);
     virtual void enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo);
 
@@ -94,8 +95,6 @@ private slots:
     void slot_treeView_currentChanged(const QModelIndex &current, const QModelIndex &previous);
 
     void on_treeView_clicked(const QModelIndex &index);
-
-    void playCurrentTraceFile();
 
     void on_stateTreeView_clicked(const QModelIndex &index);
 
@@ -140,7 +139,7 @@ private:
 
     QProcess *m_pReplayProcess;
     QToolButton *m_pGenerateTraceButton;
-    QToolButton *m_pPlayButton;
+//    QToolButton *m_pPlayButton;
 
     glvdebug_QTimelineView* m_pTimeline;
 

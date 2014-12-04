@@ -53,7 +53,7 @@ glvdebug::glvdebug(QWidget *parent)
       m_pController(NULL),
       m_pReplayProcess(new QProcess()),
       m_pGenerateTraceButton(NULL),
-      m_pPlayButton(NULL),
+//      m_pPlayButton(NULL),
       m_pTimeline(NULL),
       m_bDelayUpdateUIForContext(false)
 {
@@ -81,12 +81,7 @@ glvdebug::glvdebug(QWidget *parent)
     m_pGenerateTraceButton->setText("Generate Trace");
     m_pGenerateTraceButton->setEnabled(true);
 
-    m_pPlayButton = new QToolButton(ui->mainToolBar);
-    m_pPlayButton->setText("Play Trace");
-    m_pPlayButton->setEnabled(false);
-
     ui->mainToolBar->addWidget(m_pGenerateTraceButton);
-    ui->mainToolBar->addWidget(m_pPlayButton);
 
     ui->treeView->setModel(NULL);
 
@@ -97,8 +92,6 @@ glvdebug::glvdebug(QWidget *parent)
     ui->timelineLayout->removeWidget(ui->timelineViewPlaceholder);
     delete ui->timelineViewPlaceholder;
     ui->timelineViewPlaceholder = NULL;
-
-    connect(m_pPlayButton, SIGNAL(clicked()), this, SLOT(playCurrentTraceFile()));
 
     connect(m_pReplayProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(slot_readReplayStandardOutput()));
     connect(m_pReplayProcess, SIGNAL(readyReadStandardError()), this, SLOT(slot_readReplayStandardError()));
@@ -122,11 +115,11 @@ glvdebug::~glvdebug()
     delete ui;
     glvdebug_output_deinit();
     
-    if (m_pPlayButton != NULL)
-    {
-        delete m_pPlayButton;
-        m_pPlayButton = NULL;
-    }
+//    if (m_pPlayButton != NULL)
+//    {
+//        delete m_pPlayButton;
+//        m_pPlayButton = NULL;
+//    }
 
     if (m_pReplayProcess != NULL)
     {
@@ -146,6 +139,15 @@ int glvdebug::add_custom_state_viewer(QWidget* pWidget, const QString& title, bo
     }
 
     return tabIndex;
+}
+
+QToolButton* glvdebug::add_toolbar_button(const QString& title, bool bEnabled)
+{
+    QToolButton* pButton = new QToolButton(ui->mainToolBar);
+    pButton->setText(title);
+    pButton->setEnabled(bEnabled);
+    ui->mainToolBar->addWidget(pButton);
+    return pButton;
 }
 
 void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
@@ -216,21 +218,6 @@ glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
     //}
 
     return result;
-}
-
-void glvdebug::playCurrentTraceFile()
-{
-    QCursor origCursor = cursor();
-    setCursor(Qt::WaitCursor);
-
-    // update UI
-    m_pPlayButton->setEnabled(false);
-
-    m_pController->PlayTraceFile(&m_traceFileInfo);
-
-    m_pPlayButton->setEnabled(true);
-
-    setCursor(origCursor);
 }
 
 void glvdebug::on_actionE_xit_triggered()
@@ -443,7 +430,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
         glvdebug_output_message("...success!");
 
         // update toolbar
-        m_pPlayButton->setEnabled(true);
+//        m_pPlayButton->setEnabled(true);
 
         //ui->searchTextBox->setEnabled(true);
         //ui->searchPrevButton->setEnabled(true);
@@ -517,7 +504,7 @@ void glvdebug::reset_tracefile_ui()
     ui->searchPrevButton->setEnabled(false);
     ui->searchNextButton->setEnabled(false);
 
-    m_pPlayButton->setEnabled(false);
+//    m_pPlayButton->setEnabled(false);
 
     //GLVDEBUG_DISABLE_BOTTOM_TAB(ui->machineInfoTab);
     //GLVDEBUG_DISABLE_BOTTOM_TAB(ui->callStackTab);
