@@ -174,8 +174,14 @@ xglDisplay::xglDisplay()
 xglDisplay::~xglDisplay()
 {
 #ifdef PLATFORM_LINUX
-    xcb_destroy_window(m_WsiConnection.pConnection, m_XcbWindow);
-    xcb_disconnect(m_WsiConnection.pConnection);
+    if (m_XcbWindow != NULL)
+    {
+        xcb_destroy_window(m_WsiConnection.pConnection, m_XcbWindow);
+    }
+    if (m_WsiConnection.pConnection != NULL)
+    {
+        xcb_disconnect(m_WsiConnection.pConnection);
+    }
 #endif
 }
 
