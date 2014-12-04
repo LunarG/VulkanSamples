@@ -180,12 +180,36 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdResetQueryPool(
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdSetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event_)
+    XGL_EVENT                                   event_,
+    XGL_SET_EVENT                               pipeEvent)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
+    uint32_t pipe_control_flags;
 
-    cmd_batch_immediate(cmd, event->obj.mem->bo, 0, 1);
+    /* Event setting is done with PIPE_CONTROL post-sync write immediate.
+     * With no other PIPE_CONTROL flags set, it behaves as XGL_SET_EVENT_TOP_OF_PIPE.
+     * All other pipeEvent values will behave as XGL_SET_EVENT_GPU_COMMANDS_COMPLETE.
+     */
+    switch(pipeEvent)
+    {
+    case XGL_SET_EVENT_TOP_OF_PIPE:
+        pipe_control_flags = 0;
+        break;
+    case XGL_SET_EVENT_VERTEX_PROCESSING_COMPLETE:
+    case XGL_SET_EVENT_FRAGMENT_PROCESSING_COMPLETE:
+    case XGL_SET_EVENT_GRAPHICS_PIPELINE_COMPLETE:
+    case XGL_SET_EVENT_COMPUTE_PIPELINE_COMPLETE:
+    case XGL_SET_EVENT_TRANSFER_COMPLETE:
+    case XGL_SET_EVENT_GPU_COMMANDS_COMPLETE:
+        pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
+        break;
+    default:
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
+        break;
+    }
+    cmd_batch_immediate(cmd, pipe_control_flags, event->obj.mem->bo, 0, 1);
 }
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(
@@ -195,7 +219,10 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
 
-    cmd_batch_immediate(cmd, event->obj.mem->bo, 0, 0);
+    /* The timing of event reset is not well specifed.
+     * Event reset is done like XGL_SET_EVENT_TOP_OF_PIPE.
+     */
+    cmd_batch_immediate(cmd, 0, event->obj.mem->bo, 0, 0);
 }
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdWriteTimestamp(

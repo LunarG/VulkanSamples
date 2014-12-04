@@ -29,25 +29,12 @@
 #include "sampler.h"
 #include "dset.h"
 
-static bool dset_img_state_read_only(XGL_IMAGE_STATE state)
+static bool dset_img_state_read_only(XGL_IMAGE_LAYOUT layout)
 {
-    switch (state) {
-    case XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY:
-    case XGL_IMAGE_STATE_COMPUTE_SHADER_READ_ONLY:
-    case XGL_IMAGE_STATE_MULTI_SHADER_READ_ONLY:
-    case XGL_IMAGE_STATE_TARGET_AND_SHADER_READ_ONLY:
-        return true;
-    default:
-        return false;
-    }
-}
-
-static bool dset_buf_state_read_only(XGL_BUFFER_STATE state)
-{
-    switch (state) {
-    case XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_ONLY:
-    case XGL_BUFFER_STATE_COMPUTE_SHADER_READ_ONLY:
-    case XGL_BUFFER_STATE_MULTI_SHADER_READ_ONLY:
+    switch (layout) {
+    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
         return true;
     default:
         return false;
@@ -150,7 +137,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglAttachImageViewDescriptors(
         struct intel_img_view *view = intel_img_view(info->view);
 
         slot->type = INTEL_DSET_SLOT_IMG_VIEW;
-        slot->read_only = dset_img_state_read_only(info->state);
+        slot->read_only = dset_img_state_read_only(info->layout);
         slot->u.img_view = view;
     }
 }
@@ -169,7 +156,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglAttachBufferViewDescriptors(
         const XGL_BUFFER_VIEW_ATTACH_INFO *info = &pBufferViews[i];
 
         slot->type = INTEL_DSET_SLOT_BUF_VIEW;
-        slot->read_only = dset_buf_state_read_only(info->state);
+        slot->read_only = false;
         slot->u.buf_view = intel_buf_view(info->view);
     }
 }

@@ -703,6 +703,55 @@ TEST_F(XglCmdCopyBufferTest, MultiAlignments)
 TEST_F(XglCmdCopyBufferTest, RAWHazard)
 {
     xgl_testing::Buffer bufs[3];
+    XGL_EVENT_CREATE_INFO event_info;
+    XGL_EVENT event;
+    XGL_MEMORY_REQUIREMENTS mem_req;
+    size_t data_size = sizeof(mem_req);
+    XGL_RESULT err;
+
+    //        typedef struct _XGL_EVENT_CREATE_INFO
+    //        {
+    //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO
+    //            const XGL_VOID*                         pNext;      // Pointer to next structure
+    //            XGL_FLAGS                               flags;      // Reserved
+    //        } XGL_EVENT_CREATE_INFO;
+    memset(&event_info, 0, sizeof(event_info));
+    event_info.sType = XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+
+    err = xglCreateEvent(dev_.obj(), &event_info, &event);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglGetObjectInfo(event, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    ASSERT_XGL_SUCCESS(err);
+
+    //        XGL_RESULT XGLAPI xglAllocMemory(
+    //            XGL_DEVICE                                  device,
+    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            XGL_GPU_MEMORY*                             pMem);
+    XGL_MEMORY_ALLOC_INFO mem_info;
+    XGL_GPU_MEMORY event_mem;
+
+    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect events to require memory";
+
+    XGL_UINT heapInfo[mem_req.heapCount];
+    memset(&mem_info, 0, sizeof(mem_info));
+    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.allocationSize = mem_req.size;
+    mem_info.alignment = mem_req.alignment;
+    mem_info.heapCount = mem_req.heapCount;
+    mem_info.pHeaps = heapInfo;
+    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
+    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    err = xglAllocMemory(dev_.obj(), &mem_info, &event_mem);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglBindObjectMemory(event, event_mem, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglResetEvent(event);
+    ASSERT_XGL_SUCCESS(err);
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init(dev_, 4);
@@ -717,19 +766,53 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
 
     xglCmdFillBuffer(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
     // is this necessary?
-    XGL_BUFFER_STATE_TRANSITION transition = bufs[0].state_transition(
-            XGL_BUFFER_STATE_DATA_TRANSFER, XGL_BUFFER_STATE_DATA_TRANSFER, 0, 4);
-    xglCmdPrepareBufferRegions(cmd_.obj(), 1, &transition);
+    XGL_BUFFER_MEMORY_BARRIER memory_barrier = bufs[0].buffer_memory_barrier(
+            XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_COPY_BIT, 0, 4);
+
+    XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_TRANSFER_COMPLETE };
+    XGL_PIPELINE_BARRIER pipeline_barrier = {};
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = set_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.pMemBarriers = &memory_barrier;
+    xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
     XGL_BUFFER_COPY region = {};
     region.copySize = 4;
     xglCmdCopyBuffer(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
-    // is this necessary?
-    transition = bufs[1].state_transition(
-            XGL_BUFFER_STATE_DATA_TRANSFER, XGL_BUFFER_STATE_DATA_TRANSFER, 0, 4);
-    xglCmdPrepareBufferRegions(cmd_.obj(), 1, &transition);
+
+    memory_barrier = bufs[1].buffer_memory_barrier(
+            XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_COPY_BIT, 0, 4);
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = set_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.pMemBarriers = &memory_barrier;
+    xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
     xglCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
+
+    /* Use xglCmdSetEvent and xglCmdWaitEvents to test them.
+     * This could be xglCmdPipelineBarrier.
+     */
+    xglCmdSetEvent(cmd_.obj(), event, XGL_SET_EVENT_TRANSFER_COMPLETE);
+
+    // Additional commands could go into the buffer here before the wait.
+
+    memory_barrier = bufs[1].buffer_memory_barrier(
+            XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
+    XGL_EVENT_WAIT_INFO wait_info = {};
+    wait_info.sType = XGL_STRUCTURE_TYPE_EVENT_WAIT_INFO;
+    wait_info.eventCount = 1;
+    wait_info.pEvents = &event;
+    wait_info.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    wait_info.memBarrierCount = 1;
+    wait_info.pMemBarriers = &memory_barrier;
+    xglCmdWaitEvents(cmd_.obj(), &wait_info);
+
     cmd_.end();
 
     submit_and_done();
@@ -737,6 +820,13 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     const uint32_t *data = static_cast<const uint32_t *>(bufs[2].map());
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].unmap();
+
+    // All done with event memory, clean up
+    err = xglBindObjectMemory(event, XGL_NULL_HANDLE, 0);
+    ASSERT_XGL_SUCCESS(err);
+
+    err = xglDestroyObject(event);
+    ASSERT_XGL_SUCCESS(err);
 }
 
 class XglCmdBlitImageTest : public XglCmdBlitTest {
@@ -1041,12 +1131,10 @@ protected:
         dst.init(dev_, img_info);
         add_memory_ref(dst, 0);
 
-        const XGL_IMAGE_STATE state =
-            (img_info.usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) ?
-            XGL_IMAGE_STATE_UNINITIALIZED_TARGET : XGL_IMAGE_STATE_DATA_TRANSFER;
+        const XGL_IMAGE_LAYOUT layout = XGL_IMAGE_LAYOUT_GENERAL;
 
         cmd_.begin();
-        xglCmdCloneImageData(cmd_.obj(), src.obj(), state, dst.obj(), state);
+        xglCmdCloneImageData(cmd_.obj(), src.obj(), layout, dst.obj(), layout);
         cmd_.end();
 
         submit_and_done();
@@ -1179,27 +1267,62 @@ protected:
         xgl_testing::Image img;
         img.init(dev_, img_info);
         add_memory_ref(img, 0);
+        const XGL_FLAGS all_cache_outputs =
+                XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
+                XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |
+                XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
+                XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+                XGL_MEMORY_OUTPUT_COPY_BIT;
+        const XGL_FLAGS all_cache_inputs =
+                XGL_MEMORY_INPUT_CPU_READ_BIT |
+                XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
+                XGL_MEMORY_INPUT_INDEX_FETCH_BIT |
+                XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
+                XGL_MEMORY_INPUT_UNIFORM_READ_BIT |
+                XGL_MEMORY_INPUT_SHADER_READ_BIT |
+                XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
+                XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+                XGL_MEMORY_INPUT_COPY_BIT;
 
-        std::vector<XGL_IMAGE_STATE_TRANSITION> to_clear;
-        std::vector<XGL_IMAGE_STATE_TRANSITION> to_xfer;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER> to_clear;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER> to_xfer;
 
-        const XGL_IMAGE_STATE initial_state =
-            (img_info.usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) ?
-            XGL_IMAGE_STATE_UNINITIALIZED_TARGET : XGL_IMAGE_STATE_DATA_TRANSFER;
         for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
-            to_clear.push_back(img.state_transition(initial_state, XGL_IMAGE_STATE_CLEAR, *it));
-            to_xfer.push_back(img.state_transition(XGL_IMAGE_STATE_CLEAR, XGL_IMAGE_STATE_DATA_TRANSFER, *it));
+            to_clear.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
+                    XGL_IMAGE_LAYOUT_GENERAL,
+                    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    *it));
+            to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
+                    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
         }
 
         cmd_.begin();
 
-        xglCmdPrepareImages(cmd_.obj(), to_clear.size(), &to_clear[0]);
-        if (test_raw_)
+        XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+        XGL_PIPELINE_BARRIER pipeline_barrier = {};
+        pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+        pipeline_barrier.eventCount = 1;
+        pipeline_barrier.pEvents = set_events;
+        pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+        pipeline_barrier.memBarrierCount = to_clear.size();
+        pipeline_barrier.pMemBarriers = &to_clear[0];
+        xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+
+        if (test_raw_) {
             xglCmdClearColorImageRaw(cmd_.obj(), img.obj(), color.raw, ranges.size(), &ranges[0]);
-        else
+        } else {
             xglCmdClearColorImage(cmd_.obj(), img.obj(), color.color, ranges.size(), &ranges[0]);
-        xglCmdPrepareImages(cmd_.obj(), to_xfer.size(), &to_xfer[0]);
+        }
+
+        pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+        pipeline_barrier.eventCount = 1;
+        pipeline_barrier.pEvents = set_events;
+        pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+        pipeline_barrier.memBarrierCount = to_xfer.size();
+        pipeline_barrier.pMemBarriers = &to_xfer[0];
+        xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         cmd_.end();
 
@@ -1362,20 +1485,59 @@ protected:
         xgl_testing::Image img;
         img.init(dev_, img_info);
         add_memory_ref(img, 0);
+        const XGL_FLAGS all_cache_outputs =
+                XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
+                XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |
+                XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
+                XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+                XGL_MEMORY_OUTPUT_COPY_BIT;
+        const XGL_FLAGS all_cache_inputs =
+                XGL_MEMORY_INPUT_CPU_READ_BIT |
+                XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
+                XGL_MEMORY_INPUT_INDEX_FETCH_BIT |
+                XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
+                XGL_MEMORY_INPUT_UNIFORM_READ_BIT |
+                XGL_MEMORY_INPUT_SHADER_READ_BIT |
+                XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
+                XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+                XGL_MEMORY_INPUT_COPY_BIT;
 
-        std::vector<XGL_IMAGE_STATE_TRANSITION> to_clear;
-        std::vector<XGL_IMAGE_STATE_TRANSITION> to_xfer;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER> to_clear;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER> to_xfer;
 
         for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
-            to_clear.push_back(img.state_transition(XGL_IMAGE_STATE_UNINITIALIZED_TARGET, XGL_IMAGE_STATE_CLEAR, *it));
-            to_xfer.push_back(img.state_transition(XGL_IMAGE_STATE_CLEAR, XGL_IMAGE_STATE_DATA_TRANSFER, *it));
+            to_clear.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
+                    XGL_IMAGE_LAYOUT_GENERAL,
+                    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    *it));
+            to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
+                    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
         }
 
         cmd_.begin();
-        xglCmdPrepareImages(cmd_.obj(), to_clear.size(), &to_clear[0]);
+
+        XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+        XGL_PIPELINE_BARRIER pipeline_barrier = {};
+        pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+        pipeline_barrier.eventCount = 1;
+        pipeline_barrier.pEvents = set_events;
+        pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+        pipeline_barrier.memBarrierCount = to_clear.size();
+        pipeline_barrier.pMemBarriers = &to_clear[0];
+        xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+
         xglCmdClearDepthStencil(cmd_.obj(), img.obj(), depth, stencil, ranges.size(), &ranges[0]);
-        xglCmdPrepareImages(cmd_.obj(), to_xfer.size(), &to_xfer[0]);
+
+        pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+        pipeline_barrier.eventCount = 1;
+        pipeline_barrier.pEvents = set_events;
+        pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+        pipeline_barrier.memBarrierCount = to_xfer.size();
+        pipeline_barrier.pMemBarriers = &to_xfer[0];
+        xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+
         cmd_.end();
 
         submit_and_done();

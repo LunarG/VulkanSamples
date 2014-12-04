@@ -615,16 +615,6 @@ core = Extension(
              Param("XGL_GPU_SIZE", "offset"),
              Param("XGL_INDEX_TYPE", "indexType")]),
 
-        Proto("XGL_VOID", "CmdPrepareBufferRegions",
-            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_UINT", "transitionCount"),
-             Param("const XGL_BUFFER_STATE_TRANSITION*", "pStateTransitions")]),
-
-        Proto("XGL_VOID", "CmdPrepareImages",
-            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_UINT", "transitionCount"),
-             Param("const XGL_IMAGE_STATE_TRANSITION*", "pStateTransitions")]),
-
         Proto("XGL_VOID", "CmdDraw",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_UINT", "firstVertex"),
@@ -696,9 +686,9 @@ core = Extension(
         Proto("XGL_VOID", "CmdCloneImageData",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_IMAGE", "srcImage"),
-             Param("XGL_IMAGE_STATE", "srcImageState"),
+             Param("XGL_IMAGE_LAYOUT", "srcImageLayout"),
              Param("XGL_IMAGE", "destImage"),
-             Param("XGL_IMAGE_STATE", "destImageState")]),
+             Param("XGL_IMAGE_LAYOUT", "destImageLayout")]),
 
         Proto("XGL_VOID", "CmdUpdateBuffer",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
@@ -745,11 +735,20 @@ core = Extension(
 
         Proto("XGL_VOID", "CmdSetEvent",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_EVENT", "event")]),
+             Param("XGL_EVENT", "event"),
+             Param("XGL_SET_EVENT", "pipeEvent")]),
 
         Proto("XGL_VOID", "CmdResetEvent",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_EVENT", "event")]),
+
+        Proto("XGL_VOID", "CmdWaitEvents",
+            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
+             Param("const XGL_EVENT_WAIT_INFO*", "pWaitInfo")]),
+
+        Proto("XGL_VOID", "CmdPipelineBarrier",
+            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
+             Param("const XGL_PIPELINE_BARRIER*", "pBarrier")]),
 
         Proto("XGL_VOID", "CmdBufferAtomic",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),

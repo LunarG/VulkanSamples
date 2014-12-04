@@ -687,9 +687,9 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToBuffer(
 ICD_EXPORT XGL_VOID XGLAPI xglCmdCloneImageData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_STATE                             srcImageState,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
-    XGL_IMAGE_STATE                             destImageState)
+    XGL_IMAGE_LAYOUT                            destImageLayout)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);

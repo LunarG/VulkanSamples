@@ -1234,12 +1234,15 @@ void cmd_batch_timestamp(struct intel_cmd *cmd,
 }
 
 void cmd_batch_immediate(struct intel_cmd *cmd,
+                         uint32_t pipe_control_flags,
                          struct intel_bo *bo,
                          XGL_GPU_SIZE offset,
                          uint64_t val)
 {
     /* need any WA or stall? */
-    gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_IMM, bo, offset, val);
+    gen6_PIPE_CONTROL(cmd,
+            GEN6_PIPE_CONTROL_WRITE_IMM | pipe_control_flags,
+            bo, offset, val);
 }
 
 static void gen6_cc_states(struct intel_cmd *cmd)

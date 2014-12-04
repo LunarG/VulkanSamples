@@ -356,17 +356,17 @@ public:
 
     static XGL_BUFFER_CREATE_INFO create_info(XGL_GPU_SIZE size, XGL_FLAGS usage);
 
-    XGL_BUFFER_STATE_TRANSITION state_transition(XGL_BUFFER_STATE old_state, XGL_BUFFER_STATE new_state,
+    XGL_BUFFER_MEMORY_BARRIER buffer_memory_barrier(XGL_FLAGS output_mask, XGL_FLAGS input_mask,
                                                  XGL_GPU_SIZE offset, XGL_GPU_SIZE size) const
     {
-        XGL_BUFFER_STATE_TRANSITION transition = {};
-        transition.sType = XGL_STRUCTURE_TYPE_BUFFER_STATE_TRANSITION;
-        transition.buffer = obj();
-        transition.oldState = old_state;
-        transition.newState = new_state;
-        transition.offset = offset;
-        transition.regionSize = size;
-        return transition;
+        XGL_BUFFER_MEMORY_BARRIER barrier = {};
+        barrier.sType = XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.buffer = obj();
+        barrier.outputMask = output_mask;
+        barrier.inputMask = input_mask;
+        barrier.offset = offset;
+        barrier.size = size;
+        return barrier;
     }
 private:
     XGL_BUFFER_CREATE_INFO create_info_;
@@ -403,15 +403,20 @@ public:
     XGL_EXTENT3D extent() const { return create_info_.extent; }
     XGL_EXTENT3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
 
-    XGL_IMAGE_STATE_TRANSITION state_transition(XGL_IMAGE_STATE old_state, XGL_IMAGE_STATE new_state,
-                                                const XGL_IMAGE_SUBRESOURCE_RANGE &range) const
+    XGL_IMAGE_MEMORY_BARRIER image_memory_barrier(XGL_FLAGS output_mask, XGL_FLAGS input_mask,
+                                                  XGL_IMAGE_LAYOUT old_layout,
+                                                  XGL_IMAGE_LAYOUT new_layout,
+                                                  const XGL_IMAGE_SUBRESOURCE_RANGE &range) const
     {
-        XGL_IMAGE_STATE_TRANSITION transition = {};
-        transition.image = obj();
-        transition.oldState = old_state;
-        transition.newState = new_state;
-        transition.subresourceRange = range;
-        return transition;
+        XGL_IMAGE_MEMORY_BARRIER barrier = {};
+        barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.outputMask = output_mask;
+        barrier.inputMask = input_mask;
+        barrier.oldLayout = old_layout;
+        barrier.newLayout = new_layout;
+        barrier.image = obj();
+        barrier.subresourceRange = range;
+        return barrier;
     }
 
     static XGL_IMAGE_CREATE_INFO create_info();

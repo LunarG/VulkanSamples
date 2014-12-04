@@ -86,12 +86,11 @@ static void demo_draw_build_cmd(struct demo *demo)
 {
     const XGL_COLOR_ATTACHMENT_BIND_INFO color_attachment = {
         .view = demo->buffers[demo->current_buffer].view,
-        .colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
+        .layout = XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
     const XGL_DEPTH_STENCIL_BIND_INFO depth_stencil = {
         .view = demo->depth.view,
-        .depthState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
-        .stencilState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL,
+        .layout = XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
     const XGL_FLOAT clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
     const XGL_FLOAT clear_depth = 0.9f;
@@ -565,7 +564,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
             .sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO,
             .pNext = NULL,
             .view = demo->textures[i].view,
-            .state = XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY,
+	    .layout = XGL_IMAGE_LAYOUT_GENERAL,
         };
 
         xglAttachSamplerDescriptors(demo->dset, 2 * i, 1,

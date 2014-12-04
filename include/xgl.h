@@ -148,50 +148,56 @@ typedef enum _XGL_MEMORY_PRIORITY
     XGL_NUM_MEMORY_PRIORITY                                 = (XGL_MEMORY_PRIORITY_END_RANGE - XGL_MEMORY_PRIORITY_BEGIN_RANGE + 1),
 } XGL_MEMORY_PRIORITY;
 
-typedef enum _XGL_BUFFER_STATE
+typedef enum _XGL_IMAGE_LAYOUT
 {
-    XGL_BUFFER_STATE_DATA_TRANSFER                          = 0x00000000,
-    XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_ONLY              = 0x00000001,
-    XGL_BUFFER_STATE_GRAPHICS_SHADER_WRITE_ONLY             = 0x00000002,
-    XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_WRITE             = 0x00000003,
-    XGL_BUFFER_STATE_COMPUTE_SHADER_READ_ONLY               = 0x00000004,
-    XGL_BUFFER_STATE_COMPUTE_SHADER_WRITE_ONLY              = 0x00000005,
-    XGL_BUFFER_STATE_COMPUTE_SHADER_READ_WRITE              = 0x00000006,
-    XGL_BUFFER_STATE_MULTI_SHADER_READ_ONLY                 = 0x00000007,
-    XGL_BUFFER_STATE_INDEX_DATA                             = 0x00000008,
-    XGL_BUFFER_STATE_INDIRECT_ARG                           = 0x00000009,
-    XGL_BUFFER_STATE_WRITE_TIMESTAMP                        = 0x0000000A,
-    XGL_BUFFER_STATE_QUEUE_ATOMIC                           = 0x0000000B,
+    XGL_IMAGE_LAYOUT_GENERAL                                = 0x00000000,   // General layout when image can be used for any kind of access
+    XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL               = 0x00000001,   // Optimal layout when image is only used for color attachment read/write
+    XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL       = 0x00000002,   // Optimal layout when image is only used for depth/stencil attachment read/write
+    XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL        = 0x00000003,   // Optimal layout when image is used for read only depth/stencil attachment and shader access
+    XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL               = 0x00000004,   // Optimal layout when image is used for read only shader access
+    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL                          = 0x00000005,   // Optimal layout when image is used only for clear operations
+    XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                = 0x00000006,   // Optimal layout when image is used only as source of transfer operations
+    XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL           = 0x00000007,   // Optimal layout when image is used only as destination of transfer operations
+} XGL_IMAGE_LAYOUT;
 
-    XGL_BUFFER_STATE_BEGIN_RANGE                            = XGL_BUFFER_STATE_DATA_TRANSFER,
-    XGL_BUFFER_STATE_END_RANGE                              = XGL_BUFFER_STATE_QUEUE_ATOMIC,
-    XGL_NUM_BUFFER_STATE                                    = (XGL_BUFFER_STATE_END_RANGE - XGL_BUFFER_STATE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_BUFFER_STATE)
-} XGL_BUFFER_STATE;
-
-typedef enum _XGL_IMAGE_STATE
+typedef enum _XGL_SET_EVENT
 {
-    XGL_IMAGE_STATE_DATA_TRANSFER                           = 0x00000000,
-    XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY               = 0x00000001,
-    XGL_IMAGE_STATE_GRAPHICS_SHADER_WRITE_ONLY              = 0x00000002,
-    XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_WRITE              = 0x00000003,
-    XGL_IMAGE_STATE_COMPUTE_SHADER_READ_ONLY                = 0x00000004,
-    XGL_IMAGE_STATE_COMPUTE_SHADER_WRITE_ONLY               = 0x00000005,
-    XGL_IMAGE_STATE_COMPUTE_SHADER_READ_WRITE               = 0x00000006,
-    XGL_IMAGE_STATE_MULTI_SHADER_READ_ONLY                  = 0x00000007,
-    XGL_IMAGE_STATE_TARGET_AND_SHADER_READ_ONLY             = 0x00000008,
-    XGL_IMAGE_STATE_UNINITIALIZED_TARGET                    = 0x00000009,
-    XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL            = 0x0000000A,
-    XGL_IMAGE_STATE_TARGET_SHADER_ACCESS_OPTIMAL            = 0x0000000B,
-    XGL_IMAGE_STATE_CLEAR                                   = 0x0000000C,
-    XGL_IMAGE_STATE_RESOLVE_SOURCE                          = 0x0000000D,
-    XGL_IMAGE_STATE_RESOLVE_DESTINATION                     = 0x0000000E,
+    XGL_SET_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Set event before the GPU starts processing subsequent command
+    XGL_SET_EVENT_VERTEX_PROCESSING_COMPLETE                = 0x00000002,   // Set event when all pending vertex processing is complete
+    XGL_SET_EVENT_FRAGMENT_PROCESSING_COMPLETE              = 0x00000003,   // Set event when all pending fragment shader executions are complete
+    XGL_SET_EVENT_GRAPHICS_PIPELINE_COMPLETE                = 0x00000004,   // Set event when all pending graphics operations are complete
+    XGL_SET_EVENT_COMPUTE_PIPELINE_COMPLETE                 = 0x00000005,   // Set event when all pending compute operations are complete
+    XGL_SET_EVENT_TRANSFER_COMPLETE                         = 0x00000006,   // Set event when all pending transfer operations are complete
+    XGL_SET_EVENT_GPU_COMMANDS_COMPLETE                     = 0x00000007,   // Set event when all pending GPU work is complete
+} XGL_SET_EVENT;
 
-    XGL_IMAGE_STATE_BEGIN_RANGE                             = XGL_IMAGE_STATE_DATA_TRANSFER,
-    XGL_IMAGE_STATE_END_RANGE                               = XGL_IMAGE_STATE_RESOLVE_DESTINATION,
-    XGL_NUM_IMAGE_STATE                                     = (XGL_IMAGE_STATE_END_RANGE - XGL_IMAGE_STATE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_IMAGE_STATE)
-} XGL_IMAGE_STATE;
+typedef enum _XGL_WAIT_EVENT
+{
+    XGL_WAIT_EVENT_TOP_OF_PIPE                              = 0x00000001,   // Wait event before the GPU starts processing subsequent commands
+    XGL_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING               = 0x00000002,   // Wait event before subsequent fragment processing
+} XGL_WAIT_EVENT;
+
+typedef enum _XGL_MEMORY_OUTPUT_FLAGS
+{
+    XGL_MEMORY_OUTPUT_CPU_WRITE_BIT                         = 0x00000001,   // Controls output coherency of CPU writes
+    XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT                      = 0x00000002,   // Controls output coherency of generic shader writes
+    XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                  = 0x00000004,   // Controls output coherency of color attachment writes
+    XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT          = 0x00000008,   // Controls output coherency of depth/stencil attachment writes
+    XGL_MEMORY_OUTPUT_COPY_BIT                              = 0x00000010,   // Controls output coherency of copy operations
+} XGL_MEMORY_OUTPUT_FLAGS;
+
+typedef enum _XGL_MEMORY_INPUT_FLAGS
+{
+    XGL_MEMORY_INPUT_CPU_READ_BIT                           = 0x00000001,   // Controls input coherency of CPU reads
+    XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT                   = 0x00000002,   // Controls input coherency of indirect command reads
+    XGL_MEMORY_INPUT_INDEX_FETCH_BIT                        = 0x00000004,   // Controls input coherency of index fetches
+    XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT             = 0x00000008,   // Controls input coherency of vertex attribute fetches
+    XGL_MEMORY_INPUT_UNIFORM_READ_BIT                       = 0x00000010,   // Controls input coherency of uniform buffer reads
+    XGL_MEMORY_INPUT_SHADER_READ_BIT                        = 0x00000020,   // Controls input coherency of generic shader reads
+    XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                   = 0x00000040,   // Controls input coherency of color attachment reads
+    XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = 0x00000080,   // Controls input coherency of depth/stencil attachment reads
+    XGL_MEMORY_INPUT_COPY_BIT                               = 0x00000100,   // Controls input coherency of copy operations
+} XGL_MEMORY_INPUT_FLAGS;
 
 typedef enum _XGL_ATTACHMENT_LOAD_OP
 {
@@ -878,7 +884,7 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO                = 5,
     XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO              = 6,
     XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO               = 7,
-    XGL_STRUCTURE_TYPE_BUFFER_STATE_TRANSITION              = 8,
+    XGL_STRUCTURE_TYPE_EVENT_WAIT_INFO                      = 8,
     XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO               = 9,
     XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO    = 10,
     XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO       = 11,
@@ -914,6 +920,10 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO       = 41,
     XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO              = 42,
     XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 43,
+    XGL_STRUCTURE_TYPE_PIPELINE_BARRIER                     = 44,
+    XGL_STRUCTURE_TYPE_MEMORY_BARRIER                       = 45,
+    XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                = 46,
+    XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                 = 47,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1001,6 +1011,7 @@ typedef enum _XGL_IMAGE_CREATE_FLAGS
     XGL_IMAGE_CREATE_CLONEABLE_BIT                          = 0x00000002,
     XGL_IMAGE_CREATE_SHAREABLE_BIT                          = 0x00000004,
     XGL_IMAGE_CREATE_SPARSE_BIT                             = 0x00000008,
+    XGL_IMAGE_CREATE_MUTABLE_FORMAT_BIT                     = 0x00000010,   // Allows image views to have different format than the base image
 } XGL_IMAGE_CREATE_FLAGS;
 
 // Depth-stencil view creation flags
@@ -1287,7 +1298,6 @@ typedef struct _XGL_BUFFER_VIEW_ATTACH_INFO
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
     XGL_BUFFER_VIEW                         view;
-    XGL_BUFFER_STATE                        state;
 } XGL_BUFFER_VIEW_ATTACH_INFO;
 
 typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
@@ -1295,19 +1305,8 @@ typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
     XGL_IMAGE_VIEW                          view;
-    XGL_IMAGE_STATE                         state;
+    XGL_IMAGE_LAYOUT                        layout;
 } XGL_IMAGE_VIEW_ATTACH_INFO;
-
-typedef struct _XGL_BUFFER_STATE_TRANSITION
-{
-    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_STATE_TRANSITION
-    XGL_VOID*                               pNext;                      // Pointer to next structure
-    XGL_BUFFER                              buffer;
-    XGL_BUFFER_STATE                        oldState;
-    XGL_BUFFER_STATE                        newState;
-    XGL_GPU_SIZE                            offset;
-    XGL_GPU_SIZE                            regionSize;
-} XGL_BUFFER_STATE_TRANSITION;
 
 typedef struct _XGL_BUFFER_CREATE_INFO
 {
@@ -1347,13 +1346,72 @@ typedef struct _XGL_IMAGE_SUBRESOURCE_RANGE
     XGL_UINT                                arraySize;
 } XGL_IMAGE_SUBRESOURCE_RANGE;
 
-typedef struct _XGL_IMAGE_STATE_TRANSITION
+typedef struct _XGL_EVENT_WAIT_INFO
 {
-    XGL_IMAGE                               image;
-    XGL_IMAGE_STATE                         oldState;
-    XGL_IMAGE_STATE                         newState;
-    XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
-} XGL_IMAGE_STATE_TRANSITION;
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_EVENT_WAIT_INFO
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+
+    XGL_UINT                                eventCount;                 // Number of events to wait on
+    const XGL_EVENT*                        pEvents;                    // Array of event objects to wait on
+
+    XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
+
+    XGL_UINT                                memBarrierCount;            // Number of memory barriers
+    const XGL_VOID*                         pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
+} XGL_EVENT_WAIT_INFO;
+
+typedef struct _XGL_PIPELINE_BARRIER
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_PIPELINE_BARRIER
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+
+    XGL_UINT                                eventCount;                 // Number of events to wait on
+    const XGL_SET_EVENT*                    pEvents;                    // Array of pipeline events to wait on
+
+    XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
+
+    XGL_UINT                                memBarrierCount;            // Number of memory barriers
+    const XGL_VOID*                         pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
+} XGL_PIPELINE_BARRIER;
+
+typedef struct _XGL_MEMORY_BARRIER
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_BARRIER
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+
+    XGL_FLAGS                               outputMask;                 // Outputs the barrier should sync (see XGL_MEMORY_OUTPUT_FLAGS)
+    XGL_FLAGS                               inputMask;                  // Inputs the barrier should sync to (see XGL_MEMORY_INPUT_FLAGS)
+} XGL_MEMORY_BARRIER;
+
+typedef struct _XGL_BUFFER_MEMORY_BARRIER
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+
+    XGL_FLAGS                               outputMask;                 // Outputs the barrier should sync (see XGL_MEMORY_OUTPUT_FLAGS)
+    XGL_FLAGS                               inputMask;                  // Inputs the barrier should sync to (see XGL_MEMORY_INPUT_FLAGS)
+
+    XGL_BUFFER                              buffer;                     // Buffer to sync
+
+    XGL_GPU_SIZE                            offset;                     // Offset within the buffer to sync
+    XGL_GPU_SIZE                            size;                       // Amount of bytes to sync
+} XGL_BUFFER_MEMORY_BARRIER;
+
+typedef struct _XGL_IMAGE_MEMORY_BARRIER
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+
+    XGL_FLAGS                               outputMask;                 // Outputs the barrier should sync (see XGL_MEMORY_OUTPUT_FLAGS)
+    XGL_FLAGS                               inputMask;                  // Inputs the barrier should sync to (see XGL_MEMORY_INPUT_FLAGS)
+
+    XGL_IMAGE_LAYOUT                        oldLayout;                  // Current layout of the image
+    XGL_IMAGE_LAYOUT                        newLayout;                  // New layout to transition the image to
+
+    XGL_IMAGE                               image;                      // Image to sync
+
+    XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;           // Subresource range to sync
+} XGL_IMAGE_MEMORY_BARRIER;
 
 typedef struct _XGL_IMAGE_CREATE_INFO
 {
@@ -1424,14 +1482,13 @@ typedef struct _XGL_DEPTH_STENCIL_VIEW_CREATE_INFO
 typedef struct _XGL_COLOR_ATTACHMENT_BIND_INFO
 {
     XGL_COLOR_ATTACHMENT_VIEW               view;
-    XGL_IMAGE_STATE                         colorAttachmentState;   // XGL_IMAGE_STATE
+    XGL_IMAGE_LAYOUT                        layout;
 } XGL_COLOR_ATTACHMENT_BIND_INFO;
 
 typedef struct _XGL_DEPTH_STENCIL_BIND_INFO
 {
     XGL_DEPTH_STENCIL_VIEW                  view;
-    XGL_IMAGE_STATE                         depthState;             // XGL_IMAGE_STATE
-    XGL_IMAGE_STATE                         stencilState;           // XGL_IMAGE_STATE
+    XGL_IMAGE_LAYOUT                        layout;
 } XGL_DEPTH_STENCIL_BIND_INFO;
 
 typedef struct _XGL_BUFFER_COPY
@@ -2010,8 +2067,6 @@ typedef XGL_VOID (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer,
 typedef XGL_VOID (XGLAPI *xglCmdBindDynamicBufferViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferView);
 typedef XGL_VOID (XGLAPI *xglCmdBindVertexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT binding);
 typedef XGL_VOID (XGLAPI *xglCmdBindIndexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
-typedef XGL_VOID (XGLAPI *xglCmdPrepareBufferRegionsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_BUFFER_STATE_TRANSITION* pStateTransitions);
-typedef XGL_VOID (XGLAPI *xglCmdPrepareImagesType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions);
 typedef XGL_VOID (XGLAPI *xglCmdDrawType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
 typedef XGL_VOID (XGLAPI *xglCmdDrawIndexedType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount);
 typedef XGL_VOID (XGLAPI *xglCmdDrawIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride);
@@ -2022,15 +2077,17 @@ typedef XGL_VOID (XGLAPI *xglCmdCopyBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BU
 typedef XGL_VOID (XGLAPI *xglCmdCopyImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_IMAGE_COPY* pRegions);
 typedef XGL_VOID (XGLAPI *xglCmdCopyBufferToImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
 typedef XGL_VOID (XGLAPI *xglCmdCopyImageToBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, XGL_UINT regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
-typedef XGL_VOID (XGLAPI *xglCmdCloneImageDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_STATE srcImageState, XGL_IMAGE destImage, XGL_IMAGE_STATE destImageState);
+typedef XGL_VOID (XGLAPI *xglCmdCloneImageDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout);
 typedef XGL_VOID (XGLAPI *xglCmdUpdateBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const XGL_UINT32* pData);
 typedef XGL_VOID (XGLAPI *xglCmdFillBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, XGL_UINT32 data);
 typedef XGL_VOID (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_FLOAT color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef XGL_VOID (XGLAPI *xglCmdClearColorImageRawType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_UINT32 color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef XGL_VOID (XGLAPI *xglCmdClearDepthStencilType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_FLOAT depth, XGL_UINT32 stencil, XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef XGL_VOID (XGLAPI *xglCmdResolveImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT rectCount, const XGL_IMAGE_RESOLVE* pRects);
-typedef XGL_VOID (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event);
+typedef XGL_VOID (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_SET_EVENT pipeEvent);
 typedef XGL_VOID (XGLAPI *xglCmdResetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event);
+typedef XGL_VOID (XGLAPI *xglCmdWaitEventsType)(XGL_CMD_BUFFER cmdBuffer, const XGL_EVENT_WAIT_INFO* pWaitInfo);
+typedef XGL_VOID (XGLAPI *xglCmdPipelineBarrierType)(XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier);
 typedef XGL_VOID (XGLAPI *xglCmdBufferAtomicType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_UINT64 srcData, XGL_ATOMIC_OP atomicOp);
 typedef XGL_VOID (XGLAPI *xglCmdBeginQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot, XGL_FLAGS flags);
 typedef XGL_VOID (XGLAPI *xglCmdEndQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot);
@@ -2494,16 +2551,6 @@ XGL_VOID XGLAPI xglCmdBindIndexBuffer(
     XGL_GPU_SIZE                                offset,
     XGL_INDEX_TYPE                              indexType);
 
-XGL_VOID XGLAPI xglCmdPrepareBufferRegions(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    transitionCount,
-    const XGL_BUFFER_STATE_TRANSITION*          pStateTransitions);
-
-XGL_VOID XGLAPI xglCmdPrepareImages(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    transitionCount,
-    const XGL_IMAGE_STATE_TRANSITION*           pStateTransitions);
-
 XGL_VOID XGLAPI xglCmdDraw(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    firstVertex,
@@ -2575,9 +2622,9 @@ XGL_VOID XGLAPI xglCmdCopyImageToBuffer(
 XGL_VOID XGLAPI xglCmdCloneImageData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_STATE                             srcImageState,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
-    XGL_IMAGE_STATE                             destImageState);
+    XGL_IMAGE_LAYOUT                            destImageLayout);
 
 XGL_VOID XGLAPI xglCmdUpdateBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
@@ -2624,11 +2671,20 @@ XGL_VOID XGLAPI xglCmdResolveImage(
 
 XGL_VOID XGLAPI xglCmdSetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event);
+    XGL_EVENT                                   event,
+    XGL_SET_EVENT                               pipeEvent);
 
 XGL_VOID XGLAPI xglCmdResetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event);
+
+XGL_VOID XGLAPI xglCmdWaitEvents(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    const XGL_EVENT_WAIT_INFO*                  pWaitInfo);
+
+XGL_VOID XGLAPI xglCmdPipelineBarrier(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    const XGL_PIPELINE_BARRIER*                 pBarrier);
 
 XGL_VOID XGLAPI xglCmdBufferAtomic(
     XGL_CMD_BUFFER                              cmdBuffer,

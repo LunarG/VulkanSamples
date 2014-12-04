@@ -483,6 +483,7 @@ void cmd_batch_timestamp(struct intel_cmd *cmd,
                          XGL_GPU_SIZE offset);
 
 void cmd_batch_immediate(struct intel_cmd *cmd,
+                         uint32_t pipe_control_flags,
                          struct intel_bo *bo,
                          XGL_GPU_SIZE offset,
                          uint64_t val);

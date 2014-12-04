@@ -38,84 +38,43 @@ enum {
     SAMPLER_CACHE    = 1 << 4,
 };
 
-static uint32_t buf_get_state_caches(const struct intel_buf *buf,
-                                     XGL_BUFFER_STATE state)
+static uint32_t img_get_layout_caches(const struct intel_img *img,
+                                     XGL_IMAGE_LAYOUT layout)
 {
     uint32_t caches;
 
-    switch (state) {
-    case XGL_BUFFER_STATE_DATA_TRANSFER:
-        /*
-         * because of meta, this may imply GPU render/sample in addition to
-         * CPU read/write
-         */
-        caches = MEM_CACHE | RENDER_CACHE | SAMPLER_CACHE;
+    switch (layout) {
+    case XGL_IMAGE_LAYOUT_GENERAL:
+        // General layout when image can be used for any kind of access
+        caches = MEM_CACHE | DATA_READ_CACHE | DATA_WRITE_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
-    case XGL_BUFFER_STATE_INDEX_DATA:
-    case XGL_BUFFER_STATE_INDIRECT_ARG:
-    case XGL_BUFFER_STATE_WRITE_TIMESTAMP:
-    case XGL_BUFFER_STATE_QUEUE_ATOMIC:
-        caches = MEM_CACHE;
+    case XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        // Optimal layout when image is only used for color attachment read/write
+        caches = DATA_WRITE_CACHE | RENDER_CACHE;
         break;
-    case XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_ONLY:
-    case XGL_BUFFER_STATE_COMPUTE_SHADER_READ_ONLY:
-    case XGL_BUFFER_STATE_MULTI_SHADER_READ_ONLY:
-        caches = DATA_READ_CACHE;
+    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        // Optimal layout when image is only used for depth/stencil attachment read/write
+        caches = DATA_WRITE_CACHE | RENDER_CACHE;
         break;
-    case XGL_BUFFER_STATE_GRAPHICS_SHADER_WRITE_ONLY:
-    case XGL_BUFFER_STATE_COMPUTE_SHADER_WRITE_ONLY:
-        caches = DATA_WRITE_CACHE;
-        break;
-    case XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_WRITE:
-    case XGL_BUFFER_STATE_COMPUTE_SHADER_READ_WRITE:
-        caches = DATA_READ_CACHE | DATA_WRITE_CACHE;
-        break;
-    default:
-        caches = 0;
-        break;
-    }
-
-    return caches;
-}
-
-static uint32_t img_get_state_caches(const struct intel_img *img,
-                                     XGL_IMAGE_STATE state)
-{
-    uint32_t caches;
-
-    switch (state) {
-    case XGL_IMAGE_STATE_DATA_TRANSFER:
-        /* as in XGL_BUFFER_STATE_DATA_TRANSFER */
-        caches = MEM_CACHE | RENDER_CACHE | SAMPLER_CACHE;
-        break;
-    case XGL_IMAGE_STATE_GRAPHICS_SHADER_WRITE_ONLY:
-    case XGL_IMAGE_STATE_COMPUTE_SHADER_WRITE_ONLY:
-        caches = DATA_WRITE_CACHE;
-        break;
-    case XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_ONLY:
-    case XGL_IMAGE_STATE_MULTI_SHADER_READ_ONLY:
-    case XGL_IMAGE_STATE_TARGET_AND_SHADER_READ_ONLY:
-        caches = DATA_READ_CACHE | SAMPLER_CACHE;
-        break;
-    case XGL_IMAGE_STATE_COMPUTE_SHADER_READ_ONLY:
-        caches = DATA_READ_CACHE;
-        break;
-    case XGL_IMAGE_STATE_GRAPHICS_SHADER_READ_WRITE:
-        caches = DATA_READ_CACHE | DATA_WRITE_CACHE | SAMPLER_CACHE;
-        break;
-    case XGL_IMAGE_STATE_COMPUTE_SHADER_READ_WRITE:
-        caches = DATA_READ_CACHE | DATA_WRITE_CACHE;
-        break;
-    case XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL:
-    case XGL_IMAGE_STATE_TARGET_SHADER_ACCESS_OPTIMAL:
-        caches = RENDER_CACHE | DATA_WRITE_CACHE;
-        break;
-    case XGL_IMAGE_STATE_CLEAR:
-    case XGL_IMAGE_STATE_RESOLVE_DESTINATION:
+    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        // Optimal layout when image is used for read only depth/stencil attachment and shader access
         caches = RENDER_CACHE;
         break;
-    case XGL_IMAGE_STATE_RESOLVE_SOURCE:
-        caches = SAMPLER_CACHE;
+    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        // Optimal layout when image is used for read only shader access
+        caches = DATA_READ_CACHE | SAMPLER_CACHE;
+        break;
+    case XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL:
+        // Optimal layout when image is used only for clear operations
+        caches = RENDER_CACHE;
+        break;
+    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+        // Optimal layout when image is used only as source of transfer operations
+        caches = MEM_CACHE | DATA_READ_CACHE | RENDER_CACHE | SAMPLER_CACHE;
+        break;
+    case XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+        // Optimal layout when image is used only as destination of transfer operations
+        caches = MEM_CACHE | DATA_WRITE_CACHE | RENDER_CACHE;
         break;
     default:
         caches = 0;
@@ -163,46 +122,149 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
     return flags;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdPrepareBufferRegions(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    transitionCount,
-    const XGL_BUFFER_STATE_TRANSITION*          pStateTransitions)
+static void cmd_memory_barriers(struct intel_cmd *cmd,
+				uint32_t flush_flags,
+                                XGL_UINT memory_barrier_count,
+                                const XGL_VOID* memory_barriers)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    uint32_t flush_flags = 0;
-    XGL_UINT i;
+    uint32_t i;
+    XGL_MEMORY_BARRIER *memory_barrier;
+    XGL_BUFFER_MEMORY_BARRIER *buffer_memory_barrier;
+    XGL_IMAGE_MEMORY_BARRIER *image_memory_barrier;
+    XGL_FLAGS input_mask = 0;
+    XGL_FLAGS output_mask = 0;
 
-    for (i = 0; i < transitionCount; i++) {
-        const XGL_BUFFER_STATE_TRANSITION *trans = &pStateTransitions[i];
-        struct intel_buf *buf = intel_buf(trans->buffer);
-
-        flush_flags |= cmd_get_flush_flags(cmd,
-                buf_get_state_caches(buf, trans->oldState),
-                buf_get_state_caches(buf, trans->newState),
-                false);
+    for (i = 0; i < memory_barrier_count; i++) {
+        memory_barrier = &((XGL_MEMORY_BARRIER *) memory_barriers)[i];
+        switch(memory_barrier->sType)
+        {
+        case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
+            output_mask |= memory_barrier->outputMask;
+            input_mask |= memory_barrier->inputMask;
+            break;
+        case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
+            buffer_memory_barrier = (XGL_BUFFER_MEMORY_BARRIER *) memory_barrier;
+            output_mask |= buffer_memory_barrier->outputMask;
+            input_mask |= buffer_memory_barrier->inputMask;
+            break;
+        case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
+            image_memory_barrier = (XGL_IMAGE_MEMORY_BARRIER *) memory_barrier;
+            output_mask |= image_memory_barrier->outputMask;
+            input_mask |= image_memory_barrier->inputMask;
+            {
+                struct intel_img *img = intel_img(image_memory_barrier->image);
+                flush_flags |= cmd_get_flush_flags(cmd,
+                        img_get_layout_caches(img, image_memory_barrier->oldLayout),
+                        img_get_layout_caches(img, image_memory_barrier->newLayout),
+                        (img->layout.format.numericFormat == XGL_NUM_FMT_DS));
+            }
+            break;
+        default:
+            break;
+        }
     }
+
+    if (output_mask & XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT) {
+        flush_flags |= GEN7_PIPE_CONTROL_DC_FLUSH_ENABLE;
+    }
+    if (output_mask & XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT) {
+        flush_flags |= GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH;
+    }
+    if (output_mask & XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        flush_flags |= GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH;
+    }
+
+    /* CPU write is cache coherent, so XGL_MEMORY_OUTPUT_CPU_WRITE_BIT needs no flush. */
+    /* Meta handles flushes, so XGL_MEMORY_OUTPUT_COPY_BIT needs no flush. */
+
+    if (input_mask & (XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_UNIFORM_READ_BIT)) {
+        flush_flags |= GEN6_PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE;
+    }
+
+    if (input_mask & XGL_MEMORY_INPUT_UNIFORM_READ_BIT) {
+        flush_flags |= GEN6_PIPE_CONTROL_CONSTANT_CACHE_INVALIDATE;
+    }
+
+    if (input_mask & XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT) {
+        flush_flags |= GEN6_PIPE_CONTROL_VF_CACHE_INVALIDATE;
+    }
+
+    /* These bits have no corresponding cache invalidate operation.
+     * XGL_MEMORY_INPUT_CPU_READ_BIT
+     * XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT
+     * XGL_MEMORY_INPUT_INDEX_FETCH_BIT
+     * XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT
+     * XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT
+     * XGL_MEMORY_INPUT_COPY_BIT
+     */
 
     cmd_batch_flush(cmd, flush_flags);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdWaitEvents(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    transitionCount,
-    const XGL_IMAGE_STATE_TRANSITION*           pStateTransitions)
+    const XGL_EVENT_WAIT_INFO*                  pWaitInfo)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    uint32_t flush_flags = 0;
-    XGL_UINT i;
 
-    for (i = 0; i < transitionCount; i++) {
-        const XGL_IMAGE_STATE_TRANSITION *trans = &pStateTransitions[i];
-        struct intel_img *img = intel_img(trans->image);
+    /* This hardware will always wait at XGL_WAIT_EVENT_TOP_OF_PIPE.
+     * Passing a pWaitInfo->waitEvent of XGL_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
+     * does not change that.
+     */
 
-        flush_flags |= cmd_get_flush_flags(cmd,
-                img_get_state_caches(img, trans->oldState),
-                img_get_state_caches(img, trans->newState),
-                (img->layout.format.numericFormat == XGL_NUM_FMT_DS));
+    /* Because the command buffer is serialized, reaching
+     * a pipelined wait is always after completion of prior events.
+     * pWaitInfo->pEvents need not be examined.
+     * xglCmdWaitEvents is equivalent to memory barrier part of xglCmdPipelineBarrier.
+     * cmd_memory_barriers will wait for GEN6_PIPE_CONTROL_CS_STALL and perform
+     * appropriate cache control.
+     */
+    cmd_memory_barriers(cmd,
+            GEN6_PIPE_CONTROL_CS_STALL,
+            pWaitInfo->memBarrierCount, pWaitInfo->pMemBarriers);
+}
+
+ICD_EXPORT XGL_VOID XGLAPI xglCmdPipelineBarrier(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    const XGL_PIPELINE_BARRIER*                 pBarrier)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    uint32_t pipe_control_flags = 0;
+    uint32_t i;
+
+    /* This hardware will always wait at XGL_WAIT_EVENT_TOP_OF_PIPE.
+     * Passing a pBarrier->waitEvent of XGL_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
+     * does not change that.
+     */
+
+    /* Cache control is done with PIPE_CONTROL flags.
+     * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as XGL_SET_EVENT_TOP_OF_PIPE.
+     * All other pEvents values will behave as XGL_SET_EVENT_GPU_COMMANDS_COMPLETE.
+     */
+    for (i = 0; i < pBarrier->eventCount; i++) {
+        switch(pBarrier->pEvents[i])
+        {
+        case XGL_SET_EVENT_TOP_OF_PIPE:
+            break;
+        case XGL_SET_EVENT_VERTEX_PROCESSING_COMPLETE:
+        case XGL_SET_EVENT_FRAGMENT_PROCESSING_COMPLETE:
+        case XGL_SET_EVENT_GRAPHICS_PIPELINE_COMPLETE:
+        case XGL_SET_EVENT_COMPUTE_PIPELINE_COMPLETE:
+        case XGL_SET_EVENT_TRANSFER_COMPLETE:
+        case XGL_SET_EVENT_GPU_COMMANDS_COMPLETE:
+            pipe_control_flags |= GEN6_PIPE_CONTROL_CS_STALL;
+            break;
+        default:
+            cmd->result = XGL_ERROR_UNKNOWN;
+            return;
+            break;
+        }
     }
 
-    cmd_batch_flush(cmd, flush_flags);
+    /* cmd_memory_barriers can wait for GEN6_PIPE_CONTROL_CS_STALL and perform
+     * appropriate cache control.
+     */
+    cmd_memory_barriers(cmd,
+            pipe_control_flags,
+            pBarrier->memBarrierCount, pBarrier->pMemBarriers);
 }

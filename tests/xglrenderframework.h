@@ -115,7 +115,7 @@ public:
     XGL_RESULT BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj);
     XGL_RESULT BeginCommandBuffer();
     XGL_RESULT EndCommandBuffer();
-    void PrepareBufferRegions(int transitionCount, XGL_BUFFER_STATE_TRANSITION *transitionPtr);
+    void PipelineBarrier(XGL_PIPELINE_BARRIER *barrierPtr);
     void AddRenderTarget(XglImage *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers();
@@ -142,7 +142,24 @@ class XglConstantBufferObj : public xgl_testing::Buffer
 public:
     XglConstantBufferObj(XglDevice *device);
     XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data);
-    void SetBufferState(XGL_BUFFER_STATE newState);
+    void BufferMemoryBarrier(
+        XGL_FLAGS outputMask =
+            XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |
+            XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
+            XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            XGL_MEMORY_OUTPUT_COPY_BIT,
+        XGL_FLAGS inputMask =
+            XGL_MEMORY_INPUT_CPU_READ_BIT |
+            XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
+            XGL_MEMORY_INPUT_INDEX_FETCH_BIT |
+            XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
+            XGL_MEMORY_INPUT_UNIFORM_READ_BIT |
+            XGL_MEMORY_INPUT_SHADER_READ_BIT |
+            XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
+            XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            XGL_MEMORY_INPUT_COPY_BIT);
+
     void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding);
 
     XGL_BUFFER_VIEW_ATTACH_INFO     m_bufferViewInfo;
@@ -173,14 +190,6 @@ class XglImage : public xgl_testing::Image
 public:
     XglImage(XglDevice *dev);
 
-    // Image usage flags
-    //    typedef enum _XGL_IMAGE_USAGE_FLAGS
-    //    {
-    //        XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
-    //        XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
-    //        XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
-    //        XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
-    //    } XGL_IMAGE_USAGE_FLAGS;
 public:
     void init( XGL_UINT32 w, XGL_UINT32 h,
                      XGL_FORMAT fmt, XGL_FLAGS usage,
@@ -189,9 +198,9 @@ public:
     //    void clear( CommandBuffer*, XGL_UINT[4] );
     //    void prepare( CommandBuffer*, XGL_IMAGE_STATE );
 
-    void state( XGL_IMAGE_STATE state )
+    void layout( XGL_IMAGE_LAYOUT layout )
     {
-        m_imageInfo.state = state;
+        m_imageInfo.layout = layout;
     }
     XGL_GPU_MEMORY memory() const
     {
@@ -209,9 +218,9 @@ public:
         return m_targetView.obj();
     }
 
-    XGL_IMAGE_STATE state() const
+    XGL_IMAGE_LAYOUT layout() const
     {
-        return ( XGL_IMAGE_STATE )m_imageInfo.state;
+        return ( XGL_IMAGE_LAYOUT )m_imageInfo.layout;
     }
     XGL_UINT32 width() const
     {

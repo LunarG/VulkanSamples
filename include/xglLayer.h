@@ -105,8 +105,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdBindDynamicBufferViewType CmdBindDynamicBufferView;
     xglCmdBindVertexBufferType CmdBindVertexBuffer;
     xglCmdBindIndexBufferType CmdBindIndexBuffer;
-    xglCmdPrepareBufferRegionsType CmdPrepareBufferRegions;
-    xglCmdPrepareImagesType CmdPrepareImages;
     xglCmdDrawType CmdDraw;
     xglCmdDrawIndexedType CmdDrawIndexed;
     xglCmdDrawIndirectType CmdDrawIndirect;
@@ -126,6 +124,8 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdResolveImageType CmdResolveImage;
     xglCmdSetEventType CmdSetEvent;
     xglCmdResetEventType CmdResetEvent;
+    xglCmdWaitEventsType CmdWaitEvents;
+    xglCmdPipelineBarrierType CmdPipelineBarrier;
     xglCmdBufferAtomicType CmdBufferAtomic;
     xglCmdBeginQueryType CmdBeginQuery;
     xglCmdEndQueryType CmdEndQuery;
