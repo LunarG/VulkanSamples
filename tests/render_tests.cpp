@@ -448,7 +448,7 @@ void XglRenderTest::GenerateClearAndPrepareBufferCmds()
 
             // prepare depth buffer for rendering
             XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
-            transitionToRender.image = m_renderTarget->image();
+            transitionToRender.image = m_depthStencilImage;
             transitionToRender.oldState = XGL_IMAGE_STATE_CLEAR;
             transitionToRender.newState = m_depthStencilBinding.depthState;
             transitionToRender.subresourceRange = dsRange;
