@@ -100,13 +100,15 @@ static XGL_RESULT event_get_info(struct intel_base *base, int type,
         {
             XGL_MEMORY_REQUIREMENTS *mem_req = data;
 
+            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            if (data == NULL)
+                return ret;
             /* use dword aligned to 64-byte boundaries */
             mem_req->size = 4;
             mem_req->alignment = 64;
             mem_req->heapCount = 1;
             mem_req->heaps[0] = 0;
 
-            *size = sizeof(*mem_req);
         }
         break;
     default:

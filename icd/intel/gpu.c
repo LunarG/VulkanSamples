@@ -423,18 +423,18 @@ XGL_RESULT XGLAPI intelGetGpuInfo(
 
     switch (infoType) {
     case XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
-        if (pData == NULL) {
-            return XGL_ERROR_INVALID_POINTER;
-        }
         *pDataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
+        if (pData == NULL) {
+            return ret;
+        }
         intel_gpu_get_props(gpu, pData);
         break;
 
     case XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
-        if (pData == NULL) {
-            return XGL_ERROR_INVALID_POINTER;
-        }
         *pDataSize = sizeof(XGL_PHYSICAL_GPU_PERFORMANCE);
+        if (pData == NULL) {
+            return ret;
+        }
         intel_gpu_get_perf(gpu, pData);
         break;
 
@@ -460,10 +460,10 @@ XGL_RESULT XGLAPI intelGetGpuInfo(
         break;
 
     case XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES:
-        if (pData == NULL) {
-            return XGL_ERROR_INVALID_POINTER;
-        }
         *pDataSize = sizeof(XGL_PHYSICAL_GPU_MEMORY_PROPERTIES);
+        if (pData == NULL) {
+            return ret;
+        }
         intel_gpu_get_memory_props(gpu, pData);
         break;
 

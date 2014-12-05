@@ -544,6 +544,8 @@ XGL_RESULT XGLAPI intelGetFormatInfo(
     switch (infoType) {
     case XGL_INFO_TYPE_FORMAT_PROPERTIES:
         *pDataSize = sizeof(XGL_FORMAT_PROPERTIES);
+        if (pData == NULL)
+            return ret;
         intel_format_get_props(dev, format, pData);
         break;
     default:

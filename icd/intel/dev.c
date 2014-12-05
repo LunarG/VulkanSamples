@@ -365,8 +365,9 @@ XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
 {
     struct intel_dev *dev = intel_dev(device);
 
-    intel_dev_get_heap_props(dev, pData);
     *pDataSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);
+    if (pData != NULL)
+        intel_dev_get_heap_props(dev, pData);
 
     return XGL_SUCCESS;
 }

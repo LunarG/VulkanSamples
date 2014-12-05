@@ -59,12 +59,14 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
         {
             XGL_MEMORY_REQUIREMENTS *mem_req = data;
 
+            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            if (data == NULL)
+                return ret;
             mem_req->size = img->total_size;
             mem_req->alignment = 4096;
             mem_req->heapCount = 1;
             mem_req->heaps[0] = 0;
 
-            *size = sizeof(*mem_req);
         }
         break;
     default:
