@@ -221,7 +221,6 @@ public:
     void GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet, int numTris);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
 
-    void ClearDepthStencil(XGL_FLOAT value);
     void ClearRenderBuffer(XGL_UINT32 clear_color);
     void InitDepthStencil();
     void GenerateClearAndPrepareBufferCmds();
@@ -255,6 +254,7 @@ protected:
 
         memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
         m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+        memset(&m_depthStencilImage, 0, sizeof(m_depthStencilImage));
 
         InitFramework();
     }
@@ -425,39 +425,36 @@ void dumpVec4(const char *note, glm::vec4 vector)
 void XglRenderTest::GenerateClearAndPrepareBufferCmds()
 {
     XglRenderFramework::GenerateClearAndPrepareBufferCmds();
-}
 
+    if (m_depthStencilImage) {
+            printf("Clearing Depth Stencil\n");fflush(stdout);
+            XGL_IMAGE_SUBRESOURCE_RANGE dsRange = {};
+            dsRange.aspect = XGL_IMAGE_ASPECT_DEPTH;
+            dsRange.baseMipLevel = 0;
+            dsRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
+            dsRange.baseArraySlice = 0;
+            dsRange.arraySize = XGL_LAST_MIP_OR_SLICE;
 
-void XglRenderTest::ClearDepthStencil(XGL_FLOAT value)
-/* clear the buffer */
-{
-    XGL_RESULT err;
-    const uint16_t depth_value = (uint16_t) (value * 65535);
-    const XGL_INT tw = 128 / sizeof(uint16_t);
-    const XGL_INT th = 32;
-    XGL_INT i, j, w, h;
-    XGL_VOID *data;
+            // prepare the depth buffer for clear
+            XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
+            transitionToClear.image = m_depthStencilImage;
+            transitionToClear.oldState = m_depthStencilBinding.depthState;
+            transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
+            transitionToClear.subresourceRange = dsRange;
+            xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
+            m_depthStencilBinding.depthState = transitionToClear.newState;
 
-    w = (m_width + tw - 1) / tw;
-    h = (m_height + th - 1) / th;
+            xglCmdClearDepthStencil(m_cmdBuffer, m_depthStencilImage, 1.0f, 0, 1, &dsRange);
 
-    err = xglMapMemory(m_depthStencilMem, 0, &data);
-    ASSERT_XGL_SUCCESS(err);
-
-#ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
-    pDSDumpDot((char*)"triVtxFetchAndMVP.dot");
-#endif
-
-    for (i = 0; i < w * h; i++) {
-        uint16_t *tile = (uint16_t *) ((char *) data + 4096 * i);
-
-        for (j = 0; j < 2048; j++)
-            tile[j] = depth_value;
-    }
-
-    err = xglUnmapMemory(m_depthStencilMem);
-    ASSERT_XGL_SUCCESS(err);
+            // prepare depth buffer for rendering
+            XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
+            transitionToRender.image = m_renderTarget->image();
+            transitionToRender.oldState = XGL_IMAGE_STATE_CLEAR;
+            transitionToRender.newState = m_depthStencilBinding.depthState;
+            transitionToRender.subresourceRange = dsRange;
+            xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
+            m_depthStencilBinding.depthState = transitionToClear.newState;
+        }
 }
 
 void XglRenderTest::ClearRenderBuffer(XGL_UINT32 clear_color)
@@ -1741,7 +1738,6 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    ClearDepthStencil(1.0f);
     GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 12);
 
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
@@ -2405,7 +2401,6 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    ClearDepthStencil(1.0f);
     GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 12);
 
     QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
