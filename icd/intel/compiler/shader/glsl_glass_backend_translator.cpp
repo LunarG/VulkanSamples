@@ -836,7 +836,6 @@ inline void MesaGlassTranslator::emitIRTexture(const llvm::IntrinsicInst* llvmIn
    }
 
    if (texFlags & ETFGather) {
-      assert(0 && "TODO: Handle gather"); // TODO;
       txName += "Gather";
    }
 
