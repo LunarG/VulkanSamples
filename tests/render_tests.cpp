@@ -221,7 +221,6 @@ public:
     void GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet, int numTris);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
 
-    void ClearRenderBuffer(XGL_UINT32 clear_color);
     void InitDepthStencil();
     void GenerateClearAndPrepareBufferCmds();
     void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText);
@@ -455,34 +454,6 @@ void XglRenderTest::GenerateClearAndPrepareBufferCmds()
             xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
             m_depthStencilBinding.depthState = transitionToClear.newState;
         }
-}
-
-void XglRenderTest::ClearRenderBuffer(XGL_UINT32 clear_color)
-/* clear the buffer */
-{
-    XGL_RESULT err;
-    const XGL_IMAGE_SUBRESOURCE sr = {
-        XGL_IMAGE_ASPECT_COLOR, 0, 0
-    };
-    XGL_SUBRESOURCE_LAYOUT sr_layout;
-    XGL_UINT data_size = sizeof(sr_layout);
-    XGL_VOID    *ptr;
-
-    err = xglGetImageSubresourceInfo( m_renderTarget->image(),
-                                      &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
-                                      &data_size, &sr_layout);
-    ASSERT_XGL_SUCCESS( err );
-    ASSERT_EQ(data_size, sizeof(sr_layout));
-
-    err = m_renderTarget->MapMemory( &ptr );
-    ASSERT_XGL_SUCCESS( err );
-
-    ptr = (void *) ((char *) ptr + sr_layout.offset);
-
-    memset(ptr, clear_color, m_width * m_height *sizeof(XGL_UINT32));
-
-    err = m_renderTarget->UnmapMemory();
-    ASSERT_XGL_SUCCESS(err);
 }
 
 void XglRenderTest::InitDepthStencil()
