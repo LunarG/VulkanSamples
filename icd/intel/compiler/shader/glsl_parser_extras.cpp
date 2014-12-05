@@ -1672,6 +1672,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       state->ARB_draw_instanced_enable     = true;
       state->EXT_texture_array_enable      = true;
       state->ARB_texture_rectangle_enable  = true;
+      state->ARB_texture_gather_enable     = true;
+      state->ARB_texture_cube_map_array_enable = true;
 
       // Allocate space for new instruction list
       // Set required state for translation to HIR
