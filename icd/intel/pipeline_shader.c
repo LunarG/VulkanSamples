@@ -339,11 +339,33 @@ static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
     return XGL_SUCCESS;
 }
 
+static int pipeline_get_last_color_attachment(const struct intel_pipeline *pipeline,
+                                              const struct intel_pipeline_create_info *info)
+{
+    int idx;
+
+    for (idx = ARRAY_SIZE(info->cb.attachment) - 1; idx >= 0; idx--) {
+        const XGL_PIPELINE_CB_ATTACHMENT_STATE *att =
+            &info->cb.attachment[idx];
+
+        if (!icd_format_is_undef(att->format))
+            break;
+    }
+
+    return idx;
+}
+
 static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
     struct intel_pipeline_shader *fs = &pipeline->fs;
+    int rt_count;
     XGL_RESULT ret;
+
+    rt_count = pipeline_get_last_color_attachment(pipeline, info) + 1;
+    /* at least one NULL RT */
+    if (rt_count <= 0)
+        rt_count = 1;
 
     assert(!info->fs.linkConstBufferCount);
 
@@ -354,10 +376,9 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
     if (ret != XGL_SUCCESS)
         return ret;
 
-    /* assuming one RT; need to parse the shader */
     fs->rmap = rmap_create(pipeline->dev,
             &info->fs.descriptorSetMapping[0],
-            &info->fs.dynamicMemoryViewMapping, 1);
+            &info->fs.dynamicMemoryViewMapping, rt_count);
     if (!fs->rmap) {
         icd_free(fs->pCode);
         return XGL_ERROR_OUT_OF_MEMORY;

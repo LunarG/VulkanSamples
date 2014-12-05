@@ -1578,15 +1578,26 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
             break;
         case INTEL_PIPELINE_RMAP_SLOT_RT:
             {
-                const struct intel_rt_view *view = cmd->bind.att.rt[i];
+                const struct intel_rt_view *view =
+                    (slot->u.index < cmd->bind.att.rt_count) ?
+                    cmd->bind.att.rt[slot->u.index] : NULL;
 
-                offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                        GEN6_ALIGNMENT_SURFACE_STATE,
-                        view->cmd_len, view->cmd);
+                if (view) {
+                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                            GEN6_ALIGNMENT_SURFACE_STATE,
+                            view->cmd_len, view->cmd);
 
-                cmd_reserve_reloc(cmd, 1);
-                cmd_surface_reloc(cmd, offset, 1, view->img->obj.mem->bo,
-                        view->cmd[1], INTEL_RELOC_WRITE);
+                    cmd_reserve_reloc(cmd, 1);
+                    cmd_surface_reloc(cmd, offset, 1, view->img->obj.mem->bo,
+                            view->cmd[1], INTEL_RELOC_WRITE);
+                } else {
+                    struct intel_null_view null_view;
+                    intel_null_view_init(&null_view, cmd->dev);
+
+                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                            GEN6_ALIGNMENT_SURFACE_STATE,
+                            null_view.cmd_len, null_view.cmd);
+                }
             }
             break;
         case INTEL_PIPELINE_RMAP_SLOT_DYN:
