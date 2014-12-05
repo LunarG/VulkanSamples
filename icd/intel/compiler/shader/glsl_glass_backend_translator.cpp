@@ -1564,17 +1564,27 @@ inline ir_constant* MesaGlassTranslator::newIRConstant(const llvm::Value* value)
    case llvm::Type::FloatTyID:
       return new(shader) ir_constant(newIRScalarConstant<float>(constant));
 
-   case llvm::Type::ArrayTyID:
    case llvm::Type::StructTyID:
+   case llvm::Type::ArrayTyID:
       {
-         const llvm::ArrayType* arrayType     = llvm::dyn_cast<const llvm::ArrayType>(type);
-         const int              arraySize     = arrayType->getNumElements();
+         const llvm::Type* aggrType = 0;
+         int               aggrSize = 0;
+
+         if (const llvm::StructType* structType = llvm::dyn_cast<const llvm::StructType>(type)) {
+             aggrSize = structType->getNumElements();
+             aggrType = structType;
+         } else if (const llvm::ArrayType* arrayType = llvm::dyn_cast<const llvm::ArrayType>(type)) {
+             aggrSize = arrayType->getNumElements();
+             aggrType = arrayType;
+         } else {
+           assert(0 && "unexpected constant aggregate type");
+         }
 
          const llvm::ConstantDataSequential* dataSequential = llvm::dyn_cast<llvm::ConstantDataSequential>(constant);
 
          // Populate a list of entries
          exec_list constantValues;
-         for (int element = 0; element < arraySize; ++element) {
+         for (int element = 0; element < aggrSize; ++element) {
             const llvm::Constant* constElement;
             if (dataSequential)
                constElement = dataSequential->getElementAsConstant(element);
@@ -1584,7 +1594,7 @@ inline ir_constant* MesaGlassTranslator::newIRConstant(const llvm::Value* value)
             constantValues.push_tail(newIRConstant(constElement));
          }
 
-         return new(shader) ir_constant(llvmTypeToHirType(arrayType, 0, constant),
+         return new(shader) ir_constant(llvmTypeToHirType(aggrType, 0, constant),
                                         &constantValues);
       }
 
