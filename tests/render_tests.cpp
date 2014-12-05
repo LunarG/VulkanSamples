@@ -425,36 +425,6 @@ void dumpVec4(const char *note, glm::vec4 vector)
 void XglRenderTest::GenerateClearAndPrepareBufferCmds()
 {
     XglRenderFramework::GenerateClearAndPrepareBufferCmds();
-
-    if (0) {
-//    if (m_depthStencilImage) {
-        XGL_IMAGE_SUBRESOURCE_RANGE dsRange = {};
-        dsRange.aspect = XGL_IMAGE_ASPECT_DEPTH;
-        dsRange.baseMipLevel = 0;
-        dsRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
-        dsRange.baseArraySlice = 0;
-        dsRange.arraySize = XGL_LAST_MIP_OR_SLICE;
-
-        // prepare the depth buffer for clear
-        XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
-        transitionToClear.image = m_depthStencilImage;
-        transitionToClear.oldState = m_depthStencilBinding.depthState;
-        transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
-        transitionToClear.subresourceRange = dsRange;
-        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
-        m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
-
-        xglCmdClearDepthStencil(m_cmdBuffer, m_depthStencilImage, 1.0f, 0, 1, &dsRange);
-
-        // prepare depth buffer for rendering
-        XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
-        transitionToRender.image = m_renderTarget->image();
-        transitionToRender.oldState = XGL_IMAGE_STATE_CLEAR;
-        transitionToRender.newState = m_depthStencilBinding.depthState;
-        transitionToRender.subresourceRange = dsRange;
-        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
-        m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
-    }
 }
 
 

@@ -53,12 +53,6 @@ void XglRenderFramework::InitFramework()
 {
     XGL_RESULT err;
 
-    memset(&m_vtxBufferView, 0, sizeof(m_vtxBufferView));
-    m_vtxBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-
-    memset(&m_constantBufferView, 0, sizeof(m_constantBufferView));
-    m_constantBufferView.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-
     err = xglInitAndEnumerateGpus(&app_info, NULL,
                                   MAX_GPUS, &this->gpu_count, objs);
     ASSERT_XGL_SUCCESS(err);
@@ -146,157 +140,6 @@ void XglRenderFramework::InitState()
     ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
 }
 
-void XglRenderFramework::InitConstantBuffer(int constantCount, int constantSize,
-                                            const void* data)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-
-    XGL_MEMORY_ALLOC_INFO alloc_info = {};
-    XGL_UINT8 *pData;
-
-    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = constantCount * constantSize;
-    alloc_info.alignment = 0;
-    alloc_info.heapCount = 1;
-    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
-
-    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
-    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    err = xglAllocMemory(device(), &alloc_info, &m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
-    ASSERT_XGL_SUCCESS(err);
-
-    memcpy(pData, data, alloc_info.allocationSize);
-
-    err = xglUnmapMemory(m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    // set up the memory view for the constant buffer
-    this->m_constantBufferView.stride = 16;
-    this->m_constantBufferView.range  = alloc_info.allocationSize;
-    this->m_constantBufferView.offset = 0;
-    this->m_constantBufferView.mem    = m_constantBufferMem;
-    this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
-}
-
-/*
- * Update existing constant value with new data of exactly
- * the same size.
- */
-void XglRenderFramework::UpdateConstantBuffer(const void* data)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-    XGL_UINT8 *pData;
-
-    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
-    ASSERT_XGL_SUCCESS(err);
-
-    memcpy(pData + this->m_constantBufferView.offset, data, this->m_constantBufferView.range);
-
-    err = xglUnmapMemory(m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderFramework::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
-                                         XGL_QUERY_POOL *pPool, XGL_GPU_MEMORY *pMem)
-{
-    XGL_RESULT err;
-
-    XGL_QUERY_POOL_CREATE_INFO poolCreateInfo = {};
-    poolCreateInfo.sType = XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    poolCreateInfo.pNext = NULL;
-    poolCreateInfo.queryType = type;
-    poolCreateInfo.slots = slots;
-
-    err = xglCreateQueryPool(device(), &poolCreateInfo, pPool);
-    ASSERT_XGL_SUCCESS(err);
-
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
-    err = xglGetObjectInfo(*pPool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-
-    if (!mem_req.size) {
-        *pMem = XGL_NULL_HANDLE;
-        return;
-    }
-
-    XGL_MEMORY_ALLOC_INFO mem_info;
-
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
-    mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(device(), &mem_info, pMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglBindObjectMemory(*pPool, *pMem, 0);
-    ASSERT_XGL_SUCCESS(err);
-}
-
-void XglRenderFramework::DestroyQueryPool(XGL_QUERY_POOL pool, XGL_GPU_MEMORY mem)
-{
-    ASSERT_XGL_SUCCESS(xglBindObjectMemory(pool, XGL_NULL_HANDLE, 0));
-    ASSERT_XGL_SUCCESS(xglFreeMemory(mem));
-    ASSERT_XGL_SUCCESS(xglDestroyObject(pool));
-}
-
-void XglRenderFramework::CreateShader(XGL_PIPELINE_SHADER_STAGE stage,
-                                      const char *shader_code,
-                                      XGL_SHADER *pshader)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-    std::vector<unsigned int> bil;
-    XGL_SHADER_CREATE_INFO createInfo;
-    size_t shader_len;
-    XGL_SHADER shader;
-
-    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
-
-    if (!this->m_use_bil) {
-        shader_len = strlen(shader_code);
-        createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-        createInfo.pCode = malloc(createInfo.codeSize);
-        createInfo.flags = 0;
-
-        /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
-        ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
-        ((uint32_t *) createInfo.pCode)[1] = 0;
-        ((uint32_t *) createInfo.pCode)[2] = stage;
-        memcpy(((uint32_t *) createInfo.pCode + 3), shader_code, shader_len + 1);
-
-        err = xglCreateShader(device(), &createInfo, &shader);
-        if (err) {
-            free((void *) createInfo.pCode);
-        }
-    }
-
-    // Only use BIL if GLSL compile fails or it's requested via m_use_bil
-    if (this->m_use_bil || err) {
-        // Use Reference GLSL to BIL compiler
-        GLSLtoBIL(stage, shader_code, bil);
-        createInfo.pCode = bil.data();
-        createInfo.codeSize = bil.size() * sizeof(unsigned int);
-        createInfo.flags = 0;
-        err = xglCreateShader(device(), &createInfo, &shader);
-    }
-
-    ASSERT_XGL_SUCCESS(err);
-
-    *pshader = shader;
-}
-
 void XglRenderFramework::InitViewport(float width, float height)
 {
     XGL_RESULT err;
@@ -340,24 +183,6 @@ void XglRenderFramework::GenerateBindRenderTargetCmd()
     } else {
        xglCmdBindAttachments(m_cmdBuffer, 1, &m_colorBinding, XGL_NULL_HANDLE );
     }
-}
-
-void XglRenderFramework::GenerateBindStateAndPipelineCmds(XGL_PIPELINE* pipeline)
-{
-    // set all states
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, m_stateRaster );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, m_stateViewport );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, m_stateMsaa );
-
-    // bind pipeline and WVP (dynamic memory view)
-    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, *pipeline );
-
-    // bind pipeline and WVP (dynamic memory view)
-    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, m_rsrcDescSet, 0 );
-
-    xglCmdBindVertexData(m_cmdBuffer, m_vtxBufferView.mem, m_vtxBufferView.offset, 0);
 }
 
 void XglRenderFramework::GenerateBindStateAndPipelineCmds()
