@@ -963,6 +963,69 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
 }
 
+TEST_F(XglRenderTest, TriangleMRT)
+{
+    static const char *vertShaderText =
+            "#version 130\n"
+            "in vec4 pos;\n"
+            "void main() {\n"
+            "   gl_Position = pos;\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 130\n"
+            "void main() {\n"
+            "   gl_FragData[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   gl_FragData[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "}\n";
+    const XGL_FLOAT vb_data[][2] = {
+        { -1.0f, -1.0f },
+        {  1.0f, -1.0f },
+        { -1.0f,  1.0f }
+    };
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglConstantBufferObj meshBuffer(m_device, sizeof(vb_data) / sizeof(vb_data[0]), sizeof(vb_data[0]), vb_data);
+    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+         sizeof(vb_data[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+    };
+
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrib;
+    vi_attrib.binding = 0;                       // index into vertexBindingDescriptions
+    vi_attrib.format.channelFormat = XGL_CH_FMT_R32G32;            // format of source data
+    vi_attrib.format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attrib.offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+
+    pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
+    pipelineobj.AddVertexInputBindings(&vi_binding,1);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+
+    m_renderTargetCount = 2;
+
+    XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
+    att.blendEnable = XGL_FALSE;
+    att.format = m_render_target_fmt;
+    att.channelWriteMask = 0xf;
+    pipelineobj.SetColorAttachment(1, &att);
+
+    GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+}
+
 TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
 {
     static const char *vertShaderText =
