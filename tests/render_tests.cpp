@@ -884,7 +884,7 @@ TEST_F(XglRenderTest, TriangleTwoFSUniforms)
 
 
     static const char *fragShaderText =
-            "#version 430\n"
+            "#version 130\n"
             "in vec4 color;\n"
             "in vec4 scale;\n"
             "uniform vec4 foo;\n"
@@ -938,10 +938,13 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
 
     static const char *fragShaderText =
-            "#version 430\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
             "in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
 
 
@@ -2246,9 +2249,10 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
             "layout (std140, binding = 1) uniform greenVal { vec4 green; };"
             "layout (std140, binding = 2) uniform blueVal  { vec4 blue; };"
             "layout (std140, binding = 18) uniform whiteVal { vec4 white; };"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = blue;\n"
-            "   gl_FragColor += red;\n"
+            "   outColor = blue;\n"
+            "   outColor += red;\n"
             "}\n";
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
