@@ -2327,10 +2327,14 @@ struct gl_context
 };
 
 
+// LunarG - update this when merging compiler and driver debug flags
 #ifdef DEBUG
-extern int MESA_VERBOSE;
-extern int MESA_DEBUG_FLAGS;
-# define MESA_FUNCTION __FUNCTION__
+//extern int MESA_VERBOSE;
+//extern int MESA_DEBUG_FLAGS;
+//# define MESA_FUNCTION __FUNCTION__
+# define MESA_VERBOSE 0
+# define MESA_DEBUG_FLAGS 0
+# define MESA_FUNCTION "a function"
 #else
 # define MESA_VERBOSE 0
 # define MESA_DEBUG_FLAGS 0

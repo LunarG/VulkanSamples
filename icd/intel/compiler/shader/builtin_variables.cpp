@@ -29,6 +29,7 @@
 #include "program/prog_parameter.h"
 #include "program/prog_statevars.h"
 #include "program/prog_instruction.h"
+#include "icd-utils.h" // LunarG - ADD
 
 static const struct gl_builtin_uniform_element gl_NumSamples_elements[] = {
    {NULL, {STATE_NUM_SAMPLES, 0, 0}, SWIZZLE_XXXX}

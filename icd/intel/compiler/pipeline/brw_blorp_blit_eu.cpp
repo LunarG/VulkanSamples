@@ -26,7 +26,7 @@
 #include "brw_blorp.h"
 
 brw_blorp_eu_emitter::brw_blorp_eu_emitter(struct brw_context *brw)
-   : mem_ctx(ralloc_context(NULL)), c(rzalloc(mem_ctx, struct brw_wm_compile)),
+   : brw_ctx (brw), mem_ctx(ralloc_context(NULL)), c(rzalloc(mem_ctx, struct brw_wm_compile)),
      generator(brw, c, NULL, NULL, false)
 {
 }
@@ -119,7 +119,7 @@ brw_blorp_eu_emitter::emit_scattered_write(enum opcode opcode,
                                            bool use_header)
 {
    assert(opcode == SHADER_OPCODE_DWORD_SCATTERED_WRITE ||
-          (brw->gen >= 7 && opcode == SHADER_OPCODE_BYTE_SCATTERED_WRITE));
+          (brw_ctx->gen >= 7 && opcode == SHADER_OPCODE_BYTE_SCATTERED_WRITE));
 
    fs_inst *inst = new (mem_ctx) fs_inst(opcode);
 
@@ -142,7 +142,7 @@ brw_blorp_eu_emitter::emit_scattered_read(const struct brw_reg &dst,
                                           bool use_header)
 {
    assert(opcode == SHADER_OPCODE_DWORD_SCATTERED_READ ||
-          (brw->gen >= 7 && opcode == SHADER_OPCODE_BYTE_SCATTERED_READ));
+          (brw_ctx->gen >= 7 && opcode == SHADER_OPCODE_BYTE_SCATTERED_READ));
 
    fs_inst *inst = new (mem_ctx) fs_inst(opcode);
 

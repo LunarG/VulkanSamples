@@ -197,6 +197,7 @@ private:
    fs_inst *emit_cmp(int op, const struct brw_reg &x, const struct brw_reg &y);
 
    void *mem_ctx;
+   struct brw_context *brw_ctx;
    struct brw_wm_compile *c;
    exec_list insts;
    fs_generator generator;

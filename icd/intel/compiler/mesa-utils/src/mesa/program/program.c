@@ -365,7 +365,8 @@ _mesa_delete_program(struct gl_context *ctx, struct gl_program *prog)
 {
    (void) ctx;
    ASSERT(prog);
-   ASSERT(prog->RefCount==0);
+   // LunarG: XGL does not use reference counts
+   //ASSERT(prog->RefCount==0);
 
    if (prog == &_mesa_DummyProgram)
       return;
