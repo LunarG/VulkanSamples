@@ -172,8 +172,9 @@ class HeaderFileParser:
         # strip comma and comment, then extra split in case of no comma w/ comments
         enum_val = enum_val.strip().split(',', 1)[0]
         self.enum_val_dict[enum_name]['val'] = enum_val.split()[0]
-        # TODO : Make this more robust, to verify if enum value is unique
-        #  Currently just try to cast to int which works ok but missed -(HEX) values
+        # account for negative values surrounded by parens
+        self.enum_val_dict[enum_name]['val'] = self.enum_val_dict[enum_name]['val'].strip(')').replace('-(', '-')
+        # Try to cast to int to determine if enum value is unique
         try:
             #print("ENUM val:", self.enum_val_dict[enum_name]['val'])
             int(self.enum_val_dict[enum_name]['val'], 0)

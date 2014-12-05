@@ -29,6 +29,7 @@ extern "C" {
 #include "glvtrace_xgl_xgldbg_structs.h"
 #include "glvtrace_xgl_xglwsix11ext_structs.h"
 #include "glvtrace_xgl_packet_id.h"
+#include "xgl_enum_string_helper.h"
 }
 
 #define APP_NAME "glvreplay_xgl"

@@ -10,9 +10,11 @@ include("${SRC_DIR}/build_options.cmake")
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 
 # This file is shared between replayer and tracer and are generated to each dir.  Should generate them to common area
-add_custom_command(OUTPUT glvtrace_xgl_packet_id.h
+add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
-	           DEPENDS ${SRC_DIR}/../../../xgl-layer-generate.py)
+        COMMAND ${SRC_DIR}/../../../xgl-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
+	           DEPENDS ${SRC_DIR}/../../../xgl-layer-generate.py
+	                   ${SRC_DIR}/../../../xgl-helper.py)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 set(OS_REPLAYER_LIBS
@@ -35,6 +37,7 @@ set(SRC_LIST
 
 set (HDR_LIST
     glvtrace_xgl_packet_id.h
+    xgl_enum_string_helper.h
     glvreplay_xgl.h
     glvreplay_xgl_replay.h
 )
