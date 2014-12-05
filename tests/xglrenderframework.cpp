@@ -37,10 +37,14 @@ XglRenderFramework::XglRenderFramework() :
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 )                   // default window height
 {
+    XGL_UINT i;
+
+    m_renderTargetCount = 1;
+
     m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
     m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
 
-    m_colorBinding.view = XGL_NULL_HANDLE;
+    m_colorBindings[0].view = XGL_NULL_HANDLE;
     m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
 
@@ -74,10 +78,12 @@ void XglRenderFramework::ShutdownFramework()
         xglDestroyObject(m_stateViewport);
     }
 
-    if (m_renderTarget) {
+    for (XGL_UINT i = 0; i < m_renderTargetCount; i++) {
+        if (m_renderTargets[i]) {
         // TODO: XglImage should be able to destroy itself
 //        m_renderTarget->
 //        xglDestroyObject(*m_renderTarget);
+        }
     }
 
     // reset the driver
@@ -167,21 +173,29 @@ void XglRenderFramework::InitViewport()
 
 void XglRenderFramework::InitRenderTarget()
 {
-    m_device->CreateImage(m_width, m_height, m_render_target_fmt,
-                          XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
-                          XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                          &m_renderTarget);
+    XGL_UINT i;
+
+    for (i = 0; i < m_renderTargetCount; i++) {
+        m_device->CreateImage(m_width, m_height, m_render_target_fmt,
+                              XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
+                              XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                              &m_renderTargets[i]);
+    }
 }
 
 void XglRenderFramework::GenerateBindRenderTargetCmd()
 {
+    XGL_UINT i;
+
     // bind render target
-    m_colorBinding.view  = m_renderTarget->targetView();
-    m_colorBinding.colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+    for (i = 0; i < m_renderTargetCount; i++) {
+        m_colorBindings[i].view  = m_renderTargets[i]->targetView();
+        m_colorBindings[i].colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+    }
     if (m_depthStencilBinding.view) {
-       xglCmdBindAttachments(m_cmdBuffer, 1, &m_colorBinding, &m_depthStencilBinding );
+       xglCmdBindAttachments(m_cmdBuffer, m_renderTargetCount, m_colorBindings, &m_depthStencilBinding );
     } else {
-       xglCmdBindAttachments(m_cmdBuffer, 1, &m_colorBinding, XGL_NULL_HANDLE );
+       xglCmdBindAttachments(m_cmdBuffer, m_renderTargetCount, m_colorBindings, XGL_NULL_HANDLE );
     }
 }
 
@@ -197,6 +211,8 @@ void XglRenderFramework::GenerateBindStateAndPipelineCmds()
 
 void XglRenderFramework::GenerateClearAndPrepareBufferCmds()
 {
+    XGL_UINT i;
+
     // whatever we want to do, we do it to the whole buffer
     XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
     srRange.aspect = XGL_IMAGE_ASPECT_COLOR;
@@ -205,27 +221,30 @@ void XglRenderFramework::GenerateClearAndPrepareBufferCmds()
     srRange.baseArraySlice = 0;
     srRange.arraySize = XGL_LAST_MIP_OR_SLICE;
 
-    // prepare the whole back buffer for clear
-    XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
-    transitionToClear.image = m_renderTarget->image();
-    transitionToClear.oldState = m_renderTarget->state();
-    transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
-    transitionToClear.subresourceRange = srRange;
-    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
-    m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
-
     // clear the back buffer to dark grey
     XGL_UINT clearColor[4] = {64, 64, 64, 0};
-    xglCmdClearColorImageRaw( m_cmdBuffer, m_renderTarget->image(), clearColor, 1, &srRange );
+    XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
+    for (i = 0; i < m_renderTargetCount; i++) {
+        transitionToClear.image = m_renderTargets[i]->image();
+        transitionToClear.oldState = m_renderTargets[i]->state();
+        transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
+        transitionToClear.subresourceRange = srRange;
+        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
+        m_renderTargets[i]->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
+
+        xglCmdClearColorImageRaw( m_cmdBuffer, m_renderTargets[i]->image(), clearColor, 1, &srRange );
+    }
 
     // prepare back buffer for rendering
     XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
-    transitionToRender.image = m_renderTarget->image();
-    transitionToRender.oldState = m_renderTarget->state();
-    transitionToRender.newState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
-    transitionToRender.subresourceRange = srRange;
-    xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
-    m_renderTarget->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
+    for (i = 0; i < m_renderTargetCount; i++) {
+        transitionToRender.image = m_renderTargets[i]->image();
+        transitionToRender.oldState = m_renderTargets[i]->state();
+        transitionToRender.newState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+        transitionToRender.subresourceRange = srRange;
+        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
+        m_renderTargets[i]->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
+    }
 }
 
 XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
@@ -879,6 +898,11 @@ void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer,
     m_vertexBufferObjs.push_back(vertexDataBuffer);
     m_vertexBufferBindings.push_back(binding);
     m_vertexBufferCount++;
+}
+
+void XglPipelineObj::SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att)
+{
+    m_cb_state.attachment[binding] = *att;
 }
 
 void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet)

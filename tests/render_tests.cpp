@@ -296,6 +296,7 @@ void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDesc
 void XglRenderTest::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs)
 {
     XGL_RESULT err = XGL_SUCCESS;
+    XGL_UINT i;
 
     // submit the command buffer to the universal queue
     err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, numMemRefs, memRefs, NULL );
@@ -307,8 +308,8 @@ void XglRenderTest::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMe
     // Wait for work to finish before cleaning up.
     xglDeviceWaitIdle(m_device->device());
 
-    RecordImage(m_renderTarget);
-
+    for (i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
 }
 
 void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fragShaderText)
@@ -363,7 +364,8 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
     // Wait for work to finish before cleaning up.
     xglDeviceWaitIdle(m_device->device());
 
-    RecordImage(m_renderTarget);
+    assert(m_renderTargetCount == 1);
+    RecordImage(m_renderTargets[0]);
 
 }
 
@@ -397,7 +399,8 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
         // Wait for work to finish before cleaning up.
         xglDeviceWaitIdle(m_device->device());
 
-        RecordImage(m_renderTarget);
+        assert(m_renderTargetCount == 1);
+        RecordImage(m_renderTargets[0]);
     }
 }
 

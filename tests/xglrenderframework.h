@@ -61,10 +61,11 @@ protected:
     XGL_VIEWPORT_STATE_OBJECT       m_stateViewport;
     XGL_DEPTH_STENCIL_STATE_OBJECT  m_stateDepthStencil;
     XGL_MSAA_STATE_OBJECT           m_stateMsaa;
-    XglImage                       *m_renderTarget;
+    XglImage                       *m_renderTargets[XGL_MAX_COLOR_ATTACHMENTS];
+    XGL_UINT                        m_renderTargetCount;
     XGL_FLOAT                       m_width, m_height;
     XGL_FORMAT                      m_render_target_fmt;
-    XGL_COLOR_ATTACHMENT_BIND_INFO  m_colorBinding;
+    XGL_COLOR_ATTACHMENT_BIND_INFO  m_colorBindings[XGL_MAX_COLOR_ATTACHMENTS];
     XGL_DEPTH_STENCIL_BIND_INFO     m_depthStencilBinding;
 
     /*
@@ -220,6 +221,7 @@ public:
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
     void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
     void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
+    void SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
 
 protected:
     XGL_PIPELINE m_pipeline;
