@@ -228,8 +228,6 @@ protected:
     XGL_PIPELINE_RS_STATE_CREATE_INFO m_rs_state;
     XGL_PIPELINE_CB_STATE m_cb_state;
     XGL_PIPELINE_DB_STATE_CREATE_INFO m_db_state;
-    XGL_FORMAT m_render_target_format;
-    XGL_PIPELINE_CB_ATTACHMENT_STATE m_cb_attachment_state;
     XGL_GPU_MEMORY m_pipe_mem;
     XglDevice *m_device;
     vector<XglShaderObj*> m_shaderObjs;

@@ -837,9 +837,6 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_rs_state.rasterizerDiscardEnable = XGL_FALSE;
     m_rs_state.pointSize = 1.0;
 
-    m_render_target_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    m_render_target_format.numericFormat = XGL_NUM_FMT_UNORM;
-
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
     m_cb_state.pNext = &m_rs_state;
@@ -847,10 +844,10 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_cb_state.dualSourceBlendEnable = XGL_FALSE;
     m_cb_state.logicOp = XGL_LOGIC_OP_COPY;
 
-    m_cb_attachment_state.blendEnable = XGL_FALSE;
-    m_cb_attachment_state.format = m_render_target_format;
-    m_cb_attachment_state.channelWriteMask = 0xF;
-    m_cb_state.attachment[0] = m_cb_attachment_state;
+    m_cb_state.attachment[0].blendEnable = XGL_FALSE;
+    m_cb_state.attachment[0].format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    m_cb_state.attachment[0].format.numericFormat = XGL_NUM_FMT_UNORM;
+    m_cb_state.attachment[0].channelWriteMask = 0xF;
 
     m_db_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
     m_db_state.pNext = &m_cb_state,
