@@ -1182,6 +1182,42 @@ class Subcommand(object):
         hf_body.append('}')
         return "\n".join(hf_body)
 
+    def _generate_packet_id_enum(self):
+        pid_enum = []
+        pid_enum.append('enum GLV_TRACE_PACKET_ID_XGL')
+        pid_enum.append('{')
+        first_func = True
+        for proto in self.protos:
+            if first_func:
+                first_func = False
+                pid_enum.append('    GLV_TPI_XGL_xgl%s = GLV_TPI_BEGIN_API_HERE,' % proto.name)
+            else:
+                pid_enum.append('    GLV_TPI_XGL_xgl%s,' % proto.name)
+        pid_enum.append('};\n')
+        return "\n".join(pid_enum)
+
+    def _generate_interp_func(self):
+        interp_func_body = []
+        interp_func_body.append('static glv_trace_packet_header* interpret_trace_packet_xgl(glv_trace_packet_header* pHeader)')
+        interp_func_body.append('{')
+        interp_func_body.append('    if (pHeader == NULL)')
+        interp_func_body.append('    {')
+        interp_func_body.append('        return NULL;')
+        interp_func_body.append('    }')
+        interp_func_body.append('    switch (pHeader->packet_id)')
+        interp_func_body.append('    {')
+        for proto in self.protos:
+            interp_func_body.append('        case GLV_TPI_XGL_xgl%s:\n        {' % proto.name)
+            header_prefix = 'h'
+            if 'Wsi' in proto.name or 'Dbg' in proto.name:
+                header_prefix = 'pH'
+            interp_func_body.append('            return interpret_body_as_xgl%s(pHeader)->%seader;\n        }' % (proto.name, header_prefix))
+        interp_func_body.append('        default:')
+        interp_func_body.append('            return NULL;')
+        interp_func_body.append('    }')
+        interp_func_body.append('    return NULL;')
+        interp_func_body.append('}')
+        return "\n".join(interp_func_body)
 
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
@@ -1542,6 +1578,33 @@ class GlaveTraceC(Subcommand):
 
         return "\n".join(body)
 
+class GlavePacketID(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once')
+        header_txt.append('#include "glv_trace_packet_utils.h"')
+        header_txt.append('#include "glv_interconnect.h"')
+        header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
+        header_txt.append('#define SEND_ENTRYPOINT_ID(entrypoint) ;')
+        header_txt.append('//#define SEND_ENTRYPOINT_ID(entrypoint) glv_TraceInfo(#entrypoint "\\n");\n')
+        header_txt.append('#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) ;')
+        header_txt.append('//#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) glv_TraceInfo(entrypoint, __VA_ARGS__);\n')
+        header_txt.append('#define CREATE_TRACE_PACKET(entrypoint, buffer_bytes_needed) \\')
+        header_txt.append('    pHeader = glv_create_trace_packet(GLV_TID_XGL, GLV_TPI_XGL_##entrypoint, sizeof(struct_##entrypoint), buffer_bytes_needed);\n')
+        header_txt.append('#define FINISH_TRACE_PACKET() \\')
+        header_txt.append('    glv_finalize_trace_packet(pHeader); \\')
+        header_txt.append('    glv_write_trace_packet(pHeader, glv_trace_get_trace_file()); \\')
+        header_txt.append('    glv_delete_trace_packet(&pHeader);')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_packet_id_enum(),
+                self._generate_interp_func()]
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -1553,6 +1616,7 @@ def main():
             "ObjectTracker" : ObjectTrackerSubcommand,
             "glave-trace-h" : GlaveTraceHeader,
             "glave-trace-c" : GlaveTraceC,
+            "glave-packet-id" : GlavePacketID,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
