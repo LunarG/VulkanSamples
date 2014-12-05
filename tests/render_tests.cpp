@@ -1082,7 +1082,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
 #endif
     GenerateBindStateAndPipelineCmds();
 
-    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,descriptorSet);
+    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,&descriptorSet);
     descriptorSet.BindCommandBuffer(m_cmdBuffer);
 
     meshBuffer.Bind(m_cmdBuffer, 0, 0);
