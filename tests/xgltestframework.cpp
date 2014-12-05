@@ -302,6 +302,15 @@ void XglTestFramework::Compare(const char *basename, XglImage *image )
     DestroyMagickWand(magick_wand_1);
     DestroyMagickWand(magick_wand_2);
     MagickWandTerminus();
+
+    if (differenz == 0.0)
+    {
+        /*
+         * If test image and golden image match, we do not need to
+         * keep around the test image.
+         */
+        remove(testimage);
+    }
 }
 
 void XglTestFramework::Show(const char *comment, XglImage *image)
