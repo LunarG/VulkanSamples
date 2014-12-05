@@ -354,11 +354,8 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
     err = xglEndCommandBuffer( m_cmdBuffer );
     ASSERT_XGL_SUCCESS( err );
 
-    // this command buffer only uses the vertex buffer memory
-    m_numMemRefs = 0;
-
     // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_numMemRefs, m_memRefs, NULL );
+    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, 0, m_memRefs, NULL );
     ASSERT_XGL_SUCCESS( err );
 
     err = xglQueueWaitIdle( m_device->m_queue );
