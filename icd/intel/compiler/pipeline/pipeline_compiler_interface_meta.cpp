@@ -307,7 +307,7 @@ void intel_meta_compiler::emit_vs_fill_mem()
     mrf_offset += 1;
 
     emit_scattered_write(SHADER_OPCODE_DWORD_SCATTERED_WRITE,
-            base_mrf, mrf_offset, 1, use_header);
+            mrf, base_mrf, mrf_offset, 1, use_header);
 
     emit_urb_write_eot(base_mrf);
 }
@@ -340,7 +340,7 @@ void intel_meta_compiler::emit_vs_copy_mem()
 
     emit_add_8(offset(mrf, mrf_offset), src_offset_x, vid);
     mrf_offset += 1;
-    emit_scattered_read(temps[0], op_read,
+    emit_scattered_read(temps[0], op_read, mrf,
             base_mrf, mrf_offset, 1, use_header);
 
     /* prepare to set up dst offset */
@@ -348,10 +348,10 @@ void intel_meta_compiler::emit_vs_copy_mem()
 
     emit_add_8(offset(mrf, mrf_offset), dst_mem_offset, vid);
     mrf_offset += 1;
-    emit_mov_8(offset(mrf, mrf_offset), temps[0]);
+    emit_mov_8(offset(mrf, mrf_offset), vec1(temps[0]));
     mrf_offset += 1;
 
-    emit_scattered_write(op_write, base_mrf, mrf_offset, 1, use_header);
+    emit_scattered_write(op_write, mrf, base_mrf, mrf_offset, 1, use_header);
 
     emit_urb_write_eot(base_mrf);
 }

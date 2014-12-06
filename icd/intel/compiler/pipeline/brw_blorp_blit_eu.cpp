@@ -113,6 +113,7 @@ brw_blorp_eu_emitter::emit_render_target_write(const struct brw_reg &src0,
 
 void
 brw_blorp_eu_emitter::emit_scattered_write(enum opcode opcode,
+                                           const struct brw_reg &src0,
                                            unsigned msg_reg_nr,
                                            unsigned msg_length,
                                            int dispatch_width,
@@ -125,6 +126,7 @@ brw_blorp_eu_emitter::emit_scattered_write(enum opcode opcode,
 
    inst->dst = brw_vecn_reg(dispatch_width,
            BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_NULL, 0);
+   inst->src[0] = src0;
    inst->base_mrf = msg_reg_nr;
    inst->mlen = msg_length;
    inst->header_present = use_header;
@@ -136,6 +138,7 @@ brw_blorp_eu_emitter::emit_scattered_write(enum opcode opcode,
 void
 brw_blorp_eu_emitter::emit_scattered_read(const struct brw_reg &dst,
                                           enum opcode opcode,
+                                          const struct brw_reg &src0,
                                           unsigned msg_reg_nr,
                                           unsigned msg_length,
                                           int dispatch_width,
@@ -165,6 +168,7 @@ brw_blorp_eu_emitter::emit_scattered_read(const struct brw_reg &dst,
        break;
    }
 
+   inst->src[0] = src0;
    inst->base_mrf = msg_reg_nr;
    inst->mlen = msg_length;
    inst->header_present = use_header;

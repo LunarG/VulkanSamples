@@ -683,10 +683,12 @@ private:
                                       struct brw_reg surf_index);
 
    void generate_scattered_write(fs_inst *inst,
+                                 const struct brw_reg &dst,
                                  const struct brw_reg &src);
 
    void generate_scattered_read(fs_inst *inst,
-                                const struct brw_reg &dst);
+                                const struct brw_reg &dst,
+                                const struct brw_reg &src);
 
    void patch_discard_jumps_to_fb_writes();
 

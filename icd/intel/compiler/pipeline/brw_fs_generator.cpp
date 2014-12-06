@@ -95,11 +95,12 @@ fs_generator::patch_discard_jumps_to_fb_writes()
 
 void
 fs_generator::generate_scattered_write(fs_inst *inst,
-                                       const struct brw_reg &dst)
+                                       const struct brw_reg &dst,
+                                       const struct brw_reg &src)
 {
     brw_scattered_write(p,
             dst,
-            brw_message_reg(inst->base_mrf),
+            src,
             inst->target,
             inst->mlen,
             inst->header_present,
@@ -110,11 +111,12 @@ fs_generator::generate_scattered_write(fs_inst *inst,
 
 void
 fs_generator::generate_scattered_read(fs_inst *inst,
-                                      const struct brw_reg &dst)
+                                      const struct brw_reg &dst,
+                                      const struct brw_reg &src)
 {
     brw_scattered_read(p,
             dst,
-            brw_message_reg(inst->base_mrf),
+            src,
             inst->target,
             inst->mlen,
             inst->header_present,
@@ -1828,11 +1830,11 @@ fs_generator::generate_code(exec_list *instructions, FILE *dump_file)
 
       case SHADER_OPCODE_DWORD_SCATTERED_WRITE:
       case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
-         generate_scattered_write(inst, dst);
+         generate_scattered_write(inst, dst, src[0]);
          break;
       case SHADER_OPCODE_DWORD_SCATTERED_READ:
       case SHADER_OPCODE_BYTE_SCATTERED_READ:
-         generate_scattered_read(inst, dst);
+         generate_scattered_read(inst, dst, src[0]);
          break;
       case VS_OPCODE_URB_WRITE:
          brw_urb_WRITE(p,

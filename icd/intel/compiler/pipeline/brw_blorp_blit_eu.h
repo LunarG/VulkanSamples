@@ -53,6 +53,7 @@ protected:
                                  bool use_header);
 
    void emit_scattered_write(enum opcode opcode,
+                             const struct brw_reg &src0,
                              unsigned msg_reg_nr,
                              unsigned msg_length,
                              int dispatch_width,
@@ -60,6 +61,7 @@ protected:
 
    void emit_scattered_read(const struct brw_reg &dst,
                             enum opcode opcode,
+                            const struct brw_reg &src0,
                             unsigned msg_reg_nr,
                             unsigned msg_length,
                             int dispatch_width,

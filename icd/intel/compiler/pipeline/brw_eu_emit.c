@@ -266,8 +266,7 @@ validate_reg(struct brw_instruction *insn, struct brw_reg reg)
 
    /* Restrictions from 3.3.10: Register Region Restrictions. */
    /* 3. */
-   // LunarG - TODO:  Bring this assert back online when understood
-   //assert(execsize >= width);
+   assert(execsize >= width);
 
    /* 4. */
    if (execsize == width && hstride != 0) {
