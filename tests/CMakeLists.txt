@@ -4,10 +4,6 @@ find_package (OpenGL REQUIRED)
 find_package (GLUT REQUIRED)
 find_package(ImageMagick COMPONENTS MagickWand)
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/golden_images.gz
-   COMMAND cp ${PROJECT_SOURCE_DIR}/tests/golden_images.tar.gz ${CMAKE_CURRENT_BINARY_DIR}
-   COMMAND tar xf ${CMAKE_CURRENT_BINARY_DIR}/golden_images.tar.gz --directory=${CMAKE_CURRENT_BINARY_DIR})
-
 if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
 endif()
@@ -62,6 +58,14 @@ add_definitions(
     -DMAGICKCORE_HDRI_ENABLE=0
     )
 
+# set up a symlink for out-of-tree builds
+if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+    add_custom_target(golden-symlink ALL
+        ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/golden
+        VERBATIM
+        )
+endif()
+
 add_executable(xglbase init.cpp ${COMMON_CPP})
 set_target_properties(xglbase
    PROPERTIES
@@ -74,7 +78,7 @@ set_target_properties(xgl_image_tests
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_image_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP} displayengine.cpp golden_images.gz)
+add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP} displayengine.cpp)
 set_target_properties(xgl_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
