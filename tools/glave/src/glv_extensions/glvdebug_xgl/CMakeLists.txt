@@ -42,6 +42,7 @@ set(SRC_LIST
 set(UI_HEADER_LIST
     glvdebug_xgl_qcontroller.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
+    ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.h
 )
 
 set(HDR_LIST

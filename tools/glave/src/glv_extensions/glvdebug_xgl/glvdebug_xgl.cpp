@@ -43,17 +43,6 @@ GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(glvdeb
     return result;
 }
 
-GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_play_trace_file(glvdebug_trace_file_info* pTraceFileInfo)
-{
-    CREATE_CONTROLLER()
-    bool result = false;
-    if (s_pQController != NULL)
-    {
-        result = s_pQController->PlayTraceFile(pTraceFileInfo);
-    }
-    return result;
-}
-
 GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_unload_trace_file()
 {
     CREATE_CONTROLLER()

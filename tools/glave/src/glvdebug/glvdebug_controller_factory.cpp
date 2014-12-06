@@ -34,11 +34,9 @@ glvdebug_controller* glvdebug_controller_factory::Load(const char* filename)
         pController->pLibrary = pLibrary;
         pController->InterpretTracePacket = (funcptr_glvdebug_controller_interpret_trace_packet)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_interpret_trace_packet");
         pController->LoadTraceFile = (funcptr_glvdebug_controller_load_trace_file)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_load_trace_file");
-        pController->PlayTraceFile = (funcptr_glvdebug_controller_play_trace_file)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_play_trace_file");
         pController->UnloadTraceFile = (funcptr_glvdebug_controller_unload_trace_file)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_unload_trace_file");
         assert(pController->InterpretTracePacket != NULL);
         assert(pController->LoadTraceFile != NULL);
-        assert(pController->PlayTraceFile != NULL);
         assert(pController->UnloadTraceFile != NULL);
     }
 

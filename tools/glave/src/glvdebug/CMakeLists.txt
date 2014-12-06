@@ -52,6 +52,7 @@ set(UI_HEADER_LIST
     glvdebug.h
     glvdebug_qtimelineview.h
     glvdebug_QReplayWidget.h
+    glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
    )
 
@@ -68,6 +69,7 @@ set(HEADER_LIST
     glvdebug_controller_factory.h
     glvdebug_qtimelineview.h
     glvdebug_QReplayWidget.h
+    glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
    )
 

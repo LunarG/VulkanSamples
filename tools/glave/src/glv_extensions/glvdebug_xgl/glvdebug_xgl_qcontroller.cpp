@@ -31,17 +31,14 @@ extern "C" {
 #include <assert.h>
 #include <QWidget>
 #include <QToolButton>
+#include <QCoreApplication>
 
 #include "glvdebug_view.h"
 #include "glvreplay_seq.h"
 
 glvdebug_xgl_QController::glvdebug_xgl_QController()
-    : m_pTraceFileInfo(NULL),
-      m_pView(NULL),
-      m_pReplayWidget(NULL),
-      m_pPlayButton(NULL)
+    : m_pReplayWidget(NULL)
 {
-    memset(m_pReplayers, 0, sizeof(glv_replay::glv_trace_packet_replay_library*) * GLV_MAX_TRACER_ID_ARRAY_SIZE);
 }
 
 glvdebug_xgl_QController::~glvdebug_xgl_QController()
@@ -76,11 +73,11 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     //m_pView->add_custom_state_viewer(new QWidget(), QString("Buffers"));
     //m_pView->add_custom_state_viewer(new QWidget(), QString("Vertex Arrays"));
 
-    m_pReplayWidget = new glvdebug_QReplayWidget();
+    m_pReplayWidget = new glvdebug_QReplayWidget(this);
     if (m_pReplayWidget != NULL)
     {
         // load available replayers
-        if (!load_replayers(pTraceFileInfo, m_pReplayWidget))
+        if (!load_replayers(pTraceFileInfo, m_pReplayWidget->GetReplayWindow()))
         {
             m_pView->output_error("Failed to load necessary replayers.");
             delete m_pReplayWidget;
@@ -90,75 +87,10 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
         {
             m_pView->add_custom_state_viewer(m_pReplayWidget, "Replayer", true);
             m_pReplayWidget->setEnabled(true);
-
-            m_pPlayButton = m_pView->add_toolbar_button("Play Trace", true);
-            connect(m_pPlayButton, SIGNAL(clicked()), this, SLOT(playCurrentTraceFile()));
         }
     }
 
     m_pView->enable_default_calltree_model(pTraceFileInfo);
-
-    return true;
-}
-
-bool glvdebug_xgl_QController::PlayTraceFile(glvdebug_trace_file_info* pTraceFileInfo)
-{
-    glvdebug_trace_file_packet_offsets* pCurPacket;
-    unsigned int res;
-    glv_replay::glv_trace_packet_replay_library *replayer;
-//    glv_trace_packet_message* msgPacket;
-
-    for (unsigned int i = 0; i < pTraceFileInfo->packetCount; i++)
-    {
-        pCurPacket = &pTraceFileInfo->pPacketOffsets[i];
-        switch (pCurPacket->pHeader->packet_id) {
-            case GLV_TPI_MESSAGE:
-//                msgPacket = (glv_trace_packet_message*)pCurPacket->pHeader;
-//                if(msgPacket->type == TLLWarn) {
-//                    s_pView->output_warning(msgPacket->message);
-//                } else if(msgPacket->type == TLLError) {
-//                    s_pView->output_error(msgPacket->message);
-//                } else {
-//                    s_pView->output_message(msgPacket->message);
-//                }
-                break;
-            case GLV_TPI_MARKER_CHECKPOINT:
-                break;
-            case GLV_TPI_MARKER_API_BOUNDARY:
-                break;
-            case GLV_TPI_MARKER_API_GROUP_BEGIN:
-                break;
-            case GLV_TPI_MARKER_API_GROUP_END:
-                break;
-            case GLV_TPI_MARKER_TERMINATE_PROCESS:
-                break;
-            //TODO processing code for all the above cases
-            default:
-            {
-                if (pCurPacket->pHeader->tracer_id >= GLV_MAX_TRACER_ID_ARRAY_SIZE  || pCurPacket->pHeader->tracer_id == GLV_TID_RESERVED) {
-                    m_pView->output_warning(QString("Tracer_id from packet num packet %1 invalid.\n").arg(pCurPacket->pHeader->packet_id));
-                    continue;
-                }
-                replayer = m_pReplayers[pCurPacket->pHeader->tracer_id];
-                if (replayer == NULL) {
-                    m_pView->output_warning(QString("Tracer_id %1 has no valid replayer.\n").arg(pCurPacket->pHeader->tracer_id));
-                    continue;
-                }
-                if (pCurPacket->pHeader->packet_id >= GLV_TPI_BEGIN_API_HERE)
-                {
-                    // replay the API packet
-                    res = replayer->Replay(pCurPacket->pHeader);
-                    if (res != glv_replay::GLV_REPLAY_SUCCESS)
-                    {
-                        m_pView->output_error(QString("Failed to replay packet_id %1.\n").arg(pCurPacket->pHeader->packet_id));
-                    }
-                } else {
-                    m_pView->output_error(QString("Bad packet type id=%1, index=%2.\n").arg(pCurPacket->pHeader->packet_id).arg(pCurPacket->pHeader->global_packet_index));
-                    //return false;
-                }
-            }
-        }
-    }
 
     return true;
 }
@@ -190,83 +122,3 @@ void glvdebug_xgl_QController::UnloadTraceFile(void)
     }
 }
 
-bool glvdebug_xgl_QController::load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget)
-{
-    // Get window handle of the widget to replay into.
-    assert(pReplayWidget != NULL);
-    unsigned int windowWidth = 800;
-    unsigned int windowHeight = 600;
-    WId hWindow = pReplayWidget->winId();
-    windowWidth = pReplayWidget->geometry().width();
-    windowHeight = pReplayWidget->geometry().height();
-
-    // load any API specific driver libraries and init replayer objects
-    int debuglevel = 0;
-    uint8_t tidApi = GLV_TID_RESERVED;
-
-    // uncomment this to display in a separate window (and then comment out the line below it)
-//    glv_replay::Display disp(windowWidth, windowHeight, 0, false);
-    glv_replay::Display disp((glv_window_handle)hWindow, windowWidth, windowHeight);
-
-    for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
-    {
-        m_pReplayers[i] = NULL;
-    }
-
-    for (int i = 0; i < pTraceFileInfo->header.tracer_count; i++)
-    {
-        uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i];
-        tidApi = tracerId;
-
-        const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
-
-        if (pReplayerInfo->tracerId != tracerId)
-        {
-            glv_LogError("Replayer info for TracerId (%d) failed consistency check.\n", tracerId);
-            assert(!"TracerId in GLV_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
-        }
-        else if (pReplayerInfo->needsReplayer == TRUE)
-        {
-            // Have our factory create the necessary replayer
-            m_pReplayers[tracerId] = m_replayerFactory.Create(tracerId);
-
-            if (m_pReplayers[tracerId] == NULL)
-            {
-                // replayer failed to be created
-                glv_LogError("Couldn't create replayer for TracerId %d.\n", tracerId);
-            }
-            else
-            {
-                // Initialize the replayer
-                int err = m_pReplayers[tracerId]->Initialize(&disp, debuglevel);
-                if (err) {
-                    glv_LogError("Couldn't Initialize replayer for TracerId %d.\n", tracerId);
-                    return false;
-                }
-            }
-        }
-    }
-
-    if (tidApi == GLV_TID_RESERVED)
-    {
-        glv_LogError("No API specified in tracefile for replaying.\n");
-        return false;
-    }
-
-    return true;
-}
-
-void glvdebug_xgl_QController::playCurrentTraceFile()
-{
-//    QCursor origCursor = cursor();
-//    setCursor(Qt::WaitCursor);
-
-    // update UI
-    m_pPlayButton->setEnabled(false);
-
-    PlayTraceFile(m_pTraceFileInfo);
-
-    m_pPlayButton->setEnabled(true);
-
-//    setCursor(origCursor);
-}

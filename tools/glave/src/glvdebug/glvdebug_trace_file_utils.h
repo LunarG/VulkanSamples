@@ -54,7 +54,7 @@ struct glvdebug_trace_file_info
     glv_trace_file_header header;
 
     // number of packets in file which should also be number of elements in pPacketOffsets array
-    unsigned int packetCount;
+    uint64_t packetCount;
 
     // array of packet offsets
     glvdebug_trace_file_packet_offsets* pPacketOffsets;

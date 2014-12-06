@@ -25,13 +25,11 @@
 #define GLVDEBUG_XGL_QCONTROLLER_H
 
 #include "glv_trace_packet_identifiers.h"
-#include "glvdebug_trace_file_utils.h"
-#include "glvdebug_view.h"
 #include "glvdebug_QReplayWidget.h"
-#include "glvreplay_factory.h"
+#include "glvdebug_QReplayWorker.h"
 #include <QObject>
 
-class glvdebug_xgl_QController : public QObject
+class glvdebug_xgl_QController : public glvdebug_QReplayWorker
 {
     Q_OBJECT
 public:
@@ -40,23 +38,15 @@ public:
 
     glv_trace_packet_header* InterpretTracePacket(glv_trace_packet_header* pHeader);
     bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
-    bool PlayTraceFile(glvdebug_trace_file_info* pTraceFileInfo);
     void UnloadTraceFile(void);
 
-private slots:
+protected slots:
     void playCurrentTraceFile();
 
 private:
-    bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget);
-
-    glvdebug_trace_file_info* m_pTraceFileInfo;
-    glvdebug_view* m_pView;
-    glv_replay::ReplayFactory m_replayerFactory;
-    glv_replay::glv_trace_packet_replay_library* m_pReplayers[GLV_MAX_TRACER_ID_ARRAY_SIZE];
-
     glvdebug_QReplayWidget* m_pReplayWidget;
-    QToolButton *m_pPlayButton;
 
+    QThread* pThread;
 };
 
 #endif // GLVDEBUG_XGL_QCONTROLLER_H
