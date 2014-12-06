@@ -325,6 +325,11 @@ void intel_meta_compiler::emit_vs_copy_mem()
         op_read = SHADER_OPCODE_DWORD_SCATTERED_READ;
         op_write = SHADER_OPCODE_DWORD_SCATTERED_WRITE;
     } else {
+        /* Byte Scattered Read/Write are Gen7+ only */
+        if (brw->gen == 6) {
+            emit_urb_write_eot(base_mrf);
+            return;
+        }
         op_read = SHADER_OPCODE_BYTE_SCATTERED_READ;
         op_write = SHADER_OPCODE_BYTE_SCATTERED_WRITE;
     }
