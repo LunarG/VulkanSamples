@@ -429,7 +429,6 @@ void XglRenderTest::GenerateClearAndPrepareBufferCmds()
     XglRenderFramework::GenerateClearAndPrepareBufferCmds();
 
     if (m_depthStencilImage) {
-            printf("Clearing Depth Stencil\n");fflush(stdout);
             XGL_IMAGE_SUBRESOURCE_RANGE dsRange = {};
             dsRange.aspect = XGL_IMAGE_ASPECT_DEPTH;
             dsRange.baseMipLevel = 0;
