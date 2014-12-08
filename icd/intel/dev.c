@@ -196,7 +196,7 @@ void intel_dev_destroy(struct intel_dev *dev)
     intel_base_destroy(&dev->base);
 
     if (gpu->winsys)
-        intel_gpu_close(dev->gpu);
+        intel_gpu_close(gpu);
 }
 
 void intel_dev_get_heap_props(const struct intel_dev *dev,
