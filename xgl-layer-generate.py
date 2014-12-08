@@ -1219,6 +1219,179 @@ class Subcommand(object):
         interp_func_body.append('}')
         return "\n".join(interp_func_body)
 
+    def _generate_struct_util_funcs(self):
+        pid_enum = []
+        pid_enum.append('//=============================================================================')
+        pid_enum.append('static uint64_t calc_size_XGL_APPLICATION_INFO(const XGL_APPLICATION_INFO* pStruct)')
+        pid_enum.append('{')
+        pid_enum.append('    return ((pStruct == NULL) ? 0 : sizeof(XGL_APPLICATION_INFO)) + strlen((const char *)pStruct->pAppName) + 1 + strlen((const char *)pStruct->pEngineName) + 1;')
+        pid_enum.append('}\n')
+        pid_enum.append('static void add_XGL_APPLICATION_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_APPLICATION_INFO** ppStruct, const XGL_APPLICATION_INFO *pInStruct)')
+        pid_enum.append('{')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_APPLICATION_INFO), pInStruct);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen((const char *)pInStruct->pAppName) + 1, (const char *)pInStruct->pAppName);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen((const char *)pInStruct->pEngineName) + 1, (const char *)pInStruct->pEngineName);')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAppName));')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
+        pid_enum.append('};\n')
+        pid_enum.append('//=============================================================================\n')
+        pid_enum.append('static uint64_t calc_size_XGL_DEVICE_CREATE_INFO(const XGL_DEVICE_CREATE_INFO* pStruct)')
+        pid_enum.append('{')
+        pid_enum.append('    uint64_t total_size_ppEnabledExtensionNames = pStruct->extensionCount * sizeof(XGL_CHAR *);')
+        pid_enum.append('    uint32_t i;')
+        pid_enum.append('    for (i = 0; i < pStruct->extensionCount; i++)')
+        pid_enum.append('    {')
+        pid_enum.append('        total_size_ppEnabledExtensionNames += strlen((const char *)pStruct->ppEnabledExtensionNames[i]) + 1;')
+        pid_enum.append('    }')
+        pid_enum.append('    return sizeof(XGL_DEVICE_CREATE_INFO) + (pStruct->queueRecordCount*sizeof(XGL_DEVICE_CREATE_INFO)) + total_size_ppEnabledExtensionNames;')
+        pid_enum.append('}\n')
+        pid_enum.append('static void add_XGL_DEVICE_CREATE_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_DEVICE_CREATE_INFO** ppStruct, const XGL_DEVICE_CREATE_INFO *pInStruct)')
+        pid_enum.append('{')
+        pid_enum.append('    uint32_t i;')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_DEVICE_CREATE_INFO), pInStruct);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(XGL_DEVICE_CREATE_INFO), pInStruct->pRequestedQueues);')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
+        pid_enum.append('    if (pInStruct->extensionCount > 0) ')
+        pid_enum.append('    {')
+        pid_enum.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(XGL_CHAR *), pInStruct->ppEnabledExtensionNames);')
+        pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++)')
+        pid_enum.append('        {')
+        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])), strlen((const char *)pInStruct->ppEnabledExtensionNames[i]) + 1, (const char *)pInStruct->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            glv_finalize_buffer_address(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])));')
+        pid_enum.append('        }')
+        pid_enum.append('        glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
+        pid_enum.append('    }')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)ppStruct);')
+        pid_enum.append('}\n')
+        pid_enum.append('static XGL_DEVICE_CREATE_INFO* interpret_XGL_DEVICE_CREATE_INFO(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
+        pid_enum.append('{')
+        pid_enum.append('    XGL_DEVICE_CREATE_INFO* pXGL_DEVICE_CREATE_INFO = (XGL_DEVICE_CREATE_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
+        pid_enum.append('    if (pXGL_DEVICE_CREATE_INFO != NULL)')
+        pid_enum.append('    {')
+        pid_enum.append('        pXGL_DEVICE_CREATE_INFO->pRequestedQueues = (const XGL_DEVICE_QUEUE_CREATE_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pXGL_DEVICE_CREATE_INFO->pRequestedQueues);\n')
+        pid_enum.append('        if (pXGL_DEVICE_CREATE_INFO->extensionCount > 0)')
+        pid_enum.append('        {')
+        pid_enum.append('            const XGL_CHAR** pNames;')
+        pid_enum.append('            uint32_t i;')
+        pid_enum.append('            pXGL_DEVICE_CREATE_INFO->ppEnabledExtensionNames = (const XGL_CHAR *const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pXGL_DEVICE_CREATE_INFO->ppEnabledExtensionNames);')
+        pid_enum.append('            pNames = (const XGL_CHAR**)pXGL_DEVICE_CREATE_INFO->ppEnabledExtensionNames;')
+        pid_enum.append('            for (i = 0; i < pXGL_DEVICE_CREATE_INFO->extensionCount; i++)')
+        pid_enum.append('            {')
+        pid_enum.append('                pNames[i] = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pXGL_DEVICE_CREATE_INFO->ppEnabledExtensionNames[i]));')
+        pid_enum.append('            }')
+        pid_enum.append('        }')
+        pid_enum.append('    }\n')
+        pid_enum.append('    return pXGL_DEVICE_CREATE_INFO;')
+        pid_enum.append('}\n')
+        pid_enum.append('static void interpret_pipeline_shader(glv_trace_packet_header*  pHeader, XGL_PIPELINE_SHADER* pShader)')
+        pid_enum.append('{')
+        pid_enum.append('    XGL_UINT i, j;')
+        pid_enum.append('    if (pShader != NULL)')
+        pid_enum.append('    {')
+        pid_enum.append('        // descriptor sets')
+        pid_enum.append('        // TODO: need to ensure XGL_MAX_DESCRIPTOR_SETS is equal in replay as it was at trace time - meta data')
+        pid_enum.append('        for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        pid_enum.append('        {')
+        pid_enum.append('            pShader->descriptorSetMapping[i].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo);')
+        pid_enum.append('            for (j = 0; j < pShader->descriptorSetMapping[i].descriptorCount; j++)')
+        pid_enum.append('            {')
+        pid_enum.append('                if (pShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
+        pid_enum.append('                {')
+        pid_enum.append('                    XGL_DESCRIPTOR_SLOT_INFO* pInfo = (XGL_DESCRIPTOR_SLOT_INFO*)pShader->descriptorSetMapping[i].pDescriptorInfo;')
+        pid_enum.append('                    pInfo[j].pNextLevelSet = (const XGL_DESCRIPTOR_SET_MAPPING*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
+        pid_enum.append('                }')
+        pid_enum.append('            }')
+        pid_enum.append('        }\n')
+        pid_enum.append('        // constant buffers')
+        pid_enum.append('        if (pShader->linkConstBufferCount > 0)')
+        pid_enum.append('        {')
+        pid_enum.append('            XGL_UINT i;')
+        pid_enum.append('            pShader->pLinkConstBufferInfo = (const XGL_LINK_CONST_BUFFER*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pLinkConstBufferInfo);')
+        pid_enum.append('            for (i = 0; i < pShader->linkConstBufferCount; i++)')
+        pid_enum.append('            {')
+        pid_enum.append('                XGL_LINK_CONST_BUFFER* pBuffer = (XGL_LINK_CONST_BUFFER*)pShader->pLinkConstBufferInfo;')
+        pid_enum.append('                pBuffer[i].pBufferData = (const XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pLinkConstBufferInfo[i].pBufferData);')
+        pid_enum.append('            }')
+        pid_enum.append('        }')
+        pid_enum.append('    }')
+        pid_enum.append('}\n')
+        pid_enum.append('//=============================================================================')
+        return "\n".join(pid_enum)
+
+    def _generate_interp_funcs(self):
+        # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
+        custom_case_dict = { 'InitAndEnumerateGpus' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n', 'pInfo->pAppName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n', 'pInfo->pEngineName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
+                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['XGL_SHADER_CREATE_INFO* pInfo = (XGL_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n', 'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
+                             'CreateGraphicsPipeline' : {'param': 'pCreateInfo', 'txt': ['assert(pPacket->pCreateInfo->sType == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);\n', '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n','XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pPacket->pCreateInfo->pNext;\n','*ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pNext);\n',
+                                                                                         'XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;\n', 'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
+                                                                                         '    switch(pNext->sType)\n', '    {\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pNext->pNext;\n',
+                                                                                         '            *ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pNext->pNext;\n',
+                                                                                         '            *ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            interpret_pipeline_shader(pHeader, &pNext->shader);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pNext->pNext;\n',
+                                                                                         '            XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pVi = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *) pNext;\n',
+                                                                                         '            *ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            pVi->pVertexBindingDescriptions = (XGL_VERTEX_INPUT_BINDING_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexBindingDescriptions);\n',
+                                                                                         '            pVi->pVertexAttributeDescriptions = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexAttributeDescriptions);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        default:\n',
+                                                                                         '            assert(!"Encountered an unexpected type in pipeline state list");\n',
+                                                                                         '    }\n',
+                                                                                         '    pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;\n',
+                                                                                         '}']},
+                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
+        if_body = []
+        for proto in self.protos:
+            if 'Wsi' not in proto.name and 'Dbg' not in proto.name:
+                if 'UnmapMemory' == proto.name:
+                    proto.params = proto.params + (xgl.Param("XGL_VOID*", "pData"),)
+                if_body.append('typedef struct struct_xgl%s {' % proto.name)
+                if_body.append('    glv_trace_packet_header* header;')
+                for p in proto.params:
+                    if '[4]' in p.ty:
+                        if_body.append('    %s %s[4];' % (p.ty.strip('[4]'), p.name))
+                    else:
+                        if_body.append('    %s %s;' % (p.ty, p.name))
+                if 'XGL_VOID' != proto.ret:
+                    if_body.append('    %s result;' % proto.ret)
+                if_body.append('} struct_xgl%s;\n' % proto.name)
+                if_body.append('static struct_xgl%s* interpret_body_as_xgl%s(glv_trace_packet_header* pHeader)' % (proto.name, proto.name))
+                if_body.append('{')
+                if_body.append('    struct_xgl%s* pPacket = (struct_xgl%s*)pHeader->pBody;' % (proto.name, proto.name))
+                if_body.append('    pPacket->header = pHeader;')
+                for p in proto.params:
+                    if '*' in p.ty:
+                        if 'DEVICE_CREATE_INFO' in p.ty:
+                            if_body.append('    pPacket->%s = interpret_XGL_DEVICE_CREATE_INFO(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
+                        else:
+                            if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
+                        if proto.name in custom_case_dict and p.name == custom_case_dict[proto.name]['param']:
+                            if_body.append('    if (pPacket->%s != NULL)' % custom_case_dict[proto.name]['param'])
+                            if_body.append('    {')
+                            if_body.append('        %s' % "        ".join(custom_case_dict[proto.name]['txt']))
+                            if_body.append('    }')
+                if_body.append('    return pPacket;')
+                if_body.append('}\n')
+        return "\n".join(if_body)
+
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
         return '#include <xglLayer.h>\n#include "loader.h"'
@@ -1581,7 +1754,7 @@ class GlaveTraceC(Subcommand):
 class GlavePacketID(Subcommand):
     def generate_header(self):
         header_txt = []
-        header_txt.append('#pragma once')
+        header_txt.append('#pragma once\n')
         header_txt.append('#include "glv_trace_packet_utils.h"')
         header_txt.append('#include "glv_interconnect.h"')
         header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
@@ -1605,6 +1778,20 @@ class GlavePacketID(Subcommand):
 
         return "\n".join(body)
 
+class GlaveStructsCore(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#include "xgl.h"')
+        header_txt.append('#include "glv_trace_packet_utils.h"\n')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_struct_util_funcs(),
+                self._generate_interp_funcs()]
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -1617,6 +1804,7 @@ def main():
             "glave-trace-h" : GlaveTraceHeader,
             "glave-trace-c" : GlaveTraceC,
             "glave-packet-id" : GlavePacketID,
+            "glave-core-structs" : GlaveStructsCore,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:

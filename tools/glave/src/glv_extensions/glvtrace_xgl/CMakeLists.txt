@@ -13,6 +13,7 @@ add_custom_command(OUTPUT glvtrace_xgl_xgl.h glvtrace_xgl_xgl.c glvtrace_xgl_pac
 	COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-trace-h > glvtrace_xgl_xgl.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-trace-c > glvtrace_xgl_xgl.c
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
+        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
 	           DEPENDS ${SRC_DIR}/../../../xgl-layer-generate.py)
 
 set(SRC_LIST
