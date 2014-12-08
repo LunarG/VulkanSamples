@@ -603,7 +603,9 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
         break;
     }
 
+    ralloc_free(brw->shader_prog);
     ralloc_free(brw);
+
     return (sh->pCode) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 

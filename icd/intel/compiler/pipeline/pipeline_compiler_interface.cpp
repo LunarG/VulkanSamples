@@ -104,11 +104,6 @@ static void initialize_brw_context(struct brw_context *brw,
     brw->shader_prog = brw_new_shader_program(&brw->ctx, 0);
 }
 
-static inline void pipeline_destroy_compile(struct brw_context *brw) {
-    ralloc_free(brw->shader_prog);
-    ralloc_free(brw);
-}
-
 static void hexdump(FILE *fp, void *ptr, int buflen) {
   unsigned int *buf = (unsigned int*)ptr;
   int i, j;
@@ -277,6 +272,12 @@ struct brw_context *intel_create_brw_context(const struct intel_gpu *gpu)
     return brw;
 }
 
+void intel_destroy_brw_context(struct brw_context *brw)
+{
+    ralloc_free(brw->shader_prog);
+    ralloc_free(brw);
+}
+
 // invoke backend compiler to generate ISA and supporting data structures
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
@@ -431,7 +432,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
         status = XGL_ERROR_BAD_PIPELINE_DATA;
     }
 
-    pipeline_destroy_compile(brw);
+    intel_destroy_brw_context(brw);
 
     return status;
 }
