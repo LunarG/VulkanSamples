@@ -89,6 +89,7 @@ XGL_RESULT intel_dset_create(struct intel_dev *dev,
 
 void intel_dset_destroy(struct intel_dset *dset)
 {
+    icd_free(dset->slots);
     intel_base_destroy(&dset->obj.base);
 }
 
