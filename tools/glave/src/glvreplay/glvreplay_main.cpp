@@ -56,59 +56,68 @@ static void usage(const char *argv0)
 }
 
 namespace glv_replay {
-int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[])
+int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[], unsigned int numLoops)
 {
     int err = 0;
     glv_trace_packet_header *packet;
     unsigned int res;
     glv_trace_packet_replay_library *replayer;
     glv_trace_packet_message* msgPacket;
+    struct seqBookmark startingPacket;
 
-    while ((packet = seq.get_next_packet()) != NULL)
+    // record the location of starting trace packet
+    seq.record_bookmark();
+    seq.get_bookmark(startingPacket);
+
+    while (numLoops > 0)
     {
-        switch (packet->packet_id) {
-            case GLV_TPI_MESSAGE:
-                msgPacket = glv_interpret_body_as_trace_packet_message(packet);
-                glv_PrintTraceMessage(msgPacket->type, msgPacket->message);
-                break;
-            case GLV_TPI_MARKER_CHECKPOINT:
-                break;
-            case GLV_TPI_MARKER_API_BOUNDARY:
-                break;
-            case GLV_TPI_MARKER_API_GROUP_BEGIN:
-                break;
-            case GLV_TPI_MARKER_API_GROUP_END:
-                break;
-            case GLV_TPI_MARKER_TERMINATE_PROCESS:
-                break;
-            //TODO processing code for all the above cases
-            default:
-            {
-                if (packet->tracer_id >= GLV_MAX_TRACER_ID_ARRAY_SIZE  || packet->tracer_id == GLV_TID_RESERVED) {
-                    glv_LogError("Tracer_id from packet num packet %d invalid.\n", packet->packet_id);
-                    continue;
-                }
-                replayer = replayerArray[packet->tracer_id];
-                if (replayer == NULL) {
-                    glv_LogWarn("Tracer_id %d has no valid replayer.\n", packet->tracer_id);
-                    continue;
-                }
-                if (packet->packet_id >= GLV_TPI_BEGIN_API_HERE)
+        while ((packet = seq.get_next_packet()) != NULL)
+        {
+            switch (packet->packet_id) {
+                case GLV_TPI_MESSAGE:
+                    msgPacket = glv_interpret_body_as_trace_packet_message(packet);
+                    glv_PrintTraceMessage(msgPacket->type, msgPacket->message);
+                    break;
+                case GLV_TPI_MARKER_CHECKPOINT:
+                    break;
+                case GLV_TPI_MARKER_API_BOUNDARY:
+                    break;
+                case GLV_TPI_MARKER_API_GROUP_BEGIN:
+                    break;
+                case GLV_TPI_MARKER_API_GROUP_END:
+                    break;
+                case GLV_TPI_MARKER_TERMINATE_PROCESS:
+                    break;
+                //TODO processing code for all the above cases
+                default:
                 {
-                    // replay the API packet
-                    res = replayer->Replay(replayer->Interpret(packet));
-                    if (res != GLV_REPLAY_SUCCESS)
-                    {
-                        glv_LogError("Failed to replay packet_id %d.\n",packet->packet_id);
+                    if (packet->tracer_id >= GLV_MAX_TRACER_ID_ARRAY_SIZE  || packet->tracer_id == GLV_TID_RESERVED) {
+                        glv_LogError("Tracer_id from packet num packet %d invalid.\n", packet->packet_id);
+                        continue;
                     }
-                } else {
-                    glv_LogError("Bad packet type id=%d, index=%d.\n", packet->packet_id, packet->global_packet_index);
-                    return -1;
+                    replayer = replayerArray[packet->tracer_id];
+                    if (replayer == NULL) {
+                        glv_LogWarn("Tracer_id %d has no valid replayer.\n", packet->tracer_id);
+                        continue;
+                    }
+                    if (packet->packet_id >= GLV_TPI_BEGIN_API_HERE)
+                    {
+                        // replay the API packet
+                        res = replayer->Replay(replayer->Interpret(packet));
+                        if (res != GLV_REPLAY_SUCCESS)
+                        {
+                           glv_LogError("Failed to replay packet_id %d.\n",packet->packet_id);
+                        }
+                    } else {
+                        glv_LogError("Bad packet type id=%d, index=%d.\n", packet->packet_id, packet->global_packet_index);
+                        return -1;
+                    }
                 }
             }
         }
+        numLoops--;
+        seq.set_bookmark(startingPacket);
     }
-
     return err;
 }
 } // namespace glv_replay
@@ -121,6 +130,7 @@ int main(int argc, char **argv)
     //bool hasSnapshot = false;
     //bool fastReplay = false;
     unsigned int debugLevel = 1;
+    unsigned int numLoops = 1;
     int err;
 
     // parse command line options
@@ -229,7 +239,7 @@ int main(int argc, char **argv)
 
     // main loop
     Sequencer sequencer(traceFile);
-    err = glv_replay::main_loop(sequencer, replayer);
+    err = glv_replay::main_loop(sequencer, replayer, numLoops);
 
     for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {

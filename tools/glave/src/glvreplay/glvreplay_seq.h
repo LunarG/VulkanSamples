@@ -38,7 +38,6 @@ namespace glv_replay {
 struct seqBookmark
 {
     unsigned int file_offset;
-    uint64_t next_index;
 };
 
 
@@ -62,6 +61,7 @@ public:
     glv_trace_packet_header *get_next_packet();
     void get_bookmark(seqBookmark &bookmark);
     void set_bookmark(const seqBookmark &bookmark);
+    void record_bookmark();
     
 private:
     glv_trace_packet_header *m_lastPacket;

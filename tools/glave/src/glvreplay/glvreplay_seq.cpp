@@ -41,14 +41,16 @@ glv_trace_packet_header * Sequencer::get_next_packet()
 
 void Sequencer::get_bookmark(seqBookmark &bookmark) {
     bookmark.file_offset = m_bookmark.file_offset;
-    bookmark.next_index = m_bookmark.next_index;
 }
 
 
 void Sequencer::set_bookmark(const seqBookmark &bookmark) {
-    m_bookmark.file_offset = bookmark.file_offset;
-    m_bookmark.next_index = bookmark.next_index;
-    
+    fseek(m_pFile->mFile, m_bookmark.file_offset, SEEK_SET);
+}
+
+void Sequencer::record_bookmark()
+{
+    m_bookmark.file_offset = ftell(m_pFile->mFile);
 }
 
 } /* namespace glv_replay */
