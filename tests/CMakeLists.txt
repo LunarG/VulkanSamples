@@ -58,10 +58,11 @@ add_definitions(
     -DMAGICKCORE_HDRI_ENABLE=0
     )
 
-# set up a symlink for out-of-tree builds
+# extra setup for out-of-tree builds
 if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
-    add_custom_target(golden-symlink ALL
-        ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/golden
+    add_custom_target(binary-dir-symlinks ALL
+        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/golden
+        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests.sh
         VERBATIM
         )
 endif()
