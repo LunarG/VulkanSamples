@@ -1248,15 +1248,20 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         {
             struct_xglCreateGraphicsPipeline* pPacket = (struct_xglCreateGraphicsPipeline*)(packet->pBody);
             XGL_GRAPHICS_PIPELINE_CREATE_INFO createInfo;
+            struct shaderPair saveShader[10];
+            unsigned int idx = 0;
             memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
             // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext
             XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;
             XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;
-            while ((NULL != pPacketNext) && (XGL_NULL_HANDLE != pPacketNext)) // TODO : Shouldn't need both of these checks
+            while (XGL_NULL_HANDLE != pPacketNext)
             {
                 if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pNext->sType)
+                {
+                    saveShader[idx].val = pNext->shader.shader;
+                    saveShader[idx++].addr = &(pNext->shader.shader);
                     pNext->shader.shader = remap(pPacketNext->shader.shader);
-                // TODO : Do we need to do anything here for non-shader blocks?
+                }
                 pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacketNext->pNext;
                 pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;
             }
@@ -1266,6 +1271,8 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
             {
                 add_to_map(pPacket->pPipeline, &pipeline);
             }
+            for (unsigned int i = 0; i < idx; i++)
+                *(saveShader[i].addr) = saveShader[i].val;
             CHECK_RETURN_VALUE(xglCreateGraphicsPipeline);
             break;
         }

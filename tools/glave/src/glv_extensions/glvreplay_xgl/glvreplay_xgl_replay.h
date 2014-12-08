@@ -958,6 +958,10 @@ private:
         return (q == m_depthStencilViews.end()) ? XGL_NULL_HANDLE : q->second;
     }
 
+    struct shaderPair {
+        XGL_SHADER *addr;
+        XGL_SHADER val;
+    };
     std::map<XGL_SHADER, XGL_SHADER> m_shader;
     void add_to_map(XGL_SHADER* pTraceShader, XGL_SHADER* pReplayShader)
     {
