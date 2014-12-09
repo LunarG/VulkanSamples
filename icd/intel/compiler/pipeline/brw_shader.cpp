@@ -961,6 +961,16 @@ backend_visitor::dump_instructions()
 void
 backend_visitor::assign_common_binding_table_offsets(uint32_t next_binding_table_offset)
 {
+   // LunarG:  Don't allow compiler to separate number spaces for textures and buffers
+   stage_prog_data->binding_table.texture_start = next_binding_table_offset;
+   stage_prog_data->binding_table.ubo_start     = next_binding_table_offset;
+
+   // LunarG: Turn these on when we are ready to support
+   //stage_prog_data->binding_table.gather_texture_start = ??;
+   //stage_prog_data->binding_table.abo_start = ??;
+   //stage_prog_data->binding_table.pull_constants_start = ??;
+   return;
+
    int num_textures = _mesa_fls(prog->SamplersUsed);
 
    stage_prog_data->binding_table.texture_start = next_binding_table_offset;
