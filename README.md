@@ -1,5 +1,5 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.4, 2 Dec 2014*
+*Version 0.5, 9 Dec 2014*
 
 This project provides *open source* components for the XGL Ecosystem.
 
@@ -21,9 +21,23 @@ The following components are available:
 - [*Sample Drivers*](https://github.com/KhronosGroup/GL-Next/tree/master/icd)
   - [Common Infrastructure](https://github.com/KhronosGroup/GL-Next/tree/master/icd/common)
   - [Implementation for Intel GPUs](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel)
+- [*Sample Driver Tests*](https://github.com/KhronosGroup/GL-Next/tree/master/tests)
+  - Now includes Golden images to verify xgl_render_tests rendering.
 
 ## New
 
+- Sample driver now supports multiple render targets. Added TriangleMRT to test that functionality.
+- Added XGL_SLOT_SHADER_TEXTURE_RESOURCE to xgl.h as a descriptor slot type to work around confusion in GLSL
+  between textures and buffers as shader resources.
+- Misc. fixes for layers and Intel sample driver
+
+## Prior updates
+
+- Added mutex to APIDump, APIDumpFile and DrawState to prevent apparent threading issues using printf
+- Fix support for {Fill,Copy}Memory
+- MemTracker can report issues to application via debug callback
+- Update test infrastructure to improve ease of writing new tests. Add image comparison feature for regression testing. Requires ImageMagick library.
+- Misc. fixes to demos, layers and Intel sample driver
 - Added mutex to APIDump, APIDumpFile and DrawState to prevent apparent threading issues using printf
 - Fix support for {Fill,Copy}Memory
 - MemTracker can report issues to application via debug callback
