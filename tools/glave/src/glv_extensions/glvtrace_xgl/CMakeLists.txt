@@ -9,7 +9,7 @@ include("${SRC_DIR}/build_options.cmake")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 
-add_custom_command(OUTPUT glvtrace_xgl_xgl.h glvtrace_xgl_xgl.c glvtrace_xgl_packet_id.h
+add_custom_command(OUTPUT glvtrace_xgl_xgl.h glvtrace_xgl_xgl.c glvtrace_xgl_packet_id.h glvtrace_xgl_xgl_structs.h
 	COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-trace-h > glvtrace_xgl_xgl.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-trace-c > glvtrace_xgl_xgl.c
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
