@@ -501,13 +501,28 @@ class Subcommand(object):
         func_ptrs.append('#ifdef WIN32')
         func_ptrs.append('extern INIT_ONCE gInitOnce;')
         for proto in self.protos:
-            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+            if True not in [skip_str in proto.name for skip_str in ['Dbg', 'Wsi']]: #Dbg' not in proto.name and 'Wsi' not in proto.name:
                 func_ptrs.append('#define __HOOKED_xgl%s hooked_xgl%s' % (proto.name, proto.name))
 
         func_ptrs.append('\n#elif defined(PLATFORM_LINUX)')
         func_ptrs.append('extern pthread_once_t gInitOnce;')
         for proto in self.protos:
-            if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
+            if True not in [skip_str in proto.name for skip_str in ['Dbg', 'Wsi']]:
+                func_ptrs.append('#define __HOOKED_xgl%s xgl%s' % (proto.name, proto.name))
+
+        func_ptrs.append('#endif\n')
+        return "\n".join(func_ptrs)
+
+    def _generate_trace_func_ptrs_ext(self, func_class='Wsi'):
+        func_ptrs = []
+        func_ptrs.append('#ifdef WIN32')
+        for proto in self.protos:
+            if func_class in proto.name:
+                func_ptrs.append('#define __HOOKED_xgl%s hooked_xgl%s' % (proto.name, proto.name))
+
+        func_ptrs.append('#elif defined(__linux__)')
+        for proto in self.protos:
+            if func_class in proto.name:
                 func_ptrs.append('#define __HOOKED_xgl%s xgl%s' % (proto.name, proto.name))
 
         func_ptrs.append('#endif\n')
@@ -522,6 +537,16 @@ class Subcommand(object):
 
         return "\n".join(func_protos)
 
+    def _generate_trace_func_protos_ext(self, func_class='Wsi'):
+        func_protos = []
+        func_protos.append('// Hooked function prototypes\n')
+        for proto in self.protos:
+            if func_class in proto.name:
+                func_protos.append('%s;' % proto.c_func(prefix="__HOOKED_xgl", attr="XGLAPI"))
+
+        return "\n".join(func_protos)
+
+
     def _generate_func_ptr_assignments(self):
         func_ptr_assign = []
         for proto in self.protos:
@@ -534,6 +559,16 @@ class Subcommand(object):
                         func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
                 func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ') = xgl%s;\n' % (proto.name))
         func_ptr_assign.append('static BOOL isHooked = FALSE;\n')
+        return "\n".join(func_ptr_assign)
+
+    def _generate_func_ptr_assignments_ext(self, func_class='Wsi'):
+        func_ptr_assign = []
+        for proto in self.protos:
+            if func_class in proto.name:
+                func_ptr_assign.append('static %s( XGLAPI * real_xgl%s)(' % (proto.ret, proto.name))
+                for p in proto.params:
+                    func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
+                func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ') = xgl%s;\n' % (proto.name))
         return "\n".join(func_ptr_assign)
 
     def _generate_attach_hooks(self):
@@ -563,6 +598,33 @@ class Subcommand(object):
         hooks_txt.append('#endif\n}\n')
         return "\n".join(hooks_txt)
 
+    def _generate_attach_hooks_ext(self, func_class='Wsi'):
+        func_ext_dict = {'Wsi': '_xglwsix11ext', 'Dbg': '_xgldbg'}
+        first_proto_dict = {'Wsi': 'WsiX11AssociateConnection', 'Dbg': 'DbgSetValidationLevel'}
+        hooks_txt = []
+        hooks_txt.append('void AttachHooks%s()\n{\n    BOOL hookSuccess = TRUE;\n#if defined(WIN32)' % func_ext_dict[func_class])
+        hooks_txt.append('    Mhook_BeginMultiOperation(FALSE);')
+        hooks_txt.append('    if (real_xgl%s != NULL)' % first_proto_dict[func_class])
+        hooks_txt.append('    {')
+        hook_operator = '='
+        for proto in self.protos:
+            if func_class in proto.name:
+                hooks_txt.append('        hookSuccess %s Mhook_SetHook((PVOID*)&real_xgl%s, hooked_xgl%s);' % (hook_operator, proto.name, proto.name))
+                hook_operator = '&='
+        hooks_txt.append('    }\n')
+        hooks_txt.append('    if (!hookSuccess)\n    {')
+        hooks_txt.append('        glv_LogError("Failed to hook XGL ext %s.");\n    }\n' % func_class)
+        hooks_txt.append('    Mhook_EndMultiOperation();\n')
+        hooks_txt.append('#elif defined(__linux__)')
+        hooks_txt.append('    hookSuccess = glv_platform_get_next_lib_sym((PVOID*)&real_xgl%s, "xgl%s");' % (first_proto_dict[func_class], first_proto_dict[func_class]))
+        for proto in self.protos:
+            if func_class in proto.name and first_proto_dict[func_class] not in proto.name:
+                hooks_txt.append('    hookSuccess %s glv_platform_get_next_lib_sym((PVOID*)&real_xgl%s, "xgl%s");' % (hook_operator, proto.name, proto.name))
+        hooks_txt.append('    if (!hookSuccess)\n    {')
+        hooks_txt.append('        glv_LogError("Failed to hook XGL ext %s.");\n    }\n' % func_class)
+        hooks_txt.append('#endif\n}\n')
+        return "\n".join(hooks_txt)
+
     def _generate_detach_hooks(self):
         hooks_txt = []
         hooks_txt.append('void DetachHooks()\n{\n#ifdef __linux__\n    return;\n#elif defined(WIN32)')
@@ -572,11 +634,28 @@ class Subcommand(object):
             if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
                 hooks_txt.append('        unhookSuccess %s Mhook_Unhook((PVOID*)&real_xgl%s);' % (hook_operator, proto.name))
                 hook_operator = '&='
-        hooks_txt.append('    }\n    isHooked = FALSE;\n')
+        hooks_txt.append('    }\n    isHooked = FALSE;')
         hooks_txt.append('    if (!unhookSuccess)\n    {')
         hooks_txt.append('        glv_LogError("Failed to unhook XGL.");\n    }')
         hooks_txt.append('#endif\n}')
         hooks_txt.append('#ifdef WIN32\nINIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;\n#elif defined(PLATFORM_LINUX)\npthread_once_t gInitOnce = PTHREAD_ONCE_INIT;\n#endif\n')
+        return "\n".join(hooks_txt)
+
+    def _generate_detach_hooks_ext(self, func_class='Wsi'):
+        func_ext_dict = {'Wsi': '_xglwsix11ext', 'Dbg': '_xgldbg'}
+        first_proto_dict = {'Wsi': 'WsiX11AssociateConnection', 'Dbg': 'DbgSetValidationLevel'}
+        hooks_txt = []
+        hooks_txt.append('void DetachHooks%s()\n{\n#ifdef WIN32' % func_ext_dict[func_class])
+        hooks_txt.append('    BOOL unhookSuccess = TRUE;\n    if (real_xgl%s != NULL)\n    {' % first_proto_dict[func_class])
+        hook_operator = '='
+        for proto in self.protos:
+            if func_class in proto.name:
+                hooks_txt.append('        unhookSuccess %s Mhook_Unhook((PVOID*)&real_xgl%s);' % (hook_operator, proto.name))
+                hook_operator = '&='
+        hooks_txt.append('    }')
+        hooks_txt.append('    if (!unhookSuccess)\n    {')
+        hooks_txt.append('        glv_LogError("Failed to unhook XGL ext %s.");\n    }' % func_class)
+        hooks_txt.append('#elif defined(__linux__)\n    return;\n#endif\n}\n')
         return "\n".join(hooks_txt)
 
     def _generate_init_tracer(self):
@@ -816,6 +895,69 @@ class Subcommand(object):
                         func_body.append('    add_new_handle_to_mem_info(*pMem, pAllocInfo->allocationSize, NULL);')
                     elif 'FreeMemory' in proto.name:
                         func_body.append('    rm_handle_from_mem_info(mem);')
+                if 'VOID' not in proto.ret or '*' in proto.ret:
+                    func_body.append('    return result;')
+                func_body.append('}\n')
+        return "\n".join(func_body)
+
+    def _generate_trace_funcs_ext(self, func_class='Wsi'):
+        thread_once_funcs = ['DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback', 'DbgSetGlobalOption']
+        func_body = []
+        for proto in self.protos:
+            if func_class in proto.name:
+                packet_update_txt = ''
+                return_txt = ''
+                packet_size = ''
+                buff_ptr_indices = []
+                func_body.append('GLVTRACER_EXPORT %s XGLAPI __HOOKED_xgl%s(' % (proto.ret, proto.name))
+                for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 is NULL
+                    func_body.append('    %s %s,' % (p.ty, p.name))
+                    if 'Size' in p.name:
+                        packet_size += p.name
+                    if '*' in p.ty and 'pSysMem' != p.name:
+                        if 'CHAR' in p.ty:
+                            packet_size += '((%s != NULL) ? strlen((const char *)%s) + 1 : 0) + ' % (p.name, p.name)
+                        elif 'Size' not in packet_size:
+                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
+                        buff_ptr_indices.append(proto.params.index(p))
+                        if 'pConnectionInfo' in p.name:
+                            packet_size += '((pConnectionInfo->pConnection != NULL) ? sizeof(void *) : 0)'
+                    else:
+                        packet_update_txt += '    pPacket->%s = %s;\n' % (p.name, p.name)
+                if '' == packet_size:
+                    packet_size = '0'
+                else:
+                    packet_size = packet_size.strip(' + ')
+                func_body[-1] = func_body[-1].replace(',', ')')
+                func_body.append('{\n    glv_trace_packet_header* pHeader;')
+                if 'VOID' not in proto.ret or '*' in proto.ret:
+                    func_body.append('    %s result;' % proto.ret)
+                    return_txt = 'result = '
+                func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
+                if proto.name in thread_once_funcs:
+                    func_body.append('    glv_platform_thread_once(&gInitOnce, InitTracer);')
+                func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, packet_size))
+                func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
+                func_body.append(packet_update_txt.strip('\n'))
+                for idx in buff_ptr_indices:
+                    if 'CHAR' in proto.params[idx].ty:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen((const char *)%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
+                    elif 'Size' in proto.params[idx-1].name:
+                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s, %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].name))
+                    else:
+                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
+                if 'WsiX11AssociateConnection' in proto.name:
+                    func_body.append('    if (pConnectionInfo->pConnection != NULL) {')
+                    func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pConnectionInfo->pConnection), sizeof(void *), pConnectionInfo->pConnection);')
+                    func_body.append('        glv_finalize_buffer_address(pHeader, (void**) &(pPacket->pConnectionInfo->pConnection));')
+                    func_body.append('    }')
+                if 'VOID' not in proto.ret or '*' in proto.ret:
+                    func_body.append('    pPacket->result = result;')
+                for idx in buff_ptr_indices:
+                    func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s));' % (proto.params[idx].name))
+                func_body.append('    FINISH_TRACE_PACKET();')
                 if 'VOID' not in proto.ret or '*' in proto.ret:
                     func_body.append('    return result;')
                 func_body.append('}\n')
@@ -1792,6 +1934,81 @@ class GlaveStructsCore(Subcommand):
 
         return "\n".join(body)
 
+class GlaveWsiHeader(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#include "xgl.h"')
+        header_txt.append('#include "xglWsiX11Ext.h"\n')
+        header_txt.append('void AttachHooks_xglwsix11ext();')
+        header_txt.append('void DetachHooks_xglwsix11ext();')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_trace_func_ptrs_ext(),
+                self._generate_trace_func_protos_ext()]
+
+        return "\n".join(body)
+
+class GlaveWsiC(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include "glv_platform.h"')
+        header_txt.append('#include "glv_common.h"')
+        header_txt.append('#include "glvtrace_xgl_xglwsix11ext.h"')
+        header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_packet_id.h"')
+        header_txt.append('#ifdef WIN32')
+        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
+        header_txt.append('#endif')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_func_ptr_assignments_ext(),
+                self._generate_attach_hooks_ext(),
+                self._generate_detach_hooks_ext(),
+                self._generate_trace_funcs_ext()]
+
+        return "\n".join(body)
+
+class GlaveDbgHeader(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#include "xgl.h"')
+        header_txt.append('#include "xglDbg.h"\n')
+        header_txt.append('void AttachHooks_xgldbg();')
+        header_txt.append('void DetachHooks_xgldbg();')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_trace_func_ptrs_ext('Dbg'),
+                self._generate_trace_func_protos_ext('Dbg')]
+
+        return "\n".join(body)
+
+class GlaveDbgC(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include "glv_platform.h"')
+        header_txt.append('#include "glv_common.h"')
+        header_txt.append('#include "glvtrace_xgl_xgl.h"')
+        header_txt.append('#include "glvtrace_xgl_xgldbg.h"')
+        header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_packet_id.h"')
+        header_txt.append('#ifdef WIN32')
+        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
+        header_txt.append('#endif')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_func_ptr_assignments_ext('Dbg'),
+                self._generate_attach_hooks_ext('Dbg'),
+                self._generate_detach_hooks_ext('Dbg'),
+                self._generate_trace_funcs_ext('Dbg')]
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -1805,6 +2022,12 @@ def main():
             "glave-trace-c" : GlaveTraceC,
             "glave-packet-id" : GlavePacketID,
             "glave-core-structs" : GlaveStructsCore,
+            "glave-wsi-trace-h" : GlaveWsiHeader,
+            "glave-wsi-trace-c" : GlaveWsiC,
+#            "glave-wsi-trace-structs" : GlaveWsiStructs,
+            "glave-dbg-trace-h" : GlaveDbgHeader,
+            "glave-dbg-trace-c" : GlaveDbgC,
+#            "glave-dbg-trace-structs" : GlaveDbgStructs,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
