@@ -249,14 +249,9 @@ string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS     "${CMAKE_EXE_LINK_FLAGS_LIST}"
 # Linker flags (shared)
 string(REPLACE ";" " " CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINK_FLAGS_LIST}")
 
-# If building from inside chroot project, use glv_build there.
-if (EXISTS "${CMAKE_SOURCE_DIR}/../bin/chroot_build.sh")
-    set(RADPROJ_BUILD_DIR ${CMAKE_SOURCE_DIR}/../glv_build)
-else()
-    set(RADPROJ_BUILD_DIR ${CMAKE_SOURCE_DIR}/glv_build)
-endif()
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${RADPROJ_BUILD_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${RADPROJ_BUILD_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY   ${PROJECT_BINARY_DIR}/../../..)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../)
+
 
 function(build_options_finalize)
     if (CMAKE_VERBOSE)
