@@ -1583,6 +1583,240 @@ class Subcommand(object):
                 if_body.append('}\n')
         return "\n".join(if_body)
 
+    def _generate_replay_class_decls(self):
+        cd_body = []
+        cd_body.append('class ApiReplay {')
+        cd_body.append('public:')
+        cd_body.append('    virtual ~ApiReplay() { }')
+        cd_body.append('    virtual enum glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header * packet) = 0;')
+        cd_body.append('    virtual int init(glv_replay::Display & disp) = 0;')
+        cd_body.append('};\n')
+        cd_body.append('class xglDisplay: public glv_replay::DisplayImp {')
+        cd_body.append('friend class xglReplay;')
+        cd_body.append('public:')
+        cd_body.append('    xglDisplay();')
+        cd_body.append('    ~xglDisplay();')
+        cd_body.append('    int init(const unsigned int gpu_idx);')
+        cd_body.append('    int set_window(glv_window_handle hWindow, unsigned int width, unsigned int height);')
+        cd_body.append('    int create_window(const unsigned int width, const unsigned int height);')
+        cd_body.append('    void resize_window(const unsigned int width, const unsigned int height);')
+        cd_body.append('    void process_event();')
+        cd_body.append('    // XGL_DEVICE get_device() { return m_dev[m_gpuIdx];}')
+        cd_body.append('#if defined(WIN32)')
+        cd_body.append('    HWND get_window_handle() { return m_windowHandle; }')
+        cd_body.append('#elif defined(PLATFORM_LINUX)')
+        cd_body.append('    xcb_window_t get_window_handle() { return m_XcbWindow; }')
+        cd_body.append('#endif')
+        cd_body.append('private:')
+        cd_body.append('    XGL_RESULT init_xgl(const unsigned int gpu_idx);')
+        cd_body.append('    bool m_initedXGL;')
+        cd_body.append('#if defined(WIN32)')
+        cd_body.append('    HWND m_windowHandle;')
+        cd_body.append('#elif defined(PLATFORM_LINUX)')
+        cd_body.append('    XGL_WSI_X11_CONNECTION_INFO m_WsiConnection;')
+        cd_body.append('    xcb_screen_t *m_pXcbScreen;')
+        cd_body.append('    xcb_window_t m_XcbWindow;')
+        cd_body.append('#endif')
+        cd_body.append('    unsigned int m_windowWidth;')
+        cd_body.append('    unsigned int m_windowHeight;')
+        cd_body.append('#if 0')
+        cd_body.append('    XGL_DEVICE m_dev[XGL_MAX_PHYSICAL_GPUS];')
+        cd_body.append('    XGL_UINT32 m_gpuCount;')
+        cd_body.append('    unsigned int m_gpuIdx;')
+        cd_body.append('    XGL_PHYSICAL_GPU m_gpus[XGL_MAX_PHYSICAL_GPUS];')
+        cd_body.append('    XGL_PHYSICAL_GPU_PROPERTIES m_gpuProps[XGL_MAX_PHYSICAL_GPUS];')
+        cd_body.append('#endif')
+        cd_body.append('    std::vector<XGL_CHAR *>m_extensions;')
+        cd_body.append('};\n')
+        cd_body.append('typedef struct _XGLAllocInfo {')
+        cd_body.append('    XGL_GPU_SIZE size;')
+        cd_body.append('    XGL_VOID *pData;')
+        cd_body.append('} XGLAllocInfo;')
+        return "\n".join(cd_body)
+
+    def _generate_replay_func_ptrs(self):
+        xf_body = []
+        xf_body.append('struct xglFuncs {')
+        xf_body.append('    void init_funcs(void * libHandle);')
+        xf_body.append('    void *m_libHandle;\n')
+        for proto in self.protos:
+            xf_body.append('    typedef %s( XGLAPI * type_xgl%s)(' % (proto.ret, proto.name))
+            for p in proto.params:
+                if '[4]' in p.ty:
+                    xf_body.append('        %s %s[4],' % (p.ty.strip('[4]'), p.name))
+                else:
+                    xf_body.append('        %s %s,' % (p.ty, p.name))
+            xf_body[-1] = xf_body[-1].replace(',', ');')
+            xf_body.append('    type_xgl%s real_xgl%s;' % (proto.name, proto.name))
+        xf_body.append('};')
+        return "\n".join(xf_body)
+
+    def _map_decl(self, type1, type2, name):
+        return '    std::map<%s, %s> %s;' % (type1, type2, name)
+
+    def _add_to_map_decl(self, type1, type2, name):
+        txt = '    void add_to_map(%s* pTraceVal, %s* pReplayVal)\n    {\n' % (type1, type2)
+        txt += '        assert(pTraceVal != NULL);\n'
+        txt += '        assert(pReplayVal != NULL);\n'
+        txt += '        %s[*pTraceVal] = *pReplayVal;\n    }' % name
+        return txt
+
+    def _rm_from_map_decl(self, ty, name):
+        txt = '    void rm_from_map(const %s& key)\n    {\n' % (ty)
+        txt += '        %s.erase(key);\n    }' % name
+        return txt
+
+    def _remap_decl(self, ty, name):
+        txt = '    %s remap(const %s& value)\n    {\n' % (ty, ty)
+        txt += '        std::map<%s, %s>::const_iterator q = %s.find(value);\n' % (ty, ty, name)
+        txt += '        return (q == %s.end()) ? XGL_NULL_HANDLE : q->second;\n    }' % name
+        return txt
+
+    def _generate_replay_class(self):
+        obj_map_dict = {'m_gpus': 'XGL_PHYSICAL_GPU',
+                        'm_devices': 'XGL_DEVICE',
+                        'm_queues': 'XGL_QUEUE',
+                        'm_memories': 'XGL_GPU_MEMORY',
+                        'm_images': 'XGL_IMAGE',
+                        'm_imageViews': 'XGL_IMAGE_VIEW',
+                        'm_colorTargetViews': 'XGL_COLOR_ATTACHMENT_VIEW',
+                        'm_depthStencilViews': 'XGL_DEPTH_STENCIL_VIEW',
+                        'm_shader': 'XGL_SHADER',
+                        'm_pipeline': 'XGL_PIPELINE',
+                        'm_pipelineDelta': 'XGL_PIPELINE_DELTA',
+                        'm_sampler': 'XGL_SAMPLER',
+                        'm_descriptorSets': 'XGL_DESCRIPTOR_SET',
+                        'm_viewportStates': 'XGL_VIEWPORT_STATE_OBJECT',
+                        'm_rasterStates': 'XGL_RASTER_STATE_OBJECT',
+                        'm_msaaStates': 'XGL_MSAA_STATE_OBJECT',
+                        'm_colorBlendStates': 'XGL_COLOR_BLEND_STATE_OBJECT',
+                        'm_depthStencilStates': 'XGL_DEPTH_STENCIL_STATE_OBJECT',
+                        'm_cmdBuffers': 'XGL_CMD_BUFFER',
+                        'm_fences': 'XGL_FENCE',
+                        'm_queue_semaphores': 'XGL_QUEUE_SEMAPHORE',
+                        'm_events': 'XGL_EVENT',
+                        'm_queryPools': 'XGL_QUERY_POOL',
+                        }
+        rc_body = []
+        rc_body.append('class xglReplay : public ApiReplay {')
+        rc_body.append('public:')
+        rc_body.append('    ~xglReplay();')
+        rc_body.append('    xglReplay(unsigned int debugLevel);\n')
+        rc_body.append('    int init(glv_replay::Display & disp);')
+        rc_body.append('    xglDisplay * get_display() {return m_display;}')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);\n')
+        rc_body.append('private:')
+        rc_body.append('    struct xglFuncs m_xglFuncs;')
+        rc_body.append('    void copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange);')
+        rc_body.append('    unsigned int m_debugLevel;')
+        rc_body.append('    xglDisplay *m_display;')
+        rc_body.append('    XGL_MEMORY_HEAP_PROPERTIES m_heapProps[XGL_MAX_MEMORY_HEAPS];')
+        rc_body.append('    struct shaderPair {')
+        rc_body.append('        XGL_SHADER *addr;')
+        rc_body.append('        XGL_SHADER val;')
+        rc_body.append('    };')
+        rc_body.append(self._map_decl('XGL_GPU_MEMORY', 'XGLAllocInfo', 'm_mapData'))
+        # Custom code for 1-off memory mapping functions
+        rc_body.append('    void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)')
+        rc_body.append('    {')
+        rc_body.append('        XGLAllocInfo info;')
+        rc_body.append('        info.pData = NULL;')
+        rc_body.append('        info.size = size;')
+        rc_body.append('        m_mapData.insert(std::pair<XGL_GPU_MEMORY, XGLAllocInfo>(handle, info));')
+        rc_body.append('    }')
+        rc_body.append('    void add_mapping_to_mapData(XGL_GPU_MEMORY handle, XGL_VOID *pData)')
+        rc_body.append('    {')
+        rc_body.append('        std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);')
+        rc_body.append('        if (it == m_mapData.end())')
+        rc_body.append('        {')
+        rc_body.append('            glv_LogWarn("add_mapping_to_mapData() could not find entry\\n");')
+        rc_body.append('            return;')
+        rc_body.append('        }')
+        rc_body.append('        XGLAllocInfo &info = it->second;')
+        rc_body.append('        if (info.pData != NULL)')
+        rc_body.append('        {')
+        rc_body.append('            glv_LogWarn("add_mapping_to_mapData() data already mapped overwrite old mapping\\n");')
+        rc_body.append('        }')
+        rc_body.append('        info.pData = pData;')
+        rc_body.append('    }')
+        rc_body.append('    void rm_entry_from_mapData(XGL_GPU_MEMORY handle)')
+        rc_body.append('    {')
+        rc_body.append('        std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);')
+        rc_body.append('        if (it == m_mapData.end())')
+        rc_body.append('            return;')
+        rc_body.append('        m_mapData.erase(it);')
+        rc_body.append('    }')
+        rc_body.append('    void rm_mapping_from_mapData(XGL_GPU_MEMORY handle, XGL_VOID* pData)')
+        rc_body.append('    {')
+        rc_body.append('        std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);')
+        rc_body.append('        if (it == m_mapData.end())')
+        rc_body.append('            return;\n')
+        rc_body.append('        XGLAllocInfo &info = it->second;')
+        rc_body.append('        if (!pData || !info.pData)')
+        rc_body.append('        {')
+        rc_body.append('            glv_LogWarn("rm_mapping_from_mapData() null src or dest pointers\\n");')
+        rc_body.append('            info.pData = NULL;')
+        rc_body.append('            return;')
+        rc_body.append('        }')
+        rc_body.append('        memcpy(info.pData, pData, info.size);')
+        rc_body.append('        info.pData = NULL;')
+        rc_body.append('    }\n')
+        rc_body.append('    /*std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU> m_gpus;')
+        rc_body.append('    void add_to_map(XGL_PHYSICAL_GPU* pTraceGpu, XGL_PHYSICAL_GPU* pReplayGpu)')
+        rc_body.append('    {')
+        rc_body.append('        assert(pTraceGpu != NULL);')
+        rc_body.append('        assert(pReplayGpu != NULL);')
+        rc_body.append('        m_gpus[*pTraceGpu] = *pReplayGpu;')
+        rc_body.append('    }\n')
+        rc_body.append('    XGL_PHYSICAL_GPU remap(const XGL_PHYSICAL_GPU& gpu)')
+        rc_body.append('    {')
+        rc_body.append('        std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU>::const_iterator q = m_gpus.find(gpu);')
+        rc_body.append('        return (q == m_gpus.end()) ? XGL_NULL_HANDLE : q->second;')
+        rc_body.append('    }*/\n')
+        rc_body.append('    void clear_all_map_handles()\n    {')
+        for var in sorted(obj_map_dict):
+            rc_body.append('        %s.clear();' % var)
+        rc_body.append('    }')
+        for var in sorted(obj_map_dict):
+            rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
+            rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
+            rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
+            rc_body.append(self._remap_decl(obj_map_dict[var], var))
+        # XGL_STATE_OBJECT code
+        state_obj_remap_types = ['XGL_VIEWPORT_STATE_OBJECT', 'XGL_RASTER_STATE_OBJECT', 'XGL_MSAA_STATE_OBJECT', 'XGL_COLOR_BLEND_STATE_OBJECT', 'XGL_DEPTH_STENCIL_STATE_OBJECT']
+        rc_body.append('    XGL_STATE_OBJECT remap(const XGL_STATE_OBJECT& state)\n    {')
+        rc_body.append('        XGL_STATE_OBJECT obj;')
+        for t in state_obj_remap_types:
+            rc_body.append('        if ((obj = remap(static_cast <%s> (state))) != XGL_NULL_HANDLE)' % t)
+            rc_body.append('            return obj;')
+        rc_body.append('        return XGL_NULL_HANDLE;\n    }')
+        rc_body.append('    void rm_from_map(const XGL_STATE_OBJECT& state)\n    {')
+        for t in state_obj_remap_types:
+            rc_body.append('        rm_from_map(static_cast <%s> (state));' % t)
+        rc_body.append('    }')
+        # OBJECT code
+        rc_body.append('    XGL_OBJECT remap(const XGL_OBJECT& object)\n    {')
+        rc_body.append('        XGL_OBJECT obj;')
+        obj_remap_types = ['XGL_CMD_BUFFER', 'XGL_IMAGE', 'XGL_IMAGE_VIEW', 'XGL_COLOR_ATTACHMENT_VIEW', 'XGL_DEPTH_STENCIL_VIEW', 'XGL_SHADER', 'XGL_PIPELINE', 'XGL_PIPELINE_DELTA', 'XGL_SAMPLER', 'XGL_DESCRIPTOR_SET', 'XGL_STATE_OBJECT', 'XGL_FENCE', 'XGL_QUEUE_SEMAPHORE', 'XGL_EVENT', 'XGL_QUERY_POOL']
+        for var in obj_remap_types:
+            rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % (var))
+            rc_body.append('            return obj;')
+        rc_body.append('        return XGL_NULL_HANDLE;\n    }')
+        rc_body.append('    void rm_from_map(const XGL_OBJECT & objKey)\n    {')
+        for var in obj_remap_types:
+            rc_body.append('        rm_from_map(static_cast <%s> (objKey));' % (var))
+        rc_body.append('    }')
+        rc_body.append('    XGL_BASE_OBJECT remap(const XGL_BASE_OBJECT& object)\n    {')
+        rc_body.append('        XGL_BASE_OBJECT obj;')
+        base_obj_remap_types = ['XGL_DEVICE', 'XGL_QUEUE', 'XGL_GPU_MEMORY', 'XGL_OBJECT']
+        for t in base_obj_remap_types:
+            rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % t)
+            rc_body.append('            return obj;')
+        rc_body.append('        return XGL_NULL_HANDLE;\n    }')
+        rc_body.append('};')
+        return "\n".join(rc_body)
+
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
         return '#include <xglLayer.h>\n#include "loader.h"'
@@ -2087,6 +2321,51 @@ class GlaveDbgStructs(Subcommand):
 
         return "\n".join(body)
 
+class GlaveReplayHeader(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#include <set>')
+        header_txt.append('#include <map>')
+        header_txt.append('#include <vector>')
+        header_txt.append('#include <xcb/xcb.h>\n')
+        header_txt.append('#include "glvreplay_window.h"')
+        header_txt.append('#include "glvreplay_factory.h"')
+        header_txt.append('#include "glv_trace_packet_identifiers.h"\n')
+        header_txt.append('#include "xgl.h"')
+        header_txt.append('#include "xglDbg.h"')
+        header_txt.append('#include "xglWsiX11Ext.h"')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_replay_class_decls(),
+                self._generate_replay_func_ptrs(),
+                self._generate_replay_class()]
+
+        return "\n".join(body)
+
+class GlaveReplayC(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include "glv_platform.h"')
+        header_txt.append('#include "glv_common.h"')
+        header_txt.append('#include "glvtrace_xgl_xgl.h"')
+        header_txt.append('#include "glvtrace_xgl_xgldbg.h"')
+        header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_packet_id.h"')
+        header_txt.append('#ifdef WIN32')
+        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
+        header_txt.append('#endif')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_func_ptr_assignments_ext('Dbg'),
+                self._generate_attach_hooks_ext('Dbg'),
+                self._generate_detach_hooks_ext('Dbg'),
+                self._generate_trace_funcs_ext('Dbg')]
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -2106,6 +2385,8 @@ def main():
             "glave-dbg-trace-h" : GlaveDbgHeader,
             "glave-dbg-trace-c" : GlaveDbgC,
             "glave-dbg-trace-structs" : GlaveDbgStructs,
+            "glave-replay-h" : GlaveReplayHeader,
+            "glave-replay-c" : GlaveReplayC,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
