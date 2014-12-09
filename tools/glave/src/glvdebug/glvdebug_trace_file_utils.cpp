@@ -68,7 +68,7 @@ BOOL glvdebug_populate_trace_file_info(glvdebug_trace_file_info* pTraceFileInfo)
         }
         else if (feof(pTraceFileInfo->pFile) != 0)
         {
-            glvdebug_output_warning("There are no trace packets in this trace file.\n");
+            glvdebug_output_warning("Reached the end of the file.\n");
         }
         glvdebug_output_warning("There are no trace packets in this trace file.\n");
         pTraceFileInfo->pPacketOffsets = NULL;
