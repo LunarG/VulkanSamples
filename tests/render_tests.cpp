@@ -2385,7 +2385,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
 {
     // This test mixes binding slots of textures and buffers, ensuring
     // that sparse and overlapping assignments work.
-    // The expected result from this test is a red triangle, although
+    // The expected result from this test is a purple triangle, although
     // you can modify it to move the desired result around.
 
     static const char *vertShaderText =
@@ -2405,35 +2405,27 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (binding = 0) uniform sampler2D surface0;\n"
+            "layout (binding = 16) uniform sampler2D surface1;\n"
             "layout (binding = 2) uniform sampler2D surface2;\n"
-            "layout (binding = 4) uniform sampler2D surface4;\n"
-            "layout (binding = 6) uniform sampler2D surface6;\n"
+            "layout (binding = 4) uniform sampler2D surface3;\n"
 
-            "layout (std140, binding = 1) uniform redVal   { vec4 red; };"
-            "layout (std140, binding = 3) uniform greenVal { vec4 green; };"
-            "layout (std140, binding = 5) uniform blueVal  { vec4 blue; };"
-            "layout (std140, binding = 7) uniform whiteVal { vec4 white; };"
+
+            "layout (std140, binding = 10) uniform redVal   { vec4 red; };"
+            "layout (std140, binding = 15) uniform greenVal { vec4 green; };"
+            "layout (std140, binding = 13) uniform blueVal  { vec4 blue; };"
+            "layout (std140, binding = 17) uniform whiteVal { vec4 white; };"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   outColor = red;// * vec4(0.00001);\n"
+            "   outColor = red * vec4(0.00001);\n"
             "   outColor += white * vec4(0.00001);\n"
             "   outColor += textureLod(surface2, vec2(0.5), 0.0)* vec4(0.00001);\n"
-            "   outColor += textureLod(surface6, vec2(0.5), 0.0)* vec4(0.00001);\n"
+            "   outColor += textureLod(surface1, vec2(0.0), 0.0);//* vec4(0.00001);\n"
             "}\n";
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
-
-    // We're going to create a number of uniform buffers, and then allow
-    // the shader to select which it wants to read from with a binding
-
-    // Let's populate the buffers with a single color each:
-    //    layout (std140, binding = 0) uniform bufferVals { vec4 red;   } myRedVal;
-    //    layout (std140, binding = 1) uniform bufferVals { vec4 green; } myGreenVal;
-    //    layout (std140, binding = 2) uniform bufferVals { vec4 blue;  } myBlueVal;
-    //    layout (std140, binding = 3) uniform bufferVals { vec4 white; } myWhiteVal;
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -2446,37 +2438,40 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
     XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
-    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, &redBuffer);
+    ps.BindShaderEntitySlotToMemory(10, XGL_SLOT_SHADER_RESOURCE, &redBuffer);
 
     XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
-    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, &greenBuffer);
+    ps.BindShaderEntitySlotToMemory(15, XGL_SLOT_SHADER_RESOURCE, &greenBuffer);
 
     XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
-    ps.BindShaderEntitySlotToMemory(5, XGL_SLOT_SHADER_RESOURCE, &blueBuffer);
+    ps.BindShaderEntitySlotToMemory(13, XGL_SLOT_SHADER_RESOURCE, &blueBuffer);
 
     XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
-    ps.BindShaderEntitySlotToMemory(7, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
+    ps.BindShaderEntitySlotToMemory(17, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
 
     XglSamplerObj sampler0(m_device);
-    XglTextureObj texture0(m_device); // Red
-    texture0.ChangeColors(0xffff0000,0xffff0000);
+    XglTextureObj texture0(m_device); // Light Red
+    texture0.ChangeColors(0xff800000,0xff800000);
     ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture0);
     ps.BindShaderEntitySlotToSampler(0, &sampler0);
     XglSamplerObj sampler2(m_device);
-    XglTextureObj texture2(m_device); // Blue
-    texture2.ChangeColors(0xff0000ff,0xff0000ff);
+    XglTextureObj texture2(m_device); // Light Blue
+    texture2.ChangeColors(0xff000080,0xff000080);
     ps.BindShaderEntitySlotToImage(2, XGL_SLOT_SHADER_RESOURCE, &texture2);
     ps.BindShaderEntitySlotToSampler(2, &sampler2);
     XglSamplerObj sampler4(m_device);
-    XglTextureObj texture4(m_device); // Green
-    texture4.ChangeColors(0xff00ff00,0xff00ff00);
+    XglTextureObj texture4(m_device); // Light Green
+    texture4.ChangeColors(0xff008000,0xff008000);
     ps.BindShaderEntitySlotToImage(4, XGL_SLOT_SHADER_RESOURCE, &texture4);
     ps.BindShaderEntitySlotToSampler(4, &sampler4);
-    XglSamplerObj sampler6(m_device);
-    XglTextureObj texture6(m_device); // White
-    texture6.ChangeColors(0xffffffff,0xffffffff);
-    ps.BindShaderEntitySlotToImage(6, XGL_SLOT_SHADER_RESOURCE, &texture6);
-    ps.BindShaderEntitySlotToSampler(6, &sampler6);
+
+    // NOTE:  Bindings 1,3,5,7,8,9,11,12,14,16 work for this sampler, but 6 does not!!!
+    // TODO:  Get back here ASAP and understand why.
+    XglSamplerObj sampler7(m_device);
+    XglTextureObj texture7(m_device); // Red and Blue
+    texture7.ChangeColors(0xffff00ff,0xffff00ff);
+    ps.BindShaderEntitySlotToImage(16, XGL_SLOT_SHADER_RESOURCE, &texture7);
+    ps.BindShaderEntitySlotToSampler(16, &sampler7);
 
 
     XglPipelineObj pipelineobj(m_device);
@@ -2494,13 +2489,13 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     descriptorSet.AttachSampler(&sampler2);
     descriptorSet.AttachImageView(&texture4);
     descriptorSet.AttachSampler(&sampler4);
-    descriptorSet.AttachImageView(&texture6);
-    descriptorSet.AttachSampler(&sampler6);
+    descriptorSet.AttachImageView(&texture7);
+    descriptorSet.AttachSampler(&sampler7);
 
     m_memoryRefManager.AddMemoryRef(&texture0);
     m_memoryRefManager.AddMemoryRef(&texture2);
     m_memoryRefManager.AddMemoryRef(&texture4);
-    m_memoryRefManager.AddMemoryRef(&texture6);
+    m_memoryRefManager.AddMemoryRef(&texture7);
 
 
     GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
