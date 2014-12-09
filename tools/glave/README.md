@@ -102,7 +102,6 @@ Trace file is in "glvtrace_cube.glv".
 
 Rather than giving command line options, can instead put tracer options in a
 settings file: "glvtrace_settings.txt".
-```
 
 ###Running replayer###
 The Glave replayer takes  a trace file  and will launch an XGL session based
