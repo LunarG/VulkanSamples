@@ -1534,6 +1534,28 @@ class Subcommand(object):
                 if_body.append('}\n')
         return "\n".join(if_body)
 
+    def _generate_interp_funcs_ext(self, func_class='Wsi'):
+        if_body = []
+        for proto in self.protos:
+            if func_class in proto.name:
+                if_body.append('typedef struct struct_xgl%s {' % proto.name)
+                if_body.append('    glv_trace_packet_header* pHeader;')
+                for p in proto.params:
+                    if_body.append('    %s %s;' % (p.ty, p.name))
+                if 'XGL_VOID' != proto.ret:
+                    if_body.append('    %s result;' % proto.ret)
+                if_body.append('} struct_xgl%s;\n' % proto.name)
+                if_body.append('static struct_xgl%s* interpret_body_as_xgl%s(glv_trace_packet_header* pHeader)' % (proto.name, proto.name))
+                if_body.append('{')
+                if_body.append('    struct_xgl%s* pPacket = (struct_xgl%s*)pHeader->pBody;' % (proto.name, proto.name))
+                if_body.append('    pPacket->pHeader = pHeader;')
+                for p in proto.params:
+                    if '*' in p.ty:
+                        if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
+                if_body.append('    return pPacket;')
+                if_body.append('}\n')
+        return "\n".join(if_body)
+
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
         return '#include <xglLayer.h>\n#include "loader.h"'
@@ -1920,7 +1942,7 @@ class GlavePacketID(Subcommand):
 
         return "\n".join(body)
 
-class GlaveStructsCore(Subcommand):
+class GlaveCoreStructs(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -1971,6 +1993,19 @@ class GlaveWsiC(Subcommand):
 
         return "\n".join(body)
 
+class GlaveWsiStructs(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#include "xglWsiX11Ext.h"')
+        header_txt.append('#include "glv_trace_packet_utils.h"\n')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_interp_funcs_ext()]
+
+        return "\n".join(body)
+
 class GlaveDbgHeader(Subcommand):
     def generate_header(self):
         header_txt = []
@@ -2009,6 +2044,19 @@ class GlaveDbgC(Subcommand):
 
         return "\n".join(body)
 
+class GlaveDbgStructs(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#include "xglDbg.h"')
+        header_txt.append('#include "glv_trace_packet_utils.h"\n')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_interp_funcs_ext('Dbg')]
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -2021,13 +2069,13 @@ def main():
             "glave-trace-h" : GlaveTraceHeader,
             "glave-trace-c" : GlaveTraceC,
             "glave-packet-id" : GlavePacketID,
-            "glave-core-structs" : GlaveStructsCore,
+            "glave-core-structs" : GlaveCoreStructs,
             "glave-wsi-trace-h" : GlaveWsiHeader,
             "glave-wsi-trace-c" : GlaveWsiC,
-#            "glave-wsi-trace-structs" : GlaveWsiStructs,
+            "glave-wsi-trace-structs" : GlaveWsiStructs,
             "glave-dbg-trace-h" : GlaveDbgHeader,
             "glave-dbg-trace-c" : GlaveDbgC,
-#            "glave-dbg-trace-structs" : GlaveDbgStructs,
+            "glave-dbg-trace-structs" : GlaveDbgStructs,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:

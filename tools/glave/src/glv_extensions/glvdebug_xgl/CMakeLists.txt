@@ -17,9 +17,11 @@ else()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 # This file is shared between replayer and tracer and are generated to each dir.  Should generate them to common area
-add_custom_command(OUTPUT glvtrace_xgl_packet_id.h glvtrace_xgl_xgl_structs.h
+add_custom_command(OUTPUT glvtrace_xgl_packet_id.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg_structs.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
+        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
+        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
 	           DEPENDS ${SRC_DIR}/../../../xgl-layer-generate.py)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -53,6 +55,8 @@ set(UI_HEADER_LIST
 set(HDR_LIST
     glvtrace_xgl_packet_id.h
     glvtrace_xgl_xgl_structs.h
+    glvtrace_xgl_xglwsix11ext_structs.h
+    glvtrace_xgl_xgldbg_structs.h
     ${SRC_DIR}/glvdebug/glvdebug_controller.h
     ${SRC_DIR}/glvreplay/glvreplay_factory.h
 )
