@@ -862,6 +862,7 @@ class Subcommand(object):
                     func_body.append('    }')
                     func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayerCount), sizeof(XGL_SIZE), pOutLayerCount);')
                     func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pOutLayerCount));')
+                    func_body.append('    pPacket->pReserved = pReserved;')
                     func_body.append('    pPacket->result = result;')
                     func_body.append('    FINISH_TRACE_PACKET();')
                 else:
