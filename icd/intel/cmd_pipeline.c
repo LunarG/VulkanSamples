@@ -1486,13 +1486,20 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 
     surface_count = rmap->rt_count + rmap->texture_resource_count + rmap->resource_count + rmap->uav_count;
 
-    border_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB,
+    /*
+     * note that we cannot call cmd_state_pointer() here as the following
+     * cmd_state_pointer() would invalidate the pointer
+     */
+    border_offset = cmd_state_reserve(cmd, INTEL_CMD_ITEM_BLOB,
             GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR,
-            border_stride * rmap->sampler_count, &border_dw);
+            border_stride * rmap->sampler_count);
 
     sampler_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_SAMPLER,
             GEN6_ALIGNMENT_SAMPLER_STATE,
             4 * rmap->sampler_count, &sampler_dw);
+
+    cmd_state_update(cmd, border_offset,
+            border_stride * rmap->sampler_count, &border_dw);
 
     for (i = 0; i < rmap->sampler_count; i++) {
         const struct intel_pipeline_rmap_slot *slot =
