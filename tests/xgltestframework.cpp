@@ -145,7 +145,7 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
          * Since the above "consume" inputs, update argv
          * so that it contains the trimmed list of args for glutInit
          */
-        if (strncmp("--help", argv[i], 6) == 0) {
+        if (strncmp("--help", argv[i], 6) == 0 || strncmp("-help", argv[i], 5) == 0) {
             printf("\nOther options:\n");
             printf("\t--show-images\n"
                    "\t\tDisplay test images in viewer after tests complete.\n");
