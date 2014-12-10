@@ -1756,7 +1756,7 @@ TEST_F(XglRenderTest, VSTexture)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    vs.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    vs.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture);
     vs.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
@@ -1814,7 +1814,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture);
     ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
@@ -1882,7 +1882,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture);
     ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
@@ -1939,7 +1939,7 @@ TEST_F(XglRenderTest, FSTriangle)
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture);
     ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
@@ -2011,13 +2011,13 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     XglTextureObj texture3(m_device); // Blue
     texture3.ChangeColors(0xff0000ff,0xff0000ff);
 
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture1);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture1);
     ps.BindShaderEntitySlotToSampler(0, &sampler1);
 
-    ps.BindShaderEntitySlotToImage(1, XGL_SLOT_SHADER_RESOURCE, &texture2);
+    ps.BindShaderEntitySlotToImage(1, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture2);
     ps.BindShaderEntitySlotToSampler(1, &sampler2);
 
-    ps.BindShaderEntitySlotToImage(12, XGL_SLOT_SHADER_RESOURCE, &texture3);
+    ps.BindShaderEntitySlotToImage(12, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture3);
     ps.BindShaderEntitySlotToSampler(12, &sampler3);
 
     XglPipelineObj pipelineobj(m_device);
@@ -2338,7 +2338,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     // vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_VERTEX_INPUT, (XGL_OBJECT) &meshBuffer.m_constantBufferView);
     vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &mvpBuffer);
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture);
     ps.BindShaderEntitySlotToSampler(0, &sampler);
 
     XglPipelineObj pipelineobj(m_device);
@@ -2452,17 +2452,17 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     XglSamplerObj sampler0(m_device);
     XglTextureObj texture0(m_device); // Light Red
     texture0.ChangeColors(0xff800000,0xff800000);
-    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_RESOURCE, &texture0);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture0);
     ps.BindShaderEntitySlotToSampler(0, &sampler0);
     XglSamplerObj sampler2(m_device);
     XglTextureObj texture2(m_device); // Light Blue
     texture2.ChangeColors(0xff000080,0xff000080);
-    ps.BindShaderEntitySlotToImage(2, XGL_SLOT_SHADER_RESOURCE, &texture2);
+    ps.BindShaderEntitySlotToImage(2, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture2);
     ps.BindShaderEntitySlotToSampler(2, &sampler2);
     XglSamplerObj sampler4(m_device);
     XglTextureObj texture4(m_device); // Light Green
     texture4.ChangeColors(0xff008000,0xff008000);
-    ps.BindShaderEntitySlotToImage(4, XGL_SLOT_SHADER_RESOURCE, &texture4);
+    ps.BindShaderEntitySlotToImage(4, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture4);
     ps.BindShaderEntitySlotToSampler(4, &sampler4);
 
     // NOTE:  Bindings 1,3,5,7,8,9,11,12,14,16 work for this sampler, but 6 does not!!!
@@ -2470,8 +2470,125 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     XglSamplerObj sampler7(m_device);
     XglTextureObj texture7(m_device); // Red and Blue
     texture7.ChangeColors(0xffff00ff,0xffff00ff);
-    ps.BindShaderEntitySlotToImage(16, XGL_SLOT_SHADER_RESOURCE, &texture7);
+    ps.BindShaderEntitySlotToImage(16, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture7);
     ps.BindShaderEntitySlotToSampler(16, &sampler7);
+
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&redBuffer);
+    descriptorSet.AttachMemoryView(&greenBuffer);
+    descriptorSet.AttachMemoryView(&blueBuffer);
+    descriptorSet.AttachMemoryView(&whiteBuffer);
+    descriptorSet.AttachImageView(&texture0);
+    descriptorSet.AttachSampler(&sampler0);
+    descriptorSet.AttachImageView(&texture2);
+    descriptorSet.AttachSampler(&sampler2);
+    descriptorSet.AttachImageView(&texture4);
+    descriptorSet.AttachSampler(&sampler4);
+    descriptorSet.AttachImageView(&texture7);
+    descriptorSet.AttachSampler(&sampler7);
+
+    m_memoryRefManager.AddMemoryRef(&texture0);
+    m_memoryRefManager.AddMemoryRef(&texture2);
+    m_memoryRefManager.AddMemoryRef(&texture4);
+    m_memoryRefManager.AddMemoryRef(&texture7);
+
+
+    GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
+    QueueCommandBuffer(NULL, 0);
+
+}
+
+TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
+{
+    // This test matches binding slots of textures and buffers, requiring
+    // the driver to give them distinct number spaces.
+    // The expected result from this test is a red triangle, although
+    // you can modify it to move the desired result around.
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 430\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (binding = 0) uniform sampler2D surface0;\n"
+            "layout (binding = 1) uniform sampler2D surface1;\n"
+            "layout (binding = 2) uniform sampler2D surface2;\n"
+            "layout (binding = 3) uniform sampler2D surface3;\n"
+            "layout (std140, binding = 0) uniform redVal   { vec4 red; };"
+            "layout (std140, binding = 1) uniform greenVal { vec4 green; };"
+            "layout (std140, binding = 2) uniform blueVal  { vec4 blue; };"
+            "layout (std140, binding = 3) uniform whiteVal { vec4 white; };"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = red;// * vec4(0.00001);\n"
+            "   outColor += white * vec4(0.00001);\n"
+            "   outColor += textureLod(surface1, vec2(0.5), 0.0)* vec4(0.00001);\n"
+            "   outColor += textureLod(surface3, vec2(0.0), 0.0)* vec4(0.00001);\n"
+            "}\n";
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+
+    const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
+    const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
+    const float blueVals[4]  = { 0.0, 0.0, 1.0, 1.0 };
+    const float whiteVals[4] = { 1.0, 1.0, 1.0, 1.0 };
+
+    const int redCount   = sizeof(redVals)   / sizeof(float);
+    const int greenCount = sizeof(greenVals) / sizeof(float);
+    const int blueCount  = sizeof(blueVals)  / sizeof(float);
+    const int whiteCount = sizeof(whiteVals) / sizeof(float);
+
+    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &redBuffer);
+
+    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    ps.BindShaderEntitySlotToMemory(1, XGL_SLOT_SHADER_RESOURCE, &greenBuffer);
+
+    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    ps.BindShaderEntitySlotToMemory(2, XGL_SLOT_SHADER_RESOURCE, &blueBuffer);
+
+    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    ps.BindShaderEntitySlotToMemory(3, XGL_SLOT_SHADER_RESOURCE, &whiteBuffer);
+
+    XglSamplerObj sampler0(m_device);
+    XglTextureObj texture0(m_device); // Light Red
+    texture0.ChangeColors(0xff800000,0xff800000);
+    ps.BindShaderEntitySlotToImage(0, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture0);
+    ps.BindShaderEntitySlotToSampler(0, &sampler0);
+    XglSamplerObj sampler2(m_device);
+    XglTextureObj texture2(m_device); // Light Blue
+    texture2.ChangeColors(0xff000080,0xff000080);
+    ps.BindShaderEntitySlotToImage(1, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture2);
+    ps.BindShaderEntitySlotToSampler(1, &sampler2);
+    XglSamplerObj sampler4(m_device);
+    XglTextureObj texture4(m_device); // Light Green
+    texture4.ChangeColors(0xff008000,0xff008000);
+    ps.BindShaderEntitySlotToImage(2, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture4);
+    ps.BindShaderEntitySlotToSampler(2, &sampler4);
+    XglSamplerObj sampler7(m_device);
+    XglTextureObj texture7(m_device); // Red and Blue
+    texture7.ChangeColors(0xffff00ff,0xffff00ff);
+    ps.BindShaderEntitySlotToImage(3, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture7);
+    ps.BindShaderEntitySlotToSampler(3, &sampler7);
 
 
     XglPipelineObj pipelineobj(m_device);
