@@ -41,6 +41,7 @@ extern "C" {
 #include "glvdebug_qtimelineview.h"
 #include "glvdebug_controller.h"
 #include "glvdebug_QTraceFileModel.h"
+#include "glvdebug_qgeneratetracedialog.h"
 
 namespace Ui
 {
@@ -48,7 +49,6 @@ namespace Ui
 }
 
 class QGridLayout;
-
 class QModelIndex;
 class QProcess;
 class QProcessEnvironment;
@@ -108,12 +108,14 @@ private slots:
 
     void on_searchTextBox_returnPressed();
 
-    void slot_readReplayStandardOutput();
-    void slot_readReplayStandardError();
-
     void on_contextComboBox_currentIndexChanged(int index);
 
     void on_treeView_activated(const QModelIndex &index);
+
+    void prompt_generate_trace();
+
+    void on_message(QString message);
+    void on_error(QString error);
 
 private:
     Ui::glvdebug *ui;
@@ -121,7 +123,6 @@ private:
     // Opens a trace file without looking for associated session data
     bool open_trace_file(const std::string& filename);
 
-    bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget);
     bool load_controllers(glvdebug_trace_file_info* pTraceFileInfo);
 
     void onApiCallSelected(const QModelIndex &index, bool bAllowStateSnapshot);
@@ -137,11 +138,10 @@ private:
 
     glvdebug_controller* m_pController;
 
-    QProcess *m_pReplayProcess;
     QToolButton *m_pGenerateTraceButton;
-//    QToolButton *m_pPlayButton;
 
     glvdebug_QTimelineView* m_pTimeline;
+    glvdebug_QGenerateTraceDialog* m_pGenerateTraceDialog;
 
     QColor m_searchTextboxBackgroundColor;
     bool m_bDelayUpdateUIForContext;

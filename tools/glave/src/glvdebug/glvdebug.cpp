@@ -40,6 +40,7 @@
 #include "glvdebug_output.h"
 
 #include "glvdebug_controller_factory.h"
+#include "glvdebug_qgeneratetracedialog.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // globals
@@ -51,10 +52,9 @@ glvdebug::glvdebug(QWidget *parent)
       ui(new Ui::glvdebug),
       m_pTraceFileModel(NULL),
       m_pController(NULL),
-      m_pReplayProcess(new QProcess()),
       m_pGenerateTraceButton(NULL),
-//      m_pPlayButton(NULL),
       m_pTimeline(NULL),
+      m_pGenerateTraceDialog(NULL),
       m_bDelayUpdateUIForContext(false)
 {
     ui->setupUi(this);
@@ -80,6 +80,7 @@ glvdebug::glvdebug(QWidget *parent)
     m_pGenerateTraceButton = new QToolButton(ui->mainToolBar);
     m_pGenerateTraceButton->setText("Generate Trace");
     m_pGenerateTraceButton->setEnabled(true);
+    connect(m_pGenerateTraceButton, SIGNAL(clicked()), this, SLOT(prompt_generate_trace()));
 
     ui->mainToolBar->addWidget(m_pGenerateTraceButton);
 
@@ -93,8 +94,9 @@ glvdebug::glvdebug(QWidget *parent)
     delete ui->timelineViewPlaceholder;
     ui->timelineViewPlaceholder = NULL;
 
-    connect(m_pReplayProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(slot_readReplayStandardOutput()));
-    connect(m_pReplayProcess, SIGNAL(readyReadStandardError()), this, SLOT(slot_readReplayStandardError()));
+    m_pGenerateTraceDialog = new glvdebug_QGenerateTraceDialog(this);
+    connect(m_pGenerateTraceDialog, SIGNAL(output_message(QString)), this, SLOT(on_message(QString)));
+    connect(m_pGenerateTraceDialog, SIGNAL(output_error(QString)), this, SLOT(on_error(QString)));
 
     reset_tracefile_ui();
 }
@@ -114,18 +116,6 @@ glvdebug::~glvdebug()
 
     delete ui;
     glvdebug_output_deinit();
-    
-//    if (m_pPlayButton != NULL)
-//    {
-//        delete m_pPlayButton;
-//        m_pPlayButton = NULL;
-//    }
-
-    if (m_pReplayProcess != NULL)
-    {
-        delete m_pReplayProcess;
-        m_pReplayProcess = NULL;
-    }
 }
 
 int glvdebug::add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront)
@@ -184,38 +174,37 @@ void glvdebug::output_error(QString message, bool bRefresh)
     glvdebug_output_error(message.toStdString().c_str(), bRefresh);
 }
 
-
 glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
 {
-    //int ret = QMessageBox::warning(this, tr(g_PROJECT_NAME.toStdString().c_str()), tr("Would you like to load the new trace file?"),
-    //                              QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    int ret = QMessageBox::warning(this, tr(g_PROJECT_NAME.toStdString().c_str()), tr("Would you like to load the new trace file?"),
+                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
 
     Prompt_Result result = glvdebug_prompt_success;
 
-    //if (ret != QMessageBox::Yes)
-    //{
-    //    // user chose not to open the new trace
-    //    result = glvdebug_prompt_cancelled;
-    //}
-    //else
-    //{
+    if (ret != QMessageBox::Yes)
+    {
+        // user chose not to open the new trace
+        result = glvdebug_prompt_cancelled;
+    }
+    else
+    {
     //    // save current session if there is one
     //    if (m_openFilename.size() > 0 && m_pTraceReader != NULL && m_pApiCallTreeModel != NULL)
     //    {
     //        save_session_to_disk(get_sessionfile_path(m_openFilename, *m_pTraceReader), m_openFilename, m_pTraceReader, m_pApiCallTreeModel);
     //    }
 
-    //    // close any existing trace
-    //    close_trace_file();
+        // close any existing trace
+        close_trace_file();
 
-    //    // try to open the new file
-    //    if (pre_open_trace_file(tracefile) == false)
-    //    {
-    //        glvdebug_output_error("Could not open trace file.");
-    //        QMessageBox::critical(this, tr("Error"), tr("Could not open trace file."));
-    //        result = glvdebug_prompt_error;
-    //    }
-    //}
+        // try to open the new file
+        if (pre_open_trace_file(tracefile) == false)
+        {
+            glvdebug_output_error("Could not open trace file.");
+            QMessageBox::critical(this, tr("Error"), tr("Could not open trace file."));
+            result = glvdebug_prompt_error;
+        }
+    }
 
     return result;
 }
@@ -430,8 +419,6 @@ bool glvdebug::open_trace_file(const std::string &filename)
         glvdebug_output_message("...success!");
 
         // update toolbar
-//        m_pPlayButton->setEnabled(true);
-
         //ui->searchTextBox->setEnabled(true);
         //ui->searchPrevButton->setEnabled(true);
         //ui->searchNextButton->setEnabled(true);
@@ -503,8 +490,6 @@ void glvdebug::reset_tracefile_ui()
     ui->searchTextBox->setEnabled(false);
     ui->searchPrevButton->setEnabled(false);
     ui->searchNextButton->setEnabled(false);
-
-//    m_pPlayButton->setEnabled(false);
 
     //GLVDEBUG_DISABLE_BOTTOM_TAB(ui->machineInfoTab);
     //GLVDEBUG_DISABLE_BOTTOM_TAB(ui->callStackTab);
@@ -633,34 +618,6 @@ void glvdebug::on_searchTextBox_returnPressed()
     //}
 }
 
-void glvdebug::slot_readReplayStandardOutput()
-{
-    m_pReplayProcess->setReadChannel(QProcess::StandardOutput);
-    while (m_pReplayProcess->canReadLine())
-    {
-        QByteArray output = m_pReplayProcess->readLine();
-        if (output.endsWith("\n"))
-        {
-            output.remove(output.size() - 1, 1);
-        }
-        glvdebug_output_message(output.constData());
-    }
-}
-
-void glvdebug::slot_readReplayStandardError()
-{
-    m_pReplayProcess->setReadChannel(QProcess::StandardError);
-    while (m_pReplayProcess->canReadLine())
-    {
-        QByteArray output = m_pReplayProcess->readLine();
-        if (output.endsWith("\n"))
-        {
-            output.remove(output.size() - 1, 1);
-        }
-        glvdebug_output_error(output.constData());
-    }
-}
-
 void glvdebug::on_contextComboBox_currentIndexChanged(int index)
 {
 }
@@ -669,3 +626,46 @@ void glvdebug::on_treeView_activated(const QModelIndex &index)
 {
     onApiCallSelected(index, true);
 }
+
+void glvdebug::prompt_generate_trace()
+{
+    bool bShowDialog = true;
+    while (bShowDialog)
+    {
+        int code = m_pGenerateTraceDialog->exec();
+        if (code != glvdebug_QGenerateTraceDialog::Succeeded)
+        {
+            bShowDialog = false;
+        }
+        else
+        {
+            QFileInfo fileInfo(m_pGenerateTraceDialog->get_trace_file_path());
+            if (code == glvdebug_QGenerateTraceDialog::Succeeded &&
+                fileInfo.exists())
+            {
+                Prompt_Result result = prompt_load_new_trace(fileInfo.canonicalFilePath().toStdString().c_str());
+                if (result == glvdebug_prompt_success ||
+                        result == glvdebug_prompt_cancelled)
+                {
+                    bShowDialog = false;
+                }
+            }
+            else
+            {
+                glvdebug_output_error("Failed to trace the application.");
+                QMessageBox::critical(this, "Error", "Failed to trace application.");
+            }
+        }
+    }
+}
+
+void glvdebug::on_message(QString message)
+{
+    glvdebug_output_message(message.toStdString().c_str());
+}
+
+void glvdebug::on_error(QString error)
+{
+    glvdebug_output_error(error.toStdString().c_str());
+}
+

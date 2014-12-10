@@ -38,6 +38,7 @@ set(SRC_LIST
     glvdebug_settings.cpp
     glvdebug_output.cpp
     glvdebug_trace_file_utils.cpp
+    glvdebug_qgeneratetracedialog.cpp
     glvdebug_qtimelineview.cpp
     glvdebug_timelineitem.cpp
     glvdebug_timelinemodel.cpp
@@ -50,6 +51,7 @@ set(SRC_LIST
 # Typically that means just headers for UI objects
 set(UI_HEADER_LIST
     glvdebug.h
+    glvdebug_qgeneratetracedialog.h
     glvdebug_qtimelineview.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
@@ -62,15 +64,16 @@ set(HEADER_LIST
     glvdebug_settings.h
     glvdebug_output.h
     glvdebug_controller.h
-    glvdebug_view.h
-    glvdebug_trace_file_utils.h
-    glvdebug_timelineitem.h
-    glvdebug_timelinemodel.h
     glvdebug_controller_factory.h
+    glvdebug_qgeneratetracedialog.h
     glvdebug_qtimelineview.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
+    glvdebug_trace_file_utils.h
+    glvdebug_timelineitem.h
+    glvdebug_timelinemodel.h
+    glvdebug_view.h
    )
 
 set(FORM_LIST
