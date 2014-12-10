@@ -1006,8 +1006,10 @@ class GraphVizGen:
                 gv_funcs.append('    strncat(str, "</TABLE>>\\n];\\n\\n", 20);\n')
                 # TODO : Another hard-coded hack.  Tie these slots to "magical" DS0_MEMORY slots that should appear separately
                 gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
-                gv_funcs.append('        sprintf(tmpStr, "\\"%s\\":slot%u -> \\"DS0_MEMORY\\":slot%u [];\\n", myNodeName, i, i);\n')
-                gv_funcs.append('        strncat(str, tmpStr, strlen(tmpStr));\n')
+                gv_funcs.append('        if (XGL_SLOT_UNUSED != pStruct[i].slotObjectType) {\n')
+                gv_funcs.append('            sprintf(tmpStr, "\\"%s\\":slot%u -> \\"DS0_MEMORY\\":slot%u [];\\n", myNodeName, i, i);\n')
+                gv_funcs.append('            strncat(str, tmpStr, strlen(tmpStr));\n')
+                gv_funcs.append('        }\n')
                 gv_funcs.append('    }\n')
                 gv_funcs.append('    return str;\n}\n')
         # Add function to dynamically print out unknown struct

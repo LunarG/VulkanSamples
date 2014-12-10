@@ -596,7 +596,9 @@ static void dsDumpDot(FILE* pOutFile)
         uint32_t j;
         char label[1024];
         for (j = 0; j < pDS->numSlots; j++) {
-            fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", j, j);
+            // Don't draw unused slots
+            if (0 != pDS->dsSlot[j].activeMapping)
+                fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", j, j);
         }
         fprintf(pOutFile, "</TABLE>>\n];\n");
         // Now tie each slot to its info
