@@ -10,12 +10,13 @@ include("${SRC_DIR}/build_options.cmake")
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 
 # This file is shared between replayer and tracer and are generated to each dir.  Should generate them to common area
-add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg_structs.h glvreplay_xgl_replay.h
+add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg_structs.h glvreplay_xgl_replay.h glvreplay_xgl_replay.cpp
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
         COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-replay-h > glvreplay_xgl_replay.h
+        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-replay-c > glvreplay_xgl_replay.cpp
         COMMAND ${SRC_DIR}/../../../xgl-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
 	           DEPENDS ${SRC_DIR}/../../../xgl-layer-generate.py
 	                   ${SRC_DIR}/../../../xgl-helper.py)

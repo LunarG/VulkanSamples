@@ -1817,6 +1817,1047 @@ class Subcommand(object):
         rc_body.append('};')
         return "\n".join(rc_body)
 
+    def _generate_replay_display_init_xgl(self):
+        dix_body = []
+        dix_body.append('XGL_RESULT xglDisplay::init_xgl(unsigned int gpu_idx)')
+        dix_body.append('{')
+        dix_body.append('#if 0')
+        dix_body.append('    XGL_APPLICATION_INFO appInfo = {};')
+        dix_body.append('    appInfo.pAppName = APP_NAME;')
+        dix_body.append('    appInfo.pEngineName = "";')
+        dix_body.append('    appInfo.apiVersion = XGL_API_VERSION;')
+        dix_body.append('    XGL_RESULT res = xglInitAndEnumerateGpus(&appInfo, NULL, XGL_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);')
+        dix_body.append('    if ( res == XGL_SUCCESS ) {')
+        dix_body.append('        // retrieve the GPU information for all GPUs')
+        dix_body.append('        for( XGL_UINT32 gpu = 0; gpu < m_gpuCount; gpu++)')
+        dix_body.append('        {')
+        dix_body.append('            XGL_SIZE gpuInfoSize = sizeof(m_gpuProps[0]);\n')
+        dix_body.append('            // get the GPU physical properties:')
+        dix_body.append('            res = xglGetGpuInfo( m_gpus[gpu], XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &gpuInfoSize, &m_gpuProps[gpu]);')
+        dix_body.append('            if (res != XGL_SUCCESS)')
+        dix_body.append('                glv_LogWarn("Failed to retrieve properties for gpu[%d] result %d\\n", gpu, res);')
+        dix_body.append('        }')
+        dix_body.append('        res = XGL_SUCCESS;')
+        dix_body.append('    } else if ((gpu_idx + 1) > m_gpuCount) {')
+        dix_body.append('        glv_LogError("xglInitAndEnumerate number of gpus does not include requested index: num %d, requested %d\\n", m_gpuCount, gpu_idx);')
+        dix_body.append('        return -1;')
+        dix_body.append('    } else {')
+        dix_body.append('        glv_LogError("xglInitAndEnumerate failed\\n");')
+        dix_body.append('        return res;')
+        dix_body.append('    }')
+        dix_body.append('    // TODO add multi-gpu support always use gpu[gpu_idx] for now')
+        dix_body.append('    // get all extensions supported by this device gpu[gpu_idx]')
+        dix_body.append('    // first check if extensions are available and save a list of them')
+        dix_body.append('    bool foundWSIExt = false;')
+        dix_body.append('    for( int ext = 0; ext < sizeof( extensions ) / sizeof( extensions[0] ); ext++)')
+        dix_body.append('    {')
+        dix_body.append('        res = xglGetExtensionSupport( m_gpus[gpu_idx], extensions[ext] );')
+        dix_body.append('        if (res == XGL_SUCCESS) {')
+        dix_body.append('            m_extensions.push_back((XGL_CHAR *) extensions[ext]);')
+        dix_body.append('            if (!strcmp(extensions[ext], "XGL_WSI_WINDOWS"))')
+        dix_body.append('                foundWSIExt = true;')
+        dix_body.append('        }')
+        dix_body.append('    }')
+        dix_body.append('    if (!foundWSIExt) {')
+        dix_body.append('        glv_LogError("XGL_WSI_WINDOWS extension not supported by gpu[%d]\\n", gpu_idx);')
+        dix_body.append('        return XGL_ERROR_INCOMPATIBLE_DEVICE;')
+        dix_body.append('    }')
+        dix_body.append('    // TODO generalize this: use one universal queue for now')
+        dix_body.append('    XGL_DEVICE_QUEUE_CREATE_INFO dqci = {};')
+        dix_body.append('    dqci.queueCount = 1;')
+        dix_body.append('    dqci.queueType = XGL_QUEUE_UNIVERSAL;')
+        dix_body.append('    // create the device enabling validation level 4')
+        dix_body.append('    const XGL_CHAR * const * extNames = &m_extensions[0];')
+        dix_body.append('    XGL_DEVICE_CREATE_INFO info = {};')
+        dix_body.append('    info.queueRecordCount = 1;')
+        dix_body.append('    info.pRequestedQueues = &dqci;')
+        dix_body.append('    info.extensionCount = static_cast <XGL_UINT> (m_extensions.size());')
+        dix_body.append('    info.ppEnabledExtensionNames = extNames;')
+        dix_body.append('    info.flags = XGL_DEVICE_CREATE_VALIDATION;')
+        dix_body.append('    info.maxValidationLevel = XGL_VALIDATION_LEVEL_4;')
+        dix_body.append('    XGL_BOOL xglTrue = XGL_TRUE;')
+        dix_body.append('    res = xglDbgSetGlobalOption( XGL_DBG_OPTION_BREAK_ON_ERROR, sizeof( xglTrue ), &xglTrue );')
+        dix_body.append('    if (res != XGL_SUCCESS)')
+        dix_body.append('        glv_LogWarn("Could not set debug option break on error\\n");')
+        dix_body.append('    res = xglCreateDevice( m_gpus[0], &info, &m_dev[gpu_idx]);')
+        dix_body.append('    return res;')
+        dix_body.append('#else')
+        dix_body.append('    return XGL_ERROR_INITIALIZATION_FAILED;')
+        dix_body.append('#endif')
+        dix_body.append('}')
+        return "\n".join(dix_body)
+
+    def _generate_replay_display_init(self):
+        di_body = []
+        di_body.append('int xglDisplay::init(const unsigned int gpu_idx)')
+        di_body.append('{')
+        di_body.append('    //m_gpuIdx = gpu_idx;')
+        di_body.append('#if 0')
+        di_body.append('    XGL_RESULT result = init_xgl(gpu_idx);')
+        di_body.append('    if (result != XGL_SUCCESS) {')
+        di_body.append('        glv_LogError("could not init xgl library");')
+        di_body.append('        return -1;')
+        di_body.append('    } else {')
+        di_body.append('        m_initedXGL = true;')
+        di_body.append('    }')
+        di_body.append('#endif')
+        di_body.append('#if defined(PLATFORM_LINUX)')
+        di_body.append('    const xcb_setup_t *setup;')
+        di_body.append('    xcb_screen_iterator_t iter;')
+        di_body.append('    int scr;')
+        di_body.append('    xcb_connection_t *pConnection;')
+        di_body.append('    pConnection = xcb_connect(NULL, &scr);')
+        di_body.append('    setup = xcb_get_setup(pConnection);')
+        di_body.append('    iter = xcb_setup_roots_iterator(setup);')
+        di_body.append('    while (scr-- > 0)')
+        di_body.append('        xcb_screen_next(&iter);')
+        di_body.append('    m_pXcbScreen = iter.data;')
+        di_body.append('    m_WsiConnection.pConnection = pConnection;')
+        di_body.append('    m_WsiConnection.root = m_pXcbScreen->root;')
+        di_body.append('#endif')
+        di_body.append('    return 0;')
+        di_body.append('}')
+        return "\n".join(di_body)
+
+    def _generate_replay_display_structors(self):
+        ds_body = []
+        ds_body.append('xglDisplay::xglDisplay()')
+        ds_body.append('    : m_initedXGL(false),')
+        ds_body.append('    m_windowWidth(0),')
+        ds_body.append('    m_windowHeight(0)')
+        ds_body.append('{')
+        ds_body.append('#if defined(WIN32)')
+        ds_body.append('    m_windowHandle = NULL;')
+        ds_body.append('#elif defined(PLATFORM_LINUX)')
+        ds_body.append('    m_WsiConnection.pConnection = NULL;')
+        ds_body.append('    m_WsiConnection.root = 0;')
+        ds_body.append('    m_WsiConnection.provider = 0;')
+        ds_body.append('    m_pXcbScreen = NULL;')
+        ds_body.append('    m_XcbWindow = 0;')
+        ds_body.append('#endif')
+        ds_body.append('}')
+        ds_body.append('xglDisplay::~xglDisplay()')
+        ds_body.append('{')
+        ds_body.append('#ifdef PLATFORM_LINUX')
+        ds_body.append('    if (m_XcbWindow != 0)')
+        ds_body.append('    {')
+        ds_body.append('        xcb_destroy_window(m_WsiConnection.pConnection, m_XcbWindow);')
+        ds_body.append('    }')
+        ds_body.append('    if (m_WsiConnection.pConnection != NULL)')
+        ds_body.append('    {')
+        ds_body.append('        xcb_disconnect(m_WsiConnection.pConnection);')
+        ds_body.append('    }')
+        ds_body.append('#endif')
+        ds_body.append('}')
+        return "\n".join(ds_body)
+
+    def _generate_replay_display_window(self):
+        dw_body = []
+        dw_body.append('#if defined(WIN32)')
+        dw_body.append('LRESULT WINAPI WindowProcXgl( HWND window, unsigned int msg, WPARAM wp, LPARAM lp)')
+        dw_body.append('{')
+        dw_body.append('    switch(msg)')
+        dw_body.append('    {')
+        dw_body.append('        case WM_CLOSE:')
+        dw_body.append('            DestroyWindow( window);')
+        dw_body.append('            // fall-thru')
+        dw_body.append('        case WM_DESTROY:')
+        dw_body.append('            PostQuitMessage(0) ;')
+        dw_body.append('            return 0L ;')
+        dw_body.append('        default:')
+        dw_body.append('            return DefWindowProc( window, msg, wp, lp ) ;')
+        dw_body.append('    }')
+        dw_body.append('}')
+        dw_body.append('#endif')
+        dw_body.append('int xglDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsigned int height)')
+        dw_body.append('{')
+        dw_body.append('#if defined(WIN32)')
+        dw_body.append('    m_windowHandle = hWindow;')
+        dw_body.append('#elif defined(PLATFORM_LINUX)')
+        dw_body.append('    m_XcbWindow = hWindow;')
+        dw_body.append('#endif')
+        dw_body.append('    m_windowWidth = width;')
+        dw_body.append('    m_windowHeight = height;')
+        dw_body.append('    return 0;')
+        dw_body.append('}\n')
+        dw_body.append('int xglDisplay::create_window(const unsigned int width, const unsigned int height)')
+        dw_body.append('{')
+        dw_body.append('#if defined(WIN32)')
+        dw_body.append('    // Register Window class')
+        dw_body.append('    WNDCLASSEX wcex = {};')
+        dw_body.append('    wcex.cbSize = sizeof( WNDCLASSEX);')
+        dw_body.append('    wcex.style = CS_HREDRAW | CS_VREDRAW;')
+        dw_body.append('    wcex.lpfnWndProc = WindowProcXgl;')
+        dw_body.append('    wcex.cbClsExtra = 0;')
+        dw_body.append('    wcex.cbWndExtra = 0;')
+        dw_body.append('    wcex.hInstance = GetModuleHandle(0);')
+        dw_body.append('    wcex.hIcon = LoadIcon(wcex.hInstance, MAKEINTRESOURCE( IDI_ICON));')
+        dw_body.append('    wcex.hCursor = LoadCursor( NULL, IDC_ARROW);')
+        dw_body.append('    wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW + 1);')
+        dw_body.append('    wcex.lpszMenuName = NULL;')
+        dw_body.append('    wcex.lpszClassName = APP_NAME;')
+        dw_body.append('    wcex.hIconSm = LoadIcon( wcex.hInstance, MAKEINTRESOURCE( IDI_ICON));')
+        dw_body.append('    if( !RegisterClassEx( &wcex))')
+        dw_body.append('    {')
+        dw_body.append('        glv_LogError("Failed to register windows class\\n");')
+        dw_body.append('        return -1;')
+        dw_body.append('    }\n')
+        dw_body.append('    // create the window')
+        dw_body.append('    m_windowHandle = CreateWindow(APP_NAME, APP_NAME, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0, 0,')
+        dw_body.append('                          width, height, NULL, NULL, wcex.hInstance, NULL);\n')
+        dw_body.append('    if (m_windowHandle)')
+        dw_body.append('    {')
+        dw_body.append('        ShowWindow( m_windowHandle, SW_SHOWDEFAULT);')
+        dw_body.append('        m_windowWidth = width;')
+        dw_body.append('        m_windowHeight = height;')
+        dw_body.append('    } else {')
+        dw_body.append('        glv_LogError("Failed to create window\\n");')
+        dw_body.append('        return -1;')
+        dw_body.append('    }')
+        dw_body.append('    return 0;')
+        dw_body.append('#elif defined(PLATFORM_LINUX)\n')
+        dw_body.append('    uint32_t value_mask, value_list[32];')
+        dw_body.append('    m_XcbWindow = xcb_generate_id(m_WsiConnection.pConnection);\n')
+        dw_body.append('    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;')
+        dw_body.append('    value_list[0] = m_pXcbScreen->black_pixel;')
+        dw_body.append('    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |')
+        dw_body.append('                    XCB_EVENT_MASK_EXPOSURE;\n')
+        dw_body.append('    xcb_create_window(m_WsiConnection.pConnection,')
+        dw_body.append('            XCB_COPY_FROM_PARENT,')
+        dw_body.append('            m_XcbWindow, m_WsiConnection.root,')
+        dw_body.append('            0, 0, width, height, 0,')
+        dw_body.append('            XCB_WINDOW_CLASS_INPUT_OUTPUT,')
+        dw_body.append('            m_pXcbScreen->root_visual,')
+        dw_body.append('            value_mask, value_list);\n')
+        dw_body.append('    xcb_map_window(m_WsiConnection.pConnection, m_XcbWindow);')
+        dw_body.append('    xcb_flush(m_WsiConnection.pConnection);')
+        dw_body.append('    return 0;')
+        dw_body.append('#endif')
+        dw_body.append('}\n')
+        dw_body.append('void xglDisplay::resize_window(const unsigned int width, const unsigned int height)')
+        dw_body.append('{')
+        dw_body.append('#if defined(WIN32)')
+        dw_body.append('    if (width != m_windowWidth || height != m_windowHeight)')
+        dw_body.append('    {')
+        dw_body.append('        SetWindowPos(get_window_handle(), HWND_TOP, 0, 0, width, height, SWP_NOMOVE);')
+        dw_body.append('        m_windowWidth = width;')
+        dw_body.append('        m_windowHeight = height;')
+        dw_body.append('    }')
+        dw_body.append('#elif defined(PLATFORM_LINUX)')
+        dw_body.append('    if (width != m_windowWidth || height != m_windowHeight)')
+        dw_body.append('    {')
+        dw_body.append('        uint32_t values[2];')
+        dw_body.append('        values[0] = width;')
+        dw_body.append('        values[1] = height;')
+        dw_body.append('        xcb_configure_window(m_WsiConnection.pConnection, m_XcbWindow, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);')
+        dw_body.append('        m_windowWidth = width;')
+        dw_body.append('        m_windowHeight = height;')
+        dw_body.append('    }')
+        dw_body.append('#endif')
+        dw_body.append('}\n')
+        dw_body.append('void xglDisplay::process_event()')
+        dw_body.append('{')
+        dw_body.append('}')
+        return "\n".join(dw_body)
+
+    def _generate_replay_structors(self):
+        rs_body = []
+        rs_body.append('xglReplay::xglReplay(unsigned int debugLevel)')
+        rs_body.append('{')
+        rs_body.append('    m_display = new xglDisplay();')
+        rs_body.append('    m_debugLevel = debugLevel;')
+        rs_body.append('}\n')
+        rs_body.append('xglReplay::~xglReplay()')
+        rs_body.append('{')
+        rs_body.append('    delete m_display;')
+        rs_body.append('    glv_platform_close_library(m_xglFuncs.m_libHandle);')
+        rs_body.append('}')
+        return "\n".join(rs_body)
+
+    def _generate_replay_init(self):
+        ri_body = []
+        ri_body.append('int xglReplay::init(glv_replay::Display & disp)')
+        ri_body.append('{')
+        ri_body.append('    int err;')
+        ri_body.append('#if defined _WIN64')
+        ri_body.append('    HMODULE handle = LoadLibrary("xgl64.dll" );')
+        ri_body.append('#elif defined _WIN32')
+        ri_body.append('    HMODULE handle = LoadLibrary("xgl32.dll" );')
+        ri_body.append('#elif defined PLATFORM_LINUX')
+        ri_body.append('    void * handle = dlopen("libXGL.so", RTLD_LAZY);')
+        ri_body.append('#endif\n')
+        ri_body.append('    if (handle == NULL) {')
+        ri_body.append('        glv_LogError("Failed to open xgl library.\\n");')
+        ri_body.append('        return -1;')
+        ri_body.append('    }')
+        ri_body.append('    m_xglFuncs.init_funcs(handle);')
+        ri_body.append('    disp.set_implementation(m_display);')
+        ri_body.append('    if ((err = m_display->init(disp.get_gpu())) != 0) {')
+        ri_body.append('        glv_LogError("Failed to init XGL display.\\n");')
+        ri_body.append('        return err;')
+        ri_body.append('    }')
+        ri_body.append('    if (disp.get_window_handle() == 0)')
+        ri_body.append('    {')
+        ri_body.append('        if ((err = m_display->create_window(disp.get_width(), disp.get_height())) != 0) {')
+        ri_body.append('            glv_LogError("Failed to create Window\\n");')
+        ri_body.append('            return err;')
+        ri_body.append('        }')
+        ri_body.append('    }')
+        ri_body.append('    else')
+        ri_body.append('    {')
+        ri_body.append('        if ((err = m_display->set_window(disp.get_window_handle(), disp.get_width(), disp.get_height())) != 0)')
+        ri_body.append('        {')
+        ri_body.append('            glv_LogError("Failed to set Window\\n");')
+        ri_body.append('            return err;')
+        ri_body.append('        }')
+        ri_body.append('    }')
+        ri_body.append('    return 0;')
+        ri_body.append('}')
+        return "\n".join(ri_body)
+
+    def _generate_replay_remap(self):
+        # values to map and bool indicates if remap required for source
+        rr_dict = {'pageCount': False, 'realStartPage': False, 'realMem': True, 'virtualStartPage': False, 'virtualMem': True}
+        rr_body = []
+        rr_body.append('void xglReplay::copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange)\n{')
+        for k in rr_dict:
+            if rr_dict[k]:
+                rr_body.append('    outRange->%s = remap(inRange->%s);' % (k, k))
+            else:
+                rr_body.append('    outRange->%s = inRange->%s;' % (k, k))
+        rr_body.append('}')
+        return "\n".join(rr_body)
+
+    def _generate_replay_errors(self):
+        re_body = []
+        re_body.append('glv_replay::GLV_REPLAY_RESULT xglReplay::handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn)')
+        re_body.append('{')
+        re_body.append('    glv_replay::GLV_REPLAY_RESULT res = resIn;')
+        re_body.append('    if (resCall != resTrace) {')
+        re_body.append('        glv_LogWarn("Mismatched return from API call (%s) traced result %s, replay result %s\\n", entrypointName,')
+        re_body.append('                string_XGL_RESULT(resTrace), string_XGL_RESULT(resCall));')
+        re_body.append('        res = glv_replay::GLV_REPLAY_BAD_RETURN;')
+        re_body.append('    }')
+        re_body.append('#if 0')
+        re_body.append('    if (resCall != XGL_SUCCESS) {')
+        re_body.append('        glv_LogWarn("API call (%s) returned failed result %s\\n", entrypointName, string_XGL_RESULT(resCall));')
+        re_body.append('    }')
+        re_body.append('#endif')
+        re_body.append('    return res;')
+        re_body.append('}')
+        return "\n".join(re_body)
+
+    def _generate_replay_init_funcs(self):
+        rif_body = []
+        rif_body.append('void xglFuncs::init_funcs(void * handle)\n{\n    m_libHandle = handle;')
+        for proto in self.protos:
+            rif_body.append('    real_xgl%s = (type_xgl%s)(glv_platform_get_library_entrypoint(handle, "xgl%s"));' % (proto.name, proto.name, proto.name))
+        rif_body.append('}')
+        return "\n".join(rif_body)
+
+    def _get_packet_param(self, t, n):
+        # list of types that require remapping
+        remap_list = ['XGL_PHYSICAL_GPU', 'XGL_DEVICE', 'XGL_QUEUE', 'XGL_GPU_MEMORY', 'XGL_IMAGE', 'XGL_IMAGE_VIEW', 'XGL_COLOR_ATTACHMENT_VIEW',
+                        'XGL_DEPTH_STENCIL_VIEW', 'XGL_SHADER', 'XGL_PIPELINE', 'XGL_PIPELINE_DELTA', 'XGL_SAMPLER', 'XGL_DESCRIPTOR_SET',
+                        'XGL_VIEWPORT_STATE_OBJECT', 'XGL_RASTER_STATE_OBJECT', 'XGL_MSAA_STATE_OBJECT', 'XGL_COLOR_BLEND_STATE_OBJECT',
+                        'XGL_DEPTH_STENCIL_STATE_OBJECT', 'XGL_CMD_BUFFER', 'XGL_FENCE', 'XGL_QUEUE_SEMAPHORE', 'XGL_EVENT', 'XGL_QUERY_POOL',
+                        'XGL_STATE_OBJECT', 'XGL_BASE_OBJECT', 'XGL_OBJECT']
+        param_exclude_list = ['p1', 'p2']
+        if t.strip('*').strip('const ') in remap_list and n not in param_exclude_list:
+            return 'remap(pPacket->%s)' % (n)
+        return 'pPacket->%s' % (n)
+
+    def _gen_replay_init_and_enum_gpus(self):
+        ieg_body = []
+        ieg_body.append('            if (!m_display->m_initedXGL)')
+        ieg_body.append('            {')
+        ieg_body.append('                XGL_UINT gpuCount;')
+        ieg_body.append('                XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];')
+        ieg_body.append('                XGL_UINT maxGpus = (pPacket->maxGpus < XGL_MAX_PHYSICAL_GPUS) ? pPacket->maxGpus : XGL_MAX_PHYSICAL_GPUS;')
+        ieg_body.append('                replayResult = m_xglFuncs.real_xglInitAndEnumerateGpus(pPacket->pAppInfo, pPacket->pAllocCb, maxGpus, &gpuCount, &gpus[0]);')
+        ieg_body.append('                CHECK_RETURN_VALUE(xglInitAndEnumerateGpus);')
+        ieg_body.append('                //TODO handle different number of gpus in trace versus replay')
+        ieg_body.append('                if (gpuCount != *(pPacket->pGpuCount))')
+        ieg_body.append('                {')
+        ieg_body.append('                    glv_LogWarn("number of gpus mismatched in replay %u versus trace %u\\n", gpuCount, *(pPacket->pGpuCount));')
+        ieg_body.append('                }')
+        ieg_body.append('                else if (gpuCount == 0)')
+        ieg_body.append('                {')
+        ieg_body.append('                     glv_LogError("xglInitAndEnumerateGpus number of gpus is zero\\n");')
+        ieg_body.append('                }')
+        ieg_body.append('                else')
+        ieg_body.append('                {')
+        ieg_body.append('                    glv_LogInfo("Enumerated %d GPUs in the system\\n", gpuCount);')
+        ieg_body.append('                }')
+        ieg_body.append('                clear_all_map_handles();')
+        ieg_body.append('                // TODO handle enumeration results in a different order from trace to replay')
+        ieg_body.append('                for (XGL_UINT i = 0; i < gpuCount; i++)')
+        ieg_body.append('                {')
+        ieg_body.append('                    if (pPacket->pGpus)')
+        ieg_body.append('                        add_to_map(&(pPacket->pGpus[i]), &(gpus[i]));')
+        ieg_body.append('                }')
+        ieg_body.append('            }')
+        return "\n".join(ieg_body)
+
+    def _gen_replay_get_gpu_info(self):
+        ggi_body = []
+        ggi_body.append('            if (!m_display->m_initedXGL)')
+        ggi_body.append('            {')
+        ggi_body.append('                switch (pPacket->infoType) {')
+        ggi_body.append('                case XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:')
+        ggi_body.append('                {')
+        ggi_body.append('                    XGL_PHYSICAL_GPU_PROPERTIES gpuProps;')
+        ggi_body.append('                    XGL_SIZE dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);')
+        ggi_body.append('                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &dataSize,')
+        ggi_body.append('                                    (pPacket->pData == NULL) ? NULL : &gpuProps);')
+        ggi_body.append('                    if (pPacket->pData != NULL)')
+        ggi_body.append('                    {')
+        ggi_body.append('                        glv_LogInfo("Replay Gpu Properties\\n");')
+        ggi_body.append('                        glv_LogInfo("Vendor ID %x, Device ID %x, name %s\\n",gpuProps.vendorId, gpuProps.deviceId, gpuProps.gpuName);')
+        ggi_body.append('                        glv_LogInfo("API version %u, Driver version %u, gpu Type %u\\n",gpuProps.apiVersion, gpuProps.driverVersion, gpuProps.gpuType);')
+        ggi_body.append('                    }')
+        ggi_body.append('                    break;')
+        ggi_body.append('                }')
+        ggi_body.append('                case XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:')
+        ggi_body.append('                {')
+        ggi_body.append('                    XGL_PHYSICAL_GPU_PERFORMANCE gpuPerfs;')
+        ggi_body.append('                    XGL_SIZE dataSize = sizeof(XGL_PHYSICAL_GPU_PERFORMANCE);')
+        ggi_body.append('                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &dataSize,')
+        ggi_body.append('                                    (pPacket->pData == NULL) ? NULL : &gpuPerfs);')
+        ggi_body.append('                    if (pPacket->pData != NULL)')
+        ggi_body.append('                    {')
+        ggi_body.append('                        glv_LogInfo("Replay Gpu Performance\\n");')
+        ggi_body.append('                        glv_LogInfo("Max GPU clock %f, max shader ALUs/clock %f, max texel fetches/clock %f\\n",gpuPerfs.maxGpuClock, gpuPerfs.aluPerClock, gpuPerfs.texPerClock);')
+        ggi_body.append('                        glv_LogInfo("Max primitives/clock %f, Max pixels/clock %f\\n",gpuPerfs.primsPerClock, gpuPerfs.pixelsPerClock);')
+        ggi_body.append('                    }')
+        ggi_body.append('                    break;')
+        ggi_body.append('                }')
+        ggi_body.append('                case XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:')
+        ggi_body.append('                {')
+        ggi_body.append('                    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *pGpuQueue, *pQ;')
+        ggi_body.append('                    XGL_SIZE dataSize = sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES);')
+        ggi_body.append('                    XGL_SIZE numQueues = 1;')
+        ggi_body.append('                    assert(pPacket->pDataSize);')
+        ggi_body.append('                    if ((*(pPacket->pDataSize) % dataSize) != 0)')
+        ggi_body.append('                        glv_LogWarn("xglGetGpuInfo() for GPU_QUEUE_PROPERTIES not an integral data size assuming 1\\n");')
+        ggi_body.append('                    else')
+        ggi_body.append('                        numQueues = *(pPacket->pDataSize) / dataSize;')
+        ggi_body.append('                    dataSize = numQueues * dataSize;')
+        ggi_body.append('                    pQ = static_cast < XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *> (glv_malloc(dataSize));')
+        ggi_body.append('                    pGpuQueue = pQ;')
+        ggi_body.append('                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &dataSize,')
+        ggi_body.append('                                    (pPacket->pData == NULL) ? NULL : pGpuQueue);')
+        ggi_body.append('                    if (pPacket->pData != NULL)')
+        ggi_body.append('                    {')
+        ggi_body.append('                        for (unsigned int i = 0; i < numQueues; i++)')
+        ggi_body.append('                        {')
+        ggi_body.append('                            glv_LogInfo("Replay Gpu Queue Property for index %d, flags %u\\n", i, pGpuQueue->queueFlags);')
+        ggi_body.append('                            glv_LogInfo("Max available count %u, max atomic counters %u, supports timestamps %u\\n",pGpuQueue->queueCount, pGpuQueue->maxAtomicCounters, pGpuQueue->supportsTimestamps);')
+        ggi_body.append('                            pGpuQueue++;')
+        ggi_body.append('                        }')
+        ggi_body.append('                    }')
+        ggi_body.append('                    glv_free(pQ);')
+        ggi_body.append('                    break;')
+        ggi_body.append('                }')
+        ggi_body.append('                default:')
+        ggi_body.append('                {')
+        ggi_body.append('                    XGL_SIZE size = 0;')
+        ggi_body.append('                    void* pData = NULL;')
+        ggi_body.append('                    if (pPacket->pData != NULL && pPacket->pDataSize != NULL)')
+        ggi_body.append('                    {')
+        ggi_body.append('                        size = *pPacket->pDataSize;')
+        ggi_body.append('                        pData = glv_malloc(*pPacket->pDataSize);')
+        ggi_body.append('                    }')
+        ggi_body.append('                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &size, pData);')
+        ggi_body.append('                    if (replayResult == XGL_SUCCESS)')
+        ggi_body.append('                    {')
+        ggi_body.append('                        if (size != *pPacket->pDataSize && pData == NULL)')
+        ggi_body.append('                        {')
+        ggi_body.append('                            glv_LogWarn("xglGetGpuInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
+        ggi_body.append('                        }')
+        ggi_body.append('                        else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)')
+        ggi_body.append('                        {')
+        ggi_body.append('                            glv_LogWarn("xglGetGpuInfo returned differing data contents than the trace file contained.\\n");')
+        ggi_body.append('                        }')
+        ggi_body.append('                    }')
+        ggi_body.append('                    glv_free(pData);')
+        ggi_body.append('                    break;')
+        ggi_body.append('                }')
+        ggi_body.append('                };')
+        ggi_body.append('                CHECK_RETURN_VALUE(xglGetGpuInfo);')
+        ggi_body.append('            }')
+        return "\n".join(ggi_body)
+
+    def _gen_replay_create_device(self):
+        cd_body = []
+        cd_body.append('            if (!m_display->m_initedXGL)')
+        cd_body.append('            {')
+        cd_body.append('                XGL_DEVICE device;')
+        cd_body.append('                XGL_DEVICE_CREATE_INFO cInfo;')
+        cd_body.append('                if (m_debugLevel > 0)')
+        cd_body.append('                {')
+        cd_body.append('                    memcpy(&cInfo, pPacket->pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));')
+        cd_body.append('                    cInfo.flags = pPacket->pCreateInfo->flags | XGL_DEVICE_CREATE_VALIDATION_BIT;')
+        cd_body.append('                    cInfo.maxValidationLevel = (XGL_VALIDATION_LEVEL)((m_debugLevel <= 4) ? XGL_VALIDATION_LEVEL_0 + m_debugLevel : XGL_VALIDATION_LEVEL_0);')
+        cd_body.append('                    pPacket->pCreateInfo = &cInfo;')
+        cd_body.append('                }')
+        cd_body.append('                replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);')
+        cd_body.append('                CHECK_RETURN_VALUE(xglCreateDevice);')
+        cd_body.append('                if (replayResult == XGL_SUCCESS)')
+        cd_body.append('                {')
+        cd_body.append('                    add_to_map(pPacket->pDevice, &device);')
+        cd_body.append('                }')
+        cd_body.append('            }')
+        return "\n".join(cd_body)
+
+    def _gen_replay_get_extension_support(self):
+        ges_body = []
+        ges_body.append('            if (!m_display->m_initedXGL) {')
+        ges_body.append('                replayResult = m_xglFuncs.real_xglGetExtensionSupport(remap(pPacket->gpu), pPacket->pExtName);')
+        ges_body.append('                CHECK_RETURN_VALUE(xglGetExtensionSupport);')
+        ges_body.append('                if (replayResult == XGL_SUCCESS) {')
+        ges_body.append('                    for (unsigned int ext = 0; ext < sizeof(g_extensions) / sizeof(g_extensions[0]); ext++)')
+        ges_body.append('                    {')
+        ges_body.append('                        if (!strncmp((const char *)g_extensions[ext], (const char *)pPacket->pExtName, strlen(g_extensions[ext]))) {')
+        ges_body.append('                            bool extInList = false;')
+        ges_body.append('                            for (unsigned int j = 0; j < m_display->m_extensions.size(); ++j) {')
+        ges_body.append('                                if (!strncmp((const char *)m_display->m_extensions[j], (const char *)g_extensions[ext], strlen(g_extensions[ext])))')
+        ges_body.append('                                    extInList = true;')
+        ges_body.append('                                break;')
+        ges_body.append('                            }')
+        ges_body.append('                            if (!extInList)')
+        ges_body.append('                                m_display->m_extensions.push_back((XGL_CHAR *) g_extensions[ext]);')
+        ges_body.append('                            break;')
+        ges_body.append('                        }')
+        ges_body.append('                    }')
+        ges_body.append('                }')
+        ges_body.append('            }')
+        return "\n".join(ges_body)
+
+    def _gen_replay_queue_submit(self):
+        qs_body = []
+        qs_body.append('            XGL_CMD_BUFFER *remappedBuffers = NULL;')
+        qs_body.append('            if (pPacket->pCmdBuffers != NULL)')
+        qs_body.append('            {')
+        qs_body.append('                remappedBuffers = GLV_NEW_ARRAY( XGL_CMD_BUFFER, pPacket->cmdBufferCount);')
+        qs_body.append('                for (XGL_UINT i = 0; i < pPacket->cmdBufferCount; i++)')
+        qs_body.append('                {')
+        qs_body.append('                    *(remappedBuffers + i) = remap(*(pPacket->pCmdBuffers + i));')
+        qs_body.append('                }')
+        qs_body.append('            }')
+        qs_body.append('            XGL_MEMORY_REF* memRefs = NULL;')
+        qs_body.append('            if (pPacket->pMemRefs != NULL)')
+        qs_body.append('            {')
+        qs_body.append('                memRefs = GLV_NEW_ARRAY(XGL_MEMORY_REF, pPacket->memRefCount);')
+        qs_body.append('                memcpy(memRefs, pPacket->pMemRefs, sizeof(XGL_MEMORY_REF) * pPacket->memRefCount);')
+        qs_body.append('                for (XGL_UINT i = 0; i < pPacket->memRefCount; i++)')
+        qs_body.append('                {')
+        qs_body.append('                    memRefs[i].mem = remap(pPacket->pMemRefs[i].mem);')
+        qs_body.append('                }')
+        qs_body.append('            }')
+        qs_body.append('            replayResult = m_xglFuncs.real_xglQueueSubmit(remap(pPacket->queue), pPacket->cmdBufferCount, remappedBuffers, pPacket->memRefCount,')
+        qs_body.append('                memRefs, remap(pPacket->fence));')
+        qs_body.append('            GLV_DELETE(remappedBuffers);')
+        qs_body.append('            GLV_DELETE(memRefs);')
+        return "\n".join(qs_body)
+
+    def _gen_replay_get_memory_heap_count(self):
+        mhc_body = []
+        mhc_body.append('            XGL_UINT count;')
+        mhc_body.append('            replayResult = m_xglFuncs.real_xglGetMemoryHeapCount(remap(pPacket->device), &count);')
+        mhc_body.append('            if (count < 1 || count >= XGL_MAX_MEMORY_HEAPS)')
+        mhc_body.append('                glv_LogError("xglGetMemoryHeapCount returned bad value count = %u\\n", count);')
+        return "\n".join(mhc_body)
+
+    def _gen_replay_get_memory_heap_info(self):
+        mhi_body = []
+        mhi_body.append('            // TODO handle case where traced heap count, ids and properties do not match replay heaps')
+        mhi_body.append('            XGL_SIZE dataSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);')
+        mhi_body.append('            // TODO check returned properties match queried properties if this makes sense')
+        mhi_body.append('            if (pPacket->heapId >= XGL_MAX_MEMORY_HEAPS)')
+        mhi_body.append('            {')
+        mhi_body.append('                glv_LogError("xglGetMemoryHeapInfo bad heapid (%d) skipping packet\\n");')
+        mhi_body.append('                break;')
+        mhi_body.append('            }')
+        mhi_body.append('            replayResult = m_xglFuncs.real_xglGetMemoryHeapInfo(remap(pPacket->device), pPacket->heapId, pPacket->infoType, &dataSize,')
+        mhi_body.append('                                               static_cast <XGL_VOID *> (&(m_heapProps[pPacket->heapId])));')
+        mhi_body.append('            if (dataSize != sizeof(XGL_MEMORY_HEAP_PROPERTIES))')
+        mhi_body.append('                glv_LogError("xglGetMemoryHeapInfo returned bad size = %u\\n", dataSize);')
+        return "\n".join(mhi_body)
+
+    def _gen_replay_remap_virtual_memory_pages(self):
+        rvm_body = []
+        rvm_body.append('            XGL_VIRTUAL_MEMORY_REMAP_RANGE *pRemappedRanges = GLV_NEW_ARRAY( XGL_VIRTUAL_MEMORY_REMAP_RANGE, pPacket->rangeCount);')
+        rvm_body.append('            for (XGL_UINT i = 0; i < pPacket->rangeCount; i++)')
+        rvm_body.append('            {')
+        rvm_body.append('                copy_mem_remap_range_struct(pRemappedRanges + i, (pPacket->pRanges + i));')
+        rvm_body.append('            }')
+        rvm_body.append('            XGL_QUEUE_SEMAPHORE *pRemappedPreSema = GLV_NEW_ARRAY(XGL_QUEUE_SEMAPHORE, pPacket->preWaitSemaphoreCount);')
+        rvm_body.append('            for (XGL_UINT i = 0; i < pPacket->preWaitSemaphoreCount; i++)')
+        rvm_body.append('            {')
+        rvm_body.append('                *(pRemappedPreSema + i) = *(pPacket->pPreWaitSemaphores + i);')
+        rvm_body.append('            }')
+        rvm_body.append('            XGL_QUEUE_SEMAPHORE *pRemappedPostSema = GLV_NEW_ARRAY(XGL_QUEUE_SEMAPHORE, pPacket->postSignalSemaphoreCount);')
+        rvm_body.append('            for (XGL_UINT i = 0; i < pPacket->postSignalSemaphoreCount; i++)')
+        rvm_body.append('            {')
+        rvm_body.append('                *(pRemappedPostSema + i) = *(pPacket->pPostSignalSemaphores + i);')
+        rvm_body.append('            }')
+        rvm_body.append('            replayResult = m_xglFuncs.real_xglRemapVirtualMemoryPages(remap(pPacket->device), pPacket->rangeCount, pRemappedRanges, pPacket->preWaitSemaphoreCount,')
+        rvm_body.append('                                                     pPacket->pPreWaitSemaphores, pPacket->postSignalSemaphoreCount, pPacket->pPostSignalSemaphores);')
+        rvm_body.append('            GLV_DELETE(pRemappedRanges);')
+        rvm_body.append('            GLV_DELETE(pRemappedPreSema);')
+        rvm_body.append('            GLV_DELETE(pRemappedPostSema);')
+        return "\n".join(rvm_body)
+
+    def _gen_replay_get_object_info(self):
+        goi_body = []
+        goi_body.append('            XGL_SIZE size = 0;')
+        goi_body.append('            void* pData = NULL;')
+        goi_body.append('            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)')
+        goi_body.append('            {')
+        goi_body.append('                size = *pPacket->pDataSize;')
+        goi_body.append('                pData = glv_malloc(*pPacket->pDataSize);')
+        goi_body.append('                memcpy(pData, pPacket->pData, *pPacket->pDataSize);')
+        goi_body.append('            }')
+        goi_body.append('            replayResult = m_xglFuncs.real_xglGetObjectInfo(remap(pPacket->object), pPacket->infoType, &size, pData);')
+        goi_body.append('            if (replayResult == XGL_SUCCESS)')
+        goi_body.append('            {')
+        goi_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        goi_body.append('                {')
+        goi_body.append('                    glv_LogWarn("xglGetObjectInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
+        goi_body.append('                }')
+        goi_body.append('                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)')
+        goi_body.append('                {')
+        goi_body.append('                    glv_LogWarn("xglGetObjectInfo returned differing data contents than the trace file contained.\\n");')
+        goi_body.append('                }')
+        goi_body.append('            }')
+        goi_body.append('            glv_free(pData);')
+        return "\n".join(goi_body)
+
+    def _gen_replay_get_format_info(self):
+        gfi_body = []
+        gfi_body.append('            XGL_SIZE size = 0;')
+        gfi_body.append('            void* pData = NULL;')
+        gfi_body.append('            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)')
+        gfi_body.append('            {')
+        gfi_body.append('                size = *pPacket->pDataSize;')
+        gfi_body.append('                pData = glv_malloc(*pPacket->pDataSize);')
+        gfi_body.append('            }')
+        gfi_body.append('            replayResult = m_xglFuncs.real_xglGetFormatInfo(remap(pPacket->device), pPacket->format, pPacket->infoType, &size, pData);')
+        gfi_body.append('            if (replayResult == XGL_SUCCESS)')
+        gfi_body.append('            {')
+        gfi_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        gfi_body.append('                {')
+        gfi_body.append('                    glv_LogWarn("xglGetFormatInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
+        gfi_body.append('                }')
+        gfi_body.append('                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)')
+        gfi_body.append('                {')
+        gfi_body.append('                    glv_LogWarn("xglGetFormatInfo returned differing data contents than the trace file contained.\\n");')
+        gfi_body.append('                }')
+        gfi_body.append('            }')
+        gfi_body.append('            glv_free(pData);')
+        return "\n".join(gfi_body)
+
+    def _gen_replay_get_image_subresource_info(self):
+        isi_body = []
+        isi_body.append('            XGL_SIZE size = 0;')
+        isi_body.append('            void* pData = NULL;')
+        isi_body.append('            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)')
+        isi_body.append('            {')
+        isi_body.append('                size = *pPacket->pDataSize;')
+        isi_body.append('                pData = glv_malloc(*pPacket->pDataSize);')
+        isi_body.append('            }')
+        isi_body.append('            replayResult = m_xglFuncs.real_xglGetImageSubresourceInfo(remap(pPacket->image), pPacket->pSubresource, pPacket->infoType, &size, pData);')
+        isi_body.append('            if (replayResult == XGL_SUCCESS)')
+        isi_body.append('            {')
+        isi_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        isi_body.append('                {')
+        isi_body.append('                    glv_LogWarn("xglGetImageSubresourceInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
+        isi_body.append('                }')
+        isi_body.append('                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)')
+        isi_body.append('                {')
+        isi_body.append('                    glv_LogWarn("xglGetImageSubresourceInfo returned differing data contents than the trace file contained.\\n");')
+        isi_body.append('                }')
+        isi_body.append('            }')
+        isi_body.append('            glv_free(pData);')
+        return "\n".join(isi_body)
+
+    def _gen_replay_create_graphics_pipeline(self):
+        cgp_body = []
+        cgp_body.append('            XGL_GRAPHICS_PIPELINE_CREATE_INFO createInfo;')
+        cgp_body.append('            struct shaderPair saveShader[10];')
+        cgp_body.append('            unsigned int idx = 0;')
+        cgp_body.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));')
+        cgp_body.append('            // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext')
+        cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;')
+        cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;')
+        cgp_body.append('            while (XGL_NULL_HANDLE != pPacketNext)')
+        cgp_body.append('            {')
+        cgp_body.append('                if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pNext->sType)')
+        cgp_body.append('                {')
+        cgp_body.append('                    saveShader[idx].val = pNext->shader.shader;')
+        cgp_body.append('                    saveShader[idx++].addr = &(pNext->shader.shader);')
+        cgp_body.append('                    pNext->shader.shader = remap(pPacketNext->shader.shader);')
+        cgp_body.append('                }')
+        cgp_body.append('                pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacketNext->pNext;')
+        cgp_body.append('                pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;')
+        cgp_body.append('            }')
+        cgp_body.append('            XGL_PIPELINE pipeline;')
+        cgp_body.append('            replayResult = m_xglFuncs.real_xglCreateGraphicsPipeline(remap(pPacket->device), &createInfo, &pipeline);')
+        cgp_body.append('            if (replayResult == XGL_SUCCESS)')
+        cgp_body.append('            {')
+        cgp_body.append('                add_to_map(pPacket->pPipeline, &pipeline);')
+        cgp_body.append('            }')
+        cgp_body.append('            for (unsigned int i = 0; i < idx; i++)')
+        cgp_body.append('                *(saveShader[i].addr) = saveShader[i].val;')
+        return "\n".join(cgp_body)
+
+    def _gen_replay_store_pipeline(self):
+        sp_body = []
+        sp_body.append('            XGL_SIZE size = 0;')
+        sp_body.append('            void* pData = NULL;')
+        sp_body.append('            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)')
+        sp_body.append('            {')
+        sp_body.append('                size = *pPacket->pDataSize;')
+        sp_body.append('                pData = glv_malloc(*pPacket->pDataSize);')
+        sp_body.append('            }')
+        sp_body.append('            replayResult = m_xglFuncs.real_xglStorePipeline(remap(pPacket->pipeline), &size, pData);')
+        sp_body.append('            if (replayResult == XGL_SUCCESS)')
+        sp_body.append('            {')
+        sp_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        sp_body.append('                {')
+        sp_body.append('                    glv_LogWarn("xglStorePipeline returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
+        sp_body.append('                }')
+        sp_body.append('                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)')
+        sp_body.append('                {')
+        sp_body.append('                    glv_LogWarn("xglStorePipeline returned differing data contents than the trace file contained.\\n");')
+        sp_body.append('                }')
+        sp_body.append('            }')
+        sp_body.append('            glv_free(pData);')
+        return "\n".join(sp_body)
+
+    def _gen_replay_cmd_bind_attachments(self):
+        cba_body = []
+        cba_body.append('            // adjust color targets')
+        cba_body.append('            XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*)pPacket->pColorAttachments;')
+        cba_body.append('            bool allocatedColorAttachments = false;')
+        cba_body.append('            if (pColorAttachments != NULL)')
+        cba_body.append('            {')
+        cba_body.append('                allocatedColorAttachments = true;')
+        cba_body.append('                pColorAttachments = GLV_NEW_ARRAY(XGL_COLOR_ATTACHMENT_BIND_INFO, pPacket->colorAttachmentCount);')
+        cba_body.append('                memcpy(pColorAttachments, pPacket->pColorAttachments, sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) * pPacket->colorAttachmentCount);')
+        cba_body.append('                for (XGL_UINT i = 0; i < pPacket->colorAttachmentCount; i++)')
+        cba_body.append('                {')
+        cba_body.append('                    pColorAttachments[i].view = remap(pPacket->pColorAttachments[i].view);')
+        cba_body.append('                }')
+        cba_body.append('            }')
+        cba_body.append('            // adjust depth stencil target')
+        cba_body.append('            const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment = pPacket->pDepthStencilAttachment;')
+        cba_body.append('            XGL_DEPTH_STENCIL_BIND_INFO depthTarget;')
+        cba_body.append('            if (pDepthStencilAttachment != NULL)')
+        cba_body.append('            {')
+        cba_body.append('                memcpy(&depthTarget, pPacket->pDepthStencilAttachment, sizeof(XGL_DEPTH_STENCIL_BIND_INFO));')
+        cba_body.append('                depthTarget.view = remap(pPacket->pDepthStencilAttachment->view);')
+        cba_body.append('                pDepthStencilAttachment = &depthTarget;')
+        cba_body.append('            }')
+        cba_body.append('            // make call')
+        cba_body.append('             m_xglFuncs.real_xglCmdBindAttachments(remap(pPacket->cmdBuffer), pPacket->colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);')
+        cba_body.append('            // cleanup')
+        cba_body.append('            if (allocatedColorAttachments)')
+        cba_body.append('            {')
+        cba_body.append('                GLV_DELETE((void*)pColorAttachments);')
+        cba_body.append('            }')
+        return "\n".join(cba_body)
+
+    def _gen_replay_get_multi_gpu_compatibility(self):
+        gmgc_body = []
+        gmgc_body.append('            XGL_GPU_COMPATIBILITY_INFO cInfo;')
+        gmgc_body.append('            XGL_PHYSICAL_GPU handle0, handle1;')
+        gmgc_body.append('            handle0 = remap(pPacket->gpu0);')
+        gmgc_body.append('            handle1 = remap(pPacket->gpu1);')
+        gmgc_body.append('            replayResult = m_xglFuncs.real_xglGetMultiGpuCompatibility(handle0, handle1, &cInfo);')
+        return "\n".join(gmgc_body)
+
+    def _gen_replay_destroy_object(self):
+        do_body = []
+        do_body.append('            XGL_OBJECT object = remap(pPacket->object);')
+        do_body.append('            if (object != XGL_NULL_HANDLE)')
+        do_body.append('                replayResult = m_xglFuncs.real_xglDestroyObject(object);')
+        do_body.append('            if (replayResult == XGL_SUCCESS)')
+        do_body.append('                rm_from_map(pPacket->object);')
+        return "\n".join(do_body)
+
+    def _gen_replay_wait_for_fences(self):
+        wf_body = []
+        wf_body.append('            XGL_FENCE *pFence = GLV_NEW_ARRAY(XGL_FENCE, pPacket->fenceCount);')
+        wf_body.append('            for (XGL_UINT i = 0; i < pPacket->fenceCount; i++)')
+        wf_body.append('            {')
+        wf_body.append('                *(pFence + i) = remap(*(pPacket->pFences + i));')
+        wf_body.append('            }')
+        wf_body.append('            replayResult = m_xglFuncs.real_xglWaitForFences(remap(pPacket->device), pPacket->fenceCount, pFence, pPacket->waitAll, pPacket->timeout);')
+        wf_body.append('            GLV_DELETE(pFence);')
+        return "\n".join(wf_body)
+
+    def _gen_replay_wsi_associate_connection(self):
+        wac_body = []
+        wac_body.append('            //associate with the replayers Wsi connection rather than tracers')
+        wac_body.append('            replayResult = m_xglFuncs.real_xglWsiX11AssociateConnection(remap(pPacket->gpu), &(m_display->m_WsiConnection));')
+        return "\n".join(wac_body)
+
+    def _gen_replay_wsi_get_msc(self):
+        wgm_body = []
+        wgm_body.append('            xcb_window_t window = m_display->m_XcbWindow;')
+        wgm_body.append('            replayResult = m_xglFuncs.real_xglWsiX11GetMSC(remap(pPacket->device), window, pPacket->crtc, pPacket->pMsc);')
+        return "\n".join(wgm_body)
+
+    def _gen_replay_wsi_create_presentable_image(self):
+        cpi_body = []
+        cpi_body.append('            XGL_IMAGE img;')
+        cpi_body.append('            XGL_GPU_MEMORY mem;')
+        cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &img, &mem);')
+        cpi_body.append('            if (replayResult == XGL_SUCCESS)')
+        cpi_body.append('            {')
+        cpi_body.append('                if (pPacket->pImage != NULL)')
+        cpi_body.append('                    add_to_map(pPacket->pImage, &img);')
+        cpi_body.append('                if(pPacket->pMem != NULL)')
+        cpi_body.append('                    add_to_map(pPacket->pMem, &mem);')
+        cpi_body.append('            }')
+        return "\n".join(cpi_body)
+
+    def _gen_replay_wsi_queue_present(self):
+        wqp_body = []
+        wqp_body.append('            XGL_WSI_X11_PRESENT_INFO pInfo;')
+        wqp_body.append('            memcpy(&pInfo, pPacket->pPresentInfo, sizeof(XGL_WSI_X11_PRESENT_INFO));')
+        wqp_body.append('            pInfo.srcImage = remap(pPacket->pPresentInfo->srcImage);')
+        wqp_body.append('            // use replayers Xcb window')
+        wqp_body.append('            pInfo.destWindow = m_display->m_XcbWindow;')
+        wqp_body.append('            replayResult = m_xglFuncs.real_xglWsiX11QueuePresent(remap(pPacket->queue), &pInfo, remap(pPacket->fence));')
+        return "\n".join(wqp_body)
+
+    # I don't like making these 3 mem functions 'fully' custom, but just doing it for now to avoid being too cute
+    def _gen_replay_free_memory(self):
+        fm_body = []
+        fm_body.append('            XGL_GPU_MEMORY handle = remap(pPacket->mem);')
+        fm_body.append('            replayResult = m_xglFuncs.real_xglFreeMemory(handle);')
+        fm_body.append('            if (replayResult == XGL_SUCCESS) ')
+        fm_body.append('            {')
+        fm_body.append('                rm_entry_from_mapData(handle);')
+        fm_body.append('                rm_from_map(pPacket->mem);')
+        fm_body.append('            }')
+        return "\n".join(fm_body)
+
+    def _gen_replay_map_memory(self):
+        mm_body = []
+        mm_body.append('            XGL_GPU_MEMORY handle = remap(pPacket->mem);')
+        mm_body.append('            XGL_VOID* pData;')
+        mm_body.append('            replayResult = m_xglFuncs.real_xglMapMemory(handle, pPacket->flags, &pData);')
+        mm_body.append('            if (replayResult == XGL_SUCCESS)')
+        mm_body.append('                add_mapping_to_mapData(handle, pData);')
+        return "\n".join(mm_body)
+        
+    def _gen_replay_unmap_memory(self):
+        um_body = []
+        um_body.append('            XGL_GPU_MEMORY handle = remap(pPacket->mem);')
+        um_body.append('            rm_mapping_from_mapData(handle, pPacket->pData);  // copies data from packet into memory buffer')
+        um_body.append('            replayResult = m_xglFuncs.real_xglUnmapMemory(handle);')
+        return "\n".join(um_body)
+
+    def _gen_replay_bind_dynamic_memory_view(self):
+        bdmv_body = []
+        bdmv_body.append('            XGL_MEMORY_VIEW_ATTACH_INFO memView;')
+        bdmv_body.append('            memcpy(&memView, pPacket->pMemView, sizeof(XGL_MEMORY_VIEW_ATTACH_INFO));')
+        bdmv_body.append('            memView.mem = remap(pPacket->pMemView->mem);')
+        bdmv_body.append('            m_xglFuncs.real_xglCmdBindDynamicMemoryView(remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, &memView);')
+        return "\n".join(bdmv_body)
+
+    def _generate_replay(self):
+        # map protos to custom functions if body is fully custom
+        custom_body_dict = {'InitAndEnumerateGpus': self._gen_replay_init_and_enum_gpus,
+                            'GetGpuInfo': self._gen_replay_get_gpu_info,
+                            'CreateDevice': self._gen_replay_create_device,
+                            'GetExtensionSupport': self._gen_replay_get_extension_support,
+                            'QueueSubmit': self._gen_replay_queue_submit,
+                            'GetMemoryHeapCount': self._gen_replay_get_memory_heap_count,
+                            'GetMemoryHeapInfo': self._gen_replay_get_memory_heap_info,
+                            'RemapVirtualMemoryPages': self._gen_replay_remap_virtual_memory_pages,
+                            'GetObjectInfo': self._gen_replay_get_object_info,
+                            'GetFormatInfo': self._gen_replay_get_format_info,
+                            'GetImageSubresourceInfo': self._gen_replay_get_image_subresource_info,
+                            'CreateGraphicsPipeline': self._gen_replay_create_graphics_pipeline,
+                            'StorePipeline': self._gen_replay_store_pipeline,
+                            'CmdBindAttachments': self._gen_replay_cmd_bind_attachments,
+                            'GetMultiGpuCompatibility': self._gen_replay_get_multi_gpu_compatibility,
+                            'DestroyObject': self._gen_replay_destroy_object,
+                            'WaitForFences': self._gen_replay_wait_for_fences,
+                            'WsiX11AssociateConnection': self._gen_replay_wsi_associate_connection,
+                            'WsiX11GetMSC': self._gen_replay_wsi_get_msc,
+                            'WsiX11CreatePresentableImage': self._gen_replay_wsi_create_presentable_image,
+                            'WsiX11QueuePresent': self._gen_replay_wsi_queue_present,
+                            'FreeMemory': self._gen_replay_free_memory,
+                            'MapMemory': self._gen_replay_map_memory,
+                            'UnmapMemory': self._gen_replay_unmap_memory,
+                            'CmdBindDynamicMemoryView': self._gen_replay_bind_dynamic_memory_view}
+        # Despite returning a value, don't check these funcs b/c custom code includes check already
+        custom_check_ret_val = ['InitAndEnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport']
+        # multi-gpu Open funcs w/ list of local params to create
+        custom_open_params = {'OpenSharedMemory': (-1,),
+                              'OpenSharedQueueSemaphore': (-1,),
+                              'OpenPeerMemory': (-1,),
+                              'OpenPeerImage': (-1, -2,)}
+        # Functions that create views are unique from other create functions
+        create_view_list = ['CreateImageView', 'CreateColorAttachmentView', 'CreateDepthStencilView', 'CreateComputePipeline']
+        # Functions to treat as "Create' that don't have 'Create' in the name
+        special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory']
+        # A couple funcs use do while loops
+        do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == XGL_SUCCESS', 'GetEventStatus': '(pPacket->result == XGL_EVENT_SET || pPacket->result == XGL_EVENT_RESET) && replayResult != pPacket->result'}
+        rbody = []
+        rbody.append('#define CHECK_RETURN_VALUE(entrypoint) returnValue = handle_replay_errors(#entrypoint, replayResult, pPacket->result, returnValue);\n')
+        rbody.append('glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)')
+        rbody.append('{')
+        rbody.append('    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;')
+        rbody.append('    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;')
+        rbody.append('    switch (packet->packet_id)')
+        rbody.append('    {')
+        for proto in self.protos:
+            ret_value = False
+            create_view = False
+            create_func = False
+            transitions = False
+            ds_attach = False
+            # TODO : How to handle VOID* return of GetProcAddr?
+            if ('VOID' not in proto.ret) and (proto.name not in custom_check_ret_val):
+                ret_value = True
+            if proto.name in create_view_list:
+                create_view = True
+            elif 'Create' in proto.name or proto.name in special_create_list:
+                create_func = True
+            elif 'pStateTransitions' in [p.name for p in proto.params]:
+                transitions = True
+            elif proto.name.startswith('Attach'):
+                ds_attach = True
+            rbody.append('        case GLV_TPI_XGL_xgl%s:' % proto.name)
+            rbody.append('        {')
+            rbody.append('            struct_xgl%s* pPacket = (struct_xgl%s*)(packet->pBody);' % (proto.name, proto.name))
+            if proto.name in custom_body_dict:
+                rbody.append(custom_body_dict[proto.name]())
+            else:
+                if proto.name in custom_open_params:
+                    rbody.append('            XGL_DEVICE handle;')
+                    for pidx in custom_open_params[proto.name]:
+                        rbody.append('            %s local_%s;' % (proto.params[pidx].ty.strip('const ').strip('*'), proto.params[pidx].name))
+                    rbody.append('            handle = remap(pPacket->device);')
+                elif create_view:
+                    rbody.append('            %s createInfo;' % (proto.params[1].ty.strip('*').strip('const ')))
+                    rbody.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(%s));' % (proto.params[1].ty.strip('*').strip('const ')))
+                    if 'CreateComputePipeline' == proto.name:
+                        rbody.append('            createInfo.cs.shader = remap(pPacket->pCreateInfo->cs.shader);')
+                    else:
+                        rbody.append('            createInfo.image = remap(pPacket->pCreateInfo->image);')
+                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').strip('const '), proto.params[-1].name))
+                elif create_func: # Declare local var to store created handle into
+                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').strip('const '), proto.params[-1].name))
+                elif transitions:
+                    rbody.append('            %s pStateTransitions = (%s)pPacket->pStateTransitions;' % (proto.params[-1].ty.strip('const '), proto.params[-1].ty.strip('const ')))
+                    rbody.append('            bool allocatedMem = false;')
+                    rbody.append('            if (pStateTransitions != NULL)')
+                    rbody.append('            {')
+                    rbody.append('                allocatedMem = true;')
+                    rbody.append('                pStateTransitions = GLV_NEW_ARRAY(%s, pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').strip('const ')))
+                    rbody.append('                memcpy(pStateTransitions, pPacket->pStateTransitions, sizeof(%s) * pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').strip('const ')))
+                    rbody.append('                for (XGL_UINT i = 0; i < pPacket->transitionCount; i++)')
+                    rbody.append('                {')
+                    if 'Memory' in proto.name:
+                        rbody.append('                    pStateTransitions[i].mem = remap(pPacket->pStateTransitions[i].mem);')
+                    else:
+                        rbody.append('                    pStateTransitions[i].image = remap(pPacket->pStateTransitions[i].image);')
+                    rbody.append('                }')
+                    rbody.append('            }')
+                elif ds_attach:
+                    rbody.append('            %s %s = GLV_NEW_ARRAY(%s, pPacket->slotCount);' % (proto.params[-1].ty.strip('const '), proto.params[-1].name, proto.params[-1].ty.strip('const ').strip('*')))
+                    rbody.append('            memcpy(%s, pPacket->%s, pPacket->slotCount * sizeof(%s));' % (proto.params[-1].name, proto.params[-1].name, proto.params[-1].ty.strip('const ').strip('*')))
+                    rbody.append('            for (XGL_UINT i = 0; i < pPacket->slotCount; i++)')
+                    rbody.append('            {')
+                    if 'Sampler' in proto.name:
+                        rbody.append('                %s[i] = remap(pPacket->%s[i]);' % (proto.params[-1].name, proto.params[-1].name))
+                    elif 'Image' in proto.name:
+                        rbody.append('                %s[i].view = remap(pPacket->%s[i].view);' % (proto.params[-1].name, proto.params[-1].name))
+                    elif 'Memory' in proto.name:
+                        rbody.append('                %s[i].mem = remap(pPacket->%s[i].mem);' % (proto.params[-1].name, proto.params[-1].name))
+                    else:
+                        rbody.append('                %s[i].descriptorSet = remap(pPacket->%s[i].descriptorSet);' % (proto.params[-1].name, proto.params[-1].name))
+                    rbody.append('            }')
+                elif proto.name in do_while_dict:
+                    rbody.append('            do {')
+                rr_string = '            '
+                if ret_value:
+                    rr_string = '            replayResult = '
+                rr_string += 'm_xglFuncs.real_xgl%s(' % proto.name
+                for p in proto.params:
+                    # For last param of Create funcs, pass address of param
+                    if create_func and p.name == proto.params[-1].name:
+                        rr_string += '&local_%s, ' % p.name
+                    else:
+                        rr_string += '%s, ' % self._get_packet_param(p.ty, p.name)
+                rr_string = '%s);' % rr_string[:-2]
+                if transitions:
+                    rr_string = rr_string.replace('pPacket->pState', 'pState')
+                elif ds_attach:
+                    rr_list = rr_string.split(', ')
+                    rr_list[-1] = '%s);' % proto.params[-1].name
+                    rr_string = ', '.join(rr_list)
+                elif proto.name in custom_open_params:
+                    rr_list = rr_string.split(', ')
+                    rr_list[0] = rr_list[0].replace('remap(pPacket->device)', 'handle')
+                    for pidx in custom_open_params[proto.name]:
+                        rr_list[pidx] = '&local_%s' % proto.params[pidx].name
+                    rr_string = ', '.join(rr_list)
+                    rr_string += ');'
+                elif create_view:
+                    rr_list = rr_string.split(', ')
+                    rr_list[-2] = '&createInfo'
+                    rr_list[-1] = '&local_%s);' % proto.params[-1].name
+                    rr_string = ', '.join(rr_list)
+                    # this is a sneaky shortcut to use generic create code below to add_to_map
+                    create_func = True
+                elif 'DbgRegisterMsgCallback' == proto.name:
+                    rr_string = rr_string.replace('pPacket->pUserData);', 'NULL); // just pass NULL b/c no replay ptr to app data')
+                rbody.append(rr_string)
+                if 'DestroyDevice' in proto.name:
+                    rbody.append('            if (replayResult == XGL_SUCCESS)')
+                    rbody.append('            {')
+                    rbody.append('                rm_from_map(pPacket->device);')
+                    rbody.append('                m_display->m_initedXGL = false;')
+                    rbody.append('            }')
+                elif create_func: # save handle mapping if create successful
+                    rbody.append('            if (replayResult == XGL_SUCCESS)')
+                    rbody.append('            {')
+                    rbody.append('                add_to_map(pPacket->%s, &local_%s);' % (proto.params[-1].name, proto.params[-1].name))
+                    if 'AllocMemory' == proto.name:
+                        rbody.append('                add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
+                    rbody.append('            }')
+                elif transitions:
+                    rbody.append('            if (allocatedMem)')
+                    rbody.append('            {')
+                    rbody.append('                GLV_DELETE((void*)pStateTransitions);')
+                    rbody.append('            }')
+                elif ds_attach:
+                    rbody.append('            GLV_DELETE(%s);' % proto.params[-1].name)
+                elif proto.name in do_while_dict:
+                    rbody[-1] = '    %s' % rbody[-1]
+                    rbody.append('            } while (%s);' % do_while_dict[proto.name])
+            if ret_value:
+                rbody.append('            CHECK_RETURN_VALUE(xgl%s);' % proto.name)
+            rbody.append('            break;')
+            rbody.append('        }')
+        rbody.append('        default:')
+        rbody.append('            glv_LogWarn("Unrecognized packet_id %u, skipping\\n", packet->packet_id);')
+        rbody.append('            returnValue = glv_replay::GLV_REPLAY_INVALID_ID;')
+        rbody.append('            break;')
+        rbody.append('    }')
+        rbody.append('    return returnValue;')
+        rbody.append('}')
+        return "\n".join(rbody)
+
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
         return '#include <xglLayer.h>\n#include "loader.h"'
@@ -2347,22 +3388,39 @@ class GlaveReplayHeader(Subcommand):
 class GlaveReplayC(Subcommand):
     def generate_header(self):
         header_txt = []
-        header_txt.append('#include "glv_platform.h"')
-        header_txt.append('#include "glv_common.h"')
-        header_txt.append('#include "glvtrace_xgl_xgl.h"')
-        header_txt.append('#include "glvtrace_xgl_xgldbg.h"')
+        header_txt.append('#include "glvreplay_xgl_replay.h"\n')
+        header_txt.append('extern "C" {')
+        header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
         header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
+        header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
         header_txt.append('#include "glvtrace_xgl_packet_id.h"')
-        header_txt.append('#ifdef WIN32')
-        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
-        header_txt.append('#endif')
+        header_txt.append('#include "xgl_enum_string_helper.h"\n}\n')
+        header_txt.append('#define APP_NAME "glvreplay_xgl"')
+        header_txt.append('#define IDI_ICON 101\n')
+        header_txt.append('static const char* g_extensions[] =')
+        header_txt.append('{')
+        header_txt.append('        "XGL_WSI_WINDOWS",')
+        header_txt.append('        "XGL_TIMER_QUEUE",')
+        header_txt.append('        "XGL_GPU_TIMESTAMP_CALIBRATION",')
+        header_txt.append('        "XGL_DMA_QUEUE",')
+        header_txt.append('        "XGL_COMMAND_BUFFER_CONTROL_FLOW",')
+        header_txt.append('        "XGL_COPY_OCCLUSION_QUERY_DATA",')
+        header_txt.append('        "XGL_ADVANCED_MULTISAMPLING",')
+        header_txt.append('        "XGL_BORDER_COLOR_PALETTE"')
+        header_txt.append('};')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_func_ptr_assignments_ext('Dbg'),
-                self._generate_attach_hooks_ext('Dbg'),
-                self._generate_detach_hooks_ext('Dbg'),
-                self._generate_trace_funcs_ext('Dbg')]
+        body = [self._generate_replay_display_init_xgl(),
+                self._generate_replay_display_init(),
+                self._generate_replay_display_structors(),
+                self._generate_replay_display_window(),
+                self._generate_replay_structors(),
+                self._generate_replay_init(),
+                self._generate_replay_remap(),
+                self._generate_replay_errors(),
+                self._generate_replay_init_funcs(),
+                self._generate_replay()]
 
         return "\n".join(body)
 
