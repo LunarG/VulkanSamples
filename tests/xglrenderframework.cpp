@@ -983,3 +983,28 @@ XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
 int XglMemoryRefManager::GetNumRefs() {
     return m_bufferObjs.size();
 }
+
+XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
+{
+    XGL_RESULT err;
+
+    memset(&m_cmdInfo,0,sizeof(m_cmdInfo));
+
+    m_device = device;
+    m_cmdInfo.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    m_cmdInfo.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    err = xglCreateCommandBuffer(m_device->device(), &m_cmdInfo, &m_cmdBuffer);
+    assert(!err);
+}
+XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
+{
+    return m_cmdBuffer;
+}
+XGL_CMD_BUFFER* XglCommandBufferObj::GetBufferPointer()
+{
+    return &m_cmdBuffer;
+}
+XglCommandBufferObj::~XglCommandBufferObj()
+{
+    if (m_cmdBuffer != XGL_NULL_HANDLE) xglDestroyObject(m_cmdBuffer);
+}

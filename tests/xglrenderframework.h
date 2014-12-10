@@ -97,6 +97,21 @@ protected:
     }
 };
 
+class XglCommandBufferObj
+{
+public:
+    XglCommandBufferObj(XglDevice *device);
+    ~XglCommandBufferObj();
+    XGL_CMD_BUFFER  GetBufferHandle();
+    XGL_CMD_BUFFER* GetBufferPointer();
+
+protected:
+    XglDevice                      *m_device;
+    XGL_CMD_BUFFER_CREATE_INFO      m_cmdInfo;
+    XGL_CMD_BUFFER                  m_cmdBuffer;
+
+};
+
 class XglConstantBufferObj
 {
 public:
