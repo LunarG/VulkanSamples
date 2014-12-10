@@ -615,7 +615,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         fs_slots[2 * i].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
         fs_slots[2 * i].shaderEntityIndex = i;
-        fs_slots[2 * i + 1].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+        fs_slots[2 * i + 1].slotObjectType = XGL_SLOT_SHADER_TEXTURE_RESOURCE;
         fs_slots[2 * i + 1].shaderEntityIndex = i;
     }
 

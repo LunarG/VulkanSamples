@@ -1022,7 +1022,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&fs_slots, 0, sizeof(fs_slots));
     fs_slots[1].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
     fs_slots[1].shaderEntityIndex = 0;
-    fs_slots[2].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
+    fs_slots[2].slotObjectType = XGL_SLOT_SHADER_TEXTURE_RESOURCE;
     fs_slots[2].shaderEntityIndex = 0;
 
     memset(&vs, 0, sizeof(vs));
