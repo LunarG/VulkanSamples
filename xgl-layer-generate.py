@@ -775,7 +775,7 @@ class Subcommand(object):
                         func_body.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
                     else:
                         func_body.append('    %s %s,' % (p.ty, p.name))
-                    if '*' in p.ty and 'pSysMem' != p.name:
+                    if '*' in p.ty and 'pSysMem' != p.name and 'pReserved' != p.name:
                         if 'pData' == p.name:
                             if 'dataSize' == proto.params[proto.params.index(p)-1].name:
                                 packet_size += 'dataSize + '
