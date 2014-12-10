@@ -551,6 +551,8 @@ XglSamplerObj::~XglSamplerObj()
 XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
 {
     m_device = device;
+    m_commandBuffer = 0;
+    m_fence = 0;
 
     memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
     memset(&m_constantBufferMem,0,sizeof(m_constantBufferMem));
@@ -567,6 +569,8 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
 
     memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
     memset(&m_constantBufferMem,0,sizeof(m_constantBufferMem));
+    m_commandBuffer = 0;
+    m_fence = 0;
 
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = constantCount * constantSize;
@@ -601,6 +605,7 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
 XglConstantBufferObj::~XglConstantBufferObj()
 {
     if (m_constantBufferMem != XGL_NULL_HANDLE) xglFreeMemory(m_constantBufferMem);
+    if (m_fence != XGL_NULL_HANDLE) xglDestroyObject(m_fence);
 }
 
 void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding)
@@ -611,11 +616,31 @@ void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, X
 
 void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_STATE newState)
 {
+    XGL_RESULT err = XGL_SUCCESS;
+    XGL_CMD_BUFFER bufferArray[1];
+
     if (this->m_constantBufferView.state == newState)
         return;
 
+    if (!m_commandBuffer)
+    {
+        XGL_FENCE_CREATE_INFO fence_info;
+        memset(&fence_info, 0, sizeof(fence_info));
+        fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        err = xglCreateFence(m_device->device(), &fence_info, &m_fence);
+
+        m_commandBuffer = new XglCommandBufferObj(m_device);
+
+    }
+    else
+    {
+        err = xglWaitForFences(m_device->device(), 1, &m_fence, XGL_TRUE, 0);
+    }
+
+    bufferArray[0] = m_commandBuffer->GetBufferHandle();
+
     // open the command buffer
-    XGL_RESULT err = xglBeginCommandBuffer( cmdBuffer, 0 );
+    err = xglBeginCommandBuffer( bufferArray[0], 0 );
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_STATE_TRANSITION transition = {};
@@ -626,11 +651,11 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
     transition.regionSize = m_numVertices * m_stride;
 
     // write transition to the command buffer
-    xglCmdPrepareMemoryRegions( cmdBuffer, 1, &transition );
+    xglCmdPrepareMemoryRegions( bufferArray[0], 1, &transition );
     this->m_constantBufferView.state = newState;
 
     // finish recording the command buffer
-    err = xglEndCommandBuffer( cmdBuffer );
+    err = xglEndCommandBuffer( bufferArray[0] );
     ASSERT_XGL_SUCCESS(err);
 
     XGL_UINT32     numMemRefs=1;
@@ -640,7 +665,7 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
     memRefs.mem = m_constantBufferMem;
 
     // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &cmdBuffer, numMemRefs, &memRefs, NULL );
+    err = xglQueueSubmit( m_device->m_queue, 1, bufferArray, numMemRefs, &memRefs, m_fence );
     ASSERT_XGL_SUCCESS(err);
 }
 
@@ -999,10 +1024,6 @@ XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
 XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
 {
     return m_cmdBuffer;
-}
-XGL_CMD_BUFFER* XglCommandBufferObj::GetBufferPointer()
-{
-    return &m_cmdBuffer;
 }
 XglCommandBufferObj::~XglCommandBufferObj()
 {

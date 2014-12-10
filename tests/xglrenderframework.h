@@ -103,7 +103,6 @@ public:
     XglCommandBufferObj(XglDevice *device);
     ~XglCommandBufferObj();
     XGL_CMD_BUFFER  GetBufferHandle();
-    XGL_CMD_BUFFER* GetBufferPointer();
 
 protected:
     XglDevice                      *m_device;
@@ -127,6 +126,8 @@ protected:
     XglDevice                      *m_device;
     int                             m_numVertices;
     int                             m_stride;
+    XglCommandBufferObj             *m_commandBuffer;
+    XGL_FENCE                       m_fence;
 };
 
 class XglIndexBufferObj : public XglConstantBufferObj
