@@ -198,15 +198,14 @@ static inline void cmd_writer_reloc(struct intel_cmd *cmd,
 }
 
 /**
- * Reserve a region from the state buffer.  Both the offset, in bytes, and the
- * pointer to the reserved region are returned.
+ * Reserve a region from the state buffer.  The offset, in bytes, to the
+ * reserved region is returned.
  *
  * Note that \p alignment is in bytes and \p len is in DWords.
  */
-static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
+static inline uint32_t cmd_state_reserve(struct intel_cmd *cmd,
                                          enum intel_cmd_item_type item,
-                                         XGL_SIZE alignment, XGL_UINT len,
-                                         uint32_t **dw)
+                                         XGL_SIZE alignment, XGL_UINT len)
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
     const XGL_SIZE size = len << 2;
@@ -216,12 +215,45 @@ static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
     /* all states are at least aligned to 32-bytes */
     assert(alignment % 32 == 0);
 
-    *dw = (uint32_t *) ((char *) writer->ptr + offset);
-
     writer->used = offset + size;
 
     if (intel_debug & INTEL_DEBUG_BATCH)
         cmd_writer_record(cmd, which, item, offset, size);
+
+    return offset;
+}
+
+/**
+ * Get the pointer to a reserved region for updating.  The pointer is only
+ * valid until the next reserve call.
+ */
+static inline void cmd_state_update(struct intel_cmd *cmd,
+                                    uint32_t offset, XGL_UINT len,
+                                    uint32_t **dw)
+{
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+
+    assert(offset + (len << 2) <= writer->used);
+
+    *dw = (uint32_t *) ((char *) writer->ptr + offset);
+}
+
+/**
+ * Reserve a region from the state buffer.  Both the offset, in bytes, and the
+ * pointer to the reserved region are returned.  The pointer is only valid
+ * until the next reserve call.
+ *
+ * Note that \p alignment is in bytes and \p len is in DWords.
+ */
+static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
+                                         enum intel_cmd_item_type item,
+                                         XGL_SIZE alignment, XGL_UINT len,
+                                         uint32_t **dw)
+{
+    const uint32_t offset = cmd_state_reserve(cmd, item, alignment, len);
+
+    cmd_state_update(cmd, offset, len, dw);
 
     return offset;
 }
@@ -322,7 +354,8 @@ static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
 
 /**
  * Reserve a region from the batch buffer.  Both the offset, in DWords, and
- * the pointer to the reserved region are returned.
+ * the pointer to the reserved region are returned.  The pointer is only valid
+ * until the next reserve call.
  *
  * Note that \p len is in DWords.
  */
