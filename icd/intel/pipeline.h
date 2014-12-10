@@ -69,6 +69,7 @@ struct intel_pipeline_rmap {
     /* this is not an intel_obj */
 
     XGL_UINT rt_count;
+    XGL_UINT texture_resource_count;
     XGL_UINT resource_count;
     XGL_UINT uav_count;
     XGL_UINT sampler_count;

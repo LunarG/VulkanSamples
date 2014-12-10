@@ -33,7 +33,10 @@ static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap
                                                       XGL_DESCRIPTOR_SET_SLOT_TYPE type,
                                                       XGL_UINT index)
 {
-    const XGL_UINT resource_offset = rmap->rt_count;
+    // The ordering of below offsets is important.  Textures need to come before
+    // buffers with the current compiler conventions.
+    const XGL_UINT texture_resource_offset = rmap->rt_count;
+    const XGL_UINT resource_offset = texture_resource_offset + rmap->texture_resource_count;
     const XGL_UINT uav_offset = resource_offset + rmap->resource_count;
     const XGL_UINT sampler_offset = uav_offset + rmap->uav_count;
     struct intel_pipeline_rmap_slot *slot;
@@ -41,6 +44,9 @@ static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap
     switch (type) {
     case XGL_SLOT_UNUSED:
         slot = NULL;
+        break;
+    case XGL_SLOT_SHADER_TEXTURE_RESOURCE:
+        slot = &rmap->slots[texture_resource_offset + index];
         break;
     case XGL_SLOT_SHADER_RESOURCE:
         slot = &rmap->slots[resource_offset + index];
@@ -138,6 +144,10 @@ static void rmap_update_count(struct intel_pipeline_rmap *rmap,
     switch (type) {
     case XGL_SLOT_UNUSED:
         break;
+    case XGL_SLOT_SHADER_TEXTURE_RESOURCE:
+        if (rmap->texture_resource_count < index + 1)
+            rmap->texture_resource_count = index + 1;
+        break;
     case XGL_SLOT_SHADER_RESOURCE:
         if (rmap->resource_count < index + 1)
             rmap->resource_count = index + 1;
@@ -225,7 +235,7 @@ static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
     rmap_update_count(rmap, dyn->slotObjectType, dyn->shaderEntityIndex);
     rmap->rt_count = rt_count;
 
-    rmap->slot_count = rmap->rt_count + rmap->resource_count +
+    rmap->slot_count = rmap->rt_count + rmap->texture_resource_count + rmap->resource_count +
         rmap->uav_count + rmap->sampler_count;
 
     rmap->slots = icd_alloc(sizeof(rmap->slots[0]) * rmap->slot_count,

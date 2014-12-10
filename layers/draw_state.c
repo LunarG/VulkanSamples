@@ -760,6 +760,7 @@ static XGL_BOOL verifyShaderSlotMapping(const XGL_UINT slot, const XGL_UINT slot
     char str[1024];
     switch (shaderMapping)
     {
+        case XGL_SLOT_SHADER_TEXTURE_RESOURCE:
         case XGL_SLOT_SHADER_RESOURCE:
             if (MAPPING_MEMORY != slotBinding && MAPPING_IMAGE != slotBinding)
                 error = XGL_TRUE;

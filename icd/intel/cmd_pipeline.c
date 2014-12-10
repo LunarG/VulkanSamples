@@ -1484,7 +1484,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
     if (!rmap || !rmap->sampler_count)
         return 0;
 
-    surface_count = rmap->rt_count + rmap->resource_count + rmap->uav_count;
+    surface_count = rmap->rt_count + rmap->texture_resource_count + rmap->resource_count + rmap->uav_count;
 
     border_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB,
             GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR,
@@ -1563,7 +1563,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
 
     surface_count = (rmap) ?
-        rmap->rt_count + rmap->resource_count + rmap->uav_count : 0;
+        rmap->rt_count + rmap->texture_resource_count + rmap->resource_count + rmap->uav_count : 0;
     if (!surface_count)
         return 0;
 
