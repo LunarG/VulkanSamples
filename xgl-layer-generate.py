@@ -825,7 +825,7 @@ class Subcommand(object):
                     func_body.append('    uint32_t i = 0;')
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
                     func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen((const char*)pOutLayers[i]) + 1: 0;')
-                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize);' % (proto.name))
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(XGL_SIZE));' % (proto.name))
                 elif proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
@@ -850,6 +850,18 @@ class Subcommand(object):
                     func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->ppData));')
                     func_body.append('        add_data_to_mem_info(mem, *ppData);')
                     func_body.append('    }')
+                    func_body.append('    pPacket->result = result;')
+                    func_body.append('    FINISH_TRACE_PACKET();')
+                elif 'EnumerateLayers' == proto.name: #custom code for EnumerateLayers case
+                    func_body.append('    pPacket->gpu = gpu;')
+                    func_body.append('    pPacket->maxLayerCount = maxLayerCount;')
+                    func_body.append('    pPacket->maxStringSize = maxStringSize;')
+                    func_body.append('    for (i = 0; i < *pOutLayerCount; i++) {')
+                    func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayers[i]), ((pOutLayers[i] != NULL) ? strlen((const char *)pOutLayers[i]) + 1 : 0), pOutLayers[i]);')
+                    func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pOutLayers[i]));')
+                    func_body.append('    }')
+                    func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayerCount), sizeof(XGL_SIZE), pOutLayerCount);')
+                    func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pOutLayerCount));')
                     func_body.append('    pPacket->result = result;')
                     func_body.append('    FINISH_TRACE_PACKET();')
                 else:
