@@ -88,10 +88,9 @@ static bool rmap_init_slots_with_path(struct intel_pipeline_rmap *rmap,
 
         slot = rmap_get_slot(rmap, info->slotObjectType,
                 info->shaderEntityIndex);
-        if (!slot)
+        if (!slot || slot->path_len)
             continue;
 
-        assert(!slot->path_len);
         slot->path_len = nest_level + 1;
 
         if (nest_level) {
@@ -139,14 +138,17 @@ static bool rmap_init_slots(struct intel_pipeline_rmap *rmap,
 
 static void rmap_update_count(struct intel_pipeline_rmap *rmap,
                               XGL_DESCRIPTOR_SET_SLOT_TYPE type,
-                              XGL_UINT index)
+                              XGL_UINT index, XGL_UINT rt_count, XGL_UINT ubo_start)
 {
+    rmap->rt_count = rt_count;
+
     switch (type) {
     case XGL_SLOT_UNUSED:
         break;
     case XGL_SLOT_SHADER_TEXTURE_RESOURCE:
         if (rmap->texture_resource_count < index + 1)
-            rmap->texture_resource_count = index + 1;
+            if (index < ubo_start - rt_count)
+                rmap->texture_resource_count = index + 1;
         break;
     case XGL_SLOT_SHADER_RESOURCE:
         if (rmap->resource_count < index + 1)
@@ -167,7 +169,8 @@ static void rmap_update_count(struct intel_pipeline_rmap *rmap,
 }
 
 static XGL_UINT rmap_init_counts(struct intel_pipeline_rmap *rmap,
-                                 const XGL_DESCRIPTOR_SET_MAPPING *mapping)
+                                 const XGL_DESCRIPTOR_SET_MAPPING *mapping,
+                                 XGL_UINT rt_count, XGL_UINT ubo_start)
 {
     XGL_UINT depth = 0;
     XGL_UINT i;
@@ -177,7 +180,7 @@ static XGL_UINT rmap_init_counts(struct intel_pipeline_rmap *rmap,
 
         if (info->slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET) {
             const XGL_UINT d = rmap_init_counts(rmap,
-                    info->pNextLevelSet);
+                    info->pNextLevelSet, rt_count, ubo_start);
             if (depth < d + 1)
                 depth = d + 1;
 
@@ -185,7 +188,7 @@ static XGL_UINT rmap_init_counts(struct intel_pipeline_rmap *rmap,
         }
 
         rmap_update_count(rmap, info->slotObjectType,
-                info->shaderEntityIndex);
+                info->shaderEntityIndex, rt_count, ubo_start);
     }
 
     return depth;
@@ -217,7 +220,7 @@ static void rmap_destroy(struct intel_pipeline_rmap *rmap)
 static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
                                                const XGL_DESCRIPTOR_SET_MAPPING *mapping,
                                                const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
-                                               XGL_UINT rt_count)
+                                               XGL_UINT rt_count, XGL_UINT ubo_start)
 {
     struct intel_pipeline_rmap *rmap;
     struct intel_pipeline_rmap_slot *slot;
@@ -229,11 +232,10 @@ static struct intel_pipeline_rmap *rmap_create(struct intel_dev *dev,
 
     memset(rmap, 0, sizeof(*rmap));
 
-    depth = rmap_init_counts(rmap, mapping);
+    depth = rmap_init_counts(rmap, mapping, rt_count, ubo_start);
 
     /* add RTs and the dynamic memory view */
-    rmap_update_count(rmap, dyn->slotObjectType, dyn->shaderEntityIndex);
-    rmap->rt_count = rt_count;
+    rmap_update_count(rmap, dyn->slotObjectType, dyn->shaderEntityIndex, rt_count, ubo_start);
 
     rmap->slot_count = rmap->rt_count + rmap->texture_resource_count + rmap->resource_count +
         rmap->uav_count + rmap->sampler_count;
@@ -284,7 +286,7 @@ static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
 
     vs->rmap = rmap_create(pipeline->dev,
             &info->vs.descriptorSetMapping[0],
-            &info->vs.dynamicMemoryViewMapping, 0);
+            &info->vs.dynamicMemoryViewMapping, 0, vs->ubo_start);
     if (!vs->rmap) {
         icd_free(vs->pCode);
         return XGL_ERROR_OUT_OF_MEMORY;
@@ -392,7 +394,7 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
 
     fs->rmap = rmap_create(pipeline->dev,
             &info->fs.descriptorSetMapping[0],
-            &info->fs.dynamicMemoryViewMapping, rt_count);
+            &info->fs.dynamicMemoryViewMapping, rt_count, fs->ubo_start);
     if (!fs->rmap) {
         icd_free(fs->pCode);
         return XGL_ERROR_OUT_OF_MEMORY;
