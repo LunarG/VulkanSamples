@@ -146,7 +146,7 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
          * Since the above "consume" inputs, update argv
          * so that it contains the trimmed list of args for glutInit
          */
-        if (strncmp("--help", argv[i], 6) == 0 || strncmp("-help", argv[i], 5) == 0) {
+        if (strncmp("--help", argv[i], 6) == 0 || strncmp("-h", argv[i], 2) == 0) {
             printf("\nOther options:\n");
             printf("\t--show-images\n"
                    "\t\tDisplay test images in viewer after tests complete.\n");
@@ -155,10 +155,10 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
                    "\t\tUsed to generate golden images for compare-images.\n");
             printf("\t--compare-images\n"
                    "\t\tCompare test images to 'golden' image in golden folder.\n"
-                   "\t\tAlso saves the generated test image in current working directory.\n"
-                   "\t\t\tbut only if the image is different from the golden\n"
-                   "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can specify different\n"
-                   "\t\t\tdirectory for golden images\n"
+                   "\t\tAlso saves the generated test image in current working\n"
+                   "\t\t\tdirectory but only if the image is different from the golden\n"
+                   "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can specify\n"
+                   "\t\t\tdifferent directory for golden images\n"
                    "\t\tSignal test failure if different.\n");
             printf("\t--use-BIL\n"
                    "\t\tUse BIL code path (default).\n");
