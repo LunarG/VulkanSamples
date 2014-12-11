@@ -41,6 +41,7 @@ set(SRC_LIST
     ${SRC_LIST}
     glvdebug_xgl.cpp
     glvdebug_xgl_qcontroller.cpp
+    glvdebug_xgl_qfile_model.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
 )
 
@@ -48,6 +49,8 @@ set(SRC_LIST
 # Typically that means just headers for UI objects
 set(UI_HEADER_LIST
     glvdebug_xgl_qcontroller.h
+    glvdebug_xgl_qfile_model.h
+    ${SRC_DIR}/glvdebug/glvdebug_QTraceFileModel.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.h
 )

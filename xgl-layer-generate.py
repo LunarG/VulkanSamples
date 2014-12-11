@@ -1351,6 +1351,20 @@ class Subcommand(object):
         pid_enum.append('};\n')
         return "\n".join(pid_enum)
 
+    def _generate_stringify_func(self):
+        func_body = []
+        func_body.append('static const char *stringify_xgl_packet_id(const enum GLV_TRACE_PACKET_ID_XGL id)')
+        func_body.append('{')
+        func_body.append('    switch(id) {')
+        for proto in self.protos:
+            func_body.append('    case GLV_TPI_XGL_xgl%s:' % proto.name)
+            func_body.append('        return "xgl%s";' % proto.name)
+        func_body.append('    default:')
+        func_body.append('        return NULL;')
+        func_body.append('    }')
+        func_body.append('};\n')
+        return "\n".join(func_body)
+
     def _generate_interp_func(self):
         interp_func_body = []
         interp_func_body.append('static glv_trace_packet_header* interpret_trace_packet_xgl(glv_trace_packet_header* pHeader)')
@@ -1951,6 +1965,7 @@ class GlavePacketID(Subcommand):
 
     def generate_body(self):
         body = [self._generate_packet_id_enum(),
+                self._generate_stringify_func(),
                 self._generate_interp_func()]
 
         return "\n".join(body)

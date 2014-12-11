@@ -11,6 +11,10 @@ class glvdebug_QTraceFileModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
+    glvdebug_QTraceFileModel()
+    {
+    }
+
     glvdebug_QTraceFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
     {
         m_pTraceFileInfo = pTraceFileInfo;
@@ -18,6 +22,16 @@ public:
 
     virtual ~glvdebug_QTraceFileModel()
     {
+    }
+
+    void setTraceFileInfo(glvdebug_trace_file_info* pTraceFileInfo)
+    {
+        m_pTraceFileInfo = pTraceFileInfo;
+    }
+
+    virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, QString &strOut) const
+    {
+        strOut = "Error wrong object";
     }
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const
@@ -87,8 +101,14 @@ public:
                         case GLV_TPI_MARKER_API_GROUP_BEGIN:
                         case GLV_TPI_MARKER_API_GROUP_END:
                         case GLV_TPI_MARKER_TERMINATE_PROCESS:
+                            return QVariant((unsigned int) packet_id);
+                            break;
                         default:
-                        return QVariant((unsigned int) packet_id);
+                            QString apiStr;
+                            this->getApiCall((const GLV_TRACE_PACKET_ID) packet_id, apiStr);
+                            return apiStr;
+                            break;
+
                     }
                 }
                 case Column_TracerId:
