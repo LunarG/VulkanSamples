@@ -1,5 +1,5 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.5, 9 Dec 2014*
+*Version 0.6, 11 Dec 2014*
 
 This project provides *open source* components for the XGL Ecosystem.
 
@@ -18,6 +18,8 @@ The following components are available:
 - *GLAVE Debugger* 
   - APIDump (generated)
   - APIDumpFile (generated)
+  - glvtrace64: capture trace of XGL API of an application.
+  - glvreplay64: replay captured trace.
 - [*Sample Drivers*](https://github.com/KhronosGroup/GL-Next/tree/master/icd)
   - [Common Infrastructure](https://github.com/KhronosGroup/GL-Next/tree/master/icd/common)
   - [Implementation for Intel GPUs](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel)
@@ -26,6 +28,7 @@ The following components are available:
 
 ## New
 
+- XGL API trace and capture tools. See tools/glave/README.md for details.
 - Sample driver now supports multiple render targets. Added TriangleMRT to test that functionality.
 - Added XGL_SLOT_SHADER_TEXTURE_RESOURCE to xgl.h as a descriptor slot type to work around confusion in GLSL
   between textures and buffers as shader resources.
