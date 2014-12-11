@@ -2819,8 +2819,6 @@ class Subcommand(object):
                     rr_string = ', '.join(rr_list)
                     # this is a sneaky shortcut to use generic create code below to add_to_map
                     create_func = True
-                elif 'DbgRegisterMsgCallback' == proto.name:
-                    rr_string = rr_string.replace('pPacket->pUserData);', 'NULL); // just pass NULL b/c no replay ptr to app data')
                 rbody.append(rr_string)
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
@@ -2847,6 +2845,11 @@ class Subcommand(object):
                     rbody.append('            } while (%s);' % do_while_dict[proto.name])
             if ret_value:
                 rbody.append('            CHECK_RETURN_VALUE(xgl%s);' % proto.name)
+            if 'MsgCallback' in proto.name:
+                rbody.pop()
+                rbody.pop()
+                rbody.pop()
+                rbody.append('            // Just eating these calls as no way to restore dbg func ptr.')
             rbody.append('            break;')
             rbody.append('        }')
         rbody.append('        default:')
