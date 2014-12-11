@@ -24,6 +24,7 @@
 #include "GL/freeglut_std.h"
 //#include "ShaderLang.h"
 #include "GlslangToBil.h"
+#include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
 
@@ -155,11 +156,15 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
             printf("\t--compare-images\n"
                    "\t\tCompare test images to 'golden' image in golden folder.\n"
                    "\t\tAlso saves the generated test image in current working directory.\n"
+                   "\t\t\tbut only if the image is different from the golden\n"
+                   "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can specify different\n"
+                   "\t\t\tdirectory for golden images\n"
                    "\t\tSignal test failure if different.\n");
             printf("\t--use-BIL\n"
                    "\t\tUse BIL code path (default).\n");
             printf("\t--no-BIL\n"
                    "\t\tUse built-in GLSL compiler rather than BIL code path.\n");
+            exit(0);
         }
 
         argv[n] = argv[i];
@@ -271,8 +276,13 @@ void XglTestFramework::Compare(const char *basename, XglImage *image )
     MagickWand *magick_wand_2;
     MagickWand *compare_wand;
     MagickBooleanType status;
-    char testimage[256],golden[256];
+    char testimage[256],golden[PATH_MAX+256],golddir[PATH_MAX] = "./golden";
     double differenz;
+
+    if (getenv("RENDERTEST_GOLDEN_DIR"))
+    {
+        strcpy(golddir,getenv("RENDERTEST_GOLDEN_DIR"));
+    }
 
     MagickWandGenesis();
     magick_wand_1=NewMagickWand();
@@ -283,7 +293,7 @@ void XglTestFramework::Compare(const char *basename, XglImage *image )
 
     MagickWandGenesis();
     magick_wand_2=NewMagickWand();
-    sprintf(golden,"golden/%s.ppm",basename);
+    sprintf(golden,"%s/%s.ppm",golddir,basename);
     status=MagickReadImage(magick_wand_2,golden);
     ASSERT_TRUE(status) << "Unable to open file: " << golden;
 
