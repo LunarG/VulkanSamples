@@ -347,7 +347,6 @@ SET(SOURCES
     mem.c
     obj.c
     pipeline.c
-    pipeline_shader.c
     query.c
     queue.c
     sampler.c
