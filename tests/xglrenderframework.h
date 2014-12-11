@@ -120,7 +120,7 @@ public:
     XglConstantBufferObj(XglDevice *device);
     XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data);
     ~XglConstantBufferObj();
-    void SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_STATE newState);
+    void SetMemoryState(XGL_MEMORY_STATE newState);
     void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding);
     XGL_MEMORY_VIEW_ATTACH_INFO     m_constantBufferView;
     XGL_GPU_MEMORY                  m_constantBufferMem;

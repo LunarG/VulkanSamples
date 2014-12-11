@@ -614,7 +614,7 @@ void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, X
 }
 
 
-void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_STATE newState)
+void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
 {
     XGL_RESULT err = XGL_SUCCESS;
 

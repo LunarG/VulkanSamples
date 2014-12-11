@@ -861,7 +861,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -922,7 +922,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device, sizeof(vb_data) / sizeof(vb_data[0]), sizeof(vb_data[0]), vb_data);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1006,11 +1006,11 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer, XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglIndexBufferObj indexBuffer(m_device);
     indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), XGL_INDEX_16, g_idxData);
-    indexBuffer.SetMemoryState(m_cmdBuffer, XGL_MEMORY_STATE_INDEX_DATA);
+    indexBuffer.SetMemoryState(XGL_MEMORY_STATE_INDEX_DATA);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1111,7 +1111,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1185,7 +1185,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1269,7 +1269,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1344,7 +1344,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1525,7 +1525,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -1598,7 +1598,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -2324,7 +2324,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
-    meshBuffer.SetMemoryState(m_cmdBuffer,XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
+    meshBuffer.SetMemoryState(XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY);
 
 
     const int buf_size = sizeof(MVP) / sizeof(XGL_FLOAT);
