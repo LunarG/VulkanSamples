@@ -123,8 +123,9 @@ struct intel_pipeline_shader {
 
     XGL_GPU_SIZE per_thread_scratch_size;
 
-    /* these are set up by the driver */
     struct intel_pipeline_rmap *rmap;
+
+    /* these are set up by the driver */
     XGL_UINT max_threads;
     XGL_GPU_SIZE scratch_offset;
 };
