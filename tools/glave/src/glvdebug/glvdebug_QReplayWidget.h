@@ -84,6 +84,13 @@ public:
         connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()));
         connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)));
         connect(m_pWorker, SIGNAL(ReplayFinished()), this, SLOT(onReplayFinished()));
+
+        connect(m_pWorker, SIGNAL(ReplayStarted()), this, SIGNAL(ReplayStarted()));
+        connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SIGNAL(ReplayPaused(uint64_t)));
+        connect(m_pWorker, SIGNAL(ReplayContinued()), this, SIGNAL(ReplayContinued()));
+        connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SIGNAL(ReplayStopped(uint64_t)));
+        connect(m_pWorker, SIGNAL(ReplayFinished()), this, SIGNAL(ReplayFinished()));
+
     }
 
     virtual ~glvdebug_QReplayWidget()
@@ -105,6 +112,12 @@ signals:
     void PauseButtonClicked();
     void ContinueButtonClicked();
     void StopButtonClicked();
+
+    void ReplayStarted();
+    void ReplayPaused(uint64_t packetIndex);
+    void ReplayContinued();
+    void ReplayStopped(uint64_t packetIndex);
+    void ReplayFinished();
 
 public slots:
 

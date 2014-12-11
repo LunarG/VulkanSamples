@@ -82,6 +82,7 @@ public:
     virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled);
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel);
     virtual void enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo);
+    virtual void select_call_at_packet_index(unsigned long long packetIndex);
 
 public slots:
 

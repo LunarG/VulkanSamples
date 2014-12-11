@@ -40,6 +40,8 @@ public:
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel) = 0;
     virtual void enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo) = 0;
 
+    virtual void select_call_at_packet_index(unsigned long long packetIndex) = 0;
+
     //virtual void set_timeline_model(glvdebug_QTimelineModel* pModel) = 0;
 
     // \return tab index of state viewer
@@ -47,5 +49,7 @@ public:
 
     virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled) = 0;
     //virtual void set_statetree_model(glvdebug_QStateTreeModel* pModel) = 0;
+
+
 
 };

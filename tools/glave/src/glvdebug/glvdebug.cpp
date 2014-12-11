@@ -151,6 +151,17 @@ void glvdebug::enable_default_calltree_model(glvdebug_trace_file_info* pTraceFil
     set_calltree_model(m_pTraceFileModel);
 }
 
+void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
+{
+    QModelIndex start = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_PacketIndex);
+    QModelIndexList matches = m_pTraceFileModel->match(start, Qt::DisplayRole, QVariant(packetIndex), 1);
+    if (matches.count() > 0)
+    {
+        ui->treeView->setCurrentIndex(matches[0]);
+        ui->treeView->setFocus();
+    }
+}
+
 void glvdebug::reset_view()
 {
     while (ui->stateTabWidget->count() > 0)

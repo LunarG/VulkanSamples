@@ -42,6 +42,7 @@ public:
 
 protected slots:
     void playCurrentTraceFile();
+    void onReplayPaused(uint64_t packetIndex);
 
 private:
     glvdebug_QReplayWidget* m_pReplayWidget;
