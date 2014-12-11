@@ -346,6 +346,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             pipe_shader->out_count = data->base.vue_map.num_slots;// = 2;
             pipe_shader->urb_grf_start = data->base.dispatch_grf_start_reg;// = 1;
             pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
+            pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
 
             if (unlikely(INTEL_DEBUG & DEBUG_VS)) {
                 printf("out_count: %d\n", pipe_shader->out_count);
@@ -394,6 +395,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
                                            data->urb_setup[VARYING_SLOT_CLIP_DIST1] >= 0;
 
             pipe_shader->surface_count = data->base.binding_table.size_bytes / 4;
+            pipe_shader->ubo_start     = data->base.binding_table.ubo_start;
             pipe_shader->urb_grf_start = data->first_curbe_grf;
             pipe_shader->in_count      = data->num_varying_inputs;
 

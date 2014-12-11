@@ -290,6 +290,10 @@ static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
+    // Ensure that all textures in descriptor set were consumed
+    // This is temporary until we move resource map building to compiler
+    assert(vs->ubo_start == vs->rmap->texture_resource_count);
+
     pipeline->active_shaders |= SHADER_VERTEX_FLAG;
 
     return XGL_SUCCESS;
@@ -393,6 +397,10 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
         icd_free(fs->pCode);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
+
+    // Ensure that all textures in descriptor set were consumed
+    // This is temporary until we move resource map building to compiler
+    assert(fs->ubo_start == fs->rmap->texture_resource_count + fs->rmap->rt_count);
 
     pipeline->active_shaders |= SHADER_FRAGMENT_FLAG;
 

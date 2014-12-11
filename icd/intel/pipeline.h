@@ -115,6 +115,7 @@ struct intel_pipeline_shader {
     XGL_UINT sampler_count;
     XGL_UINT surface_count;
 
+    XGL_UINT ubo_start;
     XGL_UINT urb_grf_start;
 
     XGL_FLAGS barycentric_interps;
