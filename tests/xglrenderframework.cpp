@@ -617,7 +617,6 @@ void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, X
 void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_STATE newState)
 {
     XGL_RESULT err = XGL_SUCCESS;
-    XGL_CMD_BUFFER bufferArray[1];
 
     if (this->m_constantBufferView.state == newState)
         return;
@@ -637,10 +636,8 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
         err = xglWaitForFences(m_device->device(), 1, &m_fence, XGL_TRUE, 0);
     }
 
-    bufferArray[0] = m_commandBuffer->GetBufferHandle();
-
     // open the command buffer
-    err = xglBeginCommandBuffer( bufferArray[0], 0 );
+    err = m_commandBuffer->BeginCommandBuffer(0);
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_STATE_TRANSITION transition = {};
@@ -651,11 +648,11 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
     transition.regionSize = m_numVertices * m_stride;
 
     // write transition to the command buffer
-    xglCmdPrepareMemoryRegions( bufferArray[0], 1, &transition );
+    m_commandBuffer->PrepareMemoryRegions(1, &transition);
     this->m_constantBufferView.state = newState;
 
     // finish recording the command buffer
-    err = xglEndCommandBuffer( bufferArray[0] );
+    err = m_commandBuffer->EndCommandBuffer();
     ASSERT_XGL_SUCCESS(err);
 
     XGL_UINT32     numMemRefs=1;
@@ -665,6 +662,8 @@ void XglConstantBufferObj::SetMemoryState(XGL_CMD_BUFFER cmdBuffer, XGL_MEMORY_S
     memRefs.mem = m_constantBufferMem;
 
     // submit the command buffer to the universal queue
+    XGL_CMD_BUFFER bufferArray[1];
+    bufferArray[0] = m_commandBuffer->GetBufferHandle();
     err = xglQueueSubmit( m_device->m_queue, 1, bufferArray, numMemRefs, &memRefs, m_fence );
     ASSERT_XGL_SUCCESS(err);
 }
@@ -1021,10 +1020,27 @@ XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
     err = xglCreateCommandBuffer(m_device->device(), &m_cmdInfo, &m_cmdBuffer);
     assert(!err);
 }
+
 XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
 {
     return m_cmdBuffer;
 }
+
+XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_FLAGS flags)
+{
+    return xglBeginCommandBuffer(m_cmdBuffer, flags);
+}
+
+XGL_RESULT XglCommandBufferObj::EndCommandBuffer()
+{
+    return xglEndCommandBuffer(m_cmdBuffer);
+}
+
+void XglCommandBufferObj::PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr)
+{
+    xglCmdPrepareMemoryRegions(m_cmdBuffer, transitionCount, transitionPtr);
+}
+
 XglCommandBufferObj::~XglCommandBufferObj()
 {
     if (m_cmdBuffer != XGL_NULL_HANDLE) xglDestroyObject(m_cmdBuffer);

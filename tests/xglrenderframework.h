@@ -102,7 +102,10 @@ class XglCommandBufferObj
 public:
     XglCommandBufferObj(XglDevice *device);
     ~XglCommandBufferObj();
-    XGL_CMD_BUFFER  GetBufferHandle();
+    XGL_CMD_BUFFER GetBufferHandle();
+    XGL_RESULT BeginCommandBuffer(XGL_FLAGS flags);
+    XGL_RESULT EndCommandBuffer();
+    void PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr);
 
 protected:
     XglDevice                      *m_device;
