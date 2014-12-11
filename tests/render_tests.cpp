@@ -2404,7 +2404,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (binding = 0) uniform sampler2D surface0;\n"
-            "layout (binding = 16) uniform sampler2D surface1;\n"
+            "layout (binding = 9) uniform sampler2D surface1;\n"
             "layout (binding = 2) uniform sampler2D surface2;\n"
             "layout (binding = 4) uniform sampler2D surface3;\n"
 
@@ -2469,8 +2469,8 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     XglSamplerObj sampler7(m_device);
     XglTextureObj texture7(m_device); // Red and Blue
     texture7.ChangeColors(0xffff00ff,0xffff00ff);
-    ps.BindShaderEntitySlotToImage(16, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture7);
-    ps.BindShaderEntitySlotToSampler(16, &sampler7);
+    ps.BindShaderEntitySlotToImage(9, XGL_SLOT_SHADER_TEXTURE_RESOURCE, &texture7);
+    ps.BindShaderEntitySlotToSampler(9, &sampler7);
 
 
     XglPipelineObj pipelineobj(m_device);
