@@ -1840,8 +1840,8 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         {
         struct_xglDbgRegisterMsgCallback *pPacket = (struct_xglDbgRegisterMsgCallback*)(packet->pBody);
 		// just pass NULL since don't have replay pointer to app data
-		replayResult = m_xglFuncs.real_xglDbgRegisterMsgCallback(pPacket->pfnMsgCallback, NULL);
-		CHECK_RETURN_VALUE(xglDbgRegisterMsgCallback);
+//		replayResult = m_xglFuncs.real_xglDbgRegisterMsgCallback(pPacket->pfnMsgCallback, NULL);
+//		CHECK_RETURN_VALUE(xglDbgRegisterMsgCallback);
 		break;
         }
         case GLV_TPI_XGL_xglDbgUnregisterMsgCallback:
