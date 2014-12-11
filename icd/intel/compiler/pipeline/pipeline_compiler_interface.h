@@ -45,7 +45,7 @@ void intel_destroy_brw_context(struct brw_context *brw);
 
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
                                          const struct intel_gpu *gpu,
-                                         const struct intel_ir *ir);
+                                         const XGL_PIPELINE_SHADER *info);
 
 XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,

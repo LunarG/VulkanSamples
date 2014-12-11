@@ -281,8 +281,9 @@ void intel_destroy_brw_context(struct brw_context *brw)
 // invoke backend compiler to generate ISA and supporting data structures
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
-                                         const struct intel_ir *ir)
+                                         const XGL_PIPELINE_SHADER *info)
 {
+    const struct intel_ir *ir = intel_shader(info->shader)->ir;
     /* XXX how about constness? */
     struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
     XGL_RESULT status = XGL_SUCCESS;

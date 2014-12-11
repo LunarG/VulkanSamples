@@ -279,8 +279,7 @@ static XGL_RESULT pipeline_build_vs(struct intel_pipeline *pipeline,
 
     // Right here, lower the IR to ISA using NOS
     // This must be after assignment of pipeline constant buffer
-    ret = intel_pipeline_shader_compile(vs, pipeline->dev->gpu,
-            intel_shader(info->vs.shader)->ir);
+    ret = intel_pipeline_shader_compile(vs, pipeline->dev->gpu, &info->vs);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -307,8 +306,7 @@ static XGL_RESULT pipeline_build_tcs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *tcs = &pipeline->tcs;
     XGL_RESULT ret;
 
-    ret = intel_pipeline_shader_compile(tcs, pipeline->dev->gpu,
-            intel_shader(info->tcs.shader)->ir);
+    ret = intel_pipeline_shader_compile(tcs, pipeline->dev->gpu, &info->tcs);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -325,8 +323,7 @@ static XGL_RESULT pipeline_build_tes(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *tes = &pipeline->tes;
     XGL_RESULT ret;
 
-    ret = intel_pipeline_shader_compile(tes, pipeline->dev->gpu,
-            intel_shader(info->tes.shader)->ir);
+    ret = intel_pipeline_shader_compile(tes, pipeline->dev->gpu, &info->tes);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -343,8 +340,7 @@ static XGL_RESULT pipeline_build_gs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *gs = &pipeline->gs;
     XGL_RESULT ret;
 
-    ret = intel_pipeline_shader_compile(gs, pipeline->dev->gpu,
-            intel_shader(info->gs.shader)->ir);
+    ret = intel_pipeline_shader_compile(gs, pipeline->dev->gpu, &info->gs);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -387,8 +383,7 @@ static XGL_RESULT pipeline_build_fs(struct intel_pipeline *pipeline,
 
     // Right here, lower the IR to ISA using NOS
     // This must be after assignment of pipeline constant buffer
-    ret = intel_pipeline_shader_compile(fs, pipeline->dev->gpu,
-            intel_shader(info->fs.shader)->ir);
+    ret = intel_pipeline_shader_compile(fs, pipeline->dev->gpu, &info->fs);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -415,8 +410,7 @@ static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
     struct intel_pipeline_shader *cs = &pipeline->cs;
     XGL_RESULT ret;
 
-    ret = intel_pipeline_shader_compile(cs, pipeline->dev->gpu,
-            intel_shader(info->compute.cs.shader)->ir);
+    ret = intel_pipeline_shader_compile(cs, pipeline->dev->gpu, &info->compute.cs);
     if (ret != XGL_SUCCESS)
         return ret;
 
