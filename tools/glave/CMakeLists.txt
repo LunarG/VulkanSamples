@@ -17,7 +17,7 @@ find_package(PythonLibs)
 find_package(PythonInterp)
 
 if (NOT PYTHONLIBS_FOUND OR NOT PYTHONINTERP_FOUND)
-    message(FATAL_ERROR "Missing PythonLibs development libraries: sudo apt-get install libpython3.4-dev")
+    message(FATAL_ERROR "Missing PythonLibs development libraries: sudo apt-get install libpython-dev (may also need libpython3.4-dev and/or libpython2.7-dev)")
 endif()
 
 find_package(Qt5 COMPONENTS Widgets Gui Core)
