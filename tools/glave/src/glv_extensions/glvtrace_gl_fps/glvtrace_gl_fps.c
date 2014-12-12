@@ -140,7 +140,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         case DLL_PROCESS_ATTACH:
         {
             LARGE_INTEGER tmp;
-            gMessageStream = glv_MessageStream_create(TRUE, "", GLV_BASE_PORT + GLV_TID_GL_FPS);
+            gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_GL_FPS);
 
             glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));
             glv_tracelog_set_tracer_id(GLV_TID_GL_FPS);
