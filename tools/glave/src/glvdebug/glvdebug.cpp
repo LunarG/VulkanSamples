@@ -99,6 +99,10 @@ glvdebug::glvdebug(QWidget *parent)
     connect(m_pGenerateTraceDialog, SIGNAL(output_error(QString)), this, SLOT(on_error(QString)));
 
     reset_tracefile_ui();
+
+    // for now, remove these widgets since they are not used
+    ui->bottomTabWidget->removeTab(ui->bottomTabWidget->indexOf(ui->machineInfoTab));
+    ui->bottomTabWidget->removeTab(ui->bottomTabWidget->indexOf(ui->callStackTab));
 }
 
 glvdebug::~glvdebug()
