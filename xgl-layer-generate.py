@@ -115,14 +115,14 @@ class Subcommand(object):
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             if '*' in xgl_type:
-                return ("%i", "*%s" % name)
+                return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
-        if "XGL_FORMAT" == xgl_type and "format" == name:
-            return ("{format.channelFormat = %s, format.numericFormat = %s}", "string_XGL_CHANNEL_FORMAT(format.channelFormat), string_XGL_NUM_FORMAT(format.numericFormat)")
+        if "XGL_FORMAT" == xgl_type:
+           return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_XGL_CHANNEL_FORMAT(%s.channelFormat), string_XGL_NUM_FORMAT(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
-        return ("%p", "(void*)%s" % name)
+        return ("%p", "(void*)(%s)" % name)
 
     def _generate_dispatch_entrypoints(self, qual="", layer="Generic", no_addr=False):
         if qual:
@@ -1353,12 +1353,36 @@ class Subcommand(object):
 
     def _generate_stringify_func(self):
         func_body = []
-        func_body.append('static const char *stringify_xgl_packet_id(const enum GLV_TRACE_PACKET_ID_XGL id)')
+        func_body.append('static const char *stringify_xgl_packet_id(const enum GLV_TRACE_PACKET_ID_XGL id, const glv_trace_packet_header* pHeader)')
         func_body.append('{')
+        func_body.append('    static char str[1024];')
         func_body.append('    switch(id) {')
         for proto in self.protos:
             func_body.append('    case GLV_TPI_XGL_xgl%s:' % proto.name)
-            func_body.append('        return "xgl%s";' % proto.name)
+            func_body.append('    {')
+            func_str = 'xgl%s(' % proto.name
+            print_vals = ''
+            create_func = False
+            if 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
+                create_func = True
+            for p in proto.params:
+                last_param = False
+                if (p.name == proto.params[-1].name):
+                    last_param = True
+                if last_param and create_func: # last param of create func
+                    (pft, pfi) = self._get_printf_params(p.ty,'pPacket->%s' % p.name, True)
+                else:
+                    (pft, pfi) = self._get_printf_params(p.ty, 'pPacket->%s' % p.name, False)
+                if last_param == True:
+                    func_str += '%s = %s)' % (p.name, pft)
+                    print_vals += ', %s' % (pfi)
+                else:
+                    func_str += '%s = %s, ' % (p.name, pft)
+                    print_vals += ', %s' % (pfi)
+            func_body.append('        struct_xgl%s* pPacket = (struct_xgl%s*)(pHeader->pBody);' % (proto.name, proto.name))
+            func_body.append('        snprintf(str, 1024, "%s"%s);' % (func_str, print_vals))
+            func_body.append('        return str;')
+            func_body.append('    }')
         func_body.append('    default:')
         func_body.append('        return NULL;')
         func_body.append('    }')
@@ -3227,10 +3251,12 @@ class GlavePacketID(Subcommand):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "glv_trace_packet_utils.h"')
+        header_txt.append('#include "glv_trace_packet_identifiers.h"')
         header_txt.append('#include "glv_interconnect.h"')
         header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
         header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
         header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
+        header_txt.append('#include "xgl_enum_string_helper.h"')
         header_txt.append('#define SEND_ENTRYPOINT_ID(entrypoint) ;')
         header_txt.append('//#define SEND_ENTRYPOINT_ID(entrypoint) glv_TraceInfo(#entrypoint "\\n");\n')
         header_txt.append('#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) ;')

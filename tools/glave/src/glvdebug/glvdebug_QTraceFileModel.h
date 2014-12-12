@@ -21,7 +21,7 @@ public:
     {
     }
 
-    virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, QString &strOut) const
+    virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const
     {
         strOut = QString ("%1").arg(packetId);
     }
@@ -97,7 +97,7 @@ public:
                             break;
                         default:
                             QString apiStr;
-                            this->getApiCall((const GLV_TRACE_PACKET_ID) packet_id, apiStr);
+                            this->getApiCall((const GLV_TRACE_PACKET_ID) packet_id, pHeader, apiStr);
                             return apiStr;
                             break;
 

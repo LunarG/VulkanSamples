@@ -38,7 +38,8 @@ glvdebug_xgl_QFileModel::~glvdebug_xgl_QFileModel()
 {
 }
 
-void glvdebug_xgl_QFileModel::getApiCall(const GLV_TRACE_PACKET_ID packetId, QString &strOut) const
+void glvdebug_xgl_QFileModel::getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const
 {
-    strOut = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) packetId );
+    strOut = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) packetId, pHeader);
 }
+
