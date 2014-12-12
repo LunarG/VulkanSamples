@@ -11,10 +11,6 @@ class glvdebug_QTraceFileModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
-    glvdebug_QTraceFileModel()
-    {
-    }
-
     glvdebug_QTraceFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
     {
         m_pTraceFileInfo = pTraceFileInfo;
@@ -24,14 +20,9 @@ public:
     {
     }
 
-    void setTraceFileInfo(glvdebug_trace_file_info* pTraceFileInfo)
-    {
-        m_pTraceFileInfo = pTraceFileInfo;
-    }
-
     virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, QString &strOut) const
     {
-        strOut = "Error wrong object";
+        strOut = QString ("%1").arg(packetId);
     }
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const

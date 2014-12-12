@@ -31,8 +31,8 @@ extern "C" {
 
 
 glvdebug_xgl_QFileModel::glvdebug_xgl_QFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
+        : glvdebug_QTraceFileModel(parent, pTraceFileInfo)
 {
-    setTraceFileInfo(pTraceFileInfo);
 }
 
 glvdebug_xgl_QFileModel::~glvdebug_xgl_QFileModel()
