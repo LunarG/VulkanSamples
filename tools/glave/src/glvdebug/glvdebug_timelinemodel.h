@@ -35,9 +35,8 @@ class glvdebug_timelineItem;
 class glvdebug_timelineModel
 {
 public:
-    glvdebug_timelineModel();
-    ~glvdebug_timelineModel();
-
+    glvdebug_timelineModel(glvdebug_timelineItem* pRoot);
+    virtual ~glvdebug_timelineModel();
     glvdebug_timelineItem* get_root_item();
 
 protected:
@@ -48,6 +47,8 @@ signals:
 public slots:
 
 private:
+    // we don't expect anybody to use this one since then we'd have a model with no root.
+    glvdebug_timelineModel();
 };
 
 #endif // GLVDEBUG_TIMELINEMODEL_H

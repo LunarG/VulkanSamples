@@ -26,6 +26,12 @@
 #include "glvdebug_timelinemodel.h"
 #include "glvdebug_timelineitem.h"
 
+
+glvdebug_timelineModel::glvdebug_timelineModel(glvdebug_timelineItem* pRoot)
+    : m_rootItem(pRoot)
+{
+}
+
 glvdebug_timelineModel::glvdebug_timelineModel()
     : m_rootItem(NULL)
 {

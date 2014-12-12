@@ -133,6 +133,9 @@ private:
 
     void selectApicallModelIndex(QModelIndex index, bool scrollTo, bool select);
 
+    static float u64ToFloat(uint64_t value);
+    void build_timeline_model();
+
     glvdebug_trace_file_info m_traceFileInfo;
     glvdebug_QTraceFileModel* m_pTraceFileModel;
 

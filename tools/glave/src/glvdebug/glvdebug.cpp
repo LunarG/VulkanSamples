@@ -39,6 +39,8 @@
 #include "glvdebug_settings.h"
 #include "glvdebug_output.h"
 
+#include "glvdebug_timelinemodel.h"
+
 #include "glvdebug_controller_factory.h"
 #include "glvdebug_qgeneratetracedialog.h"
 
@@ -116,6 +118,12 @@ glvdebug::~glvdebug()
 
     close_trace_file();
 
+    if (m_pTimeline != NULL)
+    {
+        delete m_pTimeline;
+        m_pTimeline = NULL;
+    }
+
     reset_view();
 
     delete ui;
@@ -158,6 +166,12 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
     {
         ui->treeView->setCurrentIndex(matches[0]);
         ui->treeView->setFocus();
+    }
+
+    if (m_pTimeline != NULL)
+    {
+        m_pTimeline->setCurrentApiCall(packetIndex);
+        m_pTimeline->repaint();
     }
 }
 
@@ -253,6 +267,14 @@ void glvdebug::close_trace_file()
         glvdebug_controller_factory::Unload(&m_pController);
     }
 
+    if (m_pTimeline->model() != NULL)
+    {
+        glvdebug_timelineModel* pModel = m_pTimeline->model();
+        delete pModel;
+        m_pTimeline->setModel(NULL);
+        m_pTimeline->repaint();
+    }
+
     if (m_pTraceFileModel != NULL)
     {
         delete m_pTraceFileModel;
@@ -289,9 +311,6 @@ void glvdebug::close_trace_file()
     setWindowTitle(g_PROJECT_NAME);
 
     reset_tracefile_ui();
-
-    m_pTimeline->setModel(NULL);
-    m_pTimeline->repaint();
 }
 
 void glvdebug::on_actionExport_API_Calls_triggered()
@@ -406,6 +425,8 @@ bool glvdebug::open_trace_file(const std::string &filename)
             if (bOpened)
             {
                 bOpened = m_pController->LoadTraceFile(&m_traceFileInfo, this);
+
+                build_timeline_model();
             }
         }
 
@@ -547,6 +568,86 @@ void glvdebug::selectApicallModelIndex(QModelIndex index, bool scrollTo, bool se
     {
         ui->treeView->setCurrentIndex(index);
     }
+}
+
+float glvdebug::u64ToFloat(uint64_t value)
+{
+    // taken from: http://stackoverflow.com/questions/4400747/converting-from-unsigned-long-long-to-float-with-round-to-nearest-even
+    const int mask_bit_count = 31;
+
+    // How many bits are needed?
+    int b = sizeof(uint64_t) * CHAR_BIT - 1;
+    for (; b >= 0; --b)
+    {
+        if (value & (1ull << b))
+        {
+            break;
+        }
+    }
+
+    // If there are few enough significant bits, use normal cast and done.
+    if (b < mask_bit_count)
+    {
+        return static_cast<float>(value & ~1ull);
+    }
+
+    // Save off the low-order useless bits:
+    uint64_t low_bits = value & ((1ull << (b - mask_bit_count)) - 1);
+
+    // Now mask away those useless low bits:
+    value &= ~((1ull << (b - mask_bit_count)) - 1);
+
+    // Finally, decide how to round the new LSB:
+    if (low_bits > ((1ull << (b - mask_bit_count)) / 2ull))
+    {
+        // Round up.
+        value |= (1ull << (b - mask_bit_count));
+    }
+    else
+    {
+        // Round down.
+        value &= ~(1ull << (b - mask_bit_count));
+    }
+
+    return static_cast<float>(value);
+}
+
+void glvdebug::build_timeline_model()
+{
+    float timelineStart = 0;
+    float timelineEnd = 1;
+    uint64_t rawTimelineStart = 0;
+    uint64_t rawTimelineEnd = 1;
+    uint64_t rawBaseTime = timelineStart;
+
+    // determine actual start and end times of the entire timeline
+    if (m_traceFileInfo.packetCount > 0)
+    {
+        rawTimelineStart = m_traceFileInfo.pPacketOffsets[0].pHeader->entrypoint_begin_time;
+        rawTimelineEnd = m_traceFileInfo.pPacketOffsets[m_traceFileInfo.packetCount - 1].pHeader->entrypoint_end_time;
+
+        rawBaseTime = rawTimelineStart;
+
+        timelineStart = u64ToFloat(rawTimelineStart - rawBaseTime);
+        timelineEnd = u64ToFloat(rawTimelineEnd - rawBaseTime);
+    }
+
+    // setup root item (which indicates the span of the timeline)
+    glvdebug_timelineItem* pRoot = new glvdebug_timelineItem(timelineStart, timelineEnd, NULL);
+    glvdebug_timelineModel* pModel = new glvdebug_timelineModel(pRoot);
+
+    // setup individual items
+    for (uint64_t index = 0; index < m_traceFileInfo.packetCount; index++)
+    {
+        float startTime = u64ToFloat(m_traceFileInfo.pPacketOffsets[index].pHeader->entrypoint_begin_time - rawBaseTime);
+        float endTime = u64ToFloat(m_traceFileInfo.pPacketOffsets[index].pHeader->entrypoint_end_time - rawBaseTime);
+
+        glvdebug_timelineItem* pItem = new glvdebug_timelineItem(startTime, endTime, pRoot);
+        pRoot->appendChild(pItem);
+    }
+
+    m_pTimeline->setModel(pModel);
+    m_pTimeline->repaint();
 }
 
 void glvdebug::on_searchTextBox_textChanged(const QString &searchText)

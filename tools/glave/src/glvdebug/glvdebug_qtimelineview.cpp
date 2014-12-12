@@ -208,41 +208,24 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         //}
 
         // draw current api call marker
-        bFoundApiCall = drawCurrentApiCallMarker(painter, triangle, pChild);
+        if (c == m_curApiCallNumber)
+        {
+            bFoundApiCall = drawCurrentApiCallMarker(painter, triangle, pChild);
+        }
 
         if (bFoundFrame && bFoundApiCall) break;
     }
 }
 
 bool glvdebug_QTimelineView::drawCurrentApiCallMarker(QPainter* painter,
-                                                        QPolygon& triangle,
+                                                      QPolygon& triangle,
                                          glvdebug_timelineItem* pItem)
 {
-    bool bRetVal = false;
-    //if (pItem->getApiCallItem() != NULL)
-    //{
-    //    if (pItem->getApiCallItem()->globalCallIndex() == m_curApiCallNumber)
-    //    {
-    //        painter->save();
-    //        painter->translate(scalePositionHorizontally(pItem->getBeginTime()), 0);
-    //        painter->drawPolygon(triangle);
-    //        painter->restore();
-    //        bRetVal = true;
-    //    }
-    //    else
-    //    {
-    //        // check children
-    //        int numChildren = pItem->childCount();
-    //        for (int c = 0; c < numChildren; c++)
-    //        {
-    //            if ((bRetVal = drawCurrentApiCallMarker(painter, triangle, pItem->child(c))))
-    //            {
-    //                break;
-    //            }
-    //        }
-    //    }
-    //}
-    return bRetVal;
+    painter->save();
+    painter->translate(scalePositionHorizontally(pItem->getBeginTime()), 0);
+    painter->drawPolygon(triangle);
+    painter->restore();
+    return true;
 }
 
 float glvdebug_QTimelineView::scaleDurationHorizontally(float value)
