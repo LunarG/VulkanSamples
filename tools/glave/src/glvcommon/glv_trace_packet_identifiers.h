@@ -55,7 +55,7 @@ typedef struct GLV_TRACER_REPLAYER_INFO
 static const GLV_TRACER_REPLAYER_INFO gs_tracerReplayerInfo[GLV_MAX_TRACER_ID_ARRAY_SIZE] = {
     {GLV_TID_RESERVED, FALSE, "", ""},
     {GLV_TID_GL_FPS, FALSE, "", ""},
-    {GLV_TID_MANTLE, TRUE, GLV_LIBRARY_NAME(glvreplay_mantle), ""},
+    {GLV_TID_MANTLE, TRUE, GLV_LIBRARY_NAME(glvreplay_mantle), GLV_LIBRARY_NAME(glvdebug_mantle)},
     {GLV_TID_XGL, TRUE, GLV_LIBRARY_NAME(glvreplay_xgl), GLV_LIBRARY_NAME(glvdebug_xgl)},
     {GLV_TID_MANTLE_PERF, FALSE, "", ""},
     {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
