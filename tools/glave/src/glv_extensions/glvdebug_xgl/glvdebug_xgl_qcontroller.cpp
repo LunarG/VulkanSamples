@@ -92,7 +92,6 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
         }
     }
 
-    m_pView->enable_default_calltree_model(pTraceFileInfo);
     m_pView->set_calltree_model(pTraceFileModel);
     return true;
 }
