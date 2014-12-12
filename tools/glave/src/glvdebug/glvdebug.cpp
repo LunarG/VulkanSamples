@@ -143,12 +143,7 @@ QToolButton* glvdebug::add_toolbar_button(const QString& title, bool bEnabled)
 void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
 {
     ui->treeView->setModel(pModel);
-}
-
-void glvdebug::enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo)
-{
-    m_pTraceFileModel = new glvdebug_QTraceFileModel(NULL, pTraceFileInfo);
-    set_calltree_model(m_pTraceFileModel);
+    m_pTraceFileModel = pModel;
 }
 
 void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)

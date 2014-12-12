@@ -23,7 +23,8 @@
  *************************************************************************/
 #pragma once
 
-class glvdebug_QTraceFileModel;
+#include "glvdebug_QTraceFileModel.h"
+
 struct glvdebug_trace_file_info;
 class QWidget;
 class QToolButton;
@@ -38,7 +39,6 @@ public:
     virtual void output_error(QString message, bool bRefresh = true) = 0;
 
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel) = 0;
-    virtual void enable_default_calltree_model(glvdebug_trace_file_info* pTraceFileInfo) = 0;
 
     virtual void select_call_at_packet_index(unsigned long long packetIndex) = 0;
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 # this project is currently only available on Linux
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+#if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 project(glvdebug_xgl)
 
@@ -89,4 +89,4 @@ target_link_libraries(${PROJECT_NAME}
 build_options_finalize()
 
 endif(NOT Qt5_FOUND)
-endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+#endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")

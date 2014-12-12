@@ -37,6 +37,5 @@ public:
 
     virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, QString &strOut) const;
 
-
 };
 

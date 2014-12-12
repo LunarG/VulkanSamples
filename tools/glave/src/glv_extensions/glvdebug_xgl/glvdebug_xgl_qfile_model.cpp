@@ -29,7 +29,6 @@ extern "C" {
 
 #include "glvdebug_xgl_qfile_model.h"
 
-
 glvdebug_xgl_QFileModel::glvdebug_xgl_QFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
         : glvdebug_QTraceFileModel(parent, pTraceFileInfo)
 {
@@ -37,8 +36,8 @@ glvdebug_xgl_QFileModel::glvdebug_xgl_QFileModel(QObject* parent, glvdebug_trace
 
 glvdebug_xgl_QFileModel::~glvdebug_xgl_QFileModel()
 {
-    
 }
+
 void glvdebug_xgl_QFileModel::getApiCall(const GLV_TRACE_PACKET_ID packetId, QString &strOut) const
 {
     strOut = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) packetId );

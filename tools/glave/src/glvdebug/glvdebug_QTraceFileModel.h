@@ -12,6 +12,7 @@ class glvdebug_QTraceFileModel : public QAbstractItemModel
     Q_OBJECT
 public:
     glvdebug_QTraceFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
+        : QAbstractItemModel(parent)
     {
         m_pTraceFileInfo = pTraceFileInfo;
     }
