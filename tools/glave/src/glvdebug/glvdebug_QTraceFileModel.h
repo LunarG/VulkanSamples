@@ -131,6 +131,11 @@ public:
 
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const
     {
+        if (m_pTraceFileInfo == NULL || m_pTraceFileInfo->packetCount == 0)
+        {
+            return createIndex(row, column);
+        }
+
         glv_trace_packet_header* pHeader = m_pTraceFileInfo->pPacketOffsets[row].pHeader;
         void* pData = NULL;
         switch (column)
