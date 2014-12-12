@@ -13,8 +13,17 @@ if (WIN32)
     set(WIN32_PTHREADS_INCLUDE_PATH "${WIN32_PTHREADS_PATH}/include")
 endif()
 
-find_package(PythonLibs REQUIRED)
-find_package(PythonInterp REQUIRED)
+find_package(PythonLibs)
+find_package(PythonInterp)
+
+if (NOT PythonLibs_FOUND OR NOT PythonInterp_FOUND)
+    message(FATAL_ERROR "Missing Python 3.4 development libraries: sudo apt-get install libpython3.4-dev")
+endif()
+
+find_package(Qt5 COMPONENTS Widgets Gui Core)
+if (NOT Qt5_FOUND)
+    message(WARNING "Missing Qt5 development libraries: sudo apt-get install qt5-default")
+endif()
 
 set(CODE_GEN_DIR "glv_extensions/glave_xgl_gen")
 
