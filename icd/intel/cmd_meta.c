@@ -47,6 +47,13 @@ static void cmd_meta_init_mem_view(struct intel_cmd *cmd,
     info.format = format;
     info.state = state;
 
+    /*
+     * We do not rely on the hardware to avoid out-of-bound access.  But we do
+     * not want the hardware to ignore the last element either.
+     */
+    if (info.range % info.stride)
+        info.range += info.stride - (info.range % info.stride);
+
     intel_mem_view_init(view, cmd->dev, &info);
 }
 
