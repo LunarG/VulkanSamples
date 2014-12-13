@@ -1542,6 +1542,65 @@ TEST_F(XglCmdCopyMemoryToImageTest, Basic)
     }
 }
 
+class XglCmdCopyImageToMemoryTest : public XglCmdBlitImageTest {
+protected:
+    virtual void SetUp()
+    {
+        XglCmdBlitTest::SetUp();
+        init_test_formats(XGL_FORMAT_IMAGE_COPY_BIT);
+        ASSERT_NE(true, test_formats_.empty());
+    }
+
+    void test_copy_image_to_memory(const XGL_IMAGE_CREATE_INFO &img_info, const xgl_testing::ImageChecker &checker)
+    {
+        xgl_testing::Image img;
+        xgl_testing::Buffer buf;
+
+        img.init(dev_, img_info);
+        fill_src(img, checker);
+        cmd_.add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
+
+        buf.init(dev_, checker.buffer_size());
+        cmd_.add_memory_ref(buf, 0);
+
+        cmd_.begin();
+        xglCmdCopyImageToMemory(cmd_.obj(), img.obj(), buf.obj(),
+                checker.regions().size(), &checker.regions()[0]);
+        cmd_.end();
+
+        submit_and_done();
+
+        checker.check(buf);
+    }
+
+    void test_copy_image_to_memory(const XGL_IMAGE_CREATE_INFO &img_info, const std::vector<XGL_MEMORY_IMAGE_COPY> &regions)
+    {
+        xgl_testing::ImageChecker checker(img_info, regions);
+        test_copy_image_to_memory(img_info, checker);
+    }
+
+    void test_copy_image_to_memory(const XGL_IMAGE_CREATE_INFO &img_info)
+    {
+        xgl_testing::ImageChecker checker(img_info);
+        test_copy_image_to_memory(img_info, checker);
+    }
+};
+
+TEST_F(XglCmdCopyImageToMemoryTest, Basic)
+{
+    for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
+         it != test_formats_.end(); it++) {
+        XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
+        img_info.imageType = XGL_IMAGE_2D;
+        img_info.format = it->format;
+        img_info.extent.width = 64;
+        img_info.extent.height = 64;
+        img_info.tiling = it->tiling;
+
+        test_copy_image_to_memory(img_info);
+    }
+}
+
 class XglCmdCopyImageTest : public XglCmdBlitImageTest {
 protected:
     virtual void SetUp()
