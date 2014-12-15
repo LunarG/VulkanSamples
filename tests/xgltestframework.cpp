@@ -973,9 +973,10 @@ EShLanguage XglTestFramework::FindLanguage(const XGL_PIPELINE_SHADER_STAGE shade
 
     case XGL_SHADER_STAGE_COMPUTE:
         return EShLangCompute;
-    }
 
-    return EShLangVertex;
+    default:
+        return EShLangVertex;
+    }
 }
 
 

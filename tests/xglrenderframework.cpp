@@ -697,6 +697,9 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
         m_stride = 4;
         viewFormat.channelFormat = XGL_CH_FMT_R32;
         break;
+    default:
+        assert(!"unknown index type");
+        break;
     }
 
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;

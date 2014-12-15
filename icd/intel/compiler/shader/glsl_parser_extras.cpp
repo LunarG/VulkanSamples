@@ -362,6 +362,8 @@ _mesa_glsl_parse_state::process_version_directive(YYLTYPE *locp, int version,
       case API_OPENGLES2:
 	 this->language_version = 100;
 	 break;
+      case API_XGL:
+         break;
       }
    }
 }
