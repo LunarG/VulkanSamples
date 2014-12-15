@@ -241,7 +241,6 @@ void XglImageTest::DestroyImageView(XGL_IMAGE_VIEW imageView)
 TEST_F(XglImageTest, CreateImageViewTest) {
     XGL_FORMAT fmt;
     XGL_IMAGE_VIEW imageView;
-    XGL_RESULT err;
 
     fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
     fmt.numericFormat = XGL_NUM_FMT_UINT;

@@ -423,14 +423,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);
 
-    struct _mesa_glsl_parse_state *state =
-        new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
-
     shader_program->Type = shader->Stage;
 
     bool dump_ast = false;
     bool dump_hir = false;
-    bool do_link  = true;
 
     _mesa_glsl_compile_shader(ctx, shader, dump_ast, dump_hir);
 

@@ -1823,8 +1823,8 @@ brw_vs_emit(struct brw_context *brw,
             void *mem_ctx,
             unsigned *final_assembly_size)
 {
-   bool start_busy = false;
-   double start_time = 0;
+//   bool start_busy = false;
+//   double start_time = 0;
 
 //   if (unlikely(brw->perf_debug)) {
 //      start_busy = (brw->batch.last_bo &&

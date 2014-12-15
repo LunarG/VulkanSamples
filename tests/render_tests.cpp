@@ -406,7 +406,7 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
 
 void dumpMatrix(const char *note, glm::mat4 MVP)
 {
-    int i,j;
+    int i;
 
     printf("%s: \n", note);
     for (i=0; i<4; i++) {
@@ -2625,7 +2625,7 @@ int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     XglTestFramework::InitArgs(&argc, argv);
 
-    ::testing::Environment* const xgl_test_env = ::testing::AddGlobalTestEnvironment(new TestEnvironment);
+    ::testing::AddGlobalTestEnvironment(new TestEnvironment);
 
     result = RUN_ALL_TESTS();
 

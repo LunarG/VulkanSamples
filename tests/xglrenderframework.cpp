@@ -37,8 +37,6 @@ XglRenderFramework::XglRenderFramework() :
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 )                   // default window height
 {
-    XGL_UINT i;
-
     m_renderTargetCount = 1;
 
     m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
@@ -382,7 +380,6 @@ XglTextureObj::XglTextureObj(XglDevice *device):
     m_texHeight = 16;
     const uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
     XGL_RESULT err;
-    XGL_UINT i;
 
     memset(&m_textureViewInfo,0,sizeof(m_textureViewInfo));
 
@@ -863,8 +860,6 @@ XglShaderObj::~XglShaderObj()
 
 XglPipelineObj::XglPipelineObj(XglDevice *device)
 {
-    XGL_RESULT err;
-
     m_device = device;
     m_vi_state.attributeCount = m_vi_state.bindingCount = 0;
     m_vertexBufferCount = 0;
@@ -939,7 +934,6 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
 
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shaderCreateInfo;
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vertexInputAttrib;
 
     for (int i=0; i<m_shaderObjs.size(); i++)
     {

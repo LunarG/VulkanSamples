@@ -289,7 +289,6 @@ void intel_meta_compiler::emit_vs_fill_mem()
         retype(vec1(brw_message_reg(base_mrf)), BRW_REGISTER_TYPE_UD);
     int mrf_offset = 0;
     bool use_header;
-    int i;
 
     if (brw->gen >= 7) {
         use_header = false;
@@ -319,7 +318,6 @@ void intel_meta_compiler::emit_vs_copy_mem()
     int mrf_offset = 0;
     enum opcode op_read, op_write;
     bool use_header;
-    int i;
 
     if (id == INTEL_DEV_META_VS_COPY_MEM) {
         op_read = SHADER_OPCODE_DWORD_SCATTERED_READ;
@@ -383,7 +381,6 @@ void intel_meta_compiler::emit_copy_img()
         retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
     enum sampler_param params[8];
     XGL_UINT param_count = 0;
-    int mrf_offset;
 
     if (brw->gen >= 7) {
         params[param_count++] = SAMPLER_PARAM_X;

@@ -928,9 +928,6 @@ void XglRenderTest::DrawTriangleTest()
 
     DestroyQueryPool(query, query_mem);
 
-    const ::testing::TestInfo* const test_info =
-      ::testing::UnitTest::GetInstance()->current_test_info();
-
 //    renderTarget->WritePPM(test_info->test_case_name());
 //    m_screen.Display(renderTarget, m_image_mem);
     RecordImage(renderTarget);
@@ -955,7 +952,7 @@ int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     XglTestFramework::InitArgs(&argc, argv);
 
-    ::testing::Environment* const xgl_test_env = ::testing::AddGlobalTestEnvironment(new TestEnvironment);
+    ::testing::AddGlobalTestEnvironment(new TestEnvironment);
 
     result = RUN_ALL_TESTS();
 

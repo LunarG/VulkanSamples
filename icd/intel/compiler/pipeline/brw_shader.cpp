@@ -161,9 +161,6 @@ void
 brw_notify_link_shader(struct gl_context *ctx,
                        struct gl_shader_program *shProg)
 {
-   struct brw_context *brw = brw_context(ctx);
-   struct brw_shader_program *prog = brw_shader_program(shProg);
-
 //   if (brw->precompile) {
 //      prog->pre_key.fbo_height = ctx->DrawBuffer->Height;
 //      prog->pre_key.is_user_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
@@ -296,8 +293,6 @@ brw_shader_program_restore_wm_compile(struct gl_shader_program *shader_prog,
 static bool
 brw_shader_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
 {
-   struct brw_context *brw = brw_context(ctx);
-
    switch(prog->Type) {
    case MESA_SHADER_FRAGMENT:
        if (!brw_fs_precompile(ctx, prog))
