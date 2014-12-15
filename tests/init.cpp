@@ -138,6 +138,7 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
 
     // TODO: Iterate over all GPUs
     gpu = new XglGpu(0, objs[0]);
+    delete gpu;
 
     // TODO: Verify destroy functions
 }

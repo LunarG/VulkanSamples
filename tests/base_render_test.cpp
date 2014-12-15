@@ -413,7 +413,6 @@ void XglRenderTest::DrawTriangleTest()
     size_t shader_len;
     XGL_IMAGE                    m_image;
     XGL_COLOR_ATTACHMENT_VIEW    m_targetView;
-    XGL_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
     XGL_GPU_MEMORY               m_memory;
 
     int width = 256, height = 256;
@@ -760,8 +759,6 @@ void XglRenderTest::DrawTriangleTest()
         ASSERT_XGL_SUCCESS(err);
         ASSERT_EQ(data_size, sizeof(mem_req));
         ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
-
-        m_imageInfo.state = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
 
         //        XGL_RESULT XGLAPI xglAllocMemory(
         //            XGL_DEVICE                                  device,
