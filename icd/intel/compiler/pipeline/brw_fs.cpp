@@ -2597,8 +2597,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
       if (inst->opcode != FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD)
          continue;
 
-      // LunarG: Remove - Don't use samplers for uniform loads yet
-      if (false && brw->gen >= 7) {
+      if (brw->gen >= 7) {
          /* The offset arg before was a vec4-aligned byte offset.  We need to
           * turn it into a dword offset.
           */
