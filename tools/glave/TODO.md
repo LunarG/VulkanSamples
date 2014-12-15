@@ -23,6 +23,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Auto-pause on Validation layer error or warning
   * Single-step the replay
   * Timeline pointer gets updated in real-time of replayed API call
+  * Pop-out replay window to be floating so it can replay at larger dimensions
 * Settings dialog
 * State dependency graph at selected API Call
 * Group API Calls by:
