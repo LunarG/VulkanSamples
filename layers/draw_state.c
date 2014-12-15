@@ -154,7 +154,7 @@ static XGL_SIZE sTypeStructSize(XGL_STRUCTURE_TYPE sType)
 }
 // Return the size of the underlying struct based on Bind Point enum
 //  Have to do this b/c VIEWPORT doesn't have sType in its createinfo struct
-static XGL_SIZE dynStateCreateInfoSize(XGL_STRUCTURE_TYPE sType)
+static XGL_SIZE dynStateCreateInfoSize(XGL_STATE_BIND_POINT sType)
 {
     switch (sType)
     {
