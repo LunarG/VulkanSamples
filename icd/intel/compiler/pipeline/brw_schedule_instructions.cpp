@@ -564,8 +564,9 @@ public:
    void calculate_deps(bool bu);
    bool conflict(fs_reg *r0, int n0, fs_reg *r1, int n1);
    bool is_compressed(fs_inst *inst);
-   schedule_node *choose_instruction_to_schedule_td() { assert(0); return 0; }
+   schedule_node *choose_instruction_to_schedule_td();
    schedule_node *choose_instruction_to_schedule_bu();
+   schedule_node *choose_instruction_to_schedule_classic();
    int issue_time(backend_instruction *inst);
    fs_visitor *v;
 
@@ -1503,6 +1504,201 @@ vec4_instruction_scheduler::calculate_deps(bool bu)
          }
       }
    }
+}
+
+schedule_node *
+fs_instruction_scheduler::choose_instruction_to_schedule_classic()
+{
+   schedule_node *chosen = NULL;
+
+   if (mode == SCHEDULE_PRE || mode == SCHEDULE_POST) {
+      int chosen_time = 0;
+
+      /* Of the instructions ready to execute or the closest to
+       * being ready, choose the oldest one.
+       */
+      foreach_list(node, &instructions) {
+         schedule_node *n = (schedule_node *)node;
+
+         if (!chosen || n->unblocked_time < chosen_time) {
+            chosen = n;
+            chosen_time = n->unblocked_time;
+         }
+      }
+   } else {
+      /* Before register allocation, we don't care about the latencies of
+       * instructions.  All we care about is reducing live intervals of
+       * variables so that we can avoid register spilling, or get SIMD16
+       * shaders which naturally do a better job of hiding instruction
+       * latency.
+       */
+      foreach_list(node, &instructions) {
+         schedule_node *n = (schedule_node *)node;
+         fs_inst *inst = (fs_inst *)n->inst;
+
+         if (!chosen) {
+            chosen = n;
+            continue;
+         }
+
+         /* Most important: If we can definitely reduce register pressure, do
+          * so immediately.
+          */
+         float register_pressure_benefit = get_register_pressure_benefit(n->inst, false);
+         float chosen_register_pressure_benefit =
+            get_register_pressure_benefit(chosen->inst, false);
+
+         if (register_pressure_benefit > 0 &&
+             register_pressure_benefit > chosen_register_pressure_benefit) {
+            chosen = n;
+            continue;
+         } else if (chosen_register_pressure_benefit > 0 &&
+                    (register_pressure_benefit <
+                     chosen_register_pressure_benefit)) {
+            continue;
+         }
+
+         if (mode == SCHEDULE_PRE_LIFO) {
+            /* Prefer instructions that recently became available for
+             * scheduling.  These are the things that are most likely to
+             * (eventually) make a variable dead and reduce register pressure.
+             * Typical register pressure estimates don't work for us because
+             * most of our pressure comes from texturing, where no single
+             * instruction to schedule will make a vec4 value dead.
+             */
+            if (n->cand_generation > chosen->cand_generation) {
+               chosen = n;
+               continue;
+            } else if (n->cand_generation < chosen->cand_generation) {
+               continue;
+            }
+
+            /* On MRF-using chips, prefer non-SEND instructions.  If we don't
+             * do this, then because we prefer instructions that just became
+             * candidates, we'll end up in a pattern of scheduling a SEND,
+             * then the MRFs for the next SEND, then the next SEND, then the
+             * MRFs, etc., without ever consuming the results of a send.
+             */
+            if (v->brw->gen < 7) {
+               fs_inst *chosen_inst = (fs_inst *)chosen->inst;
+
+               /* We use regs_written > 1 as our test for the kind of send
+                * instruction to avoid -- only sends generate many regs, and a
+                * single-result send is probably actually reducing register
+                * pressure.
+                */
+               if (inst->regs_written <= 1 && chosen_inst->regs_written > 1) {
+                  chosen = n;
+                  continue;
+               } else if (inst->regs_written > chosen_inst->regs_written) {
+                  continue;
+               }
+            }
+         }
+
+         /* For instructions pushed on the cands list at the same time, prefer
+          * the one with the highest delay to the end of the program.  This is
+          * most likely to have its values able to be consumed first (such as
+          * for a large tree of lowered ubo loads, which appear reversed in
+          * the instruction stream with respect to when they can be consumed).
+          */
+         if (n->delay > chosen->delay) {
+            chosen = n;
+            continue;
+         } else if (n->delay < chosen->delay) {
+            continue;
+         }
+
+         /* If all other metrics are equal, we prefer the first instruction in
+          * the list (program execution).
+          */
+      }
+   }
+
+   return chosen;
+}
+
+schedule_node *
+fs_instruction_scheduler::choose_instruction_to_schedule_td()
+{
+   if (!use_ips(mode))
+      return choose_instruction_to_schedule_classic();
+
+   schedule_node *chosen = NULL;
+   schedule_node *first = NULL;
+
+   const float data_pressure_fraction  = current_block_pressure / allocatable_grfs;
+   const bool  data_pressure_panic = data_pressure_fraction > pressure_panic_threshold;
+   float chosen_weight = -1e10f;
+
+   int chosen_time = 0;
+
+   foreach_list(node, &instructions) {
+      schedule_node *n = (schedule_node *)node;
+      if (!chosen)
+         chosen = n;
+
+      if (!first)
+         first = n;
+
+      if (use_ips(mode)) {
+         fs_inst *inst = (fs_inst *)n->inst;
+
+         const bool partially_scheduled = is_partially_scheduled(inst);
+         const float pressure_reduction = get_register_pressure_benefit(inst, false);
+
+         // Weighting factors, clamped to [-1..1]
+         const float latency_factor     = clamp01(n->platency / 25.0f);
+         const float pressure_factor    = clamp01(pressure_reduction / 4.0f);
+         const float partial_factor     = partially_scheduled ? 1.0f : 0.0f;
+         const float locality_factor    = (previous_chosen && consumes_dst(previous_chosen->inst, inst)) ? 1.0f : 0.0f;
+         const float generation_factor  = clamp01((n->cand_generation - first->cand_generation) / 20.0f);
+         const float delay_factor       = clamp01((n->delay - first->delay) / 100.0f);
+         const float unblocked_factor   = clamp01((n->unblocked_ptime - ptime) / 20.0f);
+
+         float weight;
+
+         if (data_pressure_panic) {
+            weight =
+               latency_factor     * -100.0f +
+               pressure_factor    *   20.0f  +
+               partial_factor     *   20.0f  +
+               locality_factor    *    1.0f  +
+               generation_factor  *   10.0f  +
+               delay_factor       *    0.0f  +
+               unblocked_factor   *   10.0f  +
+               0.0f;
+         } else {
+            weight =
+               delay_factor       *  500.0f +
+               unblocked_factor   * -200.0f +
+               latency_factor     *  100.0f +
+               0.0f;
+
+         }
+
+         if (weight > chosen_weight) {
+            chosen_weight = weight;
+            chosen = n;
+         }
+
+         if (debug) {
+            fprintf(stderr, "factors: W=%7.2f: %5.2f %5.2f %s: ",
+                    weight,
+                    delay_factor,
+                    unblocked_factor,
+                    data_pressure_panic ? "!" : "");
+            bv->dump_instruction(inst);
+         }
+      } else { // not mode == SCHEDULE_PRE_IPS
+         if (n->unblocked_time < chosen_time) {
+            chosen = n;
+            chosen_time = n->unblocked_time;
+         }
+      }
+   }
+
+   return chosen;
 }
 
 schedule_node *
