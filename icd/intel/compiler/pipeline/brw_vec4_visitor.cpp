@@ -3250,8 +3250,7 @@ vec4_visitor::emit_pull_constant_load(vec4_instruction *inst,
    src_reg offset = get_pull_constant_offset(inst, orig_src.reladdr, reg_offset);
    vec4_instruction *load;
 
-   // LunarG: Remove - Don't use samplers for uniform loads yet
-   if (false && brw->gen >= 7) {
+   if (brw->gen >= 7) {
       dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
       grf_offset.type = offset.type;
       emit_before(inst, MOV(grf_offset, offset));
