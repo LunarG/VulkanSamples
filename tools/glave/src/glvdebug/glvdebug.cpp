@@ -105,6 +105,9 @@ glvdebug::glvdebug(QWidget *parent)
     // for now, remove these widgets since they are not used
     ui->bottomTabWidget->removeTab(ui->bottomTabWidget->indexOf(ui->machineInfoTab));
     ui->bottomTabWidget->removeTab(ui->bottomTabWidget->indexOf(ui->callStackTab));
+    ui->prevSnapshotButton->setVisible(false);
+    ui->nextSnapshotButton->setVisible(false);
+    ui->line->setVisible(false);
 }
 
 glvdebug::~glvdebug()
