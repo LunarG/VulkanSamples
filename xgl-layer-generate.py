@@ -203,11 +203,11 @@ class Subcommand(object):
                         file_mode = "a"
                         if 'CreateDevice' in proto.name:
                             file_mode = "w"
-                        f_open = 'unsigned int tid = pthread_self();\n    pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
+                        f_open = 'pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
                         log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
                         f_close = '\n    fclose(pOutFile);\n    pthread_mutex_unlock( &file_lock );'
                     else:
-                        f_open = 'unsigned int tid = pthread_self();\n    pthread_mutex_lock( &print_lock );\n    '
+                        f_open = 'pthread_mutex_lock( &print_lock );\n    '
                         log_func = 'printf("t{%%u} xgl%s(' % proto.name
                         f_close = '\n    pthread_mutex_unlock( &print_lock );'
                     print_vals = ', getTIDIndex()'

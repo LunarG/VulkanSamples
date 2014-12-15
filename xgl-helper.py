@@ -504,7 +504,6 @@ class StructWrapperGen:
                 sh_funcs.append('    char* extra_indent = (char*)malloc(strlen(prefix) + 3);\n')
                 sh_funcs.append('    strcpy(extra_indent, "  ");\n')
                 sh_funcs.append('    strncat(extra_indent, prefix, strlen(prefix));\n')
-                sh_funcs.append("    char dummy_char = '\\0';\n")
                 sh_funcs.append('    char* stp_strs[%i];\n' % num_stps)
                 for index in range(num_stps):
                     if (stp_list[index]['ptr']):
@@ -527,7 +526,7 @@ class StructWrapperGen:
                             else:
                                 sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);\n' % (index, stp_list[index]['name'], stp_list[index]['name']))
                         sh_funcs.append('    }\n')
-                        sh_funcs.append("    else\n        stp_strs[%i] = &dummy_char;\n" % (index))
+                        sh_funcs.append("    else\n        stp_strs[%i] = \"\";\n" % (index))
                     elif stp_list[index]['array']: # TODO : For now just printing first element of array
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s[0], extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    len = 256+strlen(tmpStr);\n')
@@ -924,7 +923,6 @@ class GraphVizGen:
             if 0 != num_stps:
                 gv_funcs.append("    char* tmpStr;\n")
                 gv_funcs.append("    char nodeName[100];\n")
-                gv_funcs.append("    char dummy_char = '\\0';\n")
                 gv_funcs.append('    char* stp_strs[%i];\n' % num_stps)
                 for index in range(num_stps):
                     if (stp_list[index]['ptr']):
@@ -947,7 +945,7 @@ class GraphVizGen:
                             gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
                             gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
                         gv_funcs.append('    }\n')
-                        gv_funcs.append("    else\n        stp_strs[%i] = &dummy_char;\n" % (index))
+                        gv_funcs.append("    else\n        stp_strs[%i] = \"\";\n" % (index))
                     elif stp_list[index]['array']: # TODO : For now just printing first element of array
                         gv_funcs.append('    sprintf(nodeName, "%s_%%p", (void*)&pStruct->%s[0]);\n' % (stp_list[index]['name'], stp_list[index]['name']))
                         gv_funcs.append('    tmpStr = %s(&pStruct->%s[0], nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))

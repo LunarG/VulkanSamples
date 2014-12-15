@@ -589,7 +589,6 @@ static void dsDumpDot(FILE* pOutFile)
     const int i = 0; // hard-coding to just the first DS index for now
     uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
     DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
-    XGL_UINT slotOffset = lastBoundSlotOffset[i];
     if (pDS) {
         fprintf(pOutFile, "subgraph DS_SLOTS\n{\nlabel=\"DS0 Slots\"\n");
         // First create simple array node as central DS reference point
