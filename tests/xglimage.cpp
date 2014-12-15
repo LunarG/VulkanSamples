@@ -35,9 +35,9 @@ XglImage::XglImage(XglDevice *dev) :
     m_targetView( XGL_NULL_HANDLE ),
     m_memory( XGL_NULL_HANDLE ),
     m_offset( 0 ),
-    m_mipCount( 0 ),
     m_width( 0 ),
-    m_height( 0 )
+    m_height( 0 ),
+    m_mipCount( 0 )
 {
     m_device = dev;
     m_format.channelFormat = XGL_CH_FMT_UNDEFINED;

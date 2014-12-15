@@ -1047,9 +1047,9 @@ bool XglTestFramework::GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
 XglTestImageRecord::XglTestImageRecord() : // Constructor
     m_width( 0 ),
     m_height( 0 ),
-    m_data( NULL )
+    m_data( NULL ),
+    m_data_size( 0 )
 {
-    m_data_size = 0;
 }
 
 XglTestImageRecord::~XglTestImageRecord()

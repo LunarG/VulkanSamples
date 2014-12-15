@@ -28,12 +28,12 @@
 #include "xglrenderframework.h"
 
 XglRenderFramework::XglRenderFramework() :
-    m_colorBlend( XGL_NULL_HANDLE ),
-    m_stateMsaa( XGL_NULL_HANDLE ),
-    m_stateDepthStencil( XGL_NULL_HANDLE ),
-    m_stateRaster( XGL_NULL_HANDLE ),
     m_cmdBuffer( XGL_NULL_HANDLE ),
+    m_stateRaster( XGL_NULL_HANDLE ),
+    m_colorBlend( XGL_NULL_HANDLE ),
     m_stateViewport( XGL_NULL_HANDLE ),
+    m_stateDepthStencil( XGL_NULL_HANDLE ),
+    m_stateMsaa( XGL_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 )                   // default window height
 {

@@ -461,7 +461,6 @@ public:
    int ubo_byte_offset;
    bool ubo_row_major;
    gl_shader_stage shader_type;
-   bool isXGL;
 
 private:
    void handle_samplers(const glsl_type *base_type,
@@ -621,6 +620,8 @@ public:
     * Mask of samplers used by the current shader stage for shadows.
     */
    unsigned shader_shadow_samplers;
+
+   bool isXGL;
 };
 
 /**

@@ -53,10 +53,10 @@ public:
     int operator<(const XglTestImageRecord &rhs) const;
 
     string      m_title;
-    void       *m_data;
-    unsigned    m_data_size;
     int         m_width;
     int         m_height;
+    void       *m_data;
+    unsigned    m_data_size;
 };
 
 class XglTestFramework : public ::testing::Test

@@ -4,8 +4,7 @@
 #include "xglimage.h"
 
 XglDevice::XglDevice(XGL_UINT id, XGL_PHYSICAL_GPU obj) :
-    m_flags(0),
-    XglGpu(id, obj)
+    XglGpu(id, obj), m_flags(0)
 {
     init_device();
     init_formats();
