@@ -310,6 +310,13 @@ SET(COMPILER_SOURCES
     compiler/pipeline/gen8_vec4_generator.cpp
     )
 
+set_source_files_properties(
+	compiler/shader/glsl_glass_manager.cpp
+	compiler/shader/glsl_glass_backend_translator.cpp
+	compiler/shader/glsl_glass_backend.cpp
+	compiler/shader/glsl_parser_extras.cpp
+	PROPERTIES COMPILE_FLAGS "-Wno-unknown-pragmas -Wno-ignored-qualifiers")
+
 SET(STANDALONE_COMPILER_SOURCES
     compiler/shader/main.cpp
     ${COMPILER_SOURCES}
