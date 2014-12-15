@@ -13,11 +13,10 @@ if (WIN32)
     set(WIN32_PTHREADS_INCLUDE_PATH "${WIN32_PTHREADS_PATH}/include")
 endif()
 
-find_package(PythonLibs)
 find_package(PythonInterp)
 
-if (NOT PYTHONLIBS_FOUND OR NOT PYTHONINTERP_FOUND)
-    message(FATAL_ERROR "Missing PythonLibs development libraries: sudo apt-get install libpython-dev (may also need libpython3.4-dev and/or libpython2.7-dev)")
+if (NOT PYTHONINTERP_FOUND)
+    message(FATAL_ERROR "Missing PythonInterp. Install python interpreter 2.7 (on linux use sudo apt-get install python2.7)")
 endif()
 
 find_package(Qt5 COMPONENTS Widgets Gui Core)
