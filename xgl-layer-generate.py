@@ -160,7 +160,7 @@ class Subcommand(object):
                                  '            return XGL_ERROR_INVALID_POINTER;\n'
                                  '        // This layer compatible with all GPUs\n'
                                  '        *pOutLayerCount = 1;\n'
-                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
                                      '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt, layer_name))
@@ -271,7 +271,7 @@ class Subcommand(object):
                                  '            return XGL_ERROR_INVALID_POINTER;\n'
                                  '        // This layer compatible with all GPUs\n'
                                  '        *pOutLayerCount = 1;\n'
-                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
                                      '}' % (qual, decl, proto.params[0].name, ret_val, c_call,f_open, log_func, f_close, stmt, layer_name))
@@ -377,7 +377,7 @@ class Subcommand(object):
                                  '            return XGL_ERROR_INVALID_POINTER;\n'
                                  '        // This layer compatible with all GPUs\n'
                                  '        *pOutLayerCount = 1;\n'
-                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
                                      '}' % (qual, decl, proto.params[0].name, using_line, ret_val, c_call, create_line, destroy_line, stmt, layer_name))
@@ -1713,13 +1713,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    XGL_BASE_OBJECT      srcObject,')
         header_txt.append('    XGL_SIZE             location,')
         header_txt.append('    XGL_INT              msgCode,')
-        header_txt.append('    const XGL_CHAR*      pLayerPrefix,')
-        header_txt.append('    const XGL_CHAR*      pMsg)')
+        header_txt.append('    const char*          pLayerPrefix,')
+        header_txt.append('    const char*          pMsg)')
         header_txt.append('{')
         header_txt.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;')
         header_txt.append('    if (pTrav) {')
         header_txt.append('        while (pTrav) {')
-        header_txt.append('            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);')
+        header_txt.append('            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, (const XGL_CHAR *) pMsg, pTrav->pUserData);')
         header_txt.append('            pTrav = pTrav->pNext;')
         header_txt.append('        }')
         header_txt.append('    }')

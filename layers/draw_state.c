@@ -46,13 +46,13 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     XGL_BASE_OBJECT      srcObject,
     XGL_SIZE             location,
     XGL_INT              msgCode,
-    const XGL_CHAR*      pLayerPrefix,
-    const XGL_CHAR*      pMsg)
+    const char*          pLayerPrefix,
+    const char*          pMsg)
 {
     XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
     if (pTrav) {
         while (pTrav) {
-            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
+            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, (const XGL_CHAR *) pMsg, pTrav->pUserData);
             pTrav = pTrav->pNext;
         }
     }
@@ -1184,7 +1184,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
             return XGL_ERROR_INVALID_POINTER;
         // This layer compatible with all GPUs
         *pOutLayerCount = 1;
-        strncpy(pOutLayers[0], "DrawState", maxStringSize);
+        strncpy((char *) pOutLayers[0], "DrawState", maxStringSize);
         return XGL_SUCCESS;
     }
 }
