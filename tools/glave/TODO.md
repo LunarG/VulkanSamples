@@ -11,13 +11,15 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 * API entrypoints names & parameters displayed in UI
 * Tracing and replay standard output gets directed to Output window
 * Plugin-based UI allows for extensibility to other APIs
-
-**TODO LIST**
 * Search API Call Tree
   * Search result navigation
 * API Call Tree Enhancements:
-  * Bold draw calls
   * Draw call navigation buttons
+* Export API Calls as Text file
+
+**TODO LIST**
+* API Call Tree Enhancements:
+  * Bold draw calls
 * Hide / show columns on API Call Tree
 * Additional replay support:
   * Auto-pause on Validation layer error or warning
