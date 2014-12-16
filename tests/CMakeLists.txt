@@ -80,19 +80,19 @@ set_target_properties(xgl_image_tests
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_image_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP} displayengine.cpp)
+add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP})
 set_target_properties(xgl_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_blit_tests blit_tests.cpp ${COMMON_CPP} displayengine.cpp)
+add_executable(xgl_blit_tests blit_tests.cpp ${COMMON_CPP})
 set_target_properties(xgl_blit_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_blit_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_base_render_test base_render_test.cpp ${COMMON_CPP} displayengine.cpp)
+add_executable(xgl_base_render_test base_render_test.cpp ${COMMON_CPP})
 set_target_properties(xgl_base_render_test
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
