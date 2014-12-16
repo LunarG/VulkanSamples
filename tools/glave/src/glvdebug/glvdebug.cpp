@@ -464,8 +464,8 @@ bool glvdebug::open_trace_file(const std::string &filename)
 
         //ui->prevSnapshotButton->setEnabled(true);
         //ui->nextSnapshotButton->setEnabled(true);
-        //ui->prevDrawcallButton->setEnabled(true);
-        //ui->nextDrawcallButton->setEnabled(true);
+        ui->prevDrawcallButton->setEnabled(true);
+        ui->nextDrawcallButton->setEnabled(true);
     }
 
     this->setCursor(origCursor);
@@ -520,8 +520,8 @@ void glvdebug::reset_tracefile_ui()
 
     //ui->prevSnapshotButton->setEnabled(false);
     //ui->nextSnapshotButton->setEnabled(false);
-    //ui->prevDrawcallButton->setEnabled(false);
-    //ui->nextDrawcallButton->setEnabled(false);
+    ui->prevDrawcallButton->setEnabled(false);
+    ui->nextDrawcallButton->setEnabled(false);
     ui->searchTextBox->clear();
     ui->searchTextBox->setEnabled(false);
     ui->searchPrevButton->setEnabled(false);
