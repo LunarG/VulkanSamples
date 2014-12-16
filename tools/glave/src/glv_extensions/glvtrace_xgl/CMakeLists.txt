@@ -10,19 +10,19 @@ include("${SRC_DIR}/build_options.cmake")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 
 add_custom_command(OUTPUT glvtrace_xgl_xgl.h glvtrace_xgl_xgl.c glvtrace_xgl_packet_id.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext.h glvtrace_xgl_xglwsix11ext.c glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg.h glvtrace_xgl_xgldbg.c glvtrace_xgl_xgldbg_structs.h xgl_enum_string_helper.h
-	COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-trace-h > glvtrace_xgl_xgl.h
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-trace-c > glvtrace_xgl_xgl.c
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-wsi-trace-h > glvtrace_xgl_xglwsix11ext.h
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-wsi-trace-c > glvtrace_xgl_xglwsix11ext.c
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-dbg-trace-h > glvtrace_xgl_xgldbg.h
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-dbg-trace-c > glvtrace_xgl_xgldbg.c
-        COMMAND ${SRC_DIR}/../../../xgl-layer-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
+	COMMAND ${SRC_DIR}/../../../glave-generate.py glave-trace-h > glvtrace_xgl_xgl.h
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-trace-c > glvtrace_xgl_xgl.c
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-wsi-trace-h > glvtrace_xgl_xglwsix11ext.h
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-wsi-trace-c > glvtrace_xgl_xglwsix11ext.c
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-h > glvtrace_xgl_xgldbg.h
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-c > glvtrace_xgl_xgldbg.c
+        COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
         COMMAND ${SRC_DIR}/../../../xgl-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
 	           DEPENDS ${SRC_DIR}/../../../xgl-helper.py
-                           ${SRC_DIR}/../../../xgl-layer-generate.py)
+                           ${SRC_DIR}/../../../glave-generate.py)
 
 set(SRC_LIST
     ${SRC_LIST}
