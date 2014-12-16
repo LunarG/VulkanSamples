@@ -730,10 +730,61 @@ void glvdebug::on_nextSnapshotButton_clicked()
 
 void glvdebug::on_prevDrawcallButton_clicked()
 {
+    if (m_pTraceFileModel != NULL)
+    {
+        QModelIndex currentParent;
+        int currentRow = 0;
+        if (ui->treeView->currentIndex().isValid())
+        {
+            currentRow = ui->treeView->currentIndex().row();
+            currentParent = ui->treeView->currentIndex().parent();
+        }
+
+        QModelIndex index = ui->treeView->indexAbove(m_pTraceFileModel->index(currentRow, glvdebug_QTraceFileModel::Column_EntrypointName, currentParent));
+
+        while (index.isValid())
+        {
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+            if (pHeader != NULL && m_pTraceFileModel->isDrawCall((GLV_TRACE_PACKET_ID)pHeader->packet_id))
+            {
+                selectApicallModelIndex(index, true, true);
+                ui->treeView->setFocus();
+                return;
+            }
+
+            // that row is not a draw call, so check the next one
+            index = ui->treeView->indexAbove(index);
+        }
+    }
 }
 
 void glvdebug::on_nextDrawcallButton_clicked()
 {
+    if (m_pTraceFileModel != NULL)
+    {
+        QModelIndex currentParent;
+        int currentRow = 0;
+        if (ui->treeView->currentIndex().isValid())
+        {
+            currentRow = ui->treeView->currentIndex().row();
+            currentParent = ui->treeView->currentIndex().parent();
+        }
+
+        QModelIndex index = ui->treeView->indexBelow(m_pTraceFileModel->index(currentRow, glvdebug_QTraceFileModel::Column_EntrypointName, currentParent));
+        while (index.isValid())
+        {
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+            if (pHeader != NULL && m_pTraceFileModel->isDrawCall((GLV_TRACE_PACKET_ID)pHeader->packet_id))
+            {
+                selectApicallModelIndex(index, true, true);
+                ui->treeView->setFocus();
+                return;
+            }
+
+            // that row is not a draw call, so check the next one
+            index = ui->treeView->indexBelow(index);
+        }
+    }
 }
 
 void glvdebug::on_searchTextBox_returnPressed()

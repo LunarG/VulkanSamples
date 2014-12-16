@@ -46,6 +46,11 @@ public:
     {
     }
 
+    virtual bool isDrawCall(const GLV_TRACE_PACKET_ID packetId) const
+    {
+        return false;
+    }
+
     virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const
     {
         strOut = QString ("%1").arg(packetId);

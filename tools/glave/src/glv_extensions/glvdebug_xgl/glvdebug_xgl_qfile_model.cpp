@@ -43,3 +43,36 @@ void glvdebug_xgl_QFileModel::getApiCall(const GLV_TRACE_PACKET_ID packetId, con
     strOut = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) packetId, pHeader);
 }
 
+bool glvdebug_xgl_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) const
+{
+    bool isDraw = false;
+    switch((GLV_TRACE_PACKET_ID_XGL)packetId)
+    {
+        case GLV_TPI_XGL_xglCmdDraw:
+        case GLV_TPI_XGL_xglCmdDrawIndexed:
+        case GLV_TPI_XGL_xglCmdDrawIndirect:
+        case GLV_TPI_XGL_xglCmdDrawIndexedIndirect:
+        case GLV_TPI_XGL_xglCmdDispatch:
+        case GLV_TPI_XGL_xglCmdDispatchIndirect:
+        case GLV_TPI_XGL_xglCmdCopyMemory:
+        case GLV_TPI_XGL_xglCmdCopyImage:
+        case GLV_TPI_XGL_xglCmdCopyMemoryToImage:
+        case GLV_TPI_XGL_xglCmdCopyImageToMemory:
+        case GLV_TPI_XGL_xglCmdCloneImageData:
+        case GLV_TPI_XGL_xglCmdUpdateMemory:
+        case GLV_TPI_XGL_xglCmdFillMemory:
+        case GLV_TPI_XGL_xglCmdClearColorImage:
+        case GLV_TPI_XGL_xglCmdClearColorImageRaw:
+        case GLV_TPI_XGL_xglCmdClearDepthStencil:
+        case GLV_TPI_XGL_xglCmdResolveImage:
+        {
+            isDraw = true;
+            break;
+        }
+        default:
+        {
+            isDraw = false;
+        }
+    }
+    return isDraw;
+}
