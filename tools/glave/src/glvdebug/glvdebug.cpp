@@ -135,7 +135,6 @@ glvdebug::~glvdebug()
 
 int glvdebug::add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront)
 {
-    // TODO: Might need to create / add a layout, add widget to layout, then set layout of the tab
     int tabIndex = ui->stateTabWidget->addTab(pWidget, title);
 
     if (bBringToFront)
@@ -163,18 +162,21 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
 
 void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
 {
-    QModelIndex start = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_PacketIndex);
-    QModelIndexList matches = m_pTraceFileModel->match(start, Qt::DisplayRole, QVariant(packetIndex), 1);
-    if (matches.count() > 0)
+    if (m_pTraceFileModel != NULL)
     {
-        ui->treeView->setCurrentIndex(matches[0]);
-        ui->treeView->setFocus();
-    }
+        QModelIndex start = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_PacketIndex);
+        QModelIndexList matches = m_pTraceFileModel->match(start, Qt::DisplayRole, QVariant(packetIndex), 1);
+        if (matches.count() > 0)
+        {
+            ui->treeView->setCurrentIndex(matches[0]);
+            ui->treeView->setFocus();
+        }
 
-    if (m_pTimeline != NULL)
-    {
-        m_pTimeline->setCurrentApiCall(packetIndex);
-        m_pTimeline->repaint();
+        if (m_pTimeline != NULL)
+        {
+            m_pTimeline->setCurrentApiCall(packetIndex);
+            m_pTimeline->repaint();
+        }
     }
 }
 
@@ -453,9 +455,9 @@ bool glvdebug::open_trace_file(const std::string &filename)
         glvdebug_output_message("...success!");
 
         // update toolbar
-        //ui->searchTextBox->setEnabled(true);
-        //ui->searchPrevButton->setEnabled(true);
-        //ui->searchNextButton->setEnabled(true);
+        ui->searchTextBox->setEnabled(true);
+        ui->searchPrevButton->setEnabled(true);
+        ui->searchNextButton->setEnabled(true);
 
         ui->action_Close->setEnabled(true);
         //ui->actionExport_API_Calls->setEnabled(true);
@@ -655,45 +657,67 @@ void glvdebug::build_timeline_model()
 
 void glvdebug::on_searchTextBox_textChanged(const QString &searchText)
 {
-    //QPalette palette(ui->searchTextBox->palette());
-    //palette.setColor(QPalette::Base, m_searchTextboxBackgroundColor);
-    //ui->searchTextBox->setPalette(palette);
+    QPalette palette(ui->searchTextBox->palette());
+    palette.setColor(QPalette::Base, m_searchTextboxBackgroundColor);
+    ui->searchTextBox->setPalette(palette);
 
-    //if (m_pApiCallTreeModel != NULL)
-    //{
-    //    m_pApiCallTreeModel->set_highlight_search_string(searchText);
-    //}
+    if (m_pTraceFileModel != NULL)
+    {
+        m_pTraceFileModel->set_highlight_search_string(searchText);
+    }
 
-    //// need to briefly give the treeview focus so that it properly redraws and highlights the matching rows
-    //// then return focus to the search textbox so that typed keys are not lost
-    //ui->treeView->setFocus();
-    //ui->searchTextBox->setFocus();
+    // need to briefly give the treeview focus so that it properly redraws and highlights the matching rows
+    // then return focus to the search textbox so that typed keys are not lost
+    ui->treeView->setFocus();
+    ui->searchTextBox->setFocus();
 }
 
 void glvdebug::on_searchNextButton_clicked()
 {
-    //if (m_pApiCallTreeModel != NULL)
-    //{
-    //    QModelIndex index = m_pApiCallTreeModel->find_next_search_result(m_pCurrentCallTreeItem, ui->searchTextBox->text());
-    //    if (index.isValid())
-    //    {
-    //        selectApicallModelIndex(index, true, true);
-    //        ui->treeView->setFocus();
-    //    }
-    //}
+    if (m_pTraceFileModel != NULL)
+    {
+        QModelIndex index = ui->treeView->indexBelow(ui->treeView->currentIndex());
+
+        while (index.isValid())
+        {
+            for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
+            {
+                if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
+                {
+                    selectApicallModelIndex(index, true, true);
+                    ui->treeView->setFocus();
+                    return;
+                }
+            }
+
+            // wasn't found in that row, so check the next one
+            index = ui->treeView->indexBelow(index);
+        }
+    }
 }
 
 void glvdebug::on_searchPrevButton_clicked()
 {
-    //if (m_pApiCallTreeModel != NULL)
-    //{
-    //    QModelIndex index = m_pApiCallTreeModel->find_prev_search_result(m_pCurrentCallTreeItem, ui->searchTextBox->text());
-    //    if (index.isValid())
-    //    {
-    //        selectApicallModelIndex(index, true, true);
-    //        ui->treeView->setFocus();
-    //    }
-    //}
+    if (m_pTraceFileModel != NULL)
+    {
+        QModelIndex index = ui->treeView->indexAbove(ui->treeView->currentIndex());
+
+        while (index.isValid())
+        {
+            for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
+            {
+                if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
+                {
+                    selectApicallModelIndex(index, true, true);
+                    ui->treeView->setFocus();
+                    return;
+                }
+            }
+
+            // wasn't found in that row, so check the next one
+            index = ui->treeView->indexAbove(index);
+        }
+    }
 }
 
 void glvdebug::on_prevSnapshotButton_clicked()
@@ -714,22 +738,76 @@ void glvdebug::on_nextDrawcallButton_clicked()
 
 void glvdebug::on_searchTextBox_returnPressed()
 {
-    //if (m_pApiCallTreeModel != NULL)
-    //{
-    //    QModelIndex index = m_pApiCallTreeModel->find_next_search_result(m_pCurrentCallTreeItem, ui->searchTextBox->text());
-    //    if (index.isValid())
-    //    {
-    //        // a valid item was found, scroll to it and select it
-    //        selectApicallModelIndex(index, true, true);
-    //    }
-    //    else
-    //    {
-    //        // no items were found, so set the textbox background to red (it will get cleared to the original color if the user edits the search text)
-    //        QPalette palette(ui->searchTextBox->palette());
-    //        palette.setColor(QPalette::Base, Qt::red);
-    //        ui->searchTextBox->setPalette(palette);
-    //    }
-    //}
+    if (m_pTraceFileModel != NULL)
+    {
+        QModelIndex index = ui->treeView->indexBelow(ui->treeView->currentIndex());
+        bool bFound = false;
+
+        // search down from the current index
+        while (index.isValid())
+        {
+            for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
+            {
+                if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
+                {
+                    bFound = true;
+                    break;
+                }
+            }
+
+            if (bFound)
+            {
+                break;
+            }
+            else
+            {
+                // wasn't found in that row, so check the next one
+                index = ui->treeView->indexBelow(index);
+            }
+        }
+
+        // if not found yet, then search from the root down to the current node
+        if (!bFound)
+        {
+            index = m_pTraceFileModel->index(0, 0);
+
+            while (index.isValid() && index != ui->treeView->currentIndex())
+            {
+                for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
+                {
+                    if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+
+                if (bFound)
+                {
+                    break;
+                }
+                else
+                {
+                    // wasn't found in that row, so check the next one
+                    index = ui->treeView->indexBelow(index);
+                }
+            }
+        }
+
+        if (bFound && index.isValid())
+        {
+            // a valid item was found, scroll to it and select it
+            selectApicallModelIndex(index, true, true);
+            ui->searchTextBox->setFocus();
+        }
+        else
+        {
+            // no items were found, so set the textbox background to red (it will get cleared to the original color if the user edits the search text)
+            QPalette palette(ui->searchTextBox->palette());
+            palette.setColor(QPalette::Base, Qt::red);
+            ui->searchTextBox->setPalette(palette);
+        }
+    }
 }
 
 void glvdebug::on_contextComboBox_currentIndexChanged(int index)
