@@ -334,7 +334,7 @@ void glvdebug::on_actionExport_API_Calls_triggered()
 {
     QString suggestedName(m_traceFileInfo.filename);
 
-    int lastIndex = suggestedName.lastIndexOf('-');
+    int lastIndex = suggestedName.lastIndexOf('.');
     if (lastIndex != -1)
     {
         suggestedName = suggestedName.remove(lastIndex, suggestedName.size() - lastIndex);
@@ -342,6 +342,31 @@ void glvdebug::on_actionExport_API_Calls_triggered()
     suggestedName += "-ApiCalls.txt";
 
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export API Calls"), suggestedName, tr("Text (*.txt)"));
+
+    if (!fileName.isEmpty())
+    {
+        FILE* pFile = fopen(fileName.toStdString().c_str(), "w");
+        if (pFile == NULL)
+        {
+            glvdebug_output_error("Failed to open file for write. Can't export API calls.");
+            return;
+        }
+
+        // iterate through every packet
+        for (unsigned int i = 0; i < m_traceFileInfo.packetCount; i++)
+        {
+            glvdebug_trace_file_packet_offsets* pOffsets = &m_traceFileInfo.pPacketOffsets[i];
+            glv_trace_packet_header* pHeader = pOffsets->pHeader;
+            assert(pHeader != NULL);
+            QString string;
+            m_pTraceFileModel->getApiCall((GLV_TRACE_PACKET_ID)pHeader->packet_id, pHeader, string);
+
+            // output packet string
+            fprintf(pFile, "%s\n", string.toStdString().c_str());
+        }
+
+        fclose(pFile);
+    }
 }
 
 void glvdebug::on_actionEdit_triggered()

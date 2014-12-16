@@ -53,7 +53,24 @@ public:
 
     virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const
     {
-        strOut = QString ("%1").arg(packetId);
+        switch (pHeader->packet_id)
+        {
+            case GLV_TPI_MESSAGE:
+            {
+                glv_trace_packet_message* pPacket = (glv_trace_packet_message*)pHeader->pBody;
+                strOut = pPacket->message;
+                break;
+            }
+            case GLV_TPI_MARKER_CHECKPOINT:
+            case GLV_TPI_MARKER_API_BOUNDARY:
+            case GLV_TPI_MARKER_API_GROUP_BEGIN:
+            case GLV_TPI_MARKER_API_GROUP_END:
+            case GLV_TPI_MARKER_TERMINATE_PROCESS:
+            default:
+            {
+                strOut = QString ("%1").arg(packetId);
+            }
+        }
     }
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const
@@ -121,28 +138,9 @@ public:
                 {
                     glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
                     uint64_t packet_id = pHeader->packet_id;
-                    switch (packet_id)
-                    {
-                        case GLV_TPI_MESSAGE:
-                        {
-                            glv_trace_packet_message* msgPacket = (glv_trace_packet_message*)pHeader->pBody;
-                            return QString(msgPacket->message);
-                            break;
-                        }
-                        case GLV_TPI_MARKER_CHECKPOINT:
-                        case GLV_TPI_MARKER_API_BOUNDARY:
-                        case GLV_TPI_MARKER_API_GROUP_BEGIN:
-                        case GLV_TPI_MARKER_API_GROUP_END:
-                        case GLV_TPI_MARKER_TERMINATE_PROCESS:
-                            return QVariant((unsigned int) packet_id);
-                            break;
-                        default:
-                            QString apiStr;
-                            this->getApiCall((const GLV_TRACE_PACKET_ID) packet_id, pHeader, apiStr);
-                            return apiStr;
-                            break;
-
-                    }
+                    QString apiStr;
+                    this->getApiCall((const GLV_TRACE_PACKET_ID) packet_id, pHeader, apiStr);
+                    return apiStr;
                 }
                 case Column_TracerId:
                     return QVariant(*(uint8_t*)index.internalPointer());
