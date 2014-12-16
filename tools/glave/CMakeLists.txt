@@ -16,7 +16,7 @@ endif()
 find_package(PythonInterp)
 
 if (NOT PYTHONINTERP_FOUND)
-    message(FATAL_ERROR "Missing PythonInterp. Install python interpreter 2.7 (on linux use sudo apt-get install python2.7)")
+    message(FATAL_ERROR "Missing PythonInterp. Install python interpreter 2.7 (on linux use cmd: sudo apt-get install python2.7)")
 endif()
 
 find_package(Qt5 COMPONENTS Widgets Gui Core)
