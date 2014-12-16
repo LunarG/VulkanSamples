@@ -158,6 +158,18 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
 {
     ui->treeView->setModel(pModel);
     m_pTraceFileModel = pModel;
+
+    // hide columns that are not very important right now
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_TracerId);
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_BeginTime);
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
+
+    int width = ui->treeView->geometry().width();
+    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
+    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_PacketIndex,    width * 0.15);
+    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_ThreadId,       width * 0.15);
+    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_CpuDuration,    width * 0.15);
 }
 
 void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)

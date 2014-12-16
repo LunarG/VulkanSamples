@@ -222,7 +222,7 @@ public:
                 case Column_TracerId:
                     return QString("Tracer ID");
                 case Column_PacketIndex:
-                    return QString("Global Packet Index");
+                    return QString("Index");
                 case Column_ThreadId:
                     return QString("Thread ID");
                 case Column_BeginTime:
