@@ -776,7 +776,7 @@ class EnumCodeGen:
             # bet == base_enum_type, fet == final_enum_type
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("static const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {\n" % (fet, fet, fet))
+            body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {\n" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
                     body.append('    case %s:\n        return "%s";\n' % (e, e))
