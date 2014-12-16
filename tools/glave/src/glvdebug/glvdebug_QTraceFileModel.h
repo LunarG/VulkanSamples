@@ -51,15 +51,14 @@ public:
         return false;
     }
 
-    virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const
+    virtual QString get_packet_string(const glv_trace_packet_header* pHeader) const
     {
         switch (pHeader->packet_id)
         {
             case GLV_TPI_MESSAGE:
             {
                 glv_trace_packet_message* pPacket = (glv_trace_packet_message*)pHeader->pBody;
-                strOut = pPacket->message;
-                break;
+                return QString(pPacket->message);
             }
             case GLV_TPI_MARKER_CHECKPOINT:
             case GLV_TPI_MARKER_API_BOUNDARY:
@@ -68,7 +67,7 @@ public:
             case GLV_TPI_MARKER_TERMINATE_PROCESS:
             default:
             {
-                strOut = QString ("%1").arg(packetId);
+                return QString ("%1").arg(pHeader->packet_id);
             }
         }
     }
@@ -137,9 +136,7 @@ public:
                 case Column_EntrypointName:
                 {
                     glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
-                    uint64_t packet_id = pHeader->packet_id;
-                    QString apiStr;
-                    this->getApiCall((const GLV_TRACE_PACKET_ID) packet_id, pHeader, apiStr);
+                    QString apiStr = this->get_packet_string(pHeader);
                     return apiStr;
                 }
                 case Column_TracerId:

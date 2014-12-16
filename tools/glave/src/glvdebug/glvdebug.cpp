@@ -358,8 +358,7 @@ void glvdebug::on_actionExport_API_Calls_triggered()
             glvdebug_trace_file_packet_offsets* pOffsets = &m_traceFileInfo.pPacketOffsets[i];
             glv_trace_packet_header* pHeader = pOffsets->pHeader;
             assert(pHeader != NULL);
-            QString string;
-            m_pTraceFileModel->getApiCall((GLV_TRACE_PACKET_ID)pHeader->packet_id, pHeader, string);
+            QString string = m_pTraceFileModel->get_packet_string(pHeader);
 
             // output packet string
             fprintf(pFile, "%s\n", string.toStdString().c_str());

@@ -35,7 +35,7 @@ public:
     glvdebug_xgl_QFileModel(QObject * parent, glvdebug_trace_file_info *);
     virtual ~glvdebug_xgl_QFileModel();
 
-    virtual void getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const;
+    virtual QString get_packet_string(const glv_trace_packet_header* pHeader) const;
 
     virtual bool isDrawCall(const GLV_TRACE_PACKET_ID packetId) const;
 

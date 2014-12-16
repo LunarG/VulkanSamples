@@ -38,15 +38,15 @@ glvdebug_xgl_QFileModel::~glvdebug_xgl_QFileModel()
 {
 }
 
-void glvdebug_xgl_QFileModel::getApiCall(const GLV_TRACE_PACKET_ID packetId, const glv_trace_packet_header* pHeader, QString &strOut) const
+QString glvdebug_xgl_QFileModel::get_packet_string(const glv_trace_packet_header* pHeader) const
 {
-    if (packetId < GLV_TPI_BEGIN_API_HERE)
+    if (pHeader->packet_id < GLV_TPI_BEGIN_API_HERE)
     {
-        glvdebug_QTraceFileModel::getApiCall(packetId, pHeader, strOut);
+        return glvdebug_QTraceFileModel::get_packet_string(pHeader);
     }
     else
     {
-        strOut = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) packetId, pHeader);
+        return QString(stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) pHeader->packet_id, pHeader));
     }
 }
 
