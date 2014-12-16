@@ -67,7 +67,8 @@ static FILE* glv_write_trace_file_header(glv_process_info* pProcInfo)
 
     for (index = 0; index < pProcInfo->tracerCount; index++)
     {
-        pHeader->tracer_id_array[index] = pProcInfo->pCaptureThreads[index].tracerId;
+        pHeader->tracer_id_array[index].id = pProcInfo->pCaptureThreads[index].tracerId;
+        pHeader->tracer_id_array[index].is_64_bit = (sizeof(intptr_t) == 8) ? 1 : 0;
     }
 
     pHeader->contains_state_snapshot = FALSE;

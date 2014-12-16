@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     // Make sure trace file version is supported
     if (fileHeader.trace_file_version < GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE)
     {
-        glv_LogError("Trace file version %su is older than minimum compatible version (%su).\nYou'll need to make a new trace file, or use an older replayer.\n", fileHeader.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
+        glv_LogError("Trace file version %u is older than minimum compatible version (%u).\nYou'll need to make a new trace file, or use an older replayer.\n", fileHeader.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
     }
 
     // load any API specific driver libraries and init replayer objects
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < fileHeader.tracer_count; i++)
     {
-        uint8_t tracerId = fileHeader.tracer_id_array[i];
+        uint8_t tracerId = fileHeader.tracer_id_array[i].id;
         tidApi = tracerId;
 
         const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);

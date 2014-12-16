@@ -423,7 +423,8 @@ bool glvdebug::open_trace_file(const std::string &filename)
             // Make sure trace file version is supported
             if (m_traceFileInfo.header.trace_file_version < GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE)
             {
-                glv_LogError("Trace file version %su is older than minimum compatible version (%su).\nYou'll need to make a new trace file, or use an older replayer.\n", m_traceFileInfo.header.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
+                glv_LogError("Trace file version %u is older than minimum compatible version (%u).\nYou'll need to make a new trace file, or use an older replayer.\n", m_traceFileInfo.header.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
+                bOpened = false;
             }
 
             if (!load_controllers(&m_traceFileInfo))
@@ -431,7 +432,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
                 glvdebug_output_error("Failed to load necessary debug controllers.");
                 bOpened = false;
             }
-            else
+            else if (bOpened)
             {
                 // interpret the trace file packets
                 for (unsigned int i = 0; i < m_traceFileInfo.packetCount; i++)
@@ -519,7 +520,7 @@ bool glvdebug::load_controllers(glvdebug_trace_file_info* pTraceFileInfo)
 
     for (int i = 0; i < pTraceFileInfo->header.tracer_count; i++)
     {
-        uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i];
+        uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i].id;
 
         const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
 

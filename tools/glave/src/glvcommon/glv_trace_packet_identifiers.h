@@ -27,9 +27,9 @@
 #include "glv_common.h"
 #include "glv_tracelog.h"
 
-#define GLV_TRACE_FILE_VERSION_1 0x0001
-#define GLV_TRACE_FILE_VERSION GLV_TRACE_FILE_VERSION_1
-#define GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE GLV_TRACE_FILE_VERSION_1
+#define GLV_TRACE_FILE_VERSION_2 0x0002
+#define GLV_TRACE_FILE_VERSION GLV_TRACE_FILE_VERSION_2
+#define GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE GLV_TRACE_FILE_VERSION_2
 
 #define GLV_MAX_TRACER_ID_ARRAY_SIZE 16
 
@@ -83,11 +83,16 @@ typedef enum _GLV_TRACE_PACKET_ID
 } GLV_TRACE_PACKET_ID;
 
 typedef struct {
+    uint8_t id;
+    uint8_t is_64_bit;
+} glv_tracer_info;
+
+typedef struct {
     uint16_t trace_file_version;
     uint32_t uuid[4];
     uint64_t first_packet_offset;   // will be size of header including size of tracer_id_array and state_snapshot_path/binary
     uint8_t tracer_count;           // number of tracers referenced in this trace file
-    uint8_t tracer_id_array[GLV_MAX_TRACER_ID_ARRAY_SIZE]; // array of tracer_ids which are referenced in the trace file
+    glv_tracer_info tracer_id_array[GLV_MAX_TRACER_ID_ARRAY_SIZE]; // array of tracer_ids and values which are referenced in the trace file
     uint8_t contains_state_snapshot; // bool (0 = false, 1 = true)
     uint32_t state_snapshot_size;   // either length of state_snapshot_path or bytecount of state_snapshot_binary
     intptr_t state_snapshot_path;   // char* array text path to snapshot file

@@ -198,7 +198,7 @@ protected:
 
         for (int i = 0; i < pTraceFileInfo->header.tracer_count; i++)
         {
-            uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i];
+            uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i].id;
             tidApi = tracerId;
 
             const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
