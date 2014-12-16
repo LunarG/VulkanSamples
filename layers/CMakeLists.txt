@@ -18,9 +18,6 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
-# TODO : With standard settings below we get warnings as error due to unused functions.
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ../include")
-set (CMAKE_C_FLAGS "-std=c99 -Wextra -Wno-sign-compare -Wno-unused-parameter -I ../include")
 set (CMAKE_CXX_FLAGS "-std=c++11")
 
 add_library (XGLLayerBasic SHARED basic.cpp)
