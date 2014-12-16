@@ -53,6 +53,7 @@ public:
         Column_EntrypointName,
         Column_TracerId,
         Column_PacketIndex,
+        Column_ThreadId,
         Column_BeginTime,
         Column_EndTime,
         Column_PacketSize,
@@ -106,6 +107,8 @@ public:
                 case Column_TracerId:
                     return QVariant(*(uint8_t*)index.internalPointer());
                 case Column_PacketIndex:
+                case Column_ThreadId:
+                    return QVariant(*(uint32_t*)index.internalPointer());
                 case Column_BeginTime:
                 case Column_EndTime:
                 case Column_PacketSize:
@@ -140,6 +143,9 @@ public:
             break;
         case Column_PacketIndex:
             pData = &pHeader->global_packet_index;
+            break;
+        case Column_ThreadId:
+            pData = &pHeader->thread_id;
             break;
         case Column_BeginTime:
             pData = &pHeader->entrypoint_begin_time;
@@ -177,6 +183,8 @@ public:
                     return QString("Tracer ID");
                 case Column_PacketIndex:
                     return QString("Global Packet Index");
+                case Column_ThreadId:
+                    return QString("Thread ID");
                 case Column_BeginTime:
                     return QString("Start Time");
                 case Column_EndTime:

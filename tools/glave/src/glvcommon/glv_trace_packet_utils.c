@@ -135,6 +135,7 @@ glv_trace_packet_header* glv_create_trace_packet(uint8_t tracer_id, uint16_t pac
     pHeader->size = total_packet_size;
     pHeader->global_packet_index = g_packet_index++;
     pHeader->tracer_id = tracer_id;
+    pHeader->thread_id = glv_platform_get_thread_id();
     pHeader->packet_id = packet_id;
     pHeader->entrypoint_begin_time = glv_get_time();
     pHeader->entrypoint_end_time = 0;

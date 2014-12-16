@@ -100,6 +100,7 @@ typedef struct {
     uint64_t global_packet_index;
     uint8_t tracer_id; // TODO: need to uniquely identify tracers in a way that is known by the replayer
     uint16_t packet_id; // GLV_TRACE_PACKET_ID (or one of the api-specific IDs)
+    uint32_t thread_id;
     uint64_t entrypoint_begin_time;
     uint64_t entrypoint_end_time;
     uint64_t next_buffers_offset; // used for tracking the addition of buffers to the trace packet
