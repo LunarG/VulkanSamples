@@ -29,6 +29,7 @@ The following components are available:
   - APIDumpFile (generated)
   - glvtrace64: capture trace of XGL API of an application.
   - glvreplay64: replay captured trace.
+  - screenshot: ![ScreenShot](http://www.lunarg.com/wp-content/themes/LunarG/images/logo.png)
 - [*Sample Drivers*](icd)
   - [Common Infrastructure](icd/common)
   - [Implementation for Intel GPUs](icd/intel)
