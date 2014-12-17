@@ -326,6 +326,44 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
     return(m_slotInfo);
 
 }
+void XglDescriptorSetObj::CreateXGLDescriptorSet()
+{
+    XGL_RESULT err;
+
+    // Create descriptor set for a uniform resource
+    memset(&m_descriptorInfo,0,sizeof(m_descriptorInfo));
+    m_descriptorInfo.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
+    m_descriptorInfo.slots = m_nextSlot;
+
+    // Create a descriptor set with requested number of slots
+    err = xglCreateDescriptorSet( m_device->device(), &m_descriptorInfo, &m_rsrcDescSet );
+    ASSERT_XGL_SUCCESS(err);
+
+    // Bind memory to the descriptor set
+    err = m_device->AllocAndBindGpuMemory(m_rsrcDescSet, "DescriptorSet", &m_descriptor_set_mem);
+    ASSERT_XGL_SUCCESS(err);
+
+    xglBeginDescriptorSetUpdate( m_rsrcDescSet );
+    xglClearDescriptorSetSlots(m_rsrcDescSet, 0, m_nextSlot);
+    for (int i=0; i<m_memoryViews.size();i++)
+    {
+        xglAttachMemoryViewDescriptors( m_rsrcDescSet, m_memorySlots[i], 1, m_memoryViews[i] );
+    }
+    for (int i=0; i<m_samplers.size();i++)
+    {
+        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, m_samplers[i] );
+    }
+    for (int i=0; i<m_imageViews.size();i++)
+    {
+        xglAttachImageViewDescriptors( m_rsrcDescSet, m_imageSlots[i], 1, m_imageViews[i] );
+    }
+    xglEndDescriptorSetUpdate( m_rsrcDescSet );
+}
+
+XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle()
+{
+    return m_rsrcDescSet;
+}
 
 void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
 {
