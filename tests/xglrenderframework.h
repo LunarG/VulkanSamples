@@ -241,6 +241,8 @@ public:
     void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
     void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
     void SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
+    void CreateXGLPipeline(XglDescriptorSetObj *descriptorSet);
+    XGL_PIPELINE GetPipelineHandle();
 
 protected:
     XGL_PIPELINE m_pipeline;

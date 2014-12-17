@@ -927,6 +927,43 @@ void XglPipelineObj::SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_
     m_cb_state.attachment[binding] = *att;
 }
 
+void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
+{
+    XGL_RESULT err;
+    XGL_VOID* head_ptr = &m_db_state;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shaderCreateInfo;
+
+    for (int i=0; i<m_shaderObjs.size(); i++)
+    {
+        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo(descriptorSet);
+        shaderCreateInfo->pNext = head_ptr;
+        head_ptr = shaderCreateInfo;
+    }
+
+    if (m_vi_state.attributeCount && m_vi_state.bindingCount)
+    {
+        m_vi_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+        m_vi_state.pNext = head_ptr;
+        head_ptr = &m_vi_state;
+    }
+
+    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext = head_ptr;
+    info.flags = 0;
+
+    err = xglCreateGraphicsPipeline(m_device->device(), &info, &m_pipeline);
+    assert(!err);
+
+    err = m_device->AllocAndBindGpuMemory(m_pipeline, "Pipeline", &m_pipe_mem);
+    assert(!err);
+}
+XGL_PIPELINE XglPipelineObj::GetPipelineHandle()
+{
+    return m_pipeline;
+}
+
 void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet)
 {
     XGL_RESULT err;
