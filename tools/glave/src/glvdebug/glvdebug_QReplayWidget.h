@@ -51,25 +51,25 @@ public:
         m_pPlayButton->setText("Play");
         m_pPlayButton->setEnabled(true);
         m_pToolBar->addWidget(m_pPlayButton);
-        connect(m_pPlayButton, SIGNAL(clicked()), this, SLOT(slotPlayButtonClicked()));
+        connect(m_pPlayButton, SIGNAL(clicked()), this, SLOT(onPlayButtonClicked()));
 
         m_pPauseButton = new QToolButton(m_pToolBar);
         m_pPauseButton->setText("Pause");
         m_pPauseButton->setEnabled(false);
         m_pToolBar->addWidget(m_pPauseButton);
-        connect(m_pPauseButton, SIGNAL(clicked()), this, SLOT(slotPauseButtonClicked()));
+        connect(m_pPauseButton, SIGNAL(clicked()), this, SLOT(onPauseButtonClicked()));
 
         m_pContinueButton = new QToolButton(m_pToolBar);
         m_pContinueButton->setText("Continue");
         m_pContinueButton->setEnabled(false);
         m_pToolBar->addWidget(m_pContinueButton);
-        connect(m_pContinueButton, SIGNAL(clicked()), this, SLOT(slotContinueButtonClicked()));
+        connect(m_pContinueButton, SIGNAL(clicked()), this, SLOT(onContinueButtonClicked()));
 
         m_pStopButton = new QToolButton(m_pToolBar);
         m_pStopButton->setText("Stop");
         m_pStopButton->setEnabled(false);
         m_pToolBar->addWidget(m_pStopButton);
-        connect(m_pStopButton, SIGNAL(clicked()), this, SLOT(slotStopButtonClicked()));
+        connect(m_pStopButton, SIGNAL(clicked()), this, SLOT(onStopButtonClicked()));
 
         m_pReplayWindow = new QWidget(this);
         pLayout->addWidget(m_pReplayWindow);
@@ -79,11 +79,14 @@ public:
         connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()));
         connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()));
 
-        connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()));
-        connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)));
-        connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()));
-        connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)));
-        connect(m_pWorker, SIGNAL(ReplayFinished()), this, SLOT(onReplayFinished()));
+//        qRegisterMetaType<uint64_t>("uint64_t");
+
+        // connect worker signals to widget actions
+        connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(slotReplayStarted()));
+        connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(slotReplayPaused(uint64_t)));
+        connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(slotReplayContinued()));
+        connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(slotReplayStopped(uint64_t)));
+        connect(m_pWorker, SIGNAL(ReplayFinished()), this, SLOT(slotReplayFinished()));
 
         connect(m_pWorker, SIGNAL(ReplayStarted()), this, SIGNAL(ReplayStarted()));
         connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SIGNAL(ReplayPaused(uint64_t)));
@@ -91,10 +94,15 @@ public:
         connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SIGNAL(ReplayStopped(uint64_t)));
         connect(m_pWorker, SIGNAL(ReplayFinished()), this, SIGNAL(ReplayFinished()));
 
+//        m_replayThread.setObjectName("ReplayThread");
+//        m_pWorker->moveToThread(&m_replayThread);
+//        m_replayThread.start();
     }
 
     virtual ~glvdebug_QReplayWidget()
     {
+//        m_replayThread.exit();
+//        m_replayThread.wait();
     }
 
     virtual QPaintEngine* paintEngine() const
@@ -119,9 +127,9 @@ signals:
     void ReplayStopped(uint64_t packetIndex);
     void ReplayFinished();
 
-public slots:
+private slots:
 
-    void onReplayStarted()
+    void slotReplayStarted()
     {
         m_pPlayButton->setEnabled(false);
         m_pPauseButton->setEnabled(true);
@@ -129,7 +137,7 @@ public slots:
         m_pStopButton->setEnabled(true);
     }
 
-    void onReplayPaused(uint64_t)
+    void slotReplayPaused(uint64_t)
     {
         m_pPlayButton->setEnabled(false);
         m_pPauseButton->setEnabled(false);
@@ -137,7 +145,7 @@ public slots:
         m_pStopButton->setEnabled(false);
     }
 
-    void onReplayContinued()
+    void slotReplayContinued()
     {
         m_pPlayButton->setEnabled(false);
         m_pPauseButton->setEnabled(true);
@@ -145,7 +153,7 @@ public slots:
         m_pStopButton->setEnabled(true);
     }
 
-    void onReplayStopped(uint64_t)
+    void slotReplayStopped(uint64_t)
     {
         m_pPlayButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
@@ -153,7 +161,7 @@ public slots:
         m_pStopButton->setEnabled(false);
     }
 
-    void onReplayFinished()
+    void slotReplayFinished()
     {
         m_pPlayButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
@@ -161,13 +169,13 @@ public slots:
         m_pStopButton->setEnabled(false);
     }
 
-private slots:
-    void slotPlayButtonClicked()
+public slots:
+    void onPlayButtonClicked()
     {
         emit PlayButtonClicked();
     }
 
-    void slotPauseButtonClicked()
+    void onPauseButtonClicked()
     {
         m_pPlayButton->setEnabled(false);
         m_pPauseButton->setEnabled(false);
@@ -177,12 +185,12 @@ private slots:
         emit PauseButtonClicked();
     }
 
-    void slotContinueButtonClicked()
+    void onContinueButtonClicked()
     {
         emit ContinueButtonClicked();
     }
 
-    void slotStopButtonClicked()
+    void onStopButtonClicked()
     {
         emit StopButtonClicked();
     }
@@ -195,6 +203,7 @@ private:
     QToolButton* m_pPauseButton;
     QToolButton* m_pContinueButton;
     QToolButton* m_pStopButton;
+    QThread m_replayThread;
 };
 
 

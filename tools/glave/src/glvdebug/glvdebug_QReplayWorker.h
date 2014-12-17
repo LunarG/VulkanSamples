@@ -40,7 +40,8 @@ public:
         : m_bPauseReplay(false),
           m_bStopReplay(false),
           m_pView(NULL),
-          m_pTraceFileInfo(NULL)
+          m_pTraceFileInfo(NULL),
+          m_currentReplayPacketIndex(0)
     {
         memset(m_pReplayers, 0, sizeof(glv_replay::glv_trace_packet_replay_library*) * GLV_MAX_TRACER_ID_ARRAY_SIZE);
     }
@@ -50,7 +51,7 @@ public:
     }
 
 protected slots:
-    void playCurrentTraceFile()
+    void playCurrentTraceFile(uint64_t startPacketIndex)
     {
         glvdebug_trace_file_info* pTraceFileInfo = m_pTraceFileInfo;
         glvdebug_trace_file_packet_offsets* pCurPacket;
@@ -58,26 +59,19 @@ protected slots:
         glv_replay::glv_trace_packet_replay_library *replayer;
     //    glv_trace_packet_message* msgPacket;
 
-        for (uint64_t i = 0; i < pTraceFileInfo->packetCount; i++)
+        for (uint64_t i = startPacketIndex; i < pTraceFileInfo->packetCount; i++)
         {
+            m_currentReplayPacketIndex = i;
             QCoreApplication::processEvents();
             if (m_bPauseReplay)
             {
-                emit ReplayPaused(i);
-
-                do
-                {
-                    QCoreApplication::processEvents();
-                }
-                while (m_bPauseReplay);
-
-                emit ReplayContinued();
+                emit ReplayPaused(m_currentReplayPacketIndex);
+                return;
             }
 
             if (m_bStopReplay)
             {
-                emit ReplayStopped(i);
-                m_pView->output_message("Replay stopped.");
+                emit ReplayStopped(m_currentReplayPacketIndex);
                 return;
             }
 
@@ -125,13 +119,12 @@ protected slots:
                         }
                     } else {
                         m_pView->output_error(QString("Bad packet type id=%1, index=%2.\n").arg(pCurPacket->pHeader->packet_id).arg(pCurPacket->pHeader->global_packet_index));
-                        //return false;
                     }
                 }
             }
         }
 
-//        return true;
+        emit ReplayFinished();
     }
 
 public slots:
@@ -141,8 +134,7 @@ public slots:
         m_bStopReplay = false;
 
         emit ReplayStarted();
-        playCurrentTraceFile();
-        emit ReplayFinished();
+        playCurrentTraceFile(0);
     }
 
     void PauseReplay()
@@ -153,6 +145,8 @@ public slots:
     void ContinueReplay()
     {
         m_bPauseReplay = false;
+        emit ReplayContinued();
+        playCurrentTraceFile(m_currentReplayPacketIndex);
     }
 
     void StopReplay()
@@ -172,6 +166,7 @@ protected:
     bool m_bStopReplay;
     glvdebug_view* m_pView;
     glvdebug_trace_file_info* m_pTraceFileInfo;
+    uint64_t m_currentReplayPacketIndex;
 
     bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget)
     {
