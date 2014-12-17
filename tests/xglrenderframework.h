@@ -139,6 +139,7 @@ public:
     XglIndexBufferObj(XglDevice *device);
     void CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE dataFormat, const void* data);
     void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset);
+    XGL_INDEX_TYPE GetIndexType();
 
 protected:
     XGL_INDEX_TYPE  m_indexType;

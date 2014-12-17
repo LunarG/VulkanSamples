@@ -734,6 +734,11 @@ void XglIndexBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset)
     xglCmdBindIndexData(cmdBuffer, this->m_constantBufferMem, offset, m_indexType);
 }
 
+XGL_INDEX_TYPE XglIndexBufferObj::GetIndexType()
+{
+    return m_indexType;
+}
+
 XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescriptorSetObj *descriptorSet)
 {
     XGL_DESCRIPTOR_SLOT_INFO *slotInfo;
