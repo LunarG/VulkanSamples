@@ -1,9 +1,18 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.6, 11 Dec 2014*
+*Version 0.7, 17 Dec 2014*
 
-This project provides *open source* components for the XGL Ecosystem.
+This project provides *open source* tools for XGL Developers.
 
 ## Introduction
+
+XGL is an Explicit API, enabling direct control over how GPUs actually work. No validation, shader recompilation, memory management or synchronization is done inside an XGL driver. Applications have full control and responsibility and any errors in how the XGL is used are likely to result in an application crash. This project provides layered utility libraries to ease development and help guide developers to proven safe patterns.
+
+New with XGL in an extensible layered architecture that enables significant innovation in tools:
+- Cross IHV support enables tools vendors to plug into a common, extensible layer architecture
+- Layered tools during development enable validating, debugging and profiling without production performance impact
+- Modular validation architecture encourages many fine-grained layers--and new layers can be added easily
+- Encourages open community of tool developers: led by Valve, LunarG, Codeplay and others
+- Customized interactive debugging and validation layers will be available together with first drivers
 
 The components here are being shared with the Khronos community to provide
 early insights into the specification of XGL and to assists those doing
@@ -15,7 +24,7 @@ The following components are available:
   - [Object Tracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/object_track.c)
   - [Draw State](https://github.com/KhronosGroup/GL-Next/blob/master/layers/draw_state.c)
   - [MemTracker](https://github.com/KhronosGroup/GL-Next/blob/master/layers/mem_tracker.c)
-- *GLAVE Debugger* 
+- [*GLAVE Debugger*](https://github.com/KhronosGroup/GL-Next/tree/master/tools/glave)
   - APIDump (generated)
   - APIDumpFile (generated)
   - glvtrace64: capture trace of XGL API of an application.
