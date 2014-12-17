@@ -124,6 +124,84 @@ class Subcommand(object):
             return ("%p", "(void*)*%s" % name)
         return ("%p", "(void*)(%s)" % name)
 
+    def _gen_layer_dbg_callback_header(self):
+        cbh_body = []
+        cbh_body.append('static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;')
+        cbh_body.append('// Utility function to handle reporting')
+        cbh_body.append('//  If callbacks are enabled, use them, otherwise use printf')
+        cbh_body.append('static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
+        cbh_body.append('    XGL_VALIDATION_LEVEL validationLevel,')
+        cbh_body.append('    XGL_BASE_OBJECT      srcObject,')
+        cbh_body.append('    XGL_SIZE             location,')
+        cbh_body.append('    XGL_INT              msgCode,')
+        cbh_body.append('    const XGL_CHAR*      pLayerPrefix,')
+        cbh_body.append('    const XGL_CHAR*      pMsg)')
+        cbh_body.append('{')
+        cbh_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;')
+        cbh_body.append('    if (pTrav) {')
+        cbh_body.append('        while (pTrav) {')
+        cbh_body.append('            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);')
+        cbh_body.append('            pTrav = pTrav->pNext;')
+        cbh_body.append('        }')
+        cbh_body.append('    }')
+        cbh_body.append('    else {')
+        cbh_body.append('        switch (msgType) {')
+        cbh_body.append('            case XGL_DBG_MSG_ERROR:')
+        cbh_body.append('                printf("{%s}ERROR : %s\\n", pLayerPrefix, pMsg);')
+        cbh_body.append('                break;')
+        cbh_body.append('            case XGL_DBG_MSG_WARNING:')
+        cbh_body.append('                printf("{%s}WARN : %s\\n", pLayerPrefix, pMsg);')
+        cbh_body.append('                break;')
+        cbh_body.append('            case XGL_DBG_MSG_PERF_WARNING:')
+        cbh_body.append('                printf("{%s}PERF_WARN : %s\\n", pLayerPrefix, pMsg);')
+        cbh_body.append('                break;')
+        cbh_body.append('            default:')
+        cbh_body.append('                printf("{%s}INFO : %s\\n", pLayerPrefix, pMsg);')
+        cbh_body.append('                break;')
+        cbh_body.append('        }')
+        cbh_body.append('    }')
+        cbh_body.append('}')
+        return "\n".join(cbh_body)
+
+    def _gen_layer_dbg_callback_register(self):
+        r_body = []
+        r_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)')
+        r_body.append('{')
+        r_body.append('    // This layer intercepts callbacks')
+        r_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));')
+        r_body.append('    if (!pNewDbgFuncNode)')
+        r_body.append('        return XGL_ERROR_OUT_OF_MEMORY;')
+        r_body.append('    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;')
+        r_body.append('    pNewDbgFuncNode->pUserData = pUserData;')
+        r_body.append('    pNewDbgFuncNode->pNext = pDbgFunctionHead;')
+        r_body.append('    pDbgFunctionHead = pNewDbgFuncNode;')
+        r_body.append('    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);')
+        r_body.append('    return result;')
+        r_body.append('}')
+        return "\n".join(r_body)
+
+    def _gen_layer_dbg_callback_unregister(self):
+        ur_body = []
+        ur_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
+        ur_body.append('{')
+        ur_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;')
+        ur_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;')
+        ur_body.append('    while (pTrav) {')
+        ur_body.append('        if (pTrav->pfnMsgCallback == pfnMsgCallback) {')
+        ur_body.append('            pPrev->pNext = pTrav->pNext;')
+        ur_body.append('            if (pDbgFunctionHead == pTrav)')
+        ur_body.append('                pDbgFunctionHead = pTrav->pNext;')
+        ur_body.append('            free(pTrav);')
+        ur_body.append('            break;')
+        ur_body.append('        }')
+        ur_body.append('        pPrev = pTrav;')
+        ur_body.append('        pTrav = pTrav->pNext;')
+        ur_body.append('    }')
+        ur_body.append('    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);')
+        ur_body.append('    return result;')
+        ur_body.append('}')
+        return "\n".join(ur_body)
+
     def _generate_dispatch_entrypoints(self, qual="", layer="Generic", no_addr=False):
         if qual:
             qual += " "
@@ -146,13 +224,16 @@ class Subcommand(object):
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
                                  '{\n'
+                                 '    char str[1024];\n'
                                  '    if (gpu != NULL) {\n'
                                  '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '        printf("At start of layered %s\\n");\n'
+                                 '        sprintf(str, "At start of layered %s\\n");\n'
+                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, "GENERIC", str);\n'
                                  '        pCurObj = gpuw;\n'
                                  '        pthread_once(&tabOnce, initLayerTable);\n'
                                  '        %snextTable.%s;\n'
-                                 '        printf("Completed layered %s\\n");\n'
+                                 '        sprintf(str, "Completed layered %s\\n");\n'
+                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, "GENERIC", str);\n'
                                  '        fflush(stdout);\n'
                                  '    %s'
                                  '    } else {\n'
@@ -164,6 +245,10 @@ class Subcommand(object):
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
                                      '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt, layer_name))
+                    elif 'DbgRegisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_register())
+                    elif 'DbgUnregisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_unregister())
                     elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
@@ -174,12 +259,15 @@ class Subcommand(object):
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
                                  '{\n'
+                                 '    char str[1024];'
                                  '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '    printf("At start of layered %s\\n");\n'
+                                 '    sprintf(str, "At start of layered %s\\n");\n'
+                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, "GENERIC", str);\n'
                                  '    pCurObj = gpuw;\n'
                                  '    pthread_once(&tabOnce, initLayerTable);\n'
                                  '    %snextTable.%s;\n'
-                                 '    printf("Completed layered %s\\n");\n'
+                                 '    sprintf(str, "Completed layered %s\\n");\n'
+                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, "GENERIC", str);\n'
                                  '    fflush(stdout);\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
@@ -514,7 +602,8 @@ class GenericLayerSubcommand(Subcommand):
         return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n'
 
     def generate_body(self):
-        body = [self._generate_layer_dispatch_table(),
+        body = [self._gen_layer_dbg_callback_header(),
+                self._generate_layer_dispatch_table(),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "Generic"),
                 self._generate_layer_gpa_function()]
 
