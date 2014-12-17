@@ -287,13 +287,22 @@ class Subcommand(object):
         hooks_txt.append('#elif defined(__linux__)\n    return;\n#endif\n}\n')
         return "\n".join(hooks_txt)
 
-    def _generate_init_tracer(self):
+    def _generate_init_funcs(self):
         init_tracer = []
+        init_tracer.append('void send_xgl_api_version_packet()\n{')
+        init_tracer.append('    struct_xglApiVersion* pPacket;')
+        init_tracer.append('    glv_trace_packet_header* pHeader;')
+        init_tracer.append('    pHeader = glv_create_trace_packet(GLV_TID_XGL, GLV_TPI_XGL_xglApiVersion, sizeof(struct_xglApiVersion), 0);')
+        init_tracer.append('    pPacket = interpret_body_as_xglApiVersion(pHeader, FALSE);')
+        init_tracer.append('    pPacket->version = XGL_API_VERSION;')
+        init_tracer.append('    FINISH_TRACE_PACKET();\n}\n')
+
         init_tracer.append('void InitTracer()\n{')
         init_tracer.append('    gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_XGL);')
         init_tracer.append('    glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));')
         init_tracer.append('//    glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));')
-        init_tracer.append('    glv_tracelog_set_tracer_id(GLV_TID_XGL);\n}\n')
+        init_tracer.append('    glv_tracelog_set_tracer_id(GLV_TID_XGL);')
+        init_tracer.append('    send_xgl_api_version_packet();\n}\n')
         return "\n".join(init_tracer)
 
     # InitAndEnumerateGpus is unique enough that it gets custom generation code
@@ -975,7 +984,8 @@ class Subcommand(object):
         for proto in self.protos:
             if first_func:
                 first_func = False
-                pid_enum.append('    GLV_TPI_XGL_xgl%s = GLV_TPI_BEGIN_API_HERE,' % proto.name)
+                pid_enum.append('    GLV_TPI_XGL_xglApiVersion = GLV_TPI_BEGIN_API_HERE,')
+                pid_enum.append('    GLV_TPI_XGL_xgl%s,' % proto.name)
             else:
                 pid_enum.append('    GLV_TPI_XGL_xgl%s,' % proto.name)
         pid_enum.append('};\n')
@@ -987,6 +997,12 @@ class Subcommand(object):
         func_body.append('{')
         func_body.append('    static char str[1024];')
         func_body.append('    switch(id) {')
+        func_body.append('    case GLV_TPI_XGL_xglApiVersion:')
+        func_body.append('    {')
+        func_body.append('        struct_xglApiVersion* pPacket = (struct_xglApiVersion*)(pHeader->pBody);')
+        func_body.append('        snprintf(str, 1024, "xglApiVersion = 0x%x", pPacket->version);')
+        func_body.append('        return str;')
+        func_body.append('    }')
         for proto in self.protos:
             func_body.append('    case GLV_TPI_XGL_xgl%s:' % proto.name)
             func_body.append('    {')
@@ -1029,6 +1045,8 @@ class Subcommand(object):
         interp_func_body.append('    }')
         interp_func_body.append('    switch (pHeader->packet_id)')
         interp_func_body.append('    {')
+        interp_func_body.append('        case GLV_TPI_XGL_xglApiVersion:\n        {')
+        interp_func_body.append('            return interpret_body_as_xglApiVersion(pHeader, TRUE)->header;\n        }')
         for proto in self.protos:
             interp_func_body.append('        case GLV_TPI_XGL_xgl%s:\n        {' % proto.name)
             header_prefix = 'h'
@@ -1182,6 +1200,18 @@ class Subcommand(object):
                                                                                          '}']},
                              'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
         if_body = []
+        if_body.append('typedef struct struct_xglApiVersion {')
+        if_body.append('    glv_trace_packet_header* header;')
+        if_body.append('    uint32_t version;')
+        if_body.append('} struct_xglApiVersion;\n')
+        if_body.append('static struct_xglApiVersion* interpret_body_as_xglApiVersion(glv_trace_packet_header* pHeader, BOOL check_version)')
+        if_body.append('{')
+        if_body.append('    struct_xglApiVersion* pPacket = (struct_xglApiVersion*)pHeader->pBody;')
+        if_body.append('    pPacket->header = pHeader;')
+        if_body.append('    if (check_version && pPacket->version != XGL_API_VERSION)')
+        if_body.append('        glv_LogError("Trace file from older XGL version 0x%x, xgl replayer built from version 0x%x, replayer may fail\\n", pPacket->version, XGL_API_VERSION);')
+        if_body.append('    return pPacket;')
+        if_body.append('}\n')
         for proto in self.protos:
             if 'Wsi' not in proto.name and 'Dbg' not in proto.name:
                 if 'UnmapMemory' == proto.name:
@@ -2372,6 +2402,8 @@ class Subcommand(object):
         rbody.append('    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;')
         rbody.append('    switch (packet->packet_id)')
         rbody.append('    {')
+        rbody.append('    case GLV_TPI_XGL_xglApiVersion:')
+        rbody.append('        break;  // nothing to replay on the version packet')
         for proto in self.protos:
             ret_value = False
             create_view = False
@@ -2552,7 +2584,7 @@ class GlaveTraceC(Subcommand):
         body = [self._generate_func_ptr_assignments(),
                 self._generate_attach_hooks(),
                 self._generate_detach_hooks(),
-                self._generate_init_tracer(),
+                self._generate_init_funcs(),
                 self._generate_helper_funcs(),
                 self._generate_trace_funcs()]
 
