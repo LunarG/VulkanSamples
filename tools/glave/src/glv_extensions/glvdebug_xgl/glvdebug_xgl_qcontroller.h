@@ -27,6 +27,7 @@
 #include "glv_trace_packet_identifiers.h"
 #include "glvdebug_QReplayWidget.h"
 #include "glvdebug_QReplayWorker.h"
+#include "glvdebug_xgl_qfile_model.h"
 #include <QObject>
 
 class glvdebug_xgl_QController : public glvdebug_QReplayWorker
@@ -46,8 +47,7 @@ protected slots:
 
 private:
     glvdebug_QReplayWidget* m_pReplayWidget;
-
-    QThread* pThread;
+    glvdebug_xgl_QFileModel* m_pTraceFileModel;
 };
 
 #endif // GLVDEBUG_XGL_QCONTROLLER_H

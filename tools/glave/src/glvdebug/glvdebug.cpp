@@ -292,12 +292,6 @@ void glvdebug::close_trace_file()
         m_pTimeline->repaint();
     }
 
-    if (m_pTraceFileModel != NULL)
-    {
-        delete m_pTraceFileModel;
-        m_pTraceFileModel = NULL;
-    }
-
     if (m_traceFileInfo.packetCount > 0)
     {
         for (unsigned int i = 0; i < m_traceFileInfo.packetCount; i++)

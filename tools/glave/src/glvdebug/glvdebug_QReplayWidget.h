@@ -189,7 +189,6 @@ private slots:
 
 private:
     glvdebug_QReplayWorker* m_pWorker;
-    QThread* pThread;
     QWidget* m_pReplayWindow;
     QToolBar* m_pToolBar;
     QToolButton* m_pPlayButton;

@@ -27,7 +27,6 @@ extern "C" {
 }
 
 #include "glvdebug_xgl_qcontroller.h"
-#include "glvdebug_xgl_qfile_model.h"
 
 #include <assert.h>
 #include <QWidget>
@@ -38,7 +37,8 @@ extern "C" {
 #include "glvreplay_seq.h"
 
 glvdebug_xgl_QController::glvdebug_xgl_QController()
-    : m_pReplayWidget(NULL)
+    : m_pReplayWidget(NULL),
+      m_pTraceFileModel(NULL)
 {
 }
 
@@ -64,7 +64,7 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     assert(pView != NULL);
     m_pView = pView;
     m_pTraceFileInfo = pTraceFileInfo;
-    glvdebug_xgl_QFileModel *pTraceFileModel = new glvdebug_xgl_QFileModel(NULL, pTraceFileInfo);
+
     //m_pView->add_custom_state_viewer(new QWidget(), QString("Framebuffer"));
     //m_pView->add_custom_state_viewer(new QWidget(), QString("Textures"));
     //m_pView->add_custom_state_viewer(new QWidget(), QString("Programs"));
@@ -92,7 +92,8 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
         }
     }
 
-    m_pView->set_calltree_model(pTraceFileModel);
+    m_pTraceFileModel = new glvdebug_xgl_QFileModel(NULL, pTraceFileInfo);
+    m_pView->set_calltree_model(m_pTraceFileModel);
     return true;
 }
 
@@ -107,6 +108,13 @@ void glvdebug_xgl_QController::UnloadTraceFile(void)
     if (m_pView != NULL)
     {
         m_pView->set_calltree_model(NULL);
+        m_pView = NULL;
+    }
+
+    if (m_pTraceFileModel != NULL)
+    {
+        delete m_pTraceFileModel;
+        m_pTraceFileModel = NULL;
     }
 
     if (m_pReplayWidget != NULL)
