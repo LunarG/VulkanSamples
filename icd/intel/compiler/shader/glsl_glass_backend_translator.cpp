@@ -1072,7 +1072,7 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
                                              irVarMode, true);
 
             var->data.how_declared = ir_var_declared_in_block;
-            var->init_interface_type(irInterfaceType);
+            var->reinit_interface_type(irInterfaceType);
 
             // TODO: irInterfaceType->fields.structure[field].row_major;
 
