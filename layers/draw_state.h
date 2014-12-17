@@ -44,6 +44,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_PIPELINE              = 16, // Invalid DS referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS       = 17, // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT  = 18, // Invalid dyn state object
+    DRAWSTATE_MISSING_DOT_PROGRAM           = 19, // No "dot" program in order to generate png image
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -59,5 +60,7 @@ typedef enum _DRAW_TYPE
 
 //prototypes for extension functions
 XGL_VOID drawStateDumpDotFile(char* outFileName);
-// Func ptr typedef
+XGL_VOID drawStateDumpPngFile(char* outFileName);
+// Func ptr typedefs
 typedef XGL_VOID (*DRAW_STATE_DUMP_DOT_FILE)(char*);
+typedef XGL_VOID (*DRAW_STATE_DUMP_PNG_FILE)(char*);

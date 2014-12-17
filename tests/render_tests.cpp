@@ -276,15 +276,17 @@ void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDesc
 
     GenerateClearAndPrepareBufferCmds();
     GenerateBindRenderTargetCmd();
-#ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
-    pDSDumpDot((char*)"triTest.dot");
-#endif
+
     GenerateBindStateAndPipelineCmds();
 
     pipelineobj->BindPipelineCommandBuffer(m_cmdBuffer,descriptorSet);
     descriptorSet->BindCommandBuffer(m_cmdBuffer);
-
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest.dot");
+    DRAW_STATE_DUMP_PNG_FILE pDSDumpPng = (DRAW_STATE_DUMP_PNG_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpPngFile");
+    pDSDumpPng((char*)"triTest.png");
+#endif
     // render the triangle
     xglCmdDraw( m_cmdBuffer, 0, 3*numTris, 0, 1 );
 
@@ -340,13 +342,12 @@ void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fra
     GenerateBindRenderTargetCmd();
     GenerateBindStateAndPipelineCmds();
 
+    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,&descriptorSet);
+    descriptorSet.BindCommandBuffer(m_cmdBuffer);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triUniFS.dot");
 #endif
-    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,&descriptorSet);
-    descriptorSet.BindCommandBuffer(m_cmdBuffer);
-
     // render the triangle
     xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
 
@@ -1052,7 +1053,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     GenerateBindRenderTargetCmd();
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
-    pDSDumpDot((char*)"triTest.dot");
+    pDSDumpDot((char*)"triTest2.dot");
 #endif
     GenerateBindStateAndPipelineCmds();
 

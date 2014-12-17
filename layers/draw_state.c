@@ -27,6 +27,7 @@
 #include <string.h>
 #include <assert.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "xgl_struct_string_helper.h"
 #include "xgl_struct_graphviz_helper.h"
 #include "draw_state.h"
@@ -878,6 +879,10 @@ static void synchAndPrintDSConfig()
     if (autoDumpOnce) {
         autoDumpOnce = 0;
         dumpDotFile("pipeline_dump.dot");
+        // Convert dot to png if dot available
+        if(access( "/usr/bin/dot", X_OK) != -1) {
+            system("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
+        }
     }
 }
 
@@ -2037,6 +2042,23 @@ XGL_VOID drawStateDumpDotFile(char* outFileName)
     dumpDotFile(outFileName);
 }
 
+XGL_VOID drawStateDumpPngFile(char* outFileName)
+{
+    char dotExe[32] = "/usr/bin/dot";
+    if( access(dotExe, X_OK) != -1) {
+        dumpDotFile("/tmp/tmp.dot");
+        char dotCmd[1024];
+        sprintf(dotCmd, "%s /tmp/tmp.dot -Tpng -o %s", dotExe, outFileName);
+        system(dotCmd);
+        remove("/tmp/tmp.dot");
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Cannot execute dot program at (%s) to dump requested %s file.", dotExe, outFileName);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
+    }
+}
+
 XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
@@ -2071,6 +2093,8 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
         return xglDeviceWaitIdle;
     else if (!strncmp("drawStateDumpDotFile", (const char *) funcName, sizeof("drawStateDumpDotFile")))
         return drawStateDumpDotFile;
+    else if (!strncmp("drawStateDumpPngFile", (const char *) funcName, sizeof("drawStateDumpPngFile")))
+        return drawStateDumpPngFile;
     else if (!strncmp("xglGetMemoryHeapCount", (const char *) funcName, sizeof("xglGetMemoryHeapCount")))
         return xglGetMemoryHeapCount;
     else if (!strncmp("xglGetMemoryHeapInfo", (const char *) funcName, sizeof("xglGetMemoryHeapInfo")))
