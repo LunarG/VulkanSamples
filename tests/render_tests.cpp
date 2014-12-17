@@ -2916,6 +2916,259 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
 
 }
 
+TEST_F(XglRenderTest, TriangleUniformBufferLayout)
+{
+    // This test populates a buffer with a variety of different data
+    // types, then reads them out with a shader.
+    // The expected result from this test is a green triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform mixedBuffer {\n"
+            "    vec4 fRed;\n"
+            "    vec4 fGreen;\n"
+            "    layout(row_major) mat4 worldToProj;\n"
+            "    layout(row_major) mat4 projToWorld;\n"
+            "    layout(row_major) mat4 worldToView;\n"
+            "    layout(row_major) mat4 viewToProj;\n"
+            "    layout(row_major) mat4 worldToShadow[4];\n"
+            "    float fZero;\n"
+            "    float fOne;\n"
+            "    float fTwo;\n"
+            "    float fThree;\n"
+            "    vec3 fZeroZeroZero;\n"
+            "    float fFour;\n"
+            "    vec3 fZeroZeroOne;\n"
+            "    float fFive;\n"
+            "    vec3 fZeroOneZero;\n"
+            "    float fSix;\n"
+            "    float fSeven;\n"
+            "    float fEight;\n"
+            "    float fNine;\n"
+            "    vec2 fZeroZero;\n"
+            "    vec2 fZeroOne;\n"
+            "    vec4 fBlue;\n"
+            "    vec2 fOneZero;\n"
+            "    vec2 fOneOne;\n"
+            "    vec3 fZeroOneOne;\n"
+            "    float fTen;\n"
+            "    float fEleven;\n"
+            "    float fTwelve;\n"
+            "    vec3 fOneZeroZero;\n"
+            "    vec4 uvOffsets[4];\n"
+            "};\n"
+            "layout (location = 0) out vec4 color;"
+            "void main() {\n"
+
+            "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   \n"
+
+            // do some exact comparisons, even though we should
+            // really have an epsilon involved.
+            "   vec4 outColor = right;\n"
+            "   if (fRed != vec4(1.0, 0.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fGreen != vec4(0.0, 1.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fBlue != vec4(0.0, 0.0, 1.0, 1.0))\n"
+            "       outColor = wrong;\n"
+
+            "   color = outColor;\n"
+
+            // generic position stuff
+            "   vec2 vertices;\n"
+            "   int vertexSelector = gl_VertexID;\n"
+            "   if (vertexSelector == 0)\n"
+            "      vertices = vec2(-0.5, -0.5);\n"
+            "   else if (vertexSelector == 1)\n"
+            "      vertices = vec2( 0.5, -0.5);\n"
+            "   else if (vertexSelector == 2)\n"
+            "      vertices = vec2( 0.5, 0.5);\n"
+            "   else\n"
+            "      vertices = vec2( 0.0,  0.0);\n"
+            "   gl_Position = vec4(vertices, 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform mixedBuffer {\n"
+            "    vec4 fRed;\n"
+            "    vec4 fGreen;\n"
+            "    layout(row_major) mat4 worldToProj;\n"
+            "    layout(row_major) mat4 projToWorld;\n"
+            "    layout(row_major) mat4 worldToView;\n"
+            "    layout(row_major) mat4 viewToProj;\n"
+            "    layout(row_major) mat4 worldToShadow[4];\n"
+            "    float fZero;\n"
+            "    float fOne;\n"
+            "    float fTwo;\n"
+            "    float fThree;\n"
+            "    vec3 fZeroZeroZero;\n"
+            "    float fFour;\n"
+            "    vec3 fZeroZeroOne;\n"
+            "    float fFive;\n"
+            "    vec3 fZeroOneZero;\n"
+            "    float fSix;\n"
+            "    float fSeven;\n"
+            "    float fEight;\n"
+            "    float fNine;\n"
+            "    vec2 fZeroZero;\n"
+            "    vec2 fZeroOne;\n"
+            "    vec4 fBlue;\n"
+            "    vec2 fOneZero;\n"
+            "    vec2 fOneOne;\n"
+            "    vec3 fZeroOneOne;\n"
+            "    float fTen;\n"
+            "    float fEleven;\n"
+            "    float fTwelve;\n"
+            "    vec3 fOneZeroZero;\n"
+            "    vec4 uvOffsets[4];\n"
+            "};\n"
+            "layout (location = 0) in vec4 color;\n"
+            "void main() {\n"
+            "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   \n"
+
+            // start with VS value to ensure it passed
+            "   vec4 outColor = color;\n"
+
+            // do some exact comparisons, even though we should
+            // really have an epsilon involved.
+            "   if (fRed != vec4(1.0, 0.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fGreen != vec4(0.0, 1.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (projToWorld[1] != vec4(0.0, 2.0, 0.0, 0.0))\n"
+            "       outColor = wrong;\n"
+            "   if (worldToShadow[2][1] != vec4(0.0, 7.0, 0.0, 0.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fTwo != 2.0)\n"
+            "       outColor = wrong;\n"
+            "   if (fOneOne != vec2(1.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fTen != 10.0)\n"
+            "       outColor = wrong;\n"
+            "   if (uvOffsets[2] != vec4(0.9, 1.0, 1.1, 1.2))\n"
+            "       outColor = wrong;\n"
+            "   \n"
+            "   gl_FragColor = outColor;\n"
+            "}\n";
+
+
+    const float mixedVals[196] = {   1.0, 0.0, 0.0, 1.0,   //        vec4 fRed;            // align
+                                     0.0, 1.0, 0.0, 1.0,   //        vec4 fGreen;          // align
+                                     1.0, 0.0, 0.0, 1.0,   //        layout(row_major) mat4 worldToProj;
+                                     0.0, 1.0, 0.0, 1.0,   //        align
+                                     0.0, 0.0, 1.0, 1.0,   //        align
+                                     0.0, 0.0, 0.0, 1.0,   //        align
+                                     2.0, 0.0, 0.0, 2.0,   //        layout(row_major) mat4 projToWorld;
+                                     0.0, 2.0, 0.0, 2.0,   //        align
+                                     0.0, 0.0, 2.0, 2.0,   //        align
+                                     0.0, 0.0, 0.0, 2.0,   //        align
+                                     3.0, 0.0, 0.0, 3.0,   //        layout(row_major) mat4 worldToView;
+                                     0.0, 3.0, 0.0, 3.0,   //        align
+                                     0.0, 0.0, 3.0, 3.0,   //        align
+                                     0.0, 0.0, 0.0, 3.0,   //        align
+                                     4.0, 0.0, 0.0, 4.0,   //        layout(row_major) mat4 viewToProj;
+                                     0.0, 4.0, 0.0, 4.0,   //        align
+                                     0.0, 0.0, 4.0, 4.0,   //        align
+                                     0.0, 0.0, 0.0, 4.0,   //        align
+                                     5.0, 0.0, 0.0, 5.0,   //        layout(row_major) mat4 worldToShadow[4];
+                                     0.0, 5.0, 0.0, 5.0,   //        align
+                                     0.0, 0.0, 5.0, 5.0,   //        align
+                                     0.0, 0.0, 0.0, 5.0,   //        align
+                                     6.0, 0.0, 0.0, 6.0,   //        align
+                                     0.0, 6.0, 0.0, 6.0,   //        align
+                                     0.0, 0.0, 6.0, 6.0,   //        align
+                                     0.0, 0.0, 0.0, 6.0,   //        align
+                                     7.0, 0.0, 0.0, 7.0,   //        align
+                                     0.0, 7.0, 0.0, 7.0,   //        align
+                                     0.0, 0.0, 7.0, 7.0,   //        align
+                                     0.0, 0.0, 0.0, 7.0,   //        align
+                                     8.0, 0.0, 0.0, 8.0,   //        align
+                                     0.0, 8.0, 0.0, 8.0,   //        align
+                                     0.0, 0.0, 8.0, 8.0,   //        align
+                                     0.0, 0.0, 0.0, 8.0,   //        align
+                                     0.0,                  //        float fZero;          // align
+                                     1.0,                  //        float fOne;           // pack
+                                     2.0,                  //        float fTwo;           // pack
+                                     3.0,                  //        float fThree;         // pack
+                                     0.0, 0.0, 0.0,        //        vec3 fZeroZeroZero;   // align
+                                     4.0,                  //        float fFour;          // pack
+                                     0.0, 0.0, 1.0,        //        vec3 fZeroZeroOne;    // align
+                                     5.0,                  //        float fFive;          // pack
+                                     0.0, 1.0, 0.0,        //        vec3 fZeroOneZero;    // align
+                                     6.0,                  //        float fSix;           // pack
+                                     7.0,                  //        float fSeven;         // align
+                                     8.0,                  //        float fEight;         // pack
+                                     9.0,                  //        float fNine;          // pack
+                                     0.0,                  //        BUFFER
+                                     0.0, 0.0,             //        vec2 fZeroZero;       // align
+                                     0.0, 1.0,             //        vec2 fZeroOne;        // pack
+                                     0.0, 0.0, 1.0, 1.0,   //        vec4 fBlue;           // align
+                                     1.0, 0.0,             //        vec2 fOneZero;        // align
+                                     1.0, 1.0,             //        vec2 fOneOne;         // pack
+                                     0.0, 1.0, 1.0,        //        vec3 fZeroOneOne;     // align
+                                     10.0,                 //        float fTen;           // pack
+                                     11.0,                 //        float fEleven;        // align
+                                     12.0,                 //        float fTwelve;        // pack
+                                     0.0, 0.0,             //        BUFFER
+                                     1.0, 0.0, 0.0,        //        vec3 fOneZeroZero;    // align
+                                     0.0,                  //        BUFFER
+                                     0.1, 0.2, 0.3, 0.4,   //        vec4 uvOffsets[4];
+                                     0.5, 0.6, 0.7, 0.8,   //        align
+                                     0.9, 1.0, 1.1, 1.2,   //        align
+                                     1.3, 1.4, 1.5, 1.6,   //        align
+                                  };
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    const int constCount   = sizeof(mixedVals)   / sizeof(float);
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+
+    XglConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
+    vs.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &mixedBuffer);
+    ps.BindShaderEntitySlotToMemory(0, XGL_SLOT_SHADER_RESOURCE, &mixedBuffer);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AttachMemoryView(&mixedBuffer);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
+
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest2.dot");
+#endif
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    cmdBuffer.EndCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(NULL, 0);
+
+    for (int i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
+}
+
 int main(int argc, char **argv) {
     int result;
 
