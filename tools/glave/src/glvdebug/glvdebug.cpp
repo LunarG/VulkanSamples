@@ -312,12 +312,16 @@ void glvdebug::close_trace_file()
     {
         fclose(m_traceFileInfo.pFile);
         m_traceFileInfo.pFile = NULL;
-        glv_free(m_traceFileInfo.filename);
-        m_traceFileInfo.filename = NULL;
     }
 
-    glvdebug_output_message("Closing trace file.");
-    glvdebug_output_message("-------------------");
+    if (m_traceFileInfo.filename != NULL)
+    {
+        glv_free(m_traceFileInfo.filename);
+        m_traceFileInfo.filename = NULL;
+
+        glvdebug_output_message("Closing trace file.");
+        glvdebug_output_message("-------------------");
+    }
 
     setWindowTitle(g_PROJECT_NAME);
 
