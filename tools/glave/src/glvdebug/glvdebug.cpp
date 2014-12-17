@@ -161,9 +161,13 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
 
     // hide columns that are not very important right now
     ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_TracerId);
+    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_TracerId);
     ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_BeginTime);
+    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_BeginTime);
     ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
+    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_EndTime);
     ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
+    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_PacketSize);
 
     int width = ui->treeView->geometry().width();
     ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
@@ -717,6 +721,8 @@ void glvdebug::on_searchNextButton_clicked()
         {
             for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
             {
+                if (m_hiddenApicallColumns.indexOf((enum glvdebug_QTraceFileModel::Columns) column) != -1)  // skip search of values in hidden columns
+                    continue;
                 if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
                 {
                     selectApicallModelIndex(index, true, true);
@@ -741,6 +747,8 @@ void glvdebug::on_searchPrevButton_clicked()
         {
             for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
             {
+                if (m_hiddenApicallColumns.indexOf((enum glvdebug_QTraceFileModel::Columns) column) != -1)  // skip search of values in hidden columns
+                    continue;
                 if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
                 {
                     selectApicallModelIndex(index, true, true);
