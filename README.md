@@ -21,20 +21,24 @@ prototyping at this point.
 The following components are available:
 - Proposed Reference [*ICD Loader*](loader) (including [*Layer Management*](layers/README.md))
 - Proposed Reference [*Validation Layers*](layers/)
-  - [Object Tracker](layers/object_track.c)
-  - [Draw State](layers/draw_state.c)
-  - [MemTracker](layers/mem_tracker.c)
+    - [Object Tracker](layers/object_track.c)
+    - [Draw State](layers/draw_state.c)
+    - [MemTracker](layers/mem_tracker.c)
 - [*GLAVE Debugger*](tools/glave)
-  - APIDump (generated)
-  - APIDumpFile (generated)
-  - glvtrace64: capture trace of XGL API of an application.
-  - glvreplay64: replay captured trace.
-  - screenshot: ![ScreenShot](http://www.lunarg.com/wp-content/themes/LunarG/images/logo.png)
+    - APIDump (generated)
+    - APIDumpFile (generated)
+    - glvtrace64: capture trace of XGL API of an application.
+    - glvreplay64: replay captured trace.
+
+    screenshot: 
+
+    ![ScreenShot](docs/images/Glave-Small.png)
+    
 - [*Sample Drivers*](icd)
-  - [Common Infrastructure](icd/common)
-  - [Implementation for Intel GPUs](icd/intel)
+    - [Common Infrastructure](icd/common)
+    - [Implementation for Intel GPUs](icd/intel)
 - [*Sample Driver Tests*](tests)
-  - Now includes Golden images to verify xgl_render_tests rendering.
+    - Now includes Golden images to verify xgl_render_tests rendering.
 
 ## New
 
