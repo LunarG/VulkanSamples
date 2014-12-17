@@ -25,6 +25,8 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Auto-pause on Validation layer error or warning
   * Single-step the replay
   * Timeline pointer gets updated in real-time of replayed API call
+    * I (PeterLValve) implemented this locally, but the performance cost to update the UI was not worthwhile. This should be revisited once the replay is actually performed in a different thread.
+  * Run the replay in a separate thread from the UI
   * Pop-out replay window to be floating so it can replay at larger dimensions
 * Settings dialog
 * State dependency graph at selected API Call
