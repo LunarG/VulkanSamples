@@ -756,19 +756,37 @@ class StructWrapperGen:
         return "\n//any footer info for class\n"
 
 class EnumCodeGen:
-    def __init__(self, enum_type_dict=None, enum_val_dict=None, typedef_fwd_dict=None, in_file=None, out_file=None):
+    def __init__(self, enum_type_dict=None, enum_val_dict=None, typedef_fwd_dict=None, in_file=None, out_sh_file=None, out_vh_file=None):
         self.et_dict = enum_type_dict
         self.ev_dict = enum_val_dict
         self.tf_dict = typedef_fwd_dict
         self.in_file = in_file
-        self.out_file = out_file
-        self.efg = CommonFileGen(self.out_file)
+        self.out_sh_file = out_sh_file
+        self.eshfg = CommonFileGen(self.out_sh_file)
+        self.out_vh_file = out_vh_file
+        self.evhfg = CommonFileGen(self.out_vh_file)
         
     def generateStringHelper(self):
-        self.efg.setHeader(self._generateSHHeader())
-        self.efg.setBody(self._generateSHBody())
-        self.efg.generate()
-    
+        self.eshfg.setHeader(self._generateSHHeader())
+        self.eshfg.setBody(self._generateSHBody())
+        self.eshfg.generate()
+
+    def generateEnumValidate(self):
+        self.evhfg.setHeader(self._generateSHHeader())
+        self.evhfg.setHeader(self._generateVHBody())
+        self.evhfg.generate()
+
+    def _generateVHBody(self):
+        body = []
+        for bet in self.et_dict:
+            fet = self.tf_dict[bet]
+            body.append("static uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
+            for e in sorted(self.et_dict[bet]):
+                if (self.ev_dict[e]['unique']):
+                    body.append('    case %s:' % (e))
+            body.append('        return 1;\n    default:\n        return 0;\n    }\n}\n\n')
+        return "\n".join(body)
+
     def _generateSHBody(self):
         body = []
 #        with open(self.out_file, "a") as hf:
@@ -778,8 +796,8 @@ class EnumCodeGen:
             body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {\n" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
-                    body.append('    case %s:\n        return "%s";\n' % (e, e))
-            body.append('    default:\n        return "Unhandled %s";\n    }\n    return "Unhandled %s";\n}\n\n' % (fet, fet))
+                    body.append('    case %s:\n        return "%s";' % (e, e))
+            body.append('    default:\n        return "Unhandled %s";\n    }\n}\n\n' % (fet))
         return "\n".join(body)
     
     def _generateSHHeader(self):
@@ -1087,23 +1105,26 @@ def main(argv=None):
     #print(typedef_dict)
     #print(struct_dict)
     if (opts.abs_out_dir is not None):
-        enum_filename = os.path.join(opts.abs_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
+        enum_sh_filename = os.path.join(opts.abs_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
     else:
-        enum_filename = os.path.join(os.getcwd(), opts.rel_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
-    enum_filename = os.path.abspath(enum_filename)
-    if not os.path.exists(os.path.dirname(enum_filename)):
-        print("Creating output dir %s" % os.path.dirname(enum_filename))
-        os.mkdir(os.path.dirname(enum_filename))
+        enum_sh_filename = os.path.join(os.getcwd(), opts.rel_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
+    enum_sh_filename = os.path.abspath(enum_sh_filename)
+    if not os.path.exists(os.path.dirname(enum_sh_filename)):
+        print("Creating output dir %s" % os.path.dirname(enum_sh_filename))
+        os.mkdir(os.path.dirname(enum_sh_filename))
     if opts.gen_enum_string_helper:
-        print("Generating enum string helper to %s" % enum_filename)
-        eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_filename)
+        print("Generating enum string helper to %s" % enum_sh_filename)
+        enum_vh_filename = os.path.join(os.path.dirname(enum_sh_filename), os.path.basename(opts.input_file).strip(".h")+"_enum_validate_helper.h")
+        print("Generating enum validate helper to %s" % enum_vh_filename)
+        eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_sh_filename, enum_vh_filename)
         eg.generateStringHelper()
+        eg.generateEnumValidate()
     #for struct in struct_dict:
     #print(struct)
     if opts.gen_struct_wrappers:
-        sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_filename))
+        sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         #print(sw.get_class_name(struct))
-        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_filename),"stdint.h","stdio.h","stdlib.h"])
+        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h"])
         print("Generating struct wrapper header to %s" % sw.header_filename)
         sw.generateHeader()
         print("Generating struct wrapper class to %s" % sw.class_filename)
@@ -1113,11 +1134,11 @@ def main(argv=None):
         sw.set_no_addr(True)
         sw.generateStringHelper()
     if opts.gen_cmake:
-        cmg = CMakeGen(sw, os.path.dirname(enum_filename))
+        cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
         cmg.generate()
     if opts.gen_graphviz:
-        gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_filename))
-        gv.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_filename),"stdint.h","stdio.h","stdlib.h"])
+        gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
+        gv.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h"])
         gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)
