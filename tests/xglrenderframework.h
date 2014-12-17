@@ -97,6 +97,9 @@ protected:
     }
 };
 
+class XglIndexBufferObj;
+class XglConstantBufferObj;
+
 class XglCommandBufferObj
 {
 public:
@@ -106,11 +109,29 @@ public:
     XGL_RESULT BeginCommandBuffer(XGL_FLAGS flags);
     XGL_RESULT EndCommandBuffer();
     void PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr);
+    void AddRenderTarget(XglImage *renderTarget);
+    void AddDepthStencil();
+    void ClearAllBuffers();
+    void ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage);
+    void BindAttachments(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding);
+    void BindAttachments();
+    void BindPipeline(XGL_PIPELINE pipeline);
+    void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
+    void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding);
+    void BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset);
+    void BindState(XGL_RASTER_STATE_OBJECT stateRaster, XGL_VIEWPORT_STATE_OBJECT stateViewport,
+                   XGL_COLOR_BLEND_STATE_OBJECT colorBlend, XGL_DEPTH_STENCIL_STATE_OBJECT stateDepthStencil,
+                   XGL_MSAA_STATE_OBJECT stateMsaa);
+    void Draw(XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
+    void DrawIndexed(XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount);
+    void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
 
 protected:
     XglDevice                      *m_device;
     XGL_CMD_BUFFER_CREATE_INFO      m_cmdInfo;
     XGL_CMD_BUFFER                  m_cmdBuffer;
+    vector<XglImage*>               m_renderTargets;
+    XGL_UINT                        m_renderTargetCount;
 
 };
 
