@@ -5,7 +5,7 @@ This project provides *open source* tools for XGL Developers.
 
 ## Introduction
 
-XGL is an Explicit API, enabling direct control over how GPUs actually work. No validation, shader recompilation, memory management or synchronization is done inside an XGL driver. Applications have full control and responsibility and any errors in how the XGL is used are likely to result in an application crash. This project provides layered utility libraries to ease development and help guide developers to proven safe patterns.
+XGL is an Explicit API, enabling direct control over how GPUs actually work. No validation, shader recompilation, memory management or synchronization is done inside an XGL driver. Applications have full control and responsibility. Any errors in how XGL is used are likely to result in a crash. This project provides layered utility libraries to ease development and help guide developers to proven safe patterns.
 
 New with XGL in an extensible layered architecture that enables significant innovation in tools:
 - Cross IHV support enables tools vendors to plug into a common, extensible layer architecture
