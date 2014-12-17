@@ -15,11 +15,10 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Search result navigation
 * API Call Tree Enhancements:
   * Draw call navigation buttons
+  * Draw calls are shown in bold font
 * Export API Calls as Text file
 
 **TODO LIST**
-* API Call Tree Enhancements:
-  * Bold draw calls
 * Hide / show columns on API Call Tree
 * Additional replay support:
   * Auto-pause on Validation layer error or warning

@@ -25,6 +25,7 @@
 #pragma once
 
 #include <QColor>
+#include <QFont>
 #include <qabstractitemmodel.h>
 #include "glvdebug_trace_file_utils.h"
 
@@ -119,6 +120,17 @@ public:
             return QVariant();
         }
 
+        if (role == Qt::FontRole)
+        {
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)this->index(index.row(), Column_EntrypointName, index.parent()).internalPointer();
+            if (isDrawCall((GLV_TRACE_PACKET_ID)pHeader->packet_id))
+            {
+                QFont font;
+                font.setBold(true);
+                return font;
+            }
+        }
+
         if (role == Qt::BackgroundRole && !m_searchString.isEmpty())
         {
             QVariant cellData = data(index, Qt::DisplayRole);
@@ -156,6 +168,7 @@ public:
                 }
             }
         }
+
         return QVariant();
     }
 
