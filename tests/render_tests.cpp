@@ -1039,38 +1039,35 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-
-    XGL_RESULT err = XGL_SUCCESS;
+    pipelineobj.CreateXGLPipeline(&descriptorSet);
+    descriptorSet.CreateXGLDescriptorSet();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    // Build command buffer
-    // TODO: SetMemoryState above also uses this command buffer, do we need to make sure
-    // that job is complete? Or maybe we shouldn't queue those actions?
-    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
-    ASSERT_XGL_SUCCESS(err);
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    cmdBuffer.ClearAllBuffers(NULL, NULL);
+    cmdBuffer.BindAttachments(NULL);
 
-    GenerateClearAndPrepareBufferCmds();
-    GenerateBindRenderTargetCmd();
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
-    GenerateBindStateAndPipelineCmds();
-
-    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,&descriptorSet);
-    descriptorSet.BindCommandBuffer(m_cmdBuffer);
-
-    meshBuffer.Bind(m_cmdBuffer, 0, 0);
-    indexBuffer.Bind(m_cmdBuffer, /* offset */ 0);
+    cmdBuffer.BindState(m_stateRaster, m_stateViewport, m_colorBlend, m_stateDepthStencil, m_stateMsaa);
+    cmdBuffer.BindPipeline(pipelineobj.GetPipelineHandle());
+    cmdBuffer.BindDescriptorSet(descriptorSet.GetDescriptorSetHandle());
+    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    cmdBuffer.BindIndexBuffer(&indexBuffer,0);
 
     // render two triangles
-    xglCmdDrawIndexed(m_cmdBuffer, 0, 6, 0, 0, 1);
+    cmdBuffer.DrawIndexed(0, 6, 0, 0, 1);
 
     // finalize recording of the command buffer
-    err = xglEndCommandBuffer( m_cmdBuffer );
-    ASSERT_XGL_SUCCESS( err );
+    cmdBuffer.EndCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(NULL, 0);
 
-    QueueCommandBuffer(NULL, 0);
+    for (int i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
 
 }
 
