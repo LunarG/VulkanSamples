@@ -491,7 +491,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
         ui->searchNextButton->setEnabled(true);
 
         ui->action_Close->setEnabled(true);
-        //ui->actionExport_API_Calls->setEnabled(true);
+        ui->actionExport_API_Calls->setEnabled(true);
 
         //ui->prevSnapshotButton->setEnabled(true);
         //ui->nextSnapshotButton->setEnabled(true);
@@ -547,7 +547,7 @@ bool glvdebug::load_controllers(glvdebug_trace_file_info* pTraceFileInfo)
 void glvdebug::reset_tracefile_ui()
 {
     ui->action_Close->setEnabled(false);
-    //ui->actionExport_API_Calls->setEnabled(false);
+    ui->actionExport_API_Calls->setEnabled(false);
 
     //ui->prevSnapshotButton->setEnabled(false);
     //ui->nextSnapshotButton->setEnabled(false);
