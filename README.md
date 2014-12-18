@@ -1,5 +1,5 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.7, 17 Dec 2014*
+*Version 0.7, 18 Dec 2014*
 
 This project provides *open source* tools for XGL Developers.
 
@@ -19,26 +19,17 @@ early insights into the specification of XGL and to assists those doing
 prototyping at this point.
 
 The following components are available:
-- Proposed Reference [*ICD Loader*](loader) (including [*Layer Management*](layers/README.md))
-- Proposed Reference [*Validation Layers*](layers/)
-    - [Object Tracker](layers/object_track.c)
-    - [Draw State](layers/draw_state.c)
-    - [MemTracker](layers/mem_tracker.c)
+- XGL Library and header files, which include:
+    - [*ICD Loader*](loader) and [*Layer Manager*](layers/README.md)
+    - Snapshot of *XGL* and *BIL* header files from [*Khronos*](www.khronos.org)
+    
 - [*GLAVE Debugger*](tools/glave)
-    - APIDump (generated)
-    - APIDumpFile (generated)
-    - glvtrace64: capture trace of XGL API of an application.
-    - glvreplay64: replay captured trace.
-
-    screenshot: 
 
     ![ScreenShot](docs/images/Glave-Small.png)
-    
-- [*Sample Drivers*](icd)
-    - [Common Infrastructure](icd/common)
-    - [Implementation for Intel GPUs](icd/intel)
-- [*Sample Driver Tests*](tests)
-    - Now includes Golden images to verify xgl_render_tests rendering.
+
+- Core [*Validation Layers*](layers/)
+
+- [*Sample Driver*](icd)
 
 ## New
 

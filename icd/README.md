@@ -1,3 +1,9 @@
+This sample driver implementation provide multiple subcomponents required to build and test an Installable Client Driver (ICD):
+- [Common Infrastructure](common)
+- [Implementation for Intel GPUs](intel)
+- [*Sample Driver Tests*](../tests)
+    - Now includes Golden images to verify xgl_render_tests rendering.
+
 common/ provides helper and utility functions, as well as all XGL entry points
 except xglInitAndEnumerateGpus.  Hardware drivers are required to provide that
 function, and to embed a "XGL_LAYER_DISPATCH_TABLE *" as the first member of
