@@ -1073,6 +1073,7 @@ void intel_mem_view_init(struct intel_mem_view *view,
     }
 
     view->mem = intel_mem(info->mem);
+    view->info = *info;
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_buf_gen7(dev->gpu, info->offset,

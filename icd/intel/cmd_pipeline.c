@@ -1560,7 +1560,8 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 }
 
 static uint32_t emit_binding_table(struct intel_cmd *cmd,
-                                   const struct intel_pipeline_rmap *rmap)
+                                   const struct intel_pipeline_rmap *rmap,
+                                   const XGL_PIPELINE_SHADER_STAGE stage)
 {
     uint32_t binding_table[256], offset;
     XGL_UINT surface_count, i;
@@ -1641,15 +1642,33 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                             dset_slot->u.img_view->cmd[1], reloc_flags);
                     break;
                 case INTEL_DSET_SLOT_MEM_VIEW:
-                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                            GEN6_ALIGNMENT_SURFACE_STATE,
-                            dset_slot->u.mem_view.cmd_len,
-                            dset_slot->u.mem_view.cmd);
+                    {
+                        XGL_MEMORY_VIEW_ATTACH_INFO tmp_info = dset_slot->u.mem_view.info;
+                        struct intel_mem_view tmp;
 
-                    cmd_reserve_reloc(cmd, 1);
-                    cmd_surface_reloc(cmd, offset, 1,
-                            dset_slot->u.mem_view.mem->bo,
-                            dset_slot->u.mem_view.cmd[1], reloc_flags);
+                        memset(&tmp, 0, sizeof(tmp));
+
+                        /* The compiler expects uniform buffers to have pitch of
+                         * 4 for fragment shaders, but 16 for other stages.
+                         */
+                        if (XGL_SHADER_STAGE_FRAGMENT == stage) {
+                            tmp_info.stride = 4;
+                        } else {
+                            tmp_info.stride = 16;
+                        }
+
+                        intel_mem_view_init(&tmp, cmd->dev, &tmp_info);
+
+                        offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                                GEN6_ALIGNMENT_SURFACE_STATE,
+                                tmp.cmd_len,
+                                tmp.cmd);
+
+                        cmd_reserve_reloc(cmd, 1);
+                        cmd_surface_reloc(cmd, offset, 1,
+                                dset_slot->u.mem_view.mem->bo,
+                                tmp.cmd[1], reloc_flags);
+                    }
                     break;
                 case INTEL_DSET_SLOT_SAMPLER:
                     assert(0 == cmd->bind.dset.graphics_offset);
@@ -1804,15 +1823,20 @@ static void emit_shader_resources(struct intel_cmd *cmd)
     uint32_t binding_tables[5], samplers[5];
 
     binding_tables[0] = emit_binding_table(cmd,
-            cmd->bind.pipeline.graphics->vs.rmap);
+            cmd->bind.pipeline.graphics->vs.rmap,
+            XGL_SHADER_STAGE_VERTEX);
     binding_tables[1] = emit_binding_table(cmd,
-            cmd->bind.pipeline.graphics->tcs.rmap);
+            cmd->bind.pipeline.graphics->tcs.rmap,
+            XGL_SHADER_STAGE_TESS_CONTROL);
     binding_tables[2] = emit_binding_table(cmd,
-            cmd->bind.pipeline.graphics->tes.rmap);
+            cmd->bind.pipeline.graphics->tes.rmap,
+            XGL_SHADER_STAGE_TESS_EVALUATION);
     binding_tables[3] = emit_binding_table(cmd,
-            cmd->bind.pipeline.graphics->gs.rmap);
+            cmd->bind.pipeline.graphics->gs.rmap,
+            XGL_SHADER_STAGE_GEOMETRY);
     binding_tables[4] = emit_binding_table(cmd,
-            cmd->bind.pipeline.graphics->fs.rmap);
+            cmd->bind.pipeline.graphics->fs.rmap,
+            XGL_SHADER_STAGE_FRAGMENT);
 
     samplers[0] = emit_samplers(cmd, cmd->bind.pipeline.graphics->vs.rmap);
     samplers[1] = emit_samplers(cmd, cmd->bind.pipeline.graphics->tcs.rmap);

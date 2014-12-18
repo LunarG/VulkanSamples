@@ -46,6 +46,7 @@ struct intel_mem_view {
     /* this is not an intel_obj */
 
     struct intel_mem *mem;
+    XGL_MEMORY_VIEW_ATTACH_INFO info;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
