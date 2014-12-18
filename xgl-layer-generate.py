@@ -288,7 +288,7 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    cis_param_index = [] # Store list of indices when func has struct params
+                    sp_param_dict = {} # Store 'index' func has struct param to print, or an name of binding "Count" param for array to print
                     create_params = 0 # Num of params at end of function that are created and returned as output values
                     if 'WsiX11CreatePresentableImage' in proto.name:
                         create_params = -2
@@ -423,6 +423,7 @@ class Subcommand(object):
                         f_close = '\n    pthread_mutex_unlock( &print_lock );'
                     print_vals = ', getTIDIndex()'
                     pindex = 0
+                    prev_count_name = ''
                     for p in proto.params:
                         cp = False
                         if 0 != create_params:
@@ -435,10 +436,17 @@ class Subcommand(object):
                             (pft, pfi) = ("%s", '"addr"')
                         log_func += '%s = %s, ' % (p.name, pft)
                         print_vals += ', %s' % (pfi)
+                        # Catch array inputs that are bound by a "Count" param
+                        if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
+                            sp_param_dict[pindex] = prev_count_name
                         # 'format' gets special treatment as a small struct that we print inline
-                        if 'Wsi' not in proto.name and 'format' != p.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
-                            cis_param_index.append(pindex)
+                        elif 'Wsi' not in proto.name and 'format' != p.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+                            sp_param_dict[pindex] = 'index'
                         pindex += 1
+                        if p.name.endswith('Count'):
+                            prev_count_name = p.name
+                        else:
+                            prev_count_name = ''
                     log_func = log_func.strip(', ')
                     if proto.ret != "XGL_VOID":
                         log_func += ') = %s\\n"'
@@ -446,24 +454,49 @@ class Subcommand(object):
                     else:
                         log_func += ')\\n"'
                     log_func = '%s%s);' % (log_func, print_vals)
-                    if len(cis_param_index) > 0:
-                        log_func += '\n    char *pTmpStr;'
-                        for sp_index in cis_param_index:
-                            cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                            log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                            log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
-                            if "File" in layer:
-                                if no_addr:
-                                    log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                    if len(sp_param_dict) > 0:
+                        i_decl = False
+                        log_func += '\n    char *pTmpStr = "";'
+                        for sp_index in sorted(sp_param_dict):
+                            # TODO : Clean this if/else block up, too much duplicated code
+                            if 'index' == sp_param_dict[sp_index]:
+                                cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                                log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                                log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
+                                if "File" in layer:
+                                    if no_addr:
+                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                    else:
+                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                                 else:
-                                    log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                            else:
-                                if no_addr:
-                                    log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                    if no_addr:
+                                        log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                    else:
+                                        log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                    log_func += '\n        fflush(stdout);'
+                                log_func += '\n        free(pTmpStr);\n    }'
+                            else: # should have a count value stored to iterate over array
+                                if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                                    cis_print_func = 'pTmpStr = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
                                 else:
-                                    log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                log_func += '\n        fflush(stdout);'
-                            log_func += '\n        free(pTmpStr);\n    }'
+                                    cis_print_func = 'pTmpStr = (char*)malloc(sizeof(char));\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
+                                if not i_decl:
+                                    log_func += '\n    uint32_t i;'
+                                    i_decl = True
+                                log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
+                                log_func += '\n        %s' % (cis_print_func)
+                                if "File" in layer:
+                                    if no_addr:
+                                        log_func += '\n        fprintf(pOutFile, "   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
+                                    else:
+                                        log_func += '\n        fprintf(pOutFile, "   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                else:
+                                    if no_addr:
+                                        log_func += '\n        printf("   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
+                                    else:
+                                        log_func += '\n        printf("   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                    log_func += '\n        fflush(stdout);'
+                                log_func += '\n        free(pTmpStr);\n    }'
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
