@@ -38,13 +38,16 @@ layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers per 
 (build dir)/layer/api\_dump\_no\_addr.c - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
 
 ### Print Object Stats
-(build di\r>/layer/object_track.c - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL\_OBJECT\_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL\_UINT64 objTrackGetObjectCount(XGL\_OBJECT\_TYPE type)" and a secondary call to return an array of those objects "XGL\_RESULT objTrackGetObjects(XGL\_OBJECT\_TYPE type, XGL\_UINT64 objCount, OBJTRACK\_NODE* pObjNodeArray)".
+(build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL\_OBJECT\_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL\_UINT64 objTrackGetObjectCount(XGL\_OBJECT\_TYPE type)" and a secondary call to return an array of those objects "XGL\_RESULT objTrackGetObjects(XGL\_OBJECT\_TYPE type, XGL\_UINT64 objCount, OBJTRACK\_NODE* pObjNodeArray)".
 
 ### Report Draw State
 layer/draw\_state.c - Report the Descriptor Set, Pipeline State, and dynamic state at each Draw call. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
 
 ### Track GPU Memory
 layer/mem\_tracker.c - Track GPU Memory and any binding it has to objects and/or Cmd Buffers. Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+
+### Check parameters
+<build dir>/layer/param_checker.c (name=ParamChecker) - Check the input parameters to API calls for validity. Currently this only checks ENUM params directly passed to API calls and ENUMs embedded in struct params. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ## Using Layers
 
