@@ -891,8 +891,11 @@ class StructWrapperGen:
                 if is_type(self.struct_dict[s][m]['type'], 'enum'):
                     sh_funcs.append('    if (!validate_%s(pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                 # TODO : Need a little refinement to this code to make sure type of struct matches expected input (ptr, const...)
-                #if is_type(self.struct_dict[s][m]['type'], 'struct'):
-                #    sh_funcs.append('    if (!%s((%s)pStruct->%s))\n        return 0;' % (self._get_vh_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['full_type'], self.struct_dict[s][m]['name']))
+                if is_type(self.struct_dict[s][m]['type'], 'struct'):
+                    if (self.struct_dict[s][m]['ptr']):
+                        sh_funcs.append('    if (!%s((const %s*)pStruct->%s))\n        return 0;' % (self._get_vh_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
+                    else:
+                        sh_funcs.append('    if (!%s((const %s*)&pStruct->%s))\n        return 0;' % (self._get_vh_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
             sh_funcs.append("    return 1;\n}")
 
         return "\n".join(sh_funcs)
