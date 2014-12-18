@@ -641,7 +641,6 @@ class Subcommand(object):
                                 param_checks.append('    char str[1024];')
                                 str_decl = True
                             param_checks.append('    if (!validate_%s(%s)) {' % (p.ty, p.name))
-                            param_checks.append('        char str[1024];')
                             param_checks.append('        sprintf(str, "Parameter %s to function %s has invalid value of %%i.", (int)%s);'  % (p.name, proto.name, p.name))
                             param_checks.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
                             param_checks.append('    }')
@@ -703,18 +702,13 @@ class Subcommand(object):
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
                                  '{\n'
-                                 '    char str[1024];'
                                  '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '    sprintf(str, "At start of layered %s\\n");\n'
-                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, "PARAMCHECK", str);\n'
                                  '    pCurObj = gpuw;\n'
                                  '    pthread_once(&tabOnce, initLayerTable);\n'
+                                 '%s\n'
                                  '    %snextTable.%s;\n'
-                                 '    sprintf(str, "Completed layered %s\\n");\n'
-                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, "PARAMCHECK", str);\n'
-                                 '    fflush(stdout);\n'
                                  '%s'
-                                 '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
+                                 '}' % (qual, decl, proto.params[0].name, "\n".join(param_checks), ret_val, c_call, stmt))
 
         return "\n\n".join(funcs)
 
