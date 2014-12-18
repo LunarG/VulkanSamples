@@ -4,7 +4,7 @@ Feel Free to vote things up in the lists, attempt to implement them yourself, or
 
 As you complete an item, please copy / paste it into the SUPPORTED FEATURES section.
 
-**SUPPORTED FEATURES**
+**SUPPORTED FEATURES IN DEBUGGER**
 * Generating & loading traces
 * Replay traces within the UI w/ pause, continue, stop ability
 * Timeline shows CPU time of each API call
@@ -18,7 +18,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Draw calls are shown in bold font
 * Export API Calls as Text file
 
-**TODO LIST**
+**TODO LIST IN DEBUGGER**
 * Hide / show columns on API Call Tree
 * Additional replay support:
   * Auto-pause on Validation layer error or warning
@@ -47,6 +47,25 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Pan & Zoom
   * Click call will cause API Call Tree to highlight call
 * Optimize trace file loading by memory-mapping the file
+
+**SUPPORTED FEATURES IN TRACING/REPLAYING COMMAND LINE TOOLS AND LIBRARIES**
+* Command line Tracer app (glvtrace) which launches game/app with tracing library(ies) inserted and writes trace packets to a file
+* Command line Tracer server which collects tracing packets over a socket connection and writes them to a file
+* XGL tracer library supports multithreaded XGL apps
+* Command line Replayer app (glvreplay) replays a XGL trace file with Window display on Linux
+
+**TODO LIST IN TRACING/REPLAYING COMMAND LINE TOOLS AND LIBRARIES**
+* Optimize replay speed  by using hash maps for opaque handles
+* Handle XGL persistently CPU mapped buffers during tracing, rather then relying on updating data at unmap time
+* Optimize Replayer speed by memory-mapping the file and/or reading file in a separate thread
+* Looping in Replayer over arbitrary frames or calls
+* Looping in Replayer with state restoration at beginning of loop
+* Replayer window display of XGL on Windows OS
+* Command line tool to display trace file in human readable format
+* Command line tool for editing trace files in human readable format
+* Replayer supports multithreading
+* 64-bit build supports 32-bit trace files
+* XGL tracing and replay cross platform support with differing GPUs
 
 **LIKE TO HAVE FUTURE FEATURE IDEAS**
 * Export trace file into *.cpp/h files that compile into a runnable application
