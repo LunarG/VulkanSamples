@@ -17,9 +17,9 @@ add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvt
         COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
         COMMAND ${SRC_DIR}/../../../glave-generate.py glave-replay-h > glvreplay_xgl_replay.h
         COMMAND ${SRC_DIR}/../../../glave-generate.py glave-replay-c > glvreplay_xgl_replay.cpp
-        COMMAND ${SRC_DIR}/../../../xgl-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
 	           DEPENDS ${SRC_DIR}/../../../glave-generate.py
-	                   ${SRC_DIR}/../../../xgl-helper.py)
+	                   ${SRC_DIR}/../../../xgl_helper.py)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 set(OS_REPLAYER_LIBS

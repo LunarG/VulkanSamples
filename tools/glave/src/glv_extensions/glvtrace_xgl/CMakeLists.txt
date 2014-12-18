@@ -20,8 +20,8 @@ add_custom_command(OUTPUT glvtrace_xgl_xgl.h glvtrace_xgl_xgl.c glvtrace_xgl_pac
         COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-h > glvtrace_xgl_xgldbg.h
         COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-c > glvtrace_xgl_xgldbg.c
         COMMAND ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
-        COMMAND ${SRC_DIR}/../../../xgl-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-	           DEPENDS ${SRC_DIR}/../../../xgl-helper.py
+        COMMAND ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
+	           DEPENDS ${SRC_DIR}/../../../xgl_helper.py
                            ${SRC_DIR}/../../../glave-generate.py)
 
 set(SRC_LIST

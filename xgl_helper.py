@@ -321,11 +321,13 @@ class StructWrapperGen:
         self.string_helper_no_addr_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr.h")
         self.string_helper_cpp_filename = os.path.join(out_dir, self.api+"_struct_string_helper_cpp.h")
         self.string_helper_no_addr_cpp_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr_cpp.h")
+        self.validate_helper_filename = os.path.join(out_dir, self.api+"_struct_validate_helper.h")
         self.no_addr = False
         self.hfg = CommonFileGen(self.header_filename)
         self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
         self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
+        self.vhg = CommonFileGen(self.validate_helper_filename)
         #print(self.header_filename)
         self.header_txt = ""
         self.definition_txt = ""
@@ -381,6 +383,14 @@ class StructWrapperGen:
         self.shcppg.setHeader(self._generateStringHelperHeaderCpp())
         self.shcppg.setBody(self._generateStringHelperFunctionsCpp())
         self.shcppg.generate()
+
+    # Generate c-style .h file that contains functions for printing structs
+    def generateValidateHelper(self):
+        print("Generating struct validate helper")
+        self.vhg.setCopyright(self._generateCopyright())
+        self.vhg.setHeader(self._generateValidateHelperHeader())
+        self.vhg.setBody(self._generateValidateHelperFunctions())
+        self.vhg.generate()
 
     def _generateCopyright(self):
         return "//This is the copyright\n"
@@ -445,8 +455,14 @@ class StructWrapperGen:
         dp_funcs.append("}\n")
         return "\n".join(dp_funcs)
 
+    def _get_func_name(self, struct, mid_str):
+        return "%s_%s_%s" % (self.api, mid_str, struct.lower().strip("_"))
+
     def _get_sh_func_name(self, struct):
-        return "%s_print_%s" % (self.api, struct.lower().strip("_"))
+        return self._get_func_name(struct, 'print')
+
+    def _get_vh_func_name(self, struct):
+        return self._get_func_name(struct, 'validate')
 
     # Return elements to create formatted string for given struct member
     def _get_struct_print_formatted(self, struct_member, pre_var_name="prefix", postfix = "\\n", struct_var_name="pStruct", struct_ptr=True, print_array=False):
@@ -863,6 +879,31 @@ class StructWrapperGen:
         header.append("string dynamic_display(const XGL_VOID* pStruct, const string prefix);\n")
         return "".join(header)
 
+    def _generateValidateHelperFunctions(self):
+        sh_funcs = []
+        # We do two passes, first pass just generates prototypes for all the functsions
+        for s in self.struct_dict:
+            sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
+        sh_funcs.append('\n')
+        for s in self.struct_dict:
+            sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
+            for m in sorted(self.struct_dict[s]):
+                if is_type(self.struct_dict[s][m]['type'], 'enum'):
+                    sh_funcs.append('    if (!validate_%s(pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
+            sh_funcs.append("    return 1;\n}")
+
+        return "\n".join(sh_funcs)
+
+    def _generateValidateHelperHeader(self):
+        header = []
+        header.append("//#includes, #defines, globals and such...\n")
+        for f in self.include_headers:
+            if 'xgl_enum_validate_helper' not in f:
+                header.append("#include <%s>\n" % f)
+        header.append('#include "xgl_enum_validate_helper.h"\n\n// Function Prototypes\n')
+        #header.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix);\n")
+        return "".join(header)
+
     def _generateHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
@@ -940,7 +981,7 @@ class EnumCodeGen:
 
     def generateEnumValidate(self):
         self.evhfg.setHeader(self._generateSHHeader())
-        self.evhfg.setHeader(self._generateVHBody())
+        self.evhfg.setBody(self._generateVHBody())
         self.evhfg.generate()
 
     def _generateVHBody(self):
@@ -1301,6 +1342,7 @@ def main(argv=None):
         print("Generating struct wrapper class to %s" % sw.class_filename)
         sw.generateBody()
         sw.generateStringHelper()
+        sw.generateValidateHelper()
         # Generate a 2nd helper file that excludes addrs
         sw.set_no_addr(True)
         sw.generateStringHelper()

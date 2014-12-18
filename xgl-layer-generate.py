@@ -26,8 +26,10 @@
 #   Chia-I Wu <olv@lunarg.com>
 
 import sys
+import os
 
 import xgl
+import xgl_helper
 
 class Subcommand(object):
     def __init__(self, argv):
@@ -434,10 +436,9 @@ class Subcommand(object):
                             (pft, pfi) = ("%s", '"addr"')
                         log_func += '%s = %s, ' % (p.name, pft)
                         print_vals += ', %s' % (pfi)
-                        # TODO : Just want this to be simple check for params of STRUCT type
-                        if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['XGL_CHAR', 'XGL_VOID', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'XGL_UINT32']]):
-                            if 'Wsi' not in proto.name:
-                                cis_param_index.append(pindex)
+                        # 'format' gets special treatment as a small struct that we print inline
+                        if 'Wsi' not in proto.name and 'format' != p.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+                            cis_param_index.append(pindex)
                         pindex += 1
                     log_func = log_func.strip(', ')
                     if proto.ret != "XGL_VOID":
@@ -624,13 +625,96 @@ class Subcommand(object):
                                  '%s%s'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, using_line, ret_val, c_call, create_line, destroy_line, stmt))
-
-        # TODO : Put this code somewhere so it gets called at the end if objects not deleted :
-        #     // Report any remaining objects in LL
-        #     objNode *pTrav = pObjLLHead;
-        #     while (pTrav) {
-        #         printf("WARN : %s object %p has not been destroyed.\n", pTrav->objType, pTrav->pObj);
-        #    }
+                elif "ParamChecker" == layer:
+                    # TODO : Need to fix up the non-else cases below to do param checking as well
+                    decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+                    param0_name = proto.params[0].name
+                    ret_val = ''
+                    stmt = ''
+                    param_checks = []
+                    # Add code to check enums and structs
+                    # TODO : Currently only validating enum values, need to validate everything
+                    str_decl = False
+                    for p in proto.params:
+                        if xgl_helper.is_type(p.ty.strip('*').strip('const '), 'enum'):
+                            if not str_decl:
+                                param_checks.append('    char str[1024];')
+                                str_decl = True
+                            param_checks.append('    if (!validate_%s(%s)) {' % (p.ty, p.name))
+                            param_checks.append('        char str[1024];')
+                            param_checks.append('        sprintf(str, "Parameter %s to function %s has invalid value of %%i.", (int)%s);'  % (p.name, proto.name, p.name))
+                            param_checks.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
+                            param_checks.append('    }')
+                        elif xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct') and 'const' in p.ty:
+                            if not str_decl:
+                                param_checks.append('    char str[1024];')
+                                str_decl = True
+                            if '*' in p.ty: # First check for null ptr
+                                param_checks.append('    if (!%s) {' % p.name)
+                                param_checks.append('        sprintf(str, "Struct ptr parameter %s to function %s is NULL.");'  % (p.name, proto.name))
+                                param_checks.append('        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
+                                param_checks.append('    }')
+                                param_checks.append('    else if (!xgl_validate_%s(%s)) {' % (p.ty.strip('*').strip('const ').lower(), p.name))
+                            else:
+                                param_checks.append('    if (!xgl_validate_%s(%s)) {' % (p.ty.strip('const ').lower(), p.name))
+                            param_checks.append('        sprintf(str, "Parameter %s to function %s contains an invalid value.");'  % (p.name, proto.name))
+                            param_checks.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
+                            param_checks.append('    }')
+                    if proto.ret != "XGL_VOID":
+                        ret_val = "XGL_RESULT result = "
+                        stmt = "    return result;\n"
+                    if proto.name == "EnumerateLayers":
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    char str[1024];\n'
+                                 '    if (gpu != NULL) {\n'
+                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '        sprintf(str, "At start of layered %s\\n");\n'
+                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, "PARAMCHECK", str);\n'
+                                 '        pCurObj = gpuw;\n'
+                                 '        pthread_once(&tabOnce, initLayerTable);\n'
+                                 '        %snextTable.%s;\n'
+                                 '        sprintf(str, "Completed layered %s\\n");\n'
+                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, "PARAMCHECK", str);\n'
+                                 '        fflush(stdout);\n'
+                                 '    %s'
+                                 '    } else {\n'
+                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                                 '            return XGL_ERROR_INVALID_POINTER;\n'
+                                 '        // This layer compatible with all GPUs\n'
+                                 '        *pOutLayerCount = 1;\n'
+                                 '        strncpy(pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        return XGL_SUCCESS;\n'
+                                 '    }\n'
+                                     '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt, layer_name))
+                    elif 'DbgRegisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_register())
+                    elif 'DbgUnregisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_unregister())
+                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '%s\n'
+                                 '    %snextTable.%s;\n'
+                                 '%s'
+                                 '}' % (qual, decl, "\n".join(param_checks), ret_val, proto.c_call(), stmt))
+                    else:
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    char str[1024];'
+                                 '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '    sprintf(str, "At start of layered %s\\n");\n'
+                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, "PARAMCHECK", str);\n'
+                                 '    pCurObj = gpuw;\n'
+                                 '    pthread_once(&tabOnce, initLayerTable);\n'
+                                 '    %snextTable.%s;\n'
+                                 '    sprintf(str, "Completed layered %s\\n");\n'
+                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, "PARAMCHECK", str);\n'
+                                 '    fflush(stdout);\n'
+                                 '%s'
+                                 '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
 
         return "\n\n".join(funcs)
 
@@ -1086,6 +1170,18 @@ class ObjectTrackerSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class ParamCheckerSubcommand(Subcommand):
+    def generate_header(self):
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_enum_validate_helper.h"\n#include "xgl_struct_validate_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\n'
+
+    def generate_body(self):
+        body = [self._gen_layer_dbg_callback_header(),
+                self._generate_layer_dispatch_table(),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "ParamChecker"),
+                self._generate_layer_gpa_function()]
+
+        return "\n\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -1097,13 +1193,23 @@ def main():
             "ApiDumpCpp" : ApiDumpCppSubcommand,
             "ApiDumpNoAddrCpp" : ApiDumpNoAddrCppSubcommand,
             "ObjectTracker" : ObjectTrackerSubcommand,
+            "ParamChecker" : ParamCheckerSubcommand,
     }
 
-    if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
-        print("Usage: %s <subcommand> [options]" % sys.argv[0])
+    if len(sys.argv) < 3 or sys.argv[1] not in subcommands or not os.path.exists(sys.argv[2]):
+        print("Usage: %s <subcommand> <input_header> [options]" % sys.argv[0])
         print
         print("Available sucommands are: %s" % " ".join(subcommands))
         exit(1)
+
+    hfp = xgl_helper.HeaderFileParser(sys.argv[2])
+    hfp.parse()
+    xgl_helper.enum_val_dict = hfp.get_enum_val_dict()
+    xgl_helper.enum_type_dict = hfp.get_enum_type_dict()
+    xgl_helper.struct_dict = hfp.get_struct_dict()
+    xgl_helper.typedef_fwd_dict = hfp.get_typedef_fwd_dict()
+    xgl_helper.typedef_rev_dict = hfp.get_typedef_rev_dict()
+    xgl_helper.types_dict = hfp.get_types_dict()
 
     subcmd = subcommands[sys.argv[1]](sys.argv[2:])
     subcmd.run()

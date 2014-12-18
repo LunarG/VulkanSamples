@@ -2,15 +2,15 @@ cmake_minimum_required (VERSION 2.8.11)
 
 macro(run_xgl_helper subcmd)
 	add_custom_command(OUTPUT ${ARGN}
-		COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-helper.py ${PROJECT_SOURCE_DIR}/include/xgl.h
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl_helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl_helper.py ${PROJECT_SOURCE_DIR}/include/xgl.h
 	)
 endmacro()
 
 macro(run_xgl_layer_generate subcmd output)
 	add_custom_command(OUTPUT ${output}
-		COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${subcmd} > ${output}
-		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${PROJECT_SOURCE_DIR}/xgl.py
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h > ${output}
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${PROJECT_SOURCE_DIR}/include/xgl.h ${PROJECT_SOURCE_DIR}/xgl.py
 	)
 endmacro()
 
@@ -67,6 +67,7 @@ run_xgl_layer_generate(ApiDumpNoAddr api_dump_no_addr.c)
 run_xgl_layer_generate(ApiDumpCpp api_dump.cpp)
 run_xgl_layer_generate(ApiDumpNoAddrCpp api_dump_no_addr.cpp)
 run_xgl_layer_generate(ObjectTracker object_track.c)
+run_xgl_layer_generate(ParamChecker param_checker.c)
 
 add_xgl_layer(Basic basic.cpp)
 add_xgl_layer(Multi multi.cpp)
@@ -80,3 +81,4 @@ add_xgl_layer(APIDumpNoAddr api_dump_no_addr.c)
 add_xgl_layer(APIDumpCpp api_dump.cpp)
 add_xgl_layer(APIDumpNoAddrCpp api_dump_no_addr.cpp)
 add_xgl_layer(ObjectTracker object_track.c)
+add_xgl_layer(ParamChecker param_checker.c)
