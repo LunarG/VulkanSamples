@@ -15,8 +15,8 @@ New with XGL in an extensible layered architecture that enables significant inno
 - Customized interactive debugging and validation layers will be available together with first drivers
 
 The components here are being shared with the Khronos community to provide
-early insights into the specification of XGL and to assists those doing
-prototyping at this point.
+insights into the specification as we approach an alpha header, and to assists those doing
+demos for GDC.
 
 The following components are available:
 - XGL Library and header files, which include:
