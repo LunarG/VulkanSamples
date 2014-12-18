@@ -424,7 +424,6 @@ class Subcommand(object):
                     print_vals = ', getTIDIndex()'
                     pindex = 0
                     for p in proto.params:
-                        # TODO : Need to handle xglWsiX11CreatePresentableImage for which the last 2 params are returned vals
                         cp = False
                         if 0 != create_params:
                             # If this is any of the N last params of the func, treat as output
@@ -635,6 +634,7 @@ class Subcommand(object):
                     # Add code to check enums and structs
                     # TODO : Currently only validating enum values, need to validate everything
                     str_decl = False
+                    prev_count_name = ''
                     for p in proto.params:
                         if xgl_helper.is_type(p.ty.strip('*').strip('const '), 'enum'):
                             if not str_decl:
@@ -645,20 +645,38 @@ class Subcommand(object):
                             param_checks.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
                             param_checks.append('    }')
                         elif xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct') and 'const' in p.ty:
+                            is_array = False
                             if not str_decl:
                                 param_checks.append('    char str[1024];')
                                 str_decl = True
                             if '*' in p.ty: # First check for null ptr
-                                param_checks.append('    if (!%s) {' % p.name)
-                                param_checks.append('        sprintf(str, "Struct ptr parameter %s to function %s is NULL.");'  % (p.name, proto.name))
-                                param_checks.append('        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
-                                param_checks.append('    }')
-                                param_checks.append('    else if (!xgl_validate_%s(%s)) {' % (p.ty.strip('*').strip('const ').lower(), p.name))
+                                # If this is an input array, parse over all of the array elements
+                                if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
+                                #if 'pImageViews' in p.name:
+                                    is_array = True
+                                    param_checks.append('    uint32_t i;')
+                                    param_checks.append('    for (i = 0; i < %s; i++) {' % prev_count_name)
+                                    param_checks.append('        if (!xgl_validate_%s(&%s[i])) {' % (p.ty.strip('*').strip('const ').lower(), p.name))
+                                    param_checks.append('            sprintf(str, "Parameter %s[%%i] to function %s contains an invalid value.", i);'  % (p.name, proto.name))
+                                    param_checks.append('            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
+                                    param_checks.append('        }')
+                                    param_checks.append('    }')
+                                else:
+                                    param_checks.append('    if (!%s) {' % p.name)
+                                    param_checks.append('        sprintf(str, "Struct ptr parameter %s to function %s is NULL.");'  % (p.name, proto.name))
+                                    param_checks.append('        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
+                                    param_checks.append('    }')
+                                    param_checks.append('    else if (!xgl_validate_%s(%s)) {' % (p.ty.strip('*').strip('const ').lower(), p.name))
                             else:
                                 param_checks.append('    if (!xgl_validate_%s(%s)) {' % (p.ty.strip('const ').lower(), p.name))
-                            param_checks.append('        sprintf(str, "Parameter %s to function %s contains an invalid value.");'  % (p.name, proto.name))
-                            param_checks.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
-                            param_checks.append('    }')
+                            if not is_array:
+                                param_checks.append('        sprintf(str, "Parameter %s to function %s contains an invalid value.");'  % (p.name, proto.name))
+                                param_checks.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);')
+                                param_checks.append('    }')
+                        if p.name.endswith('Count'):
+                            prev_count_name = p.name
+                        else:
+                            prev_count_name = ''
                     if proto.ret != "XGL_VOID":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
