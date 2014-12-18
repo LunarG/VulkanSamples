@@ -6,27 +6,32 @@ Glave is a tracer and debugger for XGL applications.
 ##Screen Shots##
 The following screen shots illustrate the current functionality available from the interactive debugger.
 
-Freshly opened tool
+###Open###
+Freshly opened tool.
 
-![ScreenShot1](../../docs/images/Glave.png "Freshly Opened Tool")
+![ScreenShot1](../../docs/images/Glave.png "Open")
 
+###Generate Trace###
 Click on "Generate Trace" button to launch the application with the trace and save the trace file, then prompt user to load it.
 
 ![ScreenShot2](../../docs/images/Glave-GenerateTraceFile.png "Generate Trace")
 
+###Play Trace###
 Click "Play" and you will see the XGL entrypoints being replayed.
 
 ![ScreenShot3](../../docs/images/Glave-LoadedAndPlaying.png "Play Trace")
 
+###Pause###
 "Pause" the replay and the upcoming entrypoint will be highlighted.  The timeline shows progress in the tracefile.
 
 ![ScreenShot4](../../docs/images/Glave-Paused.png "Pause")
 
+###Search For Memory###
 Search the trace file for an entrypoint and parameter.  In this case we find all the calls to a specifc memory object.
 
-![ScreenShot5](../../docs/images/Glave-SearchForMemory.png "Play Trace")
+![ScreenShot5](../../docs/images/Glave-SearchForMemory.png "Search For Memory")
 
-##Build Instructions##
+##Using Glave##
 Glave builds three binaries with associated XGL libraries: a tracer with XGL
 tracing library; a replayer with XGL replayer library; and a debugger  with
 XGL debugger and replayer libraries.

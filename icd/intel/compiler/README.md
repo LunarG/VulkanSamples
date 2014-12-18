@@ -3,10 +3,10 @@
 This compiler stack was brought over from the GlassyMesa driver LunarG created for Valve.
 It uses the following tools:
 - BIL support and LunarGLASS middle end optimizer (pulled in via 
-[update_external_sources.sh](https://github.com/KhronosGroup/GL-Next/tree/master/update_external_sources.sh) script)
-(https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel/compiler/mesa-utils/src/glsl)
-- [GlassyMesa's GLSLIR and supporting infrastructure](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel/compiler/shader)
-- [GlassyMesa's DRI i965 backend](https://github.com/KhronosGroup/GL-Next/tree/master/icd/intel/compiler/pipeline)
+[update_external_sources.sh](../../../update_external_sources.sh) script)
+(mesa-utils/src/glsl)
+- [GlassyMesa's GLSLIR and supporting infrastructure](shader)
+- [GlassyMesa's DRI i965 backend](pipeline)
 
 For xglCreateShader, we primarily used the existing standalone device independent front end which can consume GLSL or BIL, and results in a separately linked shader object.
 
