@@ -12,7 +12,7 @@ include(FindPkgConfig)
 
 if (CMAKE_COMPILER_IS_GNUCC)
     set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-missing-field-initializers")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS} -Werror")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS}")
     if (UNIX)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
