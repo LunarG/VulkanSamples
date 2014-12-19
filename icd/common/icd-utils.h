@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
+#include <strings.h> /* for ffs() */
 #include "icd.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -51,6 +52,11 @@
 static inline bool u_is_pow2(unsigned int val)
 {
     return ((val & (val - 1)) == 0);
+}
+
+static inline int u_ffs(int val)
+{
+    return ffs(val);
 }
 
 static inline unsigned int u_align(unsigned int val, unsigned alignment)
