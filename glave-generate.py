@@ -1325,6 +1325,8 @@ class Subcommand(object):
         cd_body.append('    virtual ~ApiReplay() { }')
         cd_body.append('    virtual enum glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header * packet) = 0;')
         cd_body.append('    virtual int init(glv_replay::Display & disp) = 0;')
+        cd_body.append('    virtual void push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, XGL_SIZE location, XGL_INT msgCode, const char* pMsg) = 0;')
+        cd_body.append('    virtual glv_replay::GLV_REPLAY_RESULT pop_validation_msgs() = 0;')
         cd_body.append('};\n')
         cd_body.append('class xglDisplay: public glv_replay::DisplayImp {')
         cd_body.append('friend class xglReplay;')
@@ -1441,6 +1443,8 @@ class Subcommand(object):
         rc_body.append('    xglDisplay * get_display() {return m_display;}')
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);')
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);\n')
+        rc_body.append('    void push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, XGL_SIZE location, XGL_INT msgCode, const char* pMsg);')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();')
         rc_body.append('private:')
         rc_body.append('    struct xglFuncs m_xglFuncs;')
         rc_body.append('    void copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange);')
@@ -1451,6 +1455,14 @@ class Subcommand(object):
         rc_body.append('        XGL_SHADER *addr;')
         rc_body.append('        XGL_SHADER val;')
         rc_body.append('    };')
+        rc_body.append('    struct validationMsg {')
+        rc_body.append('        XGL_VALIDATION_LEVEL validationLevel;')
+        rc_body.append('        XGL_BASE_OBJECT srcObject;')
+        rc_body.append('        XGL_SIZE location;')
+        rc_body.append('        XGL_INT msgCode;')
+        rc_body.append('        char msg[256];')
+        rc_body.append('    };')
+        rc_body.append('    std::vector<struct validationMsg> m_validationMsgs;')
         rc_body.append(self._map_decl('XGL_GPU_MEMORY', 'XGLAllocInfo', 'm_mapData'))
         # Custom code for 1-off memory mapping functions
         rc_body.append('    void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)')
@@ -1904,6 +1916,28 @@ class Subcommand(object):
         re_body.append('}')
         return "\n".join(re_body)
 
+    def _generate_replay_validation_funcs(self):
+        rvf_body = []
+        rvf_body.append('void xglReplay::push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, XGL_SIZE location, XGL_INT msgCode, const char * pMsg)')
+        rvf_body.append('{')
+        rvf_body.append('    struct validationMsg msgObj;')
+        rvf_body.append('    msgObj.validationLevel = validationLevel;')
+        rvf_body.append('    msgObj.srcObject = srcObject;')
+        rvf_body.append('    msgObj.location = location;')
+        rvf_body.append('    msgObj.msgCode = msgCode;')
+        rvf_body.append('    strncpy(msgObj.msg, pMsg, 256);')
+        rvf_body.append("    msgObj.msg[255] = '\\0';")
+        rvf_body.append('    m_validationMsgs.push_back(msgObj);')
+        rvf_body.append('}\n')
+        rvf_body.append('glv_replay::GLV_REPLAY_RESULT xglReplay::pop_validation_msgs()')
+        rvf_body.append('{')
+        rvf_body.append('    if (m_validationMsgs.size() == 0)')
+        rvf_body.append('        return glv_replay::GLV_REPLAY_SUCCESS;')
+        rvf_body.append('    m_validationMsgs.clear();')
+        rvf_body.append('    return glv_replay::GLV_REPLAY_VALIDATION_ERROR;')
+        rvf_body.append('}')
+        return "\n".join(rvf_body)
+
     def _generate_replay_init_funcs(self):
         rif_body = []
         rif_body.append('void xglFuncs::init_funcs(void * handle)\n{\n    m_libHandle = handle;')
@@ -2073,15 +2107,30 @@ class Subcommand(object):
         cd_body.append('            if (!m_display->m_initedXGL)')
         cd_body.append('            {')
         cd_body.append('                XGL_DEVICE device;')
-        cd_body.append('                XGL_DEVICE_CREATE_INFO cInfo;')
         cd_body.append('                if (m_debugLevel > 0)')
         cd_body.append('                {')
+        cd_body.append('                    XGL_DEVICE_CREATE_INFO cInfo, *ci;')
+        cd_body.append('                    // TODO what is the real list of layers to be running with??')
+        cd_body.append('                    const XGL_CHAR * layersStr[2] = {(XGL_CHAR *) "DrawState", (XGL_CHAR *) "MemTracker"};')
+        cd_body.append('                    XGL_LAYER_CREATE_INFO layerInfo;')
+        cd_body.append('                    ci = (XGL_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;')
+        cd_body.append('                    while (ci->pNext != NULL)')
+        cd_body.append('                        ci = (XGL_DEVICE_CREATE_INFO *) ci->pNext;')
+        cd_body.append('                    ci->pNext = &layerInfo;')
+        cd_body.append('                    layerInfo.sType = XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO;')
+        cd_body.append('                    layerInfo.pNext = 0;')
+        cd_body.append('                    layerInfo.layerCount = 2;')
+        cd_body.append('                    layerInfo.ppActiveLayerNames = layersStr;')
         cd_body.append('                    memcpy(&cInfo, pPacket->pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));')
         cd_body.append('                    cInfo.flags = pPacket->pCreateInfo->flags | XGL_DEVICE_CREATE_VALIDATION_BIT;')
         cd_body.append('                    cInfo.maxValidationLevel = (XGL_VALIDATION_LEVEL)((m_debugLevel <= 4) ? XGL_VALIDATION_LEVEL_0 + m_debugLevel : XGL_VALIDATION_LEVEL_0);')
         cd_body.append('                    pPacket->pCreateInfo = &cInfo;')
+        cd_body.append('                    replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);')
+        cd_body.append('                    if (xglDbgRegisterMsgCallback(g_fpDbgMsgCallback, NULL) != XGL_SUCCESS)')
+        cd_body.append('                        glv_LogError("Failed to register xgl callback for replayer error handling\\n");')
         cd_body.append('                }')
-        cd_body.append('                replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);')
+        cd_body.append('                else ')
+        cd_body.append('                    replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);')
         cd_body.append('                CHECK_RETURN_VALUE(xglCreateDevice);')
         cd_body.append('                if (replayResult == XGL_SUCCESS)')
         cd_body.append('                {')
@@ -2858,6 +2907,7 @@ class GlaveReplayC(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include "glvreplay_xgl_replay.h"\n')
+        header_txt.append('#include "glvreplay_xgl.h"\n')
         header_txt.append('extern "C" {')
         header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
         header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
@@ -2888,6 +2938,7 @@ class GlaveReplayC(Subcommand):
                 self._generate_replay_init(),
                 self._generate_replay_remap(),
                 self._generate_replay_errors(),
+                self._generate_replay_validation_funcs(),
                 self._generate_replay_init_funcs(),
                 self._generate_replay()]
 

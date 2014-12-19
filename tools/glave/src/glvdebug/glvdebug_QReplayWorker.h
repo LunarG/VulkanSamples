@@ -179,7 +179,7 @@ protected:
         windowHeight = pReplayWidget->geometry().height();
 
         // load any API specific driver libraries and init replayer objects
-        int debuglevel = 0;
+        int debuglevel = 4;
         uint8_t tidApi = GLV_TID_RESERVED;
 
         // uncomment this to display in a separate window (and then comment out the line below it)

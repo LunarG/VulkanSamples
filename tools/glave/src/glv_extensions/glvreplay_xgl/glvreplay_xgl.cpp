@@ -31,6 +31,37 @@ extern "C"
 }
 
 ApiReplay* g_pReplayer = NULL;
+GLV_CRITICAL_SECTION g_handlerLock;
+XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
+
+static XGL_VOID xglErrorHandler(
+                                            XGL_DBG_MSG_TYPE     msgType,
+                                            XGL_VALIDATION_LEVEL validationLevel,
+                                            XGL_BASE_OBJECT      srcObject,
+                                            XGL_SIZE             location,
+                                            XGL_INT              msgCode,
+                                            const XGL_CHAR*      pMsg,
+                                            XGL_VOID*            pUserData)
+{
+    glv_enter_critical_section(&g_handlerLock);
+    switch (msgType) {
+        case XGL_DBG_MSG_ERROR:
+            glv_LogError("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
+                         validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            g_pReplayer->push_validation_msg(validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            break;
+        case XGL_DBG_MSG_WARNING:
+        case XGL_DBG_MSG_PERF_WARNING:
+            glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
+                        validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            break;
+        default:
+            glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
+                        validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            break;
+    }
+    glv_leave_critical_section(&g_handlerLock);
+}
 
 extern "C"
 {
@@ -46,6 +77,8 @@ GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, u
         return -1;
     }
 
+    glv_create_critical_section(&g_handlerLock);
+    g_fpDbgMsgCallback = xglErrorHandler;
     int result = g_pReplayer->init(*pDisplay);
     return result;
 }
@@ -56,7 +89,10 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
     {
         delete g_pReplayer;
         g_pReplayer = NULL;
+        if (xglDbgUnregisterMsgCallback(g_fpDbgMsgCallback) != XGL_SUCCESS)
+            glv_LogError("Failed to unregister xgl callback  for replayer\n");
     }
+    glv_delete_critical_section(&g_handlerLock);
 }
 
 GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL Interpret(glv_trace_packet_header* pPacket)
@@ -77,6 +113,9 @@ GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_
     if (g_pReplayer != NULL)
     {
         result = g_pReplayer->replay(pPacket);
+
+        if (result == glv_replay::GLV_REPLAY_SUCCESS)
+            result = g_pReplayer->pop_validation_msgs();
     }
     return result;
 }

@@ -40,6 +40,7 @@ enum GLV_REPLAY_RESULT
     GLV_REPLAY_BAD_RETURN,     // replay return value != trace return value
     GLV_REPLAY_CALL_ERROR,     // replaying call caused an error
     GLV_REPLAY_INVALID_PARAMS, // trace file parameters are invalid
+    GLV_REPLAY_VALIDATION_ERROR // callback Msg error from validation layer
 };
 
 // entrypoints that must be exposed by each replayer library
