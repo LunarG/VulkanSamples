@@ -1,17 +1,23 @@
 cmake_minimum_required (VERSION 2.8.11)
 
-add_custom_command(OUTPUT generic_layer.c xgl_enum_string_helper.h xgl_struct_string_helper.h xgl_struct_graphviz_helper.h xgl_struct_string_helper_no_addr.h api_dump.c api_dump_file.c api_dump_no_addr.c object_track.c
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py Generic > generic_layer.c
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_enum_string_helper ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_struct_wrappers ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --gen_graphviz ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ApiDump > api_dump.c
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ApiDumpFile > api_dump_file.c
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ApiDumpNoAddr > api_dump_no_addr.c
-        COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ObjectTracker > object_track.c
-	           DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py
-	                   ${PROJECT_SOURCE_DIR}/xgl-helper.py
-                           ${PROJECT_SOURCE_DIR}/xgl.py)
+macro(run_xgl_helper subcmd)
+	add_custom_command(OUTPUT ${ARGN}
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-helper.py
+	)
+endmacro()
+
+macro(run_xgl_layer_generate subcmd output)
+	add_custom_command(OUTPUT ${output}
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${subcmd} > ${output}
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${PROJECT_SOURCE_DIR}/xgl.py
+	)
+endmacro()
+
+macro(add_xgl_layer target)
+	add_library(XGLLayer${target} SHARED ${ARGN})
+	add_dependencies(XGLLayer${target} generate_xgl_layer_helpers)
+endmacro()
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -20,12 +26,37 @@ include_directories(
 
 set (CMAKE_CXX_FLAGS "-std=c++11")
 
-add_library (XGLLayerBasic SHARED basic.cpp)
-add_library (XGLLayerGeneric SHARED generic_layer.c)
-add_library (XGLLayerMulti SHARED multi.cpp)
-add_library (XGLLayerObjectTracker SHARED object_track.c object_track.h)
-add_library (XGLLayerAPIDump SHARED api_dump.c xgl_enum_string_helper.h xgl_struct_string_helper.h)
-add_library (XGLLayerAPIDumpFile SHARED api_dump_file.c xgl_enum_string_helper.h xgl_struct_string_helper.h)
-add_library (XGLLayerAPIDumpNoAddr SHARED api_dump_no_addr.c xgl_enum_string_helper.h xgl_struct_string_helper_no_addr.h)
-add_library (XGLLayerDrawState SHARED draw_state.c xgl_enum_string_helper.h xgl_struct_string_helper.h xgl_struct_string_helper.h)
-add_library (XGLLayerMemTracker SHARED mem_tracker.c xgl_enum_string_helper.h xgl_struct_string_helper.h)
+run_xgl_helper(gen_enum_string_helper xgl_enum_string_helper.h)
+run_xgl_helper(gen_struct_wrappers
+	xgl_struct_string_helper.h
+	xgl_struct_string_helper_no_addr.h
+	xgl_struct_wrappers.h
+	xgl_struct_wrappers.cpp
+)
+run_xgl_helper(gen_graphviz xgl_struct_graphviz_helper.h)
+
+add_custom_target(generate_xgl_layer_helpers DEPENDS
+	xgl_enum_string_helper.h
+	xgl_struct_string_helper.h
+	xgl_struct_string_helper_no_addr.h
+	xgl_struct_wrappers.h
+	xgl_struct_wrappers.cpp
+	xgl_struct_graphviz_helper.h
+)
+
+run_xgl_layer_generate(Generic generic_layer.c)
+run_xgl_layer_generate(ApiDump api_dump.c)
+run_xgl_layer_generate(ApiDumpFile api_dump_file.c)
+run_xgl_layer_generate(ApiDumpNoAddr api_dump_no_addr.c)
+run_xgl_layer_generate(ObjectTracker object_track.c)
+
+add_xgl_layer(Basic basic.cpp)
+add_xgl_layer(Multi multi.cpp)
+add_xgl_layer(DrawState draw_state.c)
+add_xgl_layer(MemTracker mem_tracker.c)
+# generated
+add_xgl_layer(Generic generic_layer.c)
+add_xgl_layer(APIDump api_dump.c)
+add_xgl_layer(APIDumpFile api_dump_file.c)
+add_xgl_layer(APIDumpNoAddr api_dump_no_addr.c)
+add_xgl_layer(ObjectTracker object_track.c)
