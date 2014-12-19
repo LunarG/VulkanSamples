@@ -146,6 +146,34 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
+static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
+                                    XGL_SIZE *size, XGL_VOID *data)
+{
+    struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
+    XGL_RESULT ret = XGL_SUCCESS;
+
+    switch (type) {
+    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+        {
+            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+
+            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            if (data) {
+                mem_req->size = pipeline->scratch_size;
+                mem_req->alignment = 1024;
+                mem_req->heapCount = 1;
+                mem_req->heaps[0] = 0;
+            }
+        }
+        break;
+    default:
+        ret = intel_base_get_info(base, type, size, data);
+        break;
+    }
+
+    return ret;
+}
+
 static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
 {
     /*
@@ -838,6 +866,7 @@ static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
         return XGL_ERROR_OUT_OF_MEMORY;
 
     pipeline->dev = dev;
+    pipeline->obj.base.get_info = pipeline_get_info;
     pipeline->obj.destroy = pipeline_destroy;
 
     ret = pipeline_build_all(pipeline, &info);

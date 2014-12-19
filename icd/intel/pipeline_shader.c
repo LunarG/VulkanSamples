@@ -433,6 +433,11 @@ static void pipeline_post_build_shader(struct intel_pipeline *pipeline,
 {
     sh->max_threads =
         intel_gpu_get_max_threads(pipeline->dev->gpu, sh_info->stage);
+
+    /* 1KB aligned */
+    sh->scratch_offset = u_align(pipeline->scratch_size, 1024);
+    pipeline->scratch_size = sh->scratch_offset +
+        sh->per_thread_scratch_size * sh->max_threads;
 }
 
 XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,

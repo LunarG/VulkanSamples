@@ -120,9 +120,12 @@ struct intel_pipeline_shader {
 
     XGL_FLAGS barycentric_interps;
 
+    XGL_GPU_SIZE per_thread_scratch_size;
+
     /* these are set up by the driver */
     struct intel_pipeline_rmap *rmap;
     XGL_UINT max_threads;
+    XGL_GPU_SIZE scratch_offset;
 };
 
 /*
@@ -184,6 +187,7 @@ struct intel_pipeline {
     struct intel_pipeline_shader gs;
     struct intel_pipeline_shader fs;
     struct intel_pipeline_shader cs;
+    XGL_GPU_SIZE scratch_size;
 
     uint32_t wa_flags;
 
