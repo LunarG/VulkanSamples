@@ -9,12 +9,14 @@ may be the driver.  Multiple layer libraries can be chained (actually a hierarch
 xglEnumerateLayer can be called to list the available layer libraries.  xglGetProcAddr is
 used internally by the Layers and ICD Loader to initialize dispatch tables. Layers are
 activated at xglCreateDevice time. xglCreateDevice createInfo struct is extended to allow
-a list of layers to be activated.  Layer libraries can alternatively be LD_PRELOADed depending
+a list of layers to be activated.  Layer libraries can alternatively be LD\_PRELOADed depending
 upon how they are implemented.
 
 ##Layer library example code
 
-Note that some layers are code-generated and will therefore exist in the <build dir> include/xglLayer.h  - header file for layer code.
+Note that some layers are code-generated and will therefore exist in the directory (build_dir)/layers
+
+-include/xglLayer.h  - header file for layer code.
 
 ### Templates
 layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows layer features:
@@ -22,27 +24,27 @@ layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows la
 - Example layer extension function shown.
 - Layer extension advertised by xglGetExtension().
 - xglEnumerateLayers() supports loader layer name queries and call interception
-- Can be LD_PRELOADed individually
+- Can be LD\_PRELOADed individually
 
 layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers per library
     
-<build dir>/layer/generic_layer.c (name=Generic) - auto generated example wrapping all XGL entrypoints. Single global dispatch table. Can be LD_PRELOADed.
+(build dir)/layer/generic_layer.c (name=Generic) - auto generated example wrapping all XGL entrypoints. Single global dispatch table. Can be LD\_PRELOADed.
 
 ### Print API Calls and Parameter Values
-<build dir>/layer/api_dump.c - print out API calls along with parameter values
+(build dir)/layer/api_dump.c - print out API calls along with parameter values
 
-<build dir>/layer/api_dump_file.c - Write API calls along with parameter values to xgl_apidump.txt file.
+(build dir)/layer/api\_dump\_file.c - Write API calls along with parameter values to xgl\_apidump.txt file.
 
-<build dir>/layer/api_dump_no_addr.c - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
+(build dir)/layer/api\_dump\_no\_addr.c - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
 
 ### Print Object Stats
-<build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL_OBJECT_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)" and a secondary call to return an array of those objects "XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray)".
+(build di\r>/layer/object_track.c - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL\_OBJECT\_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL\_UINT64 objTrackGetObjectCount(XGL\_OBJECT\_TYPE type)" and a secondary call to return an array of those objects "XGL\_RESULT objTrackGetObjects(XGL\_OBJECT\_TYPE type, XGL\_UINT64 objCount, OBJTRACK\_NODE* pObjNodeArray)".
 
 ### Report Draw State
-layer/draw_state.c - Report the Descriptor Set, Pipeline State, and dynamic state at each Draw call. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
+layer/draw\_state.c - Report the Descriptor Set, Pipeline State, and dynamic state at each Draw call. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
 
 ### Track GPU Memory
-layer/mem_tracker.c - Track GPU Memory and any binding it has to objects and/or Cmd Buffers. Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layer/mem\_tracker.c - Track GPU Memory and any binding it has to objects and/or Cmd Buffers. Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ## Using Layers
 
@@ -50,12 +52,13 @@ layer/mem_tracker.c - Track GPU Memory and any binding it has to objects and/or 
 2. Place libXGLLayer<name>.so in the same directory as your XGL test or app:
 
     cp build/layer/libXGLLayerBasic.so build/layer/libXGLLayerGeneric.so build/tests
-    This is required for the Icd loader to be able to scan and enumerate your library.
+
+    This is required for the Icd loader to be able to scan and enumerate your library. Alternatively, use the LIBXGL\_LAYERS\_PATH environment variable to specify where the layer libraries reside.
 
 3. Specify which Layers to activate by using 
-xglCreateDevice XGL_LAYER_CREATE_INFO struct or environment variable LIBXGL_LAYER_NAMES
+xglCreateDevice XGL\_LAYER\_CREATE\_INFO struct or environment variable LIBXGL\_LAYER\_NAMES
 
-    export LIBXGL_LAYER_NAMES=Basic:Generic;
+    export LIBXGL\_LAYER\_NAMES=Basic:Generic;
     cd build/tests; ./xglinfo
 
 ## Tips for writing new layers
@@ -71,8 +74,8 @@ xglCreateDevice XGL_LAYER_CREATE_INFO struct or environment variable LIBXGL_LAYE
 8. entrypoint names can be any name as specified by the layers xglGetProcAddr
     implementation; exceptions are xglGetProcAddr and xglEnumerateLayers,
     which must have the correct name since the Loader calls these entrypoints;
-9. entrypoint names must be exported to the dynamic loader with XGL_LAYER_EXPORT;
-10. For LD_PRELOAD support: a)entrypoint names should be offical xgl names and
+9. entrypoint names must be exported to the dynamic loader with XGL\_LAYER\_EXPORT;
+10. For LD\_PRELOAD support: a)entrypoint names should be offical xgl names and
     b) initialization should occur on any call with a gpu object (Loader type
     initialization must be done if implementing xglInitAndEnumerateGpus).
 11. Implement xglGetExtension() if you want to advertise a layer extension
@@ -92,13 +95,13 @@ xglCreateDevice XGL_LAYER_CREATE_INFO struct or environment variable LIBXGL_LAYE
 - multiple layers in a hierarchy supported;
 - layer enumeration supported per GPU;
 - layers activated per gpu and per icd driver: separate  dispatch table and layer library list in loader for each gpu or icd driver;
-- activation via xglCreateDevice extension struct in CreateInfo or via env var (LIBXGL_LAYER_NAMES);
-- layer libraries can be LD_PRELOADed if implemented correctly;
+- activation via xglCreateDevice extension struct in CreateInfo or via env var (LIBXGL\_LAYER\_NAMES);
+- layer libraries can be LD\_PRELOADed if implemented correctly;
 
 ### Current known issues
 
 - layer libraries (except Basic) don't support multiple dispatch tables for multi-gpus;
-- layer libraries not yet include loader init functionality for full LD_PRELOAD of entire API including xglInitAndEnumerateGpus;
+- layer libraries not yet include loader init functionality for full LD\_PRELOAD of entire API including xglInitAndEnumerateGpus;
 - Since Layers aren't activated until xglCreateDevice, any calls to xglGetExtension() will not report layer extensions unless implemented in the layer;
 - layer extensions do NOT need to be enabled in xglCreateDevice to be available;
 - no support for apps registering layers, must be discovered via initial scan
