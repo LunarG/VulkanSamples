@@ -288,13 +288,6 @@ static struct loader_icd *loader_icd_add(const char *filename)
     if (!icd)
         return NULL;
 
-    if (loader_icd_set_global_options(icd) != XGL_SUCCESS ||
-        loader_icd_register_msg_callbacks(icd) != XGL_SUCCESS) {
-        loader_log(XGL_DBG_MSG_WARNING, 0,
-                "%s ignored: failed to migrate settings", filename);
-        loader_icd_destroy(icd);
-    }
-
     /* prepend to the list */
     icd->next = loader.icds;
     loader.icds = icd;
@@ -364,8 +357,6 @@ static void loader_icd_scan(void)
        }
     }
 
-    /* we have nothing to log anymore */
-    loader_msg_callback_clear();
 
     loader.scanned = true;
 }
@@ -1175,6 +1166,12 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
                 *disp = icd->loader_dispatch + i;
             }
 
+            if (loader_icd_set_global_options(icd) != XGL_SUCCESS ||
+                loader_icd_register_msg_callbacks(icd) != XGL_SUCCESS) {
+                loader_log(XGL_DBG_MSG_WARNING, 0,
+                        "ICD ignored: failed to migrate settings");
+                loader_icd_destroy(icd);
+            }
             count += n;
 
             if (count >= maxGpus) {
@@ -1184,6 +1181,9 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
 
         icd = icd->next;
     }
+
+    /* we have nothing to log anymore */
+    loader_msg_callback_clear();
 
     /* get layer libraries */
     if (!loader.layer_scanned)
