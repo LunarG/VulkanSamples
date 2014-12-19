@@ -365,6 +365,11 @@ XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle()
     return m_rsrcDescSet;
 }
 
+int XglDescriptorSetObj::GetTotalSlots()
+{
+    return m_nextSlot;
+}
+
 void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
 {
     XGL_RESULT err;
@@ -790,7 +795,7 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     stageInfo->shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     stageInfo->shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
 
-    stageInfo->shader.descriptorSetMapping[0].descriptorCount = m_memSlots.size() + m_imageSlots.size() + m_samplerSlots.size();
+    stageInfo->shader.descriptorSetMapping[0].descriptorCount = descriptorSet->GetTotalSlots();
     if (stageInfo->shader.descriptorSetMapping[0].descriptorCount)
     {
         vector<int> allSlots;
@@ -846,7 +851,7 @@ void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sample
 {
     m_samplerSlots.push_back(slot);
     m_samplerTypes.push_back(XGL_SLOT_SHADER_SAMPLER);
-    m_samplerObjs.push_back(sampler->m_sampler);
+    m_samplerObjs.push_back((XGL_OBJECT) &sampler->m_sampler);
 
 }
 

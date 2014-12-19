@@ -209,6 +209,7 @@ public:
     void BindCommandBuffer(XGL_CMD_BUFFER commandBuffer);
     void CreateXGLDescriptorSet();
     XGL_DESCRIPTOR_SET GetDescriptorSetHandle();
+    int GetTotalSlots();
     XGL_DESCRIPTOR_SLOT_INFO * GetSlotInfo(vector<int>slots, vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types, vector<XGL_OBJECT>objs );
 
 protected:
