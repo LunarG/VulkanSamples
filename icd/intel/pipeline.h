@@ -120,7 +120,9 @@ struct intel_pipeline_shader {
 
     XGL_FLAGS barycentric_interps;
 
+    /* these are set up by the driver */
     struct intel_pipeline_rmap *rmap;
+    XGL_UINT max_threads;
 };
 
 /*

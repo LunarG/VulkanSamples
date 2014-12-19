@@ -353,6 +353,58 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
     props->supportsPinning = false;
 }
 
+int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
+                              XGL_PIPELINE_SHADER_STAGE stage)
+{
+    switch (intel_gpu_gen(gpu)) {
+    case INTEL_GEN(7.5):
+        switch (stage) {
+        case XGL_SHADER_STAGE_VERTEX:
+            return (gpu->gt >= 2) ? 280 : 70;
+        case XGL_SHADER_STAGE_FRAGMENT:
+            return (gpu->gt == 3) ? 408 :
+                   (gpu->gt == 2) ? 204 : 102;
+        default:
+            break;
+        }
+        break;
+    case INTEL_GEN(7):
+        switch (stage) {
+        case XGL_SHADER_STAGE_VERTEX:
+            return (gpu->gt == 2) ? 128 : 36;
+        case XGL_SHADER_STAGE_FRAGMENT:
+            return (gpu->gt == 2) ? 172 : 48;
+        default:
+            break;
+        }
+        break;
+    case INTEL_GEN(6):
+        switch (stage) {
+        case XGL_SHADER_STAGE_VERTEX:
+            return (gpu->gt == 2) ? 60 : 24;
+        case XGL_SHADER_STAGE_FRAGMENT:
+            return (gpu->gt == 2) ? 80 : 40;
+        default:
+            break;
+        }
+        break;
+    default:
+        break;
+    }
+
+    icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
+            0, 0, "unknown Gen or shader stage");
+
+    switch (stage) {
+    case XGL_SHADER_STAGE_VERTEX:
+        return 1;
+    case XGL_SHADER_STAGE_FRAGMENT:
+        return 4;
+    default:
+        return 1;
+    }
+}
+
 void intel_gpu_associate_x11(struct intel_gpu *gpu,
                              struct intel_wsi_x11 *x11,
                              int fd)

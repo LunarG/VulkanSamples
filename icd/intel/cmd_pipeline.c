@@ -543,35 +543,6 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     dw[3] = dw3;
 }
 
-static int cmd_vs_max_threads(const struct intel_cmd *cmd)
-{
-    switch (cmd_gen(cmd)) {
-    case INTEL_GEN(7.5):
-        return (cmd->dev->gpu->gt >= 2) ? 280 : 70;
-    case INTEL_GEN(7):
-        return (cmd->dev->gpu->gt == 2) ? 128 : 36;
-    case INTEL_GEN(6):
-        return (cmd->dev->gpu->gt == 2) ? 60 : 24;
-    default:
-        return 1;
-    }
-}
-
-static int cmd_ps_max_threads(const struct intel_cmd *cmd)
-{
-    switch (cmd_gen(cmd)) {
-    case INTEL_GEN(7.5):
-        return (cmd->dev->gpu->gt == 3) ? 408 :
-               (cmd->dev->gpu->gt == 2) ? 204 : 102;
-    case INTEL_GEN(7):
-        return (cmd->dev->gpu->gt == 2) ? 172 : 48;
-    case INTEL_GEN(6):
-        return (cmd->dev->gpu->gt == 2) ? 80 : 40;
-    default:
-        return 4;
-    }
-}
-
 static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
@@ -592,7 +563,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
           0 << GEN6_WM_DW4_URB_GRF_START1__SHIFT |
           0 << GEN6_WM_DW4_URB_GRF_START2__SHIFT;
 
-    dw5 = (cmd_ps_max_threads(cmd) - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
+    dw5 = (fs->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
           GEN6_WM_DW5_PS_ENABLE |
           GEN6_WM_DW5_8_PIXEL_DISPATCH;
 
@@ -686,7 +657,6 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
-    const int max_threads = cmd_ps_max_threads(cmd);
     const uint8_t cmd_len = 8;
     uint32_t dw0, dw2, dw4, dw5, *dw;
 
@@ -701,10 +671,10 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
           GEN7_PS_DW4_8_PIXEL_DISPATCH;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
-        dw4 |= (max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
+        dw4 |= (fs->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
         dw4 |= msaa->cmd[msaa->cmd_len - 1] << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
     } else {
-        dw4 |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+        dw4 |= (fs->max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     }
 
     if (fs->in_count)
@@ -1748,7 +1718,6 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *vs = &pipeline->vs;
-    const int max_threads = cmd_vs_max_threads(cmd);
     const uint8_t cmd_len = 6;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
     uint32_t dw2, dw4, dw5, *dw;
@@ -1781,9 +1750,9 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
           GEN6_VS_DW5_VS_ENABLE;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5))
-        dw5 |= (max_threads - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
+        dw5 |= (vs->max_threads - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
     else
-        dw5 |= (max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
+        dw5 |= (vs->max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
 
     if (pipeline->disable_vs_cache)
         dw5 |= GEN6_VS_DW5_CACHE_DISABLE;
@@ -2373,7 +2342,6 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
     const struct intel_cmd_meta *meta = cmd->bind.meta;
     const struct intel_pipeline_shader *sh =
         intel_dev_get_meta_shader(cmd->dev, meta->shader_id);
-    const int max_threads = cmd_vs_max_threads(cmd);
     uint32_t offset, *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -2433,9 +2401,9 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
     dw[5] = GEN6_VS_DW5_CACHE_DISABLE |
             GEN6_VS_DW5_VS_ENABLE;
     if (cmd_gen(cmd) >= INTEL_GEN(7.5))
-        dw[5] |= (max_threads - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
+        dw[5] |= (sh->max_threads - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
     else
-        dw[5] |= (max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
+        dw[5] |= (sh->max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
 }
 
 static void gen6_meta_disabled(struct intel_cmd *cmd)
@@ -2668,7 +2636,6 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
     const struct intel_cmd_meta *meta = cmd->bind.meta;
     const struct intel_pipeline_shader *sh =
         intel_dev_get_meta_shader(cmd->dev, meta->shader_id);
-    const int max_threads = cmd_ps_max_threads(cmd);
     uint32_t offset, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
@@ -2689,7 +2656,7 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
         dw[2] = 0;
         dw[3] = 0;
         dw[4] = 0;
-        dw[5] = (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
+        dw[5] = (sh->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
         dw[6] = 0;
         dw[7] = 0;
         dw[8] = 0;
@@ -2719,7 +2686,7 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
              sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
     dw[3] = 0;
     dw[4] = sh->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT;
-    dw[5] = (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
+    dw[5] = (sh->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
             GEN6_WM_DW5_PS_ENABLE |
             GEN6_WM_DW5_16_PIXEL_DISPATCH;
 
@@ -2744,7 +2711,6 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     const struct intel_cmd_meta *meta = cmd->bind.meta;
     const struct intel_pipeline_shader *sh =
         intel_dev_get_meta_shader(cmd->dev, meta->shader_id);
-    const int max_threads = cmd_ps_max_threads(cmd);
     uint32_t offset, *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
@@ -2767,7 +2733,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
         dw[2] = 0;
         dw[3] = 0;
         dw[4] = GEN7_PS_DW4_8_PIXEL_DISPATCH | /* required to avoid hangs */
-                (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+                (sh->max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
         dw[5] = 0;
         dw[6] = 0;
         dw[7] = 0;
@@ -2812,10 +2778,10 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
             GEN7_PS_DW4_16_PIXEL_DISPATCH;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
-        dw[4] |= (max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
+        dw[4] |= (sh->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
         dw[4] |= ((1 << meta->samples) - 1) << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
     } else {
-        dw[4] |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+        dw[4] |= (sh->max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     }
 
     dw[5] = sh->urb_grf_start << GEN7_PS_DW5_URB_GRF_START0__SHIFT;

@@ -114,6 +114,9 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props);
 
+int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
+                              XGL_PIPELINE_SHADER_STAGE stage);
+
 void intel_gpu_associate_x11(struct intel_gpu *gpu,
                              struct intel_wsi_x11 *x11,
                              int fd);

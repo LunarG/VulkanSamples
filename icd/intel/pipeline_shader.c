@@ -427,6 +427,14 @@ static XGL_RESULT pipeline_build_cs(struct intel_pipeline *pipeline,
     return XGL_SUCCESS;
 }
 
+static void pipeline_post_build_shader(struct intel_pipeline *pipeline,
+                                       struct intel_pipeline_shader *sh,
+                                       const XGL_PIPELINE_SHADER *sh_info)
+{
+    sh->max_threads =
+        intel_gpu_get_max_threads(pipeline->dev->gpu, sh_info->stage);
+}
+
 XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
                                   const struct intel_pipeline_create_info *info)
 {
@@ -445,6 +453,19 @@ XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
 
     if (ret == XGL_SUCCESS && info->compute.cs.shader)
         ret = pipeline_build_cs(pipeline, info);
+
+    if (pipeline->active_shaders & SHADER_VERTEX_FLAG)
+        pipeline_post_build_shader(pipeline, &pipeline->vs, &info->vs);
+    if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG)
+        pipeline_post_build_shader(pipeline, &pipeline->tcs, &info->tcs);
+    if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG)
+        pipeline_post_build_shader(pipeline, &pipeline->tes, &info->tes);
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG)
+        pipeline_post_build_shader(pipeline, &pipeline->gs, &info->gs);
+    if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG)
+        pipeline_post_build_shader(pipeline, &pipeline->fs, &info->fs);
+    if (pipeline->active_shaders & SHADER_COMPUTE_FLAG)
+        pipeline_post_build_shader(pipeline, &pipeline->cs, &info->compute.cs);
 
     return ret;
 }
@@ -498,6 +519,19 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     if (ret != XGL_SUCCESS) {
         icd_free(sh);
         return NULL;
+    }
+
+    switch (id) {
+    case INTEL_DEV_META_VS_FILL_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM:
+    case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
+        sh->max_threads = intel_gpu_get_max_threads(dev->gpu,
+                XGL_SHADER_STAGE_VERTEX);
+        break;
+    default:
+        sh->max_threads = intel_gpu_get_max_threads(dev->gpu,
+                XGL_SHADER_STAGE_FRAGMENT);
+        break;
     }
 
     return sh;
