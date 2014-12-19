@@ -2111,7 +2111,7 @@ class Subcommand(object):
         cd_body.append('                {')
         cd_body.append('                    XGL_DEVICE_CREATE_INFO cInfo, *ci;')
         cd_body.append('                    // TODO what is the real list of layers to be running with??')
-        cd_body.append('                    const XGL_CHAR * layersStr[2] = {(XGL_CHAR *) "DrawState", (XGL_CHAR *) "MemTracker"};')
+        cd_body.append('                    const XGL_CHAR * layersStr[2] = {(XGL_CHAR *) "DrawState", (XGL_CHAR *) "ObjectTracker"};')
         cd_body.append('                    XGL_LAYER_CREATE_INFO layerInfo;')
         cd_body.append('                    ci = (XGL_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;')
         cd_body.append('                    while (ci->pNext != NULL)')

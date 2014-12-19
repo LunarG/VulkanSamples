@@ -52,12 +52,12 @@ static XGL_VOID xglErrorHandler(
             break;
         case XGL_DBG_MSG_WARNING:
         case XGL_DBG_MSG_PERF_WARNING:
-            glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
-                        validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            //glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
+            //            validationLevel, srcObject, location, msgCode, (char *) pMsg);
             break;
         default:
-            glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
-                        validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            //glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
+            //            validationLevel, srcObject, location, msgCode, (char *) pMsg);
             break;
     }
     glv_leave_critical_section(&g_handlerLock);
