@@ -543,12 +543,33 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     dw[3] = dw3;
 }
 
+static void gen6_add_scratch_space(struct intel_cmd *cmd,
+                                   XGL_UINT batch_pos,
+                                   const struct intel_pipeline *pipeline,
+                                   const struct intel_pipeline_shader *sh)
+{
+    int scratch_space;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    assert(sh->per_thread_scratch_size &&
+           sh->per_thread_scratch_size % 1024 == 0 &&
+           u_is_pow2(sh->per_thread_scratch_size) &&
+           sh->scratch_offset % 1024 == 0);
+    scratch_space = u_ffs(sh->per_thread_scratch_size) - 11;
+
+    cmd_reserve_reloc(cmd, 1);
+    cmd_batch_reloc(cmd, batch_pos, pipeline->obj.mem->bo,
+            sh->scratch_offset | scratch_space, INTEL_RELOC_WRITE);
+}
+
 static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 9;
+    XGL_UINT pos;
     uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
@@ -595,7 +616,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
                GEN6_WM_DW6_MSDISPMODE_PERSAMPLE;
     }
 
-    cmd_batch_pointer(cmd, cmd_len, &dw);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
     dw[1] = cmd->bind.pipeline.fs_offset;
     dw[2] = dw2;
@@ -605,6 +626,9 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     dw[6] = dw6;
     dw[7] = 0; /* kernel 1 */
     dw[8] = 0; /* kernel 2 */
+
+    if (fs->per_thread_scratch_size)
+        gen6_add_scratch_space(cmd, pos + 3, pipeline, fs);
 }
 
 static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
@@ -659,6 +683,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 8;
     uint32_t dw0, dw2, dw4, dw5, *dw;
+    XGL_UINT pos;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
@@ -687,7 +712,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
           0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
           0 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
 
-    cmd_batch_pointer(cmd, cmd_len, &dw);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
     dw[1] = cmd->bind.pipeline.fs_offset;
     dw[2] = dw2;
@@ -696,6 +721,9 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     dw[5] = dw5;
     dw[6] = 0; /* kernel 1 */
     dw[7] = 0; /* kernel 2 */
+
+    if (fs->per_thread_scratch_size)
+        gen6_add_scratch_space(cmd, pos + 3, pipeline, fs);
 }
 
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
@@ -1721,6 +1749,7 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     const uint8_t cmd_len = 6;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
     uint32_t dw2, dw4, dw5, *dw;
+    XGL_UINT pos;
     int vue_read_len;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -1757,13 +1786,16 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     if (pipeline->disable_vs_cache)
         dw5 |= GEN6_VS_DW5_CACHE_DISABLE;
 
-    cmd_batch_pointer(cmd, cmd_len, &dw);
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
     dw[1] = cmd->bind.pipeline.vs_offset;
     dw[2] = dw2;
     dw[3] = 0; /* scratch */
     dw[4] = dw4;
     dw[5] = dw5;
+
+    if (vs->per_thread_scratch_size)
+        gen6_add_scratch_space(cmd, pos + 3, pipeline, vs);
 }
 
 static void emit_shader_resources(struct intel_cmd *cmd)
@@ -2394,7 +2426,7 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
     dw[2] = GEN6_THREADDISP_SPF |
             (sh->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
              sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
-    dw[3] = 0;
+    dw[3] = 0; /* scratch */
     dw[4] = sh->urb_grf_start << GEN6_VS_DW4_URB_GRF_START__SHIFT |
             1 << GEN6_VS_DW4_URB_READ_LEN__SHIFT;
 
@@ -2404,6 +2436,8 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
         dw[5] |= (sh->max_threads - 1) << GEN75_VS_DW5_MAX_THREADS__SHIFT;
     else
         dw[5] |= (sh->max_threads - 1) << GEN6_VS_DW5_MAX_THREADS__SHIFT;
+
+    assert(!sh->per_thread_scratch_size);
 }
 
 static void gen6_meta_disabled(struct intel_cmd *cmd)
@@ -2684,7 +2718,7 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
     dw[1] = offset;
     dw[2] = (sh->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
              sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
-    dw[3] = 0;
+    dw[3] = 0; /* scratch */
     dw[4] = sh->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT;
     dw[5] = (sh->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
             GEN6_WM_DW5_PS_ENABLE |
@@ -2704,6 +2738,8 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
     }
     dw[7] = 0;
     dw[8] = 0;
+
+    assert(!sh->per_thread_scratch_size);
 }
 
 static void gen7_meta_ps(struct intel_cmd *cmd)
@@ -2771,7 +2807,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     dw[1] = offset;
     dw[2] = (sh->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
              sh->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
-    dw[3] = 0;
+    dw[3] = 0; /* scratch */
 
     dw[4] = GEN7_PS_DW4_PUSH_CONSTANT_ENABLE |
             GEN7_PS_DW4_POSOFFSET_NONE |
@@ -2787,6 +2823,8 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     dw[5] = sh->urb_grf_start << GEN7_PS_DW5_URB_GRF_START0__SHIFT;
     dw[6] = 0;
     dw[7] = 0;
+
+    assert(!sh->per_thread_scratch_size);
 }
 
 static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
