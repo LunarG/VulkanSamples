@@ -376,28 +376,27 @@ static XGL_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
 {
     format.numericFormat = XGL_NUM_FMT_UINT;
 
-    if (icd_format_is_compressed(format)) {
-        switch (icd_format_get_size(format)) {
-        case 1:
-            format.channelFormat = XGL_CH_FMT_R8;
-            break;
-        case 2:
-            format.channelFormat = XGL_CH_FMT_R16;
-            break;
-        case 4:
-            format.channelFormat = XGL_CH_FMT_R32;
-            break;
-        case 8:
-            format.channelFormat = XGL_CH_FMT_R32G32;
-            break;
-        case 16:
-            format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-            break;
-        default:
-            assert(!"unsupported compressed block size");
-            format.channelFormat = XGL_CH_FMT_R8;
-            break;
-        }
+    switch (icd_format_get_size(format)) {
+    case 1:
+        format.channelFormat = XGL_CH_FMT_R8;
+        break;
+    case 2:
+        format.channelFormat = XGL_CH_FMT_R16;
+        break;
+    case 4:
+        format.channelFormat = XGL_CH_FMT_R32;
+        break;
+    case 8:
+        format.channelFormat = XGL_CH_FMT_R32G32;
+        break;
+    case 16:
+        format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        break;
+    default:
+        assert(!"unsupported image format for raw blit op");
+        format.channelFormat = XGL_CH_FMT_UNDEFINED;
+        format.numericFormat = XGL_NUM_FMT_UNDEFINED;
+        break;
     }
 
     return format;
@@ -864,11 +863,7 @@ XGL_VOID XGLAPI intelCmdClearColorImageRaw(
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
     meta.samples = img->samples;
 
-    meta.clear_val[0] = color[0];
-    meta.clear_val[1] = color[1];
-    meta.clear_val[2] = color[2];
-    meta.clear_val[3] = color[3];
-
+    icd_format_get_raw_value(img->layout.format, color, meta.clear_val);
     format = cmd_meta_img_raw_format(cmd, img->layout.format);
 
     for (i = 0; i < rangeCount; i++)
