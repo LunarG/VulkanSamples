@@ -1528,10 +1528,7 @@ TEST_F(XglCmdCopyMemoryToImageTest, Basic)
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         // known driver issues
-        if (it->format.channelFormat == XGL_CH_FMT_B5G6R5 ||
-            it->format.channelFormat == XGL_CH_FMT_B8G8R8A8 ||
-            it->format.channelFormat == XGL_CH_FMT_R11G11B10 ||
-            it->tiling != XGL_LINEAR_TILING)
+        if (it->tiling != XGL_LINEAR_TILING)
             continue;
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
@@ -1607,10 +1604,7 @@ TEST_F(XglCmdCopyImageTest, Basic)
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         // known driver issues
-        if (it->format.channelFormat == XGL_CH_FMT_B5G6R5 ||
-            it->format.channelFormat == XGL_CH_FMT_B8G8R8A8 ||
-            it->format.channelFormat == XGL_CH_FMT_R11G11B10 ||
-            it->tiling != XGL_LINEAR_TILING)
+        if (it->tiling != XGL_LINEAR_TILING)
             continue;
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
