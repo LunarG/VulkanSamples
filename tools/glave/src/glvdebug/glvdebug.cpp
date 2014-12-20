@@ -43,6 +43,7 @@
 
 #include "glvdebug_controller_factory.h"
 #include "glvdebug_qgeneratetracedialog.h"
+#include "glvdebug_qsettingsdialog.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // globals
@@ -372,13 +373,13 @@ void glvdebug::on_actionExport_API_Calls_triggered()
 
 void glvdebug::on_actionEdit_triggered()
 {
-    //glvdebug_QSettingsDialog dialog(this);
-    //int code = dialog.exec();
+    glvdebug_QSettingsDialog dialog(this);
+    dialog.exec();
 
-    //if (code == QDialog::Accepted)
-    //{
-    //    dialog.save(g_SETTINGS_FILE);
-    //}
+//    if (code == QDialog::Accepted)
+//    {
+//        dialog.save(g_SETTINGS_FILE);
+//    }
 }
 
 bool glvdebug::pre_open_trace_file(const QString& filename)

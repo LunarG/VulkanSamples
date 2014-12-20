@@ -108,6 +108,44 @@ BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg)
 }
 
 // ------------------------------------------------------------------------------------------------
+char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting)
+{
+    switch(pSetting->type)
+    {
+    case GLV_SETTING_STRING:
+        {
+            return glv_allocate_and_copy(*((char**)pSetting->pType_data));
+        }
+        break;
+    case GLV_SETTING_BOOL:
+        {
+            return (*(BOOL*)pSetting->pType_data ? glv_allocate_and_copy("TRUE") : glv_allocate_and_copy("FALSE"));
+        }
+        break;
+    case GLV_SETTING_UINT:
+        {
+            char value[100];
+            memset(value, 0, 100);
+            sprintf(value, "%u", *(unsigned int*)pSetting->pType_data);
+            return glv_allocate_and_copy(value);
+        }
+        break;
+    case GLV_SETTING_INT:
+        {
+            char value[100];
+            memset(value, 0, 100);
+            sprintf(value, "%d", *(int*)pSetting->pType_data);
+            return glv_allocate_and_copy(value);
+        }
+        break;
+    default:
+        assert(!"Unhandled setting type");
+        break;
+    }
+    return glv_allocate_and_copy("<unhandled setting type>");
+}
+
+// ------------------------------------------------------------------------------------------------
 void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting)
 {
     assert(pSetting != NULL);
@@ -245,6 +283,51 @@ int glv_SettingInfo_init_from_file(glv_SettingInfo* pSettings, unsigned int num_
                     break;
                 }
             }
+        }
+
+        fclose(pFile);
+    }
+
+    return retVal;
+}
+
+BOOL glv_SettingInfo_save(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, char *pRemaining_args)
+{
+    FILE* pFile = NULL;
+    BOOL retVal = TRUE;
+
+    if (settingsfile == NULL)
+    {
+        glv_LogError("Cannot save an unnamed settings file\n");
+        retVal = FALSE;
+    }
+    else
+    {
+        pFile = fopen(settingsfile, "w");
+    }
+
+    if (pFile == NULL)
+    {
+        glv_LogWarn("Settings file could not be opened for writing: '%s'.\n", settingsfile);
+    }
+    else
+    {
+        unsigned int index;
+        for (index = 0; index < num_settings; index++)
+        {
+            char* value = NULL;
+            fputs(pSettings[index].pLongName, pFile);
+            fputs(" = ", pFile);
+            value = glv_SettingInfo_stringify_value(&pSettings[index]);
+            fputs(value, pFile);
+            glv_free(value);
+            fputs("\n", pFile);
+        }
+
+        if (pRemaining_args != NULL)
+        {
+            fputs("-- ", pFile);
+            fputs(pRemaining_args, pFile);
         }
 
         fclose(pFile);

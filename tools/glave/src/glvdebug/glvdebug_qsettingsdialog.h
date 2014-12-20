@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2014 Valve Software
+ * Copyright 2013-2014 Valve Software
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,33 +22,28 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#pragma once
+#ifndef _GLVDEBUG_QSETTINGSDIALOG_H_
+#define _GLVDEBUG_QSETTINGSDIALOG_H_
 
-#include "glv_common.h"
+#include <QDialog>
 
-typedef enum GLV_SETTING_TYPE
+class glvdebug_QSettingsDialog : public QDialog
 {
-    GLV_SETTING_STRING,
-    GLV_SETTING_BOOL,
-    GLV_SETTING_UINT,
-    GLV_SETTING_INT
-} GLV_SETTING_TYPE;
+    Q_OBJECT
 
-// ------------------------------------------------------------------------------------------------
-typedef struct glv_SettingInfo
-{
-    const char* const pShortName;
-    const char* const pLongName;
-    GLV_SETTING_TYPE type;
-    void* pType_data;
-    const void * const pType_default;
-    BOOL bPrintInHelp;
-    const char* pDesc;
-} glv_SettingInfo;
+public:
+    explicit glvdebug_QSettingsDialog(QWidget *parent = 0);
+    ~glvdebug_QSettingsDialog();
 
-int glv_SettingInfo_init(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, int argc, char* argv[], char** ppOut_remaining_args);
-BOOL glv_SettingInfo_save(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, char* pRemaining_args);
-void glv_SettingInfo_delete(glv_SettingInfo* pSettings, unsigned int num_settings);
+    void save();
 
-void glv_SettingInfo_print_all(const glv_SettingInfo* pSettings, unsigned int num_settings);
-void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting);
+signals:
+    void SaveSettings();
+
+private
+slots:
+    void acceptCB();
+    void cancelCB();
+};
+
+#endif // _GLVDEBUG_QSETTINGSDIALOG_H_
