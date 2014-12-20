@@ -208,7 +208,7 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         //}
 
         // draw current api call marker
-        if (c == m_curApiCallNumber)
+        if ((unsigned long long)c == m_curApiCallNumber)
         {
             bFoundApiCall = drawCurrentApiCallMarker(painter, triangle, pChild);
         }
