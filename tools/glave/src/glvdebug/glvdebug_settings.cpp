@@ -1,6 +1,8 @@
 #include "glvdebug_settings.h"
 #include <assert.h>
 
+#include <QCoreApplication>
+
 extern "C" {
 #include "glv_settings.h"
 }
@@ -47,8 +49,10 @@ bool initialize_settings(int argc, char* argv[])
 
     g_settings = s_default_settings;
 
+    QString settingsFilePath = QCoreApplication::applicationDirPath() + "/" + QString(s_SETTINGS_FILE);
+
     // apply settings from settings file and from cmd-line args
-    if (glv_SettingInfo_init(g_settings_info, num_settings, s_SETTINGS_FILE, argc, argv, &g_settings.trace_file_to_open) != 0)
+    if (glv_SettingInfo_init(g_settings_info, num_settings, settingsFilePath.toStdString().c_str(), argc, argv, &g_settings.trace_file_to_open) != 0)
     {
         // invalid options specified
         bSuccess = false;

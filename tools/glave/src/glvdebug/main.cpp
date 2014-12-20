@@ -30,13 +30,14 @@
 
 int main(int argc, char *argv[])
 {
+    // Initialize QApplication before initializing settings
+    QApplication a(argc, argv);
+
     // initialize settings
     if (initialize_settings(argc, argv) == false)
     {
         return -1;
     }
-
-    QApplication a(argc, argv);
 
     glvdebug w;
     w.show();
