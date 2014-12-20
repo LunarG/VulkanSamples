@@ -144,6 +144,31 @@ protected:
       insts.push_tail(new (mem_ctx) fs_inst(BRW_OPCODE_MUL, dst, src1, src2));
    }
 
+   inline void emit_mul_8(const struct brw_reg& dst,
+                          const struct brw_reg& src1,
+                          const struct brw_reg& src2)
+   {
+      fs_inst *mul = new (mem_ctx) fs_inst(BRW_OPCODE_MUL, dst, src1, src2);
+      mul->force_uncompressed = true;
+      insts.push_tail(mul);
+   }
+
+   inline void emit_idiv(const struct brw_reg& dst,
+                         const struct brw_reg& src1,
+                         const struct brw_reg& src2)
+   {
+      fs_inst *idiv = new (mem_ctx) fs_inst(SHADER_OPCODE_INT_QUOTIENT, dst, src1, src2);
+      insts.push_tail(idiv);
+   }
+
+   inline void emit_irem(const struct brw_reg& dst,
+                         const struct brw_reg& src1,
+                         const struct brw_reg& src2)
+   {
+      fs_inst *irem = new (mem_ctx) fs_inst(SHADER_OPCODE_INT_REMAINDER, dst, src1, src2);
+      insts.push_tail(irem);
+   }
+
    inline void emit_shr(const struct brw_reg& dst,
                         const struct brw_reg& src1,
                         const struct brw_reg& src2)

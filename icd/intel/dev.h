@@ -59,6 +59,21 @@ enum intel_dev_meta_shader {
     INTEL_DEV_META_VS_COPY_MEM_UNALIGNED,
 
     /*
+     * This expects an ivec4 to be pushed:
+     *
+     *  .xy is added to fargment coord to form (u, v)
+     *  .z is extent width
+     *  .w is dst memory offset
+     *
+     * as well as GEN6_VFCOMP_STORE_VID.
+     */
+    INTEL_DEV_META_VS_COPY_R8_TO_MEM,
+    INTEL_DEV_META_VS_COPY_R16_TO_MEM,
+    INTEL_DEV_META_VS_COPY_R32_TO_MEM,
+    INTEL_DEV_META_VS_COPY_R32G32_TO_MEM,
+    INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM,
+
+    /*
      * These expect an ivec4 to be pushed:
      *
      *  .xy is added to fragment coord to form (u, v)

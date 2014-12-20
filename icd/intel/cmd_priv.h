@@ -79,8 +79,8 @@ struct intel_ds_view;
 
 enum intel_cmd_meta_mode {
     /*
-     * Draw POINTLIST of (width - 1) vertices with only VS enabled.  The
-     * vertex id is from 0 to (width - 1).
+     * Draw POINTLIST of (width * height) vertices with only VS enabled.  The
+     * vertex id is from 0 to (width * height - 1).
      */
     INTEL_CMD_META_VS_POINTS,
 

@@ -2357,6 +2357,17 @@ static uint32_t gen6_meta_vs_constants(struct intel_cmd *cmd)
         consts[1] = meta->src.x;
         const_count = 2;
         break;
+    case INTEL_DEV_META_VS_COPY_R8_TO_MEM:
+    case INTEL_DEV_META_VS_COPY_R16_TO_MEM:
+    case INTEL_DEV_META_VS_COPY_R32_TO_MEM:
+    case INTEL_DEV_META_VS_COPY_R32G32_TO_MEM:
+    case INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM:
+        consts[0] = meta->src.x;
+        consts[1] = meta->src.y;
+        consts[2] = meta->width;
+        consts[3] = meta->dst.x;
+        const_count = 4;
+        break;
     default:
         assert(!"unknown meta shader id");
         const_count = 0;
@@ -3073,7 +3084,7 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
 
         if (meta->mode == INTEL_CMD_META_VS_POINTS) {
             gen7_3DPRIMITIVE(cmd, GEN6_3DPRIM_POINTLIST, false,
-                    meta->width, 0, 1, 0, 0);
+                    meta->width * meta->height, 0, 1, 0, 0);
         } else {
             gen7_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
         }
@@ -3089,7 +3100,7 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
 
         if (meta->mode == INTEL_CMD_META_VS_POINTS) {
             gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_POINTLIST, false,
-                    meta->width, 0, 1, 0, 0);
+                    meta->width * meta->height, 0, 1, 0, 0);
         } else {
             gen6_3DPRIMITIVE(cmd, GEN6_3DPRIM_RECTLIST, false, 3, 0, 1, 0, 0);
         }
