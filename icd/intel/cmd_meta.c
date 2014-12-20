@@ -608,25 +608,61 @@ XGL_VOID XGLAPI intelCmdCopyImageToMemory(
     struct intel_img *img = intel_img(srcImage);
     struct intel_mem *mem = intel_mem(destMem);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    XGL_FORMAT img_format, mem_format;
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
-    meta.mode = INTEL_CMD_META_FS_RECT;
+    meta.mode = INTEL_CMD_META_VS_POINTS;
 
-    format = cmd_meta_img_raw_format(cmd, img->layout.format);
-    cmd_meta_set_src_for_img(cmd, img, format, XGL_IMAGE_ASPECT_COLOR, &meta);
-    cmd_meta_set_dst_for_mem(cmd, mem, format, &meta);
+    img_format = cmd_meta_img_raw_format(cmd, img->layout.format);
+    mem_format.numericFormat = XGL_NUM_FMT_UINT;
 
-    meta.height = 1;
+    /* mem_format is ignored by hw, but we derive stride from it */
+    switch (img_format.channelFormat) {
+    case XGL_CH_FMT_R8:
+        meta.shader_id = INTEL_DEV_META_VS_COPY_R8_TO_MEM;
+        mem_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+        break;
+    case XGL_CH_FMT_R16:
+        meta.shader_id = INTEL_DEV_META_VS_COPY_R16_TO_MEM;
+        mem_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+        break;
+    case XGL_CH_FMT_R32:
+        meta.shader_id = INTEL_DEV_META_VS_COPY_R32_TO_MEM;
+        mem_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        break;
+    case XGL_CH_FMT_R32G32:
+        meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32_TO_MEM;
+        mem_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        break;
+    case XGL_CH_FMT_R32G32B32A32:
+        meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM;
+        mem_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        break;
+    default:
+        break;
+    }
+
+    if (img_format.channelFormat == XGL_CH_FMT_UNDEFINED ||
+        (cmd_gen(cmd) == INTEL_GEN(6) &&
+         icd_format_get_size(img_format) < 4)) {
+        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                "xglCmdCopyImageToMemory with bpp %d unsupported",
+                icd_format_get_size(img->layout.format));
+        cmd->result = XGL_ERROR_UNKNOWN;
+        return;
+    }
+
+    cmd_meta_set_src_for_img(cmd, img, img_format,
+            XGL_IMAGE_ASPECT_COLOR, &meta);
+    cmd_meta_set_dst_for_mem(cmd, mem, mem_format, &meta);
+
     meta.samples = 1;
 
     for (i = 0; i < regionCount; i++) {
         const XGL_MEMORY_IMAGE_COPY *region = &pRegions[i];
         XGL_UINT j;
-
-        meta.shader_id = get_shader_id(cmd->dev, img,
-                (region->imageExtent.depth > 1));
 
         meta.src.lod = region->imageSubresource.mipLevel;
         meta.src.layer = region->imageSubresource.arraySlice +
@@ -634,15 +670,15 @@ XGL_VOID XGLAPI intelCmdCopyImageToMemory(
         meta.src.x = region->imageOffset.x;
         meta.src.y = region->imageOffset.y;
 
-        meta.dst.x = region->memOffset / icd_format_get_size(format);
-
-        meta.width = region->imageExtent.width * region->imageExtent.height;
+        meta.dst.x = region->memOffset / icd_format_get_size(img_format);
+        meta.width = region->imageExtent.width;
+        meta.height = region->imageExtent.height;
 
         for (j = 0; j < region->imageExtent.depth; j++) {
             cmd_draw_meta(cmd, &meta);
 
             meta.src.layer++;
-            meta.dst.x += meta.width;
+            meta.dst.x += meta.width * meta.height;
         }
     }
 }
