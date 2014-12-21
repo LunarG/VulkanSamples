@@ -923,8 +923,10 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<
 void ImageChecker::set_solid_pattern(const std::vector<uint8_t> &solid)
 {
     pattern_ = SOLID;
-    pattern_solid_ = solid;
-    pattern_solid_.resize(buffer_cpp());
+    pattern_solid_.clear();
+    pattern_solid_.reserve(buffer_cpp());
+    for (int i = 0; i < buffer_cpp(); i++)
+        pattern_solid_.push_back(solid[i % solid.size()]);
 }
 
 XGL_SIZE ImageChecker::buffer_cpp() const
@@ -1049,8 +1051,10 @@ std::vector<uint8_t> ImageChecker::pattern_hash(const XGL_IMAGE_SUBRESOURCE &sub
 #undef HASH_BYTES
 #undef HASH_BYTE
 
-    std::vector<uint8_t> val(output, output + ARRAY_SIZE(output));
-    val.resize(buffer_cpp());
+    std::vector<uint8_t> val;
+    val.reserve(buffer_cpp());
+    for (int i = 0; i < buffer_cpp(); i++)
+        val.push_back(output[i % 4]);
 
     return val;
 }
