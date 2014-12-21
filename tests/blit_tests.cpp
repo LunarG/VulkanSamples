@@ -1527,10 +1527,6 @@ TEST_F(XglCmdCopyMemoryToImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
-        // known driver issues
-        if (it->tiling != XGL_LINEAR_TILING)
-            continue;
-
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
         img_info.imageType = XGL_IMAGE_2D;
         img_info.format = it->format;
@@ -1662,10 +1658,6 @@ TEST_F(XglCmdCopyImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
-        // known driver issues
-        if (it->tiling != XGL_LINEAR_TILING)
-            continue;
-
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
         img_info.imageType = XGL_IMAGE_2D;
         img_info.format = it->format;
@@ -1765,10 +1757,6 @@ TEST_F(XglCmdClearColorImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
-        // known driver issues
-        if (it->tiling != XGL_LINEAR_TILING)
-            continue;
-
         const XGL_FLOAT color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
