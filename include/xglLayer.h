@@ -156,5 +156,22 @@ typedef struct _XGL_LAYER_DBG_FUNCTION_NODE
     struct _XGL_LAYER_DBG_FUNCTION_NODE *pNext;
 } XGL_LAYER_DBG_FUNCTION_NODE;
 
+typedef enum _XGL_LAYER_DBG_ACTION
+{
+    XGL_DBG_LAYER_ACTION_IGNORE = 0x0,
+    XGL_DBG_LAYER_ACTION_CALLBACK = 0x1,
+    XGL_DBG_LAYER_ACTION_LOG_MSG = 0x2,
+    XGL_DBG_LAYER_ACTION_BREAK = 0x4
+} XGL_LAYER_DBG_ACTION;
+
+typedef enum _XGL_LAYER_DBG_REPORT_LEVEL
+{
+
+    XGL_DBG_LAYER_LEVEL_INFO = 0,
+    XGL_DBG_LAYER_LEVEL_WARN,
+    XGL_DBG_LAYER_LEVEL_PERF_WARN,
+    XGL_DBG_LAYER_LEVEL_ERROR,
+    XGL_DBG_LAYER_LEVEL_NONE,
+} XGL_LAYER_DBG_REPORT_LEVEL;
 // ------------------------------------------------------------------------------------------------
 // API functions
