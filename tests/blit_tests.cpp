@@ -1843,6 +1843,47 @@ TEST_F(XglCmdClearColorImageTest, Basic)
     }
 }
 
+class XglCmdClearColorImageRawTest : public XglCmdClearColorImageTest {
+protected:
+    XglCmdClearColorImageRawTest() : XglCmdClearColorImageTest(true) {}
+
+    void test_clear_color_image_raw(const XGL_IMAGE_CREATE_INFO &img_info,
+                                    const XGL_UINT32 color[4],
+                                    const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
+    {
+        Color c;
+        memcpy(c.raw, color, sizeof(c.raw));
+        test_clear_color_image(img_info, c, ranges);
+    }
+};
+
+TEST_F(XglCmdClearColorImageRawTest, Basic)
+{
+    for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
+         it != test_formats_.end(); it++) {
+        const XGL_UINT32 color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
+
+        // not sure what to do here
+        if (it->format.channelFormat == XGL_CH_FMT_UNDEFINED ||
+            it->format.channelFormat == XGL_CH_FMT_R32G32B32 ||
+            it->format.numericFormat == XGL_NUM_FMT_DS)
+            continue;
+
+        XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
+        img_info.imageType = XGL_IMAGE_2D;
+        img_info.format = it->format;
+        img_info.extent.width = 64;
+        img_info.extent.height = 64;
+        img_info.tiling = it->tiling;
+
+        const XGL_IMAGE_SUBRESOURCE_RANGE range =
+            xgl_testing::Image::subresource_range(XGL_IMAGE_ASPECT_COLOR, img_info);
+        std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
+
+        test_clear_color_image_raw(img_info, color, ranges);
+    }
+}
+
 class XglCmdClearDepthStencilTest : public XglCmdBlitImageTest {
 protected:
     virtual void SetUp()
