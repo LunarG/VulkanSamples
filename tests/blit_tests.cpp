@@ -1423,6 +1423,11 @@ protected:
         }
     }
 
+    void init_test_formats()
+    {
+        init_test_formats(static_cast<XGL_FLAGS>(-1));
+    }
+
     void fill_src(xgl_testing::Image &img, const xgl_testing::ImageChecker &checker)
     {
         if (img.transparent()) {
@@ -1676,12 +1681,27 @@ TEST_F(XglCmdCopyImageTest, Basic)
 
 class XglCmdClearColorImageTest : public XglCmdBlitImageTest {
 protected:
+    XglCmdClearColorImageTest() : test_raw_(false) {}
+    XglCmdClearColorImageTest(bool test_raw) : test_raw_(test_raw) {}
+
     virtual void SetUp()
     {
         XglCmdBlitTest::SetUp();
-        init_test_formats(XGL_FORMAT_CONVERSION_BIT);
+
+        if (test_raw_)
+            init_test_formats();
+        else
+            init_test_formats(XGL_FORMAT_CONVERSION_BIT);
+
         ASSERT_NE(true, test_formats_.empty());
     }
+
+    union Color {
+        XGL_FLOAT color[4];
+        XGL_UINT32 raw[4];
+    };
+
+    bool test_raw_;
 
     std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const XGL_FLOAT color[4])
     {
@@ -1710,8 +1730,43 @@ protected:
         return raw;
     }
 
+    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const XGL_UINT32 color[4])
+    {
+        std::vector<uint8_t> raw;
+
+        // TODO support all formats
+        if (format.numericFormat == XGL_NUM_FMT_UNORM) {
+            switch (format.channelFormat) {
+            case XGL_CH_FMT_R8G8B8A8:
+                raw.push_back(static_cast<uint8_t>(color[0]));
+                raw.push_back(static_cast<uint8_t>(color[1]));
+                raw.push_back(static_cast<uint8_t>(color[2]));
+                raw.push_back(static_cast<uint8_t>(color[3]));
+                break;
+            case XGL_CH_FMT_B8G8R8A8:
+                raw.push_back(static_cast<uint8_t>(color[2]));
+                raw.push_back(static_cast<uint8_t>(color[1]));
+                raw.push_back(static_cast<uint8_t>(color[0]));
+                raw.push_back(static_cast<uint8_t>(color[3]));
+                break;
+            default:
+                break;
+            }
+        }
+
+        return raw;
+    }
+
+    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const Color &color)
+    {
+        if (test_raw_)
+            return color_to_raw(format, color.raw);
+        else
+            return color_to_raw(format, color.color);
+    }
+
     void test_clear_color_image(const XGL_IMAGE_CREATE_INFO &img_info,
-                                const XGL_FLOAT color[4],
+                                const Color &color,
                                 const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
         xgl_testing::Image img;
@@ -1731,9 +1786,14 @@ protected:
         }
 
         cmd_.begin();
+
         xglCmdPrepareImages(cmd_.obj(), to_clear.size(), &to_clear[0]);
-        xglCmdClearColorImage(cmd_.obj(), img.obj(), color, ranges.size(), &ranges[0]);
+        if (test_raw_)
+            xglCmdClearColorImageRaw(cmd_.obj(), img.obj(), color.raw, ranges.size(), &ranges[0]);
+        else
+            xglCmdClearColorImage(cmd_.obj(), img.obj(), color.color, ranges.size(), &ranges[0]);
         xglCmdPrepareImages(cmd_.obj(), to_xfer.size(), &to_xfer[0]);
+
         cmd_.end();
 
         submit_and_done();
@@ -1750,6 +1810,15 @@ protected:
 
         checker.set_solid_pattern(solid_pattern);
         check_dst(img, checker);
+    }
+
+    void test_clear_color_image(const XGL_IMAGE_CREATE_INFO &img_info,
+                                const XGL_FLOAT color[4],
+                                const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
+    {
+        Color c;
+        memcpy(c.color, color, sizeof(c.color));
+        test_clear_color_image(img_info, c, ranges);
     }
 };
 
