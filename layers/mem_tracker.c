@@ -29,14 +29,19 @@
 #include <pthread.h>
 #include "xgl_struct_string_helper.h"
 #include "mem_tracker.h"
+#include "layers_config.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
-static pthread_once_t tabOnce = PTHREAD_ONCE_INIT;
+static pthread_once_t g_initOnce = PTHREAD_ONCE_INIT;
+
 // Ptr to LL of dbg functions
-static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;
+static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
+static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_ERROR;
+static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
+static FILE *g_logFile = NULL;
+
 // Utility function to handle reporting
-//  If callbacks are enabled, use them, otherwise use printf
 static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     XGL_VALIDATION_LEVEL validationLevel,
     XGL_BASE_OBJECT      srcObject,
@@ -45,26 +50,52 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     const char*          pLayerPrefix,
     const char*          pMsg)
 {
-    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
-    if (pTrav) {
-        while (pTrav) {
-            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-            pTrav = pTrav->pNext;
-        }
-    }
-    else {
-        switch (msgType) {
+    if (g_debugAction & (XGL_DBG_LAYER_ACTION_LOG_MSG | XGL_DBG_LAYER_ACTION_CALLBACK)) {
+         XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
+         switch (msgType) {
             case XGL_DBG_MSG_ERROR:
-                printf("{%s}ERROR : %s\n", pLayerPrefix, pMsg);
+                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_ERROR) {
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+                        fprintf(g_logFile, "{%s}ERROR : %s\n", pLayerPrefix, pMsg);
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                        while (pTrav) {
+                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
+                            pTrav = pTrav->pNext;
+                        }
+                }
                 break;
             case XGL_DBG_MSG_WARNING:
-                printf("{%s}WARN : %s\n", pLayerPrefix, pMsg);
+                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_WARN) {
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+                        fprintf(g_logFile, "{%s}WARN : %s\n", pLayerPrefix, pMsg);
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                        while (pTrav) {
+                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
+                            pTrav = pTrav->pNext;
+                        }
+                }
                 break;
             case XGL_DBG_MSG_PERF_WARNING:
-                printf("{%s}PERF_WARN : %s\n", pLayerPrefix, pMsg);
+                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_PERF_WARN) {
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+                        fprintf(g_logFile, "{%s}PERF_WARN : %s\n", pLayerPrefix, pMsg);
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                        while (pTrav) {
+                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
+                            pTrav = pTrav->pNext;
+                        }
+                }
                 break;
             default:
-                printf("{%s}INFO : %s\n", pLayerPrefix, pMsg);
+                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_INFO) {
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+                        fprintf(g_logFile, "{%s}INFO : %s\n", pLayerPrefix, pMsg);
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                        while (pTrav) {
+                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
+                            pTrav = pTrav->pNext;
+                        }
+                }
                 break;
         }
     }
@@ -798,8 +829,30 @@ static XGL_FENCE createLocalFence()
     return fence;
 }
 
-static void initLayerTable()
+static void initMemTracker()
 {
+    const char *strOpt;
+    // initialize MemTracker options
+    strOpt = getLayerOption("MemTrackerReportLevel");
+    if (strOpt != NULL)
+        g_reportingLevel = atoi(strOpt);
+    strOpt = getLayerOption("MemTrackerDebugAction");
+    if (strOpt != NULL)
+       g_debugAction = atoi(strOpt);
+    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+    {
+        strOpt = getLayerOption("MemTrackerLogFilename");
+        if (strOpt)
+        {
+            g_logFile = fopen(strOpt, "w");
+
+        }
+        if (g_logFile == NULL)
+            g_logFile = stdout;
+    }
+
+    // initialize Layer dispatch table
+    // TODO handle multiple GPUs
     GetProcAddrType fpNextGPA;
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
@@ -1051,7 +1104,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
     return result;
 }
@@ -1060,7 +1113,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     // Save off device in case we need it to create Fences
     globalDevice = *pDevice;
@@ -1094,7 +1147,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
     return result;
 }
@@ -1105,7 +1158,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
     {
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
         pCurObj = gpuw;
-        pthread_once(&tabOnce, initLayerTable);
+        pthread_once(&g_initOnce, initMemTracker);
         XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
         return result;
     } else
@@ -1253,7 +1306,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
     return result;
 }
@@ -1961,21 +2014,21 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBAC
         return XGL_ERROR_OUT_OF_MEMORY;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
     pNewDbgFuncNode->pUserData = pUserData;
-    pNewDbgFuncNode->pNext = pDbgFunctionHead;
-    pDbgFunctionHead = pNewDbgFuncNode;
+    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
+    g_pDbgFunctionHead = pNewDbgFuncNode;
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
+    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
     XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
     while (pTrav) {
         if (pTrav->pfnMsgCallback == pfnMsgCallback) {
             pPrev->pNext = pTrav->pNext;
-            if (pDbgFunctionHead == pTrav)
-                pDbgFunctionHead = pTrav->pNext;
+            if (g_pDbgFunctionHead == pTrav)
+                g_pDbgFunctionHead = pTrav->pNext;
             free(pTrav);
             break;
         }
@@ -2024,7 +2077,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
     return result;
 }
@@ -2062,7 +2115,7 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
     if (gpu == NULL)
         return NULL;
     pCurObj = gpuw;
-    pthread_once(&tabOnce, initLayerTable);
+    pthread_once(&g_initOnce, initMemTracker);
 
     if (!strncmp("xglGetProcAddr", funcName, sizeof("xglGetProcAddr")))
         return xglGetProcAddr;
