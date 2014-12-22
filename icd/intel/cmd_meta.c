@@ -690,24 +690,17 @@ XGL_VOID XGLAPI intelCmdCloneImageData(
     XGL_IMAGE                                   destImage,
     XGL_IMAGE_STATE                             destImageState)
 {
-    const struct intel_img *src = intel_img(srcImage);
-    XGL_IMAGE_COPY region;
-    XGL_UINT lv;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_img *src = intel_img(srcImage);
+    struct intel_img *dst = intel_img(destImage);
+    XGL_MEMORY_COPY region;
 
     memset(&region, 0, sizeof(region));
-    region.srcSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
-    region.destSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
+    region.copySize = src->obj.mem->size;
 
-    for (lv = 0; lv < src->mip_levels; lv++) {
-        region.srcSubresource.mipLevel = lv;
-        region.destSubresource.mipLevel = lv;
-
-        region.extent.width = u_minify(src->layout.width0, lv);
-        region.extent.height = u_minify(src->layout.height0, lv);
-        region.extent.depth = src->array_size;
-
-        intelCmdCopyImage(cmdBuffer, srcImage, destImage, 1, &region);
-    }
+    cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH);
+    intelCmdCopyMemory(cmdBuffer, (XGL_GPU_MEMORY) src->obj.mem,
+            (XGL_GPU_MEMORY) dst->obj.mem, 1, &region);
 }
 
 XGL_VOID XGLAPI intelCmdUpdateMemory(
