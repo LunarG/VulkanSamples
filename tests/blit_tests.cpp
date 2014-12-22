@@ -1679,6 +1679,73 @@ TEST_F(XglCmdCopyImageTest, Basic)
     }
 }
 
+class XglCmdCloneImageDataTest : public XglCmdBlitImageTest {
+protected:
+    virtual void SetUp()
+    {
+        XglCmdBlitTest::SetUp();
+        init_test_formats();
+        ASSERT_NE(true, test_formats_.empty());
+    }
+
+    void test_clone_image_data(const XGL_IMAGE_CREATE_INFO &img_info)
+    {
+        xgl_testing::ImageChecker checker(img_info);
+        xgl_testing::Image src, dst;
+
+        src.init(dev_, img_info);
+        if (src.transparent() || src.copyable())
+            fill_src(src, checker);
+        cmd_.add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+
+        dst.init(dev_, img_info);
+        cmd_.add_memory_ref(dst, 0);
+
+        const XGL_IMAGE_STATE state =
+            (img_info.usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) ?
+            XGL_IMAGE_STATE_UNINITIALIZED_TARGET : XGL_IMAGE_STATE_DATA_TRANSFER;
+
+        cmd_.begin();
+        xglCmdCloneImageData(cmd_.obj(), src.obj(), state, dst.obj(), state);
+        cmd_.end();
+
+        submit_and_done();
+
+        // cannot verify
+        if (!dst.transparent() && !dst.copyable())
+            return;
+
+        check_dst(dst, checker);
+    }
+};
+
+TEST_F(XglCmdCloneImageDataTest, Basic)
+{
+    for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
+         it != test_formats_.end(); it++) {
+        // not sure what to do here
+        if (it->format.channelFormat == XGL_CH_FMT_UNDEFINED ||
+            (it->format.channelFormat >= XGL_CH_FMT_BC1 &&
+             it->format.channelFormat <= XGL_CH_FMT_BC7) ||
+            it->format.numericFormat == XGL_NUM_FMT_DS)
+            continue;
+
+        XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
+        img_info.imageType = XGL_IMAGE_2D;
+        img_info.format = it->format;
+        img_info.extent.width = 64;
+        img_info.extent.height = 64;
+        img_info.tiling = it->tiling;
+        img_info.flags = XGL_IMAGE_CREATE_CLONEABLE_BIT;
+
+        const XGL_IMAGE_SUBRESOURCE_RANGE range =
+            xgl_testing::Image::subresource_range(XGL_IMAGE_ASPECT_COLOR, img_info);
+        std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
+
+        test_clone_image_data(img_info);
+    }
+}
+
 class XglCmdClearColorImageTest : public XglCmdBlitImageTest {
 protected:
     XglCmdClearColorImageTest() : test_raw_(false) {}
