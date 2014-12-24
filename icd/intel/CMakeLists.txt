@@ -22,6 +22,7 @@ set(sources
     intel.c
     intel_gpa.c
     event.c
+    fb.c
     fence.c
     format.c
     gpu.c

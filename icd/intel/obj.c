@@ -157,6 +157,14 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO);
         shallow_copy = sizeof(XGL_SHADER_CREATE_INFO);
         break;
+    case XGL_DBG_OBJECT_FRAMEBUFFER:
+        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
+        shallow_copy = sizeof(XGL_FRAMEBUFFER_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_RENDER_PASS:
+        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
+        shallow_copy = sizeof(XGL_RENDER_PASS_CREATE_INFO);
+        break;
     default:
         // log debug message regarding invalid struct_type?
         intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
