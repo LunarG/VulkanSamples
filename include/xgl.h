@@ -54,7 +54,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 22, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 30, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -101,6 +101,8 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_FENCE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_QUEUE_SEMAPHORE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_EVENT, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_QUERY_POOL, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_FRAMEBUFFER, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_RENDER_PASS, XGL_OBJECT)
 
 #define XGL_MAX_PHYSICAL_GPUS       16
 #define XGL_MAX_PHYSICAL_GPU_NAME   256
@@ -193,6 +195,20 @@ typedef enum _XGL_IMAGE_STATE
     XGL_NUM_IMAGE_STATE                                     = (XGL_IMAGE_STATE_END_RANGE - XGL_IMAGE_STATE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_IMAGE_STATE)
 } XGL_IMAGE_STATE;
+
+typedef enum _XGL_ATTACHMENT_LOAD_OP
+{
+    XGL_ATTACHMENT_LOAD_OP_LOAD                             = 0x00000000,
+    XGL_ATTACHMENT_LOAD_OP_CLEAR                            = 0x00000001,
+    XGL_ATTACHMENT_LOAD_OP_DONT_CARE                        = 0x00000002,
+} XGL_ATTACHMENT_LOAD_OP;
+
+typedef enum _XGL_ATTACHMENT_STORE_OP
+{
+    XGL_ATTACHMENT_STORE_OP_STORE                           = 0x00000000,
+    XGL_ATTACHMENT_STORE_OP_RESOLVE_MSAA                    = 0x00000001,
+    XGL_ATTACHMENT_STORE_OP_DONT_CARE                       = 0x00000002,
+} XGL_ATTACHMENT_STORE_OP;
 
 typedef enum _XGL_IMAGE_TYPE
 {
@@ -823,6 +839,17 @@ typedef enum _XGL_PIPELINE_SHADER_STAGE
     XGL_MAX_ENUM(_XGL_PIPELINE_SHADER_STAGE)
 } XGL_PIPELINE_SHADER_STAGE;
 
+// Graphics workload submit type. Used for rendering workloads.
+typedef enum _XGL_RENDER_PASS_OPERATION
+{
+    XGL_RENDER_PASS_OPERATION_BEGIN,                                  // Start rendering
+    XGL_RENDER_PASS_OPERATION_CONTINUE,                               // Continue rendering
+    XGL_RENDER_PASS_OPERATION_END,                                    // End rendering
+    XGL_RENDER_PASS_OPERATION_BEGIN_AND_END,                          // Start and finish rendering in a single command buffer
+
+    XGL_MAX_ENUM(_XGL_RENDER_PASS_OPERATION)
+} XGL_RENDER_PASS_OPERATION;
+
 // Structure type enumerant
 typedef enum _XGL_STRUCTURE_TYPE
 {
@@ -859,10 +886,14 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO        = 31,
     XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO      = 32,
     XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO                    = 33,
+    XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO              = 34,
+    XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                = 35,
+    XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO       = 36,
+    XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO              = 37,
 // IMG CHANGE BEGIN - support for vertex input description
-    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 34,
+    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 38,
 // IMG CHANGE END
-    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 35,
+    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 39,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1309,6 +1340,8 @@ typedef struct _XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO
     XGL_UINT                                mipLevel;
     XGL_UINT                                baseArraySlice;
     XGL_UINT                                arraySize;
+    XGL_IMAGE                               msaaResolveImage;
+    XGL_IMAGE_SUBRESOURCE_RANGE             msaaResolveSubResource;
 } XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
 
 typedef struct _XGL_DEPTH_STENCIL_VIEW_CREATE_INFO
@@ -1319,6 +1352,8 @@ typedef struct _XGL_DEPTH_STENCIL_VIEW_CREATE_INFO
     XGL_UINT                                mipLevel;
     XGL_UINT                                baseArraySlice;
     XGL_UINT                                arraySize;
+    XGL_IMAGE                               msaaResolveImage;
+    XGL_IMAGE_SUBRESOURCE_RANGE             msaaResolveSubResource;
     XGL_FLAGS                               flags;                  // XGL_DEPTH_STENCIL_VIEW_CREATE_FLAGS
 } XGL_DEPTH_STENCIL_VIEW_CREATE_INFO;
 
@@ -1653,6 +1688,55 @@ typedef struct _XGL_CMD_BUFFER_CREATE_INFO
     XGL_FLAGS                               flags;
 } XGL_CMD_BUFFER_CREATE_INFO;
 
+typedef struct _XGL_CMD_BUFFER_BEGIN_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO
+    const XGL_VOID*                         pNext;
+
+    XGL_FLAGS                               flags;      // XGL_CMD_BUFFER_BUILD_FLAGS
+} XGL_CMD_BUFFER_BEGIN_INFO;
+
+typedef struct _XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
+    const XGL_VOID*                         pNext;      // Pointer to next structure
+
+    XGL_RENDER_PASS                         renderPass;
+    XGL_RENDER_PASS_OPERATION               operation;
+
+} XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
+
+// Union allowing specification of floating point or raw color data. Actual value selected is based on image being cleared.
+typedef union _XGL_CLEAR_COLOR_VALUE
+{
+    XGL_FLOAT                               floatColor[4];
+    XGL_UINT                                rawColor[4];
+} XGL_CLEAR_COLOR_VALUE;
+
+typedef struct _XGL_CLEAR_COLOR
+{
+    XGL_CLEAR_COLOR_VALUE                   color;
+    XGL_BOOL                                useRawValue;
+} XGL_CLEAR_COLOR;
+
+typedef struct _XGL_RENDER_PASS_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
+    const XGL_VOID*                         pNext;      // Pointer to next structure
+
+    XGL_RECT                                renderArea;
+    XGL_FRAMEBUFFER                         framebuffer;
+    XGL_ATTACHMENT_LOAD_OP*                 pColorLoadOps;               // Array of size equivalent to the number of attachments in the framebuffer
+    XGL_ATTACHMENT_STORE_OP*                pColorStoreOps;              // Array of size equivalent to the number of attachments in the framebuffer
+    XGL_CLEAR_COLOR*                        pColorLoadClearValues;       // Array of size equivalent to the number of attachments in the framebuffer
+    XGL_ATTACHMENT_LOAD_OP                  depthLoadOp;
+    XGL_FLOAT                               depthLoadClearValue;
+    XGL_ATTACHMENT_STORE_OP                 depthStoreOp;
+    XGL_ATTACHMENT_LOAD_OP                  stencilLoadOp;
+    XGL_UINT32                              stencilLoadClearValue;
+    XGL_ATTACHMENT_STORE_OP                 stencilStoreOp;
+} XGL_RENDER_PASS_CREATE_INFO;
+
 typedef struct _XGL_MEMORY_REF
 {
     XGL_GPU_MEMORY                          mem;
@@ -1710,6 +1794,18 @@ typedef struct _XGL_QUERY_POOL_CREATE_INFO
     XGL_QUERY_TYPE                          queryType;
     XGL_UINT                                slots;
 } XGL_QUERY_POOL_CREATE_INFO;
+
+typedef struct _XGL_FRAMEBUFFER_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;  // Must be XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
+    const XGL_VOID*                         pNext;  // Pointer to next structure
+
+    XGL_UINT                                colorAttachmentCount;
+    XGL_COLOR_ATTACHMENT_BIND_INFO*         pColorAttachments;
+    XGL_DEPTH_STENCIL_BIND_INFO*            pDepthStencilAttachment;
+    XGL_UINT                                sampleCount;
+
+} XGL_FRAMEBUFFER_CREATE_INFO;
 
 typedef struct _XGL_DRAW_INDIRECT_CMD
 {
@@ -2480,6 +2576,16 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
     XGL_GPU_MEMORY                              destMem,
     XGL_GPU_SIZE                                destOffset);
 
+XGL_RESULT xglCreateFramebuffer(
+    XGL_DEVICE                                  device,
+    const XGL_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
+    XGL_FRAMEBUFFER*                            pFramebuffer);
+
+XGL_RESULT xglCreateRenderPass(
+    XGL_DEVICE                                  device,
+    const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
+    XGL_RENDER_PASS*                            pRenderPass);
+
 #endif /* XGL_PROTOTYPES */
 
 #ifdef __cplusplus
@@ -2524,37 +2630,7 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
                 XGL_UINT                                    index,
                 const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView);
 
-    2) Framebuffer Objects
-
-    The XGL API here doesn't have a direct equivalent for a framebuffer object. In GL,
-    the framebuffer object owns attachments, and the indirection table for glDrawBuffers, etc.
-    The indirection is gone - only identity is supported here.
-
-    We may introduce an analog to the framebuffer object that packages all color
-    attachments. You would create a framebuffer thus:
-
-    typedef struct _XGL_FRAMEBUFFER_CREATE_INFO
-    {
-        XGL_STRUCTURE_TYPE    sType;  // Must be XGL_STRUCTURE_TYPE_PIPELINE_XFB_CREATE_INFO
-        const XGL_VOID*       pNext;  // Pointer to next structure
-        XGL_UINT32            colorAttachmentCount;
-        XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments;
-        XGL_DEPTH_STENCIL_BIND_INFO pDepthStencilAttachment;
-    } XGL_FRAMEBUFFER_CREATE_INFO;
-
-        xglCreateFramebuffer(
-            XGL_DEVICE device,
-            const XGL_FRAMEBUFFER_CREATE_INFO* pInfo,
-            XGL_FRAMEBUFFER* pFramebuffer);
-
-    We then replace the xglCmdBindAttachments API with:
-
-        xglBindFramebuffer(
-            XGL_CMD_BUFFER cmdBuffer,
-            XGL_PIPELINE_BIND_POINT pipelineBindPoint, // = GRAPHICS
-            XGL_FRAMEBUFFER framebuffer);
-
-    3) "Bindless" + support for non-bindless hardware.
+    2) "Bindless" + support for non-bindless hardware.
 
     XGL doesn't have bindless textures the way that GL does. It has resource descriptor
     sets, or resource tables. Resource tables can be nested and hold references to more
@@ -2568,7 +2644,7 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
     resource bindings, the table approach should still work if a limited size can be
     reported somehow.
 
-    4) Clean up some remaining Mantle'isms.
+    3) Clean up some remaining Mantle'isms.
 
     Queue types: It's a bit hand wavey. In Mantle, we have a "universal" queue type that
     supports compute and graphics and a "compute" queue that only supports compute. Devices
