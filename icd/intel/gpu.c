@@ -531,8 +531,7 @@ XGL_RESULT XGLAPI intelGetExtensionSupport(
     const XGL_CHAR*                             pExtName)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
-    const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
-            (const char *) pExtName);
+    const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu, pExtName);
 
     return (ext != INTEL_EXT_INVALID) ?
         XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;

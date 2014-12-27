@@ -118,7 +118,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
 
     for (i = 0; i < info->extensionCount; i++) {
         const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
-                (const char *) info->ppEnabledExtensionNames[i]);
+                info->ppEnabledExtensionNames[i]);
 
         if (ext == INTEL_EXT_INVALID)
             return XGL_ERROR_INVALID_EXTENSION;

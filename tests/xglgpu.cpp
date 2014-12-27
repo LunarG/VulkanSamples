@@ -76,7 +76,7 @@ void XglGpu::init_extensions()
     XGL_UINT i;
 
     static const XGL_CHAR *known_extensions[] = {
-        (const XGL_CHAR *) "XGL_COMPILE_GLSL",
+        "XGL_COMPILE_GLSL",
     };
     this->extension_count = 0;
 
@@ -107,7 +107,7 @@ bool XglGpu::extension_exist(const char *ext_name)
     XGL_UINT i;
 
     for (i=0; i<this->extension_count; i++) {
-        if (strcmp((const char *) this->extensions[i], ext_name) == 0)
+        if (strcmp(this->extensions[i], ext_name) == 0)
             return true;
     }
 

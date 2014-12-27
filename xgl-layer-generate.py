@@ -547,20 +547,20 @@ class Subcommand(object):
                          "        return NULL;\n"
                          "    pCurObj = gpuw;\n"
                          "    pthread_once(&tabOnce, initLayerTable);\n\n"
-                         '    if (!strncmp("xglGetProcAddr", (const char *) funcName, sizeof("xglGetProcAddr")))\n'
+                         '    if (!strncmp("xglGetProcAddr", funcName, sizeof("xglGetProcAddr")))\n'
                          '        return xglGetProcAddr;')
         if 0 != len(extensions):
             for ext_name in extensions:
-                func_body.append('    else if (!strncmp("%s", (const char *) funcName, sizeof("%s")))\n'
+                func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
                                  '        return %s;' % (ext_name, ext_name, ext_name))
         for name in xgl.icd_dispatch_table:
             if name == "GetProcAddr":
                 continue
             if name == "InitAndEnumerateGpus":
-                func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
+                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
                              '        return nextTable.%s;' % (prefix, name, prefix, name, name))
             else:
-                func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
+                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
                              '        return %s%s;' % (prefix, name, prefix, name, prefix, name))
 
         func_body.append("    else {\n"
@@ -724,7 +724,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;')
         header_txt.append('    if (pTrav) {')
         header_txt.append('        while (pTrav) {')
-        header_txt.append('            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, (const XGL_CHAR *) pMsg, pTrav->pUserData);')
+        header_txt.append('            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);')
         header_txt.append('            pTrav = pTrav->pNext;')
         header_txt.append('        }')
         header_txt.append('    }')

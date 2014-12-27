@@ -1242,9 +1242,9 @@ static void demo_init_xgl(struct demo *demo)
     const XGL_APPLICATION_INFO app = {
         .sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = (const XGL_CHAR *) "cube",
+        .pAppName = "cube",
         .appVersion = 0,
-        .pEngineName = (const XGL_CHAR *) "cube",
+        .pEngineName = "cube",
         .engineVersion = 0,
         .apiVersion = XGL_MAKE_VERSION(0, 22, 0),
     };
@@ -1258,7 +1258,7 @@ static void demo_init_xgl(struct demo *demo)
         .queueCount = 1,
     };
     const XGL_CHAR *ext_names[] = {
-        (const XGL_CHAR *) "XGL_WSI_X11",
+        "XGL_WSI_X11",
     };
     const XGL_DEVICE_CREATE_INFO device = {
         .sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

@@ -291,7 +291,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     XGL_UINT i;
 
     static const XGL_CHAR *known_extensions[] = {
-        (const XGL_CHAR *) "XGL_WSI_X11",
+        "XGL_WSI_X11",
     };
 
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
@@ -605,9 +605,9 @@ int main(int argc, char **argv)
     static const XGL_APPLICATION_INFO app_info = {
         .sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = (const XGL_CHAR *) "xglinfo",
+        .pAppName = "xglinfo",
         .appVersion = 1,
-        .pEngineName = (const XGL_CHAR *) "xglinfo",
+        .pEngineName = "xglinfo",
         .engineVersion = 1,
         .apiVersion = XGL_MAKE_VERSION(0, 22, 0),
     };

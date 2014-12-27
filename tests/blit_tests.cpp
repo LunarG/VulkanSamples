@@ -362,9 +362,9 @@ Environment::Environment() :
     default_dev_(0)
 {
     app_.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_.pAppName = (const XGL_CHAR *) "xgl_testing";
+    app_.pAppName = "xgl_testing";
     app_.appVersion = 1;
-    app_.pEngineName = (const XGL_CHAR *) "xgl_testing";
+    app_.pEngineName = "xgl_testing";
     app_.engineVersion = 1;
     app_.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 }
@@ -466,7 +466,7 @@ bool Gpu::init()
 void Gpu::init_exts()
 {
     static const XGL_CHAR *known_exts[] = {
-        (const XGL_CHAR *) "XGL_WSI_X11",
+        "XGL_WSI_X11",
     };
     XGL_RESULT err;
 

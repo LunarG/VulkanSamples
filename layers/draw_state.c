@@ -52,7 +52,7 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;
     if (pTrav) {
         while (pTrav) {
-            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, (const XGL_CHAR *) pMsg, pTrav->pUserData);
+            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
             pTrav = pTrav->pNext;
         }
     }
@@ -2066,249 +2066,249 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
     pCurObj = gpuw;
     pthread_once(&tabOnce, initLayerTable);
 
-    if (!strncmp("xglGetProcAddr", (const char *) funcName, sizeof("xglGetProcAddr")))
+    if (!strncmp("xglGetProcAddr", funcName, sizeof("xglGetProcAddr")))
         return xglGetProcAddr;
-    else if (!strncmp("xglInitAndEnumerateGpus", (const char *) funcName, sizeof("xglInitAndEnumerateGpus")))
+    else if (!strncmp("xglInitAndEnumerateGpus", funcName, sizeof("xglInitAndEnumerateGpus")))
         return nextTable.InitAndEnumerateGpus;
-    else if (!strncmp("xglGetGpuInfo", (const char *) funcName, sizeof("xglGetGpuInfo")))
+    else if (!strncmp("xglGetGpuInfo", funcName, sizeof("xglGetGpuInfo")))
         return xglGetGpuInfo;
-    else if (!strncmp("xglCreateDevice", (const char *) funcName, sizeof("xglCreateDevice")))
+    else if (!strncmp("xglCreateDevice", funcName, sizeof("xglCreateDevice")))
         return xglCreateDevice;
-    else if (!strncmp("xglDestroyDevice", (const char *) funcName, sizeof("xglDestroyDevice")))
+    else if (!strncmp("xglDestroyDevice", funcName, sizeof("xglDestroyDevice")))
         return xglDestroyDevice;
-    else if (!strncmp("xglGetExtensionSupport", (const char *) funcName, sizeof("xglGetExtensionSupport")))
+    else if (!strncmp("xglGetExtensionSupport", funcName, sizeof("xglGetExtensionSupport")))
         return xglGetExtensionSupport;
-    else if (!strncmp("xglEnumerateLayers", (const char *) funcName, sizeof("xglEnumerateLayers")))
+    else if (!strncmp("xglEnumerateLayers", funcName, sizeof("xglEnumerateLayers")))
         return xglEnumerateLayers;
-    else if (!strncmp("xglGetDeviceQueue", (const char *) funcName, sizeof("xglGetDeviceQueue")))
+    else if (!strncmp("xglGetDeviceQueue", funcName, sizeof("xglGetDeviceQueue")))
         return xglGetDeviceQueue;
-    else if (!strncmp("xglQueueSubmit", (const char *) funcName, sizeof("xglQueueSubmit")))
+    else if (!strncmp("xglQueueSubmit", funcName, sizeof("xglQueueSubmit")))
         return xglQueueSubmit;
-    else if (!strncmp("xglQueueSetGlobalMemReferences", (const char *) funcName, sizeof("xglQueueSetGlobalMemReferences")))
+    else if (!strncmp("xglQueueSetGlobalMemReferences", funcName, sizeof("xglQueueSetGlobalMemReferences")))
         return xglQueueSetGlobalMemReferences;
-    else if (!strncmp("xglQueueWaitIdle", (const char *) funcName, sizeof("xglQueueWaitIdle")))
+    else if (!strncmp("xglQueueWaitIdle", funcName, sizeof("xglQueueWaitIdle")))
         return xglQueueWaitIdle;
-    else if (!strncmp("xglDeviceWaitIdle", (const char *) funcName, sizeof("xglDeviceWaitIdle")))
+    else if (!strncmp("xglDeviceWaitIdle", funcName, sizeof("xglDeviceWaitIdle")))
         return xglDeviceWaitIdle;
-    else if (!strncmp("drawStateDumpDotFile", (const char *) funcName, sizeof("drawStateDumpDotFile")))
+    else if (!strncmp("drawStateDumpDotFile", funcName, sizeof("drawStateDumpDotFile")))
         return drawStateDumpDotFile;
-    else if (!strncmp("drawStateDumpPngFile", (const char *) funcName, sizeof("drawStateDumpPngFile")))
+    else if (!strncmp("drawStateDumpPngFile", funcName, sizeof("drawStateDumpPngFile")))
         return drawStateDumpPngFile;
-    else if (!strncmp("xglGetMemoryHeapCount", (const char *) funcName, sizeof("xglGetMemoryHeapCount")))
+    else if (!strncmp("xglGetMemoryHeapCount", funcName, sizeof("xglGetMemoryHeapCount")))
         return xglGetMemoryHeapCount;
-    else if (!strncmp("xglGetMemoryHeapInfo", (const char *) funcName, sizeof("xglGetMemoryHeapInfo")))
+    else if (!strncmp("xglGetMemoryHeapInfo", funcName, sizeof("xglGetMemoryHeapInfo")))
         return xglGetMemoryHeapInfo;
-    else if (!strncmp("xglAllocMemory", (const char *) funcName, sizeof("xglAllocMemory")))
+    else if (!strncmp("xglAllocMemory", funcName, sizeof("xglAllocMemory")))
         return xglAllocMemory;
-    else if (!strncmp("xglFreeMemory", (const char *) funcName, sizeof("xglFreeMemory")))
+    else if (!strncmp("xglFreeMemory", funcName, sizeof("xglFreeMemory")))
         return xglFreeMemory;
-    else if (!strncmp("xglSetMemoryPriority", (const char *) funcName, sizeof("xglSetMemoryPriority")))
+    else if (!strncmp("xglSetMemoryPriority", funcName, sizeof("xglSetMemoryPriority")))
         return xglSetMemoryPriority;
-    else if (!strncmp("xglMapMemory", (const char *) funcName, sizeof("xglMapMemory")))
+    else if (!strncmp("xglMapMemory", funcName, sizeof("xglMapMemory")))
         return xglMapMemory;
-    else if (!strncmp("xglUnmapMemory", (const char *) funcName, sizeof("xglUnmapMemory")))
+    else if (!strncmp("xglUnmapMemory", funcName, sizeof("xglUnmapMemory")))
         return xglUnmapMemory;
-    else if (!strncmp("xglPinSystemMemory", (const char *) funcName, sizeof("xglPinSystemMemory")))
+    else if (!strncmp("xglPinSystemMemory", funcName, sizeof("xglPinSystemMemory")))
         return xglPinSystemMemory;
-    else if (!strncmp("xglRemapVirtualMemoryPages", (const char *) funcName, sizeof("xglRemapVirtualMemoryPages")))
+    else if (!strncmp("xglRemapVirtualMemoryPages", funcName, sizeof("xglRemapVirtualMemoryPages")))
         return xglRemapVirtualMemoryPages;
-    else if (!strncmp("xglGetMultiGpuCompatibility", (const char *) funcName, sizeof("xglGetMultiGpuCompatibility")))
+    else if (!strncmp("xglGetMultiGpuCompatibility", funcName, sizeof("xglGetMultiGpuCompatibility")))
         return xglGetMultiGpuCompatibility;
-    else if (!strncmp("xglOpenSharedMemory", (const char *) funcName, sizeof("xglOpenSharedMemory")))
+    else if (!strncmp("xglOpenSharedMemory", funcName, sizeof("xglOpenSharedMemory")))
         return xglOpenSharedMemory;
-    else if (!strncmp("xglOpenSharedQueueSemaphore", (const char *) funcName, sizeof("xglOpenSharedQueueSemaphore")))
+    else if (!strncmp("xglOpenSharedQueueSemaphore", funcName, sizeof("xglOpenSharedQueueSemaphore")))
         return xglOpenSharedQueueSemaphore;
-    else if (!strncmp("xglOpenPeerMemory", (const char *) funcName, sizeof("xglOpenPeerMemory")))
+    else if (!strncmp("xglOpenPeerMemory", funcName, sizeof("xglOpenPeerMemory")))
         return xglOpenPeerMemory;
-    else if (!strncmp("xglOpenPeerImage", (const char *) funcName, sizeof("xglOpenPeerImage")))
+    else if (!strncmp("xglOpenPeerImage", funcName, sizeof("xglOpenPeerImage")))
         return xglOpenPeerImage;
-    else if (!strncmp("xglDestroyObject", (const char *) funcName, sizeof("xglDestroyObject")))
+    else if (!strncmp("xglDestroyObject", funcName, sizeof("xglDestroyObject")))
         return xglDestroyObject;
-    else if (!strncmp("xglGetObjectInfo", (const char *) funcName, sizeof("xglGetObjectInfo")))
+    else if (!strncmp("xglGetObjectInfo", funcName, sizeof("xglGetObjectInfo")))
         return xglGetObjectInfo;
-    else if (!strncmp("xglBindObjectMemory", (const char *) funcName, sizeof("xglBindObjectMemory")))
+    else if (!strncmp("xglBindObjectMemory", funcName, sizeof("xglBindObjectMemory")))
         return xglBindObjectMemory;
-    else if (!strncmp("xglCreateFence", (const char *) funcName, sizeof("xglCreateFence")))
+    else if (!strncmp("xglCreateFence", funcName, sizeof("xglCreateFence")))
         return xglCreateFence;
-    else if (!strncmp("xglGetFenceStatus", (const char *) funcName, sizeof("xglGetFenceStatus")))
+    else if (!strncmp("xglGetFenceStatus", funcName, sizeof("xglGetFenceStatus")))
         return xglGetFenceStatus;
-    else if (!strncmp("xglWaitForFences", (const char *) funcName, sizeof("xglWaitForFences")))
+    else if (!strncmp("xglWaitForFences", funcName, sizeof("xglWaitForFences")))
         return xglWaitForFences;
-    else if (!strncmp("xglCreateQueueSemaphore", (const char *) funcName, sizeof("xglCreateQueueSemaphore")))
+    else if (!strncmp("xglCreateQueueSemaphore", funcName, sizeof("xglCreateQueueSemaphore")))
         return xglCreateQueueSemaphore;
-    else if (!strncmp("xglSignalQueueSemaphore", (const char *) funcName, sizeof("xglSignalQueueSemaphore")))
+    else if (!strncmp("xglSignalQueueSemaphore", funcName, sizeof("xglSignalQueueSemaphore")))
         return xglSignalQueueSemaphore;
-    else if (!strncmp("xglWaitQueueSemaphore", (const char *) funcName, sizeof("xglWaitQueueSemaphore")))
+    else if (!strncmp("xglWaitQueueSemaphore", funcName, sizeof("xglWaitQueueSemaphore")))
         return xglWaitQueueSemaphore;
-    else if (!strncmp("xglCreateEvent", (const char *) funcName, sizeof("xglCreateEvent")))
+    else if (!strncmp("xglCreateEvent", funcName, sizeof("xglCreateEvent")))
         return xglCreateEvent;
-    else if (!strncmp("xglGetEventStatus", (const char *) funcName, sizeof("xglGetEventStatus")))
+    else if (!strncmp("xglGetEventStatus", funcName, sizeof("xglGetEventStatus")))
         return xglGetEventStatus;
-    else if (!strncmp("xglSetEvent", (const char *) funcName, sizeof("xglSetEvent")))
+    else if (!strncmp("xglSetEvent", funcName, sizeof("xglSetEvent")))
         return xglSetEvent;
-    else if (!strncmp("xglResetEvent", (const char *) funcName, sizeof("xglResetEvent")))
+    else if (!strncmp("xglResetEvent", funcName, sizeof("xglResetEvent")))
         return xglResetEvent;
-    else if (!strncmp("xglCreateQueryPool", (const char *) funcName, sizeof("xglCreateQueryPool")))
+    else if (!strncmp("xglCreateQueryPool", funcName, sizeof("xglCreateQueryPool")))
         return xglCreateQueryPool;
-    else if (!strncmp("xglGetQueryPoolResults", (const char *) funcName, sizeof("xglGetQueryPoolResults")))
+    else if (!strncmp("xglGetQueryPoolResults", funcName, sizeof("xglGetQueryPoolResults")))
         return xglGetQueryPoolResults;
-    else if (!strncmp("xglGetFormatInfo", (const char *) funcName, sizeof("xglGetFormatInfo")))
+    else if (!strncmp("xglGetFormatInfo", funcName, sizeof("xglGetFormatInfo")))
         return xglGetFormatInfo;
-    else if (!strncmp("xglCreateImage", (const char *) funcName, sizeof("xglCreateImage")))
+    else if (!strncmp("xglCreateImage", funcName, sizeof("xglCreateImage")))
         return xglCreateImage;
-    else if (!strncmp("xglGetImageSubresourceInfo", (const char *) funcName, sizeof("xglGetImageSubresourceInfo")))
+    else if (!strncmp("xglGetImageSubresourceInfo", funcName, sizeof("xglGetImageSubresourceInfo")))
         return xglGetImageSubresourceInfo;
-    else if (!strncmp("xglCreateImageView", (const char *) funcName, sizeof("xglCreateImageView")))
+    else if (!strncmp("xglCreateImageView", funcName, sizeof("xglCreateImageView")))
         return xglCreateImageView;
-    else if (!strncmp("xglCreateColorAttachmentView", (const char *) funcName, sizeof("xglCreateColorAttachmentView")))
+    else if (!strncmp("xglCreateColorAttachmentView", funcName, sizeof("xglCreateColorAttachmentView")))
         return xglCreateColorAttachmentView;
-    else if (!strncmp("xglCreateDepthStencilView", (const char *) funcName, sizeof("xglCreateDepthStencilView")))
+    else if (!strncmp("xglCreateDepthStencilView", funcName, sizeof("xglCreateDepthStencilView")))
         return xglCreateDepthStencilView;
-    else if (!strncmp("xglCreateShader", (const char *) funcName, sizeof("xglCreateShader")))
+    else if (!strncmp("xglCreateShader", funcName, sizeof("xglCreateShader")))
         return xglCreateShader;
-    else if (!strncmp("xglCreateGraphicsPipeline", (const char *) funcName, sizeof("xglCreateGraphicsPipeline")))
+    else if (!strncmp("xglCreateGraphicsPipeline", funcName, sizeof("xglCreateGraphicsPipeline")))
         return xglCreateGraphicsPipeline;
-    else if (!strncmp("xglCreateComputePipeline", (const char *) funcName, sizeof("xglCreateComputePipeline")))
+    else if (!strncmp("xglCreateComputePipeline", funcName, sizeof("xglCreateComputePipeline")))
         return xglCreateComputePipeline;
-    else if (!strncmp("xglStorePipeline", (const char *) funcName, sizeof("xglStorePipeline")))
+    else if (!strncmp("xglStorePipeline", funcName, sizeof("xglStorePipeline")))
         return xglStorePipeline;
-    else if (!strncmp("xglLoadPipeline", (const char *) funcName, sizeof("xglLoadPipeline")))
+    else if (!strncmp("xglLoadPipeline", funcName, sizeof("xglLoadPipeline")))
         return xglLoadPipeline;
-    else if (!strncmp("xglCreatePipelineDelta", (const char *) funcName, sizeof("xglCreatePipelineDelta")))
+    else if (!strncmp("xglCreatePipelineDelta", funcName, sizeof("xglCreatePipelineDelta")))
         return xglCreatePipelineDelta;
-    else if (!strncmp("xglCreateSampler", (const char *) funcName, sizeof("xglCreateSampler")))
+    else if (!strncmp("xglCreateSampler", funcName, sizeof("xglCreateSampler")))
         return xglCreateSampler;
-    else if (!strncmp("xglCreateDescriptorSet", (const char *) funcName, sizeof("xglCreateDescriptorSet")))
+    else if (!strncmp("xglCreateDescriptorSet", funcName, sizeof("xglCreateDescriptorSet")))
         return xglCreateDescriptorSet;
-    else if (!strncmp("xglBeginDescriptorSetUpdate", (const char *) funcName, sizeof("xglBeginDescriptorSetUpdate")))
+    else if (!strncmp("xglBeginDescriptorSetUpdate", funcName, sizeof("xglBeginDescriptorSetUpdate")))
         return xglBeginDescriptorSetUpdate;
-    else if (!strncmp("xglEndDescriptorSetUpdate", (const char *) funcName, sizeof("xglEndDescriptorSetUpdate")))
+    else if (!strncmp("xglEndDescriptorSetUpdate", funcName, sizeof("xglEndDescriptorSetUpdate")))
         return xglEndDescriptorSetUpdate;
-    else if (!strncmp("xglAttachSamplerDescriptors", (const char *) funcName, sizeof("xglAttachSamplerDescriptors")))
+    else if (!strncmp("xglAttachSamplerDescriptors", funcName, sizeof("xglAttachSamplerDescriptors")))
         return xglAttachSamplerDescriptors;
-    else if (!strncmp("xglAttachImageViewDescriptors", (const char *) funcName, sizeof("xglAttachImageViewDescriptors")))
+    else if (!strncmp("xglAttachImageViewDescriptors", funcName, sizeof("xglAttachImageViewDescriptors")))
         return xglAttachImageViewDescriptors;
-    else if (!strncmp("xglAttachMemoryViewDescriptors", (const char *) funcName, sizeof("xglAttachMemoryViewDescriptors")))
+    else if (!strncmp("xglAttachMemoryViewDescriptors", funcName, sizeof("xglAttachMemoryViewDescriptors")))
         return xglAttachMemoryViewDescriptors;
-    else if (!strncmp("xglAttachNestedDescriptors", (const char *) funcName, sizeof("xglAttachNestedDescriptors")))
+    else if (!strncmp("xglAttachNestedDescriptors", funcName, sizeof("xglAttachNestedDescriptors")))
         return xglAttachNestedDescriptors;
-    else if (!strncmp("xglClearDescriptorSetSlots", (const char *) funcName, sizeof("xglClearDescriptorSetSlots")))
+    else if (!strncmp("xglClearDescriptorSetSlots", funcName, sizeof("xglClearDescriptorSetSlots")))
         return xglClearDescriptorSetSlots;
-    else if (!strncmp("xglCreateViewportState", (const char *) funcName, sizeof("xglCreateViewportState")))
+    else if (!strncmp("xglCreateViewportState", funcName, sizeof("xglCreateViewportState")))
         return xglCreateViewportState;
-    else if (!strncmp("xglCreateRasterState", (const char *) funcName, sizeof("xglCreateRasterState")))
+    else if (!strncmp("xglCreateRasterState", funcName, sizeof("xglCreateRasterState")))
         return xglCreateRasterState;
-    else if (!strncmp("xglCreateMsaaState", (const char *) funcName, sizeof("xglCreateMsaaState")))
+    else if (!strncmp("xglCreateMsaaState", funcName, sizeof("xglCreateMsaaState")))
         return xglCreateMsaaState;
-    else if (!strncmp("xglCreateColorBlendState", (const char *) funcName, sizeof("xglCreateColorBlendState")))
+    else if (!strncmp("xglCreateColorBlendState", funcName, sizeof("xglCreateColorBlendState")))
         return xglCreateColorBlendState;
-    else if (!strncmp("xglCreateDepthStencilState", (const char *) funcName, sizeof("xglCreateDepthStencilState")))
+    else if (!strncmp("xglCreateDepthStencilState", funcName, sizeof("xglCreateDepthStencilState")))
         return xglCreateDepthStencilState;
-    else if (!strncmp("xglCreateCommandBuffer", (const char *) funcName, sizeof("xglCreateCommandBuffer")))
+    else if (!strncmp("xglCreateCommandBuffer", funcName, sizeof("xglCreateCommandBuffer")))
         return xglCreateCommandBuffer;
-    else if (!strncmp("xglBeginCommandBuffer", (const char *) funcName, sizeof("xglBeginCommandBuffer")))
+    else if (!strncmp("xglBeginCommandBuffer", funcName, sizeof("xglBeginCommandBuffer")))
         return xglBeginCommandBuffer;
-    else if (!strncmp("xglEndCommandBuffer", (const char *) funcName, sizeof("xglEndCommandBuffer")))
+    else if (!strncmp("xglEndCommandBuffer", funcName, sizeof("xglEndCommandBuffer")))
         return xglEndCommandBuffer;
-    else if (!strncmp("xglResetCommandBuffer", (const char *) funcName, sizeof("xglResetCommandBuffer")))
+    else if (!strncmp("xglResetCommandBuffer", funcName, sizeof("xglResetCommandBuffer")))
         return xglResetCommandBuffer;
-    else if (!strncmp("xglCmdBindPipeline", (const char *) funcName, sizeof("xglCmdBindPipeline")))
+    else if (!strncmp("xglCmdBindPipeline", funcName, sizeof("xglCmdBindPipeline")))
         return xglCmdBindPipeline;
-    else if (!strncmp("xglCmdBindPipelineDelta", (const char *) funcName, sizeof("xglCmdBindPipelineDelta")))
+    else if (!strncmp("xglCmdBindPipelineDelta", funcName, sizeof("xglCmdBindPipelineDelta")))
         return xglCmdBindPipelineDelta;
-    else if (!strncmp("xglCmdBindStateObject", (const char *) funcName, sizeof("xglCmdBindStateObject")))
+    else if (!strncmp("xglCmdBindStateObject", funcName, sizeof("xglCmdBindStateObject")))
         return xglCmdBindStateObject;
-    else if (!strncmp("xglCmdBindDescriptorSet", (const char *) funcName, sizeof("xglCmdBindDescriptorSet")))
+    else if (!strncmp("xglCmdBindDescriptorSet", funcName, sizeof("xglCmdBindDescriptorSet")))
         return xglCmdBindDescriptorSet;
-    else if (!strncmp("xglCmdBindDynamicMemoryView", (const char *) funcName, sizeof("xglCmdBindDynamicMemoryView")))
+    else if (!strncmp("xglCmdBindDynamicMemoryView", funcName, sizeof("xglCmdBindDynamicMemoryView")))
         return xglCmdBindDynamicMemoryView;
-    else if (!strncmp("xglCmdBindIndexData", (const char *) funcName, sizeof("xglCmdBindIndexData")))
+    else if (!strncmp("xglCmdBindIndexData", funcName, sizeof("xglCmdBindIndexData")))
         return xglCmdBindIndexData;
-    else if (!strncmp("xglCmdBindAttachments", (const char *) funcName, sizeof("xglCmdBindAttachments")))
+    else if (!strncmp("xglCmdBindAttachments", funcName, sizeof("xglCmdBindAttachments")))
         return xglCmdBindAttachments;
-    else if (!strncmp("xglCmdPrepareMemoryRegions", (const char *) funcName, sizeof("xglCmdPrepareMemoryRegions")))
+    else if (!strncmp("xglCmdPrepareMemoryRegions", funcName, sizeof("xglCmdPrepareMemoryRegions")))
         return xglCmdPrepareMemoryRegions;
-    else if (!strncmp("xglCmdPrepareImages", (const char *) funcName, sizeof("xglCmdPrepareImages")))
+    else if (!strncmp("xglCmdPrepareImages", funcName, sizeof("xglCmdPrepareImages")))
         return xglCmdPrepareImages;
-    else if (!strncmp("xglCmdDraw", (const char *) funcName, sizeof("xglCmdDraw")))
+    else if (!strncmp("xglCmdDraw", funcName, sizeof("xglCmdDraw")))
         return xglCmdDraw;
-    else if (!strncmp("xglCmdDrawIndexed", (const char *) funcName, sizeof("xglCmdDrawIndexed")))
+    else if (!strncmp("xglCmdDrawIndexed", funcName, sizeof("xglCmdDrawIndexed")))
         return xglCmdDrawIndexed;
-    else if (!strncmp("xglCmdDrawIndirect", (const char *) funcName, sizeof("xglCmdDrawIndirect")))
+    else if (!strncmp("xglCmdDrawIndirect", funcName, sizeof("xglCmdDrawIndirect")))
         return xglCmdDrawIndirect;
-    else if (!strncmp("xglCmdDrawIndexedIndirect", (const char *) funcName, sizeof("xglCmdDrawIndexedIndirect")))
+    else if (!strncmp("xglCmdDrawIndexedIndirect", funcName, sizeof("xglCmdDrawIndexedIndirect")))
         return xglCmdDrawIndexedIndirect;
-    else if (!strncmp("xglCmdDispatch", (const char *) funcName, sizeof("xglCmdDispatch")))
+    else if (!strncmp("xglCmdDispatch", funcName, sizeof("xglCmdDispatch")))
         return xglCmdDispatch;
-    else if (!strncmp("xglCmdDispatchIndirect", (const char *) funcName, sizeof("xglCmdDispatchIndirect")))
+    else if (!strncmp("xglCmdDispatchIndirect", funcName, sizeof("xglCmdDispatchIndirect")))
         return xglCmdDispatchIndirect;
-    else if (!strncmp("xglCmdCopyMemory", (const char *) funcName, sizeof("xglCmdCopyMemory")))
+    else if (!strncmp("xglCmdCopyMemory", funcName, sizeof("xglCmdCopyMemory")))
         return xglCmdCopyMemory;
-    else if (!strncmp("xglCmdCopyImage", (const char *) funcName, sizeof("xglCmdCopyImage")))
+    else if (!strncmp("xglCmdCopyImage", funcName, sizeof("xglCmdCopyImage")))
         return xglCmdCopyImage;
-    else if (!strncmp("xglCmdCopyMemoryToImage", (const char *) funcName, sizeof("xglCmdCopyMemoryToImage")))
+    else if (!strncmp("xglCmdCopyMemoryToImage", funcName, sizeof("xglCmdCopyMemoryToImage")))
         return xglCmdCopyMemoryToImage;
-    else if (!strncmp("xglCmdCopyImageToMemory", (const char *) funcName, sizeof("xglCmdCopyImageToMemory")))
+    else if (!strncmp("xglCmdCopyImageToMemory", funcName, sizeof("xglCmdCopyImageToMemory")))
         return xglCmdCopyImageToMemory;
-    else if (!strncmp("xglCmdCloneImageData", (const char *) funcName, sizeof("xglCmdCloneImageData")))
+    else if (!strncmp("xglCmdCloneImageData", funcName, sizeof("xglCmdCloneImageData")))
         return xglCmdCloneImageData;
-    else if (!strncmp("xglCmdUpdateMemory", (const char *) funcName, sizeof("xglCmdUpdateMemory")))
+    else if (!strncmp("xglCmdUpdateMemory", funcName, sizeof("xglCmdUpdateMemory")))
         return xglCmdUpdateMemory;
-    else if (!strncmp("xglCmdFillMemory", (const char *) funcName, sizeof("xglCmdFillMemory")))
+    else if (!strncmp("xglCmdFillMemory", funcName, sizeof("xglCmdFillMemory")))
         return xglCmdFillMemory;
-    else if (!strncmp("xglCmdClearColorImage", (const char *) funcName, sizeof("xglCmdClearColorImage")))
+    else if (!strncmp("xglCmdClearColorImage", funcName, sizeof("xglCmdClearColorImage")))
         return xglCmdClearColorImage;
-    else if (!strncmp("xglCmdClearColorImageRaw", (const char *) funcName, sizeof("xglCmdClearColorImageRaw")))
+    else if (!strncmp("xglCmdClearColorImageRaw", funcName, sizeof("xglCmdClearColorImageRaw")))
         return xglCmdClearColorImageRaw;
-    else if (!strncmp("xglCmdClearDepthStencil", (const char *) funcName, sizeof("xglCmdClearDepthStencil")))
+    else if (!strncmp("xglCmdClearDepthStencil", funcName, sizeof("xglCmdClearDepthStencil")))
         return xglCmdClearDepthStencil;
-    else if (!strncmp("xglCmdResolveImage", (const char *) funcName, sizeof("xglCmdResolveImage")))
+    else if (!strncmp("xglCmdResolveImage", funcName, sizeof("xglCmdResolveImage")))
         return xglCmdResolveImage;
-    else if (!strncmp("xglCmdSetEvent", (const char *) funcName, sizeof("xglCmdSetEvent")))
+    else if (!strncmp("xglCmdSetEvent", funcName, sizeof("xglCmdSetEvent")))
         return xglCmdSetEvent;
-    else if (!strncmp("xglCmdResetEvent", (const char *) funcName, sizeof("xglCmdResetEvent")))
+    else if (!strncmp("xglCmdResetEvent", funcName, sizeof("xglCmdResetEvent")))
         return xglCmdResetEvent;
-    else if (!strncmp("xglCmdMemoryAtomic", (const char *) funcName, sizeof("xglCmdMemoryAtomic")))
+    else if (!strncmp("xglCmdMemoryAtomic", funcName, sizeof("xglCmdMemoryAtomic")))
         return xglCmdMemoryAtomic;
-    else if (!strncmp("xglCmdBeginQuery", (const char *) funcName, sizeof("xglCmdBeginQuery")))
+    else if (!strncmp("xglCmdBeginQuery", funcName, sizeof("xglCmdBeginQuery")))
         return xglCmdBeginQuery;
-    else if (!strncmp("xglCmdEndQuery", (const char *) funcName, sizeof("xglCmdEndQuery")))
+    else if (!strncmp("xglCmdEndQuery", funcName, sizeof("xglCmdEndQuery")))
         return xglCmdEndQuery;
-    else if (!strncmp("xglCmdResetQueryPool", (const char *) funcName, sizeof("xglCmdResetQueryPool")))
+    else if (!strncmp("xglCmdResetQueryPool", funcName, sizeof("xglCmdResetQueryPool")))
         return xglCmdResetQueryPool;
-    else if (!strncmp("xglCmdWriteTimestamp", (const char *) funcName, sizeof("xglCmdWriteTimestamp")))
+    else if (!strncmp("xglCmdWriteTimestamp", funcName, sizeof("xglCmdWriteTimestamp")))
         return xglCmdWriteTimestamp;
-    else if (!strncmp("xglCmdInitAtomicCounters", (const char *) funcName, sizeof("xglCmdInitAtomicCounters")))
+    else if (!strncmp("xglCmdInitAtomicCounters", funcName, sizeof("xglCmdInitAtomicCounters")))
         return xglCmdInitAtomicCounters;
-    else if (!strncmp("xglCmdLoadAtomicCounters", (const char *) funcName, sizeof("xglCmdLoadAtomicCounters")))
+    else if (!strncmp("xglCmdLoadAtomicCounters", funcName, sizeof("xglCmdLoadAtomicCounters")))
         return xglCmdLoadAtomicCounters;
-    else if (!strncmp("xglCmdSaveAtomicCounters", (const char *) funcName, sizeof("xglCmdSaveAtomicCounters")))
+    else if (!strncmp("xglCmdSaveAtomicCounters", funcName, sizeof("xglCmdSaveAtomicCounters")))
         return xglCmdSaveAtomicCounters;
-    else if (!strncmp("xglDbgSetValidationLevel", (const char *) funcName, sizeof("xglDbgSetValidationLevel")))
+    else if (!strncmp("xglDbgSetValidationLevel", funcName, sizeof("xglDbgSetValidationLevel")))
         return xglDbgSetValidationLevel;
-    else if (!strncmp("xglDbgRegisterMsgCallback", (const char *) funcName, sizeof("xglDbgRegisterMsgCallback")))
+    else if (!strncmp("xglDbgRegisterMsgCallback", funcName, sizeof("xglDbgRegisterMsgCallback")))
         return xglDbgRegisterMsgCallback;
-    else if (!strncmp("xglDbgUnregisterMsgCallback", (const char *) funcName, sizeof("xglDbgUnregisterMsgCallback")))
+    else if (!strncmp("xglDbgUnregisterMsgCallback", funcName, sizeof("xglDbgUnregisterMsgCallback")))
         return xglDbgUnregisterMsgCallback;
-    else if (!strncmp("xglDbgSetMessageFilter", (const char *) funcName, sizeof("xglDbgSetMessageFilter")))
+    else if (!strncmp("xglDbgSetMessageFilter", funcName, sizeof("xglDbgSetMessageFilter")))
         return xglDbgSetMessageFilter;
-    else if (!strncmp("xglDbgSetObjectTag", (const char *) funcName, sizeof("xglDbgSetObjectTag")))
+    else if (!strncmp("xglDbgSetObjectTag", funcName, sizeof("xglDbgSetObjectTag")))
         return xglDbgSetObjectTag;
-    else if (!strncmp("xglDbgSetGlobalOption", (const char *) funcName, sizeof("xglDbgSetGlobalOption")))
+    else if (!strncmp("xglDbgSetGlobalOption", funcName, sizeof("xglDbgSetGlobalOption")))
         return xglDbgSetGlobalOption;
-    else if (!strncmp("xglDbgSetDeviceOption", (const char *) funcName, sizeof("xglDbgSetDeviceOption")))
+    else if (!strncmp("xglDbgSetDeviceOption", funcName, sizeof("xglDbgSetDeviceOption")))
         return xglDbgSetDeviceOption;
-    else if (!strncmp("xglCmdDbgMarkerBegin", (const char *) funcName, sizeof("xglCmdDbgMarkerBegin")))
+    else if (!strncmp("xglCmdDbgMarkerBegin", funcName, sizeof("xglCmdDbgMarkerBegin")))
         return xglCmdDbgMarkerBegin;
-    else if (!strncmp("xglCmdDbgMarkerEnd", (const char *) funcName, sizeof("xglCmdDbgMarkerEnd")))
+    else if (!strncmp("xglCmdDbgMarkerEnd", funcName, sizeof("xglCmdDbgMarkerEnd")))
         return xglCmdDbgMarkerEnd;
-    else if (!strncmp("xglWsiX11AssociateConnection", (const char *) funcName, sizeof("xglWsiX11AssociateConnection")))
+    else if (!strncmp("xglWsiX11AssociateConnection", funcName, sizeof("xglWsiX11AssociateConnection")))
         return xglWsiX11AssociateConnection;
-    else if (!strncmp("xglWsiX11GetMSC", (const char *) funcName, sizeof("xglWsiX11GetMSC")))
+    else if (!strncmp("xglWsiX11GetMSC", funcName, sizeof("xglWsiX11GetMSC")))
         return xglWsiX11GetMSC;
-    else if (!strncmp("xglWsiX11CreatePresentableImage", (const char *) funcName, sizeof("xglWsiX11CreatePresentableImage")))
+    else if (!strncmp("xglWsiX11CreatePresentableImage", funcName, sizeof("xglWsiX11CreatePresentableImage")))
         return xglWsiX11CreatePresentableImage;
-    else if (!strncmp("xglWsiX11QueuePresent", (const char *) funcName, sizeof("xglWsiX11QueuePresent")))
+    else if (!strncmp("xglWsiX11QueuePresent", funcName, sizeof("xglWsiX11QueuePresent")))
         return xglWsiX11QueuePresent;
     else {
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;

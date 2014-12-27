@@ -193,8 +193,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         size += sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
         size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
         for (i = 0; i < src->extensionCount; i++) {
-            size += 1 +
-                strlen((const char *) src->ppEnabledExtensionNames[i]);
+            size += 1 + strlen(src->ppEnabledExtensionNames[i]);
         }
 
         dst = icd_alloc(size, 0, XGL_SYSTEM_ALLOC_DEBUG);
@@ -215,8 +214,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         dst->ppEnabledExtensionNames = (const XGL_CHAR * const *) d;
 
         for (i = 0; i < src->extensionCount; i++) {
-            const XGL_SIZE len =
-                strlen((const char *) src->ppEnabledExtensionNames[i]);
+            const XGL_SIZE len = strlen(src->ppEnabledExtensionNames[i]);
 
             memcpy(d + size, src->ppEnabledExtensionNames[i], len + 1);
             ((const XGL_CHAR **) d)[i] = (const XGL_CHAR *) (d + size);

@@ -85,9 +85,9 @@ protected:
 
         this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = (const XGL_CHAR *) "base";
+        this->app_info.pAppName = "base";
         this->app_info.appVersion = 1;
-        this->app_info.pEngineName = (const XGL_CHAR *) "unittest";
+        this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
@@ -116,9 +116,9 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
 
     app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
-    app_info.pAppName = (const XGL_CHAR *) "base";
+    app_info.pAppName = "base";
     app_info.appVersion = 1;
-    app_info.pEngineName = (const XGL_CHAR *) "unittest";
+    app_info.pEngineName = "unittest";
     app_info.engineVersion = 1;
     app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 

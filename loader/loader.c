@@ -168,7 +168,7 @@ static void loader_log(XGL_DBG_MSG_TYPE msg_type, XGL_INT msg_code,
 
     while (cb) {
         cb->func(msg_type, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0,
-                msg_code, (const XGL_CHAR *) msg, cb->data);
+                msg_code, msg, cb->data);
         cb = cb->next;
     }
 
@@ -434,7 +434,7 @@ static void layer_lib_scan(const char * libInPaths)
              if (!strncmp(dent->d_name, "libXGLLayer", strlen("libXGLLayer"))) {
                 void * handle;
                 snprintf(temp_str, sizeof(temp_str), "%s/%s",p,dent->d_name);
-                if ((handle = dlopen((const char *) temp_str, RTLD_LAZY)) == NULL)
+                if ((handle = dlopen(temp_str, RTLD_LAZY)) == NULL)
                     continue;
                 if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
                     loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
@@ -461,128 +461,128 @@ static void layer_lib_scan(const char * libInPaths)
 static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
 {
     tab->GetProcAddr = fpGPA;
-    tab->InitAndEnumerateGpus = fpGPA(gpu, (const XGL_CHAR *) "xglInitAndEnumerateGpus");
-    tab->GetGpuInfo = fpGPA(gpu, (const XGL_CHAR *) "xglGetGpuInfo");
-    tab->CreateDevice = fpGPA(gpu, (const XGL_CHAR *) "xglCreateDevice");
-    tab->DestroyDevice = fpGPA(gpu, (const XGL_CHAR *) "xglDestroyDevice");
-    tab->GetExtensionSupport = fpGPA(gpu, (const XGL_CHAR *) "xglGetExtensionSupport");
-    tab->EnumerateLayers = fpGPA(gpu, (const XGL_CHAR *) "xglEnumerateLayers");
+    tab->InitAndEnumerateGpus = fpGPA(gpu, "xglInitAndEnumerateGpus");
+    tab->GetGpuInfo = fpGPA(gpu, "xglGetGpuInfo");
+    tab->CreateDevice = fpGPA(gpu, "xglCreateDevice");
+    tab->DestroyDevice = fpGPA(gpu, "xglDestroyDevice");
+    tab->GetExtensionSupport = fpGPA(gpu, "xglGetExtensionSupport");
+    tab->EnumerateLayers = fpGPA(gpu, "xglEnumerateLayers");
     if (tab->EnumerateLayers == NULL)
         tab->EnumerateLayers = xglEnumerateLayers;
-    tab->GetDeviceQueue = fpGPA(gpu, (const XGL_CHAR *) "xglGetDeviceQueue");
-    tab->QueueSubmit = fpGPA(gpu, (const XGL_CHAR *) "xglQueueSubmit");
-    tab->QueueSetGlobalMemReferences = fpGPA(gpu, (const XGL_CHAR *) "xglQueueSetGlobalMemReferences");
-    tab->QueueWaitIdle = fpGPA(gpu, (const XGL_CHAR *) "xglQueueWaitIdle");
-    tab->DeviceWaitIdle = fpGPA(gpu, (const XGL_CHAR *) "xglDeviceWaitIdle");
-    tab->GetMemoryHeapCount = fpGPA(gpu, (const XGL_CHAR *) "xglGetMemoryHeapCount");
-    tab->GetMemoryHeapInfo = fpGPA(gpu, (const XGL_CHAR *) "xglGetMemoryHeapInfo");
-    tab->AllocMemory = fpGPA(gpu, (const XGL_CHAR *) "xglAllocMemory");
-    tab->FreeMemory = fpGPA(gpu, (const XGL_CHAR *) "xglFreeMemory");
-    tab->SetMemoryPriority = fpGPA(gpu, (const XGL_CHAR *) "xglSetMemoryPriority");
-    tab->MapMemory = fpGPA(gpu, (const XGL_CHAR *) "xglMapMemory");
-    tab->UnmapMemory = fpGPA(gpu, (const XGL_CHAR *) "xglUnmapMemory");
-    tab->PinSystemMemory = fpGPA(gpu, (const XGL_CHAR *) "xglPinSystemMemory");
-    tab->RemapVirtualMemoryPages = fpGPA(gpu, (const XGL_CHAR *) "xglRemapVirtualMemoryPages");
-    tab->GetMultiGpuCompatibility = fpGPA(gpu, (const XGL_CHAR *) "xglGetMultiGpuCompatibility");
-    tab->OpenSharedMemory = fpGPA(gpu, (const XGL_CHAR *) "xglOpenSharedMemory");
-    tab->OpenSharedQueueSemaphore = fpGPA(gpu, (const XGL_CHAR *) "xglOpenSharedQueueSemaphore");
-    tab->OpenPeerMemory = fpGPA(gpu, (const XGL_CHAR *) "xglOpenPeerMemory");
-    tab->OpenPeerImage = fpGPA(gpu, (const XGL_CHAR *) "xglOpenPeerImage");
-    tab->DestroyObject = fpGPA(gpu, (const XGL_CHAR *) "xglDestroyObject");
-    tab->GetObjectInfo = fpGPA(gpu, (const XGL_CHAR *) "xglGetObjectInfo");
-    tab->BindObjectMemory = fpGPA(gpu, (const XGL_CHAR *) "xglBindObjectMemory");
-    tab->CreateFence = fpGPA(gpu, (const XGL_CHAR *) "xglCreateFence");
-    tab->GetFenceStatus = fpGPA(gpu, (const XGL_CHAR *) "xglGetFenceStatus");
-    tab->WaitForFences = fpGPA(gpu, (const XGL_CHAR *) "xglWaitForFences");
-    tab->CreateQueueSemaphore = fpGPA(gpu, (const XGL_CHAR *) "xglCreateQueueSemaphore");
-    tab->SignalQueueSemaphore = fpGPA(gpu, (const XGL_CHAR *) "xglSignalQueueSemaphore");
-    tab->WaitQueueSemaphore = fpGPA(gpu, (const XGL_CHAR *) "xglWaitQueueSemaphore");
-    tab->CreateEvent = fpGPA(gpu, (const XGL_CHAR *) "xglCreateEvent");
-    tab->GetEventStatus = fpGPA(gpu, (const XGL_CHAR *) "xglGetEventStatus");
-    tab->SetEvent = fpGPA(gpu, (const XGL_CHAR *) "xglSetEvent");
-    tab->ResetEvent = fpGPA(gpu, (const XGL_CHAR *) "xglResetEvent");
-    tab->CreateQueryPool = fpGPA(gpu, (const XGL_CHAR *) "xglCreateQueryPool");
-    tab->GetQueryPoolResults = fpGPA(gpu, (const XGL_CHAR *) "xglGetQueryPoolResults");
-    tab->GetFormatInfo = fpGPA(gpu, (const XGL_CHAR *) "xglGetFormatInfo");
-    tab->CreateImage = fpGPA(gpu, (const XGL_CHAR *) "xglCreateImage");
-    tab->GetImageSubresourceInfo = fpGPA(gpu, (const XGL_CHAR *) "xglGetImageSubresourceInfo");
-    tab->CreateImageView = fpGPA(gpu, (const XGL_CHAR *) "xglCreateImageView");
-    tab->CreateColorAttachmentView = fpGPA(gpu, (const XGL_CHAR *) "xglCreateColorAttachmentView");
-    tab->CreateDepthStencilView = fpGPA(gpu, (const XGL_CHAR *) "xglCreateDepthStencilView");
-    tab->CreateShader = fpGPA(gpu, (const XGL_CHAR *) "xglCreateShader");
-    tab->CreateGraphicsPipeline = fpGPA(gpu, (const XGL_CHAR *) "xglCreateGraphicsPipeline");
-    tab->CreateComputePipeline = fpGPA(gpu, (const XGL_CHAR *) "xglCreateComputePipeline");
-    tab->StorePipeline = fpGPA(gpu, (const XGL_CHAR *) "xglStorePipeline");
-    tab->LoadPipeline = fpGPA(gpu, (const XGL_CHAR *) "xglLoadPipeline");
-    tab->CreatePipelineDelta = fpGPA(gpu, (const XGL_CHAR *) "xglCreatePipelineDelta");
-    tab->CreateSampler = fpGPA(gpu, (const XGL_CHAR *) "xglCreateSampler");
-    tab->CreateDescriptorSet = fpGPA(gpu, (const XGL_CHAR *) "xglCreateDescriptorSet");
-    tab->BeginDescriptorSetUpdate = fpGPA(gpu, (const XGL_CHAR *) "xglBeginDescriptorSetUpdate");
-    tab->EndDescriptorSetUpdate = fpGPA(gpu, (const XGL_CHAR *) "xglEndDescriptorSetUpdate");
-    tab->AttachSamplerDescriptors = fpGPA(gpu, (const XGL_CHAR *) "xglAttachSamplerDescriptors");
-    tab->AttachImageViewDescriptors = fpGPA(gpu, (const XGL_CHAR *) "xglAttachImageViewDescriptors");
-    tab->AttachMemoryViewDescriptors = fpGPA(gpu, (const XGL_CHAR *) "xglAttachMemoryViewDescriptors");
-    tab->AttachNestedDescriptors = fpGPA(gpu, (const XGL_CHAR *) "xglAttachNestedDescriptors");
-    tab->ClearDescriptorSetSlots = fpGPA(gpu, (const XGL_CHAR *) "xglClearDescriptorSetSlots");
-    tab->CreateViewportState = fpGPA(gpu, (const XGL_CHAR *) "xglCreateViewportState");
-    tab->CreateRasterState = fpGPA(gpu, (const XGL_CHAR *) "xglCreateRasterState");
-    tab->CreateMsaaState = fpGPA(gpu, (const XGL_CHAR *) "xglCreateMsaaState");
-    tab->CreateColorBlendState = fpGPA(gpu, (const XGL_CHAR *) "xglCreateColorBlendState");
-    tab->CreateDepthStencilState = fpGPA(gpu, (const XGL_CHAR *) "xglCreateDepthStencilState");
-    tab->CreateCommandBuffer = fpGPA(gpu, (const XGL_CHAR *) "xglCreateCommandBuffer");
-    tab->BeginCommandBuffer = fpGPA(gpu, (const XGL_CHAR *) "xglBeginCommandBuffer");
-    tab->EndCommandBuffer = fpGPA(gpu, (const XGL_CHAR *) "xglEndCommandBuffer");
-    tab->ResetCommandBuffer = fpGPA(gpu, (const XGL_CHAR *) "xglResetCommandBuffer");
-    tab->CmdBindPipeline = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindPipeline");
-    tab->CmdBindPipelineDelta = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindPipelineDelta");
-    tab->CmdBindStateObject = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindStateObject");
-    tab->CmdBindDescriptorSet = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindDescriptorSet");
-    tab->CmdBindDynamicMemoryView = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindDynamicMemoryView");
-    tab->CmdBindVertexData = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindVertexData");
-    tab->CmdBindIndexData = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindIndexData");
-    tab->CmdBindAttachments = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBindAttachments");
-    tab->CmdPrepareMemoryRegions = fpGPA(gpu, (const XGL_CHAR *) "xglCmdPrepareMemoryRegions");
-    tab->CmdPrepareImages = fpGPA(gpu, (const XGL_CHAR *) "xglCmdPrepareImages");
-    tab->CmdDraw = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDraw");
-    tab->CmdDrawIndexed = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDrawIndexed");
-    tab->CmdDrawIndirect = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDrawIndirect");
-    tab->CmdDrawIndexedIndirect = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDrawIndexedIndirect");
-    tab->CmdDispatch = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDispatch");
-    tab->CmdDispatchIndirect = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDispatchIndirect");
-    tab->CmdCopyMemory = fpGPA(gpu, (const XGL_CHAR *) "xglCmdCopyMemory");
-    tab->CmdCopyImage = fpGPA(gpu, (const XGL_CHAR *) "xglCmdCopyImage");
-    tab->CmdCopyMemoryToImage = fpGPA(gpu, (const XGL_CHAR *) "xglCmdCopyMemoryToImage");
-    tab->CmdCopyImageToMemory = fpGPA(gpu, (const XGL_CHAR *) "xglCmdCopyImageToMemory");
-    tab->CmdCloneImageData = fpGPA(gpu, (const XGL_CHAR *) "xglCmdCloneImageData");
-    tab->CmdUpdateMemory = fpGPA(gpu, (const XGL_CHAR *) "xglCmdUpdateMemory");
-    tab->CmdFillMemory = fpGPA(gpu, (const XGL_CHAR *) "xglCmdFillMemory");
-    tab->CmdClearColorImage = fpGPA(gpu, (const XGL_CHAR *) "xglCmdClearColorImage");
-    tab->CmdClearColorImageRaw = fpGPA(gpu, (const XGL_CHAR *) "xglCmdClearColorImageRaw");
-    tab->CmdClearDepthStencil = fpGPA(gpu, (const XGL_CHAR *) "xglCmdClearDepthStencil");
-    tab->CmdResolveImage = fpGPA(gpu, (const XGL_CHAR *) "xglCmdResolveImage");
-    tab->CmdSetEvent = fpGPA(gpu, (const XGL_CHAR *) "xglCmdSetEvent");
-    tab->CmdResetEvent = fpGPA(gpu, (const XGL_CHAR *) "xglCmdResetEvent");
-    tab->CmdMemoryAtomic = fpGPA(gpu, (const XGL_CHAR *) "xglCmdMemoryAtomic");
-    tab->CmdBeginQuery = fpGPA(gpu, (const XGL_CHAR *) "xglCmdBeginQuery");
-    tab->CmdEndQuery = fpGPA(gpu, (const XGL_CHAR *) "xglCmdEndQuery");
-    tab->CmdResetQueryPool = fpGPA(gpu, (const XGL_CHAR *) "xglCmdResetQueryPool");
-    tab->CmdWriteTimestamp = fpGPA(gpu, (const XGL_CHAR *) "xglCmdWriteTimestamp");
-    tab->CmdInitAtomicCounters = fpGPA(gpu, (const XGL_CHAR *) "xglCmdInitAtomicCounters");
-    tab->CmdLoadAtomicCounters = fpGPA(gpu, (const XGL_CHAR *) "xglCmdLoadAtomicCounters");
-    tab->CmdSaveAtomicCounters = fpGPA(gpu, (const XGL_CHAR *) "xglCmdSaveAtomicCounters");
-    tab->DbgSetValidationLevel = fpGPA(gpu, (const XGL_CHAR *) "xglDbgSetValidationLevel");
-    tab->DbgRegisterMsgCallback = fpGPA(gpu, (const XGL_CHAR *) "xglDbgRegisterMsgCallback");
-    tab->DbgUnregisterMsgCallback = fpGPA(gpu, (const XGL_CHAR *) "xglDbgUnregisterMsgCallback");
-    tab->DbgSetMessageFilter = fpGPA(gpu, (const XGL_CHAR *) "xglDbgSetMessageFilter");
-    tab->DbgSetObjectTag = fpGPA(gpu, (const XGL_CHAR *) "xglDbgSetObjectTag");
-    tab->DbgSetGlobalOption = fpGPA(gpu, (const XGL_CHAR *) "xglDbgSetGlobalOption");
-    tab->DbgSetDeviceOption = fpGPA(gpu, (const XGL_CHAR *) "xglDbgSetDeviceOption");
-    tab->CmdDbgMarkerBegin = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDbgMarkerBegin");
-    tab->CmdDbgMarkerEnd = fpGPA(gpu, (const XGL_CHAR *) "xglCmdDbgMarkerEnd");
-    tab->WsiX11AssociateConnection = fpGPA(gpu, (const XGL_CHAR *) "xglWsiX11AssociateConnection");
-    tab->WsiX11GetMSC = fpGPA(gpu, (const XGL_CHAR *) "xglWsiX11GetMSC");
-    tab->WsiX11CreatePresentableImage = fpGPA(gpu, (const XGL_CHAR *) "xglWsiX11CreatePresentableImage");
-    tab->WsiX11QueuePresent = fpGPA(gpu, (const XGL_CHAR *) "xglWsiX11QueuePresent");
+    tab->GetDeviceQueue = fpGPA(gpu, "xglGetDeviceQueue");
+    tab->QueueSubmit = fpGPA(gpu, "xglQueueSubmit");
+    tab->QueueSetGlobalMemReferences = fpGPA(gpu, "xglQueueSetGlobalMemReferences");
+    tab->QueueWaitIdle = fpGPA(gpu, "xglQueueWaitIdle");
+    tab->DeviceWaitIdle = fpGPA(gpu, "xglDeviceWaitIdle");
+    tab->GetMemoryHeapCount = fpGPA(gpu, "xglGetMemoryHeapCount");
+    tab->GetMemoryHeapInfo = fpGPA(gpu, "xglGetMemoryHeapInfo");
+    tab->AllocMemory = fpGPA(gpu, "xglAllocMemory");
+    tab->FreeMemory = fpGPA(gpu, "xglFreeMemory");
+    tab->SetMemoryPriority = fpGPA(gpu, "xglSetMemoryPriority");
+    tab->MapMemory = fpGPA(gpu, "xglMapMemory");
+    tab->UnmapMemory = fpGPA(gpu, "xglUnmapMemory");
+    tab->PinSystemMemory = fpGPA(gpu, "xglPinSystemMemory");
+    tab->RemapVirtualMemoryPages = fpGPA(gpu, "xglRemapVirtualMemoryPages");
+    tab->GetMultiGpuCompatibility = fpGPA(gpu, "xglGetMultiGpuCompatibility");
+    tab->OpenSharedMemory = fpGPA(gpu, "xglOpenSharedMemory");
+    tab->OpenSharedQueueSemaphore = fpGPA(gpu, "xglOpenSharedQueueSemaphore");
+    tab->OpenPeerMemory = fpGPA(gpu, "xglOpenPeerMemory");
+    tab->OpenPeerImage = fpGPA(gpu, "xglOpenPeerImage");
+    tab->DestroyObject = fpGPA(gpu, "xglDestroyObject");
+    tab->GetObjectInfo = fpGPA(gpu, "xglGetObjectInfo");
+    tab->BindObjectMemory = fpGPA(gpu, "xglBindObjectMemory");
+    tab->CreateFence = fpGPA(gpu, "xglCreateFence");
+    tab->GetFenceStatus = fpGPA(gpu, "xglGetFenceStatus");
+    tab->WaitForFences = fpGPA(gpu, "xglWaitForFences");
+    tab->CreateQueueSemaphore = fpGPA(gpu, "xglCreateQueueSemaphore");
+    tab->SignalQueueSemaphore = fpGPA(gpu, "xglSignalQueueSemaphore");
+    tab->WaitQueueSemaphore = fpGPA(gpu, "xglWaitQueueSemaphore");
+    tab->CreateEvent = fpGPA(gpu, "xglCreateEvent");
+    tab->GetEventStatus = fpGPA(gpu, "xglGetEventStatus");
+    tab->SetEvent = fpGPA(gpu, "xglSetEvent");
+    tab->ResetEvent = fpGPA(gpu, "xglResetEvent");
+    tab->CreateQueryPool = fpGPA(gpu, "xglCreateQueryPool");
+    tab->GetQueryPoolResults = fpGPA(gpu, "xglGetQueryPoolResults");
+    tab->GetFormatInfo = fpGPA(gpu, "xglGetFormatInfo");
+    tab->CreateImage = fpGPA(gpu, "xglCreateImage");
+    tab->GetImageSubresourceInfo = fpGPA(gpu, "xglGetImageSubresourceInfo");
+    tab->CreateImageView = fpGPA(gpu, "xglCreateImageView");
+    tab->CreateColorAttachmentView = fpGPA(gpu, "xglCreateColorAttachmentView");
+    tab->CreateDepthStencilView = fpGPA(gpu, "xglCreateDepthStencilView");
+    tab->CreateShader = fpGPA(gpu, "xglCreateShader");
+    tab->CreateGraphicsPipeline = fpGPA(gpu, "xglCreateGraphicsPipeline");
+    tab->CreateComputePipeline = fpGPA(gpu, "xglCreateComputePipeline");
+    tab->StorePipeline = fpGPA(gpu, "xglStorePipeline");
+    tab->LoadPipeline = fpGPA(gpu, "xglLoadPipeline");
+    tab->CreatePipelineDelta = fpGPA(gpu, "xglCreatePipelineDelta");
+    tab->CreateSampler = fpGPA(gpu, "xglCreateSampler");
+    tab->CreateDescriptorSet = fpGPA(gpu, "xglCreateDescriptorSet");
+    tab->BeginDescriptorSetUpdate = fpGPA(gpu, "xglBeginDescriptorSetUpdate");
+    tab->EndDescriptorSetUpdate = fpGPA(gpu, "xglEndDescriptorSetUpdate");
+    tab->AttachSamplerDescriptors = fpGPA(gpu, "xglAttachSamplerDescriptors");
+    tab->AttachImageViewDescriptors = fpGPA(gpu, "xglAttachImageViewDescriptors");
+    tab->AttachMemoryViewDescriptors = fpGPA(gpu, "xglAttachMemoryViewDescriptors");
+    tab->AttachNestedDescriptors = fpGPA(gpu, "xglAttachNestedDescriptors");
+    tab->ClearDescriptorSetSlots = fpGPA(gpu, "xglClearDescriptorSetSlots");
+    tab->CreateViewportState = fpGPA(gpu, "xglCreateViewportState");
+    tab->CreateRasterState = fpGPA(gpu, "xglCreateRasterState");
+    tab->CreateMsaaState = fpGPA(gpu, "xglCreateMsaaState");
+    tab->CreateColorBlendState = fpGPA(gpu, "xglCreateColorBlendState");
+    tab->CreateDepthStencilState = fpGPA(gpu, "xglCreateDepthStencilState");
+    tab->CreateCommandBuffer = fpGPA(gpu, "xglCreateCommandBuffer");
+    tab->BeginCommandBuffer = fpGPA(gpu, "xglBeginCommandBuffer");
+    tab->EndCommandBuffer = fpGPA(gpu, "xglEndCommandBuffer");
+    tab->ResetCommandBuffer = fpGPA(gpu, "xglResetCommandBuffer");
+    tab->CmdBindPipeline = fpGPA(gpu, "xglCmdBindPipeline");
+    tab->CmdBindPipelineDelta = fpGPA(gpu, "xglCmdBindPipelineDelta");
+    tab->CmdBindStateObject = fpGPA(gpu, "xglCmdBindStateObject");
+    tab->CmdBindDescriptorSet = fpGPA(gpu, "xglCmdBindDescriptorSet");
+    tab->CmdBindDynamicMemoryView = fpGPA(gpu, "xglCmdBindDynamicMemoryView");
+    tab->CmdBindVertexData = fpGPA(gpu, "xglCmdBindVertexData");
+    tab->CmdBindIndexData = fpGPA(gpu, "xglCmdBindIndexData");
+    tab->CmdBindAttachments = fpGPA(gpu, "xglCmdBindAttachments");
+    tab->CmdPrepareMemoryRegions = fpGPA(gpu, "xglCmdPrepareMemoryRegions");
+    tab->CmdPrepareImages = fpGPA(gpu, "xglCmdPrepareImages");
+    tab->CmdDraw = fpGPA(gpu, "xglCmdDraw");
+    tab->CmdDrawIndexed = fpGPA(gpu, "xglCmdDrawIndexed");
+    tab->CmdDrawIndirect = fpGPA(gpu, "xglCmdDrawIndirect");
+    tab->CmdDrawIndexedIndirect = fpGPA(gpu, "xglCmdDrawIndexedIndirect");
+    tab->CmdDispatch = fpGPA(gpu, "xglCmdDispatch");
+    tab->CmdDispatchIndirect = fpGPA(gpu, "xglCmdDispatchIndirect");
+    tab->CmdCopyMemory = fpGPA(gpu, "xglCmdCopyMemory");
+    tab->CmdCopyImage = fpGPA(gpu, "xglCmdCopyImage");
+    tab->CmdCopyMemoryToImage = fpGPA(gpu, "xglCmdCopyMemoryToImage");
+    tab->CmdCopyImageToMemory = fpGPA(gpu, "xglCmdCopyImageToMemory");
+    tab->CmdCloneImageData = fpGPA(gpu, "xglCmdCloneImageData");
+    tab->CmdUpdateMemory = fpGPA(gpu, "xglCmdUpdateMemory");
+    tab->CmdFillMemory = fpGPA(gpu, "xglCmdFillMemory");
+    tab->CmdClearColorImage = fpGPA(gpu, "xglCmdClearColorImage");
+    tab->CmdClearColorImageRaw = fpGPA(gpu, "xglCmdClearColorImageRaw");
+    tab->CmdClearDepthStencil = fpGPA(gpu, "xglCmdClearDepthStencil");
+    tab->CmdResolveImage = fpGPA(gpu, "xglCmdResolveImage");
+    tab->CmdSetEvent = fpGPA(gpu, "xglCmdSetEvent");
+    tab->CmdResetEvent = fpGPA(gpu, "xglCmdResetEvent");
+    tab->CmdMemoryAtomic = fpGPA(gpu, "xglCmdMemoryAtomic");
+    tab->CmdBeginQuery = fpGPA(gpu, "xglCmdBeginQuery");
+    tab->CmdEndQuery = fpGPA(gpu, "xglCmdEndQuery");
+    tab->CmdResetQueryPool = fpGPA(gpu, "xglCmdResetQueryPool");
+    tab->CmdWriteTimestamp = fpGPA(gpu, "xglCmdWriteTimestamp");
+    tab->CmdInitAtomicCounters = fpGPA(gpu, "xglCmdInitAtomicCounters");
+    tab->CmdLoadAtomicCounters = fpGPA(gpu, "xglCmdLoadAtomicCounters");
+    tab->CmdSaveAtomicCounters = fpGPA(gpu, "xglCmdSaveAtomicCounters");
+    tab->DbgSetValidationLevel = fpGPA(gpu, "xglDbgSetValidationLevel");
+    tab->DbgRegisterMsgCallback = fpGPA(gpu, "xglDbgRegisterMsgCallback");
+    tab->DbgUnregisterMsgCallback = fpGPA(gpu, "xglDbgUnregisterMsgCallback");
+    tab->DbgSetMessageFilter = fpGPA(gpu, "xglDbgSetMessageFilter");
+    tab->DbgSetObjectTag = fpGPA(gpu, "xglDbgSetObjectTag");
+    tab->DbgSetGlobalOption = fpGPA(gpu, "xglDbgSetGlobalOption");
+    tab->DbgSetDeviceOption = fpGPA(gpu, "xglDbgSetDeviceOption");
+    tab->CmdDbgMarkerBegin = fpGPA(gpu, "xglCmdDbgMarkerBegin");
+    tab->CmdDbgMarkerEnd = fpGPA(gpu, "xglCmdDbgMarkerEnd");
+    tab->WsiX11AssociateConnection = fpGPA(gpu, "xglWsiX11AssociateConnection");
+    tab->WsiX11GetMSC = fpGPA(gpu, "xglWsiX11GetMSC");
+    tab->WsiX11CreatePresentableImage = fpGPA(gpu, "xglWsiX11CreatePresentableImage");
+    tab->WsiX11QueuePresent = fpGPA(gpu, "xglWsiX11QueuePresent");
 }
 
 static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, XGL_UINT *gpu_index)
@@ -749,7 +749,7 @@ static XGL_UINT loader_get_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index
             XGL_UINT len;
             for (XGL_UINT i = 0; i < pCi->layerCount; i++) {
                 const char * lib_name = NULL;
-                name = (const char *) *(pCi->ppActiveLayerNames + i);
+                name = *(pCi->ppActiveLayerNames + i);
                 if (!find_layer_name(icd, gpu_index, name, &lib_name))
                     return loader_get_layer_env(icd, gpu_index, layerNames);
                 len = strlen(name);
@@ -875,247 +875,247 @@ LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_C
     if (disp_table == NULL)
         return NULL;
 
-    if (!strncmp("xglGetProcAddr", (const char *) pName, sizeof("xglGetProcAddr")))
+    if (!strncmp("xglGetProcAddr", pName, sizeof("xglGetProcAddr")))
         return disp_table->GetProcAddr;
-    else if (!strncmp("xglInitAndEnumerateGpus", (const char *) pName, sizeof("xglInitAndEnumerateGpus")))
+    else if (!strncmp("xglInitAndEnumerateGpus", pName, sizeof("xglInitAndEnumerateGpus")))
         return disp_table->InitAndEnumerateGpus;
-    else if (!strncmp("xglGetGpuInfo", (const char *) pName, sizeof ("xglGetGpuInfo")))
+    else if (!strncmp("xglGetGpuInfo", pName, sizeof ("xglGetGpuInfo")))
         return disp_table->GetGpuInfo;
-    else if (!strncmp("xglCreateDevice", (const char *) pName, sizeof ("xglCreateDevice")))
+    else if (!strncmp("xglCreateDevice", pName, sizeof ("xglCreateDevice")))
         return disp_table->CreateDevice;
-    else if (!strncmp("xglDestroyDevice", (const char *) pName, sizeof ("xglDestroyDevice")))
+    else if (!strncmp("xglDestroyDevice", pName, sizeof ("xglDestroyDevice")))
         return disp_table->DestroyDevice;
-    else if (!strncmp("xglGetExtensionSupport", (const char *) pName, sizeof ("xglGetExtensionSupport")))
+    else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
         return disp_table->GetExtensionSupport;
-    else if (!strncmp("xglEnumerateLayers", (const char *) pName, sizeof ("xglEnumerateLayers")))
+    else if (!strncmp("xglEnumerateLayers", pName, sizeof ("xglEnumerateLayers")))
         return disp_table->EnumerateLayers;
-    else if (!strncmp("xglGetDeviceQueue", (const char *) pName, sizeof ("xglGetDeviceQueue")))
+    else if (!strncmp("xglGetDeviceQueue", pName, sizeof ("xglGetDeviceQueue")))
         return disp_table->GetDeviceQueue;
-    else if (!strncmp("xglQueueSubmit", (const char *) pName, sizeof ("xglQueueSubmit")))
+    else if (!strncmp("xglQueueSubmit", pName, sizeof ("xglQueueSubmit")))
         return disp_table->QueueSubmit;
-    else if (!strncmp("xglQueueSetGlobalMemReferences", (const char *) pName, sizeof ("xglQueueSetGlobalMemReferences")))
+    else if (!strncmp("xglQueueSetGlobalMemReferences", pName, sizeof ("xglQueueSetGlobalMemReferences")))
         return disp_table->QueueSetGlobalMemReferences;
-    else if (!strncmp("xglQueueWaitIdle", (const char *) pName, sizeof ("xglQueueWaitIdle")))
+    else if (!strncmp("xglQueueWaitIdle", pName, sizeof ("xglQueueWaitIdle")))
         return disp_table->QueueWaitIdle;
-    else if (!strncmp("xglDeviceWaitIdle", (const char *) pName, sizeof ("xglDeviceWaitIdle")))
+    else if (!strncmp("xglDeviceWaitIdle", pName, sizeof ("xglDeviceWaitIdle")))
         return disp_table->DeviceWaitIdle;
-    else if (!strncmp("xglGetMemoryHeapCount", (const char *) pName, sizeof ("xglGetMemoryHeapCount")))
+    else if (!strncmp("xglGetMemoryHeapCount", pName, sizeof ("xglGetMemoryHeapCount")))
         return disp_table->GetMemoryHeapCount;
-    else if (!strncmp("xglGetMemoryHeapInfo", (const char *) pName, sizeof ("xglGetMemoryHeapInfo")))
+    else if (!strncmp("xglGetMemoryHeapInfo", pName, sizeof ("xglGetMemoryHeapInfo")))
         return disp_table->GetMemoryHeapInfo;
-    else if (!strncmp("xglAllocMemory", (const char *) pName, sizeof ("xglAllocMemory")))
+    else if (!strncmp("xglAllocMemory", pName, sizeof ("xglAllocMemory")))
         return disp_table->AllocMemory;
-    else if (!strncmp("xglFreeMemory", (const char *) pName, sizeof ("xglFreeMemory")))
+    else if (!strncmp("xglFreeMemory", pName, sizeof ("xglFreeMemory")))
         return disp_table->FreeMemory;
-    else if (!strncmp("xglSetMemoryPriority", (const char *) pName, sizeof ("xglSetMemoryPriority")))
+    else if (!strncmp("xglSetMemoryPriority", pName, sizeof ("xglSetMemoryPriority")))
         return disp_table->SetMemoryPriority;
-    else if (!strncmp("xglMapMemory", (const char *) pName, sizeof ("xglMapMemory")))
+    else if (!strncmp("xglMapMemory", pName, sizeof ("xglMapMemory")))
         return disp_table->MapMemory;
-    else if (!strncmp("xglUnmapMemory", (const char *) pName, sizeof ("xglUnmapMemory")))
+    else if (!strncmp("xglUnmapMemory", pName, sizeof ("xglUnmapMemory")))
         return disp_table->UnmapMemory;
-    else if (!strncmp("xglPinSystemMemory", (const char *) pName, sizeof ("xglPinSystemMemory")))
+    else if (!strncmp("xglPinSystemMemory", pName, sizeof ("xglPinSystemMemory")))
         return disp_table->PinSystemMemory;
-    else if (!strncmp("xglRemapVirtualMemoryPages", (const char *) pName, sizeof ("xglRemapVirtualMemoryPages")))
+    else if (!strncmp("xglRemapVirtualMemoryPages", pName, sizeof ("xglRemapVirtualMemoryPages")))
         return disp_table->RemapVirtualMemoryPages;
-    else if (!strncmp("xglGetMultiGpuCompatibility", (const char *) pName, sizeof ("xglGetMultiGpuCompatibility")))
+    else if (!strncmp("xglGetMultiGpuCompatibility", pName, sizeof ("xglGetMultiGpuCompatibility")))
         return disp_table->GetMultiGpuCompatibility;
-    else if (!strncmp("xglOpenSharedMemory", (const char *) pName, sizeof ("xglOpenSharedMemory")))
+    else if (!strncmp("xglOpenSharedMemory", pName, sizeof ("xglOpenSharedMemory")))
         return disp_table->OpenSharedMemory;
-    else if (!strncmp("xglOpenSharedQueueSemaphore", (const char *) pName, sizeof ("xglOpenSharedQueueSemaphore")))
+    else if (!strncmp("xglOpenSharedQueueSemaphore", pName, sizeof ("xglOpenSharedQueueSemaphore")))
         return disp_table->OpenSharedQueueSemaphore;
-    else if (!strncmp("xglOpenPeerMemory", (const char *) pName, sizeof ("xglOpenPeerMemory")))
+    else if (!strncmp("xglOpenPeerMemory", pName, sizeof ("xglOpenPeerMemory")))
         return disp_table->OpenPeerMemory;
-    else if (!strncmp("xglOpenPeerImage", (const char *) pName, sizeof ("xglOpenPeerImage")))
+    else if (!strncmp("xglOpenPeerImage", pName, sizeof ("xglOpenPeerImage")))
         return disp_table->OpenPeerImage;
-    else if (!strncmp("xglDestroyObject", (const char *) pName, sizeof ("xglDestroyObject")))
+    else if (!strncmp("xglDestroyObject", pName, sizeof ("xglDestroyObject")))
         return disp_table->DestroyObject;
-    else if (!strncmp("xglGetObjectInfo", (const char *) pName, sizeof ("xglGetObjectInfo")))
+    else if (!strncmp("xglGetObjectInfo", pName, sizeof ("xglGetObjectInfo")))
         return disp_table->GetObjectInfo;
-    else if (!strncmp("xglBindObjectMemory", (const char *) pName, sizeof ("xglBindObjectMemory")))
+    else if (!strncmp("xglBindObjectMemory", pName, sizeof ("xglBindObjectMemory")))
         return disp_table->BindObjectMemory;
-    else if (!strncmp("xglCreateFence", (const char *) pName, sizeof ("xgllCreateFence")))
+    else if (!strncmp("xglCreateFence", pName, sizeof ("xgllCreateFence")))
         return disp_table->CreateFence;
-    else if (!strncmp("xglGetFenceStatus", (const char *) pName, sizeof ("xglGetFenceStatus")))
+    else if (!strncmp("xglGetFenceStatus", pName, sizeof ("xglGetFenceStatus")))
         return disp_table->GetFenceStatus;
-    else if (!strncmp("xglWaitForFences", (const char *) pName, sizeof ("xglWaitForFences")))
+    else if (!strncmp("xglWaitForFences", pName, sizeof ("xglWaitForFences")))
         return disp_table->WaitForFences;
-    else if (!strncmp("xglCreateQueueSemaphore", (const char *) pName, sizeof ("xgllCreateQueueSemaphore")))
+    else if (!strncmp("xglCreateQueueSemaphore", pName, sizeof ("xgllCreateQueueSemaphore")))
         return disp_table->CreateQueueSemaphore;
-    else if (!strncmp("xglSignalQueueSemaphore", (const char *) pName, sizeof ("xglSignalQueueSemaphore")))
+    else if (!strncmp("xglSignalQueueSemaphore", pName, sizeof ("xglSignalQueueSemaphore")))
         return disp_table->SignalQueueSemaphore;
-    else if (!strncmp("xglWaitQueueSemaphore", (const char *) pName, sizeof ("xglWaitQueueSemaphore")))
+    else if (!strncmp("xglWaitQueueSemaphore", pName, sizeof ("xglWaitQueueSemaphore")))
         return disp_table->WaitQueueSemaphore;
-    else if (!strncmp("xglCreateEvent", (const char *) pName, sizeof ("xgllCreateEvent")))
+    else if (!strncmp("xglCreateEvent", pName, sizeof ("xgllCreateEvent")))
         return disp_table->CreateEvent;
-    else if (!strncmp("xglGetEventStatus", (const char *) pName, sizeof ("xglGetEventStatus")))
+    else if (!strncmp("xglGetEventStatus", pName, sizeof ("xglGetEventStatus")))
         return disp_table->GetEventStatus;
-    else if (!strncmp("xglSetEvent", (const char *) pName, sizeof ("xglSetEvent")))
+    else if (!strncmp("xglSetEvent", pName, sizeof ("xglSetEvent")))
         return disp_table->SetEvent;
-    else if (!strncmp("xglResetEvent", (const char *) pName, sizeof ("xgllResetEvent")))
+    else if (!strncmp("xglResetEvent", pName, sizeof ("xgllResetEvent")))
         return disp_table->ResetEvent;
-    else if (!strncmp("xglCreateQueryPool", (const char *) pName, sizeof ("xglCreateQueryPool")))
+    else if (!strncmp("xglCreateQueryPool", pName, sizeof ("xglCreateQueryPool")))
         return disp_table->CreateQueryPool;
-    else if (!strncmp("xglGetQueryPoolResults", (const char *) pName, sizeof ("xglGetQueryPoolResults")))
+    else if (!strncmp("xglGetQueryPoolResults", pName, sizeof ("xglGetQueryPoolResults")))
         return disp_table->GetQueryPoolResults;
-    else if (!strncmp("xglGetFormatInfo", (const char *) pName, sizeof ("xglGetFormatInfo")))
+    else if (!strncmp("xglGetFormatInfo", pName, sizeof ("xglGetFormatInfo")))
         return disp_table->GetFormatInfo;
-    else if (!strncmp("xglCreateImage", (const char *) pName, sizeof ("xglCreateImage")))
+    else if (!strncmp("xglCreateImage", pName, sizeof ("xglCreateImage")))
         return disp_table->CreateImage;
-    else if (!strncmp("xglGetImageSubresourceInfo", (const char *) pName, sizeof ("xglGetImageSubresourceInfo")))
+    else if (!strncmp("xglGetImageSubresourceInfo", pName, sizeof ("xglGetImageSubresourceInfo")))
         return disp_table->GetImageSubresourceInfo;
-    else if (!strncmp("xglCreateImageView", (const char *) pName, sizeof ("xglCreateImageView")))
+    else if (!strncmp("xglCreateImageView", pName, sizeof ("xglCreateImageView")))
         return disp_table->CreateImageView;
-    else if (!strncmp("xglCreateColorAttachmentView", (const char *) pName, sizeof ("xglCreateColorAttachmentView")))
+    else if (!strncmp("xglCreateColorAttachmentView", pName, sizeof ("xglCreateColorAttachmentView")))
         return disp_table->CreateColorAttachmentView;
-    else if (!strncmp("xglCreateDepthStencilView", (const char *) pName, sizeof ("xglCreateDepthStencilView")))
+    else if (!strncmp("xglCreateDepthStencilView", pName, sizeof ("xglCreateDepthStencilView")))
         return disp_table->CreateDepthStencilView;
-    else if (!strncmp("xglCreateShader", (const char *) pName, sizeof ("xglCreateShader")))
+    else if (!strncmp("xglCreateShader", pName, sizeof ("xglCreateShader")))
         return disp_table->CreateShader;
-    else if (!strncmp("xglCreateGraphicsPipeline", (const char *) pName, sizeof ("xglCreateGraphicsPipeline")))
+    else if (!strncmp("xglCreateGraphicsPipeline", pName, sizeof ("xglCreateGraphicsPipeline")))
         return disp_table->CreateGraphicsPipeline;
-    else if (!strncmp("xglCreateComputePipeline", (const char *) pName, sizeof ("xglCreateComputePipeline")))
+    else if (!strncmp("xglCreateComputePipeline", pName, sizeof ("xglCreateComputePipeline")))
         return disp_table->CreateComputePipeline;
-    else if (!strncmp("xglStorePipeline", (const char *) pName, sizeof ("xglStorePipeline")))
+    else if (!strncmp("xglStorePipeline", pName, sizeof ("xglStorePipeline")))
         return disp_table->StorePipeline;
-    else if (!strncmp("xglLoadPipeline", (const char *) pName, sizeof ("xglLoadPipeline")))
+    else if (!strncmp("xglLoadPipeline", pName, sizeof ("xglLoadPipeline")))
         return disp_table->LoadPipeline;
-    else if (!strncmp("xglCreatePipelineDelta", (const char *) pName, sizeof ("xglCreatePipelineDelta")))
+    else if (!strncmp("xglCreatePipelineDelta", pName, sizeof ("xglCreatePipelineDelta")))
         return disp_table->CreatePipelineDelta;
-    else if (!strncmp("xglCreateSampler", (const char *) pName, sizeof ("xglCreateSampler")))
+    else if (!strncmp("xglCreateSampler", pName, sizeof ("xglCreateSampler")))
         return disp_table->CreateSampler;
-    else if (!strncmp("xglCreateDescriptorSet", (const char *) pName, sizeof ("xglCreateDescriptorSet")))
+    else if (!strncmp("xglCreateDescriptorSet", pName, sizeof ("xglCreateDescriptorSet")))
         return disp_table->CreateDescriptorSet;
-    else if (!strncmp("xglBeginDescriptorSetUpdate", (const char *) pName, sizeof ("xglBeginDescriptorSetUpdate")))
+    else if (!strncmp("xglBeginDescriptorSetUpdate", pName, sizeof ("xglBeginDescriptorSetUpdate")))
         return disp_table->BeginDescriptorSetUpdate;
-    else if (!strncmp("xglEndDescriptorSetUpdate", (const char *) pName, sizeof ("xglEndDescriptorSetUpdate")))
+    else if (!strncmp("xglEndDescriptorSetUpdate", pName, sizeof ("xglEndDescriptorSetUpdate")))
         return disp_table->EndDescriptorSetUpdate;
-    else if (!strncmp("xglAttachSamplerDescriptors", (const char *) pName, sizeof ("xglAttachSamplerDescriptors")))
+    else if (!strncmp("xglAttachSamplerDescriptors", pName, sizeof ("xglAttachSamplerDescriptors")))
         return disp_table->AttachSamplerDescriptors;
-    else if (!strncmp("xglAttachImageViewDescriptors", (const char *) pName, sizeof ("xglAttachImageViewDescriptors")))
+    else if (!strncmp("xglAttachImageViewDescriptors", pName, sizeof ("xglAttachImageViewDescriptors")))
         return disp_table->AttachImageViewDescriptors;
-    else if (!strncmp("xglAttachMemoryViewDescriptors", (const char *) pName, sizeof ("xglAttachMemoryViewDescriptors")))
+    else if (!strncmp("xglAttachMemoryViewDescriptors", pName, sizeof ("xglAttachMemoryViewDescriptors")))
         return disp_table->AttachMemoryViewDescriptors;
-    else if (!strncmp("xglAttachNestedDescriptors", (const char *) pName, sizeof ("xglAttachNestedDescriptors")))
+    else if (!strncmp("xglAttachNestedDescriptors", pName, sizeof ("xglAttachNestedDescriptors")))
         return disp_table->AttachNestedDescriptors;
-    else if (!strncmp("xglClearDescriptorSetSlots", (const char *) pName, sizeof ("xglClearDescriptorSetSlots")))
+    else if (!strncmp("xglClearDescriptorSetSlots", pName, sizeof ("xglClearDescriptorSetSlots")))
         return disp_table->ClearDescriptorSetSlots;
-    else if (!strncmp("xglCreateViewportState", (const char *) pName, sizeof ("xglCreateViewportState")))
+    else if (!strncmp("xglCreateViewportState", pName, sizeof ("xglCreateViewportState")))
         return disp_table->CreateViewportState;
-    else if (!strncmp("xglCreateRasterState", (const char *) pName, sizeof ("xglCreateRasterState")))
+    else if (!strncmp("xglCreateRasterState", pName, sizeof ("xglCreateRasterState")))
         return disp_table->CreateRasterState;
-    else if (!strncmp("xglCreateMsaaState", (const char *) pName, sizeof ("xglCreateMsaaState")))
+    else if (!strncmp("xglCreateMsaaState", pName, sizeof ("xglCreateMsaaState")))
         return disp_table->CreateMsaaState;
-    else if (!strncmp("xglCreateColorBlendState", (const char *) pName, sizeof ("xglCreateColorBlendState")))
+    else if (!strncmp("xglCreateColorBlendState", pName, sizeof ("xglCreateColorBlendState")))
         return disp_table->CreateColorBlendState;
-    else if (!strncmp("xglCreateDepthStencilState", (const char *) pName, sizeof ("xglCreateDepthStencilState")))
+    else if (!strncmp("xglCreateDepthStencilState", pName, sizeof ("xglCreateDepthStencilState")))
         return disp_table->CreateDepthStencilState;
-    else if (!strncmp("xglCreateCommandBuffer", (const char *) pName, sizeof ("xglCreateCommandBuffer")))
+    else if (!strncmp("xglCreateCommandBuffer", pName, sizeof ("xglCreateCommandBuffer")))
         return disp_table->CreateCommandBuffer;
-    else if (!strncmp("xglBeginCommandBuffer", (const char *) pName, sizeof ("xglBeginCommandBuffer")))
+    else if (!strncmp("xglBeginCommandBuffer", pName, sizeof ("xglBeginCommandBuffer")))
         return disp_table->BeginCommandBuffer;
-    else if (!strncmp("xglEndCommandBuffer", (const char *) pName, sizeof ("xglEndCommandBuffer")))
+    else if (!strncmp("xglEndCommandBuffer", pName, sizeof ("xglEndCommandBuffer")))
         return disp_table->EndCommandBuffer;
-    else if (!strncmp("xglResetCommandBuffer", (const char *) pName, sizeof ("xglResetCommandBuffer")))
+    else if (!strncmp("xglResetCommandBuffer", pName, sizeof ("xglResetCommandBuffer")))
         return disp_table->ResetCommandBuffer;
-    else if (!strncmp("xglCmdBindPipeline", (const char *) pName, sizeof ("xglCmdBindPipeline")))
+    else if (!strncmp("xglCmdBindPipeline", pName, sizeof ("xglCmdBindPipeline")))
         return disp_table->CmdBindPipeline;
-    else if (!strncmp("xglCmdBindPipelineDelta", (const char *) pName, sizeof ("xglCmdBindPipelineDelta")))
+    else if (!strncmp("xglCmdBindPipelineDelta", pName, sizeof ("xglCmdBindPipelineDelta")))
         return disp_table->CmdBindPipelineDelta;
-    else if (!strncmp("xglCmdBindStateObject", (const char *) pName, sizeof ("xglCmdBindStateObject")))
+    else if (!strncmp("xglCmdBindStateObject", pName, sizeof ("xglCmdBindStateObject")))
         return disp_table->CmdBindStateObject;
-    else if (!strncmp("xglCmdBindDescriptorSet", (const char *) pName, sizeof ("xglCmdBindDescriptorSet")))
+    else if (!strncmp("xglCmdBindDescriptorSet", pName, sizeof ("xglCmdBindDescriptorSet")))
         return disp_table->CmdBindDescriptorSet;
-    else if (!strncmp("xglCmdBindDynamicMemoryView", (const char *) pName, sizeof ("xglCmdBindDynamicMemoryView")))
+    else if (!strncmp("xglCmdBindDynamicMemoryView", pName, sizeof ("xglCmdBindDynamicMemoryView")))
         return disp_table->CmdBindDynamicMemoryView;
-    else if (!strncmp("xglCmdBindVertexData", (const char *) pName, sizeof ("xglCmdBindVertexData")))
+    else if (!strncmp("xglCmdBindVertexData", pName, sizeof ("xglCmdBindVertexData")))
         return disp_table->CmdBindVertexData;
-    else if (!strncmp("xglCmdBindIndexData", (const char *) pName, sizeof ("xglCmdBindIndexData")))
+    else if (!strncmp("xglCmdBindIndexData", pName, sizeof ("xglCmdBindIndexData")))
         return disp_table->CmdBindIndexData;
-    else if (!strncmp("xglCmdBindAttachments", (const char *) pName, sizeof ("xglCmdBindAttachments")))
+    else if (!strncmp("xglCmdBindAttachments", pName, sizeof ("xglCmdBindAttachments")))
         return disp_table->CmdBindAttachments;
-    else if (!strncmp("xglCmdPrepareMemoryRegions", (const char *) pName, sizeof ("xglCmdPrepareMemoryRegions")))
+    else if (!strncmp("xglCmdPrepareMemoryRegions", pName, sizeof ("xglCmdPrepareMemoryRegions")))
         return disp_table->CmdPrepareMemoryRegions;
-    else if (!strncmp("xglCmdPrepareImages", (const char *) pName, sizeof ("xglCmdPrepareImages")))
+    else if (!strncmp("xglCmdPrepareImages", pName, sizeof ("xglCmdPrepareImages")))
         return disp_table->CmdPrepareImages;
-    else if (!strncmp("xglCmdDraw", (const char *) pName, sizeof ("xglCmdDraw")))
+    else if (!strncmp("xglCmdDraw", pName, sizeof ("xglCmdDraw")))
         return disp_table->CmdDraw;
-    else if (!strncmp("xglCmdDrawIndexed", (const char *) pName, sizeof ("xglCmdDrawIndexed")))
+    else if (!strncmp("xglCmdDrawIndexed", pName, sizeof ("xglCmdDrawIndexed")))
         return disp_table->CmdDrawIndexed;
-    else if (!strncmp("xglCmdDrawIndirect", (const char *) pName, sizeof ("xglCmdDrawIndirect")))
+    else if (!strncmp("xglCmdDrawIndirect", pName, sizeof ("xglCmdDrawIndirect")))
         return disp_table->CmdDrawIndirect;
-    else if (!strncmp("xglCmdDrawIndexedIndirect", (const char *) pName, sizeof ("xglCmdDrawIndexedIndirect")))
+    else if (!strncmp("xglCmdDrawIndexedIndirect", pName, sizeof ("xglCmdDrawIndexedIndirect")))
         return disp_table->CmdDrawIndexedIndirect;
-    else if (!strncmp("xglCmdDispatch", (const char *) pName, sizeof ("xglCmdDispatch")))
+    else if (!strncmp("xglCmdDispatch", pName, sizeof ("xglCmdDispatch")))
         return disp_table->CmdDispatch;
-    else if (!strncmp("xglCmdDispatchIndirect", (const char *) pName, sizeof ("xglCmdDispatchIndirect")))
+    else if (!strncmp("xglCmdDispatchIndirect", pName, sizeof ("xglCmdDispatchIndirect")))
         return disp_table->CmdDispatchIndirect;
-    else if (!strncmp("xglCmdCopyMemory", (const char *) pName, sizeof ("xglCmdCopyMemory")))
+    else if (!strncmp("xglCmdCopyMemory", pName, sizeof ("xglCmdCopyMemory")))
         return disp_table->CmdCopyMemory;
-    else if (!strncmp("xglCmdCopyImage", (const char *) pName, sizeof ("xglCmdCopyImage")))
+    else if (!strncmp("xglCmdCopyImage", pName, sizeof ("xglCmdCopyImage")))
         return disp_table->CmdCopyImage;
-    else if (!strncmp("xglCmdCopyMemoryToImage", (const char *) pName, sizeof ("xglCmdCopyMemoryToImage")))
+    else if (!strncmp("xglCmdCopyMemoryToImage", pName, sizeof ("xglCmdCopyMemoryToImage")))
         return disp_table->CmdCopyMemoryToImage;
-    else if (!strncmp("xglCmdCopyImageToMemory", (const char *) pName, sizeof ("xglCmdCopyImageToMemory")))
+    else if (!strncmp("xglCmdCopyImageToMemory", pName, sizeof ("xglCmdCopyImageToMemory")))
         return disp_table->CmdCopyImageToMemory;
-    else if (!strncmp("xglCmdCloneImageData", (const char *) pName, sizeof ("xglCmdCloneImageData")))
+    else if (!strncmp("xglCmdCloneImageData", pName, sizeof ("xglCmdCloneImageData")))
         return disp_table->CmdCloneImageData;
-    else if (!strncmp("xglCmdUpdateMemory", (const char *) pName, sizeof ("xglCmdUpdateMemory")))
+    else if (!strncmp("xglCmdUpdateMemory", pName, sizeof ("xglCmdUpdateMemory")))
         return disp_table->CmdUpdateMemory;
-    else if (!strncmp("xglCmdFillMemory", (const char *) pName, sizeof ("xglCmdFillMemory")))
+    else if (!strncmp("xglCmdFillMemory", pName, sizeof ("xglCmdFillMemory")))
         return disp_table->CmdFillMemory;
-    else if (!strncmp("xglCmdClearColorImage", (const char *) pName, sizeof ("xglCmdClearColorImage")))
+    else if (!strncmp("xglCmdClearColorImage", pName, sizeof ("xglCmdClearColorImage")))
         return disp_table->CmdClearColorImage;
-    else if (!strncmp("xglCmdClearColorImageRaw", (const char *) pName, sizeof ("xglCmdClearColorImageRaw")))
+    else if (!strncmp("xglCmdClearColorImageRaw", pName, sizeof ("xglCmdClearColorImageRaw")))
         return disp_table->CmdClearColorImageRaw;
-    else if (!strncmp("xglCmdClearDepthStencil", (const char *) pName, sizeof ("xglCmdClearDepthStencil")))
+    else if (!strncmp("xglCmdClearDepthStencil", pName, sizeof ("xglCmdClearDepthStencil")))
         return disp_table->CmdClearDepthStencil;
-    else if (!strncmp("xglCmdResolveImage", (const char *) pName, sizeof ("xglCmdResolveImage")))
+    else if (!strncmp("xglCmdResolveImage", pName, sizeof ("xglCmdResolveImage")))
         return disp_table->CmdResolveImage;
-    else if (!strncmp("xglCmdSetEvent", (const char *) pName, sizeof ("xglCmdSetEvent")))
+    else if (!strncmp("xglCmdSetEvent", pName, sizeof ("xglCmdSetEvent")))
         return disp_table->CmdSetEvent;
-    else if (!strncmp("xglCmdResetEvent", (const char *) pName, sizeof ("xglCmdResetEvent")))
+    else if (!strncmp("xglCmdResetEvent", pName, sizeof ("xglCmdResetEvent")))
         return disp_table->CmdResetEvent;
-    else if (!strncmp("xglCmdMemoryAtomic", (const char *) pName, sizeof ("xglCmdMemoryAtomic")))
+    else if (!strncmp("xglCmdMemoryAtomic", pName, sizeof ("xglCmdMemoryAtomic")))
         return disp_table->CmdMemoryAtomic;
-    else if (!strncmp("xglCmdBeginQuery", (const char *) pName, sizeof ("xglCmdBeginQuery")))
+    else if (!strncmp("xglCmdBeginQuery", pName, sizeof ("xglCmdBeginQuery")))
         return disp_table->CmdBeginQuery;
-    else if (!strncmp("xglCmdEndQuery", (const char *) pName, sizeof ("xglCmdEndQuery")))
+    else if (!strncmp("xglCmdEndQuery", pName, sizeof ("xglCmdEndQuery")))
         return disp_table->CmdEndQuery;
-    else if (!strncmp("xglCmdResetQueryPool", (const char *) pName, sizeof ("xglCmdResetQueryPool")))
+    else if (!strncmp("xglCmdResetQueryPool", pName, sizeof ("xglCmdResetQueryPool")))
         return disp_table->CmdResetQueryPool;
-    else if (!strncmp("xglCmdWriteTimestamp", (const char *) pName, sizeof ("xglCmdWriteTimestamp")))
+    else if (!strncmp("xglCmdWriteTimestamp", pName, sizeof ("xglCmdWriteTimestamp")))
         return disp_table->CmdWriteTimestamp;
-    else if (!strncmp("xglCmdInitAtomicCounters", (const char *) pName, sizeof ("xglCmdInitAtomicCounters")))
+    else if (!strncmp("xglCmdInitAtomicCounters", pName, sizeof ("xglCmdInitAtomicCounters")))
         return disp_table->CmdInitAtomicCounters;
-    else if (!strncmp("xglCmdLoadAtomicCounters", (const char *) pName, sizeof ("xglCmdLoadAtomicCounters")))
+    else if (!strncmp("xglCmdLoadAtomicCounters", pName, sizeof ("xglCmdLoadAtomicCounters")))
         return disp_table->CmdLoadAtomicCounters;
-    else if (!strncmp("xglCmdSaveAtomicCounters", (const char *) pName, sizeof ("xglCmdSaveAtomicCounters")))
+    else if (!strncmp("xglCmdSaveAtomicCounters", pName, sizeof ("xglCmdSaveAtomicCounters")))
         return disp_table->CmdSaveAtomicCounters;
-    else if (!strncmp("xglDbgSetValidationLevel", (const char *) pName, sizeof ("xglDbgSetValidationLevel")))
+    else if (!strncmp("xglDbgSetValidationLevel", pName, sizeof ("xglDbgSetValidationLevel")))
         return disp_table->DbgSetValidationLevel;
-    else if (!strncmp("xglDbgRegisterMsgCallback", (const char *) pName, sizeof ("xglDbgRegisterMsgCallback")))
+    else if (!strncmp("xglDbgRegisterMsgCallback", pName, sizeof ("xglDbgRegisterMsgCallback")))
         return disp_table->DbgRegisterMsgCallback;
-    else if (!strncmp("xglDbgUnregisterMsgCallback", (const char *) pName, sizeof ("xglDbgUnregisterMsgCallback")))
+    else if (!strncmp("xglDbgUnregisterMsgCallback", pName, sizeof ("xglDbgUnregisterMsgCallback")))
         return disp_table->DbgUnregisterMsgCallback;
-    else if (!strncmp("xglDbgSetMessageFilter", (const char *) pName, sizeof ("xglDbgSetMessageFilter")))
+    else if (!strncmp("xglDbgSetMessageFilter", pName, sizeof ("xglDbgSetMessageFilter")))
         return disp_table->DbgSetMessageFilter;
-    else if (!strncmp("xglDbgSetObjectTag", (const char *) pName, sizeof ("xglDbgSetObjectTag")))
+    else if (!strncmp("xglDbgSetObjectTag", pName, sizeof ("xglDbgSetObjectTag")))
         return disp_table->DbgSetObjectTag;
-    else if (!strncmp("xglDbgSetGlobalOption", (const char *) pName, sizeof ("xglDbgSetGlobalOption")))
+    else if (!strncmp("xglDbgSetGlobalOption", pName, sizeof ("xglDbgSetGlobalOption")))
         return disp_table->DbgSetGlobalOption;
-    else if (!strncmp("xglDbgSetDeviceOption", (const char *) pName, sizeof ("xglDbgSetDeviceOption")))
+    else if (!strncmp("xglDbgSetDeviceOption", pName, sizeof ("xglDbgSetDeviceOption")))
         return disp_table->DbgSetDeviceOption;
-    else if (!strncmp("xglCmdDbgMarkerBegin", (const char *) pName, sizeof ("xglCmdDbgMarkerBegin")))
+    else if (!strncmp("xglCmdDbgMarkerBegin", pName, sizeof ("xglCmdDbgMarkerBegin")))
         return disp_table->CmdDbgMarkerBegin;
-    else if (!strncmp("xglCmdDbgMarkerEnd", (const char *) pName, sizeof ("xglCmdDbgMarkerEnd")))
+    else if (!strncmp("xglCmdDbgMarkerEnd", pName, sizeof ("xglCmdDbgMarkerEnd")))
         return disp_table->CmdDbgMarkerEnd;
-    else if (!strncmp("xglWsiX11AssociateConnection", (const char *) pName, sizeof("xglWsiX11AssociateConnection")))
+    else if (!strncmp("xglWsiX11AssociateConnection", pName, sizeof("xglWsiX11AssociateConnection")))
         return disp_table->WsiX11AssociateConnection;
-    else if (!strncmp("xglWsiX11GetMSC", (const char *) pName, sizeof("xglWsiX11GetMSC")))
+    else if (!strncmp("xglWsiX11GetMSC", pName, sizeof("xglWsiX11GetMSC")))
         return disp_table->WsiX11GetMSC;
-    else if (!strncmp("xglWsiX11CreatePresentableImage", (const char *) pName, sizeof("xglWsiX11CreatePresentableImage")))
+    else if (!strncmp("xglWsiX11CreatePresentableImage", pName, sizeof("xglWsiX11CreatePresentableImage")))
         return disp_table->WsiX11CreatePresentableImage;
-    else if (!strncmp("xglWsiX11QueuePresent", (const char *) pName, sizeof("xglWsiX11QueuePresent")))
+    else if (!strncmp("xglWsiX11QueuePresent", pName, sizeof("xglWsiX11QueuePresent")))
         return disp_table->WsiX11QueuePresent;
     else  {
         if (disp_table->GetProcAddr == NULL)

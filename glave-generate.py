@@ -430,7 +430,7 @@ class Subcommand(object):
                         elif 'VOID' in p.ty:
                             packet_size += 'sizeof(%s) + ' % p.name
                         elif 'CHAR' in p.ty:
-                            packet_size += '((%s != NULL) ? strlen((const char *)%s) + 1 : 0) + ' % (p.name, p.name)
+                            packet_size += '((%s != NULL) ? strlen(%s) + 1 : 0) + ' % (p.name, p.name)
                         elif 'DEVICE_CREATE_INFO' in p.ty:
                             packet_size += 'calc_size_XGL_DEVICE_CREATE_INFO(pCreateInfo) + '
                         elif 'pDataSize' in p.name:
@@ -466,7 +466,7 @@ class Subcommand(object):
                     func_body.append('    XGL_SIZE totStringSize = 0;')
                     func_body.append('    uint32_t i = 0;')
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
-                    func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen((const char*)pOutLayers[i]) + 1: 0;')
+                    func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;')
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(XGL_SIZE));' % (proto.name))
                 elif proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                     func_body.append('    size_t customSize;')
@@ -499,7 +499,7 @@ class Subcommand(object):
                     func_body.append('    pPacket->maxLayerCount = maxLayerCount;')
                     func_body.append('    pPacket->maxStringSize = maxStringSize;')
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++) {')
-                    func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayers[i]), ((pOutLayers[i] != NULL) ? strlen((const char *)pOutLayers[i]) + 1 : 0), pOutLayers[i]);')
+                    func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayers[i]), ((pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1 : 0), pOutLayers[i]);')
                     func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pOutLayers[i]));')
                     func_body.append('    }')
                     func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayerCount), sizeof(XGL_SIZE), pOutLayerCount);')
@@ -514,7 +514,7 @@ class Subcommand(object):
                         if 'DEVICE_CREATE_INFO' in proto.params[idx].ty:
                             func_body.append('    add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo);')
                         elif 'CHAR' in proto.params[idx].ty:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen((const char *)%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
                         elif 'Count' in proto.params[idx-1].name and 'queryCount' != proto.params[idx-1].name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
                         elif 'dataSize' == proto.params[idx].name:
@@ -572,7 +572,7 @@ class Subcommand(object):
                         packet_size += p.name
                     if '*' in p.ty and 'pSysMem' != p.name:
                         if 'CHAR' in p.ty:
-                            packet_size += '((%s != NULL) ? strlen((const char *)%s) + 1 : 0) + ' % (p.name, p.name)
+                            packet_size += '((%s != NULL) ? strlen(%s) + 1 : 0) + ' % (p.name, p.name)
                         elif 'Size' not in packet_size:
                             packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
                         buff_ptr_indices.append(proto.params.index(p))
@@ -599,7 +599,7 @@ class Subcommand(object):
                 func_body.append(packet_update_txt.strip('\n'))
                 for idx in buff_ptr_indices:
                     if 'CHAR' in proto.params[idx].ty:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen((const char *)%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
                     elif 'Size' in proto.params[idx-1].name:
                         func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s, %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].name))
                     else:
@@ -1069,13 +1069,13 @@ class Subcommand(object):
         pid_enum.append('//=============================================================================')
         pid_enum.append('static uint64_t calc_size_XGL_APPLICATION_INFO(const XGL_APPLICATION_INFO* pStruct)')
         pid_enum.append('{')
-        pid_enum.append('    return ((pStruct == NULL) ? 0 : sizeof(XGL_APPLICATION_INFO)) + strlen((const char *)pStruct->pAppName) + 1 + strlen((const char *)pStruct->pEngineName) + 1;')
+        pid_enum.append('    return ((pStruct == NULL) ? 0 : sizeof(XGL_APPLICATION_INFO)) + strlen(pStruct->pAppName) + 1 + strlen(pStruct->pEngineName) + 1;')
         pid_enum.append('}\n')
         pid_enum.append('static void add_XGL_APPLICATION_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_APPLICATION_INFO** ppStruct, const XGL_APPLICATION_INFO *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_APPLICATION_INFO), pInStruct);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen((const char *)pInStruct->pAppName) + 1, (const char *)pInStruct->pAppName);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen((const char *)pInStruct->pEngineName) + 1, (const char *)pInStruct->pEngineName);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen(pInStruct->pAppName) + 1, pInStruct->pAppName);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen(pInStruct->pEngineName) + 1, pInStruct->pEngineName);')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAppName));')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
@@ -1087,7 +1087,7 @@ class Subcommand(object):
         pid_enum.append('    uint32_t i;')
         pid_enum.append('    for (i = 0; i < pStruct->extensionCount; i++)')
         pid_enum.append('    {')
-        pid_enum.append('        total_size_ppEnabledExtensionNames += strlen((const char *)pStruct->ppEnabledExtensionNames[i]) + 1;')
+        pid_enum.append('        total_size_ppEnabledExtensionNames += strlen(pStruct->ppEnabledExtensionNames[i]) + 1;')
         pid_enum.append('    }')
         pid_enum.append('    return sizeof(XGL_DEVICE_CREATE_INFO) + (pStruct->queueRecordCount*sizeof(XGL_DEVICE_CREATE_INFO)) + total_size_ppEnabledExtensionNames;')
         pid_enum.append('}\n')
@@ -1102,7 +1102,7 @@ class Subcommand(object):
         pid_enum.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(XGL_CHAR *), pInStruct->ppEnabledExtensionNames);')
         pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++)')
         pid_enum.append('        {')
-        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])), strlen((const char *)pInStruct->ppEnabledExtensionNames[i]) + 1, (const char *)pInStruct->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])), strlen(pInStruct->ppEnabledExtensionNames[i]) + 1, pInStruct->ppEnabledExtensionNames[i]);')
         pid_enum.append('            glv_finalize_buffer_address(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])));')
         pid_enum.append('        }')
         pid_enum.append('        glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
@@ -2006,10 +2006,10 @@ class Subcommand(object):
         ges_body.append('                if (replayResult == XGL_SUCCESS) {')
         ges_body.append('                    for (unsigned int ext = 0; ext < sizeof(g_extensions) / sizeof(g_extensions[0]); ext++)')
         ges_body.append('                    {')
-        ges_body.append('                        if (!strncmp((const char *)g_extensions[ext], (const char *)pPacket->pExtName, strlen(g_extensions[ext]))) {')
+        ges_body.append('                        if (!strncmp(g_extensions[ext], pPacket->pExtName, strlen(g_extensions[ext]))) {')
         ges_body.append('                            bool extInList = false;')
         ges_body.append('                            for (unsigned int j = 0; j < m_display->m_extensions.size(); ++j) {')
-        ges_body.append('                                if (!strncmp((const char *)m_display->m_extensions[j], (const char *)g_extensions[ext], strlen(g_extensions[ext])))')
+        ges_body.append('                                if (!strncmp(m_display->m_extensions[j], g_extensions[ext], strlen(g_extensions[ext])))')
         ges_body.append('                                    extInList = true;')
         ges_body.append('                                break;')
         ges_body.append('                            }')

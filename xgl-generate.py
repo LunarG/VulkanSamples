@@ -185,16 +185,16 @@ class Subcommand(object):
                          "        return NULL;\n"
                          "    pCurObj = gpuw;\n"
                          "    pthread_once(&tabOnce, initLayerTable);\n\n"
-                         '    if (!strncmp("xglGetProcAddr", (const char *) funcName, sizeof("xglGetProcAddr")))\n'
+                         '    if (!strncmp("xglGetProcAddr", funcName, sizeof("xglGetProcAddr")))\n'
                          '        return xglGetProcAddr;')
         for name in xgl.icd_dispatch_table:
             if name == "GetProcAddr":
                 continue
             if name == "InitAndEnumerateGpus":
-                func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
+                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
                              '        return nextTable.%s;' % (prefix, name, prefix, name, name))
             else:
-                func_body.append('    else if (!strncmp("%s%s", (const char *) funcName, sizeof("%s%s")))\n'
+                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
                              '        return %s%s;' % (prefix, name, prefix, name, prefix, name))
 
         func_body.append("    else {\n"

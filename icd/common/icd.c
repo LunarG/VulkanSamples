@@ -87,7 +87,7 @@ void icd_msg(XGL_DBG_MSG_TYPE msg_type,
 
     while (cb) {
         cb->func(msg_type, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0,
-                msg_code, (const XGL_CHAR *) msg, cb->data);
+                msg_code, msg, cb->data);
         cb = cb->next;
     }
 
