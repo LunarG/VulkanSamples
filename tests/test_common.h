@@ -14,7 +14,7 @@
 
 #define ASSERT_XGL_SUCCESS(err) ASSERT_EQ(XGL_SUCCESS, err) << xgl_result_string(err)
 
-static const char *xgl_result_string(XGL_RESULT err)
+static inline const char *xgl_result_string(XGL_RESULT err)
 {
     switch (err) {
 #define STR(r) case r: return #r
@@ -61,6 +61,12 @@ static const char *xgl_result_string(XGL_RESULT err)
 #undef STR
     default: return "UNKNOWN_RESULT";
     }
+}
+
+static inline void test_error_callback(const char *expr, const char *file,
+                                       unsigned int line, const char *function)
+{
+    ADD_FAILURE_AT(file, line) << "Assertion: `" << expr << "'";
 }
 
 #endif // TEST_COMMON_H

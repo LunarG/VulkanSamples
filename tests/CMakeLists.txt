@@ -17,6 +17,7 @@ SET(COMMON_CPP
     xgldevice.cpp
     xglimage.cpp
     xglrenderframework.cpp
+    xgltestbinding.cpp
     xgltestframework.cpp
    )
 

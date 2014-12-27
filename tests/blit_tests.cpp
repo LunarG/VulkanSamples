@@ -22,24 +22,16 @@
 
 // Blit (copy, clear, and resolve) tests
 
-#include <set>
-#include <utility>
-#include <vector>
-
-#include "gtest/gtest.h"
-#include "xgl.h"
+#include "test_common.h"
+#include "xgltestbinding.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 namespace xgl_testing {
 
-class Buffer;
-class CmdBuffer;
-class Device;
-class Image;
+typedef GpuMemory Buffer;
 
 XGL_SIZE get_format_size(XGL_FORMAT format);
-XGL_EXTENT3D get_mip_level_extent(const XGL_EXTENT3D &extent, XGL_UINT mip_level);
 
 class Environment : public ::testing::Environment {
 public:
@@ -58,256 +50,6 @@ private:
     int default_dev_;
 
     std::vector<Device *> devs_;
-};
-
-class Gpu {
-public:
-    explicit Gpu(XGL_PHYSICAL_GPU gpu) : gpu_(gpu) {}
-    bool init();
-
-    XGL_PHYSICAL_GPU obj() const { return gpu_; }
-    const XGL_PHYSICAL_GPU_PROPERTIES &properties() const { return props_; };
-    const XGL_PHYSICAL_GPU_PERFORMANCE &performance() const { return perf_; };
-    const XGL_PHYSICAL_GPU_MEMORY_PROPERTIES &memory_properties() const { return mem_props_; };
-    const std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> &queue_properties() const { return queue_props_; }
-    const std::vector<const XGL_CHAR *> &extensions() const { return exts_; }
-
-private:
-    void init_exts();
-
-    XGL_PHYSICAL_GPU gpu_;
-    XGL_PHYSICAL_GPU_PROPERTIES props_;
-    XGL_PHYSICAL_GPU_PERFORMANCE perf_;
-    XGL_PHYSICAL_GPU_MEMORY_PROPERTIES mem_props_;
-    std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props_;
-    std::vector<const XGL_CHAR *> exts_;
-};
-
-class Device {
-public:
-    explicit Device(XGL_PHYSICAL_GPU gpu) : gpu_(gpu), dev_(XGL_NULL_HANDLE) {}
-    ~Device();
-    bool init();
-
-    XGL_DEVICE obj() const { return dev_; }
-    XGL_PHYSICAL_GPU gpu() const { return gpu_.obj(); }
-
-    XGL_QUEUE queue(XGL_QUEUE_TYPE type, XGL_UINT idx) const;
-
-    const std::vector<XGL_MEMORY_HEAP_PROPERTIES> &heap_properties() const { return heap_props_; }
-
-    struct Format {
-        XGL_FORMAT format;
-        XGL_IMAGE_TILING tiling;
-        XGL_FLAGS features;
-    };
-    const std::vector<Format> &formats() const { return formats_; }
-
-    bool submit(XGL_QUEUE queue, const CmdBuffer &cmd, XGL_FENCE fence);
-    bool wait(XGL_QUEUE queue) { return (xglQueueWaitIdle(queue) == XGL_SUCCESS); }
-    bool wait() { return (xglDeviceWaitIdle(dev_) == XGL_SUCCESS); }
-
-private:
-    Device(const Device &);
-    Device &operator=(const Device &);
-
-    void init_queues();
-    void init_heap_props();
-    void init_formats();
-
-    Gpu gpu_;
-    XGL_DEVICE dev_;
-    std::vector<XGL_QUEUE> graphics_queues_;
-    std::vector<XGL_QUEUE> compute_queues_;
-    std::vector<XGL_QUEUE> dma_queues_;
-    std::vector<XGL_MEMORY_HEAP_PROPERTIES> heap_props_;
-    std::vector<Format> formats_;
-};
-
-class Object {
-public:
-    const XGL_MEMORY_REQUIREMENTS &memory_requirements() const { return mem_reqs_; }
-    bool bind_memory(XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset);
-    XGL_GPU_MEMORY alloc_memory(const Device &dev);
-
-    XGL_GPU_MEMORY bound_memory() const { return bound_mem_; }
-
-protected:
-    Object() : obj_(XGL_NULL_HANDLE), bound_mem_(XGL_NULL_HANDLE) {}
-    ~Object();
-    bool init(XGL_OBJECT obj);
-
-private:
-    Object(const Object &);
-    Object &operator=(const Object &);
-
-    XGL_OBJECT obj_;
-    XGL_MEMORY_REQUIREMENTS mem_reqs_;
-
-protected:
-    // not private because of Buffer, which is not an XGL_OBJECT yet
-    XGL_GPU_MEMORY bound_mem_;
-
-};
-
-class CmdBuffer : public Object {
-public:
-    CmdBuffer() : cmd_(XGL_NULL_HANDLE) {}
-    bool init(const Device &dev, const XGL_CMD_BUFFER_CREATE_INFO &info);
-    bool init(const Device &dev);
-
-    XGL_CMD_BUFFER obj() const { return cmd_; }
-
-    void add_memory_ref(const Object &obj, XGL_FLAGS flags);
-    void clear_memory_refs() { mem_refs_.clear(); }
-
-    std::vector<XGL_MEMORY_REF> memory_refs() const
-    {
-        return std::vector<XGL_MEMORY_REF>(mem_refs_.begin(), mem_refs_.end());
-    }
-
-    bool begin(XGL_FLAGS flags);
-    bool begin();
-    bool end();
-
-private:
-    class mem_ref_compare {
-    public:
-        bool operator()(const XGL_MEMORY_REF &a, const XGL_MEMORY_REF &b) const
-        {
-            return (a.mem < b.mem);
-        }
-    };
-
-    XGL_CMD_BUFFER_CREATE_INFO info_;
-    XGL_CMD_BUFFER cmd_;
-    std::set<XGL_MEMORY_REF, mem_ref_compare> mem_refs_;
-};
-
-class Buffer : public Object {
-public:
-    Buffer() : mem_(XGL_NULL_HANDLE) {}
-    ~Buffer();
-    bool init(const Device &dev, const XGL_MEMORY_ALLOC_INFO &info);
-    bool init(const Device &dev, XGL_GPU_SIZE size);
-
-    XGL_GPU_MEMORY obj() const { return mem_; }
-    XGL_GPU_SIZE size() const { return info_.allocationSize; }
-
-    XGL_MEMORY_STATE_TRANSITION prepare(XGL_MEMORY_STATE old_state, XGL_MEMORY_STATE new_state,
-                                        XGL_GPU_SIZE offset, XGL_GPU_SIZE size)
-    {
-        XGL_MEMORY_STATE_TRANSITION transition = {};
-        transition.sType = XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION;
-        transition.mem = mem_;
-        transition.oldState = old_state;
-        transition.newState = new_state;
-        transition.offset = offset;
-        transition.regionSize = size;
-        return transition;
-    }
-
-    void *map();
-    void unmap();
-
-private:
-    XGL_MEMORY_ALLOC_INFO info_;
-    XGL_GPU_MEMORY mem_;
-};
-
-class Image : public Object {
-public:
-    Image() : features_(0), img_(XGL_NULL_HANDLE), mem_(XGL_NULL_HANDLE) {}
-    ~Image();
-    bool init(const Device &dev, const XGL_IMAGE_CREATE_INFO &info);
-
-    static XGL_IMAGE_CREATE_INFO create_info()
-    {
-        XGL_IMAGE_CREATE_INFO info = {};
-
-        info.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        info.extent.width = 1;
-        info.extent.height = 1;
-        info.extent.depth = 1;
-        info.mipLevels = 1;
-        info.arraySize = 1;
-        info.samples = 1;
-
-        return info;
-    }
-
-    static XGL_IMAGE_SUBRESOURCE subresource(XGL_IMAGE_ASPECT aspect, XGL_UINT mip_level, XGL_UINT array_slice)
-    {
-        XGL_IMAGE_SUBRESOURCE subres = {};
-        subres.aspect = aspect;
-        subres.mipLevel = mip_level;
-        subres.arraySlice = array_slice;
-        return subres;
-    }
-
-    static XGL_IMAGE_SUBRESOURCE subresource(const XGL_IMAGE_SUBRESOURCE_RANGE &range,
-                                             XGL_UINT mip_level, XGL_UINT array_slice)
-    {
-        return subresource(range.aspect, range.baseMipLevel + mip_level, range.baseArraySlice + array_slice);
-    }
-
-    static XGL_IMAGE_SUBRESOURCE_RANGE subresource_range(XGL_IMAGE_ASPECT aspect,
-                                                         XGL_UINT base_mip_level, XGL_UINT mip_levels,
-                                                         XGL_UINT base_array_slice, XGL_UINT array_size)
-    {
-        XGL_IMAGE_SUBRESOURCE_RANGE range = {};
-        range.aspect = aspect;
-        range.baseMipLevel = base_mip_level;
-        range.mipLevels = mip_levels;
-        range.baseArraySlice = base_array_slice;
-        range.arraySize = array_size;
-        return range;
-    }
-
-    static XGL_IMAGE_SUBRESOURCE_RANGE subresource_range(XGL_IMAGE_ASPECT aspect,
-                                                         const XGL_IMAGE_CREATE_INFO &info)
-    {
-        return subresource_range(aspect, 0, info.mipLevels, 0, info.arraySize);
-    }
-
-    static XGL_IMAGE_SUBRESOURCE_RANGE subresource_range(const XGL_IMAGE_SUBRESOURCE &subres)
-    {
-        return subresource_range(subres.aspect, subres.mipLevel, 1, subres.arraySlice, 1);
-    }
-
-    XGL_IMAGE obj() const { return img_; }
-
-    bool copyable() const { return (features_ & XGL_FORMAT_IMAGE_COPY_BIT); }
-    bool transparent() const;
-    XGL_EXTENT3D extent(XGL_UINT mip_level) const { return get_mip_level_extent(info_.extent, mip_level); }
-    XGL_EXTENT3D extent() const { return info_.extent; }
-
-    XGL_IMAGE_SUBRESOURCE_RANGE subresource_range(XGL_IMAGE_ASPECT aspect) const
-    {
-        return subresource_range(aspect, info_);
-    }
-
-    XGL_SUBRESOURCE_LAYOUT subresource_layout(const XGL_IMAGE_SUBRESOURCE &subres) const;
-
-    XGL_IMAGE_STATE_TRANSITION prepare(XGL_IMAGE_STATE old_state, XGL_IMAGE_STATE new_state,
-                                       const XGL_IMAGE_SUBRESOURCE_RANGE &range) const
-    {
-        XGL_IMAGE_STATE_TRANSITION transition = {};
-        transition.image = img_;
-        transition.oldState = old_state;
-        transition.newState = new_state;
-        transition.subresourceRange = range;
-        return transition;
-    }
-
-    void *map() const;
-    void unmap() const;
-
-private:
-    XGL_IMAGE_CREATE_INFO info_;
-    XGL_FLAGS features_;
-    XGL_IMAGE img_;
-    XGL_GPU_MEMORY mem_;
 };
 
 class ImageChecker {
@@ -412,8 +154,8 @@ void Environment::SetUp()
     for (XGL_UINT i = 0; i < count; i++) {
         devs_.push_back(new Device(gpus[i]));
         if (i == default_dev_) {
-            const bool created = devs_[i]->init();
-            ASSERT_EQ(true, created);
+            devs_[i]->init();
+            ASSERT_NE(true, devs_[i]->graphics_queues().empty());
         }
     }
 }
@@ -429,421 +171,6 @@ void Environment::TearDown()
     xglInitAndEnumerateGpus(&app_, NULL, 0, &dummy_count, NULL);
 }
 
-bool Gpu::init()
-{
-    XGL_SIZE size;
-    XGL_RESULT err;
-
-    size = sizeof(props_);
-    err = xglGetGpuInfo(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &size, &props_);
-    if (err != XGL_SUCCESS || size != sizeof(props_))
-        return false;
-
-    size = sizeof(perf_);
-    err = xglGetGpuInfo(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE, &size, &perf_);
-    if (err != XGL_SUCCESS || size != sizeof(perf_))
-        return false;
-
-    size = sizeof(mem_props_);
-    err = xglGetGpuInfo(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES, &size, &mem_props_);
-    if (err != XGL_SUCCESS || size != sizeof(mem_props_))
-        return false;
-
-    err = xglGetGpuInfo(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES, &size, NULL);
-    if (err != XGL_SUCCESS || size % sizeof(queue_props_[0]))
-        return false;
-
-    queue_props_.resize(size / sizeof(queue_props_[0]));
-    err = xglGetGpuInfo(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES, &size, &queue_props_[0]);
-    if (err != XGL_SUCCESS || size != queue_props_.size() * sizeof(queue_props_[0]))
-        return false;
-
-    init_exts();
-
-    return true;
-}
-
-void Gpu::init_exts()
-{
-    static const XGL_CHAR *known_exts[] = {
-        "XGL_WSI_X11",
-    };
-    XGL_RESULT err;
-
-    for (int i; i < ARRAY_SIZE(known_exts); i++) {
-        err = xglGetExtensionSupport(gpu_, known_exts[i]);
-        if (err == XGL_SUCCESS)
-            exts_.push_back(known_exts[i]);
-    }
-}
-
-Device::~Device()
-{
-    if (dev_ != XGL_NULL_HANDLE)
-        xglDestroyDevice(dev_);
-}
-
-bool Device::init()
-{
-    XGL_RESULT err;
-
-    if (dev_ != XGL_NULL_HANDLE)
-        return true;
-
-    if (!gpu_.init())
-        return false;
-
-    // request all queues
-    std::vector<XGL_DEVICE_QUEUE_CREATE_INFO> queue_info;
-    queue_info.reserve(gpu_.queue_properties().size());
-    for (XGL_UINT i = 0; i < gpu_.queue_properties().size(); i++) {
-        XGL_DEVICE_QUEUE_CREATE_INFO qi = {};
-        qi.queueNodeIndex = i;
-        qi.queueCount = gpu_.queue_properties()[i].queueCount;
-        queue_info.push_back(qi);
-    }
-
-    XGL_DEVICE_CREATE_INFO dev_info = {};
-    dev_info.sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    dev_info.queueRecordCount = queue_info.size();
-    dev_info.pRequestedQueues = &queue_info[0];
-    dev_info.extensionCount = gpu_.extensions().size();
-    dev_info.ppEnabledExtensionNames = &gpu_.extensions()[0];
-    dev_info.maxValidationLevel = XGL_VALIDATION_LEVEL_END_RANGE;
-    dev_info.flags = XGL_DEVICE_CREATE_VALIDATION_BIT;
-
-    err = xglCreateDevice(gpu_.obj(), &dev_info, &dev_);
-    if (err != XGL_SUCCESS)
-        return false;
-
-    init_queues();
-    init_heap_props();
-    init_formats();
-
-    if (graphics_queues_.empty() || heap_props_.empty() || formats_.empty()) {
-        xglDestroyDevice(dev_);
-        dev_ = XGL_NULL_HANDLE;
-        return false;
-    }
-
-    return true;
-}
-
-void Device::init_queues()
-{
-    const struct {
-        XGL_QUEUE_TYPE type;
-        std::vector<XGL_QUEUE> &queues;
-    } known_queues[] = {
-        { XGL_QUEUE_TYPE_GRAPHICS, graphics_queues_ },
-        { XGL_QUEUE_TYPE_COMPUTE, compute_queues_ },
-        { XGL_QUEUE_TYPE_DMA, dma_queues_ },
-    };
-    XGL_RESULT err;
-
-    for (int i = 0; i < ARRAY_SIZE(known_queues); i++) {
-        XGL_UINT idx = 0;
-
-        while (true) {
-            XGL_QUEUE queue;
-            err = xglGetDeviceQueue(dev_, known_queues[i].type, idx++, &queue);
-            if (err != XGL_SUCCESS)
-                break;
-            known_queues[i].queues.push_back(queue);
-        }
-    }
-}
-
-void Device::init_heap_props()
-{
-    XGL_UINT count;
-    XGL_RESULT err;
-
-    err = xglGetMemoryHeapCount(dev_, &count);
-    if (err != XGL_SUCCESS || !count)
-        return;
-
-    heap_props_.reserve(count);
-    for (XGL_UINT i = 0; i < count; i++) {
-        XGL_MEMORY_HEAP_PROPERTIES props;
-        XGL_SIZE size = sizeof(props);
-
-        err = xglGetMemoryHeapInfo(dev_, i, XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES, &size, &props);
-        if (err == XGL_SUCCESS && size == sizeof(props))
-            heap_props_.push_back(props);
-    }
-}
-
-void Device::init_formats()
-{
-    XGL_RESULT err;
-
-    for (int ch = XGL_CH_FMT_UNDEFINED; ch <= XGL_MAX_CH_FMT; ch++) {
-        for (int num = XGL_NUM_FMT_UNDEFINED; num <= XGL_MAX_NUM_FMT; num++) {
-            const XGL_FORMAT fmt = { static_cast<XGL_CHANNEL_FORMAT>(ch),
-                                     static_cast<XGL_NUM_FORMAT>(num) };
-
-            XGL_FORMAT_PROPERTIES props;
-            XGL_SIZE size = sizeof(props);
-            err = xglGetFormatInfo(dev_, fmt, XGL_INFO_TYPE_FORMAT_PROPERTIES, &size, &props);
-            if (err != XGL_SUCCESS || size != sizeof(props))
-                continue;
-
-            if (props.linearTilingFeatures) {
-                const Format tmp = { fmt, XGL_LINEAR_TILING, props.linearTilingFeatures };
-                formats_.push_back(tmp);
-            }
-
-            if (props.optimalTilingFeatures) {
-                const Format tmp = { fmt, XGL_OPTIMAL_TILING, props.optimalTilingFeatures };
-                formats_.push_back(tmp);
-            }
-        }
-    }
-}
-
-XGL_QUEUE Device::queue(XGL_QUEUE_TYPE type, XGL_UINT idx) const
-{
-    switch (type) {
-    case XGL_QUEUE_TYPE_GRAPHICS:   return graphics_queues_[idx];
-    case XGL_QUEUE_TYPE_COMPUTE:    return compute_queues_[idx];
-    case XGL_QUEUE_TYPE_DMA:        return dma_queues_[idx];
-    default:                        return XGL_NULL_HANDLE;
-    }
-}
-
-bool Device::submit(XGL_QUEUE queue, const CmdBuffer &cmd, XGL_FENCE fence)
-{
-    XGL_CMD_BUFFER obj = cmd.obj();
-    const std::vector<XGL_MEMORY_REF> refs = cmd.memory_refs();
-
-    return (xglQueueSubmit(queue, 1, &obj, refs.size(), &refs[0], fence) == XGL_SUCCESS);
-}
-
-Object::~Object()
-{
-    if (obj_ != XGL_NULL_HANDLE) {
-        xglBindObjectMemory(obj_, XGL_NULL_HANDLE, 0);
-        xglDestroyObject(obj_);
-    }
-}
-
-bool Object::init(XGL_OBJECT obj)
-{
-    XGL_RESULT err;
-
-    XGL_SIZE size = sizeof(mem_reqs_);
-    err = xglGetObjectInfo(obj, XGL_INFO_TYPE_MEMORY_REQUIREMENTS, &size, &mem_reqs_);
-    if (err != XGL_SUCCESS || size != sizeof(mem_reqs_))
-        return false;
-
-    obj_ = obj;
-
-    return true;
-}
-
-bool Object::bind_memory(XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
-{
-    if (xglBindObjectMemory(obj_, mem, offset) == XGL_SUCCESS) {
-        bound_mem_ = mem;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-XGL_GPU_MEMORY Object::alloc_memory(const Device &dev)
-{
-    if (!mem_reqs_.size)
-        return XGL_NULL_HANDLE;
-
-    XGL_MEMORY_ALLOC_INFO mem_alloc = {};
-    mem_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_alloc.allocationSize = mem_reqs_.size;
-    mem_alloc.alignment = mem_reqs_.alignment;
-    mem_alloc.heapCount = mem_reqs_.heapCount;
-    memcpy(mem_alloc.heaps, mem_reqs_.heaps,
-            sizeof(mem_reqs_.heaps[0]) * mem_reqs_.heapCount);
-    mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    XGL_GPU_MEMORY mem;
-    XGL_RESULT err = xglAllocMemory(dev.obj(), &mem_alloc, &mem);
-    if (err != XGL_SUCCESS)
-        mem = XGL_NULL_HANDLE;
-
-    return mem;
-}
-
-bool CmdBuffer::init(const Device &dev, const XGL_CMD_BUFFER_CREATE_INFO &info)
-{
-    info_ = info;
-
-    XGL_RESULT err = xglCreateCommandBuffer(dev.obj(), &info_, &cmd_);
-    if (err != XGL_SUCCESS)
-        return false;
-
-    return Object::init(cmd_);
-}
-
-bool CmdBuffer::init(const Device &dev)
-{
-    XGL_CMD_BUFFER_CREATE_INFO info = {};
-
-    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
-
-    return init(dev, info);
-}
-
-void CmdBuffer::add_memory_ref(const Object &obj, XGL_FLAGS flags)
-{
-    XGL_MEMORY_REF ref = {};
-    ref.mem = obj.bound_memory();
-    ref.flags = flags;
-
-    std::pair<std::set<XGL_MEMORY_REF>::iterator, bool> inserted = mem_refs_.insert(ref);
-    if (!inserted.second) {
-        const XGL_FLAGS prev_flags = (*inserted.first).flags;
-
-        if ((prev_flags & flags) != prev_flags) {
-            mem_refs_.erase(inserted.first);
-            mem_refs_.insert(ref);
-        }
-    }
-}
-
-bool CmdBuffer::begin(XGL_FLAGS flags)
-{
-    return (xglBeginCommandBuffer(cmd_, flags) == XGL_SUCCESS);
-}
-
-bool CmdBuffer::begin()
-{
-    return begin(XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
-                 XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT);
-}
-
-bool CmdBuffer::end()
-{
-    return (xglEndCommandBuffer(cmd_) == XGL_SUCCESS);
-}
-
-Buffer::~Buffer()
-{
-    if (mem_ != XGL_NULL_HANDLE)
-        xglFreeMemory(mem_);
-}
-
-bool Buffer::init(const Device &dev, const XGL_MEMORY_ALLOC_INFO &info)
-{
-    info_ = info;
-
-    // cannot call Object::init()
-    if (xglAllocMemory(dev.obj(), &info_, &mem_) == XGL_SUCCESS) {
-        bound_mem_ = mem_;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool Buffer::init(const Device &dev, XGL_GPU_SIZE size)
-{
-    XGL_MEMORY_ALLOC_INFO info = {};
-    info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    info.allocationSize = size;
-    info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    // find a CPU visible heap
-    for (XGL_UINT id = 0; id < dev.heap_properties().size(); id++) {
-        const XGL_MEMORY_HEAP_PROPERTIES &heap = dev.heap_properties()[id];
-
-        if (heap.flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT) {
-            info.heapCount = 1;
-            info.heaps[0] = id;
-        }
-    }
-
-    return (info.heapCount) ? init(dev, info) : false;
-}
-
-void *Buffer::map()
-{
-    void *data;
-    return (xglMapMemory(mem_, 0, &data) == XGL_SUCCESS) ? data : NULL;
-}
-
-void Buffer::unmap()
-{
-    xglUnmapMemory(mem_);
-}
-
-Image::~Image()
-{
-    if (mem_ != XGL_NULL_HANDLE) {
-        xglBindObjectMemory(img_, XGL_NULL_HANDLE, 0);
-        xglFreeMemory(mem_);
-    }
-}
-
-bool Image::init(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
-{
-    info_ = info;
-
-    for (std::vector<xgl_testing::Device::Format>::const_iterator it = dev.formats().begin();
-         it != dev.formats().end(); it++) {
-        if (!memcmp(&it->format, &info_.format, sizeof(info_.format)) && it->tiling == info_.tiling) {
-            features_ = it->features;
-            break;
-        }
-    }
-
-    XGL_RESULT err = xglCreateImage(dev.obj(), &info_, &img_);
-    if (err != XGL_SUCCESS)
-        return false;
-
-    if (!Object::init(img_))
-        return false;
-
-    mem_ = alloc_memory(dev);
-    if (mem_ == XGL_NULL_HANDLE || !bind_memory(mem_, 0))
-        return false;
-
-    return true;
-}
-
-bool Image::transparent() const
-{
-    return (info_.tiling == XGL_LINEAR_TILING &&
-            info_.samples == 1 &&
-            !(info_.usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                             XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
-}
-
-XGL_SUBRESOURCE_LAYOUT Image::subresource_layout(const XGL_IMAGE_SUBRESOURCE &subres) const
-{
-    XGL_SUBRESOURCE_LAYOUT layout;
-    XGL_SIZE size = sizeof(layout);
-
-    XGL_RESULT err = xglGetImageSubresourceInfo(img_, &subres,
-            XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &size, &layout);
-    if (err != XGL_SUCCESS || size != sizeof(layout))
-        memset(&layout, 0, sizeof(layout));
-
-    return layout;
-}
-
-void *Image::map() const
-{
-    void *data;
-    return (transparent() && xglMapMemory(mem_, 0, &data) == XGL_SUCCESS) ? data : NULL;
-}
-
-void Image::unmap() const
-{
-    xglUnmapMemory(mem_);
-}
-
 uint32_t ImageChecker::hash_salt_;
 
 ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
@@ -857,7 +184,7 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
         region.memOffset = offset;
         region.imageSubresource.mipLevel = lv;
         region.imageSubresource.arraySlice = 0;
-        region.imageExtent = get_mip_level_extent(info_.extent, lv);
+        region.imageExtent = Image::extent(info_.extent, lv);
 
         if (info_.usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
             if (info_.format.channelFormat != XGL_CH_FMT_R8) {
@@ -910,7 +237,7 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<
                 XGL_MEMORY_IMAGE_COPY region = {};
                 region.memOffset = offset;
                 region.imageSubresource = Image::subresource(*it, lv, slice);
-                region.imageExtent = get_mip_level_extent(info_.extent, lv);
+                region.imageExtent = Image::extent(info_.extent, lv);
 
                 regions_.push_back(region);
 
@@ -1124,32 +451,65 @@ class XglCmdBlitTest : public ::testing::Test {
 protected:
     XglCmdBlitTest() :
         dev_(environment->default_device()),
-        queue_(dev_.queue(XGL_QUEUE_TYPE_GRAPHICS, 0)),
-        cmd_()
+        queue_(*dev_.graphics_queues()[0]),
+        cmd_(dev_, xgl_testing::CmdBuffer::create_info(XGL_QUEUE_TYPE_GRAPHICS))
     {
         // make sure every test uses a different pattern
         xgl_testing::ImageChecker::hash_salt_generate();
     }
 
-    virtual void SetUp()
-    {
-        DO(cmd_.init(dev_));
-    }
-
-    virtual void TearDown()
-    {
-    }
-
     bool submit_and_done()
     {
-        const bool ret = (dev_.submit(queue_, cmd_, XGL_NULL_HANDLE) && dev_.wait(queue_));
-        cmd_.clear_memory_refs();
-        return ret;
+        queue_.submit(cmd_, mem_refs_);
+        queue_.wait();
+        mem_refs_.clear();
+        return true;
+    }
+
+    void add_memory_ref(const xgl_testing::Object &obj, XGL_FLAGS flags)
+    {
+        const std::vector<XGL_GPU_MEMORY> mems = obj.memories();
+        for (std::vector<XGL_GPU_MEMORY>::const_iterator it = mems.begin(); it != mems.end(); it++) {
+            std::vector<XGL_MEMORY_REF>::iterator ref;
+            for (ref = mem_refs_.begin(); ref != mem_refs_.end(); ref++) {
+                if (ref->mem == *it)
+                    break;
+            }
+
+            if (ref == mem_refs_.end()) {
+                XGL_MEMORY_REF tmp = {};
+                tmp.mem = *it;
+                tmp.flags = flags;
+                mem_refs_.push_back(tmp);
+            } else {
+                ref->flags &= flags;
+            }
+        }
+    }
+
+    void add_memory_ref(const xgl_testing::GpuMemory &obj, XGL_FLAGS flags)
+    {
+        std::vector<XGL_MEMORY_REF>::iterator it;
+        for (it = mem_refs_.begin(); it != mem_refs_.end(); it++) {
+            if (it->mem == obj.obj())
+                break;
+        }
+
+        if (it == mem_refs_.end()) {
+            XGL_MEMORY_REF ref = {};
+            ref.mem = obj.obj();
+            ref.flags = flags;
+            mem_refs_.push_back(ref);
+        } else {
+            it->flags &= flags;
+        }
     }
 
     xgl_testing::Device &dev_;
-    XGL_QUEUE queue_;
+    xgl_testing::Queue &queue_;
     xgl_testing::CmdBuffer cmd_;
+
+    std::vector<XGL_MEMORY_REF> mem_refs_;
 };
 
 typedef XglCmdBlitTest XglCmdFillMemoryTest;
@@ -1159,7 +519,7 @@ TEST_F(XglCmdFillMemoryTest, Basic)
     xgl_testing::Buffer buf;
 
     buf.init(dev_, 20);
-    cmd_.add_memory_ref(buf, 0);
+    add_memory_ref(buf, 0);
 
     cmd_.begin();
     xglCmdFillMemory(cmd_.obj(), buf.obj(), 0, 4, 0x11111111);
@@ -1183,7 +543,7 @@ TEST_F(XglCmdFillMemoryTest, Large)
     xgl_testing::Buffer buf;
 
     buf.init(dev_, size);
-    cmd_.add_memory_ref(buf, 0);
+    add_memory_ref(buf, 0);
 
     cmd_.begin();
     xglCmdFillMemory(cmd_.obj(), buf.obj(), 0, size / 2, 0x11111111);
@@ -1206,7 +566,7 @@ TEST_F(XglCmdFillMemoryTest, Overlap)
     xgl_testing::Buffer buf;
 
     buf.init(dev_, 64);
-    cmd_.add_memory_ref(buf, 0);
+    add_memory_ref(buf, 0);
 
     cmd_.begin();
     xglCmdFillMemory(cmd_.obj(), buf.obj(), 0, 48, 0x11111111);
@@ -1232,7 +592,7 @@ TEST_F(XglCmdFillMemoryTest, MultiAlignments)
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init(dev_, size);
-        cmd_.add_memory_ref(bufs[i], 0);
+        add_memory_ref(bufs[i], 0);
         xglCmdFillMemory(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
         size <<= 1;
     }
@@ -1263,10 +623,10 @@ TEST_F(XglCmdCopyMemoryTest, Basic)
     uint32_t *data = static_cast<uint32_t *>(src.map());
     data[0] = 0x11111111;
     src.unmap();
-    cmd_.add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+    add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
 
     dst.init(dev_, 4);
-    cmd_.add_memory_ref(dst, 0);
+    add_memory_ref(dst, 0);
 
     cmd_.begin();
     XGL_MEMORY_COPY region = {};
@@ -1292,10 +652,10 @@ TEST_F(XglCmdCopyMemoryTest, Large)
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
     src.unmap();
-    cmd_.add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+    add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
 
     dst.init(dev_, size);
-    cmd_.add_memory_ref(dst, 0);
+    add_memory_ref(dst, 0);
 
     cmd_.begin();
     XGL_MEMORY_COPY region = {};
@@ -1336,10 +696,10 @@ TEST_F(XglCmdCopyMemoryTest, MultiAlignments)
     for (int i = 0; i < 256; i++)
         data[i] = i;
     src.unmap();
-    cmd_.add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+    add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
 
     dst.init(dev_, 1024);
-    cmd_.add_memory_ref(dst, 0);
+    add_memory_ref(dst, 0);
 
     cmd_.begin();
     xglCmdCopyMemory(cmd_.obj(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
@@ -1366,7 +726,7 @@ TEST_F(XglCmdCopyMemoryTest, RAWHazard)
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init(dev_, 4);
-        cmd_.add_memory_ref(bufs[i], 0);
+        add_memory_ref(bufs[i], 0);
 
         uint32_t *data = static_cast<uint32_t *>(bufs[i].map());
         data[0] = 0x22222222 * (i + 1);
@@ -1377,7 +737,7 @@ TEST_F(XglCmdCopyMemoryTest, RAWHazard)
 
     xglCmdFillMemory(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
     // is this necessary?
-    XGL_MEMORY_STATE_TRANSITION transition = bufs[0].prepare(
+    XGL_MEMORY_STATE_TRANSITION transition = bufs[0].state_transition(
             XGL_MEMORY_STATE_DATA_TRANSFER, XGL_MEMORY_STATE_DATA_TRANSFER, 0, 4);
     xglCmdPrepareMemoryRegions(cmd_.obj(), 1, &transition);
 
@@ -1385,7 +745,7 @@ TEST_F(XglCmdCopyMemoryTest, RAWHazard)
     region.copySize = 4;
     xglCmdCopyMemory(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
     // is this necessary?
-    transition = bufs[1].prepare(
+    transition = bufs[1].state_transition(
             XGL_MEMORY_STATE_DATA_TRANSFER, XGL_MEMORY_STATE_DATA_TRANSFER, 0, 4);
     xglCmdPrepareMemoryRegions(cmd_.obj(), 1, &transition);
 
@@ -1441,8 +801,8 @@ protected:
         in_buf.init(dev_, checker.buffer_size());
         checker.fill(in_buf);
 
-        cmd_.add_memory_ref(in_buf, XGL_MEMORY_REF_READ_ONLY_BIT);
-        cmd_.add_memory_ref(img, 0);
+        add_memory_ref(in_buf, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(img, 0);
 
         // copy in and tile
         cmd_.begin();
@@ -1465,8 +825,8 @@ protected:
         xgl_testing::Buffer out_buf;
         out_buf.init(dev_, checker.buffer_size());
 
-        cmd_.add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
-        cmd_.add_memory_ref(out_buf, 0);
+        add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(out_buf, 0);
 
         // copy out and linearize
         cmd_.begin();
@@ -1500,10 +860,10 @@ protected:
 
         buf.init(dev_, checker.buffer_size());
         checker.fill(buf);
-        cmd_.add_memory_ref(buf, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(buf, XGL_MEMORY_REF_READ_ONLY_BIT);
 
         img.init(dev_, img_info);
-        cmd_.add_memory_ref(img, 0);
+        add_memory_ref(img, 0);
 
         cmd_.begin();
         xglCmdCopyMemoryToImage(cmd_.obj(), buf.obj(), img.obj(),
@@ -1559,10 +919,10 @@ protected:
 
         img.init(dev_, img_info);
         fill_src(img, checker);
-        cmd_.add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
 
         buf.init(dev_, checker.buffer_size());
-        cmd_.add_memory_ref(buf, 0);
+        add_memory_ref(buf, 0);
 
         cmd_.begin();
         xglCmdCopyImageToMemory(cmd_.obj(), img.obj(), buf.obj(),
@@ -1643,11 +1003,11 @@ protected:
         xgl_testing::Image src;
         src.init(dev_, src_info);
         fill_src(src, src_checker);
-        cmd_.add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
 
         xgl_testing::Image dst;
         dst.init(dev_, dst_info);
-        cmd_.add_memory_ref(dst, 0);
+        add_memory_ref(dst, 0);
 
         cmd_.begin();
         xglCmdCopyImage(cmd_.obj(), src.obj(), dst.obj(), copies.size(), &copies[0]);
@@ -1696,10 +1056,10 @@ protected:
         src.init(dev_, img_info);
         if (src.transparent() || src.copyable())
             fill_src(src, checker);
-        cmd_.add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
 
         dst.init(dev_, img_info);
-        cmd_.add_memory_ref(dst, 0);
+        add_memory_ref(dst, 0);
 
         const XGL_IMAGE_STATE state =
             (img_info.usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) ?
@@ -1739,7 +1099,7 @@ TEST_F(XglCmdCloneImageDataTest, Basic)
         img_info.flags = XGL_IMAGE_CREATE_CLONEABLE_BIT;
 
         const XGL_IMAGE_SUBRESOURCE_RANGE range =
-            xgl_testing::Image::subresource_range(XGL_IMAGE_ASPECT_COLOR, img_info);
+            xgl_testing::Image::subresource_range(img_info, XGL_IMAGE_ASPECT_COLOR);
         std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
 
         test_clone_image_data(img_info);
@@ -1838,7 +1198,7 @@ protected:
     {
         xgl_testing::Image img;
         img.init(dev_, img_info);
-        cmd_.add_memory_ref(img, 0);
+        add_memory_ref(img, 0);
 
         std::vector<XGL_IMAGE_STATE_TRANSITION> to_clear;
         std::vector<XGL_IMAGE_STATE_TRANSITION> to_xfer;
@@ -1848,8 +1208,8 @@ protected:
             XGL_IMAGE_STATE_UNINITIALIZED_TARGET : XGL_IMAGE_STATE_DATA_TRANSFER;
         for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
-            to_clear.push_back(img.prepare(initial_state, XGL_IMAGE_STATE_CLEAR, *it));
-            to_xfer.push_back(img.prepare(XGL_IMAGE_STATE_CLEAR, XGL_IMAGE_STATE_DATA_TRANSFER, *it));
+            to_clear.push_back(img.state_transition(initial_state, XGL_IMAGE_STATE_CLEAR, *it));
+            to_xfer.push_back(img.state_transition(XGL_IMAGE_STATE_CLEAR, XGL_IMAGE_STATE_DATA_TRANSFER, *it));
         }
 
         cmd_.begin();
@@ -1903,7 +1263,7 @@ TEST_F(XglCmdClearColorImageTest, Basic)
         img_info.tiling = it->tiling;
 
         const XGL_IMAGE_SUBRESOURCE_RANGE range =
-            xgl_testing::Image::subresource_range(XGL_IMAGE_ASPECT_COLOR, img_info);
+            xgl_testing::Image::subresource_range(img_info, XGL_IMAGE_ASPECT_COLOR);
         std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
 
         test_clear_color_image(img_info, color, ranges);
@@ -1944,7 +1304,7 @@ TEST_F(XglCmdClearColorImageRawTest, Basic)
         img_info.tiling = it->tiling;
 
         const XGL_IMAGE_SUBRESOURCE_RANGE range =
-            xgl_testing::Image::subresource_range(XGL_IMAGE_ASPECT_COLOR, img_info);
+            xgl_testing::Image::subresource_range(img_info, XGL_IMAGE_ASPECT_COLOR);
         std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
 
         test_clear_color_image_raw(img_info, color, ranges);
@@ -2021,15 +1381,15 @@ protected:
     {
         xgl_testing::Image img;
         img.init(dev_, img_info);
-        cmd_.add_memory_ref(img, 0);
+        add_memory_ref(img, 0);
 
         std::vector<XGL_IMAGE_STATE_TRANSITION> to_clear;
         std::vector<XGL_IMAGE_STATE_TRANSITION> to_xfer;
 
         for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
-            to_clear.push_back(img.prepare(XGL_IMAGE_STATE_UNINITIALIZED_TARGET, XGL_IMAGE_STATE_CLEAR, *it));
-            to_xfer.push_back(img.prepare(XGL_IMAGE_STATE_CLEAR, XGL_IMAGE_STATE_DATA_TRANSFER, *it));
+            to_clear.push_back(img.state_transition(XGL_IMAGE_STATE_UNINITIALIZED_TARGET, XGL_IMAGE_STATE_CLEAR, *it));
+            to_xfer.push_back(img.state_transition(XGL_IMAGE_STATE_CLEAR, XGL_IMAGE_STATE_DATA_TRANSFER, *it));
         }
 
         cmd_.begin();
@@ -2068,7 +1428,7 @@ TEST_F(XglCmdClearDepthStencilTest, Basic)
         img_info.usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT;
 
         const XGL_IMAGE_SUBRESOURCE_RANGE range =
-            xgl_testing::Image::subresource_range(XGL_IMAGE_ASPECT_DEPTH, img_info);
+            xgl_testing::Image::subresource_range(img_info, XGL_IMAGE_ASPECT_DEPTH);
         std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
 
         test_clear_depth_stencil(img_info, 0.25f, 63, ranges);
@@ -2080,6 +1440,8 @@ TEST_F(XglCmdClearDepthStencilTest, Basic)
 int main(int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
+
+    xgl_testing::set_error_callback(test_error_callback);
 
     environment = new xgl_testing::Environment();
 
