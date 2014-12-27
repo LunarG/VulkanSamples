@@ -73,7 +73,7 @@ void DisplayEngine::Display(XGL_IMAGE image, XGL_GPU_MEMORY image_mem)
         XGL_IMAGE_ASPECT_COLOR, 0, 0
     };
     XGL_SUBRESOURCE_LAYOUT sr_layout;
-    XGL_UINT data_size = sizeof(sr_layout);
+    size_t data_size = sizeof(sr_layout);
 
     if (!m_enable) return;  // Do nothing except save info if not enabled
 

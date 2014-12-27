@@ -188,7 +188,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
+    size_t data_size = sizeof(mem_req);
     err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);

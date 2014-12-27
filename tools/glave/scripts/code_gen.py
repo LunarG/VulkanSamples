@@ -420,7 +420,9 @@ class StructWrapperGen:
             print_type = "lu"
         elif 'UINT8' in struct_member['type']:
             print_type = "hu"
-        elif True in [ui_str in struct_member['type'] for ui_str in ['UINT', '_SIZE', '_FLAGS', '_SAMPLE_MASK']]:
+        elif '_SIZE' in struct_member['type']:
+            print_type = "zu"
+        elif True in [ui_str in struct_member['type'] for ui_str in ['UINT', '_FLAGS', '_SAMPLE_MASK']]:
             print_type = "u"
         elif 'INT' in struct_member['type']:
             print_type = "i"

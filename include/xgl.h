@@ -48,6 +48,7 @@
 #ifndef __XGL_H__
 #define __XGL_H__
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define XGL_MAKE_VERSION(major, minor, patch) \
@@ -68,16 +69,16 @@ extern "C"
 /*
  * Datatypes
  */
-typedef unsigned char   XGL_BOOL;
+typedef uint32_t        XGL_BOOL;
 typedef void            XGL_VOID;
-typedef signed char     XGL_CHAR;       /* 1-byte signed */
+typedef char            XGL_CHAR;       /* 1-byte signed */
 typedef int32_t         XGL_INT;        /* 4-byte signed */
 typedef int32_t         XGL_INT32;      /* 4-byte signed */
 typedef uint32_t        XGL_UINT;       /* 4-byte unsigned */
 typedef uint32_t        XGL_UINT32;     /* 4-byte unsigned */
 typedef uint64_t        XGL_UINT64;     /* 8-byte unsigned */
-typedef uint32_t        XGL_SIZE;       /* 4-byte unsigned */
-typedef uint32_t        XGL_GPU_SIZE;   /* 4-byte unsigned */
+typedef size_t          XGL_SIZE;       /* 4-byte unsigned */
+typedef uint64_t        XGL_GPU_SIZE;   /* 4-byte unsigned */
 typedef uint32_t        XGL_FLAGS;      /* 4-byte unsigned */
 typedef uint32_t        XGL_SAMPLE_MASK; /* 4-byte unsigned */
 typedef uint8_t         XGL_UINT8;      /* 1-byte unsigned */

@@ -66,7 +66,7 @@ static const struct icd_format_info {
     [XGL_CH_FMT_BC7]            = { 16, 4 },
 };
 
-unsigned int icd_format_get_size(XGL_FORMAT format)
+size_t icd_format_get_size(XGL_FORMAT format)
 {
     return icd_format_table[format.channelFormat].size;
 }

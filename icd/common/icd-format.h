@@ -97,7 +97,7 @@ static inline int icd_format_get_block_width(XGL_FORMAT format)
     return (icd_format_is_compressed(format)) ? 4 : 1;
 }
 
-XGL_SIZE icd_format_get_size(XGL_FORMAT format);
+size_t icd_format_get_size(XGL_FORMAT format);
 
 XGL_UINT icd_format_get_channel_count(XGL_FORMAT format);
 

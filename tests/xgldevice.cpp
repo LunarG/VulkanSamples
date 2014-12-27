@@ -97,7 +97,7 @@ XGL_RESULT XglDevice::AllocAndBindGpuMemory(XGL_OBJECT obj, const std::string &o
 {
     XGL_RESULT err;
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
+    XGL_SIZE data_size = sizeof(mem_req);
     err = xglGetObjectInfo(obj, XGL_INFO_TYPE_MEMORY_REQUIREMENTS, &data_size, &mem_req);
     if (err != XGL_SUCCESS) return err;
 

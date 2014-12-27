@@ -278,7 +278,7 @@ void XglRenderTest::CreateQueryPool(XGL_QUERY_TYPE type, XGL_UINT slots,
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
+    XGL_SIZE data_size = sizeof(mem_req);
     err = xglGetObjectInfo(*pPool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
@@ -753,7 +753,7 @@ void XglRenderTest::DrawTriangleTest()
         ASSERT_XGL_SUCCESS(err);
 
         XGL_MEMORY_REQUIREMENTS mem_req;
-        XGL_UINT data_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+        XGL_SIZE data_size = sizeof(XGL_MEMORY_REQUIREMENTS);
         err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                                &data_size, &mem_req);
         ASSERT_XGL_SUCCESS(err);

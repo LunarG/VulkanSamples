@@ -431,10 +431,10 @@ static void app_dev_dump_heap_props(const struct app_dev *dev, XGL_UINT id)
     const XGL_MEMORY_HEAP_PROPERTIES *props = &dev->heap_props[id];
 
     printf("XGL_MEMORY_HEAP_PROPERTIES[%u]\n", id);
-    printf("\tstructSize = %u\n",       props->structSize);
+    printf("\tstructSize = %zu\n",      props->structSize);
     printf("\theapMemoryType = %s\n",   xgl_heap_type_string(props->heapMemoryType));
-    printf("\theapSize = %u\n",         props->heapSize);
-    printf("\tpagesSize = %u\n",        props->pageSize);
+    printf("\theapSize = %zu\n",        props->heapSize);
+    printf("\tpagesSize = %zu\n",       props->pageSize);
 
     printf("\tflags =%s%s%s%s%s%s\n",
             (props->flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT)        ? " visible" : "",
@@ -511,7 +511,7 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     const XGL_PHYSICAL_GPU_PROPERTIES *props = &gpu->props;
 
     printf("XGL_PHYSICAL_GPU_PROPERTIES\n");
-    printf("\tstructSize = %u\n",                   props->structSize);
+    printf("\tstructSize = %zu\n",                  props->structSize);
     printf("\tapiVersion = %u\n",                   props->apiVersion);
     printf("\tdriverVersion = %u\n",                props->driverVersion);
     printf("\tvendorId = 0x%04x\n",                 props->vendorId);
@@ -519,8 +519,8 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tgpuType = %s\n",                      xgl_gpu_type_string(props->gpuType));
     printf("\tgpuName = %s\n",                      props->gpuName);
     printf("\tmaxMemRefsPerSubmission = %u\n",      props->maxMemRefsPerSubmission);
-    printf("\tvirtualMemPageSize = %u\n",           props->virtualMemPageSize);
-    printf("\tmaxInlineMemoryUpdateSize = %u\n",    props->maxInlineMemoryUpdateSize);
+    printf("\tvirtualMemPageSize = %zu\n",          props->virtualMemPageSize);
+    printf("\tmaxInlineMemoryUpdateSize = %zu\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
     printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);
     printf("\ttimestampFrequency = %lu\n",          props->timestampFrequency);
@@ -558,7 +558,7 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, XGL_UINT id)
     const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
 
     printf("XGL_PHYSICAL_GPU_QUEUE_PROPERTIES[%d]\n", id);
-    printf("\tstructSize = %u\n",           props->structSize);
+    printf("\tstructSize = %zu\n",          props->structSize);
     printf("\tqueueFlags = %c%c%c%c\n",
             (props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & XGL_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
@@ -574,7 +574,7 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
     const XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props = &gpu->memory_props;
 
     printf("XGL_PHYSICAL_GPU_MEMORY_PROPERTIES\n");
-    printf("\tstructSize = %u\n",                       props->structSize);
+    printf("\tstructSize = %zu\n",                      props->structSize);
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
     printf("\tsupportsVirtualMemoryRemapping = %u\n",   props->supportsVirtualMemoryRemapping);
     printf("\tsupportsPinning = %u\n",                  props->supportsPinning);

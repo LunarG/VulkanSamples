@@ -143,7 +143,7 @@ void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_SIZE data_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);

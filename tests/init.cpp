@@ -181,7 +181,7 @@ TEST_F(XglTest, Event) {
     XGL_EVENT_CREATE_INFO event_info;
     XGL_EVENT event;
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT data_size = sizeof(mem_req);
+    size_t data_size = sizeof(mem_req);
     XGL_RESULT err;
 
     //        typedef struct _XGL_EVENT_CREATE_INFO
@@ -290,9 +290,9 @@ TEST_F(XglTest, Fence) {
 TEST_F(XglTest, Query) {
     XGL_QUERY_POOL_CREATE_INFO query_info;
     XGL_QUERY_POOL query_pool;
-    XGL_UINT data_size;
+    size_t data_size;
     XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_UINT query_result_size;
+    size_t query_result_size;
     XGL_UINT *query_result_data;
     XGL_RESULT err;
 
@@ -469,7 +469,7 @@ void XglTest::CreateImageTest()
     XGL_SIZE size;
     XGL_FORMAT fmt;
     XGL_FORMAT_PROPERTIES image_fmt;
-    XGL_UINT data_size;
+    size_t data_size;
 
     w =512;
     h = 256;

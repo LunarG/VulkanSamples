@@ -105,13 +105,17 @@ class Subcommand(object):
             if '*' in xgl_type:
                 return ("%lu", "*%s" % name)
             return ("%lu", name)
+        if "SIZE" in xgl_type:
+            if '*' in xgl_type:
+                return ("%zu", "*%s" % name)
+            return ("%zu", name)
         if "FLOAT" in xgl_type:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
         if "BOOL" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
             return ("%u", name)
-        if True in [t in xgl_type for t in ["INT", "SIZE", "FLAGS", "MASK", "xcb_window_t"]]:
+        if True in [t in xgl_type for t in ["INT", "FLAGS", "MASK", "xcb_window_t"]]:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             if '*' in xgl_type:

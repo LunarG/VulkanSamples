@@ -508,7 +508,7 @@ writer_decode_kernel(const struct intel_cmd *cmd,
     const void *kernel = (const void *)
         writer_pointer(cmd, which, item->offset);
 
-    fprintf(stderr, "0x%08x:\n", item->offset);
+    fprintf(stderr, "0x%08zx:\n", item->offset);
     intel_disassemble_kernel(cmd->dev->gpu, kernel, item->size);
 }
 
@@ -563,7 +563,7 @@ static void cmd_writer_decode(struct intel_cmd *cmd,
 
     switch (which) {
     case INTEL_CMD_WRITER_BATCH:
-        fprintf(stderr, "decoding batch buffer: %d bytes\n", writer->used);
+        fprintf(stderr, "decoding batch buffer: %zu bytes\n", writer->used);
         if (writer->used) {
             intel_winsys_decode_bo(cmd->dev->winsys,
                     writer->bo, writer->used);
