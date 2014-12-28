@@ -13,7 +13,6 @@ if(NOT ImageMagick_FOUND)
 endif()
 
 SET(COMMON_CPP
-    xglgpu.cpp
     xgldevice.cpp
     xglimage.cpp
     xglrenderframework.cpp
