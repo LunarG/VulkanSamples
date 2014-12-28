@@ -379,16 +379,13 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
     XGL_RESULT err;
 
     for (i = 0; i < 8; i++) {
-        XGL_UINT8 *pData;
-        err = xglMapMemory(constantBuffer->m_constantBufferMem, 0, (XGL_VOID **) &pData);
-        ASSERT_XGL_SUCCESS(err);
+        void *pData = constantBuffer->map();
 
         Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
         MVP = Projection * View * Model;
         memcpy(pData, (const void*) &MVP[0][0], matrixSize);
 
-        err = xglUnmapMemory(constantBuffer->m_constantBufferMem);
-        ASSERT_XGL_SUCCESS(err);
+        constantBuffer->unmap();
 
         // submit the command buffer to the universal queue
         err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_memoryRefManager.GetNumRefs(), m_memoryRefManager.GetMemoryRefList(), NULL );

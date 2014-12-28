@@ -592,65 +592,39 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
 {
     m_device = device;
     m_commandBuffer = 0;
-    m_fence = 0;
 
     memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
-    memset(&m_constantBufferMem,0,sizeof(m_constantBufferMem));
 }
 
 XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data)
 {
-    XGL_RESULT err = XGL_SUCCESS;
-    XGL_UINT8 *pData;
-    XGL_MEMORY_ALLOC_INFO           alloc_info = {};
     m_device = device;
+    m_commandBuffer = 0;
+
+    memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
     m_numVertices = constantCount;
     m_stride = constantSize;
 
-    memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
-    memset(&m_constantBufferMem,0,sizeof(m_constantBufferMem));
-    m_commandBuffer = 0;
-    m_fence = 0;
+    const size_t allocationSize = constantCount * constantSize;
+    init(*m_device, allocationSize);
 
-    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = constantCount * constantSize;
-    alloc_info.alignment = 0;
-    alloc_info.heapCount = 1;
-    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
-
-    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
-    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    err = xglAllocMemory(m_device->device(), &alloc_info, &m_constantBufferMem);
-    assert(!err);
-
-    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
-    assert(!err);
-
-    memcpy(pData, data, alloc_info.allocationSize);
-
-    err = xglUnmapMemory(m_constantBufferMem);
-    assert(!err);
+    void *pData = map();
+    memcpy(pData, data, allocationSize);
+    unmap();
 
     // set up the memory view for the constant buffer
     this->m_constantBufferView.stride = 16;
-    this->m_constantBufferView.range  = alloc_info.allocationSize;
+    this->m_constantBufferView.range  = allocationSize;
     this->m_constantBufferView.offset = 0;
-    this->m_constantBufferView.mem    = m_constantBufferMem;
+    this->m_constantBufferView.mem    = obj();
     this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
     this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
     this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
 }
 
-XglConstantBufferObj::~XglConstantBufferObj()
-{
-    if (m_constantBufferMem != XGL_NULL_HANDLE) xglFreeMemory(m_constantBufferMem);
-    if (m_fence != XGL_NULL_HANDLE) xglDestroyObject(m_fence);
-}
-
 void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding)
 {
-    xglCmdBindVertexData(cmdBuffer, this->m_constantBufferMem, offset, binding);
+    xglCmdBindVertexData(cmdBuffer, obj(), offset, binding);
 }
 
 
@@ -663,29 +637,22 @@ void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
 
     if (!m_commandBuffer)
     {
-        XGL_FENCE_CREATE_INFO fence_info;
-        memset(&fence_info, 0, sizeof(fence_info));
-        fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        err = xglCreateFence(m_device->device(), &fence_info, &m_fence);
+        m_fence.init(*m_device, xgl_testing::Fence::create_info(0));
 
         m_commandBuffer = new XglCommandBufferObj(m_device);
 
     }
     else
     {
-        err = xglWaitForFences(m_device->device(), 1, &m_fence, XGL_TRUE, 0);
+        m_device->wait(m_fence);
     }
 
     // open the command buffer
     err = m_commandBuffer->BeginCommandBuffer(0);
     ASSERT_XGL_SUCCESS(err);
 
-    XGL_MEMORY_STATE_TRANSITION transition = {};
-    transition.mem = m_constantBufferMem;
-    transition.oldState = XGL_MEMORY_STATE_DATA_TRANSFER;
-    transition.newState = newState;
-    transition.offset = 0;
-    transition.regionSize = m_numVertices * m_stride;
+    XGL_MEMORY_STATE_TRANSITION transition =
+        state_transition(XGL_MEMORY_STATE_DATA_TRANSFER, newState, 0, m_numVertices * m_stride);
 
     // write transition to the command buffer
     m_commandBuffer->PrepareMemoryRegions(1, &transition);
@@ -699,12 +666,12 @@ void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
     XGL_MEMORY_REF memRefs;
     // this command buffer only uses the vertex buffer memory
     memRefs.flags = 0;
-    memRefs.mem = m_constantBufferMem;
+    memRefs.mem = obj();
 
     // submit the command buffer to the universal queue
     XGL_CMD_BUFFER bufferArray[1];
     bufferArray[0] = m_commandBuffer->GetBufferHandle();
-    err = xglQueueSubmit( m_device->m_queue, 1, bufferArray, numMemRefs, &memRefs, m_fence );
+    err = xglQueueSubmit( m_device->m_queue, 1, bufferArray, numMemRefs, &memRefs, m_fence.obj() );
     ASSERT_XGL_SUCCESS(err);
 }
 
@@ -716,9 +683,6 @@ XglIndexBufferObj::XglIndexBufferObj(XglDevice *device)
 
 void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE indexType, const void* data)
 {
-    XGL_RESULT err = XGL_SUCCESS;
-    XGL_UINT8 *pData;
-    XGL_MEMORY_ALLOC_INFO           alloc_info = {};
     XGL_FORMAT viewFormat;
 
     m_numVertices = numIndexes;
@@ -742,31 +706,18 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
         break;
     }
 
-    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = numIndexes * m_stride;
-    alloc_info.alignment = 0;
-    alloc_info.heapCount = 1;
-    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
+    const size_t allocationSize = numIndexes * m_stride;
+    init(*m_device, allocationSize);
 
-    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
-    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    err = xglAllocMemory(m_device->device(), &alloc_info, &m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglMapMemory(m_constantBufferMem, 0, (XGL_VOID **) &pData);
-    ASSERT_XGL_SUCCESS(err);
-
-    memcpy(pData, data, alloc_info.allocationSize);
-
-    err = xglUnmapMemory(m_constantBufferMem);
-    ASSERT_XGL_SUCCESS(err);
+    void *pData = map();
+    memcpy(pData, data, allocationSize);
+    unmap();
 
     // set up the memory view for the constant buffer
     this->m_constantBufferView.stride = m_stride;
-    this->m_constantBufferView.range  = alloc_info.allocationSize;
+    this->m_constantBufferView.range  = allocationSize;
     this->m_constantBufferView.offset = 0;
-    this->m_constantBufferView.mem    = m_constantBufferMem;
+    this->m_constantBufferView.mem    = obj();
     this->m_constantBufferView.format.channelFormat = viewFormat.channelFormat;
     this->m_constantBufferView.format.numericFormat = viewFormat.numericFormat;
     this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
@@ -774,7 +725,7 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
 
 void XglIndexBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset)
 {
-    xglCmdBindIndexData(cmdBuffer, this->m_constantBufferMem, offset, m_indexType);
+    xglCmdBindIndexData(cmdBuffer, obj(), offset, m_indexType);
 }
 
 XGL_INDEX_TYPE XglIndexBufferObj::GetIndexType()
@@ -1063,7 +1014,7 @@ XglMemoryRefManager::XglMemoryRefManager() {
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
-    m_bufferObjs.push_back(constantBuffer->m_constantBufferMem);
+    m_bufferObjs.push_back(constantBuffer->obj());
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
@@ -1263,9 +1214,9 @@ void XglCommandBufferObj::BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet)
 }
 void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset)
 {
-    xglCmdBindIndexData(obj(), indexBuffer->m_constantBufferMem, offset, indexBuffer->GetIndexType());
+    xglCmdBindIndexData(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
 }
 void XglCommandBufferObj::BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding)
 {
-    xglCmdBindVertexData(obj(), vertexBuffer->m_constantBufferMem, offset, binding);
+    xglCmdBindVertexData(obj(), vertexBuffer->obj(), offset, binding);
 }
