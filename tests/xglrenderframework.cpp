@@ -412,17 +412,11 @@ XglDescriptorSetObj::~XglDescriptorSetObj()
     if (m_rsrcDescSet != XGL_NULL_HANDLE) xglDestroyObject(m_rsrcDescSet);
 }
 
-XglTextureObj::XglTextureObj(XglDevice *device):
-    m_texture(XGL_NULL_HANDLE),
-    m_textureMem(XGL_NULL_HANDLE),
-    m_textureView(XGL_NULL_HANDLE)
+XglTextureObj::XglTextureObj(XglDevice *device)
 {
     m_device = device;
     const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
-    m_texWidth = 16;
-    m_texHeight = 16;
     const uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
-    XGL_RESULT err;
 
     memset(&m_textureViewInfo,0,sizeof(m_textureViewInfo));
 
@@ -433,7 +427,7 @@ XglTextureObj::XglTextureObj(XglDevice *device):
         .pNext = NULL,
         .imageType = XGL_IMAGE_2D,
         .format = tex_format,
-        .extent = { m_texWidth, m_texHeight, 1 },
+        .extent = { 16, 16, 1 },
         .mipLevels = 1,
         .arraySize = 1,
         .samples = 1,
@@ -441,15 +435,6 @@ XglTextureObj::XglTextureObj(XglDevice *device):
         .usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT,
         .flags = 0,
     };
-
-    XGL_MEMORY_ALLOC_INFO mem_alloc;
-        mem_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-        mem_alloc.pNext = NULL;
-        mem_alloc.allocationSize = 0;
-        mem_alloc.alignment = 0;
-        mem_alloc.flags = 0;
-        mem_alloc.heapCount = 0;
-        mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
     XGL_IMAGE_VIEW_CREATE_INFO view;
         view.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -468,91 +453,48 @@ XglTextureObj::XglTextureObj(XglDevice *device):
         view.subresourceRange.arraySize = 1;
         view.minLod = 0.0f;
 
-    XGL_MEMORY_REQUIREMENTS mem_reqs;
-    XGL_SIZE mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
-
     /* create image */
-    err = xglCreateImage(m_device->device(), &image, &m_texture);
-    assert(!err);
-
-    err = xglGetObjectInfo(m_texture,
-            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-            &mem_reqs_size, &mem_reqs);
-    assert(!err && mem_reqs_size == sizeof(mem_reqs));
-
-    mem_alloc.allocationSize = mem_reqs.size;
-    mem_alloc.alignment = mem_reqs.alignment;
-    mem_alloc.heapCount = mem_reqs.heapCount;
-    memcpy(mem_alloc.heaps, mem_reqs.heaps,
-            sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
-
-    /* allocate memory */
-    err = xglAllocMemory(m_device->device(), &mem_alloc, &m_textureMem);
-    assert(!err);
-
-    /* bind memory */
-    err = xglBindObjectMemory(m_texture, m_textureMem, 0);
-    assert(!err);
+    init(*m_device, image);
 
     /* create image view */
-    view.image = m_texture;
-    err = xglCreateImageView(m_device->device(), &view, &m_textureView);
-    assert(!err);
+    view.image = obj();
+    m_textureView.init(*m_device, view);
 
+    XGL_SUBRESOURCE_LAYOUT layout =
+        subresource_layout(subresource(XGL_IMAGE_ASPECT_COLOR, 0, 0));
+    m_rowPitch = layout.rowPitch;
 
-    const XGL_IMAGE_SUBRESOURCE subres = {
-        .aspect = XGL_IMAGE_ASPECT_COLOR,
-        .mipLevel = 0,
-        .arraySlice = 0,
-    };
-    XGL_SUBRESOURCE_LAYOUT layout;
-    XGL_SIZE layout_size=sizeof(layout);
     XGL_VOID *data;
     XGL_INT x, y;
 
-    err = xglGetImageSubresourceInfo(m_texture, &subres,
-            XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
-    assert(!err && layout_size == sizeof(layout));
-    m_rowPitch = layout.rowPitch;
+    data = map();
 
-    err = xglMapMemory(m_textureMem, 0, &data);
-    assert(!err);
-
-    for (y = 0; y < m_texHeight; y++) {
+    for (y = 0; y < extent().height; y++) {
         uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
-        for (x = 0; x < m_texWidth; x++)
+        for (x = 0; x < extent().width; x++)
             row[x] = tex_colors[(x & 1) ^ (y & 1)];
     }
 
-    err = xglUnmapMemory(m_textureMem);
-    assert(!err);
+    unmap();
 
-    m_textureViewInfo.view = m_textureView;
+    m_textureViewInfo.view = m_textureView.obj();
 
-}
-
-XglTextureObj::~XglTextureObj()
-{
-       if (m_texture != XGL_NULL_HANDLE) xglDestroyObject(m_texture);
 }
 
 void XglTextureObj::ChangeColors(uint32_t color1, uint32_t color2)
 {
-    XGL_RESULT err;
     const uint32_t tex_colors[2] = { color1, color2 };
     XGL_VOID *data;
 
-    err = xglMapMemory(m_textureMem, 0, &data);
-    assert(!err);
+    data = map();
 
-    for (int y = 0; y < m_texHeight; y++) {
+    for (int y = 0; y < extent().height; y++) {
         uint32_t *row = (uint32_t *) ((char *) data + m_rowPitch * y);
-        for (int x = 0; x < m_texWidth; x++)
+        for (int x = 0; x < extent().width; x++)
             row[x] = tex_colors[(x & 1) ^ (y & 1)];
     }
 
-    err = xglUnmapMemory(m_textureMem);
-    assert(!err);
+    unmap();
 }
 
 XglSamplerObj::XglSamplerObj(XglDevice *device)
@@ -1018,7 +960,9 @@ void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
-    m_bufferObjs.push_back(texture->m_textureMem);
+    const std::vector<XGL_GPU_MEMORY> mems = texture->memories();
+    if (!mems.empty())
+        m_bufferObjs.push_back(mems[0]);
 }
 
 XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {

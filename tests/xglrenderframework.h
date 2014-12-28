@@ -161,23 +161,17 @@ protected:
     XGL_INDEX_TYPE  m_indexType;
 };
 
-class XglTextureObj
+class XglTextureObj : public xgl_testing::Image
 {
 public:
     XglTextureObj(XglDevice *device);
-    ~XglTextureObj();
     void ChangeColors(uint32_t color1, uint32_t color2);
-    XGL_IMAGE                  m_texture;
     XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
-    XGL_GPU_MEMORY             m_textureMem;
 
 protected:
     XglDevice                 *m_device;
-    XGL_IMAGE_VIEW             m_textureView;
-    int                        m_texHeight;
-    int                        m_texWidth;
-    int                        m_rowPitch;
-
+    xgl_testing::ImageView     m_textureView;
+    XGL_GPU_SIZE               m_rowPitch;
 };
 
 class XglSamplerObj
