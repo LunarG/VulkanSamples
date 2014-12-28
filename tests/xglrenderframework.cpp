@@ -1063,11 +1063,11 @@ XglMemoryRefManager::XglMemoryRefManager() {
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
-    m_bufferObjs.push_back(&constantBuffer->m_constantBufferMem);
+    m_bufferObjs.push_back(constantBuffer->m_constantBufferMem);
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
-    m_bufferObjs.push_back(&texture->m_textureMem);
+    m_bufferObjs.push_back(texture->m_textureMem);
 }
 
 XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
@@ -1082,7 +1082,7 @@ XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
     for (int i=0; i<numRefs; i++)
     {
         localRefs[i].flags = 0;
-        localRefs[i].mem = *m_bufferObjs[i];
+        localRefs[i].mem = m_bufferObjs[i];
     }
     return localRefs;
 }

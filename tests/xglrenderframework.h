@@ -291,7 +291,7 @@ public:
 
 protected:
     int m_numRefs;
-    vector<XGL_GPU_MEMORY*> m_bufferObjs;
+    vector<XGL_GPU_MEMORY> m_bufferObjs;
 
 };
 
