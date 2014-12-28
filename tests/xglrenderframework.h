@@ -100,11 +100,10 @@ protected:
 class XglIndexBufferObj;
 class XglConstantBufferObj;
 
-class XglCommandBufferObj
+class XglCommandBufferObj : xgl_testing::CmdBuffer
 {
 public:
     XglCommandBufferObj(XglDevice *device);
-    ~XglCommandBufferObj();
     XGL_CMD_BUFFER GetBufferHandle();
     XGL_RESULT BeginCommandBuffer(XGL_FLAGS flags);
     XGL_RESULT EndCommandBuffer();
@@ -128,8 +127,6 @@ public:
 
 protected:
     XglDevice                      *m_device;
-    XGL_CMD_BUFFER_CREATE_INFO      m_cmdInfo;
-    XGL_CMD_BUFFER                  m_cmdBuffer;
     vector<XglImage*>               m_renderTargets;
     XGL_UINT                        m_renderTargetCount;
 

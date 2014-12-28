@@ -1091,43 +1091,34 @@ int XglMemoryRefManager::GetNumRefs() {
 }
 
 XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
+    : xgl_testing::CmdBuffer(*device, xgl_testing::CmdBuffer::create_info(XGL_QUEUE_TYPE_GRAPHICS))
 {
-    XGL_RESULT err;
-
-    memset(&m_cmdInfo,0,sizeof(m_cmdInfo));
-    m_renderTargetCount = 0;
-
     m_device = device;
-    m_cmdInfo.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    m_cmdInfo.queueType = XGL_QUEUE_TYPE_GRAPHICS;
-    err = xglCreateCommandBuffer(m_device->device(), &m_cmdInfo, &m_cmdBuffer);
-    assert(!err);
+    m_renderTargetCount = 0;
 }
 
 XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
 {
-    return m_cmdBuffer;
+    return obj();
 }
 
 XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_FLAGS flags)
 {
-    return xglBeginCommandBuffer(m_cmdBuffer, flags);
+    begin(flags);
+    return XGL_SUCCESS;
 }
 
 XGL_RESULT XglCommandBufferObj::EndCommandBuffer()
 {
-    return xglEndCommandBuffer(m_cmdBuffer);
+    end();
+    return XGL_SUCCESS;
 }
 
 void XglCommandBufferObj::PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr)
 {
-    xglCmdPrepareMemoryRegions(m_cmdBuffer, transitionCount, transitionPtr);
+    xglCmdPrepareMemoryRegions(obj(), transitionCount, transitionPtr);
 }
 
-XglCommandBufferObj::~XglCommandBufferObj()
-{
-    if (m_cmdBuffer != XGL_NULL_HANDLE) xglDestroyObject(m_cmdBuffer);
-}
 void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage)
 {
     XGL_UINT i;
@@ -1148,10 +1139,10 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         transitionToClear.oldState = m_renderTargets[i]->state();
         transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
         transitionToClear.subresourceRange = srRange;
-        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
+        xglCmdPrepareImages( obj(), 1, &transitionToClear );
         m_renderTargets[i]->state(( XGL_IMAGE_STATE ) transitionToClear.newState);
 
-        xglCmdClearColorImageRaw( m_cmdBuffer, m_renderTargets[i]->image(), clearColor, 1, &srRange );
+        xglCmdClearColorImageRaw( obj(), m_renderTargets[i]->image(), clearColor, 1, &srRange );
     }
 
     if (depthStencilImage)
@@ -1169,10 +1160,10 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         transitionToClear.oldState = depthStencilBinding->depthState;
         transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
         transitionToClear.subresourceRange = dsRange;
-        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
+        xglCmdPrepareImages( obj(), 1, &transitionToClear );
         depthStencilBinding->depthState = transitionToClear.newState;
 
-        xglCmdClearDepthStencil(m_cmdBuffer, depthStencilImage, 1.0f, 0, 1, &dsRange);
+        xglCmdClearDepthStencil(obj(), depthStencilImage, 1.0f, 0, 1, &dsRange);
 
         // prepare depth buffer for rendering
         XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
@@ -1180,7 +1171,7 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         transitionToRender.oldState = XGL_IMAGE_STATE_CLEAR;
         transitionToRender.newState = depthStencilBinding->depthState;
         transitionToRender.subresourceRange = dsRange;
-        xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
+        xglCmdPrepareImages( obj(), 1, &transitionToRender );
         depthStencilBinding->depthState = transitionToClear.newState;
     }
 }
@@ -1203,7 +1194,7 @@ void XglCommandBufferObj::BindAttachments(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         transitionToRender.oldState = m_renderTargets[i]->state();
         transitionToRender.newState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
         transitionToRender.subresourceRange = srRange;
-        xglCmdPrepareImages(m_cmdBuffer, 1, &transitionToRender );
+        xglCmdPrepareImages(obj(), 1, &transitionToRender );
         m_renderTargets[i]->state(( XGL_IMAGE_STATE ) transitionToRender.newState);
     }
     for (i = 0; i < m_renderTargetCount; i++) {
@@ -1211,9 +1202,9 @@ void XglCommandBufferObj::BindAttachments(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         colorBindings[i].colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     }
     if (depthStencilBinding) {
-       xglCmdBindAttachments(m_cmdBuffer, m_renderTargetCount, colorBindings, depthStencilBinding );
+       xglCmdBindAttachments(obj(), m_renderTargetCount, colorBindings, depthStencilBinding );
     } else {
-       xglCmdBindAttachments(m_cmdBuffer, m_renderTargetCount, colorBindings, XGL_NULL_HANDLE );
+       xglCmdBindAttachments(obj(), m_renderTargetCount, colorBindings, XGL_NULL_HANDLE );
     }
 }
 
@@ -1222,11 +1213,11 @@ void XglCommandBufferObj::BindState(XGL_RASTER_STATE_OBJECT stateRaster, XGL_VIE
                                                         XGL_MSAA_STATE_OBJECT stateMsaa)
 {
     // set all states
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_RASTER, stateRaster );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_VIEWPORT, stateViewport );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_COLOR_BLEND, colorBlend);
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_DEPTH_STENCIL, stateDepthStencil );
-    xglCmdBindStateObject( m_cmdBuffer, XGL_STATE_BIND_MSAA, stateMsaa );
+    xglCmdBindStateObject( obj(), XGL_STATE_BIND_RASTER, stateRaster );
+    xglCmdBindStateObject( obj(), XGL_STATE_BIND_VIEWPORT, stateViewport );
+    xglCmdBindStateObject( obj(), XGL_STATE_BIND_COLOR_BLEND, colorBlend);
+    xglCmdBindStateObject( obj(), XGL_STATE_BIND_DEPTH_STENCIL, stateDepthStencil );
+    xglCmdBindStateObject( obj(), XGL_STATE_BIND_MSAA, stateMsaa );
 }
 
 void XglCommandBufferObj::AddRenderTarget(XglImage *renderTarget)
@@ -1237,12 +1228,12 @@ void XglCommandBufferObj::AddRenderTarget(XglImage *renderTarget)
 
 void XglCommandBufferObj::DrawIndexed(XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
-    xglCmdDrawIndexed(m_cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    xglCmdDrawIndexed(obj(), firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 void XglCommandBufferObj::Draw(XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount)
 {
-    xglCmdDraw(m_cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    xglCmdDraw(obj(), firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 void XglCommandBufferObj::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs)
@@ -1250,7 +1241,7 @@ void XglCommandBufferObj::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32
     XGL_RESULT err = XGL_SUCCESS;
 
     // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, numMemRefs, memRefs, NULL );
+    err = xglQueueSubmit( m_device->m_queue, 1, &obj(), numMemRefs, memRefs, NULL );
     ASSERT_XGL_SUCCESS( err );
 
     err = xglQueueWaitIdle( m_device->m_queue );
@@ -1262,19 +1253,19 @@ void XglCommandBufferObj::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32
 }
 void XglCommandBufferObj::BindPipeline(XGL_PIPELINE pipeline)
 {
-        xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+        xglCmdBindPipeline( obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 }
 
 void XglCommandBufferObj::BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet)
 {
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
-    xglCmdBindDescriptorSet(m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, descriptorSet, 0 );
+    xglCmdBindDescriptorSet(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, descriptorSet, 0 );
 }
 void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset)
 {
-    xglCmdBindIndexData(m_cmdBuffer, indexBuffer->m_constantBufferMem, offset, indexBuffer->GetIndexType());
+    xglCmdBindIndexData(obj(), indexBuffer->m_constantBufferMem, offset, indexBuffer->GetIndexType());
 }
 void XglCommandBufferObj::BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding)
 {
-    xglCmdBindVertexData(m_cmdBuffer, vertexBuffer->m_constantBufferMem, offset, binding);
+    xglCmdBindVertexData(obj(), vertexBuffer->m_constantBufferMem, offset, binding);
 }
