@@ -174,15 +174,12 @@ protected:
     XGL_GPU_SIZE               m_rowPitch;
 };
 
-class XglSamplerObj
+class XglSamplerObj : public xgl_testing::Sampler
 {
 public:
     XglSamplerObj(XglDevice *device);
-    ~XglSamplerObj();
-    XGL_SAMPLER m_sampler;
 
 protected:
-     XGL_SAMPLER_CREATE_INFO m_samplerCreateInfo;
      XglDevice *m_device;
 
 };

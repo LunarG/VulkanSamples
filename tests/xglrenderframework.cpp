@@ -351,7 +351,7 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet()
     }
     for (int i=0; i<m_samplers.size();i++)
     {
-        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, &m_samplers[i]->m_sampler );
+        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, &m_samplers[i]->obj() );
     }
     for (int i=0; i<m_imageViews.size();i++)
     {
@@ -395,7 +395,7 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     }
     for (int i=0; i<m_samplers.size();i++)
     {
-        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, &m_samplers[i]->m_sampler );
+        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, &m_samplers[i]->obj() );
     }
     for (int i=0; i<m_imageViews.size();i++)
     {
@@ -499,32 +499,25 @@ void XglTextureObj::ChangeColors(uint32_t color1, uint32_t color2)
 
 XglSamplerObj::XglSamplerObj(XglDevice *device)
 {
-    XGL_RESULT err = XGL_SUCCESS;
-
     m_device = device;
-    memset(&m_samplerCreateInfo,0,sizeof(m_samplerCreateInfo));
-    m_samplerCreateInfo.sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    m_samplerCreateInfo.magFilter = XGL_TEX_FILTER_NEAREST;
-    m_samplerCreateInfo.minFilter = XGL_TEX_FILTER_NEAREST;
-    m_samplerCreateInfo.mipMode = XGL_TEX_MIPMAP_BASE;
-    m_samplerCreateInfo.addressU = XGL_TEX_ADDRESS_WRAP;
-    m_samplerCreateInfo.addressV = XGL_TEX_ADDRESS_WRAP;
-    m_samplerCreateInfo.addressW = XGL_TEX_ADDRESS_WRAP;
-    m_samplerCreateInfo.mipLodBias = 0.0;
-    m_samplerCreateInfo.maxAnisotropy = 0.0;
-    m_samplerCreateInfo.compareFunc = XGL_COMPARE_NEVER;
-    m_samplerCreateInfo.minLod = 0.0;
-    m_samplerCreateInfo.maxLod = 0.0;
-    m_samplerCreateInfo.borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE;
 
-    err = xglCreateSampler(m_device->device(),&m_samplerCreateInfo, &m_sampler);
-    assert(!err);
+    XGL_SAMPLER_CREATE_INFO samplerCreateInfo;
+    memset(&samplerCreateInfo,0,sizeof(samplerCreateInfo));
+    samplerCreateInfo.sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = XGL_TEX_FILTER_NEAREST;
+    samplerCreateInfo.minFilter = XGL_TEX_FILTER_NEAREST;
+    samplerCreateInfo.mipMode = XGL_TEX_MIPMAP_BASE;
+    samplerCreateInfo.addressU = XGL_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressV = XGL_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressW = XGL_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.mipLodBias = 0.0;
+    samplerCreateInfo.maxAnisotropy = 0.0;
+    samplerCreateInfo.compareFunc = XGL_COMPARE_NEVER;
+    samplerCreateInfo.minLod = 0.0;
+    samplerCreateInfo.maxLod = 0.0;
+    samplerCreateInfo.borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE;
 
-}
-
-XglSamplerObj::~XglSamplerObj()
-{
-    if (m_sampler != XGL_NULL_HANDLE) xglDestroyObject(m_sampler);
+    init(*m_device, samplerCreateInfo);
 }
 
 /*
