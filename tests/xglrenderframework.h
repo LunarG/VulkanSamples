@@ -205,7 +205,7 @@ public:
     void CreateXGLDescriptorSet();
     XGL_DESCRIPTOR_SET GetDescriptorSetHandle();
     int GetTotalSlots();
-    XGL_DESCRIPTOR_SLOT_INFO * GetSlotInfo(vector<int>slots, vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types, vector<XGL_OBJECT>objs );
+    XGL_DESCRIPTOR_SLOT_INFO * GetSlotInfo(vector<int>slots, vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types, vector<void*>objs );
 
 protected:
     XGL_DESCRIPTOR_SET_CREATE_INFO       m_descriptorInfo;
@@ -217,7 +217,7 @@ protected:
     vector<int>                          m_memorySlots;
     vector<XGL_MEMORY_VIEW_ATTACH_INFO*> m_memoryViews;
     vector<int>                          m_samplerSlots;
-    vector<XGL_SAMPLER*>                 m_samplers;
+    vector<XglSamplerObj*>               m_samplers;
     vector<int>                          m_imageSlots;
     vector<XGL_IMAGE_VIEW_ATTACH_INFO*>  m_imageViews;
 };
@@ -240,13 +240,13 @@ protected:
     XglDevice *m_device;
     vector<int>    m_memSlots;
     vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_memTypes;
-    vector<XGL_OBJECT> m_memObjs;
+    vector<XGL_MEMORY_VIEW_ATTACH_INFO*> m_memObjs;
     vector<int>    m_samplerSlots;
     vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_samplerTypes;
-    vector<XGL_OBJECT> m_samplerObjs;
+    vector<XglSamplerObj*> m_samplerObjs;
     vector<int>    m_imageSlots;
     vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_imageTypes;
-    vector<XGL_OBJECT> m_imageObjs;
+    vector<XGL_IMAGE_VIEW_ATTACH_INFO*> m_imageObjs;
 
 };
 

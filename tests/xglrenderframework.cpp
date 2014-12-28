@@ -262,7 +262,7 @@ void XglDescriptorSetObj::AttachMemoryView(XglConstantBufferObj *constantBuffer)
 
 void XglDescriptorSetObj::AttachSampler(XglSamplerObj *sampler)
 {
-    m_samplers.push_back(&sampler->m_sampler);
+    m_samplers.push_back(sampler);
     m_samplerSlots.push_back(m_nextSlot);
     m_nextSlot++;
 
@@ -278,7 +278,7 @@ void XglDescriptorSetObj::AttachImageView(XglTextureObj *texture)
 
 XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
                                                            vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types,
-                                                           vector<XGL_OBJECT>objs )
+                                                           vector<void *>objs )
 {
     int nSlots = m_memorySlots.size() + m_imageSlots.size() + m_samplerSlots.size();
     m_slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( nSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
@@ -293,7 +293,7 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
     {
         for (int j=0; j<m_memorySlots.size(); j++)
         {
-            if ( (XGL_OBJECT) m_memoryViews[j] == objs[i])
+            if ( m_memoryViews[j] == objs[i])
             {
                 m_slotInfo[m_memorySlots[j]].shaderEntityIndex = slots[i];
                 m_slotInfo[m_memorySlots[j]].slotObjectType = types[i];
@@ -301,7 +301,7 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
         }
         for (int j=0; j<m_imageSlots.size(); j++)
         {
-            if ( (XGL_OBJECT) m_imageViews[j] == objs[i])
+            if ( m_imageViews[j] == objs[i])
             {
                 m_slotInfo[m_imageSlots[j]].shaderEntityIndex = slots[i];
                 m_slotInfo[m_imageSlots[j]].slotObjectType = types[i];
@@ -309,7 +309,7 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
         }
         for (int j=0; j<m_samplerSlots.size(); j++)
         {
-            if ( (XGL_OBJECT) m_samplers[j] == objs[i])
+            if ( m_samplers[j] == objs[i])
             {
                 m_slotInfo[m_samplerSlots[j]].shaderEntityIndex = slots[i];
                 m_slotInfo[m_samplerSlots[j]].slotObjectType = types[i];
@@ -351,7 +351,7 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet()
     }
     for (int i=0; i<m_samplers.size();i++)
     {
-        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, m_samplers[i] );
+        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, &m_samplers[i]->m_sampler );
     }
     for (int i=0; i<m_imageViews.size();i++)
     {
@@ -395,7 +395,7 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     }
     for (int i=0; i<m_samplers.size();i++)
     {
-        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, m_samplers[i] );
+        xglAttachSamplerDescriptors( m_rsrcDescSet, m_samplerSlots[i], 1, &m_samplers[i]->m_sampler );
     }
     for (int i=0; i<m_imageViews.size();i++)
     {
@@ -751,7 +751,7 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     {
         vector<int> allSlots;
         vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> allTypes;
-        vector<XGL_OBJECT> allObjs;
+        vector<void *> allObjs;
 
         allSlots.reserve(m_memSlots.size() + m_imageSlots.size() + m_samplerSlots.size());
         allTypes.reserve(m_memTypes.size() + m_imageTypes.size() + m_samplerTypes.size());
@@ -786,7 +786,7 @@ void XglShaderObj::BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLO
 {
     m_memSlots.push_back(slot);
     m_memTypes.push_back(type);
-    m_memObjs.push_back((XGL_OBJECT) &constantBuffer->m_constantBufferView);
+    m_memObjs.push_back(&constantBuffer->m_constantBufferView);
 
 }
 
@@ -794,7 +794,7 @@ void XglShaderObj::BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT
 {
     m_imageSlots.push_back(slot);
     m_imageTypes.push_back(type);
-    m_imageObjs.push_back((XGL_OBJECT) &texture->m_textureViewInfo);
+    m_imageObjs.push_back(&texture->m_textureViewInfo);
 
 }
 
@@ -802,7 +802,7 @@ void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sample
 {
     m_samplerSlots.push_back(slot);
     m_samplerTypes.push_back(XGL_SLOT_SHADER_SAMPLER);
-    m_samplerObjs.push_back((XGL_OBJECT) &sampler->m_sampler);
+    m_samplerObjs.push_back(sampler);
 
 }
 
