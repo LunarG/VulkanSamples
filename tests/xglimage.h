@@ -34,12 +34,10 @@
 *
 ********************************************************************************
 */
-class XglImage
+class XglImage : public xgl_testing::Image
 {
 public:
     XglImage(XglDevice *dev);
-
-    virtual ~XglImage();
 
     // Image usage flags
     //    typedef enum _XGL_IMAGE_USAGE_FLAGS
@@ -61,61 +59,33 @@ public:
     {
         m_imageInfo.state = state;
     }
-
-    XGL_DEVICE device() const
+    XGL_GPU_MEMORY memory() const
     {
-        return m_device->device();
+        const std::vector<XGL_GPU_MEMORY> mems = memories();
+        return mems.empty() ? XGL_NULL_HANDLE : mems[0];
     }
+
 
     XGL_IMAGE image() const
     {
-        return m_image;
+        return obj();
     }
     XGL_COLOR_ATTACHMENT_VIEW targetView()const
     {
-        return m_targetView;
-    }
-    XGL_IMAGE_VIEW_ATTACH_INFO imageView()const
-    {
-        return m_imageInfo;
-    }
-    const XGL_GPU_MEMORY& memory() const
-    {
-        return m_memory;
-    }
-    const XGL_GPU_SIZE& offset() const
-    {
-        return m_offset;
+        return m_targetView.obj();
     }
 
     XGL_IMAGE_STATE state() const
     {
         return ( XGL_IMAGE_STATE )m_imageInfo.state;
     }
-    XGL_FORMAT format() const
-    {
-        return m_format;
-    }
     XGL_UINT32 width() const
     {
-        return m_width;
+        return extent().width;
     }
     XGL_UINT32 height() const
     {
-        return m_height;
-    }
-    XGL_UINT32 mipCount() const
-    {
-        return m_mipCount;
-    }
-    XGL_CHANNEL_MAPPING channelMapping() const
-    {
-        return m_channelMapping;
-    }
-
-    bool IsBCCompressed( XGL_FORMAT format )
-    {
-        return format.channelFormat >= XGL_CH_FMT_BC1 && format.channelFormat <= XGL_CH_FMT_BC7;
+        return extent().height;
     }
 
     XGL_RESULT MapMemory(XGL_VOID** ptr);
@@ -124,18 +94,8 @@ public:
 protected:
     XglDevice *m_device;
 
-    XGL_IMAGE                    m_image;
-    XGL_COLOR_ATTACHMENT_VIEW    m_targetView;
+    xgl_testing::ColorAttachmentView m_targetView;
     XGL_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
-
-    XGL_GPU_MEMORY               m_memory;
-    XGL_GPU_SIZE                 m_offset;
-    XGL_FORMAT                   m_format;
-
-    XGL_CHANNEL_MAPPING          m_channelMapping;
-    XGL_UINT32                   m_width;
-    XGL_UINT32                   m_height;
-    XGL_UINT32                   m_mipCount;
 };
 
 #endif // XGLIMAGE_H
