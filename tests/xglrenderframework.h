@@ -184,11 +184,10 @@ protected:
 
 };
 
-class XglDescriptorSetObj
+class XglDescriptorSetObj : public xgl_testing::DescriptorSet
 {
 public:
     XglDescriptorSetObj(XglDevice *device);
-    ~XglDescriptorSetObj();
     void AttachMemoryView(XglConstantBufferObj* constantBuffer);
     void AttachSampler( XglSamplerObj* sampler);
     void AttachImageView( XglTextureObj* texture);
@@ -199,9 +198,6 @@ public:
     XGL_DESCRIPTOR_SLOT_INFO * GetSlotInfo(vector<int>slots, vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types, vector<void*>objs );
 
 protected:
-    XGL_DESCRIPTOR_SET_CREATE_INFO       m_descriptorInfo;
-    XGL_DESCRIPTOR_SET                   m_rsrcDescSet;
-    XGL_GPU_MEMORY                       m_descriptor_set_mem;
     XglDevice                           *m_device;
     XGL_DESCRIPTOR_SLOT_INFO            *m_slotInfo;
     int                                  m_nextSlot;
