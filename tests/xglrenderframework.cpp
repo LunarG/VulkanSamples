@@ -85,7 +85,7 @@ void XglRenderFramework::ShutdownFramework()
     }
 
     // reset the driver
-    m_device->destroy_device();
+    delete m_device;
     xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
 }
 

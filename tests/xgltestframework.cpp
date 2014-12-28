@@ -81,6 +81,8 @@ void TestEnvironment::SetUp()
 {
     // Initialize GLSL to BIL compiler utility
     glslang::InitializeProcess();
+
+    xgl_testing::set_error_callback(test_error_callback);
 }
 
 void TestEnvironment::TearDown()

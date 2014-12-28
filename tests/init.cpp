@@ -747,5 +747,6 @@ void XglTest::CreateShader(XGL_SHADER *pshader)
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
+    xgl_testing::set_error_callback(test_error_callback);
     return RUN_ALL_TESTS();
 }
