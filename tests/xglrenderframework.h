@@ -51,7 +51,7 @@ public:
 
 protected:
     XGL_APPLICATION_INFO            app_info;
-    XGL_PHYSICAL_GPU                objs[MAX_GPUS];
+    XGL_PHYSICAL_GPU                objs[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT                        gpu_count;
     XglDevice                      *m_device;
     XGL_CMD_BUFFER                  m_cmdBuffer;
@@ -84,7 +84,7 @@ protected:
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
         err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                      MAX_GPUS, &this->gpu_count, objs);
+                                      XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 

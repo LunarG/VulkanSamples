@@ -1,8 +1,7 @@
 #ifndef XGLDEVICE_H
 #define XGLDEVICE_H
 
-#include "xgltestbinding.h"
-#include "xglgpu.h"
+#include "test_common.h"
 
 class XglImage;
 

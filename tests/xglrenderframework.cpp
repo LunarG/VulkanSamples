@@ -56,7 +56,7 @@ void XglRenderFramework::InitFramework()
     XGL_RESULT err;
 
     err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                  MAX_GPUS, &this->gpu_count, objs);
+                                  XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 

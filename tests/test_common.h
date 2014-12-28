@@ -11,6 +11,7 @@
 
 #include "gtest/gtest.h"
 #include "gtest-1.7.0/include/gtest/gtest.h"
+#include "xgltestbinding.h"
 
 #define ASSERT_XGL_SUCCESS(err) ASSERT_EQ(XGL_SUCCESS, err) << xgl_result_string(err)
 

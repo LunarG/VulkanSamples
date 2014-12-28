@@ -76,7 +76,7 @@ public:
 
 protected:
     XGL_APPLICATION_INFO app_info;
-    XGL_PHYSICAL_GPU objs[MAX_GPUS];
+    XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT gpu_count;
     XglDevice *m_device;
 
@@ -92,7 +92,7 @@ protected:
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
         err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                      MAX_GPUS, &this->gpu_count, objs);
+                                      XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
@@ -106,10 +106,10 @@ protected:
 
 TEST(Initialization, xglInitAndEnumerateGpus) {
     XGL_APPLICATION_INFO app_info = {};
-    XGL_PHYSICAL_GPU objs[MAX_GPUS];
+    XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT gpu_count;
     XGL_RESULT err;
-    XglGpu *gpu;
+    xgl_testing::PhysicalGpu *gpu;
     XGL_CHAR *layers[16];
     XGL_SIZE layer_count;
     XGL_CHAR layer_buf[16][256];
@@ -123,7 +123,7 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
     app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
     err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                  MAX_GPUS, &gpu_count, objs);
+                                  XGL_MAX_PHYSICAL_GPUS, &gpu_count, objs);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_GE(gpu_count, 1) << "No GPU available";
 
@@ -137,7 +137,7 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
     printf("\n");
 
     // TODO: Iterate over all GPUs
-    gpu = new XglGpu(0, objs[0]);
+    gpu = new xgl_testing::PhysicalGpu(objs[0]);
     delete gpu;
 
     // TODO: Verify destroy functions
