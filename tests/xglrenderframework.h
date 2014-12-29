@@ -74,8 +74,6 @@ protected:
      * to initialize a test framework based on this class.
      */
     virtual void SetUp() {
-        XGL_RESULT err;
-
         this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
         this->app_info.pAppName = "base";
@@ -84,17 +82,11 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
-        err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                      XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
-        ASSERT_XGL_SUCCESS(err);
-        ASSERT_GE(this->gpu_count, 1) << "No GPU available";
-
-        m_device = new XglDevice(0, objs[0]);
-        m_device->get_device_queue();
+        InitFramework();
     }
 
     virtual void TearDown() {
-        xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
+        ShutdownFramework();
     }
 };
 
