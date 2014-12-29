@@ -210,11 +210,10 @@ protected:
 };
 
 
-class XglShaderObj
+class XglShaderObj : public xgl_testing::Shader
 {
 public:
     XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework);
-    ~XglShaderObj();
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo(XglDescriptorSetObj *descriptorSet);
     void BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer);
     void BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture);
@@ -222,7 +221,6 @@ public:
 
 protected:
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO stage_info;
-    XGL_SHADER m_shader;
     XGL_PIPELINE_SHADER_STAGE m_stage;
     XglDevice *m_device;
     vector<int>    m_memSlots;

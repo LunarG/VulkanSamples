@@ -647,7 +647,7 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *stageInfo = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) calloc( 1,sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO) );
     stageInfo->sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stageInfo->shader.stage = m_stage;
-    stageInfo->shader.shader = m_shader;
+    stageInfo->shader.shader = obj();
     stageInfo->shader.descriptorSetMapping[0].descriptorCount = 0;
     stageInfo->shader.linkConstBufferCount = 0;
     stageInfo->shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
@@ -740,10 +740,7 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         ((uint32_t *) createInfo.pCode)[2] = stage;
         memcpy(((uint32_t *) createInfo.pCode + 3), shader_code, shader_len + 1);
 
-        err = xglCreateShader(m_device->device(), &createInfo, &m_shader);
-        if (err) {
-            free((void *) createInfo.pCode);
-        }
+        err = init_try(*m_device, createInfo);
     }
 
     if (framework->m_use_bil || err) {
@@ -755,14 +752,9 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         createInfo.pCode = bil.data();
         createInfo.codeSize = bil.size() * sizeof(unsigned int);
         createInfo.flags = 0;
-        err = xglCreateShader(m_device->device(), &createInfo, &m_shader);
-        assert(!err);
-    }
-}
 
-XglShaderObj::~XglShaderObj()
-{
-    if (m_shader != XGL_NULL_HANDLE) xglDestroyObject(m_shader);
+        init(*m_device, createInfo);
+    }
 }
 
 XglPipelineObj::XglPipelineObj(XglDevice *device)
