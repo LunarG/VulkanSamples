@@ -60,8 +60,8 @@
 
 #include <xgl.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
-
-#include "xgldevice.h"
+#include "xgltestbinding.h"
+#include "test_common.h"
 
 class XglImageTest : public ::testing::Test {
 public:
@@ -71,10 +71,10 @@ public:
     void CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
                          XGL_IMAGE_VIEW* pView);
     void DestroyImageView(XGL_IMAGE_VIEW imageView);
-    XGL_DEVICE device() {return m_device->device();}
+    XGL_DEVICE device() {return m_device->obj();}
 
 protected:
-    XglDevice *m_device;
+    xgl_testing::Device *m_device;
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT gpu_count;
@@ -97,7 +97,8 @@ protected:
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
-        this->m_device = new XglDevice(0, objs[0]);
+        this->m_device = new xgl_testing::Device(objs[0]);
+        this->m_device->init();
     }
 
     virtual void TearDown() {

@@ -61,7 +61,8 @@
 #include <xgl.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
-#include "xgldevice.h"
+#include "xgltestbinding.h"
+#include "test_common.h"
 #include "icd-bil.h"
 
 class XglTest : public ::testing::Test {
@@ -72,13 +73,17 @@ public:
     void CreateShaderTest();
     void CreateShader(XGL_SHADER *pshader);
 
-    XGL_DEVICE device() {return m_device->device();}
+    XGL_DEVICE device() {return m_device->obj();}
 
 protected:
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT gpu_count;
-    XglDevice *m_device;
+
+    XGL_UINT m_device_id;
+    xgl_testing::Device *m_device;
+    XGL_PHYSICAL_GPU_PROPERTIES props;
+    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -96,7 +101,13 @@ protected:
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
-        this->m_device = new XglDevice(0, objs[0]);
+        m_device_id = 0;
+        this->m_device = new xgl_testing::Device(objs[m_device_id]);
+        this->m_device->init();
+
+        props = m_device->gpu().properties();
+        queue_props = m_device->gpu().queue_properties()[0];
+
     }
 
     virtual void TearDown() {
@@ -388,14 +399,15 @@ TEST_F(XglTest, Query) {
     ASSERT_XGL_SUCCESS(err);
 }
 
-void getQueue(XglDevice *device, XGL_QUEUE_TYPE qtype, const char *qname)
+void getQueue(xgl_testing::Device *device, XGL_QUEUE_TYPE qtype, const char *qname)
 {
     int que_idx;
     XGL_RESULT err;
     XGL_QUEUE queue;
 
-    for (que_idx = 0; que_idx < device->queue_props->queueCount; que_idx++) {
-        err = xglGetDeviceQueue(device->device(), qtype, que_idx, &queue);
+    const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES props = device->gpu().queue_properties()[0];
+    for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
+        err = xglGetDeviceQueue(device->obj(), qtype, que_idx, &queue);
         ASSERT_EQ(XGL_SUCCESS, err) << "xglGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << xgl_result_string(err);
     }
 }
@@ -404,7 +416,7 @@ TEST_F(XglTest, Queue)
 {
     XGL_UINT que_idx;
 
-    ASSERT_NE(0, m_device->queue_props->queueCount) << "No heaps available for GPU #" << m_device->id << ": " << m_device->props.gpuName;
+    ASSERT_NE(0, queue_props.queueCount) << "No heaps available for GPU #" << m_device_id << ": " << props.gpuName;
 
 //            XGL_RESULT XGLAPI xglGetDeviceQueue(
 //                XGL_DEVICE                                  device,
@@ -420,7 +432,7 @@ TEST_F(XglTest, Queue)
      * starting at zero.
      */
 
-    for (que_idx = 0; que_idx < m_device->queue_props->queueCount; que_idx++) {
+    for (que_idx = 0; que_idx < queue_props.queueCount; que_idx++) {
 
 //                typedef enum _XGL_QUEUE_FLAGS
 //                {
@@ -438,15 +450,15 @@ TEST_F(XglTest, Queue)
 //                    XGL_MAX_ENUM(_XGL_QUEUE_TYPE)
 //                } XGL_QUEUE_TYPE;
 
-        if (m_device->queue_props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+        if (queue_props.queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
             getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "Graphics");
         }
 
-        if (m_device->queue_props->queueFlags & XGL_QUEUE_COMPUTE_BIT) {
+        if (queue_props.queueFlags & XGL_QUEUE_COMPUTE_BIT) {
             getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "Compute");
         }
 
-        if (m_device->queue_props->queueFlags & XGL_QUEUE_DMA_BIT) {
+        if (queue_props.queueFlags & XGL_QUEUE_DMA_BIT) {
             getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "DMA");
         }
 
