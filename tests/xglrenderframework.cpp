@@ -174,10 +174,11 @@ void XglRenderFramework::InitRenderTarget()
     XGL_UINT i;
 
     for (i = 0; i < m_renderTargetCount; i++) {
-        m_device->CreateImage(m_width, m_height, m_render_target_fmt,
-                              XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
-                              XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                              &m_renderTargets[i]);
+        XglImage *img = new XglImage(m_device);
+        img->init(m_width, m_height, m_render_target_fmt,
+                XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
+                XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        m_renderTargets[i] = img;
     }
 }
 
