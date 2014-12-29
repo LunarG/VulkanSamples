@@ -235,11 +235,10 @@ protected:
 
 };
 
-class XglPipelineObj
+class XglPipelineObj : public xgl_testing::Pipeline
 {
 public:
     XglPipelineObj(XglDevice *device);
-    ~XglPipelineObj();
     void BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet);
     void AddShader(XglShaderObj* shaderObj);
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
@@ -250,13 +249,11 @@ public:
     XGL_PIPELINE GetPipelineHandle();
 
 protected:
-    XGL_PIPELINE m_pipeline;
     XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO m_vi_state;
     XGL_PIPELINE_IA_STATE_CREATE_INFO m_ia_state;
     XGL_PIPELINE_RS_STATE_CREATE_INFO m_rs_state;
     XGL_PIPELINE_CB_STATE m_cb_state;
     XGL_PIPELINE_DB_STATE_CREATE_INFO m_db_state;
-    XGL_GPU_MEMORY m_pipe_mem;
     XglDevice *m_device;
     vector<XglShaderObj*> m_shaderObjs;
     vector<XglConstantBufferObj*> m_vertexBufferObjs;

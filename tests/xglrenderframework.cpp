@@ -828,7 +828,6 @@ void XglPipelineObj::SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_
 
 void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
 {
-    XGL_RESULT err;
     XGL_VOID* head_ptr = &m_db_state;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
 
@@ -852,20 +851,16 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
     info.pNext = head_ptr;
     info.flags = 0;
 
-    err = xglCreateGraphicsPipeline(m_device->device(), &info, &m_pipeline);
-    assert(!err);
-
-    err = m_device->AllocAndBindGpuMemory(m_pipeline, "Pipeline", &m_pipe_mem);
-    assert(!err);
+    init(*m_device, info);
 }
+
 XGL_PIPELINE XglPipelineObj::GetPipelineHandle()
 {
-    return m_pipeline;
+    return obj();
 }
 
 void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet)
 {
-    XGL_RESULT err;
     XGL_VOID* head_ptr = &m_db_state;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
 
@@ -889,24 +884,15 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
     info.pNext = head_ptr;
     info.flags = 0;
 
-    err = xglCreateGraphicsPipeline(m_device->device(), &info, &m_pipeline);
-    assert(!err);
+    init(*m_device, info);
 
-    err = m_device->AllocAndBindGpuMemory(m_pipeline, "Pipeline", &m_pipe_mem);
-    assert(!err);
-
-    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline );
+    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, obj() );
 
 
     for (int i=0; i < m_vertexBufferCount; i++)
     {
         m_vertexBufferObjs[i]->Bind(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.offset,  m_vertexBufferBindings[i]);
     }
-}
-
-XglPipelineObj::~XglPipelineObj()
-{
-       if (m_pipeline != XGL_NULL_HANDLE) xglDestroyObject(m_pipeline);
 }
 
 XglMemoryRefManager::XglMemoryRefManager() {
