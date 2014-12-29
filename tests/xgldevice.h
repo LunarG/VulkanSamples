@@ -12,7 +12,6 @@ public:
 
     XGL_DEVICE device() { return obj(); }
     void get_device_queue();
-    XGL_RESULT AllocAndBindGpuMemory(XGL_OBJECT obj, const std::string &objName, XGL_GPU_MEMORY *pMem);
 
     void CreateImage(XGL_UINT32 w, XGL_UINT32 h,
                      XGL_FORMAT fmt, XGL_FLAGS usage,
