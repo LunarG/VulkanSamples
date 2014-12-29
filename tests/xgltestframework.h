@@ -24,10 +24,10 @@
 #define XGLTESTFRAMEWORK_H
 
 #include "gtest-1.7.0/include/gtest/gtest.h"
-#include "xglimage.h"
 #include "ShaderLang.h"
 #include "GLSL450Lib.h"
 #include "icd-bil.h"
+#include "test_common.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -41,6 +41,8 @@
 #define TEST_DESCRIPTION(desc) RecordProperty("description", desc)
 
 using namespace std;
+
+class XglImage;
 
 class XglTestImageRecord
 {

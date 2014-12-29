@@ -385,6 +385,69 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, obj(), 0 );
 }
 
+XglImage::XglImage(XglDevice *dev)
+{
+    m_device = dev;
+    m_imageInfo.view = XGL_NULL_HANDLE;
+    m_imageInfo.state = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+}
+
+void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
+               XGL_FORMAT fmt, XGL_FLAGS usage,
+               XGL_IMAGE_TILING tiling)
+{
+    XGL_UINT mipCount;
+
+    mipCount = 0;
+
+    XGL_UINT _w = w;
+    XGL_UINT _h = h;
+    while( ( _w > 0 ) || ( _h > 0 ) )
+    {
+        _w >>= 1;
+        _h >>= 1;
+        mipCount++;
+    }
+
+    XGL_IMAGE_CREATE_INFO imageCreateInfo = xgl_testing::Image::create_info();
+    imageCreateInfo.imageType = XGL_IMAGE_2D;
+    imageCreateInfo.format = fmt;
+    imageCreateInfo.extent.width = w;
+    imageCreateInfo.extent.height = h;
+    imageCreateInfo.mipLevels = mipCount;
+    imageCreateInfo.tiling = tiling;
+
+    imageCreateInfo.usage = usage;
+
+    xgl_testing::Image::init(*m_device, imageCreateInfo);
+
+    m_imageInfo.state = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+
+    XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
+        XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+        XGL_NULL_HANDLE,
+        obj(),
+        {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM},
+        0,
+        0,
+        1
+    };
+
+    m_targetView.init(*m_device, createView);
+}
+
+XGL_RESULT XglImage::MapMemory(XGL_VOID** ptr)
+{
+    *ptr = map();
+    return (*ptr) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+}
+
+XGL_RESULT XglImage::UnmapMemory()
+{
+    unmap();
+    return XGL_SUCCESS;
+}
+
 XglTextureObj::XglTextureObj(XglDevice *device)
 {
     m_device = device;

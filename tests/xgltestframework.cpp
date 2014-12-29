@@ -21,6 +21,7 @@
 //  DEALINGS IN THE SOFTWARE.
 
 #include "xgltestframework.h"
+#include "xglrenderframework.h"
 #include "GL/freeglut_std.h"
 //#include "ShaderLang.h"
 #include "GlslangToBil.h"

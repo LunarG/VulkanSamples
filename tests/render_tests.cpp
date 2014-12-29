@@ -73,7 +73,6 @@ using namespace std;
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
 #include "xgldevice.h"
-#include "xglimage.h"
 #include "icd-bil.h"
 
 #define GLM_FORCE_RADIANS

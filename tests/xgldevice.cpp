@@ -1,7 +1,7 @@
 
 
+#include "xglrenderframework.h"
 #include "xgldevice.h"
-#include "xglimage.h"
 
 XglDevice::XglDevice(XGL_UINT id, XGL_PHYSICAL_GPU obj) :
     xgl_testing::Device(obj), id(id)
