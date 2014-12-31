@@ -54,7 +54,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 30, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 30, 2)
 
 #ifdef __cplusplus
 extern "C"
@@ -2330,7 +2330,7 @@ XGL_RESULT XGLAPI xglCreateCommandBuffer(
 
 XGL_RESULT XGLAPI xglBeginCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_FLAGS                                   flags);               // XGL_CMD_BUFFER_BUILD_FLAGS
+    const XGL_CMD_BUFFER_BEGIN_INFO*            pBeginInfo);
 
 XGL_RESULT XGLAPI xglEndCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer);
