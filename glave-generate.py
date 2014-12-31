@@ -1433,6 +1433,8 @@ class Subcommand(object):
                         'm_queue_semaphores': 'XGL_QUEUE_SEMAPHORE',
                         'm_events': 'XGL_EVENT',
                         'm_queryPools': 'XGL_QUERY_POOL',
+                        'm_framebuffers': 'XGL_FRAMEBUFFER',
+                        'm_renderPasses': 'XGL_RENDER_PASS'
                         }
         rc_body = []
         rc_body.append('class xglReplay : public ApiReplay {')
