@@ -42,11 +42,11 @@ struct intel_null_view {
     XGL_UINT cmd_len;
 };
 
-struct intel_mem_view {
-    /* this is not an intel_obj */
+struct intel_buf_view {
+    struct intel_obj obj;
 
-    struct intel_mem *mem;
-    XGL_MEMORY_VIEW_ATTACH_INFO info;
+    struct intel_buf *buf;
+    XGL_BUFFER_VIEW_CREATE_INFO info;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
@@ -89,6 +89,16 @@ struct intel_ds_view {
     uint32_t cmd[10];
 };
 
+static inline struct intel_buf_view *intel_buf_view(XGL_BUFFER_VIEW view)
+{
+    return (struct intel_buf_view *) view;
+}
+
+static inline struct intel_buf_view *intel_buf_view_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_buf_view *) obj;
+}
+
 static inline struct intel_img_view *intel_img_view(XGL_IMAGE_VIEW view)
 {
     return (struct intel_img_view *) view;
@@ -122,9 +132,11 @@ static inline struct intel_ds_view *intel_ds_view_from_obj(struct intel_obj *obj
 void intel_null_view_init(struct intel_null_view *view,
                           struct intel_dev *dev);
 
-void intel_mem_view_init(struct intel_mem_view *view,
-                         struct intel_dev *dev,
-                         const XGL_MEMORY_VIEW_ATTACH_INFO *info);
+XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
+                                 const XGL_BUFFER_VIEW_CREATE_INFO *info,
+                                 struct intel_buf_view **view_ret);
+
+void intel_buf_view_destroy(struct intel_buf_view *view);
 
 XGL_RESULT intel_img_view_create(struct intel_dev *dev,
                                  const XGL_IMAGE_VIEW_CREATE_INFO *info,

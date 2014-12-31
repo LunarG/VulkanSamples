@@ -28,6 +28,7 @@
 
 #include "genhw/genhw.h"
 #include "dset.h"
+#include "buf.h"
 #include "img.h"
 #include "mem.h"
 #include "pipeline.h"
@@ -235,7 +236,7 @@ static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
 }
 
 static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
-                                      const struct intel_mem *mem,
+                                      const struct intel_buf *buf,
                                       XGL_GPU_SIZE offset,
                                       XGL_INDEX_TYPE type,
                                       bool enable_cut_index)
@@ -280,14 +281,14 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
     }
 
     /* aligned and inclusive */
-    end_offset = mem->size - (mem->size % offset_align) - 1;
+    end_offset = buf->size - (buf->size % offset_align) - 1;
 
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
 
     cmd_reserve_reloc(cmd, 2);
-    cmd_batch_reloc(cmd, pos + 1, mem->bo, offset, 0);
-    cmd_batch_reloc(cmd, pos + 2, mem->bo, end_offset, 0);
+    cmd_batch_reloc(cmd, pos + 1, buf->obj.mem->bo, offset, 0);
+    cmd_batch_reloc(cmd, pos + 2, buf->obj.mem->bo, end_offset, 0);
 }
 
 static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
@@ -1610,15 +1611,15 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
             break;
         case INTEL_PIPELINE_RMAP_SLOT_DYN:
             {
-                const struct intel_mem_view *view =
-                    &cmd->bind.dyn_view.graphics;
+                const struct intel_buf_view *view =
+                    cmd->bind.dyn_view.graphics;
 
                 offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                         GEN6_ALIGNMENT_SURFACE_STATE,
                         view->cmd_len, view->cmd);
 
                 cmd_reserve_reloc(cmd, 1);
-                cmd_surface_reloc(cmd, offset, 1, view->mem->bo,
+                cmd_surface_reloc(cmd, offset, 1, view->buf->obj.mem->bo,
                         view->cmd[1], INTEL_RELOC_WRITE);
             }
             break;
@@ -1643,12 +1644,12 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                             dset_slot->u.img_view->img->obj.mem->bo,
                             dset_slot->u.img_view->cmd[1], reloc_flags);
                     break;
-                case INTEL_DSET_SLOT_MEM_VIEW:
+                case INTEL_DSET_SLOT_BUF_VIEW:
                     {
-                        XGL_MEMORY_VIEW_ATTACH_INFO tmp_info = dset_slot->u.mem_view.info;
-                        struct intel_mem_view tmp;
-
-                        memset(&tmp, 0, sizeof(tmp));
+                        XGL_BUFFER_VIEW_CREATE_INFO tmp_info =
+                            dset_slot->u.buf_view->info;
+                        struct intel_buf_view *tmp;
+                        XGL_RESULT res;
 
                         /* The compiler expects uniform buffers to have pitch of
                          * 4 for fragment shaders, but 16 for other stages.
@@ -1661,17 +1662,23 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                             tmp_info.stride = 16;
                         }
 
-                        intel_mem_view_init(&tmp, cmd->dev, &tmp_info);
+                        res = intel_buf_view_create(cmd->dev, &tmp_info, &tmp);
+                        if (res != XGL_SUCCESS) {
+                            cmd->result = res;
+                            break;
+                        }
 
                         offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                                 GEN6_ALIGNMENT_SURFACE_STATE,
-                                tmp.cmd_len,
-                                tmp.cmd);
+                                tmp->cmd_len,
+                                tmp->cmd);
 
                         cmd_reserve_reloc(cmd, 1);
                         cmd_surface_reloc(cmd, offset, 1,
-                                dset_slot->u.mem_view.mem->bo,
-                                tmp.cmd[1], reloc_flags);
+                                dset_slot->u.buf_view->buf->obj.mem->bo,
+                                tmp->cmd[1], reloc_flags);
+
+                        intel_buf_view_destroy(tmp);
                     }
                     break;
                 case INTEL_DSET_SLOT_SAMPLER:
@@ -1747,13 +1754,13 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
             break;
         }
 
-        if (cmd->bind.vertex.mem[i]) {
-            const struct intel_mem *mem = cmd->bind.vertex.mem[i];
+        if (cmd->bind.vertex.buf[i]) {
+            const struct intel_buf *buf = cmd->bind.vertex.buf[i];
             const XGL_GPU_SIZE offset = cmd->bind.vertex.offset[i];
 
             cmd_reserve_reloc(cmd, 2);
-            cmd_batch_reloc(cmd, pos + 1, mem->bo, offset, 0);
-            cmd_batch_reloc(cmd, pos + 2, mem->bo, mem->size - 1, 0);
+            cmd_batch_reloc(cmd, pos + 1, buf->obj.mem->bo, offset, 0);
+            cmd_batch_reloc(cmd, pos + 2, buf->obj.mem->bo, buf->size - 1, 0);
         } else {
             dw[0] |= GEN6_VB_STATE_DW0_IS_NULL;
             dw[1] = 0;
@@ -2931,35 +2938,35 @@ static void cmd_bind_compute_dset(struct intel_cmd *cmd,
 }
 
 static void cmd_bind_graphics_dyn_view(struct intel_cmd *cmd,
-                                       const XGL_MEMORY_VIEW_ATTACH_INFO *info)
+                                       const XGL_BUFFER_VIEW_ATTACH_INFO *info)
 {
-    intel_mem_view_init(&cmd->bind.dyn_view.graphics, cmd->dev, info);
+    cmd->bind.dyn_view.graphics = intel_buf_view(info->view);
 }
 
 static void cmd_bind_compute_dyn_view(struct intel_cmd *cmd,
-                                      const XGL_MEMORY_VIEW_ATTACH_INFO *info)
+                                      const XGL_BUFFER_VIEW_ATTACH_INFO *info)
 {
-    intel_mem_view_init(&cmd->bind.dyn_view.compute, cmd->dev, info);
+    cmd->bind.dyn_view.compute = intel_buf_view(info->view);
 }
 
 static void cmd_bind_vertex_data(struct intel_cmd *cmd,
-                                 const struct intel_mem *mem,
+                                 const struct intel_buf *buf,
                                  XGL_GPU_SIZE offset, XGL_UINT binding)
 {
-    if (binding >= ARRAY_SIZE(cmd->bind.vertex.mem)) {
+    if (binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) {
         cmd->result = XGL_ERROR_UNKNOWN;
         return;
     }
 
-    cmd->bind.vertex.mem[binding] = mem;
+    cmd->bind.vertex.buf[binding] = buf;
     cmd->bind.vertex.offset[binding] = offset;
 }
 
 static void cmd_bind_index_data(struct intel_cmd *cmd,
-                                const struct intel_mem *mem,
+                                const struct intel_buf *buf,
                                 XGL_GPU_SIZE offset, XGL_INDEX_TYPE type)
 {
-    cmd->bind.index.mem = mem;
+    cmd->bind.index.buf = buf;
     cmd->bind.index.offset = offset;
     cmd->bind.index.type = type;
 }
@@ -3013,11 +3020,11 @@ static void cmd_draw(struct intel_cmd *cmd,
         if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
             gen75_3DSTATE_VF(cmd, p->primitive_restart,
                     p->primitive_restart_index);
-            gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
+            gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.buf,
                     cmd->bind.index.offset, cmd->bind.index.type,
                     false);
         } else {
-            gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.mem,
+            gen6_3DSTATE_INDEX_BUFFER(cmd, cmd->bind.index.buf,
                     cmd->bind.index.offset, cmd->bind.index.type,
                     p->primitive_restart);
         }
@@ -3197,19 +3204,19 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicBufferView(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView)
+    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferView)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd_bind_compute_dyn_view(cmd, pMemView);
+        cmd_bind_compute_dyn_view(cmd, pBufferView);
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd_bind_graphics_dyn_view(cmd, pMemView);
+        cmd_bind_graphics_dyn_view(cmd, pBufferView);
         break;
     default:
         cmd->result = XGL_ERROR_INVALID_VALUE;
@@ -3217,28 +3224,28 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindVertexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem_,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT                                    binding)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *mem = intel_mem(mem_);
+    struct intel_buf *buf = intel_buf(buffer);
 
-    cmd_bind_vertex_data(cmd, mem, offset, binding);
+    cmd_bind_vertex_data(cmd, buf, offset, binding);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindIndexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem_,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_INDEX_TYPE                              indexType)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *mem = intel_mem(mem_);
+    struct intel_buf *buf = intel_buf(buffer);
 
-    cmd_bind_index_data(cmd, mem, offset, indexType);
+    cmd_bind_index_data(cmd, buf, offset, indexType);
 }
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdDraw(
@@ -3270,7 +3277,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT32                                  count,
     XGL_UINT32                                  stride)
@@ -3282,7 +3289,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT32                                  count,
     XGL_UINT32                                  stride)
@@ -3305,7 +3312,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdDispatch(
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdDispatchIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);

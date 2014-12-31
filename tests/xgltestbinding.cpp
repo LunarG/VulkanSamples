@@ -233,6 +233,12 @@ void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, XGL_GPU_SIZE 
     EXPECT(!alloc_idx && xglBindObjectMemory(obj(), mem.obj(), mem_offset) == XGL_SUCCESS);
 }
 
+void Object::bind_memory(uint32_t alloc_idx, XGL_GPU_SIZE offset, XGL_GPU_SIZE size,
+                         const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
+{
+    EXPECT(!alloc_idx && xglBindObjectMemoryRange(obj(), offset, size, mem.obj(), mem_offset) == XGL_SUCCESS);
+}
+
 void Object::unbind_memory(uint32_t alloc_idx)
 {
     EXPECT(!alloc_idx && xglBindObjectMemory(obj(), XGL_NULL_HANDLE, 0) == XGL_SUCCESS);
@@ -254,6 +260,21 @@ void Object::alloc_memory(const Device &dev, bool for_linear_img)
     const std::vector<XGL_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
     for (int i = 0; i < mem_reqs.size(); i++) {
         XGL_MEMORY_ALLOC_INFO info = GpuMemory::alloc_info(mem_reqs[i]);
+
+        // prefer CPU visible heaps
+        std::vector<uint32_t> non_visible_heaps;
+        info.heapCount = 0;
+        for (uint32_t j = 0; j < mem_reqs[i].heapCount; j++) {
+            const uint32_t heap = mem_reqs[i].heaps[j];
+            const XGL_MEMORY_HEAP_PROPERTIES &props = dev.heap_properties()[heap];
+
+            if (props.flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT)
+                info.heaps[info.heapCount++] = heap;
+            else
+                non_visible_heaps.push_back(heap);
+        }
+        for (std::vector<uint32_t>::const_iterator it = non_visible_heaps.begin(); it != non_visible_heaps.end(); it++)
+            info.heaps[info.heapCount++] = *it;
 
         primary_mem_ = &internal_mems_[i];
 
@@ -496,24 +517,6 @@ void GpuMemory::init(const Device &dev, const XGL_MEMORY_ALLOC_INFO &info)
     DERIVED_OBJECT_INIT(xglAllocMemory, dev.obj(), &info);
 }
 
-void GpuMemory::init(const Device &dev, XGL_GPU_SIZE size)
-{
-    XGL_MEMORY_ALLOC_INFO info = {};
-    info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    info.allocationSize = size;
-    info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    // find CPU visible heaps
-    for (XGL_UINT id = 0; id < dev.heap_properties().size(); id++) {
-        const XGL_MEMORY_HEAP_PROPERTIES &heap = dev.heap_properties()[id];
-        if (heap.flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT)
-            info.heaps[info.heapCount++] = id;
-    }
-
-    EXPECT(info.heapCount);
-    init(dev, info);
-}
-
 void GpuMemory::init(const Device &dev, size_t size, const void *data)
 {
     DERIVED_OBJECT_INIT(xglPinSystemMemory, dev.obj(), data, size);
@@ -610,6 +613,24 @@ XGL_RESULT QueryPool::results(uint32_t start, uint32_t count, size_t size, void 
     return err;
 }
 
+void Buffer::init(const Device &dev, const XGL_BUFFER_CREATE_INFO &info)
+{
+    init_no_mem(dev, info);
+    alloc_memory(dev);
+}
+
+void Buffer::init_no_mem(const Device &dev, const XGL_BUFFER_CREATE_INFO &info)
+{
+    DERIVED_OBJECT_INIT(xglCreateBuffer, dev.obj(), &info);
+    create_info_ = info;
+}
+
+void BufferView::init(const Device &dev, const XGL_BUFFER_VIEW_CREATE_INFO &info)
+{
+    DERIVED_OBJECT_INIT(xglCreateBufferView, dev.obj(), &info);
+    alloc_memory(dev);
+}
+
 void Image::init(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
 {
     init_no_mem(dev, info);
@@ -643,6 +664,12 @@ void Image::init_info(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
             break;
         }
     }
+}
+
+void Image::bind_memory(uint32_t alloc_idx, const XGL_IMAGE_MEMORY_BIND_INFO &info,
+                        const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
+{
+    EXPECT(!alloc_idx && xglBindImageMemoryRange(obj(), &info, mem.obj(), mem_offset) == XGL_SUCCESS);
 }
 
 XGL_SUBRESOURCE_LAYOUT Image::subresource_layout(const XGL_IMAGE_SUBRESOURCE &subres) const
@@ -752,9 +779,9 @@ void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_IMAGE_VIEW
     xglAttachImageViewDescriptors(obj(), start_slot, img_views.size(), &img_views[0]);
 }
 
-void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_MEMORY_VIEW_ATTACH_INFO> &mem_views)
+void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_BUFFER_VIEW_ATTACH_INFO> &buf_views)
 {
-    xglAttachMemoryViewDescriptors(obj(), start_slot, mem_views.size(), &mem_views[0]);
+    xglAttachBufferViewDescriptors(obj(), start_slot, buf_views.size(), &buf_views[0]);
 }
 
 void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_DESCRIPTOR_SET_ATTACH_INFO> &sets)

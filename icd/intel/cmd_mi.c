@@ -25,8 +25,10 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#include "mem.h"
+#include "kmd/winsys.h"
+#include "buf.h"
 #include "event.h"
+#include "mem.h"
 #include "obj.h"
 #include "query.h"
 #include "cmd_priv.h"
@@ -199,20 +201,22 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(
 ICD_EXPORT XGL_VOID XGLAPI xglCmdWriteTimestamp(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_TIMESTAMP_TYPE                          timestampType,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *mem = intel_mem(destMem);
+    struct intel_buf *buf = intel_buf(destBuffer);
 
     switch (timestampType) {
     case XGL_TIMESTAMP_TOP:
         /* XXX we are not supposed to use two commands... */
-        gen6_MI_STORE_REGISTER_MEM(cmd, mem->bo, destOffset, GEN6_REG_TIMESTAMP);
-        gen6_MI_STORE_REGISTER_MEM(cmd, mem->bo, destOffset + 4, GEN6_REG_TIMESTAMP + 4);
+        gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
+                destOffset, GEN6_REG_TIMESTAMP);
+        gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
+                destOffset + 4, GEN6_REG_TIMESTAMP + 4);
         break;
     case XGL_TIMESTAMP_BOTTOM:
-        cmd_batch_timestamp(cmd, mem->bo, destOffset);
+        cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
         break;
     default:
         cmd->result = XGL_ERROR_INVALID_VALUE;

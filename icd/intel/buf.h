@@ -25,62 +25,38 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef DSET_H
-#define DSET_H
+#ifndef BUF_H
+#define BUF_H
 
 #include "intel.h"
 #include "obj.h"
-#include "view.h"
 
-enum intel_dset_slot_type {
-    INTEL_DSET_SLOT_UNUSED,
-    INTEL_DSET_SLOT_SAMPLER,
-    INTEL_DSET_SLOT_IMG_VIEW,
-    INTEL_DSET_SLOT_BUF_VIEW,
-    INTEL_DSET_SLOT_NESTED,
-};
-
-struct intel_dset;
-
-struct intel_dset_slot {
-    enum intel_dset_slot_type type;
-    bool read_only;
-
-    union {
-        const void *unused;
-        const struct intel_sampler *sampler;
-        const struct intel_img_view *img_view;
-
-        struct intel_buf_view *buf_view;
-
-        struct {
-            const struct intel_dset *dset;
-            XGL_UINT slot_offset;
-        } nested;
-
-    } u;
-};
-
-struct intel_dset {
+struct intel_buf {
     struct intel_obj obj;
 
-    struct intel_dev *dev;
-    struct intel_dset_slot *slots;
+    XGL_GPU_SIZE size;
+    XGL_FLAGS usage;
 };
 
-static inline struct intel_dset *intel_dset(XGL_DESCRIPTOR_SET dset)
+static inline struct intel_buf *intel_buf(XGL_BUFFER buf)
 {
-    return (struct intel_dset *) dset;
+    return (struct intel_buf *) buf;
 }
 
-static inline struct intel_dset *intel_dset_from_obj(struct intel_obj *obj)
+static inline struct intel_buf *intel_buf_from_base(struct intel_base *base)
 {
-    return (struct intel_dset *) obj;
+    return (struct intel_buf *) base;
 }
 
-XGL_RESULT intel_dset_create(struct intel_dev *dev,
-                             const XGL_DESCRIPTOR_SET_CREATE_INFO *info,
-                             struct intel_dset **dset_ret);
-void intel_dset_destroy(struct intel_dset *dset);
+static inline struct intel_buf *intel_buf_from_obj(struct intel_obj *obj)
+{
+    return intel_buf_from_base(&obj->base);
+}
 
-#endif /* DSET_H */
+XGL_RESULT intel_buf_create(struct intel_dev *dev,
+                            const XGL_BUFFER_CREATE_INFO *info,
+                            struct intel_buf **buf_ret);
+
+void intel_buf_destroy(struct intel_buf *buf);
+
+#endif /* BUF_H */

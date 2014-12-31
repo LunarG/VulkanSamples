@@ -135,19 +135,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    rangeCount,
-    const XGL_VIRTUAL_MEMORY_REMAP_RANGE*       pRanges,
-    XGL_UINT                                    preWaitSemaphoreCount,
-    const XGL_QUEUE_SEMAPHORE*                  pPreWaitSemaphores,
-    XGL_UINT                                    postSignalSemaphoreCount,
-    const XGL_QUEUE_SEMAPHORE*                  pPostSignalSemaphores)
-{
-    /* no kernel support */
-    return XGL_ERROR_UNAVAILABLE;
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(
     XGL_DEVICE                                  device,
     const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,

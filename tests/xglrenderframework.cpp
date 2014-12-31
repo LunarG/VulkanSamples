@@ -236,10 +236,10 @@ XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
 
 }
 
-void XglDescriptorSetObj::AttachMemoryView(XglConstantBufferObj *constantBuffer)
+void XglDescriptorSetObj::AttachBufferView(XglConstantBufferObj *constantBuffer)
 {
-    m_memoryViews.push_back(&constantBuffer->m_constantBufferView);
-    m_memorySlots.push_back(m_nextSlot);
+    m_bufferViews.push_back(&constantBuffer->m_bufferViewInfo);
+    m_bufferSlots.push_back(m_nextSlot);
     m_nextSlot++;
 
 }
@@ -264,7 +264,7 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
                                                            vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types,
                                                            vector<void *>objs )
 {
-    int nSlots = m_memorySlots.size() + m_imageSlots.size() + m_samplerSlots.size();
+    int nSlots = m_bufferSlots.size() + m_imageSlots.size() + m_samplerSlots.size();
     m_slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( nSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
     memset(m_slotInfo,0,nSlots*sizeof(XGL_DESCRIPTOR_SLOT_INFO));
 
@@ -275,12 +275,12 @@ XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
 
     for (int i=0; i<slots.size(); i++)
     {
-        for (int j=0; j<m_memorySlots.size(); j++)
+        for (int j=0; j<m_bufferSlots.size(); j++)
         {
-            if ( m_memoryViews[j] == objs[i])
+            if ( m_bufferViews[j] == objs[i])
             {
-                m_slotInfo[m_memorySlots[j]].shaderEntityIndex = slots[i];
-                m_slotInfo[m_memorySlots[j]].slotObjectType = types[i];
+                m_slotInfo[m_bufferSlots[j]].shaderEntityIndex = slots[i];
+                m_slotInfo[m_bufferSlots[j]].slotObjectType = types[i];
             }
         }
         for (int j=0; j<m_imageSlots.size(); j++)
@@ -317,9 +317,9 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet()
     begin();
     clear();
 
-    for (int i=0; i<m_memoryViews.size();i++)
+    for (int i=0; i<m_bufferViews.size();i++)
     {
-        attach(m_memorySlots[i], *m_memoryViews[i]);
+        attach(m_bufferSlots[i], *m_bufferViews[i]);
     }
     for (int i=0; i<m_samplers.size();i++)
     {
@@ -350,9 +350,9 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
     begin();
     clear();
 
-    for (int i=0; i<m_memoryViews.size();i++)
+    for (int i=0; i<m_bufferViews.size();i++)
     {
-        attach(m_memorySlots[i], *m_memoryViews[i]);
+        attach(m_bufferSlots[i], *m_bufferViews[i]);
     }
     for (int i=0; i<m_samplers.size();i++)
     {
@@ -365,7 +365,7 @@ void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
 
     end();
 
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
+    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
     xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, obj(), 0 );
 }
 
@@ -548,7 +548,7 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
     m_device = device;
     m_commandBuffer = 0;
 
-    memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
+    memset(&m_bufferViewInfo,0,sizeof(m_bufferViewInfo));
 }
 
 XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data)
@@ -556,7 +556,7 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     m_device = device;
     m_commandBuffer = 0;
 
-    memset(&m_constantBufferView,0,sizeof(m_constantBufferView));
+    memset(&m_bufferViewInfo,0,sizeof(m_bufferViewInfo));
     m_numVertices = constantCount;
     m_stride = constantSize;
 
@@ -567,27 +567,38 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     memcpy(pData, data, allocationSize);
     unmap();
 
-    // set up the memory view for the constant buffer
-    this->m_constantBufferView.stride = 16;
-    this->m_constantBufferView.range  = allocationSize;
-    this->m_constantBufferView.offset = 0;
-    this->m_constantBufferView.mem    = obj();
-    this->m_constantBufferView.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    this->m_constantBufferView.format.numericFormat = XGL_NUM_FMT_FLOAT;
-    this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
+    // set up the buffer view for the constant buffer
+    XGL_BUFFER_VIEW_CREATE_INFO view_info = {};
+    view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.buffer = obj();
+    view_info.viewType = XGL_BUFFER_VIEW_TYPED;
+    view_info.stride = 16;
+    view_info.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    view_info.format.numericFormat = XGL_NUM_FMT_FLOAT;
+    view_info.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    view_info.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    view_info.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    view_info.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    view_info.offset = 0;
+    view_info.range  = allocationSize;
+    m_bufferView.init(*m_device, view_info);
+
+    this->m_bufferViewInfo.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
+    this->m_bufferViewInfo.view = m_bufferView.obj();
+    this->m_bufferViewInfo.state = XGL_BUFFER_STATE_DATA_TRANSFER;
 }
 
 void XglConstantBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding)
 {
-    xglCmdBindVertexData(cmdBuffer, obj(), offset, binding);
+    xglCmdBindVertexBuffer(cmdBuffer, obj(), offset, binding);
 }
 
 
-void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
+void XglConstantBufferObj::SetBufferState(XGL_BUFFER_STATE newState)
 {
     XGL_RESULT err = XGL_SUCCESS;
 
-    if (this->m_constantBufferView.state == newState)
+    if (this->m_bufferViewInfo.state == newState)
         return;
 
     if (!m_commandBuffer)
@@ -611,12 +622,12 @@ void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
     err = m_commandBuffer->BeginCommandBuffer(&cmd_buf_info);
     ASSERT_XGL_SUCCESS(err);
 
-    XGL_MEMORY_STATE_TRANSITION transition =
-        state_transition(XGL_MEMORY_STATE_DATA_TRANSFER, newState, 0, m_numVertices * m_stride);
+    XGL_BUFFER_STATE_TRANSITION transition =
+        state_transition(XGL_BUFFER_STATE_DATA_TRANSFER, newState, 0, m_numVertices * m_stride);
 
     // write transition to the command buffer
-    m_commandBuffer->PrepareMemoryRegions(1, &transition);
-    this->m_constantBufferView.state = newState;
+    m_commandBuffer->PrepareBufferRegions(1, &transition);
+    this->m_bufferViewInfo.state = newState;
 
     // finish recording the command buffer
     err = m_commandBuffer->EndCommandBuffer();
@@ -626,7 +637,7 @@ void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
     XGL_MEMORY_REF memRefs;
     // this command buffer only uses the vertex buffer memory
     memRefs.flags = 0;
-    memRefs.mem = obj();
+    memRefs.mem = memories()[0];
 
     // submit the command buffer to the universal queue
     XGL_CMD_BUFFER bufferArray[1];
@@ -673,19 +684,30 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
     memcpy(pData, data, allocationSize);
     unmap();
 
-    // set up the memory view for the constant buffer
-    this->m_constantBufferView.stride = m_stride;
-    this->m_constantBufferView.range  = allocationSize;
-    this->m_constantBufferView.offset = 0;
-    this->m_constantBufferView.mem    = obj();
-    this->m_constantBufferView.format.channelFormat = viewFormat.channelFormat;
-    this->m_constantBufferView.format.numericFormat = viewFormat.numericFormat;
-    this->m_constantBufferView.state  = XGL_MEMORY_STATE_DATA_TRANSFER;
+    // set up the buffer view for the constant buffer
+    XGL_BUFFER_VIEW_CREATE_INFO view_info = {};
+    view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.buffer = obj();
+    view_info.viewType = XGL_BUFFER_VIEW_TYPED;
+    view_info.stride = m_stride;
+    view_info.format.channelFormat = viewFormat.channelFormat;
+    view_info.format.numericFormat = viewFormat.numericFormat;
+    view_info.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    view_info.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    view_info.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    view_info.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    view_info.offset = 0;
+    view_info.range  = allocationSize;
+    m_bufferView.init(*m_device, view_info);
+
+    this->m_bufferViewInfo.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
+    this->m_bufferViewInfo.view = m_bufferView.obj();
+    this->m_bufferViewInfo.state = XGL_BUFFER_STATE_DATA_TRANSFER;
 }
 
 void XglIndexBufferObj::Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset)
 {
-    xglCmdBindIndexData(cmdBuffer, obj(), offset, m_indexType);
+    xglCmdBindIndexBuffer(cmdBuffer, obj(), offset, m_indexType);
 }
 
 XGL_INDEX_TYPE XglIndexBufferObj::GetIndexType()
@@ -703,8 +725,8 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     stageInfo->shader.descriptorSetMapping[0].descriptorCount = 0;
     stageInfo->shader.linkConstBufferCount = 0;
     stageInfo->shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
-    stageInfo->shader.dynamicMemoryViewMapping.slotObjectType = XGL_SLOT_UNUSED;
-    stageInfo->shader.dynamicMemoryViewMapping.shaderEntityIndex = 0;
+    stageInfo->shader.dynamicBufferViewMapping.slotObjectType = XGL_SLOT_UNUSED;
+    stageInfo->shader.dynamicBufferViewMapping.shaderEntityIndex = 0;
 
     stageInfo->shader.descriptorSetMapping[0].descriptorCount = descriptorSet->GetTotalSlots();
     if (stageInfo->shader.descriptorSetMapping[0].descriptorCount)
@@ -713,15 +735,15 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
         vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> allTypes;
         vector<void *> allObjs;
 
-        allSlots.reserve(m_memSlots.size() + m_imageSlots.size() + m_samplerSlots.size());
-        allTypes.reserve(m_memTypes.size() + m_imageTypes.size() + m_samplerTypes.size());
-        allObjs.reserve(m_memObjs.size() + m_imageObjs.size() + m_samplerObjs.size());
+        allSlots.reserve(m_bufferSlots.size() + m_imageSlots.size() + m_samplerSlots.size());
+        allTypes.reserve(m_bufferTypes.size() + m_imageTypes.size() + m_samplerTypes.size());
+        allObjs.reserve(m_bufferObjs.size() + m_imageObjs.size() + m_samplerObjs.size());
 
-        if (m_memSlots.size())
+        if (m_bufferSlots.size())
         {
-            allSlots.insert(allSlots.end(), m_memSlots.begin(), m_memSlots.end());
-            allTypes.insert(allTypes.end(), m_memTypes.begin(), m_memTypes.end());
-            allObjs.insert(allObjs.end(), m_memObjs.begin(), m_memObjs.end());
+            allSlots.insert(allSlots.end(), m_bufferSlots.begin(), m_bufferSlots.end());
+            allTypes.insert(allTypes.end(), m_bufferTypes.begin(), m_bufferTypes.end());
+            allObjs.insert(allObjs.end(), m_bufferObjs.begin(), m_bufferObjs.end());
         }
         if (m_imageSlots.size())
         {
@@ -742,11 +764,11 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     return stageInfo;
 }
 
-void XglShaderObj::BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer)
+void XglShaderObj::BindShaderEntitySlotToBuffer(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer)
 {
-    m_memSlots.push_back(slot);
-    m_memTypes.push_back(type);
-    m_memObjs.push_back(&constantBuffer->m_constantBufferView);
+    m_bufferSlots.push_back(slot);
+    m_bufferTypes.push_back(type);
+    m_bufferObjs.push_back(&constantBuffer->m_bufferViewInfo);
 
 }
 
@@ -943,7 +965,7 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
 
     for (int i=0; i < m_vertexBufferCount; i++)
     {
-        m_vertexBufferObjs[i]->Bind(m_cmdBuffer, m_vertexBufferObjs[i]->m_constantBufferView.offset,  m_vertexBufferBindings[i]);
+        m_vertexBufferObjs[i]->Bind(m_cmdBuffer, 0,  m_vertexBufferBindings[i]);
     }
 }
 
@@ -952,7 +974,9 @@ XglMemoryRefManager::XglMemoryRefManager() {
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
-    m_bufferObjs.push_back(constantBuffer->obj());
+    const std::vector<XGL_GPU_MEMORY> mems = constantBuffer->memories();
+    if (!mems.empty())
+        m_bufferObjs.push_back(mems[0]);
 }
 
 void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
@@ -1017,9 +1041,9 @@ XGL_RESULT XglCommandBufferObj::EndCommandBuffer()
     return XGL_SUCCESS;
 }
 
-void XglCommandBufferObj::PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr)
+void XglCommandBufferObj::PrepareBufferRegions(int transitionCount, XGL_BUFFER_STATE_TRANSITION *transitionPtr)
 {
-    xglCmdPrepareMemoryRegions(obj(), transitionCount, transitionPtr);
+    xglCmdPrepareBufferRegions(obj(), transitionCount, transitionPtr);
 }
 
 void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage)
@@ -1144,14 +1168,14 @@ void XglCommandBufferObj::BindPipeline(XGL_PIPELINE pipeline)
 
 void XglCommandBufferObj::BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet)
 {
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic memory view)
+    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
     xglCmdBindDescriptorSet(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, descriptorSet, 0 );
 }
 void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset)
 {
-    xglCmdBindIndexData(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
+    xglCmdBindIndexBuffer(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
 }
 void XglCommandBufferObj::BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding)
 {
-    xglCmdBindVertexData(obj(), vertexBuffer->obj(), offset, binding);
+    xglCmdBindVertexBuffer(obj(), vertexBuffer->obj(), offset, binding);
 }

@@ -11,6 +11,7 @@ add_custom_command(OUTPUT intel_gpa.c
     DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 set(sources
+    buf.c
     cmd.c
     cmd_decode.c
     cmd_meta.c

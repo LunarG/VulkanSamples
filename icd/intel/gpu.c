@@ -291,8 +291,6 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
 
     props->maxMemRefsPerSubmission = gpu->batch_buffer_reloc_count;
 
-    props->virtualMemPageSize = 4096;
-
     /* no size limit, but no bounded buffer could exceed 2GB */
     props->maxInlineMemoryUpdateSize = 2u << 30;
 
@@ -341,9 +339,6 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
     props->structSize = sizeof(*props);
 
     props->supportsMigration = false;
-
-    /* no kernel support yet */
-    props->supportsVirtualMemoryRemapping = false;
 
     /* no winsys support for DRM_I915_GEM_USERPTR yet */
     props->supportsPinning = false;

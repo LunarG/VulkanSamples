@@ -25,27 +25,31 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
+#include "buf.h"
 #include "img.h"
 #include "mem.h"
 #include "state.h"
 #include "cmd_priv.h"
 
-static void cmd_meta_init_mem_view(struct intel_cmd *cmd,
-                                   XGL_GPU_MEMORY mem,
-                                   XGL_GPU_SIZE range,
-                                   XGL_FORMAT format,
-                                   XGL_MEMORY_STATE state,
-                                   struct intel_mem_view *view)
+static XGL_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
+                                           XGL_BUFFER buf,
+                                           XGL_GPU_SIZE range,
+                                           XGL_FORMAT format,
+                                           struct intel_buf_view **view)
 {
-    XGL_MEMORY_VIEW_ATTACH_INFO info;
+    XGL_BUFFER_VIEW_CREATE_INFO info;
 
     memset(&info, 0, sizeof(info));
-    info.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-    info.mem = mem;
-    info.range = range;
+    info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    info.buffer = buf;
+    info.viewType = XGL_BUFFER_VIEW_TYPED;
     info.stride = icd_format_get_size(format);
     info.format = format;
-    info.state = state;
+    info.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    info.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    info.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    info.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    info.range = range;
 
     /*
      * We do not rely on the hardware to avoid out-of-bound access.  But we do
@@ -54,45 +58,61 @@ static void cmd_meta_init_mem_view(struct intel_cmd *cmd,
     if (info.range % info.stride)
         info.range += info.stride - (info.range % info.stride);
 
-    intel_mem_view_init(view, cmd->dev, &info);
+    return intel_buf_view_create(cmd->dev, &info, view);
 }
 
-static void cmd_meta_set_src_for_mem(struct intel_cmd *cmd,
-                                     const struct intel_mem *mem,
+static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
+                                     const struct intel_buf *buf,
                                      XGL_FORMAT format,
                                      struct intel_cmd_meta *meta)
 {
-    struct intel_mem_view view;
+    struct intel_buf_view *view;
+    XGL_RESULT res;
 
-    cmd_meta_init_mem_view(cmd, (XGL_GPU_MEMORY) mem, mem->size, format,
-            XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY, &view);
+    res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) buf,
+            buf->size, format, &view);
+    if (res != XGL_SUCCESS) {
+        cmd->result = res;
+        return;
+    }
 
     meta->src.valid = true;
 
-    memcpy(meta->src.surface, view.cmd, sizeof(view.cmd[0]) * view.cmd_len);
-    meta->src.surface_len = view.cmd_len;
+    memcpy(meta->src.surface, view->cmd,
+            sizeof(view->cmd[0]) * view->cmd_len);
+    meta->src.surface_len = view->cmd_len;
 
-    meta->src.reloc_target = (intptr_t) mem->bo;
+    intel_buf_view_destroy(view);
+
+    meta->src.reloc_target = (intptr_t) buf->obj.mem->bo;
     meta->src.reloc_offset = 0;
     meta->src.reloc_flags = 0;
 }
 
-static void cmd_meta_set_dst_for_mem(struct intel_cmd *cmd,
-                                     const struct intel_mem *mem,
+static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
+                                     const struct intel_buf *buf,
                                      XGL_FORMAT format,
                                      struct intel_cmd_meta *meta)
 {
-    struct intel_mem_view view;
+    struct intel_buf_view *view;
+    XGL_RESULT res;
 
-    cmd_meta_init_mem_view(cmd, (XGL_GPU_MEMORY) mem, mem->size, format,
-            XGL_MEMORY_STATE_GRAPHICS_SHADER_WRITE_ONLY, &view);
+    res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) buf,
+            buf->size, format, &view);
+    if (res != XGL_SUCCESS) {
+        cmd->result = res;
+        return;
+    }
 
     meta->dst.valid = true;
 
-    memcpy(meta->dst.surface, view.cmd, sizeof(view.cmd[0]) * view.cmd_len);
-    meta->dst.surface_len = view.cmd_len;
+    memcpy(meta->dst.surface, view->cmd,
+            sizeof(view->cmd[0]) * view->cmd_len);
+    meta->dst.surface_len = view->cmd_len;
 
-    meta->dst.reloc_target = (intptr_t) mem->bo;
+    intel_buf_view_destroy(view);
+
+    meta->dst.reloc_target = (intptr_t) buf->obj.mem->bo;
     meta->dst.reloc_offset = 0;
     meta->dst.reloc_flags = INTEL_RELOC_WRITE;
 }
@@ -262,15 +282,23 @@ static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
                                         XGL_FORMAT format,
                                         struct intel_cmd_meta *meta)
 {
-    struct intel_mem_view view;
+    struct intel_buf_view *view;
+    XGL_RESULT res;
 
-    cmd_meta_init_mem_view(cmd, XGL_NULL_HANDLE, size, format,
-            XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY, &view);
+    res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) XGL_NULL_HANDLE,
+            size, format, &view);
+    if (res != XGL_SUCCESS) {
+        cmd->result = res;
+        return;
+    }
 
     meta->src.valid = true;
 
-    memcpy(meta->src.surface, view.cmd, sizeof(view.cmd[0]) * view.cmd_len);
-    meta->src.surface_len = view.cmd_len;
+    memcpy(meta->src.surface, view->cmd,
+            sizeof(view->cmd[0]) * view->cmd_len);
+    meta->src.surface_len = view->cmd_len;
+
+    intel_buf_view_destroy(view);
 
     meta->src.reloc_target = (intptr_t) writer;
     meta->src.reloc_offset = 0;
@@ -402,16 +430,16 @@ static XGL_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
     return format;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              srcMem,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  srcBuffer,
+    XGL_BUFFER                                  destBuffer,
     XGL_UINT                                    regionCount,
-    const XGL_MEMORY_COPY*                      pRegions)
+    const XGL_BUFFER_COPY*                      pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *src = intel_mem(srcMem);
-    struct intel_mem *dst = intel_mem(destMem);
+    struct intel_buf *src = intel_buf(srcBuffer);
+    struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
     XGL_UINT i;
@@ -426,7 +454,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(
     format.numericFormat = XGL_NUM_FMT_UINT;
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_MEMORY_COPY *region = &pRegions[i];
+        const XGL_BUFFER_COPY *region = &pRegions[i];
         XGL_CHANNEL_FORMAT ch;
 
         meta.src.x = region->srcOffset;
@@ -449,7 +477,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(
             if (cmd_gen(cmd) == INTEL_GEN(6)) {
                 intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
                         XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                        "unaligned xglCmdCopyMemory unsupported");
+                        "unaligned xglCmdCopyBuffer unsupported");
                 cmd->result = XGL_ERROR_UNKNOWN;
                 continue;
             }
@@ -466,8 +494,8 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(
         if (format.channelFormat != ch) {
             format.channelFormat = ch;
 
-            cmd_meta_set_src_for_mem(cmd, src, format, &meta);
-            cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
+            cmd_meta_set_src_for_buf(cmd, src, format, &meta);
+            cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
         }
 
         cmd_draw_meta(cmd, &meta);
@@ -547,15 +575,15 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImage(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemoryToImage(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              srcMem,
+    XGL_BUFFER                                  srcBuffer,
     XGL_IMAGE                                   destImage,
     XGL_UINT                                    regionCount,
-    const XGL_MEMORY_IMAGE_COPY*                pRegions)
+    const XGL_BUFFER_IMAGE_COPY*                pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *mem = intel_mem(srcMem);
+    struct intel_buf *buf = intel_buf(srcBuffer);
     struct intel_img *img = intel_img(destImage);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
@@ -568,13 +596,13 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemoryToImage(
     meta.samples = img->samples;
 
     format = cmd_meta_img_raw_format(cmd, img->layout.format);
-    cmd_meta_set_src_for_mem(cmd, mem, format, &meta);
+    cmd_meta_set_src_for_buf(cmd, buf, format, &meta);
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_MEMORY_IMAGE_COPY *region = &pRegions[i];
+        const XGL_BUFFER_IMAGE_COPY *region = &pRegions[i];
         XGL_UINT j;
 
-        meta.src.x = region->memOffset / icd_format_get_size(format);
+        meta.src.x = region->bufferOffset / icd_format_get_size(format);
 
         meta.dst.lod = region->imageSubresource.mipLevel;
         meta.dst.layer = region->imageSubresource.arraySlice +
@@ -597,47 +625,47 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemoryToImage(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_UINT                                    regionCount,
-    const XGL_MEMORY_IMAGE_COPY*                pRegions)
+    const XGL_BUFFER_IMAGE_COPY*                pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(srcImage);
-    struct intel_mem *mem = intel_mem(destMem);
+    struct intel_buf *buf = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    XGL_FORMAT img_format, mem_format;
+    XGL_FORMAT img_format, buf_format;
     XGL_UINT i;
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_VS_POINTS;
 
     img_format = cmd_meta_img_raw_format(cmd, img->layout.format);
-    mem_format.numericFormat = XGL_NUM_FMT_UINT;
+    buf_format.numericFormat = XGL_NUM_FMT_UINT;
 
-    /* mem_format is ignored by hw, but we derive stride from it */
+    /* buf_format is ignored by hw, but we derive stride from it */
     switch (img_format.channelFormat) {
     case XGL_CH_FMT_R8:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R8_TO_MEM;
-        mem_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+        buf_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
         break;
     case XGL_CH_FMT_R16:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R16_TO_MEM;
-        mem_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+        buf_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
         break;
     case XGL_CH_FMT_R32:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32_TO_MEM;
-        mem_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        buf_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
         break;
     case XGL_CH_FMT_R32G32:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32_TO_MEM;
-        mem_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        buf_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
         break;
     case XGL_CH_FMT_R32G32B32A32:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM;
-        mem_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        buf_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
         break;
     default:
         break;
@@ -648,7 +676,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(
          icd_format_get_size(img_format) < 4)) {
         intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
                 XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                "xglCmdCopyImageToMemory with bpp %d unsupported",
+                "xglCmdCopyImageToBuffer with bpp %d unsupported",
                 icd_format_get_size(img->layout.format));
         cmd->result = XGL_ERROR_UNKNOWN;
         return;
@@ -656,12 +684,12 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(
 
     cmd_meta_set_src_for_img(cmd, img, img_format,
             XGL_IMAGE_ASPECT_COLOR, &meta);
-    cmd_meta_set_dst_for_mem(cmd, mem, mem_format, &meta);
+    cmd_meta_set_dst_for_buf(cmd, buf, buf_format, &meta);
 
     meta.samples = 1;
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_MEMORY_IMAGE_COPY *region = &pRegions[i];
+        const XGL_BUFFER_IMAGE_COPY *region = &pRegions[i];
         XGL_UINT j;
 
         meta.src.lod = region->imageSubresource.mipLevel;
@@ -670,7 +698,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(
         meta.src.x = region->imageOffset.x;
         meta.src.y = region->imageOffset.y;
 
-        meta.dst.x = region->memOffset / icd_format_get_size(img_format);
+        meta.dst.x = region->bufferOffset / icd_format_get_size(img_format);
         meta.width = region->imageExtent.width;
         meta.height = region->imageExtent.height;
 
@@ -693,25 +721,51 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCloneImageData(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
-    XGL_MEMORY_COPY region;
+    struct intel_buf *src_buf, *dst_buf;
+    XGL_BUFFER_CREATE_INFO buf_info;
+    XGL_BUFFER_COPY buf_region;
+    XGL_RESULT res;
 
-    memset(&region, 0, sizeof(region));
-    region.copySize = src->obj.mem->size;
+    memset(&buf_info, 0, sizeof(buf_info));
+    buf_info.sType = XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.size = src->obj.mem->size;
+
+    memset(&buf_region, 0, sizeof(buf_region));
+    buf_region.copySize = src->obj.mem->size;
+
+    res = intel_buf_create(cmd->dev, &buf_info, &src_buf);
+    if (res != XGL_SUCCESS) {
+        cmd->result = res;
+        return;
+    }
+
+    res = intel_buf_create(cmd->dev, &buf_info, &dst_buf);
+    if (res != XGL_SUCCESS) {
+        intel_buf_destroy(src_buf);
+        cmd->result = res;
+        return;
+    }
+
+    intel_obj_bind_mem(&src_buf->obj, src->obj.mem, 0);
+    intel_obj_bind_mem(&dst_buf->obj, dst->obj.mem, 0);
 
     cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH);
-    xglCmdCopyMemory(cmdBuffer, (XGL_GPU_MEMORY) src->obj.mem,
-            (XGL_GPU_MEMORY) dst->obj.mem, 1, &region);
+    xglCmdCopyBuffer(cmdBuffer, (XGL_BUFFER) src_buf,
+            (XGL_BUFFER) dst_buf, 1, &buf_region);
+
+    intel_buf_destroy(src_buf);
+    intel_buf_destroy(dst_buf);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdUpdateMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdUpdateBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset,
     XGL_GPU_SIZE                                dataSize,
     const XGL_UINT32*                           pData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *dst = intel_mem(destMem);
+    struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
     uint32_t *ptr;
@@ -747,20 +801,20 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdUpdateMemory(
 
     cmd_meta_set_src_for_writer(cmd, INTEL_CMD_WRITER_STATE,
             offset + dataSize, format, &meta);
-    cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
+    cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
 
     cmd_draw_meta(cmd, &meta);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdFillMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdFillBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset,
     XGL_GPU_SIZE                                fillSize,
     XGL_UINT32                                  data)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_mem *dst = intel_mem(destMem);
+    struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
 
@@ -788,7 +842,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdFillMemory(
     format.channelFormat = XGL_CH_FMT_R32G32B32A32;
     format.numericFormat = XGL_NUM_FMT_UINT;
 
-    cmd_meta_set_dst_for_mem(cmd, dst, format, &meta);
+    cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
 
     cmd_draw_meta(cmd, &meta);
 }

@@ -519,7 +519,6 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tgpuType = %s\n",                      xgl_gpu_type_string(props->gpuType));
     printf("\tgpuName = %s\n",                      props->gpuName);
     printf("\tmaxMemRefsPerSubmission = %u\n",      props->maxMemRefsPerSubmission);
-    printf("\tvirtualMemPageSize = %zu\n",          props->virtualMemPageSize);
     printf("\tmaxInlineMemoryUpdateSize = %zu\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
     printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);
@@ -576,7 +575,6 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
     printf("XGL_PHYSICAL_GPU_MEMORY_PROPERTIES\n");
     printf("\tstructSize = %zu\n",                      props->structSize);
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
-    printf("\tsupportsVirtualMemoryRemapping = %u\n",   props->supportsVirtualMemoryRemapping);
     printf("\tsupportsPinning = %u\n",                  props->supportsPinning);
 }
 

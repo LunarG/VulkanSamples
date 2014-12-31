@@ -42,12 +42,12 @@ static bool dset_img_state_read_only(XGL_IMAGE_STATE state)
     }
 }
 
-static bool dset_mem_state_read_only(XGL_MEMORY_STATE state)
+static bool dset_buf_state_read_only(XGL_BUFFER_STATE state)
 {
     switch (state) {
-    case XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY:
-    case XGL_MEMORY_STATE_COMPUTE_SHADER_READ_ONLY:
-    case XGL_MEMORY_STATE_MULTI_SHADER_READ_ONLY:
+    case XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_ONLY:
+    case XGL_BUFFER_STATE_COMPUTE_SHADER_READ_ONLY:
+    case XGL_BUFFER_STATE_MULTI_SHADER_READ_ONLY:
         return true;
     default:
         return false;
@@ -155,22 +155,22 @@ ICD_EXPORT XGL_VOID XGLAPI xglAttachImageViewDescriptors(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglAttachMemoryViewDescriptors(
+ICD_EXPORT XGL_VOID XGLAPI xglAttachBufferViewDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemViews)
+    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferViews)
 {
     struct intel_dset *dset = intel_dset(descriptorSet);
     XGL_UINT i;
 
     for (i = 0; i < slotCount; i++) {
         struct intel_dset_slot *slot = &dset->slots[startSlot + i];
-        const XGL_MEMORY_VIEW_ATTACH_INFO *info = &pMemViews[i];
+        const XGL_BUFFER_VIEW_ATTACH_INFO *info = &pBufferViews[i];
 
-        slot->type = INTEL_DSET_SLOT_MEM_VIEW;
-        slot->read_only = dset_mem_state_read_only(info->state);
-        intel_mem_view_init(&slot->u.mem_view, dset->dev, info);
+        slot->type = INTEL_DSET_SLOT_BUF_VIEW;
+        slot->read_only = dset_buf_state_read_only(info->state);
+        slot->u.buf_view = intel_buf_view(info->view);
     }
 }
 

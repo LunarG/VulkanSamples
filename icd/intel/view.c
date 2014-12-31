@@ -27,6 +27,7 @@
 
 #include "genhw/genhw.h"
 #include "kmd/winsys.h"
+#include "buf.h"
 #include "dev.h"
 #include "format.h"
 #include "gpu.h"
@@ -1054,25 +1055,33 @@ void intel_null_view_init(struct intel_null_view *view,
     }
 }
 
-void intel_mem_view_init(struct intel_mem_view *view,
-                         struct intel_dev *dev,
-                         const XGL_MEMORY_VIEW_ATTACH_INFO *info)
+static void buf_view_destroy(struct intel_obj *obj)
 {
-    bool will_write;
+    struct intel_buf_view *view = intel_buf_view_from_obj(obj);
 
-    switch (info->state) {
-    case XGL_MEMORY_STATE_GRAPHICS_SHADER_WRITE_ONLY:
-    case XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_WRITE:
-    case XGL_MEMORY_STATE_COMPUTE_SHADER_WRITE_ONLY:
-    case XGL_MEMORY_STATE_COMPUTE_SHADER_READ_WRITE:
-        will_write = true;
-        break;
-    default:
-        will_write = false;
-        break;
-    }
+    intel_buf_view_destroy(view);
+}
 
-    view->mem = intel_mem(info->mem);
+XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
+                                 const XGL_BUFFER_VIEW_CREATE_INFO *info,
+                                 struct intel_buf_view **view_ret)
+{
+    struct intel_buf *buf = intel_buf(info->buffer);
+    const bool will_write = (buf->usage |
+            (XGL_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
+             XGL_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
+    XGL_FORMAT format;
+    XGL_GPU_SIZE stride;
+    struct intel_buf_view *view;
+
+    view = (struct intel_buf_view *) intel_base_create(dev, sizeof(*view),
+            dev->base.dbg, XGL_DBG_OBJECT_BUFFER_VIEW, info, 0);
+    if (!view)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    view->obj.destroy = buf_view_destroy;
+
+    view->buf = buf;
     view->info = *info;
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
@@ -1086,6 +1095,15 @@ void intel_mem_view_init(struct intel_mem_view *view,
                 will_write, will_write, view->cmd);
         view->cmd_len = 6;
     }
+
+    *view_ret = view;
+
+    return XGL_SUCCESS;
+}
+
+void intel_buf_view_destroy(struct intel_buf_view *view)
+{
+    intel_base_destroy(&view->obj.base);
 }
 
 static void img_view_destroy(struct intel_obj *obj)
@@ -1265,6 +1283,17 @@ XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
 void intel_ds_view_destroy(struct intel_ds_view *view)
 {
     intel_base_destroy(&view->obj.base);
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(
+    XGL_DEVICE                                  device,
+    const XGL_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
+    XGL_BUFFER_VIEW*                            pView)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_buf_view_create(dev, pCreateInfo,
+            (struct intel_buf_view **) pView);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateImageView(

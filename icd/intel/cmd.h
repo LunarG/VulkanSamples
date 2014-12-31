@@ -177,17 +177,17 @@ struct intel_cmd_bind {
     } dset;
 
     struct {
-        struct intel_mem_view graphics;
-        struct intel_mem_view compute;
+        struct intel_buf_view *graphics;
+        struct intel_buf_view *compute;
     } dyn_view;
 
     struct {
-        const struct intel_mem *mem[INTEL_MAX_VERTEX_BINDING_COUNT];
+        const struct intel_buf *buf[INTEL_MAX_VERTEX_BINDING_COUNT];
         XGL_GPU_SIZE offset[INTEL_MAX_VERTEX_BINDING_COUNT];
     } vertex;
 
     struct {
-        const struct intel_mem *mem;
+        const struct intel_buf *buf;
         XGL_GPU_SIZE offset;
         XGL_INDEX_TYPE type;
     } index;

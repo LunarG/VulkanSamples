@@ -116,7 +116,7 @@ public:
     XGL_RESULT BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj);
     XGL_RESULT BeginCommandBuffer();
     XGL_RESULT EndCommandBuffer();
-    void PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr);
+    void PrepareBufferRegions(int transitionCount, XGL_BUFFER_STATE_TRANSITION *transitionPtr);
     void AddRenderTarget(XglImage *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers();
@@ -138,17 +138,19 @@ protected:
 
 };
 
-class XglConstantBufferObj : public xgl_testing::GpuMemory
+class XglConstantBufferObj : public xgl_testing::Buffer
 {
 public:
     XglConstantBufferObj(XglDevice *device);
     XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data);
-    void SetMemoryState(XGL_MEMORY_STATE newState);
+    void SetBufferState(XGL_BUFFER_STATE newState);
     void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding);
-    XGL_MEMORY_VIEW_ATTACH_INFO     m_constantBufferView;
+
+    XGL_BUFFER_VIEW_ATTACH_INFO     m_bufferViewInfo;
 
 protected:
     XglDevice                      *m_device;
+    xgl_testing::BufferView         m_bufferView;
     int                             m_numVertices;
     int                             m_stride;
     XglCommandBufferObj             *m_commandBuffer;
@@ -258,7 +260,7 @@ class XglDescriptorSetObj : public xgl_testing::DescriptorSet
 {
 public:
     XglDescriptorSetObj(XglDevice *device);
-    void AttachMemoryView(XglConstantBufferObj* constantBuffer);
+    void AttachBufferView(XglConstantBufferObj* constantBuffer);
     void AttachSampler( XglSamplerObj* sampler);
     void AttachImageView( XglTextureObj* texture);
     void BindCommandBuffer(XGL_CMD_BUFFER commandBuffer);
@@ -271,8 +273,8 @@ protected:
     XglDevice                           *m_device;
     XGL_DESCRIPTOR_SLOT_INFO            *m_slotInfo;
     int                                  m_nextSlot;
-    vector<int>                          m_memorySlots;
-    vector<XGL_MEMORY_VIEW_ATTACH_INFO*> m_memoryViews;
+    vector<int>                          m_bufferSlots;
+    vector<XGL_BUFFER_VIEW_ATTACH_INFO*> m_bufferViews;
     vector<int>                          m_samplerSlots;
     vector<XglSamplerObj*>               m_samplers;
     vector<int>                          m_imageSlots;
@@ -285,7 +287,7 @@ class XglShaderObj : public xgl_testing::Shader
 public:
     XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework);
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo(XglDescriptorSetObj *descriptorSet);
-    void BindShaderEntitySlotToMemory(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer);
+    void BindShaderEntitySlotToBuffer(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer);
     void BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture);
     void BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sampler);
 
@@ -293,9 +295,9 @@ protected:
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO stage_info;
     XGL_PIPELINE_SHADER_STAGE m_stage;
     XglDevice *m_device;
-    vector<int>    m_memSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_memTypes;
-    vector<XGL_MEMORY_VIEW_ATTACH_INFO*> m_memObjs;
+    vector<int>    m_bufferSlots;
+    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_bufferTypes;
+    vector<XGL_BUFFER_VIEW_ATTACH_INFO*> m_bufferObjs;
     vector<int>    m_samplerSlots;
     vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_samplerTypes;
     vector<XglSamplerObj*> m_samplerObjs;

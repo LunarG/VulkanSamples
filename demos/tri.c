@@ -56,6 +56,7 @@ struct demo {
     } textures[DEMO_TEXTURE_COUNT];
 
     struct {
+        XGL_BUFFER buf;
         XGL_GPU_MEMORY mem;
 
         XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
@@ -152,7 +153,7 @@ static void demo_draw_build_cmd(struct demo *demo)
                                      demo->depth_stencil);
 
 
-    xglCmdBindVertexData(demo->cmd, demo->vertices.mem, 0, 0);
+    xglCmdBindVertexBuffer(demo->cmd, demo->vertices.buf, 0, 0);
 
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
@@ -468,20 +469,42 @@ static void demo_prepare_vertices(struct demo *demo)
         {  1.0f, -1.0f, -0.5f,      1.0f, 0.0f },
         {  0.0f,  1.0f,  1.0f,      0.5f, 1.0f },
     };
-    const XGL_MEMORY_ALLOC_INFO mem_alloc = {
+    const XGL_BUFFER_CREATE_INFO buf_info = {
+        .sType = XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = NULL,
+        .size = sizeof(vb),
+        .usage = XGL_BUFFER_USAGE_VERTEX_FETCH_BIT,
+        .flags = 0,
+    };
+    XGL_MEMORY_ALLOC_INFO mem_alloc = {
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
-        .allocationSize = sizeof(vb),
+        .allocationSize = 0,
         .alignment = 0,
         .flags = 0,
-        .heapCount = 1,
+        .heapCount = 0,
         .heaps[0] = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
+    XGL_MEMORY_REQUIREMENTS mem_reqs;
+    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_RESULT err;
     void *data;
 
     memset(&demo->vertices, 0, sizeof(demo->vertices));
+
+    err = xglCreateBuffer(demo->device, &buf_info, &demo->vertices.buf);
+    assert(!err);
+
+    err = xglGetObjectInfo(demo->vertices.buf,
+            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+            &mem_reqs_size, &mem_reqs);
+    assert(!err && mem_reqs_size == sizeof(mem_reqs));
+    mem_alloc.allocationSize = mem_reqs.size;
+    mem_alloc.alignment = mem_reqs.alignment;
+    mem_alloc.heapCount = mem_reqs.heapCount;
+    memcpy(mem_alloc.heaps, mem_reqs.heaps,
+            sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
 
     err = xglAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem);
     assert(!err);
@@ -492,6 +515,9 @@ static void demo_prepare_vertices(struct demo *demo)
     memcpy(data, vb, sizeof(vb));
 
     err = xglUnmapMemory(demo->vertices.mem);
+    assert(!err);
+
+    err = xglBindObjectMemory(demo->vertices.buf, demo->vertices.mem, 0);
     assert(!err);
 
     demo->vertices.vi.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
@@ -945,18 +971,20 @@ static void demo_cleanup(struct demo *demo)
 
     xglDestroyObject(demo->dset);
 
+    xglBindObjectMemory(demo->vertices.buf, XGL_NULL_HANDLE, 0);
+    xglDestroyObject(demo->vertices.buf);
     xglFreeMemory(demo->vertices.mem);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         xglDestroyObject(demo->textures[i].view);
-        xglBindObjectMemory(demo->textures[i].image, 0, XGL_NULL_HANDLE);
+        xglBindObjectMemory(demo->textures[i].image, XGL_NULL_HANDLE, 0);
         xglDestroyObject(demo->textures[i].image);
         xglFreeMemory(demo->textures[i].mem);
         xglDestroyObject(demo->textures[i].sampler);
     }
 
     xglDestroyObject(demo->depth.view);
-    xglBindObjectMemory(demo->depth.image, 0, XGL_NULL_HANDLE);
+    xglBindObjectMemory(demo->depth.image, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->depth.image);
     xglFreeMemory(demo->depth.mem);
 

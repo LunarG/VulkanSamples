@@ -29,8 +29,6 @@
 
 namespace xgl_testing {
 
-typedef GpuMemory Buffer;
-
 XGL_SIZE get_format_size(XGL_FORMAT format);
 
 class Environment : public ::testing::Environment {
@@ -54,7 +52,7 @@ private:
 
 class ImageChecker {
 public:
-    explicit ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<XGL_MEMORY_IMAGE_COPY> &regions)
+    explicit ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<XGL_BUFFER_IMAGE_COPY> &regions)
         : info_(info), regions_(regions), pattern_(HASH) {}
     explicit ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges);
     explicit ImageChecker(const XGL_IMAGE_CREATE_INFO &info);
@@ -67,7 +65,7 @@ public:
     bool check(Buffer &buf) const { return walk(CHECK, buf); }
     bool check(Image &img) const { return walk(CHECK, img); }
 
-    const std::vector<XGL_MEMORY_IMAGE_COPY> &regions() const { return regions_; }
+    const std::vector<XGL_BUFFER_IMAGE_COPY> &regions() const { return regions_; }
 
     static void hash_salt_generate() { hash_salt_++; }
 
@@ -83,18 +81,18 @@ private:
     };
 
     XGL_SIZE buffer_cpp() const;
-    XGL_SUBRESOURCE_LAYOUT buffer_layout(const XGL_MEMORY_IMAGE_COPY &region) const;
+    XGL_SUBRESOURCE_LAYOUT buffer_layout(const XGL_BUFFER_IMAGE_COPY &region) const;
 
     bool walk(Action action, Buffer &buf) const;
     bool walk(Action action, Image &img) const;
-    bool walk_region(Action action, const XGL_MEMORY_IMAGE_COPY &region, const XGL_SUBRESOURCE_LAYOUT &layout, void *data) const;
+    bool walk_region(Action action, const XGL_BUFFER_IMAGE_COPY &region, const XGL_SUBRESOURCE_LAYOUT &layout, void *data) const;
 
     std::vector<uint8_t> pattern_hash(const XGL_IMAGE_SUBRESOURCE &subres, const XGL_OFFSET3D &offset) const;
 
     static uint32_t hash_salt_;
 
     XGL_IMAGE_CREATE_INFO info_;
-    std::vector<XGL_MEMORY_IMAGE_COPY> regions_;
+    std::vector<XGL_BUFFER_IMAGE_COPY> regions_;
 
     Pattern pattern_;
     std::vector<uint8_t> pattern_solid_;
@@ -179,9 +177,9 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
     // create a region for every mip level in array slice 0
     XGL_GPU_SIZE offset = 0;
     for (XGL_UINT lv = 0; lv < info_.mipLevels; lv++) {
-        XGL_MEMORY_IMAGE_COPY region = {};
+        XGL_BUFFER_IMAGE_COPY region = {};
 
-        region.memOffset = offset;
+        region.bufferOffset = offset;
         region.imageSubresource.mipLevel = lv;
         region.imageSubresource.arraySlice = 0;
         region.imageExtent = Image::extent(info_.extent, lv);
@@ -216,9 +214,9 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
 
         for (XGL_UINT slice = 1; slice < info_.arraySize; slice++) {
             for (XGL_UINT i = 0; i < slice_region_count; i++) {
-                XGL_MEMORY_IMAGE_COPY region = regions_[i];
+                XGL_BUFFER_IMAGE_COPY region = regions_[i];
 
-                region.memOffset += slice_pitch * slice;
+                region.bufferOffset += slice_pitch * slice;
                 region.imageSubresource.arraySlice = slice;
                 regions_.push_back(region);
             }
@@ -234,8 +232,8 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<
          it != ranges.end(); it++) {
         for (XGL_UINT lv = 0; lv < it->mipLevels; lv++) {
             for (XGL_UINT slice = 0; slice < it->arraySize; slice++) {
-                XGL_MEMORY_IMAGE_COPY region = {};
-                region.memOffset = offset;
+                XGL_BUFFER_IMAGE_COPY region = {};
+                region.bufferOffset = offset;
                 region.imageSubresource = Image::subresource(*it, lv, slice);
                 region.imageExtent = Image::extent(info_.extent, lv);
 
@@ -261,10 +259,10 @@ XGL_SIZE ImageChecker::buffer_cpp() const
     return get_format_size(info_.format);
 }
 
-XGL_SUBRESOURCE_LAYOUT ImageChecker::buffer_layout(const XGL_MEMORY_IMAGE_COPY &region) const
+XGL_SUBRESOURCE_LAYOUT ImageChecker::buffer_layout(const XGL_BUFFER_IMAGE_COPY &region) const
 {
     XGL_SUBRESOURCE_LAYOUT layout = {};
-    layout.offset = region.memOffset;
+    layout.offset = region.bufferOffset;
     layout.rowPitch = buffer_cpp() * region.imageExtent.width;
     layout.depthPitch = layout.rowPitch * region.imageExtent.height;
     layout.size = layout.depthPitch * region.imageExtent.depth;
@@ -276,7 +274,7 @@ XGL_GPU_SIZE ImageChecker::buffer_size() const
 {
     XGL_GPU_SIZE size = 0;
 
-    for (std::vector<XGL_MEMORY_IMAGE_COPY>::const_iterator it = regions_.begin();
+    for (std::vector<XGL_BUFFER_IMAGE_COPY>::const_iterator it = regions_.begin();
          it != regions_.end(); it++) {
         const XGL_SUBRESOURCE_LAYOUT layout = buffer_layout(*it);
         if (size < layout.offset + layout.size)
@@ -286,7 +284,7 @@ XGL_GPU_SIZE ImageChecker::buffer_size() const
     return size;
 }
 
-bool ImageChecker::walk_region(Action action, const XGL_MEMORY_IMAGE_COPY &region,
+bool ImageChecker::walk_region(Action action, const XGL_BUFFER_IMAGE_COPY &region,
                                const XGL_SUBRESOURCE_LAYOUT &layout, void *data) const
 {
     for (XGL_INT z = 0; z < region.imageExtent.depth; z++) {
@@ -329,7 +327,7 @@ bool ImageChecker::walk(Action action, Buffer &buf) const
     if (!data)
         return false;
 
-    std::vector<XGL_MEMORY_IMAGE_COPY>::const_iterator it;
+    std::vector<XGL_BUFFER_IMAGE_COPY>::const_iterator it;
     for (it = regions_.begin(); it != regions_.end(); it++) {
         if (!walk_region(action, *it, buffer_layout(*it), data))
             break;
@@ -346,7 +344,7 @@ bool ImageChecker::walk(Action action, Image &img) const
     if (!data)
         return false;
 
-    std::vector<XGL_MEMORY_IMAGE_COPY>::const_iterator it;
+    std::vector<XGL_BUFFER_IMAGE_COPY>::const_iterator it;
     for (it = regions_.begin(); it != regions_.end(); it++) {
         if (!walk_region(action, *it, img.subresource_layout(it->imageSubresource), data))
             break;
@@ -487,24 +485,6 @@ protected:
         }
     }
 
-    void add_memory_ref(const xgl_testing::GpuMemory &obj, XGL_FLAGS flags)
-    {
-        std::vector<XGL_MEMORY_REF>::iterator it;
-        for (it = mem_refs_.begin(); it != mem_refs_.end(); it++) {
-            if (it->mem == obj.obj())
-                break;
-        }
-
-        if (it == mem_refs_.end()) {
-            XGL_MEMORY_REF ref = {};
-            ref.mem = obj.obj();
-            ref.flags = flags;
-            mem_refs_.push_back(ref);
-        } else {
-            it->flags &= flags;
-        }
-    }
-
     xgl_testing::Device &dev_;
     xgl_testing::Queue &queue_;
     xgl_testing::CmdBuffer cmd_;
@@ -512,9 +492,9 @@ protected:
     std::vector<XGL_MEMORY_REF> mem_refs_;
 };
 
-typedef XglCmdBlitTest XglCmdFillMemoryTest;
+typedef XglCmdBlitTest XglCmdFillBufferTest;
 
-TEST_F(XglCmdFillMemoryTest, Basic)
+TEST_F(XglCmdFillBufferTest, Basic)
 {
     xgl_testing::Buffer buf;
 
@@ -522,8 +502,8 @@ TEST_F(XglCmdFillMemoryTest, Basic)
     add_memory_ref(buf, 0);
 
     cmd_.begin();
-    xglCmdFillMemory(cmd_.obj(), buf.obj(), 0, 4, 0x11111111);
-    xglCmdFillMemory(cmd_.obj(), buf.obj(), 4, 16, 0x22222222);
+    xglCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 4, 0x11111111);
+    xglCmdFillBuffer(cmd_.obj(), buf.obj(), 4, 16, 0x22222222);
     cmd_.end();
 
     submit_and_done();
@@ -537,7 +517,7 @@ TEST_F(XglCmdFillMemoryTest, Basic)
     buf.unmap();
 }
 
-TEST_F(XglCmdFillMemoryTest, Large)
+TEST_F(XglCmdFillBufferTest, Large)
 {
     const XGL_GPU_SIZE size = 32 * 1024 * 1024;
     xgl_testing::Buffer buf;
@@ -546,8 +526,8 @@ TEST_F(XglCmdFillMemoryTest, Large)
     add_memory_ref(buf, 0);
 
     cmd_.begin();
-    xglCmdFillMemory(cmd_.obj(), buf.obj(), 0, size / 2, 0x11111111);
-    xglCmdFillMemory(cmd_.obj(), buf.obj(), size / 2, size / 2, 0x22222222);
+    xglCmdFillBuffer(cmd_.obj(), buf.obj(), 0, size / 2, 0x11111111);
+    xglCmdFillBuffer(cmd_.obj(), buf.obj(), size / 2, size / 2, 0x22222222);
     cmd_.end();
 
     submit_and_done();
@@ -561,7 +541,7 @@ TEST_F(XglCmdFillMemoryTest, Large)
     buf.unmap();
 }
 
-TEST_F(XglCmdFillMemoryTest, Overlap)
+TEST_F(XglCmdFillBufferTest, Overlap)
 {
     xgl_testing::Buffer buf;
 
@@ -569,8 +549,8 @@ TEST_F(XglCmdFillMemoryTest, Overlap)
     add_memory_ref(buf, 0);
 
     cmd_.begin();
-    xglCmdFillMemory(cmd_.obj(), buf.obj(), 0, 48, 0x11111111);
-    xglCmdFillMemory(cmd_.obj(), buf.obj(), 32, 32, 0x22222222);
+    xglCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 48, 0x11111111);
+    xglCmdFillBuffer(cmd_.obj(), buf.obj(), 32, 32, 0x22222222);
     cmd_.end();
 
     submit_and_done();
@@ -584,7 +564,7 @@ TEST_F(XglCmdFillMemoryTest, Overlap)
     buf.unmap();
 }
 
-TEST_F(XglCmdFillMemoryTest, MultiAlignments)
+TEST_F(XglCmdFillBufferTest, MultiAlignments)
 {
     xgl_testing::Buffer bufs[9];
     XGL_GPU_SIZE size = 4;
@@ -593,7 +573,7 @@ TEST_F(XglCmdFillMemoryTest, MultiAlignments)
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init(dev_, size);
         add_memory_ref(bufs[i], 0);
-        xglCmdFillMemory(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
+        xglCmdFillBuffer(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
         size <<= 1;
     }
     cmd_.end();
@@ -613,9 +593,9 @@ TEST_F(XglCmdFillMemoryTest, MultiAlignments)
     }
 }
 
-typedef XglCmdBlitTest XglCmdCopyMemoryTest;
+typedef XglCmdBlitTest XglCmdCopyBufferTest;
 
-TEST_F(XglCmdCopyMemoryTest, Basic)
+TEST_F(XglCmdCopyBufferTest, Basic)
 {
     xgl_testing::Buffer src, dst;
 
@@ -629,9 +609,9 @@ TEST_F(XglCmdCopyMemoryTest, Basic)
     add_memory_ref(dst, 0);
 
     cmd_.begin();
-    XGL_MEMORY_COPY region = {};
+    XGL_BUFFER_COPY region = {};
     region.copySize = 4;
-    xglCmdCopyMemory(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
+    xglCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
     cmd_.end();
 
     submit_and_done();
@@ -641,7 +621,7 @@ TEST_F(XglCmdCopyMemoryTest, Basic)
     dst.unmap();
 }
 
-TEST_F(XglCmdCopyMemoryTest, Large)
+TEST_F(XglCmdCopyBufferTest, Large)
 {
     const XGL_GPU_SIZE size = 32 * 1024 * 1024;
     xgl_testing::Buffer src, dst;
@@ -658,9 +638,9 @@ TEST_F(XglCmdCopyMemoryTest, Large)
     add_memory_ref(dst, 0);
 
     cmd_.begin();
-    XGL_MEMORY_COPY region = {};
+    XGL_BUFFER_COPY region = {};
     region.copySize = size;
-    xglCmdCopyMemory(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
+    xglCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
     cmd_.end();
 
     submit_and_done();
@@ -671,9 +651,9 @@ TEST_F(XglCmdCopyMemoryTest, Large)
     dst.unmap();
 }
 
-TEST_F(XglCmdCopyMemoryTest, MultiAlignments)
+TEST_F(XglCmdCopyBufferTest, MultiAlignments)
 {
-    const XGL_MEMORY_COPY regions[] = {
+    const XGL_BUFFER_COPY regions[] = {
         /* well aligned */
         {  0,   0,  256 },
         {  0, 256,  128 },
@@ -702,14 +682,14 @@ TEST_F(XglCmdCopyMemoryTest, MultiAlignments)
     add_memory_ref(dst, 0);
 
     cmd_.begin();
-    xglCmdCopyMemory(cmd_.obj(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
+    xglCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
     cmd_.end();
 
     submit_and_done();
 
     data = static_cast<uint8_t *>(dst.map());
     for (int i = 0; i < ARRAY_SIZE(regions); i++) {
-        const XGL_MEMORY_COPY &r = regions[i];
+        const XGL_BUFFER_COPY &r = regions[i];
 
         for (int j = 0; j < r.copySize; j++) {
             EXPECT_EQ(r.srcOffset + j, data[r.destOffset + j]) <<
@@ -720,7 +700,7 @@ TEST_F(XglCmdCopyMemoryTest, MultiAlignments)
     dst.unmap();
 }
 
-TEST_F(XglCmdCopyMemoryTest, RAWHazard)
+TEST_F(XglCmdCopyBufferTest, RAWHazard)
 {
     xgl_testing::Buffer bufs[3];
 
@@ -735,21 +715,21 @@ TEST_F(XglCmdCopyMemoryTest, RAWHazard)
 
     cmd_.begin();
 
-    xglCmdFillMemory(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
+    xglCmdFillBuffer(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
     // is this necessary?
-    XGL_MEMORY_STATE_TRANSITION transition = bufs[0].state_transition(
-            XGL_MEMORY_STATE_DATA_TRANSFER, XGL_MEMORY_STATE_DATA_TRANSFER, 0, 4);
-    xglCmdPrepareMemoryRegions(cmd_.obj(), 1, &transition);
+    XGL_BUFFER_STATE_TRANSITION transition = bufs[0].state_transition(
+            XGL_BUFFER_STATE_DATA_TRANSFER, XGL_BUFFER_STATE_DATA_TRANSFER, 0, 4);
+    xglCmdPrepareBufferRegions(cmd_.obj(), 1, &transition);
 
-    XGL_MEMORY_COPY region = {};
+    XGL_BUFFER_COPY region = {};
     region.copySize = 4;
-    xglCmdCopyMemory(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
+    xglCmdCopyBuffer(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
     // is this necessary?
     transition = bufs[1].state_transition(
-            XGL_MEMORY_STATE_DATA_TRANSFER, XGL_MEMORY_STATE_DATA_TRANSFER, 0, 4);
-    xglCmdPrepareMemoryRegions(cmd_.obj(), 1, &transition);
+            XGL_BUFFER_STATE_DATA_TRANSFER, XGL_BUFFER_STATE_DATA_TRANSFER, 0, 4);
+    xglCmdPrepareBufferRegions(cmd_.obj(), 1, &transition);
 
-    xglCmdCopyMemory(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
+    xglCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
     cmd_.end();
 
     submit_and_done();
@@ -806,7 +786,7 @@ protected:
 
         // copy in and tile
         cmd_.begin();
-        xglCmdCopyMemoryToImage(cmd_.obj(), in_buf.obj(), img.obj(),
+        xglCmdCopyBufferToImage(cmd_.obj(), in_buf.obj(), img.obj(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -830,7 +810,7 @@ protected:
 
         // copy out and linearize
         cmd_.begin();
-        xglCmdCopyImageToMemory(cmd_.obj(), img.obj(), out_buf.obj(),
+        xglCmdCopyImageToBuffer(cmd_.obj(), img.obj(), out_buf.obj(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -844,7 +824,7 @@ protected:
     XGL_FORMAT first_optimal_format_;
 };
 
-class XglCmdCopyMemoryToImageTest : public XglCmdBlitImageTest {
+class XglCmdCopyBufferToImageTest : public XglCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
@@ -866,7 +846,7 @@ protected:
         add_memory_ref(img, 0);
 
         cmd_.begin();
-        xglCmdCopyMemoryToImage(cmd_.obj(), buf.obj(), img.obj(),
+        xglCmdCopyBufferToImage(cmd_.obj(), buf.obj(), img.obj(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -875,7 +855,7 @@ protected:
         check_dst(img, checker);
     }
 
-    void test_copy_memory_to_image(const XGL_IMAGE_CREATE_INFO &img_info, const std::vector<XGL_MEMORY_IMAGE_COPY> &regions)
+    void test_copy_memory_to_image(const XGL_IMAGE_CREATE_INFO &img_info, const std::vector<XGL_BUFFER_IMAGE_COPY> &regions)
     {
         xgl_testing::ImageChecker checker(img_info, regions);
         test_copy_memory_to_image(img_info, checker);
@@ -888,7 +868,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdCopyMemoryToImageTest, Basic)
+TEST_F(XglCmdCopyBufferToImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -903,7 +883,7 @@ TEST_F(XglCmdCopyMemoryToImageTest, Basic)
     }
 }
 
-class XglCmdCopyImageToMemoryTest : public XglCmdBlitImageTest {
+class XglCmdCopyImageToBufferTest : public XglCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
@@ -925,7 +905,7 @@ protected:
         add_memory_ref(buf, 0);
 
         cmd_.begin();
-        xglCmdCopyImageToMemory(cmd_.obj(), img.obj(), buf.obj(),
+        xglCmdCopyImageToBuffer(cmd_.obj(), img.obj(), buf.obj(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -934,7 +914,7 @@ protected:
         checker.check(buf);
     }
 
-    void test_copy_image_to_memory(const XGL_IMAGE_CREATE_INFO &img_info, const std::vector<XGL_MEMORY_IMAGE_COPY> &regions)
+    void test_copy_image_to_memory(const XGL_IMAGE_CREATE_INFO &img_info, const std::vector<XGL_BUFFER_IMAGE_COPY> &regions)
     {
         xgl_testing::ImageChecker checker(img_info, regions);
         test_copy_image_to_memory(img_info, checker);
@@ -947,7 +927,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdCopyImageToMemoryTest, Basic)
+TEST_F(XglCmdCopyImageToBufferTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -974,19 +954,19 @@ protected:
     void test_copy_image(const XGL_IMAGE_CREATE_INFO &src_info, const XGL_IMAGE_CREATE_INFO &dst_info,
                          const std::vector<XGL_IMAGE_COPY> &copies)
     {
-        // convert XGL_IMAGE_COPY to two sets of XGL_MEMORY_IMAGE_COPY
-        std::vector<XGL_MEMORY_IMAGE_COPY> src_regions, dst_regions;
+        // convert XGL_IMAGE_COPY to two sets of XGL_BUFFER_IMAGE_COPY
+        std::vector<XGL_BUFFER_IMAGE_COPY> src_regions, dst_regions;
         XGL_GPU_SIZE src_offset = 0, dst_offset = 0;
         for (std::vector<XGL_IMAGE_COPY>::const_iterator it = copies.begin(); it != copies.end(); it++) {
-            XGL_MEMORY_IMAGE_COPY src_region = {}, dst_region = {};
+            XGL_BUFFER_IMAGE_COPY src_region = {}, dst_region = {};
 
-            src_region.memOffset = src_offset;
+            src_region.bufferOffset = src_offset;
             src_region.imageSubresource = it->srcSubresource;
             src_region.imageOffset = it->srcOffset;
             src_region.imageExtent = it->extent;
             src_regions.push_back(src_region);
 
-            dst_region.memOffset = src_offset;
+            dst_region.bufferOffset = src_offset;
             dst_region.imageSubresource = it->destSubresource;
             dst_region.imageOffset = it->destOffset;
             dst_region.imageExtent = it->extent;

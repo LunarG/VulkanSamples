@@ -475,9 +475,9 @@ ICD_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdMemoryAtomic(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBufferAtomic(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset,
     XGL_UINT64                                  srcData,
     XGL_ATOMIC_OP                               atomicOp)
@@ -498,7 +498,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdLoadAtomicCounters(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
     XGL_UINT                                    counterCount,
-    XGL_GPU_MEMORY                              srcMem,
+    XGL_BUFFER                                  srcBuffer,
     XGL_GPU_SIZE                                srcOffset)
 {
 }
@@ -508,7 +508,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
     XGL_UINT                                    counterCount,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset)
 {
 }

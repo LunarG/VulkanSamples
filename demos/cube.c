@@ -226,17 +226,10 @@ struct demo {
     } textures[DEMO_TEXTURE_COUNT];
 
     struct {
+        XGL_BUFFER buf;
         XGL_GPU_MEMORY mem;
-        XGL_MEMORY_VIEW_ATTACH_INFO view;
-
-        XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
-        XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_bindings[1];
-        XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrs[2];
-    } vertices;
-
-    struct {
-        XGL_GPU_MEMORY mem;
-        XGL_MEMORY_VIEW_ATTACH_INFO view;
+        XGL_BUFFER_VIEW view;
+        XGL_BUFFER_VIEW_ATTACH_INFO attach;
     } uniform_data;
 
     XGL_DESCRIPTOR_SET dset;
@@ -800,7 +793,11 @@ static void demo_prepare_textures(struct demo *demo)
 
 void demo_prepare_cube_data_buffer(struct demo *demo)
 {
+    XGL_BUFFER_CREATE_INFO buf_info;
+    XGL_BUFFER_VIEW_CREATE_INFO view_info;
     XGL_MEMORY_ALLOC_INFO alloc_info;
+    XGL_MEMORY_REQUIREMENTS mem_reqs;
+    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_UINT8 *pData;
     int i;
     mat4x4 MVP, VP;
@@ -823,14 +820,25 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         data.attr[i][3] = 0;
     }
 
+    memset(&buf_info, 0, sizeof(buf_info));
+    buf_info.sType = XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.size = sizeof(data);
+    buf_info.usage = XGL_BUFFER_USAGE_UNIFORM_READ_BIT;
+    err = xglCreateBuffer(demo->device, &buf_info, &demo->uniform_data.buf);
+    assert(!err);
+
+    err = xglGetObjectInfo(demo->uniform_data.buf,
+            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+            &mem_reqs_size, &mem_reqs);
+    assert(!err && mem_reqs_size == sizeof(mem_reqs));
+
     memset(&alloc_info, 0, sizeof(alloc_info));
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = sizeof(data);
-    alloc_info.alignment = 0;
-    alloc_info.heapCount = 1;
-    alloc_info.heaps[0] = 0; // TODO: Use known existing heap
-
-    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
+    alloc_info.allocationSize = mem_reqs.size;
+    alloc_info.alignment = mem_reqs.alignment;
+    alloc_info.heapCount = mem_reqs.heapCount;
+    memcpy(alloc_info.heaps, mem_reqs.heaps,
+            sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
     alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
     err = xglAllocMemory(demo->device, &alloc_info, &demo->uniform_data.mem);
@@ -844,14 +852,31 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = xglUnmapMemory(demo->uniform_data.mem);
     assert(!err);
 
-    // set up the memory view for the constant buffer
-    demo->uniform_data.view.sType = XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO;
-    demo->uniform_data.view.stride = 16;
-    demo->uniform_data.view.range  = alloc_info.allocationSize;
-    demo->uniform_data.view.offset = 0;
-    demo->uniform_data.view.mem    = demo->uniform_data.mem;
-    demo->uniform_data.view.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    demo->uniform_data.view.format.numericFormat = XGL_NUM_FMT_FLOAT;
+    err = xglBindObjectMemory(demo->uniform_data.buf,
+            demo->uniform_data.mem, 0);
+    assert(!err);
+
+    memset(&view_info, 0, sizeof(view_info));
+    view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.buffer = demo->uniform_data.buf;
+    view_info.viewType = XGL_BUFFER_VIEW_TYPED;
+    view_info.stride = 16;
+    view_info.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+    view_info.format.numericFormat = XGL_NUM_FMT_FLOAT;
+    view_info.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    view_info.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    view_info.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    view_info.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    view_info.offset = 0;
+    view_info.range = sizeof(data);
+
+    err = xglCreateBufferView(demo->device, &view_info, &demo->uniform_data.view);
+    assert(!err);
+
+    demo->uniform_data.attach.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
+    demo->uniform_data.attach.view = demo->uniform_data.view;
+    // no preparation..
+    demo->uniform_data.attach.state = XGL_BUFFER_STATE_DATA_TRANSFER;
 }
 
 static void demo_prepare_descriptor_set(struct demo *demo)
@@ -871,7 +896,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
 //    xglAttachMemoryViewDescriptors(demo->dset, 0, 1, &demo->vertices.view);
 
-    xglAttachMemoryViewDescriptors(demo->dset, 0, 1, &demo->uniform_data.view);
+    xglAttachBufferViewDescriptors(demo->dset, 0, 1, &demo->uniform_data.attach);
 
     XGL_IMAGE_VIEW_ATTACH_INFO image_view;
 

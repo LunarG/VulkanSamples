@@ -43,6 +43,8 @@ class Fence;
 class QueueSemaphore;
 class Event;
 class QueryPool;
+class Buffer;
+class BufferView;
 class Image;
 class ImageView;
 class ColorAttachmentView;
@@ -126,6 +128,10 @@ public:
     void bind_memory(uint32_t alloc_idx, const GpuMemory &mem, XGL_GPU_SIZE mem_offset);
     void unbind_memory(uint32_t alloc_idx);
     void unbind_memory();
+
+    // xglBindObjectMemoryRange()
+    void bind_memory(uint32_t alloc_idx, XGL_GPU_SIZE offset, XGL_GPU_SIZE size,
+                     const GpuMemory &mem, XGL_GPU_SIZE mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to get
@@ -262,13 +268,10 @@ public:
 
 class GpuMemory : public DerivedObject<XGL_GPU_MEMORY, BaseObject> {
 public:
-    explicit GpuMemory() {}
-    explicit GpuMemory(const Device &dev, XGL_GPU_SIZE size) { init(dev, size); }
     ~GpuMemory();
 
     // xglAllocMemory()
     void init(const Device &dev, const XGL_MEMORY_ALLOC_INFO &info);
-    void init(const Device &dev, XGL_GPU_SIZE size);
     // xglPinSystemMemory()
     void init(const Device &dev, size_t size, const void *data);
     // xglOpenSharedMemory()
@@ -289,19 +292,6 @@ public:
 
     // xglUnmapMemory()
     void unmap() const;
-
-    XGL_MEMORY_STATE_TRANSITION state_transition(XGL_MEMORY_STATE old_state, XGL_MEMORY_STATE new_state,
-                                                 XGL_GPU_SIZE offset, XGL_GPU_SIZE size) const
-    {
-        XGL_MEMORY_STATE_TRANSITION transition = {};
-        transition.sType = XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION;
-        transition.mem = obj();
-        transition.oldState = old_state;
-        transition.newState = new_state;
-        transition.offset = offset;
-        transition.regionSize = size;
-        return transition;
-    }
 
     static XGL_MEMORY_ALLOC_INFO alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs);
 };
@@ -353,6 +343,41 @@ public:
     static XGL_QUERY_POOL_CREATE_INFO create_info(XGL_QUERY_TYPE type, uint32_t slot_count);
 };
 
+class Buffer : public DerivedObject<XGL_BUFFER, Object> {
+public:
+    explicit Buffer() {}
+    explicit Buffer(const Device &dev, const XGL_BUFFER_CREATE_INFO &info) { init(dev, info); }
+    explicit Buffer(const Device &dev, XGL_GPU_SIZE size) { init(dev, size); }
+
+    // xglCreateBuffer()
+    void init(const Device &dev, const XGL_BUFFER_CREATE_INFO &info);
+    void init(const Device &dev, XGL_GPU_SIZE size) { init(dev, create_info(size, 0)); }
+    void init_no_mem(const Device &dev, const XGL_BUFFER_CREATE_INFO &info);
+
+    static XGL_BUFFER_CREATE_INFO create_info(XGL_GPU_SIZE size, XGL_FLAGS usage);
+
+    XGL_BUFFER_STATE_TRANSITION state_transition(XGL_BUFFER_STATE old_state, XGL_BUFFER_STATE new_state,
+                                                 XGL_GPU_SIZE offset, XGL_GPU_SIZE size) const
+    {
+        XGL_BUFFER_STATE_TRANSITION transition = {};
+        transition.sType = XGL_STRUCTURE_TYPE_BUFFER_STATE_TRANSITION;
+        transition.buffer = obj();
+        transition.oldState = old_state;
+        transition.newState = new_state;
+        transition.offset = offset;
+        transition.regionSize = size;
+        return transition;
+    }
+private:
+    XGL_BUFFER_CREATE_INFO create_info_;
+};
+
+class BufferView : public DerivedObject<XGL_BUFFER_VIEW, Object> {
+public:
+    // xglCreateBufferView()
+    void init(const Device &dev, const XGL_BUFFER_VIEW_CREATE_INFO &info);
+};
+
 class Image : public DerivedObject<XGL_IMAGE, Object> {
 public:
     explicit Image() : format_features_(0) {}
@@ -363,6 +388,10 @@ public:
     void init_no_mem(const Device &dev, const XGL_IMAGE_CREATE_INFO &info);
     // xglOpenPeerImage()
     void init(const Device &dev, const XGL_PEER_IMAGE_OPEN_INFO &info, const XGL_IMAGE_CREATE_INFO &original_info);
+
+    // xglBindImageMemoryRange()
+    void bind_memory(uint32_t alloc_idx, const XGL_IMAGE_MEMORY_BIND_INFO &info,
+                     const GpuMemory &mem, XGL_GPU_SIZE mem_offset);
 
     // xglGetImageSubresourceInfo()
     XGL_SUBRESOURCE_LAYOUT subresource_layout(const XGL_IMAGE_SUBRESOURCE &subres) const;
@@ -483,11 +512,11 @@ public:
         attach(start_slot, std::vector<XGL_IMAGE_VIEW_ATTACH_INFO>(1, view));
     }
 
-    // xglAttachMemoryViewDescriptors()
-    void attach(uint32_t start_slot, const std::vector<XGL_MEMORY_VIEW_ATTACH_INFO> &mem_views);
-    void attach(uint32_t start_slot, const XGL_MEMORY_VIEW_ATTACH_INFO &view)
+    // xglAttachBufferViewDescriptors()
+    void attach(uint32_t start_slot, const std::vector<XGL_BUFFER_VIEW_ATTACH_INFO> &buf_views);
+    void attach(uint32_t start_slot, const XGL_BUFFER_VIEW_ATTACH_INFO &view)
     {
-        attach(start_slot, std::vector<XGL_MEMORY_VIEW_ATTACH_INFO>(1, view));
+        attach(start_slot, std::vector<XGL_BUFFER_VIEW_ATTACH_INFO>(1, view));
     }
 
     // xglAttachNestedDescriptors()
@@ -590,6 +619,15 @@ inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS
     for (int i = 0; i < reqs.heapCount; i++)
         info.heaps[i] = reqs.heaps[i];
     info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    return info;
+}
+
+inline XGL_BUFFER_CREATE_INFO Buffer::create_info(XGL_GPU_SIZE size, XGL_FLAGS usage)
+{
+    XGL_BUFFER_CREATE_INFO info = {};
+    info.sType = XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    info.size = size;
+    info.usage = usage;
     return info;
 }
 

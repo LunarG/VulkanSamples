@@ -102,6 +102,14 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
         shallow_copy = sizeof(XGL_QUERY_POOL_CREATE_INFO);
         break;
+    case XGL_DBG_OBJECT_BUFFER:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
+        shallow_copy = sizeof(XGL_BUFFER_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_BUFFER_VIEW:
+        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
+        shallow_copy = sizeof(XGL_BUFFER_VIEW_CREATE_INFO);
+        break;
     case XGL_DBG_OBJECT_IMAGE:
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
         shallow_copy = sizeof(XGL_IMAGE_CREATE_INFO);
@@ -356,14 +364,33 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
 ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_OBJECT                                  object,
     XGL_GPU_MEMORY                              mem_,
-    XGL_GPU_SIZE                                offset)
+    XGL_GPU_SIZE                                memOffset)
 {
     struct intel_obj *obj = intel_obj(object);
     struct intel_mem *mem = intel_mem(mem_);
 
-    intel_obj_bind_mem(obj, mem, offset);
+    intel_obj_bind_mem(obj, mem, memOffset);
 
     return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
+    XGL_OBJECT                                  object,
+    XGL_GPU_SIZE                                rangeOffset,
+    XGL_GPU_SIZE                                rangeSize,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                memOffset)
+{
+    return XGL_ERROR_UNKNOWN;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(
+    XGL_IMAGE                                   image,
+    const XGL_IMAGE_MEMORY_BIND_INFO*           bindInfo,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                memOffset)
+{
+    return XGL_ERROR_UNKNOWN;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(

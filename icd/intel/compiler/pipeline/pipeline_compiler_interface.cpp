@@ -449,7 +449,7 @@ static void rmap_destroy(struct intel_pipeline_rmap *rmap)
 
 static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
                                                const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                                               const XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO *dyn,
+                                               const XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO *dyn,
                                                XGL_UINT rt_count, XGL_UINT ubo_start)
 {
     struct intel_pipeline_rmap *rmap;
@@ -465,7 +465,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     depth = rmap_init_counts(rmap, mapping, rt_count, ubo_start);
 
-    /* add RTs and the dynamic memory view */
+    /* add RTs and the dynamic buffer view */
     rmap_update_count(rmap, dyn->slotObjectType, dyn->shaderEntityIndex, rt_count, ubo_start);
 
     rmap->slot_count = rmap->rt_count + rmap->texture_resource_count + rmap->resource_count +
@@ -486,7 +486,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
         return NULL;
     }
 
-    /* add RTs and the dynamic memory view */
+    /* add RTs and the dynamic buffer view */
     slot = rmap_get_slot(rmap, dyn->slotObjectType, dyn->shaderEntityIndex);
     if (slot) {
         slot->path_len = INTEL_PIPELINE_RMAP_SLOT_DYN;
@@ -724,7 +724,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
         pipe_shader->rmap = rmap_create(gpu,
                 &info->descriptorSetMapping[0],
-                &info->dynamicMemoryViewMapping,
+                &info->dynamicBufferViewMapping,
                 rt_count, pipe_shader->ubo_start);
 
         if (pipe_shader->rmap) {

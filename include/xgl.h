@@ -81,6 +81,8 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_DEVICE, XGL_BASE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_QUEUE, XGL_BASE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_GPU_MEMORY, XGL_BASE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_OBJECT, XGL_BASE_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_BUFFER, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_BUFFER_VIEW, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_IMAGE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_IMAGE_VIEW, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_COLOR_ATTACHMENT_VIEW, XGL_OBJECT)
@@ -151,26 +153,26 @@ typedef enum _XGL_MEMORY_PRIORITY
     XGL_NUM_MEMORY_PRIORITY                                 = (XGL_MEMORY_PRIORITY_END_RANGE - XGL_MEMORY_PRIORITY_BEGIN_RANGE + 1),
 } XGL_MEMORY_PRIORITY;
 
-typedef enum _XGL_MEMORY_STATE
+typedef enum _XGL_BUFFER_STATE
 {
-    XGL_MEMORY_STATE_DATA_TRANSFER                          = 0x00000000,
-    XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY              = 0x00000001,
-    XGL_MEMORY_STATE_GRAPHICS_SHADER_WRITE_ONLY             = 0x00000002,
-    XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_WRITE             = 0x00000003,
-    XGL_MEMORY_STATE_COMPUTE_SHADER_READ_ONLY               = 0x00000004,
-    XGL_MEMORY_STATE_COMPUTE_SHADER_WRITE_ONLY              = 0x00000005,
-    XGL_MEMORY_STATE_COMPUTE_SHADER_READ_WRITE              = 0x00000006,
-    XGL_MEMORY_STATE_MULTI_SHADER_READ_ONLY                 = 0x00000007,
-    XGL_MEMORY_STATE_INDEX_DATA                             = 0x00000008,
-    XGL_MEMORY_STATE_INDIRECT_ARG                           = 0x00000009,
-    XGL_MEMORY_STATE_WRITE_TIMESTAMP                        = 0x0000000A,
-    XGL_MEMORY_STATE_QUEUE_ATOMIC                           = 0x0000000B,
+    XGL_BUFFER_STATE_DATA_TRANSFER                          = 0x00000000,
+    XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_ONLY              = 0x00000001,
+    XGL_BUFFER_STATE_GRAPHICS_SHADER_WRITE_ONLY             = 0x00000002,
+    XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_WRITE             = 0x00000003,
+    XGL_BUFFER_STATE_COMPUTE_SHADER_READ_ONLY               = 0x00000004,
+    XGL_BUFFER_STATE_COMPUTE_SHADER_WRITE_ONLY              = 0x00000005,
+    XGL_BUFFER_STATE_COMPUTE_SHADER_READ_WRITE              = 0x00000006,
+    XGL_BUFFER_STATE_MULTI_SHADER_READ_ONLY                 = 0x00000007,
+    XGL_BUFFER_STATE_INDEX_DATA                             = 0x00000008,
+    XGL_BUFFER_STATE_INDIRECT_ARG                           = 0x00000009,
+    XGL_BUFFER_STATE_WRITE_TIMESTAMP                        = 0x0000000A,
+    XGL_BUFFER_STATE_QUEUE_ATOMIC                           = 0x0000000B,
 
-    XGL_MEMORY_STATE_BEGIN_RANGE                            = XGL_MEMORY_STATE_DATA_TRANSFER,
-    XGL_MEMORY_STATE_END_RANGE                              = XGL_MEMORY_STATE_QUEUE_ATOMIC,
-    XGL_NUM_MEMORY_STATE                                    = (XGL_MEMORY_STATE_END_RANGE - XGL_MEMORY_STATE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_MEMORY_STATE)
-} XGL_MEMORY_STATE;
+    XGL_BUFFER_STATE_BEGIN_RANGE                            = XGL_BUFFER_STATE_DATA_TRANSFER,
+    XGL_BUFFER_STATE_END_RANGE                              = XGL_BUFFER_STATE_QUEUE_ATOMIC,
+    XGL_NUM_BUFFER_STATE                                    = (XGL_BUFFER_STATE_END_RANGE - XGL_BUFFER_STATE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_BUFFER_STATE)
+} XGL_BUFFER_STATE;
 
 typedef enum _XGL_IMAGE_STATE
 {
@@ -858,9 +860,9 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO                    = 2,
     XGL_STRUCTURE_TYPE_MEMORY_OPEN_INFO                     = 4,
     XGL_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO                = 5,
-    XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO              = 6,
+    XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO              = 6,
     XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO               = 7,
-    XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION              = 8,
+    XGL_STRUCTURE_TYPE_BUFFER_STATE_TRANSITION              = 8,
     XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO               = 9,
     XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO    = 10,
     XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO       = 11,
@@ -886,14 +888,16 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO        = 31,
     XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO      = 32,
     XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO                    = 33,
-    XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO              = 34,
-    XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                = 35,
-    XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO       = 36,
-    XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO              = 37,
+    XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO                   = 37,
+    XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO              = 38,
+    XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO              = 39,
+    XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                = 40,
+    XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO       = 41,
+    XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO              = 42,
+    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 43,
 // IMG CHANGE BEGIN - support for vertex input description
-    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 38,
+    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 90,
 // IMG CHANGE END
-    XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 39,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -930,17 +934,48 @@ typedef enum _XGL_MEMORY_HEAP_FLAGS
 // Memory allocation flags
 typedef enum _XGL_MEMORY_ALLOC_FLAGS
 {
-    XGL_MEMORY_ALLOC_VIRTUAL_BIT                            = 0x00000001,
-    XGL_MEMORY_ALLOC_SHAREABLE_BIT                          = 0x00000002,
+    XGL_MEMORY_ALLOC_SHAREABLE_BIT                          = 0x00000001,
 } XGL_MEMORY_ALLOC_FLAGS;
+
+// Buffer usage flags
+typedef enum _XGL_BUFFER_USAGE_FLAGS
+{
+    XGL_BUFFER_USAGE_SHADER_ACCESS_READ_BIT                 = 0x00000001,   // Shader read (e.g. TBO, image buffer, UBO, SBBO)
+    XGL_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT                = 0x00000002,   // Shader write (e.g. image buffer, SSBO)
+    XGL_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT               = 0x00000004,   // Shader atomic operations (e.g. image buffer, SSBO)
+    XGL_BUFFER_USAGE_UNIFORM_READ_BIT                       = 0x00000008,   // Uniform read (UBO)
+    XGL_BUFFER_USAGE_INDEX_FETCH_BIT                        = 0x00000010,   // Fixed function index fetch (index buffer)
+    XGL_BUFFER_USAGE_VERTEX_FETCH_BIT                       = 0x00000020,   // Fixed function vertex fetch (VBO)
+    XGL_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT           = 0x00000040,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
+} XGL_BUFFER_USAGE_FLAGS;
+
+// Buffer flags
+typedef enum _XGL_BUFFER_CREATE_FLAGS
+{
+    XGL_BUFFER_CREATE_SHAREABLE_BIT                         = 0x00000001,
+    XGL_BUFFER_CREATE_SPARSE_BIT                            = 0x00000002,
+} XGL_BUFFER_CREATE_FLAGS;
+
+typedef enum _XGL_BUFFER_VIEW_TYPE
+{
+    XGL_BUFFER_VIEW_RAW                                     = 0x00000000,   // Raw buffer without special structure (e.g. UBO, SSBO, indirect and parameter buffers)
+    XGL_BUFFER_VIEW_TYPED                                   = 0x00000001,   // Typed buffer, format and channels are used (TBO, image buffer)
+    XGL_BUFFER_VIEW_STRUCTURED                              = 0x00000002,   // Structured buffer, stride is used (VBO, DX-style structured buffer)
+
+    XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE                         = XGL_BUFFER_VIEW_RAW,
+    XGL_BUFFER_VIEW_TYPE_END_RANGE                           = XGL_BUFFER_VIEW_STRUCTURED,
+    XGL_NUM_BUFFER_VIEW_TYPE                                 = (XGL_BUFFER_VIEW_TYPE_END_RANGE - XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_BUFFER_VIEW_TYPE)
+} XGL_BUFFER_VIEW_TYPE;
 
 // Image usage flags
 typedef enum _XGL_IMAGE_USAGE_FLAGS
 {
     XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
     XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
-    XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
-    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
+    XGL_IMAGE_USAGE_SHADER_ACCESS_ATOMIC_BIT                = 0x00000004,
+    XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000008,
+    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000010,
 } XGL_IMAGE_USAGE_FLAGS;
 
 // Image flags
@@ -949,6 +984,7 @@ typedef enum _XGL_IMAGE_CREATE_FLAGS
     XGL_IMAGE_CREATE_INVARIANT_DATA_BIT                     = 0x00000001,
     XGL_IMAGE_CREATE_CLONEABLE_BIT                          = 0x00000002,
     XGL_IMAGE_CREATE_SHAREABLE_BIT                          = 0x00000004,
+    XGL_IMAGE_CREATE_SPARSE_BIT                             = 0x00000008,
 } XGL_IMAGE_CREATE_FLAGS;
 
 // Depth-stencil view creation flags
@@ -1063,6 +1099,14 @@ typedef struct _XGL_RECT
     XGL_EXTENT2D                            extent;
 } XGL_RECT;
 
+typedef struct _XGL_CHANNEL_MAPPING
+{
+    XGL_CHANNEL_SWIZZLE                     r;
+    XGL_CHANNEL_SWIZZLE                     g;
+    XGL_CHANNEL_SWIZZLE                     b;
+    XGL_CHANNEL_SWIZZLE                     a;
+} XGL_CHANNEL_MAPPING;
+
 typedef struct _XGL_PHYSICAL_GPU_PROPERTIES
 {
     XGL_SIZE                                structSize;
@@ -1073,7 +1117,6 @@ typedef struct _XGL_PHYSICAL_GPU_PROPERTIES
     XGL_PHYSICAL_GPU_TYPE                   gpuType;
     XGL_CHAR                                gpuName[XGL_MAX_PHYSICAL_GPU_NAME];
     XGL_UINT                                maxMemRefsPerSubmission;
-    XGL_GPU_SIZE                            virtualMemPageSize;
     XGL_GPU_SIZE                            maxInlineMemoryUpdateSize;
     XGL_UINT                                maxBoundDescriptorSets;
     XGL_UINT                                maxThreadGroupSize;
@@ -1162,7 +1205,6 @@ typedef struct _XGL_PHYSICAL_GPU_MEMORY_PROPERTIES
 {
     XGL_SIZE                                structSize;                 // Size of structure in bytes
     XGL_BOOL                                supportsMigration;
-    XGL_BOOL                                supportsVirtualMemoryRemapping;
     XGL_BOOL                                supportsPinning;
 } XGL_PHYSICAL_GPU_MEMORY_PROPERTIES;
 
@@ -1205,19 +1247,11 @@ typedef struct _XGL_PEER_MEMORY_OPEN_INFO
     XGL_GPU_MEMORY                          originalMem;
 } XGL_PEER_MEMORY_OPEN_INFO;
 
-typedef struct _XGL_VIRTUAL_MEMORY_REMAP_RANGE
-{
-    XGL_GPU_MEMORY                          virtualMem;
-    XGL_GPU_SIZE                            virtualStartPage;
-    XGL_GPU_MEMORY                          realMem;
-    XGL_GPU_SIZE                            realStartPage;
-    XGL_GPU_SIZE                            pageCount;
-} XGL_VIRTUAL_MEMORY_REMAP_RANGE;
-
 typedef struct _XGL_MEMORY_REQUIREMENTS
 {
     XGL_GPU_SIZE                            size;                       // Specified in bytes
     XGL_GPU_SIZE                            alignment;                  // Specified in bytes
+    XGL_GPU_SIZE                            granularity;                // Granularity on which xglBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     XGL_UINT                                heapCount;
     XGL_UINT                                heaps[XGL_MAX_MEMORY_HEAPS];
 } XGL_MEMORY_REQUIREMENTS;
@@ -1228,17 +1262,13 @@ typedef struct _XGL_FORMAT_PROPERTIES
     XGL_FLAGS                               optimalTilingFeatures;     // XGL_FORMAT_FEATURE_FLAGS
 } XGL_FORMAT_PROPERTIES;
 
-typedef struct _XGL_MEMORY_VIEW_ATTACH_INFO
+typedef struct _XGL_BUFFER_VIEW_ATTACH_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
-    XGL_GPU_MEMORY                          mem;
-    XGL_GPU_SIZE                            offset;
-    XGL_GPU_SIZE                            range;
-    XGL_GPU_SIZE                            stride;
-    XGL_FORMAT                              format;
-    XGL_MEMORY_STATE                        state;
-} XGL_MEMORY_VIEW_ATTACH_INFO;
+    XGL_BUFFER_VIEW                         view;
+    XGL_BUFFER_STATE                        state;
+} XGL_BUFFER_VIEW_ATTACH_INFO;
 
 typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
 {
@@ -1248,16 +1278,38 @@ typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
     XGL_IMAGE_STATE                         state;
 } XGL_IMAGE_VIEW_ATTACH_INFO;
 
-typedef struct _XGL_MEMORY_STATE_TRANSITION
+typedef struct _XGL_BUFFER_STATE_TRANSITION
 {
-    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_STATE_TRANSITION
     XGL_VOID*                               pNext;                      // Pointer to next structure
-    XGL_GPU_MEMORY                          mem;
-    XGL_MEMORY_STATE                        oldState;
-    XGL_MEMORY_STATE                        newState;
+    XGL_BUFFER                              buffer;
+    XGL_BUFFER_STATE                        oldState;
+    XGL_BUFFER_STATE                        newState;
     XGL_GPU_SIZE                            offset;
     XGL_GPU_SIZE                            regionSize;
-} XGL_MEMORY_STATE_TRANSITION;
+} XGL_BUFFER_STATE_TRANSITION;
+
+typedef struct _XGL_BUFFER_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+    XGL_GPU_SIZE                            size;                       // Specified in bytes
+    XGL_FLAGS                               usage;                      // XGL_BUFFER_USAGE_FLAGS
+    XGL_FLAGS                               flags;                      // XGL_BUFFER_CREATE_FLAGS
+} XGL_BUFFER_CREATE_INFO;
+
+typedef struct _XGL_BUFFER_VIEW_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
+    const XGL_VOID*                         pNext;                      // Pointer to next structure.
+    XGL_BUFFER                              buffer;
+    XGL_BUFFER_VIEW_TYPE                    viewType;
+    XGL_GPU_SIZE                            stride;                     // Optionally specifies stride between elements
+    XGL_FORMAT                              format;                     // Optionally specifies format of elements
+    XGL_CHANNEL_MAPPING                     channels;                   // Optionally specifies format channel mapping
+    XGL_GPU_SIZE                            offset;                     // Specified in bytes
+    XGL_GPU_SIZE                            range;                      // View size specified in bytes
+} XGL_BUFFER_VIEW_CREATE_INFO;
 
 typedef struct _XGL_IMAGE_SUBRESOURCE
 {
@@ -1311,14 +1363,6 @@ typedef struct _XGL_SUBRESOURCE_LAYOUT
     XGL_GPU_SIZE                            depthPitch;             // Specified in bytes
 } XGL_SUBRESOURCE_LAYOUT;
 
-typedef struct _XGL_CHANNEL_MAPPING
-{
-    XGL_CHANNEL_SWIZZLE                     r;
-    XGL_CHANNEL_SWIZZLE                     g;
-    XGL_CHANNEL_SWIZZLE                     b;
-    XGL_CHANNEL_SWIZZLE                     a;
-} XGL_CHANNEL_MAPPING;
-
 typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
@@ -1370,12 +1414,19 @@ typedef struct _XGL_DEPTH_STENCIL_BIND_INFO
     XGL_IMAGE_STATE                         stencilState;           // XGL_IMAGE_STATE
 } XGL_DEPTH_STENCIL_BIND_INFO;
 
-typedef struct _XGL_MEMORY_COPY
+typedef struct _XGL_BUFFER_COPY
 {
     XGL_GPU_SIZE                            srcOffset;              // Specified in bytes
     XGL_GPU_SIZE                            destOffset;             // Specified in bytes
     XGL_GPU_SIZE                            copySize;               // Specified in bytes
-} XGL_MEMORY_COPY;
+} XGL_BUFFER_COPY;
+
+typedef struct _XGL_IMAGE_MEMORY_BIND_INFO
+{
+    XGL_IMAGE_SUBRESOURCE                   subresource;
+    XGL_OFFSET3D                            offset;
+    XGL_EXTENT3D                            extent;
+} XGL_IMAGE_MEMORY_BIND_INFO;
 
 typedef struct _XGL_IMAGE_COPY
 {
@@ -1386,13 +1437,13 @@ typedef struct _XGL_IMAGE_COPY
     XGL_EXTENT3D                            extent;
 } XGL_IMAGE_COPY;
 
-typedef struct _XGL_MEMORY_IMAGE_COPY
+typedef struct _XGL_BUFFER_IMAGE_COPY
 {
-    XGL_GPU_SIZE                            memOffset;              // Specified in bytes
+    XGL_GPU_SIZE                            bufferOffset;           // Specified in bytes
     XGL_IMAGE_SUBRESOURCE                   imageSubresource;
     XGL_OFFSET3D                            imageOffset;
     XGL_EXTENT3D                            imageExtent;
-} XGL_MEMORY_IMAGE_COPY;
+} XGL_BUFFER_IMAGE_COPY;
 
 typedef struct _XGL_IMAGE_RESOLVE
 {
@@ -1437,11 +1488,11 @@ typedef struct _XGL_LINK_CONST_BUFFER
     const XGL_VOID*                             pBufferData;
 } XGL_LINK_CONST_BUFFER;
 
-typedef struct _XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO
+typedef struct _XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO
 {
     XGL_DESCRIPTOR_SET_SLOT_TYPE            slotObjectType;
     XGL_UINT                                shaderEntityIndex;
-} XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO;
+} XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO;
 
 typedef struct _XGL_PIPELINE_SHADER
 {
@@ -1450,7 +1501,7 @@ typedef struct _XGL_PIPELINE_SHADER
     XGL_DESCRIPTOR_SET_MAPPING              descriptorSetMapping[XGL_MAX_DESCRIPTOR_SETS];
     XGL_UINT                                linkConstBufferCount;
     const XGL_LINK_CONST_BUFFER*            pLinkConstBufferInfo;
-    XGL_DYNAMIC_MEMORY_VIEW_SLOT_INFO       dynamicMemoryViewMapping;
+    XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO       dynamicBufferViewMapping;
 } XGL_PIPELINE_SHADER;
 
 typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
@@ -1853,7 +1904,6 @@ typedef XGL_RESULT (XGLAPI *xglSetMemoryPriorityType)(XGL_GPU_MEMORY mem, XGL_ME
 typedef XGL_RESULT (XGLAPI *xglMapMemoryType)(XGL_GPU_MEMORY mem, XGL_FLAGS flags, XGL_VOID** ppData);
 typedef XGL_RESULT (XGLAPI *xglUnmapMemoryType)(XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglPinSystemMemoryType)(XGL_DEVICE device, const XGL_VOID* pSysMem, XGL_SIZE memSize, XGL_GPU_MEMORY* pMem);
-typedef XGL_RESULT (XGLAPI *xglRemapVirtualMemoryPagesType)(XGL_DEVICE device, XGL_UINT rangeCount, const XGL_VIRTUAL_MEMORY_REMAP_RANGE* pRanges, XGL_UINT preWaitSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPreWaitSemaphores, XGL_UINT postSignalSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPostSignalSemaphores);
 typedef XGL_RESULT (XGLAPI *xglGetMultiGpuCompatibilityType)(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo);
 typedef XGL_RESULT (XGLAPI *xglOpenSharedMemoryType)(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglOpenSharedQueueSemaphoreType)(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore);
@@ -1861,7 +1911,9 @@ typedef XGL_RESULT (XGLAPI *xglOpenPeerMemoryType)(XGL_DEVICE device, const XGL_
 typedef XGL_RESULT (XGLAPI *xglOpenPeerImageType)(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglDestroyObjectType)(XGL_OBJECT object);
 typedef XGL_RESULT (XGLAPI *xglGetObjectInfoType)(XGL_BASE_OBJECT object, XGL_OBJECT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
-typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryType)(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset);
+typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryType)(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
+typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryRangeType)(XGL_OBJECT object, XGL_GPU_SIZE rangeOffset, XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
+typedef XGL_RESULT (XGLAPI *xglBindImageMemoryRangeType)(XGL_IMAGE image, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
 typedef XGL_RESULT (XGLAPI *xglCreateFenceType)(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence);
 typedef XGL_RESULT (XGLAPI *xglGetFenceStatusType)(XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglWaitForFencesType)(XGL_DEVICE device, XGL_UINT fenceCount, const XGL_FENCE* pFences, XGL_BOOL waitAll, XGL_UINT64 timeout);
@@ -1875,6 +1927,8 @@ typedef XGL_RESULT (XGLAPI *xglResetEventType)(XGL_EVENT event);
 typedef XGL_RESULT (XGLAPI *xglCreateQueryPoolType)(XGL_DEVICE device, const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo, XGL_QUERY_POOL* pQueryPool);
 typedef XGL_RESULT (XGLAPI *xglGetQueryPoolResultsType)(XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount, XGL_SIZE* pDataSize, XGL_VOID* pData);
 typedef XGL_RESULT (XGLAPI *xglGetFormatInfoType)(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
+typedef XGL_RESULT (XGLAPI *xglCreateBufferType)(XGL_DEVICE device, const XGL_BUFFER_CREATE_INFO* pCreateInfo, XGL_BUFFER* pBuffer);
+typedef XGL_RESULT (XGLAPI *xglCreateBufferViewType)(XGL_DEVICE device, const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo, XGL_BUFFER_VIEW* pView);
 typedef XGL_RESULT (XGLAPI *xglCreateImageType)(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage);
 typedef XGL_RESULT (XGLAPI *xglGetImageSubresourceInfoType)(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
 typedef XGL_RESULT (XGLAPI *xglCreateImageViewType)(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView);
@@ -1892,7 +1946,7 @@ typedef XGL_VOID (XGLAPI *xglBeginDescriptorSetUpdateType)(XGL_DESCRIPTOR_SET de
 typedef XGL_VOID (XGLAPI *xglEndDescriptorSetUpdateType)(XGL_DESCRIPTOR_SET descriptorSet);
 typedef XGL_VOID (XGLAPI *xglAttachSamplerDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_SAMPLER* pSamplers);
 typedef XGL_VOID (XGLAPI *xglAttachImageViewDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews);
-typedef XGL_VOID (XGLAPI *xglAttachMemoryViewDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemViews);
+typedef XGL_VOID (XGLAPI *xglAttachBufferViewDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferViews);
 typedef XGL_VOID (XGLAPI *xglAttachNestedDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_DESCRIPTOR_SET_ATTACH_INFO* pNestedDescriptorSets);
 typedef XGL_VOID (XGLAPI *xglClearDescriptorSetSlotsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount);
 typedef XGL_RESULT (XGLAPI *xglCreateViewportStateType)(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState);
@@ -1908,38 +1962,38 @@ typedef XGL_VOID (XGLAPI *xglCmdBindPipelineType)(XGL_CMD_BUFFER cmdBuffer, XGL_
 typedef XGL_VOID (XGLAPI *xglCmdBindPipelineDeltaType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta);
 typedef XGL_VOID (XGLAPI *xglCmdBindStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state);
 typedef XGL_VOID (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset);
-typedef XGL_VOID (XGLAPI *xglCmdBindDynamicMemoryViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView);
-typedef XGL_VOID (XGLAPI *xglCmdBindVertexDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding);
-typedef XGL_VOID (XGLAPI *xglCmdBindIndexDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
-typedef XGL_VOID (XGLAPI *xglCmdPrepareMemoryRegionsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions);
+typedef XGL_VOID (XGLAPI *xglCmdBindDynamicBufferViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferView);
+typedef XGL_VOID (XGLAPI *xglCmdBindVertexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT binding);
+typedef XGL_VOID (XGLAPI *xglCmdBindIndexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
+typedef XGL_VOID (XGLAPI *xglCmdPrepareBufferRegionsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_BUFFER_STATE_TRANSITION* pStateTransitions);
 typedef XGL_VOID (XGLAPI *xglCmdPrepareImagesType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions);
 typedef XGL_VOID (XGLAPI *xglCmdDrawType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
 typedef XGL_VOID (XGLAPI *xglCmdDrawIndexedType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount);
-typedef XGL_VOID (XGLAPI *xglCmdDrawIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride);
-typedef XGL_VOID (XGLAPI *xglCmdDrawIndexedIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride);
+typedef XGL_VOID (XGLAPI *xglCmdDrawIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride);
+typedef XGL_VOID (XGLAPI *xglCmdDrawIndexedIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT32 count, XGL_UINT32 stride);
 typedef XGL_VOID (XGLAPI *xglCmdDispatchType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT x, XGL_UINT y, XGL_UINT z);
-typedef XGL_VOID (XGLAPI *xglCmdDispatchIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset);
-typedef XGL_VOID (XGLAPI *xglCmdCopyMemoryType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_GPU_MEMORY destMem, XGL_UINT regionCount, const XGL_MEMORY_COPY* pRegions);
+typedef XGL_VOID (XGLAPI *xglCmdDispatchIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset);
+typedef XGL_VOID (XGLAPI *xglCmdCopyBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_BUFFER destBuffer, XGL_UINT regionCount, const XGL_BUFFER_COPY* pRegions);
 typedef XGL_VOID (XGLAPI *xglCmdCopyImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_IMAGE_COPY* pRegions);
-typedef XGL_VOID (XGLAPI *xglCmdCopyMemoryToImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions);
-typedef XGL_VOID (XGLAPI *xglCmdCopyImageToMemoryType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_GPU_MEMORY destMem, XGL_UINT regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions);
+typedef XGL_VOID (XGLAPI *xglCmdCopyBufferToImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, XGL_UINT regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
+typedef XGL_VOID (XGLAPI *xglCmdCopyImageToBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, XGL_UINT regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
 typedef XGL_VOID (XGLAPI *xglCmdCloneImageDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_STATE srcImageState, XGL_IMAGE destImage, XGL_IMAGE_STATE destImageState);
-typedef XGL_VOID (XGLAPI *xglCmdUpdateMemoryType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const XGL_UINT32* pData);
-typedef XGL_VOID (XGLAPI *xglCmdFillMemoryType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, XGL_UINT32 data);
+typedef XGL_VOID (XGLAPI *xglCmdUpdateBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const XGL_UINT32* pData);
+typedef XGL_VOID (XGLAPI *xglCmdFillBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, XGL_UINT32 data);
 typedef XGL_VOID (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_FLOAT color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef XGL_VOID (XGLAPI *xglCmdClearColorImageRawType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_UINT32 color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef XGL_VOID (XGLAPI *xglCmdClearDepthStencilType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_FLOAT depth, XGL_UINT32 stencil, XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef XGL_VOID (XGLAPI *xglCmdResolveImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, XGL_UINT rectCount, const XGL_IMAGE_RESOLVE* pRects);
 typedef XGL_VOID (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event);
 typedef XGL_VOID (XGLAPI *xglCmdResetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event);
-typedef XGL_VOID (XGLAPI *xglCmdMemoryAtomicType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_UINT64 srcData, XGL_ATOMIC_OP atomicOp);
+typedef XGL_VOID (XGLAPI *xglCmdBufferAtomicType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_UINT64 srcData, XGL_ATOMIC_OP atomicOp);
 typedef XGL_VOID (XGLAPI *xglCmdBeginQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot, XGL_FLAGS flags);
 typedef XGL_VOID (XGLAPI *xglCmdEndQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot);
 typedef XGL_VOID (XGLAPI *xglCmdResetQueryPoolType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount);
-typedef XGL_VOID (XGLAPI *xglCmdWriteTimestampType)(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset);
+typedef XGL_VOID (XGLAPI *xglCmdWriteTimestampType)(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset);
 typedef XGL_VOID (XGLAPI *xglCmdInitAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, const XGL_UINT32* pData);
-typedef XGL_VOID (XGLAPI *xglCmdLoadAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY srcMem, XGL_GPU_SIZE srcOffset);
-typedef XGL_VOID (XGLAPI *xglCmdSaveAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset);
+typedef XGL_VOID (XGLAPI *xglCmdLoadAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_BUFFER srcBuffer, XGL_GPU_SIZE srcOffset);
+typedef XGL_VOID (XGLAPI *xglCmdSaveAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset);
 typedef XGL_RESULT (XGLAPI *xglCreateFramebufferType)(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer);
 typedef XGL_RESULT (XGLAPI *xglCreateRenderPassType)(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass);
 
@@ -2055,15 +2109,6 @@ XGL_RESULT XGLAPI xglPinSystemMemory(
     XGL_SIZE                                    memSize,
     XGL_GPU_MEMORY*                             pMem);
 
-XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    rangeCount,
-    const XGL_VIRTUAL_MEMORY_REMAP_RANGE*       pRanges,
-    XGL_UINT                                    preWaitSemaphoreCount,
-    const XGL_QUEUE_SEMAPHORE*                  pPreWaitSemaphores,
-    XGL_UINT                                    postSignalSemaphoreCount,
-    const XGL_QUEUE_SEMAPHORE*                  pPostSignalSemaphores);
-
 // Multi-device functions
 
 XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(
@@ -2106,7 +2151,20 @@ XGL_RESULT XGLAPI xglGetObjectInfo(
 XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_OBJECT                                  object,
     XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset);
+    XGL_GPU_SIZE                                memOffset);
+
+XGL_RESULT XGLAPI xglBindObjectMemoryRange(
+    XGL_OBJECT                                  object,
+    XGL_GPU_SIZE                                rangeOffset,
+    XGL_GPU_SIZE                                rangeSize,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                memOffset);
+
+XGL_RESULT XGLAPI xglBindImageMemoryRange(
+    XGL_IMAGE                                   image,
+    const XGL_IMAGE_MEMORY_BIND_INFO*           bindInfo,
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                memOffset);
 
 // Fence functions
 
@@ -2178,6 +2236,20 @@ XGL_RESULT XGLAPI xglGetFormatInfo(
     XGL_FORMAT_INFO_TYPE                        infoType,
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData);
+
+// Buffer functions
+
+XGL_RESULT XGLAPI xglCreateBuffer(
+    XGL_DEVICE                                  device,
+    const XGL_BUFFER_CREATE_INFO*               pCreateInfo,
+    XGL_BUFFER*                                 pBuffer);
+
+// Buffer view functions
+
+XGL_RESULT XGLAPI xglCreateBufferView(
+    XGL_DEVICE                                  device,
+    const XGL_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
+    XGL_BUFFER_VIEW*                            pView);
 
 // Image functions
 
@@ -2278,11 +2350,11 @@ XGL_VOID XGLAPI xglAttachImageViewDescriptors(
     XGL_UINT                                    slotCount,
     const XGL_IMAGE_VIEW_ATTACH_INFO*           pImageViews);
 
-XGL_VOID XGLAPI xglAttachMemoryViewDescriptors(
+XGL_VOID XGLAPI xglAttachBufferViewDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemViews);
+    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferViews);
 
 XGL_VOID XGLAPI xglAttachNestedDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
@@ -2363,29 +2435,29 @@ XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    slotOffset);
 
-XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(
+XGL_VOID XGLAPI xglCmdBindDynamicBufferView(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView);
+    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferView);
 
 // IMG CHANGE BEGIN - support for vertex input description
-XGL_VOID XGLAPI xglCmdBindVertexData(
+XGL_VOID XGLAPI xglCmdBindVertexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT                                    binding);
 // IMG CHANGE END
 
-XGL_VOID XGLAPI xglCmdBindIndexData(
+XGL_VOID XGLAPI xglCmdBindIndexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_INDEX_TYPE                              indexType);
 
-XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(
+XGL_VOID XGLAPI xglCmdPrepareBufferRegions(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
-    const XGL_MEMORY_STATE_TRANSITION*          pStateTransitions);
+    const XGL_BUFFER_STATE_TRANSITION*          pStateTransitions);
 
 XGL_VOID XGLAPI xglCmdPrepareImages(
     XGL_CMD_BUFFER                              cmdBuffer,
@@ -2409,14 +2481,14 @@ XGL_VOID XGLAPI xglCmdDrawIndexed(
 
 XGL_VOID XGLAPI xglCmdDrawIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT32                                  count,
     XGL_UINT32                                  stride);
 
 XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT32                                  count,
     XGL_UINT32                                  stride);
@@ -2429,15 +2501,15 @@ XGL_VOID XGLAPI xglCmdDispatch(
 
 XGL_VOID XGLAPI xglCmdDispatchIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              mem,
+    XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset);
 
-XGL_VOID XGLAPI xglCmdCopyMemory(
+XGL_VOID XGLAPI xglCmdCopyBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              srcMem,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  srcBuffer,
+    XGL_BUFFER                                  destBuffer,
     XGL_UINT                                    regionCount,
-    const XGL_MEMORY_COPY*                      pRegions);
+    const XGL_BUFFER_COPY*                      pRegions);
 
 XGL_VOID XGLAPI xglCmdCopyImage(
     XGL_CMD_BUFFER                              cmdBuffer,
@@ -2446,19 +2518,19 @@ XGL_VOID XGLAPI xglCmdCopyImage(
     XGL_UINT                                    regionCount,
     const XGL_IMAGE_COPY*                       pRegions);
 
-XGL_VOID XGLAPI xglCmdCopyMemoryToImage(
+XGL_VOID XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              srcMem,
+    XGL_BUFFER                                  srcBuffer,
     XGL_IMAGE                                   destImage,
     XGL_UINT                                    regionCount,
-    const XGL_MEMORY_IMAGE_COPY*                pRegions);
+    const XGL_BUFFER_IMAGE_COPY*                pRegions);
 
-XGL_VOID XGLAPI xglCmdCopyImageToMemory(
+XGL_VOID XGLAPI xglCmdCopyImageToBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_UINT                                    regionCount,
-    const XGL_MEMORY_IMAGE_COPY*                pRegions);
+    const XGL_BUFFER_IMAGE_COPY*                pRegions);
 
 XGL_VOID XGLAPI xglCmdCloneImageData(
     XGL_CMD_BUFFER                              cmdBuffer,
@@ -2467,16 +2539,16 @@ XGL_VOID XGLAPI xglCmdCloneImageData(
     XGL_IMAGE                                   destImage,
     XGL_IMAGE_STATE                             destImageState);
 
-XGL_VOID XGLAPI xglCmdUpdateMemory(
+XGL_VOID XGLAPI xglCmdUpdateBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset,
     XGL_GPU_SIZE                                dataSize,
     const XGL_UINT32*                           pData);
 
-XGL_VOID XGLAPI xglCmdFillMemory(
+XGL_VOID XGLAPI xglCmdFillBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset,
     XGL_GPU_SIZE                                fillSize,
     XGL_UINT32                                  data);
@@ -2518,9 +2590,9 @@ XGL_VOID XGLAPI xglCmdResetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event);
 
-XGL_VOID XGLAPI xglCmdMemoryAtomic(
+XGL_VOID XGLAPI xglCmdBufferAtomic(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset,
     XGL_UINT64                                  srcData,
     XGL_ATOMIC_OP                               atomicOp);
@@ -2545,7 +2617,7 @@ XGL_VOID XGLAPI xglCmdResetQueryPool(
 XGL_VOID XGLAPI xglCmdWriteTimestamp(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_TIMESTAMP_TYPE                          timestampType,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset);
 
 XGL_VOID XGLAPI xglCmdInitAtomicCounters(
@@ -2560,7 +2632,7 @@ XGL_VOID XGLAPI xglCmdLoadAtomicCounters(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
     XGL_UINT                                    counterCount,
-    XGL_GPU_MEMORY                              srcMem,
+    XGL_BUFFER                                  srcBuffer,
     XGL_GPU_SIZE                                srcOffset);
 
 XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
@@ -2568,7 +2640,7 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
     XGL_UINT                                    counterCount,
-    XGL_GPU_MEMORY                              destMem,
+    XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset);
 
 XGL_RESULT XGLAPI xglCreateFramebuffer(
@@ -2619,11 +2691,11 @@ XGL_RESULT XGLAPI xglCreateRenderPass(
     feedback is part of the pipeline, transform feedback binding would be available
     through a new API bind point:
 
-        xglCmdBindTransformFeedbackMemoryView(
+        xglCmdBindTransformFeedbackBufferView(
                 XGL_CMD_BUFFER                              cmdBuffer,
                 XGL_PIPELINE_BIND_POINT                     pipelineBindPoint, // = GRAPHICS
                 XGL_UINT                                    index,
-                const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView);
+                const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferView);
 
     2) "Bindless" + support for non-bindless hardware.
 

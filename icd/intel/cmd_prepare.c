@@ -27,7 +27,7 @@
 
 #include "genhw/genhw.h"
 #include "img.h"
-#include "mem.h"
+#include "buf.h"
 #include "cmd_priv.h"
 
 enum {
@@ -38,36 +38,36 @@ enum {
     SAMPLER_CACHE    = 1 << 4,
 };
 
-static uint32_t mem_get_state_caches(const struct intel_mem *mem,
-                                     XGL_MEMORY_STATE state)
+static uint32_t buf_get_state_caches(const struct intel_buf *buf,
+                                     XGL_BUFFER_STATE state)
 {
     uint32_t caches;
 
     switch (state) {
-    case XGL_MEMORY_STATE_DATA_TRANSFER:
+    case XGL_BUFFER_STATE_DATA_TRANSFER:
         /*
          * because of meta, this may imply GPU render/sample in addition to
          * CPU read/write
          */
         caches = MEM_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
-    case XGL_MEMORY_STATE_INDEX_DATA:
-    case XGL_MEMORY_STATE_INDIRECT_ARG:
-    case XGL_MEMORY_STATE_WRITE_TIMESTAMP:
-    case XGL_MEMORY_STATE_QUEUE_ATOMIC:
+    case XGL_BUFFER_STATE_INDEX_DATA:
+    case XGL_BUFFER_STATE_INDIRECT_ARG:
+    case XGL_BUFFER_STATE_WRITE_TIMESTAMP:
+    case XGL_BUFFER_STATE_QUEUE_ATOMIC:
         caches = MEM_CACHE;
         break;
-    case XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_ONLY:
-    case XGL_MEMORY_STATE_COMPUTE_SHADER_READ_ONLY:
-    case XGL_MEMORY_STATE_MULTI_SHADER_READ_ONLY:
+    case XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_ONLY:
+    case XGL_BUFFER_STATE_COMPUTE_SHADER_READ_ONLY:
+    case XGL_BUFFER_STATE_MULTI_SHADER_READ_ONLY:
         caches = DATA_READ_CACHE;
         break;
-    case XGL_MEMORY_STATE_GRAPHICS_SHADER_WRITE_ONLY:
-    case XGL_MEMORY_STATE_COMPUTE_SHADER_WRITE_ONLY:
+    case XGL_BUFFER_STATE_GRAPHICS_SHADER_WRITE_ONLY:
+    case XGL_BUFFER_STATE_COMPUTE_SHADER_WRITE_ONLY:
         caches = DATA_WRITE_CACHE;
         break;
-    case XGL_MEMORY_STATE_GRAPHICS_SHADER_READ_WRITE:
-    case XGL_MEMORY_STATE_COMPUTE_SHADER_READ_WRITE:
+    case XGL_BUFFER_STATE_GRAPHICS_SHADER_READ_WRITE:
+    case XGL_BUFFER_STATE_COMPUTE_SHADER_READ_WRITE:
         caches = DATA_READ_CACHE | DATA_WRITE_CACHE;
         break;
     default:
@@ -85,7 +85,7 @@ static uint32_t img_get_state_caches(const struct intel_img *img,
 
     switch (state) {
     case XGL_IMAGE_STATE_DATA_TRANSFER:
-        /* as in XGL_MEMORY_STATE_DATA_TRANSFER */
+        /* as in XGL_BUFFER_STATE_DATA_TRANSFER */
         caches = MEM_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
     case XGL_IMAGE_STATE_GRAPHICS_SHADER_WRITE_ONLY:
@@ -163,22 +163,22 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
     return flags;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdPrepareBufferRegions(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
-    const XGL_MEMORY_STATE_TRANSITION*          pStateTransitions)
+    const XGL_BUFFER_STATE_TRANSITION*          pStateTransitions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     uint32_t flush_flags = 0;
     XGL_UINT i;
 
     for (i = 0; i < transitionCount; i++) {
-        const XGL_MEMORY_STATE_TRANSITION *trans = &pStateTransitions[i];
-        struct intel_mem *mem = intel_mem(trans->mem);
+        const XGL_BUFFER_STATE_TRANSITION *trans = &pStateTransitions[i];
+        struct intel_buf *buf = intel_buf(trans->buffer);
 
         flush_flags |= cmd_get_flush_flags(cmd,
-                mem_get_state_caches(mem, trans->oldState),
-                mem_get_state_caches(mem, trans->newState),
+                buf_get_state_caches(buf, trans->oldState),
+                buf_get_state_caches(buf, trans->newState),
                 false);
     }
 
