@@ -92,7 +92,11 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-    def _generate_dispatch_entrypoints(self, qual=""):
+class LoaderSubcommand(Subcommand):
+    def generate_header(self):
+        return "#include \"loader.h\""
+
+    def _generate_loader_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
 
@@ -102,7 +106,7 @@ class Subcommand(object):
                 continue
             decl = proto.c_func(prefix="xgl", attr="XGLAPI")
             stmt = "(*disp)->%s" % proto.c_call()
-            if proto.name == "CreateDevice" and qual == "LOADER_EXPORT ":
+            if proto.name == "CreateDevice":
                 funcs.append("%s%s\n"
                          "{\n"
                          "    loader_activate_layers(%s, %s);\n"
@@ -125,7 +129,7 @@ class Subcommand(object):
                          "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
                          "    return res;\n"
                          "}" % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name))
-            elif proto.name == "GetMultiGpuCompatibility" and qual == "LOADER_EXPORT ":
+            elif proto.name == "GetMultiGpuCompatibility":
                 funcs.append("%s%s\n"
                          "{\n"
                          "    XGL_BASE_LAYER_OBJECT* wrapped_obj0 = (XGL_BASE_LAYER_OBJECT*)%s;\n"
@@ -137,7 +141,7 @@ class Subcommand(object):
                          "    return %s;\n"
                          "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
                                 proto.params[0].name, proto.params[1].name, stmt))
-            elif proto.params[0].ty != "XGL_PHYSICAL_GPU" or qual != "LOADER_EXPORT ":
+            elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                 if proto.ret != "XGL_VOID":
                     stmt = "return " + stmt
                 funcs.append("%s%s\n"
@@ -160,12 +164,8 @@ class Subcommand(object):
 
         return "\n\n".join(funcs)
 
-class LoaderSubcommand(Subcommand):
-    def generate_header(self):
-        return "#include \"loader.h\""
-
     def generate_body(self):
-        body = [self._generate_dispatch_entrypoints("LOADER_EXPORT")]
+        body = [self._generate_loader_dispatch_entrypoints("LOADER_EXPORT")]
 
         return "\n\n".join(body)
 
@@ -173,8 +173,31 @@ class IcdDispatchEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"icd.h\""
 
+    def _generate_icd_dispatch_entrypoints(self, qual=""):
+        if qual:
+            qual += " "
+
+        funcs = []
+        for proto in self.protos:
+            if not xgl.is_dispatchable(proto):
+                continue
+
+            decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+            stmt = "(*disp)->%s" % proto.c_call()
+            if proto.ret != "XGL_VOID":
+                stmt = "return " + stmt
+
+            funcs.append("%s%s\n"
+                     "{\n"
+                     "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
+                     "        (const XGL_LAYER_DISPATCH_TABLE * const *) %s;\n"
+                     "    %s;\n"
+                     "}" % (qual, decl, proto.params[0].name, stmt))
+
+        return "\n\n".join(funcs)
+
     def generate_body(self):
-        return self._generate_dispatch_entrypoints("ICD_EXPORT")
+        return self._generate_icd_dispatch_entrypoints("ICD_EXPORT")
 
 class IcdDispatchDummyImplSubcommand(Subcommand):
     def run(self):
