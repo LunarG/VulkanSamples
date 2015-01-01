@@ -162,51 +162,6 @@ class Subcommand(object):
 
         return "\n\n".join(funcs)
 
-    def _generate_layer_gpa_function(self, prefix="xgl"):
-        func_body = []
-        func_body.append("XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)\n"
-                         "{\n"
-                         "    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
-                         "    if (gpu == NULL)\n"
-                         "        return NULL;\n"
-                         "    pCurObj = gpuw;\n"
-                         "    pthread_once(&tabOnce, initLayerTable);\n\n"
-                         '    if (!strncmp("xglGetProcAddr", funcName, sizeof("xglGetProcAddr")))\n'
-                         '        return xglGetProcAddr;')
-        for name in xgl.icd_dispatch_table:
-            if name == "GetProcAddr":
-                continue
-            if name == "InitAndEnumerateGpus":
-                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
-                             '        return nextTable.%s;' % (prefix, name, prefix, name, name))
-            else:
-                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
-                             '        return %s%s;' % (prefix, name, prefix, name, prefix, name))
-
-        func_body.append("    else {\n"
-                         "        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
-                         "        if (gpuw->pGPA == NULL)\n"
-                         "            return NULL;\n"
-                         "        return gpuw->pGPA(gpuw->nextObject, funcName);\n"
-                         "    }\n"
-                         "}\n")
-        return "\n".join(func_body)
-
-    def _generate_layer_dispatch_table(self, prefix='xgl'):
-        func_body = []
-        func_body.append('static void initLayerTable()\n'
-                         '{\n'
-                         '    GetProcAddrType fpNextGPA;\n'
-                         '    fpNextGPA = pCurObj->pGPA;\n'
-                         '    assert(fpNextGPA);\n');
-
-        for name in xgl.icd_dispatch_table:
-            func_body.append('    %sType fp%s = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "%s%s");\n'
-                             '    nextTable.%s = fp%s;' % (name, name, prefix, name, name, name))
-
-        func_body.append("}\n")
-        return "\n".join(func_body)
-
 class LoaderSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
@@ -215,13 +170,6 @@ class LoaderSubcommand(Subcommand):
         body = [self._generate_dispatch_entrypoints("LOADER_EXPORT")]
 
         return "\n\n".join(body)
-
-class LayerDispatchSubcommand(Subcommand):
-    def generate_header(self):
-        return '#include "layer_wrappers.h"'
-
-    def generate_body(self):
-        return self._generate_layer_dispatch_table()
 
 class IcdDispatchEntrypointsSubcommand(Subcommand):
     def generate_header(self):
@@ -302,7 +250,6 @@ const XGL_LAYER_DISPATCH_TABLE %s_debug_dispatch_table = {
 def main():
     subcommands = {
             "loader": LoaderSubcommand,
-            "layer-dispatch" : LayerDispatchSubcommand,
             "icd-dispatch-entrypoints": IcdDispatchEntrypointsSubcommand,
             "icd-dispatch-dummy-impl": IcdDispatchDummyImplSubcommand,
     }
