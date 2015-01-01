@@ -32,12 +32,10 @@ import xgl
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
-        self.protos = ()
-        self.headers = ()
+        self.headers = xgl.headers
+        self.protos = xgl.protos
 
     def run(self):
-        self.protos = xgl.core + xgl.ext_wsi_x11
-        self.headers = xgl.core_headers + xgl.ext_wsi_x11_headers
         print(self.generate())
 
     def generate(self):
