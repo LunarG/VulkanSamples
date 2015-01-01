@@ -1217,7 +1217,7 @@ class Subcommand(object):
         for proto in self.protos:
             if 'Wsi' not in proto.name and 'Dbg' not in proto.name:
                 if 'UnmapMemory' == proto.name:
-                    proto.params = proto.params + (xgl.Param("XGL_VOID*", "pData"),)
+                    proto.params.append(xgl.Param("XGL_VOID*", "pData"))
                 if_body.append('typedef struct struct_xgl%s {' % proto.name)
                 if_body.append('    glv_trace_packet_header* header;')
                 for p in proto.params:
