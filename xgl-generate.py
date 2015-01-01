@@ -94,7 +94,7 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-    def _generate_dispatch_entrypoints(self, qual="", unwrap=False):
+    def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
 
@@ -216,13 +216,6 @@ class LoaderSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
-class LayerFuncsSubcommand(Subcommand):
-    def generate_header(self):
-        return '#include <xglLayer.h>\n#include "loader.h"'
-
-    def generate_body(self):
-        return self._generate_dispatch_entrypoints("static", True)
-
 class LayerDispatchSubcommand(Subcommand):
     def generate_header(self):
         return '#include "layer_wrappers.h"'
@@ -309,7 +302,6 @@ const XGL_LAYER_DISPATCH_TABLE %s_debug_dispatch_table = {
 def main():
     subcommands = {
             "loader": LoaderSubcommand,
-            "layer-funcs" : LayerFuncsSubcommand,
             "layer-dispatch" : LayerDispatchSubcommand,
             "icd-dispatch-entrypoints": IcdDispatchEntrypointsSubcommand,
             "icd-dispatch-dummy-impl": IcdDispatchDummyImplSubcommand,
