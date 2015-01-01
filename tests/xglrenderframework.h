@@ -110,7 +110,7 @@ class XglCommandBufferObj : xgl_testing::CmdBuffer
 public:
     XglCommandBufferObj(XglDevice *device);
     XGL_CMD_BUFFER GetBufferHandle();
-    XGL_RESULT BeginCommandBuffer(XGL_FLAGS flags);
+    XGL_RESULT BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pInfo);
     XGL_RESULT EndCommandBuffer();
     void PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr);
     void AddRenderTarget(XglImage *renderTarget);

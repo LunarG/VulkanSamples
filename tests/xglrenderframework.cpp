@@ -571,7 +571,12 @@ void XglConstantBufferObj::SetMemoryState(XGL_MEMORY_STATE newState)
     }
 
     // open the command buffer
-    err = m_commandBuffer->BeginCommandBuffer(0);
+    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
+        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+        .pNext = NULL,
+        .flags = 0,
+    };
+    err = m_commandBuffer->BeginCommandBuffer(&cmd_buf_info);
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_STATE_TRANSITION transition =
@@ -956,7 +961,7 @@ XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
     return obj();
 }
 
-XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_FLAGS flags)
+XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pInfo)
 {
     begin(flags);
     return XGL_SUCCESS;
