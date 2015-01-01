@@ -1542,11 +1542,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_FLAGS flags)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
     // This implicitly resets the Cmd Buffer so clear memory references
     freeCBBindings(cmdBuffer);
-    XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, flags);
+    XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     return result;
 }
 

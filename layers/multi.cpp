@@ -184,12 +184,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2CreateCommandBuffer(XGL_DEVICE device, 
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2BeginCommandBuffer( XGL_CMD_BUFFER cmdBuffer, XGL_FLAGS flags)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2BeginCommandBuffer( XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
     XGL_LAYER_DISPATCH_TABLE* pTable = tableMap2[cmdBuffer];
 
     printf("At start of multi2 layer xglBeginCommandBuffer()\n");
-    XGL_RESULT result = pTable->BeginCommandBuffer(cmdBuffer, flags);
+    XGL_RESULT result = pTable->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     printf("Completed multi2 layer xglBeginCommandBuffer()\n");
     return result;
 
