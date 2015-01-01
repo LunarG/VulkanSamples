@@ -94,20 +94,6 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-    def _generate_icd_dispatch_table(self):
-        proto_map = {}
-        for proto in self.protos:
-            proto_map[proto.name] = proto
-
-        entries = []
-        for name in xgl.icd_dispatch_table:
-            proto = proto_map[name]
-            entries.append(proto.c_typedef(attr="XGLAPI"))
-
-        return """XGL_LAYER_DISPATCH_TABLE {
-    %s;
-};""" % ";\n    ".join(entries)
-
     def _generate_dispatch_entrypoints(self, qual="", unwrap=False):
         if qual:
             qual += " "
@@ -244,10 +230,6 @@ class LayerDispatchSubcommand(Subcommand):
     def generate_body(self):
         return self._generate_layer_dispatch_table()
 
-class IcdDispatchTableSubcommand(Subcommand):
-    def generate_body(self):
-        return self._generate_icd_dispatch_table()
-
 class IcdDispatchEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"icd.h\""
@@ -329,7 +311,6 @@ def main():
             "loader": LoaderSubcommand,
             "layer-funcs" : LayerFuncsSubcommand,
             "layer-dispatch" : LayerDispatchSubcommand,
-            "icd-dispatch-table": IcdDispatchTableSubcommand,
             "icd-dispatch-entrypoints": IcdDispatchEntrypointsSubcommand,
             "icd-dispatch-dummy-impl": IcdDispatchDummyImplSubcommand,
     }
