@@ -280,11 +280,15 @@ static void demo_draw_build_cmd(struct demo *demo)
     const XGL_FLOAT clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
     const XGL_FLOAT clear_depth = 1.0f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
+    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
+        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+        .pNext = NULL,
+        .flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+            XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+    };
     XGL_RESULT err;
 
-    err = xglBeginCommandBuffer(demo->cmd,
-            XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
-            XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT);
+    err = xglBeginCommandBuffer(demo->cmd, &cmd_buf_info);
     assert(!err);
 
     xglCmdBindPipeline(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
