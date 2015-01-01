@@ -551,7 +551,7 @@ class Subcommand(object):
             for ext_name in extensions:
                 func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
                                  '        return %s;' % (ext_name, ext_name, ext_name))
-        for name in xgl.icd_dispatch_table:
+        for name in xgl.proto_names:
             if name == "GetProcAddr":
                 continue
             if name == "InitAndEnumerateGpus":
@@ -578,7 +578,7 @@ class Subcommand(object):
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n');
 
-        for name in xgl.icd_dispatch_table:
+        for name in xgl.proto_names:
             func_body.append('    %sType fp%s = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "%s%s");\n'
                              '    nextTable.%s = fp%s;' % (name, name, prefix, name, name, name))
 
