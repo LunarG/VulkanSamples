@@ -76,9 +76,9 @@ static struct icd_drm_device *find_dev(struct icd_drm_device *devices,
     return dev;
 }
 
-struct icd_drm_device *probe_syspath(struct icd_drm_device *devices,
-                                     struct udev *udev, const char *syspath,
-                                     int vendor_id_match)
+static struct icd_drm_device *probe_syspath(struct icd_drm_device *devices,
+                                            struct udev *udev, const char *syspath,
+                                            int vendor_id_match)
 {
     struct udev_device *minor, *parent;
     enum icd_drm_minor_type type;
