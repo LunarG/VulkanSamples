@@ -164,6 +164,10 @@ static const XGL_LAYER_DISPATCH_TABLE intel_normal_dispatch_table = {
     .DbgSetDeviceOption = intelDbgSetDeviceOption,
     .CmdDbgMarkerBegin = intelCmdDbgMarkerBegin,
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,
+    .WsiX11AssociateConnection = intelWsiX11AssociateConnection,
+    .WsiX11GetMSC = intelWsiX11GetMSC,
+    .WsiX11CreatePresentableImage = intelWsiX11CreatePresentableImage,
+    .WsiX11QueuePresent = intelWsiX11QueuePresent,
 };
 
 static const XGL_LAYER_DISPATCH_TABLE intel_debug_dispatch_table = {
