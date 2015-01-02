@@ -270,7 +270,7 @@ sampler_init(struct intel_sampler *sampler,
             mip_filter << 20 |
             lod_bias << 1;
 
-      if (info->maxAnisotropy) {
+      if (info->maxAnisotropy > 1) {
          dw0 |= GEN6_MAPFILTER_ANISOTROPIC << 17 |
                 GEN6_MAPFILTER_ANISOTROPIC << 14 |
                 1;
@@ -315,7 +315,7 @@ sampler_init(struct intel_sampler *sampler,
 
       dw0 |= translate_compare_func(info->compareFunc);
 
-      if (info->maxAnisotropy) {
+      if (info->maxAnisotropy > 1) {
          dw0 |= GEN6_MAPFILTER_ANISOTROPIC << 17 |
                 GEN6_MAPFILTER_ANISOTROPIC << 14;
       }
