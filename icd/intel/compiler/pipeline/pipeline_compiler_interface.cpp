@@ -393,6 +393,8 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             }
             pipe_shader->inputs_read = varyings_read;
 
+            pipe_shader->generic_input_start = VARYING_SLOT_VAR0 - VARYING_SLOT_CLIP_DIST0;
+
             pipe_shader->reads_user_clip = data->urb_setup[VARYING_SLOT_CLIP_DIST0] >= 0 ||
                                            data->urb_setup[VARYING_SLOT_CLIP_DIST1] >= 0;
 

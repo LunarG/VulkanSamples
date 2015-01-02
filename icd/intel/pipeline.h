@@ -105,6 +105,7 @@ struct intel_pipeline_shader {
     uint64_t inputs_read;
     uint64_t outputs_written;
     XGL_UINT outputs_offset;
+    XGL_UINT generic_input_start;
 
     XGL_BOOL enable_user_clip;
     XGL_BOOL reads_user_clip;

@@ -607,13 +607,30 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
     XGL_INT fs_in = 0;
     XGL_INT vs_out = - (vue_offset * 2 - vs->outputs_offset);
     for (i=0; i < 64; i++) {
-        if (fs->inputs_read & (1L << i)) {
+        bool vsWrites = vs->outputs_written & (1L << i);
+        bool fsReads  = fs->inputs_read     & (1L << i);
+
+        if (fsReads) {
             assert(vs_out >= 0);
             assert(fs_in < fs->in_count);
             vs_slot[fs_in] = vs_out;
+
+            if (!vsWrites) {
+                // If the vertex shader did not write this input, we cannot
+                // program the SBE to read it.  Our choices are to allow it to
+                // read junk from a GRF, or get zero.  We're choosing zero.
+                if (i >= fs->generic_input_start) {
+                    vs_slot[fs_in] = GEN7_SBE_ATTR_CONST_0000 |
+                                     GEN7_SBE_ATTR_OVERRIDE_X |
+                                     GEN7_SBE_ATTR_OVERRIDE_Y |
+                                     GEN7_SBE_ATTR_OVERRIDE_Z |
+                                     GEN7_SBE_ATTR_OVERRIDE_W;
+                }
+            }
+
             fs_in += 1;
         }
-        if (vs->outputs_written & (1L << i)) {
+        if (vsWrites) {
             vs_out += 1;
         }
     }
