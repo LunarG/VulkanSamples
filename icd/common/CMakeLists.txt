@@ -5,6 +5,7 @@ add_custom_command(OUTPUT icd-dispatch-entrypoints.c
 
 set(ICD_SOURCES
 	icd.c
+	icd-alloc.c
 	icd-dispatch-entrypoints.c
 	icd-format.c
 	icd-utils.c)

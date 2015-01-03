@@ -38,7 +38,7 @@
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
-#include "icd.h"
+#include "icd-alloc.h"
 #include "winsys.h"
 
 struct intel_winsys {

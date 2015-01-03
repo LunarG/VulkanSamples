@@ -92,7 +92,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
 
     intel_debug_init();
 
-    ret = icd_set_allocator(pAllocCb);
+    ret = icd_allocator_init(pAllocCb);
     if (ret != XGL_SUCCESS)
         return ret;
 

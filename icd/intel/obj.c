@@ -251,7 +251,7 @@ struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
 
     memset(dbg, 0, dbg_size);
 
-    dbg->alloc_id = icd_get_allocator_id();
+    dbg->alloc_id = icd_allocator_get_id();
     dbg->type = type;
     dbg->dev = dev;
 

@@ -34,7 +34,6 @@
 #include <xglDbg.h>
 #include <xglLayer.h>
 
-
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define ICD_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -69,21 +68,5 @@ void icd_log(XGL_DBG_MSG_TYPE msg_type,
              const char *format, ...);
 
 void icd_clear_msg_callbacks(void);
-
-XGL_RESULT icd_set_allocator(const XGL_ALLOC_CALLBACKS *alloc_cb);
-int icd_get_allocator_id(void);
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void *icd_alloc(XGL_SIZE size, XGL_SIZE alignment,
-                XGL_SYSTEM_ALLOC_TYPE type);
-
-void icd_free(void *mem);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ICD_H */

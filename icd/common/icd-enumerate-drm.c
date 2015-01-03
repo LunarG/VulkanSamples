@@ -30,6 +30,7 @@
 #include <string.h>
 #include <libudev.h>
 
+#include "icd-alloc.h"
 #include "icd-utils.h"
 #include "icd-enumerate-drm.h"
 

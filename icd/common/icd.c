@@ -25,7 +25,6 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#define _ISOC11_SOURCE /* for aligned_alloc */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -36,6 +35,7 @@
 #include <xgl.h>
 #include <xglDbg.h>
 
+#include "icd-utils.h"
 #include "icd.h"
 
 struct icd_msg_callback {
@@ -51,25 +51,9 @@ struct icd {
     bool debug_echo_enable;
     bool break_on_error;
     bool break_on_warning;
-
-    XGL_ALLOC_CALLBACKS alloc_callbacks;
-    int init_count;
 };
 
-static XGL_VOID *default_alloc(XGL_VOID *user_data,
-                               XGL_SIZE size,
-                               XGL_SIZE alignment,
-                               XGL_SYSTEM_ALLOC_TYPE allocType);
-
-static XGL_VOID default_free(XGL_VOID *user_data,
-                             XGL_VOID *mem);
-
-static struct icd icd = {
-    .alloc_callbacks = {
-        .pfnAlloc = default_alloc,
-        .pfnFree = default_free,
-    }
-};
+static struct icd icd;
 
 void icd_msg(XGL_DBG_MSG_TYPE msg_type,
              XGL_VALIDATION_LEVEL validation_level,
@@ -218,81 +202,4 @@ XGL_RESULT XGLAPI icdDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZ
     }
 
     return res;
-}
-
-XGL_RESULT icd_set_allocator(const XGL_ALLOC_CALLBACKS *alloc_cb)
-{
-    if (icd.init_count) {
-        const XGL_ALLOC_CALLBACKS default_cb = {
-            NULL, default_alloc, default_free
-        };
-
-        if (!alloc_cb)
-            alloc_cb = &default_cb;
-
-        /*
-         * The spec says: Changing the callbacks on subsequent calls to
-         * xglInitAndEnumerateGpus() causes it to fail with
-         * XGL_ERROR_INVALID_POINTER error.
-         */
-        return (memcmp(&icd.alloc_callbacks, alloc_cb, sizeof(*alloc_cb))) ?
-            XGL_ERROR_INVALID_POINTER : XGL_SUCCESS;
-    }
-
-    if (alloc_cb)
-        icd.alloc_callbacks = *alloc_cb;
-
-    icd.init_count++;
-
-    return XGL_SUCCESS;
-}
-
-int icd_get_allocator_id(void)
-{
-    return icd.init_count;
-}
-
-void *icd_alloc(XGL_SIZE size, XGL_SIZE alignment,
-                XGL_SYSTEM_ALLOC_TYPE type)
-{
-    return icd.alloc_callbacks.pfnAlloc(icd.alloc_callbacks.pUserData,
-            size, alignment, type);
-}
-
-void icd_free(void *mem)
-{
-    icd.alloc_callbacks.pfnFree(icd.alloc_callbacks.pUserData, mem);
-}
-
-static bool is_power_of_two(XGL_SIZE v)
-{
-    return !(v & (v - 1));
-}
-
-static XGL_VOID *default_alloc(XGL_VOID *user_data,
-                               XGL_SIZE size,
-                               XGL_SIZE alignment,
-                               XGL_SYSTEM_ALLOC_TYPE allocType)
-{
-    if (alignment <= 1) {
-        return malloc(size);
-    } else if (is_power_of_two(alignment)) {
-        if (alignment < sizeof(void *)) {
-            assert(is_power_of_two(sizeof(void *)));
-            alignment = sizeof(void *);
-        }
-
-        size = (size + alignment - 1) & ~(alignment - 1);
-
-        return aligned_alloc(alignment, size);
-    }
-    else {
-        return NULL;
-    }
-}
-
-static XGL_VOID default_free(XGL_VOID *user_data,
-                             XGL_VOID *mem)
-{
-    free(mem);
 }

@@ -22,43 +22,26 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *   Chia-I Wu <olv@lunarg.com>
+ *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef INTEL_H
-#define INTEL_H
-
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
-
-#include <xgl.h>
-#include <xglDbg.h>
-#include <xglWsiX11Ext.h>
+#ifndef ICD_ALLOC_H
+#define ICD_ALLOC_H
 
 #include "icd.h"
-#include "icd-alloc.h"
-#include "icd-bil.h"
-#include "icd-format.h"
-#include "icd-utils.h"
 
-#define INTEL_API_VERSION XGL_MAKE_VERSION(0, 22, 0)
-#define INTEL_DRIVER_VERSION 0
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define INTEL_GEN(gen) ((int) ((gen) * 100))
+XGL_RESULT icd_allocator_init(const XGL_ALLOC_CALLBACKS *alloc_cb);
+uint32_t icd_allocator_get_id(void);
 
-#define INTEL_MAX_VERTEX_BINDING_COUNT 33
-#define INTEL_MAX_VERTEX_ELEMENT_COUNT (INTEL_MAX_VERTEX_BINDING_COUNT + 1)
+void *icd_alloc(size_t size, size_t alignment, XGL_SYSTEM_ALLOC_TYPE type);
+void icd_free(void *ptr);
 
-enum intel_debug_flags {
-    INTEL_DEBUG_BATCH       = 1 << 0,
+#ifdef __cplusplus
+}
+#endif
 
-    INTEL_DEBUG_NOHW        = 1 << 20,
-    INTEL_DEBUG_NOCACHE     = 1 << 21,
-};
-
-extern int intel_debug;
-
-#endif /* INTEL_H */
+#endif /* ICD_ALLOC_H */

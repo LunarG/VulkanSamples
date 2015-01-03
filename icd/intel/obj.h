@@ -34,7 +34,7 @@ struct intel_dev;
 struct intel_mem;
 
 struct intel_base_dbg {
-    int alloc_id;
+    uint32_t alloc_id;
     XGL_DBG_OBJECT_TYPE type;
 
     void *create_info;
