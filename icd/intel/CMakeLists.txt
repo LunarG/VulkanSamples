@@ -323,6 +323,10 @@ SET(STANDALONE_COMPILER_SOURCES
     ${COMPILER_SOURCES}
 )
 
+add_custom_command(OUTPUT intel_gpa.c
+    COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > intel_gpa.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+
 SET(SOURCES 
     cmd.c
     cmd_decode.c
@@ -331,9 +335,9 @@ SET(SOURCES
     cmd_prepare.c
     cmd_pipeline.c
     dev.c
-    dispatch.c
     dset.c
     intel.c
+    intel_gpa.c
     event.c
     fence.c
     format.c
