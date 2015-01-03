@@ -45,6 +45,8 @@ ICD_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(
         return xglDestroyDevice;
     else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
         return xglGetExtensionSupport;
+    else if (!strncmp("xglEnumerateLayers", pName, sizeof ("xglEnumerateLayers")))
+        return xglEnumerateLayers;
     else if (!strncmp("xglGetDeviceQueue", pName, sizeof ("xglGetDeviceQueue")))
         return xglGetDeviceQueue;
     else if (!strncmp("xglQueueSubmit", pName, sizeof ("xglQueueSubmit")))
