@@ -225,10 +225,45 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
     def generate_body(self):
         return self._generate_stubs()
 
+class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
+    def generate_header(self):
+        return "\n".join(["#include <string.h>", "#include \"icd.h\""])
+
+    def generate_body(self):
+        for proto in self.protos:
+            if proto.name == "GetProcAddr":
+                gpa_proto = proto
+
+        gpa_decl = self._generate_stub_decl(gpa_proto)
+        gpa_pname = gpa_proto.params[-1].name
+
+        lookups = []
+        for proto in self.protos:
+            lookups.append("if (!strcmp(%s, \"%s\"))" %
+                    (gpa_pname, proto.name))
+            lookups.append("    return (%s) %s%s;" %
+                    (gpa_proto.ret, self.prefix, proto.name))
+
+        body = []
+        body.append("%s %s" % (self.qual, gpa_decl))
+        body.append("{")
+        body.append("    if (!%s || %s[0] != 'x' || %s[1] != 'g' || %s[2] != 'l')" %
+                (gpa_pname, gpa_pname, gpa_pname, gpa_pname))
+        body.append("        return NULL;")
+        body.append("")
+        body.append("    %s += 3;" % gpa_pname)
+        body.append("    %s" % "\n    ".join(lookups))
+        body.append("")
+        body.append("    return NULL;")
+        body.append("}")
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "loader": LoaderSubcommand,
             "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
+            "icd-get-proc-addr": IcdGetProcAddrSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
