@@ -8,6 +8,7 @@ set(ICD_SOURCES
 	icd-alloc.c
 	icd-dispatch-entrypoints.c
 	icd-format.c
+	icd-log.c
 	icd-utils.c)
 
 set(ICD_REQUIRED_MODULES)

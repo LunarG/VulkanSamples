@@ -22,44 +22,33 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *   Chia-I Wu <olv@lunarg.com>
+ *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef INTEL_H
-#define INTEL_H
+#ifndef ICD_LOG_H
+#define ICD_LOG_H
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
-
-#include <xgl.h>
-#include <xglDbg.h>
-#include <xglWsiX11Ext.h>
-
-#include "icd.h"
-#include "icd-alloc.h"
-#include "icd-bil.h"
-#include "icd-format.h"
-#include "icd-log.h"
+#include <stdarg.h>
 #include "icd-utils.h"
+#include "icd.h"
 
-#define INTEL_API_VERSION XGL_MAKE_VERSION(0, 22, 0)
-#define INTEL_DRIVER_VERSION 0
+XGL_RESULT icd_logger_set_bool(XGL_DBG_GLOBAL_OPTION option, bool enable);
 
-#define INTEL_GEN(gen) ((int) ((gen) * 100))
+XGL_RESULT icd_logger_add_callback(XGL_DBG_MSG_CALLBACK_FUNCTION func,
+                                   void *user_data);
+XGL_RESULT icd_logger_remove_callback(XGL_DBG_MSG_CALLBACK_FUNCTION func);
+void icd_logger_clear_callbacks(void);
 
-#define INTEL_MAX_VERTEX_BINDING_COUNT 33
-#define INTEL_MAX_VERTEX_ELEMENT_COUNT (INTEL_MAX_VERTEX_BINDING_COUNT + 1)
+void icd_logv(XGL_DBG_MSG_TYPE msg_type,
+              XGL_VALIDATION_LEVEL validation_level,
+              XGL_BASE_OBJECT src_object,
+              size_t location, int32_t msg_code,
+              const char *format, va_list ap);
 
-enum intel_debug_flags {
-    INTEL_DEBUG_BATCH       = 1 << 0,
+void icd_log(XGL_DBG_MSG_TYPE msg_type,
+             XGL_VALIDATION_LEVEL validation_level,
+             XGL_BASE_OBJECT src_object,
+             size_t location, int32_t msg_code,
+             const char *format, ...);
 
-    INTEL_DEBUG_NOHW        = 1 << 20,
-    INTEL_DEBUG_NOCACHE     = 1 << 21,
-};
-
-extern int intel_debug;
-
-#endif /* INTEL_H */
+#endif /* ICD_LOG_H */

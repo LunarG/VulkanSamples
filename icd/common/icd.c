@@ -25,158 +25,17 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-
-#include <xgl.h>
-#include <xglDbg.h>
-
-#include "icd-utils.h"
+#include "icd-log.h"
 #include "icd.h"
-
-struct icd_msg_callback {
-    XGL_DBG_MSG_CALLBACK_FUNCTION func;
-    XGL_VOID *data;
-
-    struct icd_msg_callback *next;
-};
-
-struct icd {
-    struct icd_msg_callback *msg_callbacks;
-
-    bool debug_echo_enable;
-    bool break_on_error;
-    bool break_on_warning;
-};
-
-static struct icd icd;
-
-void icd_msg(XGL_DBG_MSG_TYPE msg_type,
-             XGL_VALIDATION_LEVEL validation_level,
-             XGL_BASE_OBJECT src_object,
-             XGL_SIZE location,
-             XGL_INT msg_code,
-             const char *msg)
-{
-    const struct icd_msg_callback *cb = icd.msg_callbacks;
-
-    if (icd.debug_echo_enable || !cb) {
-        fputs(msg, stderr);
-        fputc('\n', stderr);
-    }
-
-    while (cb) {
-        cb->func(msg_type, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0,
-                msg_code, msg, cb->data);
-        cb = cb->next;
-    }
-
-    switch (msg_type) {
-    case XGL_DBG_MSG_ERROR:
-        if (icd.break_on_error) {
-            exit(1);
-        }
-        /* fall through */
-    case XGL_DBG_MSG_WARNING:
-        if (icd.break_on_warning) {
-            exit(1);
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-void icd_vlog(XGL_DBG_MSG_TYPE msg_type,
-              XGL_VALIDATION_LEVEL validation_level,
-              XGL_BASE_OBJECT src_object,
-              XGL_SIZE location,
-              XGL_INT msg_code,
-              const char *format, va_list ap)
-{
-    char msg[256];
-    int ret;
-
-    ret = vsnprintf(msg, sizeof(msg), format, ap);
-    if (ret >= sizeof(msg) || ret < 0) {
-        msg[sizeof(msg) - 1] = '\0';
-    }
-
-    icd_msg(msg_type, validation_level, src_object, location, msg_code, msg);
-}
-
-void icd_log(XGL_DBG_MSG_TYPE msg_type,
-             XGL_VALIDATION_LEVEL validation_level,
-             XGL_BASE_OBJECT src_object,
-             XGL_SIZE location,
-             XGL_INT msg_code,
-             const char *format, ...)
-{
-    va_list ap;
-
-    va_start(ap, format);
-    icd_vlog(msg_type, validation_level, src_object,
-            location, msg_code, format, ap);
-    va_end(ap);
-}
-
-void icd_clear_msg_callbacks(void)
-{
-    struct icd_msg_callback *cb = icd.msg_callbacks;
-
-    while (cb) {
-        struct icd_msg_callback *next = cb->next;
-        free(cb);
-        cb = next;
-    }
-
-    icd.msg_callbacks = NULL;
-}
 
 XGL_RESULT XGLAPI icdDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
 {
-    struct icd_msg_callback *cb;
-
-    cb = malloc(sizeof(*cb));
-    if (!cb)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    cb->func = pfnMsgCallback;
-    cb->data = pUserData;
-
-    cb->next = icd.msg_callbacks;
-    icd.msg_callbacks = cb;
-
-    return XGL_SUCCESS;
+    return icd_logger_add_callback(pfnMsgCallback, pUserData);
 }
 
 XGL_RESULT XGLAPI icdDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    struct icd_msg_callback *cb = icd.msg_callbacks;
-
-    /*
-     * Find the first match (last registered).
-     *
-     * XXX What if the same callback function is registered more than once?
-     */
-    while (cb) {
-        if (cb->func == pfnMsgCallback) {
-            break;
-        }
-
-        cb = cb->next;
-    }
-
-    if (!cb)
-        return XGL_ERROR_INVALID_POINTER;
-
-    free(cb);
-
-    return XGL_SUCCESS;
+    return icd_logger_remove_callback(pfnMsgCallback);
 }
 
 XGL_RESULT XGLAPI icdDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
@@ -188,13 +47,9 @@ XGL_RESULT XGLAPI icdDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZ
 
     switch (dbgOption) {
     case XGL_DBG_OPTION_DEBUG_ECHO_ENABLE:
-        icd.debug_echo_enable = *((const bool *) pData);
-        break;
     case XGL_DBG_OPTION_BREAK_ON_ERROR:
-        icd.break_on_error = *((const bool *) pData);
-        break;
     case XGL_DBG_OPTION_BREAK_ON_WARNING:
-        icd.break_on_warning = *((const bool *) pData);
+        res = icd_logger_set_bool(dbgOption, *((const bool *) pData));
         break;
     default:
         res = XGL_ERROR_INVALID_VALUE;

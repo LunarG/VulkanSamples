@@ -28,8 +28,6 @@
 #ifndef ICD_H
 #define ICD_H
 
-#include <stdarg.h>
-
 #include <xgl.h>
 #include <xglDbg.h>
 #include <xglLayer.h>
@@ -45,28 +43,5 @@
 XGL_RESULT XGLAPI icdDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
 XGL_RESULT XGLAPI icdDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
 XGL_RESULT XGLAPI icdDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData);
-
-void icd_msg(XGL_DBG_MSG_TYPE msg_type,
-             XGL_VALIDATION_LEVEL validation_level,
-             XGL_BASE_OBJECT src_object,
-             XGL_SIZE location,
-             XGL_INT msg_code,
-             const char *msg);
-
-void icd_vlog(XGL_DBG_MSG_TYPE msg_type,
-              XGL_VALIDATION_LEVEL validation_level,
-              XGL_BASE_OBJECT src_object,
-              XGL_SIZE location,
-              XGL_INT msg_code,
-              const char *format, va_list ap);
-
-void icd_log(XGL_DBG_MSG_TYPE msg_type,
-             XGL_VALIDATION_LEVEL validation_level,
-             XGL_BASE_OBJECT src_object,
-             XGL_SIZE location,
-             XGL_INT msg_code,
-             const char *format, ...);
-
-void icd_clear_msg_callbacks(void);
 
 #endif /* ICD_H */

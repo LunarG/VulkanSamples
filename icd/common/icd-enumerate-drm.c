@@ -31,6 +31,7 @@
 #include <libudev.h>
 
 #include "icd-alloc.h"
+#include "icd-log.h"
 #include "icd-utils.h"
 #include "icd-enumerate-drm.h"
 
