@@ -29,7 +29,6 @@
 #include "icd-enumerate-drm.h"
 #include "gpu.h"
 #include "intel.h"
-#include "dispatch.h"
 
 static int intel_devid_override;
 int intel_debug = -1;

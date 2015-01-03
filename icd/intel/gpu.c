@@ -33,7 +33,6 @@
 
 #include "genhw/genhw.h"
 #include "kmd/winsys.h"
-#include "dispatch.h"
 #include "queue.h"
 #include "gpu.h"
 #include "wsi_x11.h"
@@ -126,9 +125,6 @@ static struct intel_gpu *gpu_create(int gen, int devid,
         return NULL;
 
     memset(gpu, 0, sizeof(*gpu));
-
-    /* debug layer is always enabled for intel_gpu */
-    gpu->dispatch = intel_dispatch_get(true);
 
     gpu->devid = devid;
 

@@ -25,25 +25,23 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#include "dispatch.h"
 #include "dev.h"
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
 
+static uint32_t intel_base_magic = 0x494e544c;
+
 /**
  * Return true if an (not so) arbitrary pointer casted to intel_base points to
- * a valid intel_base.  This assumes at least the first sizeof(void*) bytes of
- * the address are accessible, and they does not happen to be our magic
- * values.
+ * a valid intel_base.  This assumes at least the first
+ * sizeof(void*)+sizeof(uint32_t) bytes of the address are accessible, and
+ * they does not happen to be our magic values.
  */
-bool intel_base_is_valid(const struct intel_base *base)
+bool intel_base_is_valid(const struct intel_base *base,
+                         XGL_DBG_OBJECT_TYPE type)
 {
-    if (base->dispatch != intel_dispatch_get(true) &&
-        base->dispatch != intel_dispatch_get(false))
-        return false;
-
-    return !intel_gpu_is_valid((const struct intel_gpu *) base);
+    return (base->magic == intel_base_magic + type);
 }
 
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
@@ -295,6 +293,9 @@ struct intel_base *intel_base_create(struct intel_dev *dev,
     if (!base)
         return NULL;
 
+    memset(base, 0, obj_size);
+    base->magic = intel_base_magic + type;
+
     if (dev == NULL) {
         /*
          * dev is NULL when we are creating the base device object
@@ -303,9 +304,6 @@ struct intel_base *intel_base_create(struct intel_dev *dev,
         dev = (struct intel_dev *) base;
     }
 
-    memset(base, 0, obj_size);
-
-    base->dispatch = intel_dispatch_get(debug);
     if (debug) {
         base->dbg = intel_base_dbg_create(dev, type, create_info, dbg_size);
         if (!base->dbg) {

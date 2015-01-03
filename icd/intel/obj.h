@@ -51,7 +51,9 @@ struct intel_base_dbg {
 };
 
 struct intel_base {
-    const XGL_LAYER_DISPATCH_TABLE *dispatch;
+    /* the loader expects a "void *" at the beginning */
+    void *loader_data;
+    uint32_t magic;
 
     struct intel_base_dbg *dbg;
 
@@ -87,7 +89,8 @@ static inline void intel_obj_bind_mem(struct intel_obj *obj,
     obj->offset = offset;
 }
 
-bool intel_base_is_valid(const struct intel_base *base);
+bool intel_base_is_valid(const struct intel_base *base,
+                         XGL_DBG_OBJECT_TYPE type);
 
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
                                XGL_SIZE *size, XGL_VOID *data);

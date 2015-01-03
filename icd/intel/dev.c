@@ -27,7 +27,6 @@
 
 #include <stdarg.h>
 #include "kmd/winsys.h"
-#include "dispatch.h"
 #include "gpu.h"
 #include "pipeline.h"
 #include "queue.h"

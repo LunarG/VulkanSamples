@@ -55,7 +55,8 @@ struct intel_wsi_x11;
  * intel_gpu is the only object that does not inherit from intel_base.
  */
 struct intel_gpu {
-    const XGL_LAYER_DISPATCH_TABLE *dispatch;
+    /* the loader expects a "void *" at the beginning */
+    void *loader_data;
 
     struct intel_gpu *next;
 

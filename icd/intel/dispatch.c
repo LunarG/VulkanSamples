@@ -25,531 +25,254 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
+#include <string.h>
 #include "icd.h"
-#include "cmd.h"
-#include "dev.h"
-#include "dset.h"
-#include "event.h"
-#include "fence.h"
-#include "format.h"
-#include "img.h"
-#include "intel.h"
 #include "gpu.h"
-#include "mem.h"
-#include "obj.h"
-#include "pipeline.h"
-#include "query.h"
-#include "queue.h"
-#include "sampler.h"
-#include "shader.h"
-#include "state.h"
-#include "view.h"
-#include "wsi_x11.h"
-#include "dispatch.h"
-
-static const XGL_LAYER_DISPATCH_TABLE intel_normal_dispatch_table = {
-    .GetProcAddr = xglGetProcAddr,
-    .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
-    .GetGpuInfo = xglGetGpuInfo,
-    .CreateDevice = xglCreateDevice,
-    .DestroyDevice = xglDestroyDevice,
-    .GetExtensionSupport = xglGetExtensionSupport,
-    .EnumerateLayers = NULL,
-    .GetDeviceQueue = xglGetDeviceQueue,
-    .QueueSubmit = xglQueueSubmit,
-    .QueueSetGlobalMemReferences = xglQueueSetGlobalMemReferences,
-    .QueueWaitIdle = xglQueueWaitIdle,
-    .DeviceWaitIdle = xglDeviceWaitIdle,
-    .GetMemoryHeapCount = xglGetMemoryHeapCount,
-    .GetMemoryHeapInfo = xglGetMemoryHeapInfo,
-    .AllocMemory = xglAllocMemory,
-    .FreeMemory = xglFreeMemory,
-    .SetMemoryPriority = xglSetMemoryPriority,
-    .MapMemory = xglMapMemory,
-    .UnmapMemory = xglUnmapMemory,
-    .PinSystemMemory = xglPinSystemMemory,
-    .RemapVirtualMemoryPages = xglRemapVirtualMemoryPages,
-    .GetMultiGpuCompatibility = xglGetMultiGpuCompatibility,
-    .OpenSharedMemory = xglOpenSharedMemory,
-    .OpenSharedQueueSemaphore = xglOpenSharedQueueSemaphore,
-    .OpenPeerMemory = xglOpenPeerMemory,
-    .OpenPeerImage = xglOpenPeerImage,
-    .DestroyObject = xglDestroyObject,
-    .GetObjectInfo = xglGetObjectInfo,
-    .BindObjectMemory = xglBindObjectMemory,
-    .CreateFence = xglCreateFence,
-    .GetFenceStatus = xglGetFenceStatus,
-    .WaitForFences = xglWaitForFences,
-    .CreateQueueSemaphore = xglCreateQueueSemaphore,
-    .SignalQueueSemaphore = xglSignalQueueSemaphore,
-    .WaitQueueSemaphore = xglWaitQueueSemaphore,
-    .CreateEvent = xglCreateEvent,
-    .GetEventStatus = xglGetEventStatus,
-    .SetEvent = xglSetEvent,
-    .ResetEvent = xglResetEvent,
-    .CreateQueryPool = xglCreateQueryPool,
-    .GetQueryPoolResults = xglGetQueryPoolResults,
-    .GetFormatInfo = xglGetFormatInfo,
-    .CreateImage = xglCreateImage,
-    .GetImageSubresourceInfo = xglGetImageSubresourceInfo,
-    .CreateImageView = xglCreateImageView,
-    .CreateColorAttachmentView = xglCreateColorAttachmentView,
-    .CreateDepthStencilView = xglCreateDepthStencilView,
-    .CreateShader = xglCreateShader,
-    .CreateGraphicsPipeline = xglCreateGraphicsPipeline,
-    .CreateComputePipeline = xglCreateComputePipeline,
-    .StorePipeline = xglStorePipeline,
-    .LoadPipeline = xglLoadPipeline,
-    .CreatePipelineDelta = xglCreatePipelineDelta,
-    .CreateSampler = xglCreateSampler,
-    .CreateDescriptorSet = xglCreateDescriptorSet,
-    .BeginDescriptorSetUpdate = xglBeginDescriptorSetUpdate,
-    .EndDescriptorSetUpdate = xglEndDescriptorSetUpdate,
-    .AttachSamplerDescriptors = xglAttachSamplerDescriptors,
-    .AttachImageViewDescriptors = xglAttachImageViewDescriptors,
-    .AttachMemoryViewDescriptors = xglAttachMemoryViewDescriptors,
-    .AttachNestedDescriptors = xglAttachNestedDescriptors,
-    .ClearDescriptorSetSlots = xglClearDescriptorSetSlots,
-    .CreateViewportState = xglCreateViewportState,
-    .CreateRasterState = xglCreateRasterState,
-    .CreateMsaaState = xglCreateMsaaState,
-    .CreateColorBlendState = xglCreateColorBlendState,
-    .CreateDepthStencilState = xglCreateDepthStencilState,
-    .CreateCommandBuffer = xglCreateCommandBuffer,
-    .BeginCommandBuffer = xglBeginCommandBuffer,
-    .EndCommandBuffer = xglEndCommandBuffer,
-    .ResetCommandBuffer = xglResetCommandBuffer,
-    .CmdBindPipeline = xglCmdBindPipeline,
-    .CmdBindPipelineDelta = xglCmdBindPipelineDelta,
-    .CmdBindStateObject = xglCmdBindStateObject,
-    .CmdBindDescriptorSet = xglCmdBindDescriptorSet,
-    .CmdBindDynamicMemoryView = xglCmdBindDynamicMemoryView,
-    .CmdBindVertexData = xglCmdBindVertexData,
-    .CmdBindIndexData = xglCmdBindIndexData,
-    .CmdBindAttachments = xglCmdBindAttachments,
-    .CmdPrepareMemoryRegions = xglCmdPrepareMemoryRegions,
-    .CmdPrepareImages = xglCmdPrepareImages,
-    .CmdDraw = xglCmdDraw,
-    .CmdDrawIndexed = xglCmdDrawIndexed,
-    .CmdDrawIndirect = xglCmdDrawIndirect,
-    .CmdDrawIndexedIndirect = xglCmdDrawIndexedIndirect,
-    .CmdDispatch = xglCmdDispatch,
-    .CmdDispatchIndirect = xglCmdDispatchIndirect,
-    .CmdCopyMemory = xglCmdCopyMemory,
-    .CmdCopyImage = xglCmdCopyImage,
-    .CmdCopyMemoryToImage = xglCmdCopyMemoryToImage,
-    .CmdCopyImageToMemory = xglCmdCopyImageToMemory,
-    .CmdCloneImageData = xglCmdCloneImageData,
-    .CmdUpdateMemory = xglCmdUpdateMemory,
-    .CmdFillMemory = xglCmdFillMemory,
-    .CmdClearColorImage = xglCmdClearColorImage,
-    .CmdClearColorImageRaw = xglCmdClearColorImageRaw,
-    .CmdClearDepthStencil = xglCmdClearDepthStencil,
-    .CmdResolveImage = xglCmdResolveImage,
-    .CmdSetEvent = xglCmdSetEvent,
-    .CmdResetEvent = xglCmdResetEvent,
-    .CmdMemoryAtomic = xglCmdMemoryAtomic,
-    .CmdBeginQuery = xglCmdBeginQuery,
-    .CmdEndQuery = xglCmdEndQuery,
-    .CmdResetQueryPool = xglCmdResetQueryPool,
-    .CmdWriteTimestamp = xglCmdWriteTimestamp,
-    .CmdInitAtomicCounters = xglCmdInitAtomicCounters,
-    .CmdLoadAtomicCounters = xglCmdLoadAtomicCounters,
-    .CmdSaveAtomicCounters = xglCmdSaveAtomicCounters,
-    .DbgSetValidationLevel = xglDbgSetValidationLevel,
-    .DbgRegisterMsgCallback = xglDbgRegisterMsgCallback,
-    .DbgUnregisterMsgCallback = xglDbgUnregisterMsgCallback,
-    .DbgSetMessageFilter = xglDbgSetMessageFilter,
-    .DbgSetObjectTag = xglDbgSetObjectTag,
-    .DbgSetGlobalOption = xglDbgSetGlobalOption,
-    .DbgSetDeviceOption = xglDbgSetDeviceOption,
-    .CmdDbgMarkerBegin = xglCmdDbgMarkerBegin,
-    .CmdDbgMarkerEnd = xglCmdDbgMarkerEnd,
-    .WsiX11AssociateConnection = xglWsiX11AssociateConnection,
-    .WsiX11GetMSC = xglWsiX11GetMSC,
-    .WsiX11CreatePresentableImage = xglWsiX11CreatePresentableImage,
-    .WsiX11QueuePresent = xglWsiX11QueuePresent,
-};
-
-static const XGL_LAYER_DISPATCH_TABLE intel_debug_dispatch_table = {
-    .GetProcAddr = xglGetProcAddr,
-    .InitAndEnumerateGpus = xglInitAndEnumerateGpus,
-    .GetGpuInfo = xglGetGpuInfo,
-    .CreateDevice = xglCreateDevice,
-    .DestroyDevice = xglDestroyDevice,
-    .GetExtensionSupport = xglGetExtensionSupport,
-    .EnumerateLayers = NULL,
-    .GetDeviceQueue = xglGetDeviceQueue,
-    .QueueSubmit = xglQueueSubmit,
-    .QueueSetGlobalMemReferences = xglQueueSetGlobalMemReferences,
-    .QueueWaitIdle = xglQueueWaitIdle,
-    .DeviceWaitIdle = xglDeviceWaitIdle,
-    .GetMemoryHeapCount = xglGetMemoryHeapCount,
-    .GetMemoryHeapInfo = xglGetMemoryHeapInfo,
-    .AllocMemory = xglAllocMemory,
-    .FreeMemory = xglFreeMemory,
-    .SetMemoryPriority = xglSetMemoryPriority,
-    .MapMemory = xglMapMemory,
-    .UnmapMemory = xglUnmapMemory,
-    .PinSystemMemory = xglPinSystemMemory,
-    .RemapVirtualMemoryPages = xglRemapVirtualMemoryPages,
-    .GetMultiGpuCompatibility = xglGetMultiGpuCompatibility,
-    .OpenSharedMemory = xglOpenSharedMemory,
-    .OpenSharedQueueSemaphore = xglOpenSharedQueueSemaphore,
-    .OpenPeerMemory = xglOpenPeerMemory,
-    .OpenPeerImage = xglOpenPeerImage,
-    .DestroyObject = xglDestroyObject,
-    .GetObjectInfo = xglGetObjectInfo,
-    .BindObjectMemory = xglBindObjectMemory,
-    .CreateFence = xglCreateFence,
-    .GetFenceStatus = xglGetFenceStatus,
-    .WaitForFences = xglWaitForFences,
-    .CreateQueueSemaphore = xglCreateQueueSemaphore,
-    .SignalQueueSemaphore = xglSignalQueueSemaphore,
-    .WaitQueueSemaphore = xglWaitQueueSemaphore,
-    .CreateEvent = xglCreateEvent,
-    .GetEventStatus = xglGetEventStatus,
-    .SetEvent = xglSetEvent,
-    .ResetEvent = xglResetEvent,
-    .CreateQueryPool = xglCreateQueryPool,
-    .GetQueryPoolResults = xglGetQueryPoolResults,
-    .GetFormatInfo = xglGetFormatInfo,
-    .CreateImage = xglCreateImage,
-    .GetImageSubresourceInfo = xglGetImageSubresourceInfo,
-    .CreateImageView = xglCreateImageView,
-    .CreateColorAttachmentView = xglCreateColorAttachmentView,
-    .CreateDepthStencilView = xglCreateDepthStencilView,
-    .CreateShader = xglCreateShader,
-    .CreateGraphicsPipeline = xglCreateGraphicsPipeline,
-    .CreateComputePipeline = xglCreateComputePipeline,
-    .StorePipeline = xglStorePipeline,
-    .LoadPipeline = xglLoadPipeline,
-    .CreatePipelineDelta = xglCreatePipelineDelta,
-    .CreateSampler = xglCreateSampler,
-    .CreateDescriptorSet = xglCreateDescriptorSet,
-    .BeginDescriptorSetUpdate = xglBeginDescriptorSetUpdate,
-    .EndDescriptorSetUpdate = xglEndDescriptorSetUpdate,
-    .AttachSamplerDescriptors = xglAttachSamplerDescriptors,
-    .AttachImageViewDescriptors = xglAttachImageViewDescriptors,
-    .AttachMemoryViewDescriptors = xglAttachMemoryViewDescriptors,
-    .AttachNestedDescriptors = xglAttachNestedDescriptors,
-    .ClearDescriptorSetSlots = xglClearDescriptorSetSlots,
-    .CreateViewportState = xglCreateViewportState,
-    .CreateRasterState = xglCreateRasterState,
-    .CreateMsaaState = xglCreateMsaaState,
-    .CreateColorBlendState = xglCreateColorBlendState,
-    .CreateDepthStencilState = xglCreateDepthStencilState,
-    .CreateCommandBuffer = xglCreateCommandBuffer,
-    .BeginCommandBuffer = xglBeginCommandBuffer,
-    .EndCommandBuffer = xglEndCommandBuffer,
-    .ResetCommandBuffer = xglResetCommandBuffer,
-    .CmdBindPipeline = xglCmdBindPipeline,
-    .CmdBindPipelineDelta = xglCmdBindPipelineDelta,
-    .CmdBindStateObject = xglCmdBindStateObject,
-    .CmdBindDescriptorSet = xglCmdBindDescriptorSet,
-    .CmdBindDynamicMemoryView = xglCmdBindDynamicMemoryView,
-    .CmdBindVertexData = xglCmdBindVertexData,
-    .CmdBindIndexData = xglCmdBindIndexData,
-    .CmdBindAttachments = xglCmdBindAttachments,
-    .CmdPrepareMemoryRegions = xglCmdPrepareMemoryRegions,
-    .CmdPrepareImages = xglCmdPrepareImages,
-    .CmdDraw = xglCmdDraw,
-    .CmdDrawIndexed = xglCmdDrawIndexed,
-    .CmdDrawIndirect = xglCmdDrawIndirect,
-    .CmdDrawIndexedIndirect = xglCmdDrawIndexedIndirect,
-    .CmdDispatch = xglCmdDispatch,
-    .CmdDispatchIndirect = xglCmdDispatchIndirect,
-    .CmdCopyMemory = xglCmdCopyMemory,
-    .CmdCopyImage = xglCmdCopyImage,
-    .CmdCopyMemoryToImage = xglCmdCopyMemoryToImage,
-    .CmdCopyImageToMemory = xglCmdCopyImageToMemory,
-    .CmdCloneImageData = xglCmdCloneImageData,
-    .CmdUpdateMemory = xglCmdUpdateMemory,
-    .CmdFillMemory = xglCmdFillMemory,
-    .CmdClearColorImage = xglCmdClearColorImage,
-    .CmdClearColorImageRaw = xglCmdClearColorImageRaw,
-    .CmdClearDepthStencil = xglCmdClearDepthStencil,
-    .CmdResolveImage = xglCmdResolveImage,
-    .CmdSetEvent = xglCmdSetEvent,
-    .CmdResetEvent = xglCmdResetEvent,
-    .CmdMemoryAtomic = xglCmdMemoryAtomic,
-    .CmdBeginQuery = xglCmdBeginQuery,
-    .CmdEndQuery = xglCmdEndQuery,
-    .CmdResetQueryPool = xglCmdResetQueryPool,
-    .CmdWriteTimestamp = xglCmdWriteTimestamp,
-    .CmdInitAtomicCounters = xglCmdInitAtomicCounters,
-    .CmdLoadAtomicCounters = xglCmdLoadAtomicCounters,
-    .CmdSaveAtomicCounters = xglCmdSaveAtomicCounters,
-    .DbgSetValidationLevel = xglDbgSetValidationLevel,
-    .DbgRegisterMsgCallback = xglDbgRegisterMsgCallback,
-    .DbgUnregisterMsgCallback = xglDbgUnregisterMsgCallback,
-    .DbgSetMessageFilter = xglDbgSetMessageFilter,
-    .DbgSetObjectTag = xglDbgSetObjectTag,
-    .DbgSetGlobalOption = xglDbgSetGlobalOption,
-    .DbgSetDeviceOption = xglDbgSetDeviceOption,
-    .CmdDbgMarkerBegin = xglCmdDbgMarkerBegin,
-    .CmdDbgMarkerEnd = xglCmdDbgMarkerEnd,
-    .WsiX11AssociateConnection = xglWsiX11AssociateConnection,
-    .WsiX11GetMSC = xglWsiX11GetMSC,
-    .WsiX11CreatePresentableImage = xglWsiX11CreatePresentableImage,
-    .WsiX11QueuePresent = xglWsiX11QueuePresent,
-};
-
-static XGL_LAYER_DISPATCH_TABLE *debug_dispatch = (XGL_LAYER_DISPATCH_TABLE *) &intel_debug_dispatch_table;
-static XGL_LAYER_DISPATCH_TABLE *normal_dispatch = (XGL_LAYER_DISPATCH_TABLE *) &intel_normal_dispatch_table;
-
-const XGL_LAYER_DISPATCH_TABLE *intel_dispatch_get(bool debug)
-{
-
-    return (debug) ? debug_dispatch : normal_dispatch;
-}
 
 ICD_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(
-    XGL_PHYSICAL_GPU                            gpu,
+    XGL_PHYSICAL_GPU                            gpu_,
     const XGL_CHAR*                             pName)
 {
-    const XGL_LAYER_DISPATCH_TABLE *disp_table = * (const XGL_LAYER_DISPATCH_TABLE * const *) gpu;
-
    if (!strncmp("xglGetProcAddr", pName, sizeof("xglGetProcAddr")))
-        return disp_table->GetProcAddr;
+        return xglGetProcAddr;
     else if (!strncmp("xglInitAndEnumerateGpus", pName, sizeof("xglInitAndEnumerateGpus")))
-        return disp_table->InitAndEnumerateGpus;
+        return xglInitAndEnumerateGpus;
     if (!strncmp("xglGetGpuInfo", pName, sizeof ("xglGetGpuInfo")))
-        return disp_table->GetGpuInfo;
+        return xglGetGpuInfo;
     else if (!strncmp("xglCreateDevice", pName, sizeof ("xglCreateDevice")))
-        return disp_table->CreateDevice;
+        return xglCreateDevice;
     else if (!strncmp("xglDestroyDevice", pName, sizeof ("xglDestroyDevice")))
-        return disp_table->DestroyDevice;
+        return xglDestroyDevice;
     else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
-        return disp_table->GetExtensionSupport;
+        return xglGetExtensionSupport;
     else if (!strncmp("xglGetDeviceQueue", pName, sizeof ("xglGetDeviceQueue")))
-        return disp_table->GetDeviceQueue;
+        return xglGetDeviceQueue;
     else if (!strncmp("xglQueueSubmit", pName, sizeof ("xglQueueSubmit")))
-        return disp_table->QueueSubmit;
+        return xglQueueSubmit;
     else if (!strncmp("xglQueueSetGlobalMemReferences", pName, sizeof ("xglQueueSetGlobalMemReferences")))
-        return disp_table->QueueSetGlobalMemReferences;
+        return xglQueueSetGlobalMemReferences;
     else if (!strncmp("xglQueueWaitIdle", pName, sizeof ("xglQueueWaitIdle")))
-        return disp_table->QueueWaitIdle;
+        return xglQueueWaitIdle;
     else if (!strncmp("xglDeviceWaitIdle", pName, sizeof ("xglDeviceWaitIdle")))
-        return disp_table->DeviceWaitIdle;
+        return xglDeviceWaitIdle;
     else if (!strncmp("xglGetMemoryHeapCount", pName, sizeof ("xglGetMemoryHeapCount")))
-        return disp_table->GetMemoryHeapCount;
+        return xglGetMemoryHeapCount;
     else if (!strncmp("xglGetMemoryHeapInfo", pName, sizeof ("xglGetMemoryHeapInfo")))
-        return disp_table->GetMemoryHeapInfo;
+        return xglGetMemoryHeapInfo;
     else if (!strncmp("xglAllocMemory", pName, sizeof ("xglAllocMemory")))
-        return disp_table->AllocMemory;
+        return xglAllocMemory;
     else if (!strncmp("xglFreeMemory", pName, sizeof ("xglFreeMemory")))
-        return disp_table->FreeMemory;
+        return xglFreeMemory;
     else if (!strncmp("xglSetMemoryPriority", pName, sizeof ("xglSetMemoryPriority")))
-        return disp_table->SetMemoryPriority;
+        return xglSetMemoryPriority;
     else if (!strncmp("xglMapMemory", pName, sizeof ("xglMapMemory")))
-        return disp_table->MapMemory;
+        return xglMapMemory;
     else if (!strncmp("xglUnmapMemory", pName, sizeof ("xglUnmapMemory")))
-        return disp_table->UnmapMemory;
+        return xglUnmapMemory;
     else if (!strncmp("xglPinSystemMemory", pName, sizeof ("xglPinSystemMemory")))
-        return disp_table->PinSystemMemory;
+        return xglPinSystemMemory;
     else if (!strncmp("xglRemapVirtualMemoryPages", pName, sizeof ("xglRemapVirtualMemoryPages")))
-        return disp_table->RemapVirtualMemoryPages;
+        return xglRemapVirtualMemoryPages;
     else if (!strncmp("xglGetMultiGpuCompatibility", pName, sizeof ("xglGetMultiGpuCompatibility")))
-        return disp_table->GetMultiGpuCompatibility;
+        return xglGetMultiGpuCompatibility;
     else if (!strncmp("xglOpenSharedMemory", pName, sizeof ("xglOpenSharedMemory")))
-        return disp_table->OpenSharedMemory;
+        return xglOpenSharedMemory;
     else if (!strncmp("xglOpenSharedQueueSemaphore", pName, sizeof ("xglOpenSharedQueueSemaphore")))
-        return disp_table->OpenSharedQueueSemaphore;
+        return xglOpenSharedQueueSemaphore;
     else if (!strncmp("xglOpenPeerMemory", pName, sizeof ("xglOpenPeerMemory")))
-        return disp_table->OpenPeerMemory;
+        return xglOpenPeerMemory;
     else if (!strncmp("xglOpenPeerImage", pName, sizeof ("xglOpenPeerImage")))
-        return disp_table->OpenPeerImage;
+        return xglOpenPeerImage;
     else if (!strncmp("xglDestroyObject", pName, sizeof ("xglDestroyObject")))
-        return disp_table->DestroyObject;
+        return xglDestroyObject;
     else if (!strncmp("xglGetObjectInfo", pName, sizeof ("xglGetObjectInfo")))
-        return disp_table->GetObjectInfo;
+        return xglGetObjectInfo;
     else if (!strncmp("xglBindObjectMemory", pName, sizeof ("xglBindObjectMemory")))
-        return disp_table->BindObjectMemory;
+        return xglBindObjectMemory;
     else if (!strncmp("xglCreateFence", pName, sizeof ("xgllCreateFence")))
-        return disp_table->CreateFence;
+        return xglCreateFence;
     else if (!strncmp("xglGetFenceStatus", pName, sizeof ("xglGetFenceStatus")))
-        return disp_table->GetFenceStatus;
+        return xglGetFenceStatus;
     else if (!strncmp("xglWaitForFences", pName, sizeof ("xglWaitForFences")))
-        return disp_table->WaitForFences;
+        return xglWaitForFences;
     else if (!strncmp("xglCreateQueueSemaphore", pName, sizeof ("xgllCreateQueueSemaphore")))
-        return disp_table->CreateQueueSemaphore;
+        return xglCreateQueueSemaphore;
     else if (!strncmp("xglSignalQueueSemaphore", pName, sizeof ("xglSignalQueueSemaphore")))
-        return disp_table->SignalQueueSemaphore;
+        return xglSignalQueueSemaphore;
     else if (!strncmp("xglWaitQueueSemaphore", pName, sizeof ("xglWaitQueueSemaphore")))
-        return disp_table->WaitQueueSemaphore;
+        return xglWaitQueueSemaphore;
     else if (!strncmp("xglCreateEvent", pName, sizeof ("xgllCreateEvent")))
-        return disp_table->CreateEvent;
+        return xglCreateEvent;
     else if (!strncmp("xglGetEventStatus", pName, sizeof ("xglGetEventStatus")))
-        return disp_table->GetEventStatus;
+        return xglGetEventStatus;
     else if (!strncmp("xglSetEvent", pName, sizeof ("xglSetEvent")))
-        return disp_table->SetEvent;
+        return xglSetEvent;
     else if (!strncmp("xglResetEvent", pName, sizeof ("xgllResetEvent")))
-        return disp_table->ResetEvent;
+        return xglResetEvent;
     else if (!strncmp("xglCreateQueryPool", pName, sizeof ("xglCreateQueryPool")))
-        return disp_table->CreateQueryPool;
+        return xglCreateQueryPool;
     else if (!strncmp("xglGetQueryPoolResults", pName, sizeof ("xglGetQueryPoolResults")))
-        return disp_table->GetQueryPoolResults;
+        return xglGetQueryPoolResults;
     else if (!strncmp("xglGetFormatInfo", pName, sizeof ("xgllGetFormatInfo")))
-        return disp_table->GetFormatInfo;
+        return xglGetFormatInfo;
     else if (!strncmp("xglCreateImage", pName, sizeof ("xglCreateImage")))
-        return disp_table->CreateImage;
+        return xglCreateImage;
     else if (!strncmp("xglGetImageSubresourceInfo", pName, sizeof ("xglGetImageSubresourceInfo")))
-        return disp_table->GetImageSubresourceInfo;
+        return xglGetImageSubresourceInfo;
     else if (!strncmp("xglCreateImageView", pName, sizeof ("xglCreateImageView")))
-        return disp_table->CreateImageView;
+        return xglCreateImageView;
     else if (!strncmp("xglCreateColorAttachmentView", pName, sizeof ("xglCreateColorAttachmentView")))
-        return disp_table->CreateColorAttachmentView;
+        return xglCreateColorAttachmentView;
     else if (!strncmp("xglCreateDepthStencilView", pName, sizeof ("xglCreateDepthStencilView")))
-        return disp_table->CreateDepthStencilView;
+        return xglCreateDepthStencilView;
     else if (!strncmp("xglCreateShader", pName, sizeof ("xglCreateShader")))
-        return disp_table->CreateShader;
+        return xglCreateShader;
     else if (!strncmp("xglCreateGraphicsPipeline", pName, sizeof ("xglCreateGraphicsPipeline")))
-        return disp_table->CreateGraphicsPipeline;
+        return xglCreateGraphicsPipeline;
     else if (!strncmp("xglCreateComputePipeline", pName, sizeof ("xglCreateComputePipeline")))
-        return disp_table->CreateComputePipeline;
+        return xglCreateComputePipeline;
     else if (!strncmp("xglStorePipeline", pName, sizeof ("xglStorePipeline")))
-        return disp_table->StorePipeline;
+        return xglStorePipeline;
     else if (!strncmp("xglLoadPipeline", pName, sizeof ("xglLoadPipeline")))
-        return disp_table->LoadPipeline;
+        return xglLoadPipeline;
     else if (!strncmp("xglCreatePipelineDelta", pName, sizeof ("xglCreatePipelineDelta")))
-        return disp_table->CreatePipelineDelta;
+        return xglCreatePipelineDelta;
     else if (!strncmp("xglCreateSampler", pName, sizeof ("xglCreateSampler")))
-        return disp_table->CreateSampler;
+        return xglCreateSampler;
     else if (!strncmp("xglCreateDescriptorSet", pName, sizeof ("xglCreateDescriptorSet")))
-        return disp_table->CreateDescriptorSet;
+        return xglCreateDescriptorSet;
     else if (!strncmp("xglBeginDescriptorSetUpdate", pName, sizeof ("xglBeginDescriptorSetUpdate")))
-        return disp_table->BeginDescriptorSetUpdate;
+        return xglBeginDescriptorSetUpdate;
     else if (!strncmp("xglEndDescriptorSetUpdate", pName, sizeof ("xglEndDescriptorSetUpdate")))
-        return disp_table->EndDescriptorSetUpdate;
+        return xglEndDescriptorSetUpdate;
     else if (!strncmp("xglAttachSamplerDescriptors", pName, sizeof ("xglAttachSamplerDescriptors")))
-        return disp_table->AttachSamplerDescriptors;
+        return xglAttachSamplerDescriptors;
     else if (!strncmp("xglAttachImageViewDescriptors", pName, sizeof ("xglAttachImageViewDescriptors")))
-        return disp_table->AttachImageViewDescriptors;
+        return xglAttachImageViewDescriptors;
     else if (!strncmp("xglAttachMemoryViewDescriptors", pName, sizeof ("xglAttachMemoryViewDescriptors")))
-        return disp_table->AttachMemoryViewDescriptors;
+        return xglAttachMemoryViewDescriptors;
     else if (!strncmp("xglAttachNestedDescriptors", pName, sizeof ("xglAttachNestedDescriptors")))
-        return disp_table->AttachNestedDescriptors;
+        return xglAttachNestedDescriptors;
     else if (!strncmp("xglClearDescriptorSetSlots", pName, sizeof ("xglClearDescriptorSetSlots")))
-        return disp_table->ClearDescriptorSetSlots;
+        return xglClearDescriptorSetSlots;
     else if (!strncmp("xglCreateViewportState", pName, sizeof ("xglCreateViewportState")))
-        return disp_table->CreateViewportState;
+        return xglCreateViewportState;
     else if (!strncmp("xglCreateRasterState", pName, sizeof ("xglCreateRasterState")))
-        return disp_table->CreateRasterState;
+        return xglCreateRasterState;
     else if (!strncmp("xglCreateMsaaState", pName, sizeof ("xglCreateMsaaState")))
-        return disp_table->CreateMsaaState;
+        return xglCreateMsaaState;
     else if (!strncmp("xglCreateColorBlendState", pName, sizeof ("xglCreateColorBlendState")))
-        return disp_table->CreateColorBlendState;
+        return xglCreateColorBlendState;
     else if (!strncmp("xglCreateDepthStencilState", pName, sizeof ("xglCreateDepthStencilState")))
-        return disp_table->CreateDepthStencilState;
+        return xglCreateDepthStencilState;
     else if (!strncmp("xglCreateCommandBuffer", pName, sizeof ("xglCreateCommandBuffer")))
-        return disp_table->CreateCommandBuffer;
+        return xglCreateCommandBuffer;
     else if (!strncmp("xglBeginCommandBuffer", pName, sizeof ("xglBeginCommandBuffer")))
-        return disp_table->BeginCommandBuffer;
+        return xglBeginCommandBuffer;
     else if (!strncmp("xglEndCommandBuffer", pName, sizeof ("xglEndCommandBuffer")))
-        return disp_table->EndCommandBuffer;
+        return xglEndCommandBuffer;
     else if (!strncmp("xglResetCommandBuffer", pName, sizeof ("xglResetCommandBuffer")))
-        return disp_table->ResetCommandBuffer;
+        return xglResetCommandBuffer;
     else if (!strncmp("xglCmdBindPipeline", pName, sizeof ("xglCmdBindPipeline")))
-        return disp_table->CmdBindPipeline;
+        return xglCmdBindPipeline;
     else if (!strncmp("xglCmdBindPipelineDelta", pName, sizeof ("xglCmdBindPipelineDelta")))
-        return disp_table->CmdBindPipelineDelta;
+        return xglCmdBindPipelineDelta;
     else if (!strncmp("xglCmdBindStateObject", pName, sizeof ("xglCmdBindStateObject")))
-        return disp_table->CmdBindStateObject;
+        return xglCmdBindStateObject;
     else if (!strncmp("xglCmdBindDescriptorSet", pName, sizeof ("xglCmdBindDescriptorSet")))
-        return disp_table->CmdBindDescriptorSet;
+        return xglCmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", pName, sizeof ("xglCmdBindDynamicMemoryView")))
-        return disp_table->CmdBindDynamicMemoryView;
+        return xglCmdBindDynamicMemoryView;
     else if (!strncmp("xglCmdBindVertexData", pName, sizeof ("xglCmdBindVertexData")))
-        return disp_table->CmdBindVertexData;
+        return xglCmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", pName, sizeof ("xglCmdBindIndexData")))
-        return disp_table->CmdBindIndexData;
+        return xglCmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", pName, sizeof ("xglCmdBindAttachments")))
-        return disp_table->CmdBindAttachments;
+        return xglCmdBindAttachments;
     else if (!strncmp("xglCmdPrepareMemoryRegions", pName, sizeof ("xglCmdPrepareMemoryRegions")))
-        return disp_table->CmdPrepareMemoryRegions;
+        return xglCmdPrepareMemoryRegions;
     else if (!strncmp("xglCmdPrepareImages", pName, sizeof ("xglCmdPrepareImages")))
-        return disp_table->CmdPrepareImages;
+        return xglCmdPrepareImages;
     else if (!strncmp("xglCmdDraw", pName, sizeof ("xglCmdDraw")))
-        return disp_table->CmdDraw;
+        return xglCmdDraw;
     else if (!strncmp("xglCmdDrawIndexed", pName, sizeof ("xglCmdDrawIndexed")))
-        return disp_table->CmdDrawIndexed;
+        return xglCmdDrawIndexed;
     else if (!strncmp("xglCmdDrawIndirect", pName, sizeof ("xglCmdDrawIndirect")))
-        return disp_table->CmdDrawIndirect;
+        return xglCmdDrawIndirect;
     else if (!strncmp("xglCmdDrawIndexedIndirect", pName, sizeof ("xglCmdDrawIndexedIndirect")))
-        return disp_table->CmdDrawIndexedIndirect;
+        return xglCmdDrawIndexedIndirect;
     else if (!strncmp("xglCmdDispatch", pName, sizeof ("xglCmdDispatch")))
-        return disp_table->CmdDispatch;
+        return xglCmdDispatch;
     else if (!strncmp("xglCmdDispatchIndirect", pName, sizeof ("xglCmdDispatchIndirect")))
-        return disp_table->CmdDispatchIndirect;
+        return xglCmdDispatchIndirect;
     else if (!strncmp("xglCmdCopyMemory", pName, sizeof ("xglCmdCopyMemory")))
-        return disp_table->CmdCopyMemory;
+        return xglCmdCopyMemory;
     else if (!strncmp("xglCmdCopyImage", pName, sizeof ("xglCmdCopyImage")))
-        return disp_table->CmdCopyImage;
+        return xglCmdCopyImage;
     else if (!strncmp("xglCmdCopyMemoryToImage", pName, sizeof ("xglCmdCopyMemoryToImage")))
-        return disp_table->CmdCopyMemoryToImage;
+        return xglCmdCopyMemoryToImage;
     else if (!strncmp("xglCmdCopyImageToMemory", pName, sizeof ("xglCmdCopyImageToMemory")))
-        return disp_table->CmdCopyImageToMemory;
+        return xglCmdCopyImageToMemory;
     else if (!strncmp("xglCmdCloneImageData", pName, sizeof ("xglCmdCloneImageData")))
-        return disp_table->CmdCloneImageData;
+        return xglCmdCloneImageData;
     else if (!strncmp("xglCmdUpdateMemory", pName, sizeof ("xglCmdUpdateMemory")))
-        return disp_table->CmdUpdateMemory;
+        return xglCmdUpdateMemory;
     else if (!strncmp("xglCmdFillMemory", pName, sizeof ("xglCmdFillMemory")))
-        return disp_table->CmdFillMemory;
+        return xglCmdFillMemory;
     else if (!strncmp("xglCmdClearColorImage", pName, sizeof ("xglCmdClearColorImage")))
-        return disp_table->CmdClearColorImage;
+        return xglCmdClearColorImage;
     else if (!strncmp("xglCmdClearColorImageRaw", pName, sizeof ("xglCmdClearColorImageRaw")))
-        return disp_table->CmdClearColorImageRaw;
+        return xglCmdClearColorImageRaw;
     else if (!strncmp("xglCmdClearDepthStencil", pName, sizeof ("xglCmdClearDepthStencil")))
-        return disp_table->CmdClearDepthStencil;
+        return xglCmdClearDepthStencil;
     else if (!strncmp("xglCmdResolveImage", pName, sizeof ("xglCmdResolveImage")))
-        return disp_table->CmdResolveImage;
+        return xglCmdResolveImage;
     else if (!strncmp("xglCmdSetEvent", pName, sizeof ("xglCmdSetEvent")))
-        return disp_table->CmdSetEvent;
+        return xglCmdSetEvent;
     else if (!strncmp("xglCmdResetEvent", pName, sizeof ("xglCmdResetEvent")))
-        return disp_table->CmdResetEvent;
+        return xglCmdResetEvent;
     else if (!strncmp("xglCmdMemoryAtomic", pName, sizeof ("xglCmdMemoryAtomic")))
-        return disp_table->CmdMemoryAtomic;
+        return xglCmdMemoryAtomic;
     else if (!strncmp("xglCmdBeginQuery", pName, sizeof ("xglCmdBeginQuery")))
-        return disp_table->CmdBeginQuery;
+        return xglCmdBeginQuery;
     else if (!strncmp("xglCmdEndQuery", pName, sizeof ("xglCmdEndQuery")))
-        return disp_table->CmdEndQuery;
+        return xglCmdEndQuery;
     else if (!strncmp("xglCmdResetQueryPool", pName, sizeof ("xglCmdResetQueryPool")))
-        return disp_table->CmdResetQueryPool;
+        return xglCmdResetQueryPool;
     else if (!strncmp("xglCmdWriteTimestamp", pName, sizeof ("xglCmdWriteTimestamp")))
-        return disp_table->CmdWriteTimestamp;
+        return xglCmdWriteTimestamp;
     else if (!strncmp("xglCmdInitAtomicCounters", pName, sizeof ("xglCmdInitAtomicCounters")))
-        return disp_table->CmdInitAtomicCounters;
+        return xglCmdInitAtomicCounters;
     else if (!strncmp("xglCmdLoadAtomicCounters", pName, sizeof ("xglCmdLoadAtomicCounters")))
-        return disp_table->CmdLoadAtomicCounters;
+        return xglCmdLoadAtomicCounters;
     else if (!strncmp("xglCmdSaveAtomicCounters", pName, sizeof ("xglCmdSaveAtomicCounters")))
-        return disp_table->CmdSaveAtomicCounters;
+        return xglCmdSaveAtomicCounters;
     else if (!strncmp("xglDbgSetValidationLevel", pName, sizeof ("xglDbgSetValidationLevel")))
-        return disp_table->DbgSetValidationLevel;
+        return xglDbgSetValidationLevel;
     else if (!strncmp("xglDbgRegisterMsgCallback", pName, sizeof ("xglDbgRegisterMsgCallback")))
-        return disp_table->DbgRegisterMsgCallback;
+        return xglDbgRegisterMsgCallback;
     else if (!strncmp("xglDbgUnregisterMsgCallback", pName, sizeof ("xglDbgUnregisterMsgCallback")))
-        return disp_table->DbgUnregisterMsgCallback;
+        return xglDbgUnregisterMsgCallback;
     else if (!strncmp("xglDbgSetMessageFilter", pName, sizeof ("xglDbgSetMessageFilter")))
-        return disp_table->DbgSetMessageFilter;
+        return xglDbgSetMessageFilter;
     else if (!strncmp("xglDbgSetObjectTag", pName, sizeof ("xglDbgSetObjectTag")))
-        return disp_table->DbgSetObjectTag;
+        return xglDbgSetObjectTag;
     else if (!strncmp("xglDbgSetGlobalOption", pName, sizeof ("xglDbgSetGlobalOption")))
-        return disp_table->DbgSetGlobalOption;
+        return xglDbgSetGlobalOption;
     else if (!strncmp("xglDbgSetDeviceOption", pName, sizeof ("xglDbgSetDeviceOption")))
-        return disp_table->DbgSetDeviceOption;
+        return xglDbgSetDeviceOption;
     else if (!strncmp("xglCmdDbgMarkerBegin", pName, sizeof ("xglCmdDbgMarkerBegin")))
-        return disp_table->CmdDbgMarkerBegin;
+        return xglCmdDbgMarkerBegin;
     else if (!strncmp("xglCmdDbgMarkerEnd", pName, sizeof ("xglCmdDbgMarkerEnd")))
-        return disp_table->CmdDbgMarkerEnd;
+        return xglCmdDbgMarkerEnd;
     else if (!strncmp("xglWsiX11AssociateConnection", pName, sizeof("xglWsiX11AssociateConnection")))
-        return disp_table->WsiX11AssociateConnection;
+        return xglWsiX11AssociateConnection;
     else if (!strncmp("xglWsiX11GetMSC", pName, sizeof("xglWsiX11GetMSC")))
-        return disp_table->WsiX11GetMSC;
+        return xglWsiX11GetMSC;
     else if (!strncmp("xglWsiX11CreatePresentableImage", pName, sizeof("xglWsiX11CreatePresentableImage")))
-        return disp_table->WsiX11CreatePresentableImage;
+        return xglWsiX11CreatePresentableImage;
     else if (!strncmp("xglWsiX11QueuePresent", pName, sizeof("xglWsiX11QueuePresent")))
-        return disp_table->WsiX11QueuePresent;
+        return xglWsiX11QueuePresent;
     else {
         // no one else to call
         return NULL;
