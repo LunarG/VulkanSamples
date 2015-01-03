@@ -73,7 +73,7 @@ XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelAllocMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglAllocMemory(
     XGL_DEVICE                                  device,
     const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
     XGL_GPU_MEMORY*                             pMem)
@@ -83,7 +83,7 @@ XGL_RESULT XGLAPI intelAllocMemory(
     return intel_mem_alloc(dev, pAllocInfo, (struct intel_mem **) pMem);
 }
 
-XGL_RESULT XGLAPI intelFreeMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglFreeMemory(
     XGL_GPU_MEMORY                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -93,7 +93,7 @@ XGL_RESULT XGLAPI intelFreeMemory(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelSetMemoryPriority(
+ICD_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(
     XGL_GPU_MEMORY                              mem_,
     XGL_MEMORY_PRIORITY                         priority)
 {
@@ -102,7 +102,7 @@ XGL_RESULT XGLAPI intelSetMemoryPriority(
     return intel_mem_set_priority(mem, priority);
 }
 
-XGL_RESULT XGLAPI intelMapMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglMapMemory(
     XGL_GPU_MEMORY                              mem_,
     XGL_FLAGS                                   flags,
     XGL_VOID**                                  ppData)
@@ -115,7 +115,7 @@ XGL_RESULT XGLAPI intelMapMemory(
     return (ptr) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 
-XGL_RESULT XGLAPI intelUnmapMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(
     XGL_GPU_MEMORY                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -125,7 +125,7 @@ XGL_RESULT XGLAPI intelUnmapMemory(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelPinSystemMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
     XGL_DEVICE                                  device,
     const XGL_VOID*                             pSysMem,
     XGL_SIZE                                    memSize,
@@ -135,7 +135,7 @@ XGL_RESULT XGLAPI intelPinSystemMemory(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelRemapVirtualMemoryPages(
+ICD_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(
     XGL_DEVICE                                  device,
     XGL_UINT                                    rangeCount,
     const XGL_VIRTUAL_MEMORY_REMAP_RANGE*       pRanges,
@@ -148,7 +148,7 @@ XGL_RESULT XGLAPI intelRemapVirtualMemoryPages(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelOpenSharedMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(
     XGL_DEVICE                                  device,
     const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
     XGL_GPU_MEMORY*                             pMem)
@@ -156,7 +156,7 @@ XGL_RESULT XGLAPI intelOpenSharedMemory(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelOpenPeerMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(
     XGL_DEVICE                                  device,
     const XGL_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
     XGL_GPU_MEMORY*                             pMem)

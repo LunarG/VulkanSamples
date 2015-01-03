@@ -93,7 +93,7 @@ void intel_dset_destroy(struct intel_dset *dset)
     intel_base_destroy(&dset->obj.base);
 }
 
-XGL_RESULT XGLAPI intelCreateDescriptorSet(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(
     XGL_DEVICE                                  device,
     const XGL_DESCRIPTOR_SET_CREATE_INFO*       pCreateInfo,
     XGL_DESCRIPTOR_SET*                         pDescriptorSet)
@@ -104,19 +104,19 @@ XGL_RESULT XGLAPI intelCreateDescriptorSet(
             (struct intel_dset **) pDescriptorSet);
 }
 
-XGL_VOID XGLAPI intelBeginDescriptorSetUpdate(
+ICD_EXPORT XGL_VOID XGLAPI xglBeginDescriptorSetUpdate(
     XGL_DESCRIPTOR_SET                          descriptorSet)
 {
     /* no-op */
 }
 
-XGL_VOID XGLAPI intelEndDescriptorSetUpdate(
+ICD_EXPORT XGL_VOID XGLAPI xglEndDescriptorSetUpdate(
     XGL_DESCRIPTOR_SET                          descriptorSet)
 {
     /* no-op */
 }
 
-XGL_VOID XGLAPI intelAttachSamplerDescriptors(
+ICD_EXPORT XGL_VOID XGLAPI xglAttachSamplerDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount,
@@ -135,7 +135,7 @@ XGL_VOID XGLAPI intelAttachSamplerDescriptors(
     }
 }
 
-XGL_VOID XGLAPI intelAttachImageViewDescriptors(
+ICD_EXPORT XGL_VOID XGLAPI xglAttachImageViewDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount,
@@ -155,7 +155,7 @@ XGL_VOID XGLAPI intelAttachImageViewDescriptors(
     }
 }
 
-XGL_VOID XGLAPI intelAttachMemoryViewDescriptors(
+ICD_EXPORT XGL_VOID XGLAPI xglAttachMemoryViewDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount,
@@ -174,7 +174,7 @@ XGL_VOID XGLAPI intelAttachMemoryViewDescriptors(
     }
 }
 
-XGL_VOID XGLAPI intelAttachNestedDescriptors(
+ICD_EXPORT XGL_VOID XGLAPI xglAttachNestedDescriptors(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount,
@@ -195,7 +195,7 @@ XGL_VOID XGLAPI intelAttachNestedDescriptors(
     }
 }
 
-XGL_VOID XGLAPI intelClearDescriptorSetSlots(
+ICD_EXPORT XGL_VOID XGLAPI xglClearDescriptorSetSlots(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     XGL_UINT                                    startSlot,
     XGL_UINT                                    slotCount)

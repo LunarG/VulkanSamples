@@ -160,29 +160,4 @@ XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
                                  struct intel_ds_state **state_ret);
 void intel_ds_state_destroy(struct intel_ds_state *state);
 
-XGL_RESULT XGLAPI intelCreateViewportState(
-    XGL_DEVICE                                  device,
-    const XGL_VIEWPORT_STATE_CREATE_INFO*       pCreateInfo,
-    XGL_VIEWPORT_STATE_OBJECT*                  pState);
-
-XGL_RESULT XGLAPI intelCreateRasterState(
-    XGL_DEVICE                                  device,
-    const XGL_RASTER_STATE_CREATE_INFO*         pCreateInfo,
-    XGL_RASTER_STATE_OBJECT*                    pState);
-
-XGL_RESULT XGLAPI intelCreateMsaaState(
-    XGL_DEVICE                                  device,
-    const XGL_MSAA_STATE_CREATE_INFO*           pCreateInfo,
-    XGL_MSAA_STATE_OBJECT*                      pState);
-
-XGL_RESULT XGLAPI intelCreateColorBlendState(
-    XGL_DEVICE                                  device,
-    const XGL_COLOR_BLEND_STATE_CREATE_INFO*    pCreateInfo,
-    XGL_COLOR_BLEND_STATE_OBJECT*               pState);
-
-XGL_RESULT XGLAPI intelCreateDepthStencilState(
-    XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_STATE_CREATE_INFO*  pCreateInfo,
-    XGL_DEPTH_STENCIL_STATE_OBJECT*             pState);
-
 #endif /* STATE_H */

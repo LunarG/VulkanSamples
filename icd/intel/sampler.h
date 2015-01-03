@@ -56,9 +56,4 @@ XGL_RESULT intel_sampler_create(struct intel_dev *dev,
                                 struct intel_sampler **sampler_ret);
 void intel_sampler_destroy(struct intel_sampler *sampler);
 
-XGL_RESULT XGLAPI intelCreateSampler(
-    XGL_DEVICE                                  device,
-    const XGL_SAMPLER_CREATE_INFO*              pCreateInfo,
-    XGL_SAMPLER*                                pSampler);
-
 #endif /* SAMPLER_H */

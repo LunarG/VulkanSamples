@@ -899,7 +899,7 @@ static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
     XGL_DEVICE                                  device,
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
     XGL_PIPELINE*                               pPipeline)
@@ -910,7 +910,7 @@ XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
             (struct intel_pipeline **) pPipeline);
 }
 
-XGL_RESULT XGLAPI intelCreateComputePipeline(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(
     XGL_DEVICE                                  device,
     const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
     XGL_PIPELINE*                               pPipeline)
@@ -918,7 +918,7 @@ XGL_RESULT XGLAPI intelCreateComputePipeline(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelStorePipeline(
+ICD_EXPORT XGL_RESULT XGLAPI xglStorePipeline(
     XGL_PIPELINE                                pipeline,
     XGL_SIZE*                                   pDataSize,
     XGL_VOID*                                   pData)
@@ -926,7 +926,7 @@ XGL_RESULT XGLAPI intelStorePipeline(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelLoadPipeline(
+ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
     XGL_DEVICE                                  device,
     XGL_SIZE                                    dataSize,
     const XGL_VOID*                             pData,
@@ -935,7 +935,7 @@ XGL_RESULT XGLAPI intelLoadPipeline(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelCreatePipelineDelta(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(
     XGL_DEVICE                                  device,
     XGL_PIPELINE                                p1,
     XGL_PIPELINE                                p2,

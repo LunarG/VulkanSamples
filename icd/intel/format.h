@@ -50,11 +50,4 @@ static inline bool intel_format_is_stencil(const struct intel_gpu *gpu,
 int intel_format_translate_color(const struct intel_gpu *gpu,
                                  XGL_FORMAT format);
 
-XGL_RESULT XGLAPI intelGetFormatInfo(
-    XGL_DEVICE                                  device,
-    XGL_FORMAT                                  format,
-    XGL_FORMAT_INFO_TYPE                        infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
 #endif /* FORMAT_H */

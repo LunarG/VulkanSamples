@@ -328,7 +328,7 @@ void intel_dev_log(struct intel_dev *dev,
     va_end(ap);
 }
 
-XGL_RESULT XGLAPI intelCreateDevice(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDevice(
     XGL_PHYSICAL_GPU                            gpu_,
     const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
     XGL_DEVICE*                                 pDevice)
@@ -338,7 +338,7 @@ XGL_RESULT XGLAPI intelCreateDevice(
     return intel_dev_create(gpu, pCreateInfo, (struct intel_dev **) pDevice);
 }
 
-XGL_RESULT XGLAPI intelDestroyDevice(
+ICD_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(
     XGL_DEVICE                                  device)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -348,7 +348,7 @@ XGL_RESULT XGLAPI intelDestroyDevice(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelGetMemoryHeapCount(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapCount(
     XGL_DEVICE                                  device,
     XGL_UINT*                                   pCount)
 {
@@ -356,7 +356,7 @@ XGL_RESULT XGLAPI intelGetMemoryHeapCount(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapInfo(
     XGL_DEVICE                                  device,
     XGL_UINT                                    heapId,
     XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
@@ -372,7 +372,7 @@ XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelGetDeviceQueue(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
     XGL_QUEUE_TYPE                              queueType,
     XGL_UINT                                    queueIndex,
@@ -393,7 +393,7 @@ XGL_RESULT XGLAPI intelGetDeviceQueue(
     }
 }
 
-XGL_RESULT XGLAPI intelDeviceWaitIdle(
+ICD_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(
     XGL_DEVICE                                  device)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -411,7 +411,7 @@ XGL_RESULT XGLAPI intelDeviceWaitIdle(
     return ret;
 }
 
-XGL_RESULT XGLAPI intelDbgSetValidationLevel(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(
     XGL_DEVICE                                  device,
     XGL_VALIDATION_LEVEL                        validationLevel)
 {
@@ -424,7 +424,7 @@ XGL_RESULT XGLAPI intelDbgSetValidationLevel(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelDbgSetMessageFilter(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(
     XGL_DEVICE                                  device,
     XGL_INT                                     msgCode,
     XGL_DBG_MSG_FILTER                          filter)
@@ -442,7 +442,7 @@ XGL_RESULT XGLAPI intelDbgSetMessageFilter(
     return intel_dev_add_msg_filter(dev, msgCode, filter);
 }
 
-XGL_RESULT XGLAPI intelDbgSetDeviceOption(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(
     XGL_DEVICE                                  device,
     XGL_DBG_DEVICE_OPTION                       dbgOption,
     XGL_SIZE                                    dataSize,

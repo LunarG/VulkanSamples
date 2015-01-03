@@ -207,47 +207,4 @@ static inline const struct intel_pipeline_shader *intel_dev_get_meta_shader(cons
     return dev->cmd_meta_shaders[id];
 }
 
-XGL_RESULT XGLAPI intelCreateDevice(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
-    XGL_DEVICE*                                 pDevice);
-
-XGL_RESULT XGLAPI intelDestroyDevice(
-    XGL_DEVICE                                  device);
-
-XGL_RESULT XGLAPI intelGetMemoryHeapCount(
-    XGL_DEVICE                                  device,
-    XGL_UINT*                                   pCount);
-
-XGL_RESULT XGLAPI intelGetMemoryHeapInfo(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    heapId,
-    XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
-XGL_RESULT XGLAPI intelGetDeviceQueue(
-    XGL_DEVICE                                  device,
-    XGL_QUEUE_TYPE                              queueType,
-    XGL_UINT                                    queueIndex,
-    XGL_QUEUE*                                  pQueue);
-
-XGL_RESULT XGLAPI intelDeviceWaitIdle(
-    XGL_DEVICE                                  device);
-
-XGL_RESULT XGLAPI intelDbgSetValidationLevel(
-    XGL_DEVICE                                  device,
-    XGL_VALIDATION_LEVEL                        validationLevel);
-
-XGL_RESULT XGLAPI intelDbgSetMessageFilter(
-    XGL_DEVICE                                  device,
-    XGL_INT                                     msgCode,
-    XGL_DBG_MSG_FILTER                          filter);
-
-XGL_RESULT XGLAPI intelDbgSetDeviceOption(
-    XGL_DEVICE                                  device,
-    XGL_DBG_DEVICE_OPTION                       dbgOption,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData);
-
 #endif /* DEV_H */

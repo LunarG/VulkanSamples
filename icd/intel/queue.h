@@ -64,38 +64,4 @@ void intel_queue_destroy(struct intel_queue *queue);
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout);
 
-XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    XGL_UINT                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs);
-
-XGL_RESULT XGLAPI intelQueueWaitIdle(
-    XGL_QUEUE                                   queue);
-
-XGL_RESULT XGLAPI intelQueueSubmit(
-    XGL_QUEUE                                   queue,
-    XGL_UINT                                    cmdBufferCount,
-    const XGL_CMD_BUFFER*                       pCmdBuffers,
-    XGL_UINT                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs,
-    XGL_FENCE                                   fence);
-
-XGL_RESULT XGLAPI intelOpenSharedQueueSemaphore(
-    XGL_DEVICE                                  device,
-    const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
-    XGL_QUEUE_SEMAPHORE*                        pSemaphore);
-
-XGL_RESULT XGLAPI intelCreateQueueSemaphore(
-    XGL_DEVICE                                  device,
-    const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
-    XGL_QUEUE_SEMAPHORE*                        pSemaphore);
-
-XGL_RESULT XGLAPI intelSignalQueueSemaphore(
-    XGL_QUEUE                                   queue,
-    XGL_QUEUE_SEMAPHORE                         semaphore);
-
-XGL_RESULT XGLAPI intelWaitQueueSemaphore(
-    XGL_QUEUE                                   queue,
-    XGL_QUEUE_SEMAPHORE                         semaphore);
-
 #endif /* QUEUE_H */

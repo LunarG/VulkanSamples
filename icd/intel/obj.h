@@ -105,23 +105,4 @@ struct intel_base *intel_base_create(struct intel_dev *dev,
                                      XGL_SIZE dbg_size);
 void intel_base_destroy(struct intel_base *base);
 
-XGL_RESULT XGLAPI intelDestroyObject(
-    XGL_OBJECT                                  object);
-
-XGL_RESULT XGLAPI intelGetObjectInfo(
-    XGL_BASE_OBJECT                             object,
-    XGL_OBJECT_INFO_TYPE                        infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
-XGL_RESULT XGLAPI intelBindObjectMemory(
-    XGL_OBJECT                                  object,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                offset);
-
-XGL_RESULT XGLAPI intelDbgSetObjectTag(
-    XGL_BASE_OBJECT                             object,
-    XGL_SIZE                                    tagSize,
-    const XGL_VOID*                             pTag);
-
 #endif /* OBJ_H */

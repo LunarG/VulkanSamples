@@ -83,44 +83,4 @@ XGL_RESULT intel_dset_create(struct intel_dev *dev,
                              struct intel_dset **dset_ret);
 void intel_dset_destroy(struct intel_dset *dset);
 
-XGL_RESULT XGLAPI intelCreateDescriptorSet(
-    XGL_DEVICE                                  device,
-    const XGL_DESCRIPTOR_SET_CREATE_INFO*       pCreateInfo,
-    XGL_DESCRIPTOR_SET*                         pDescriptorSet);
-
-XGL_VOID XGLAPI intelBeginDescriptorSetUpdate(
-    XGL_DESCRIPTOR_SET                          descriptorSet);
-
-XGL_VOID XGLAPI intelEndDescriptorSetUpdate(
-    XGL_DESCRIPTOR_SET                          descriptorSet);
-
-XGL_VOID XGLAPI intelAttachSamplerDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_SAMPLER*                          pSamplers);
-
-XGL_VOID XGLAPI intelAttachImageViewDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_IMAGE_VIEW_ATTACH_INFO*           pImageViews);
-
-XGL_VOID XGLAPI intelAttachMemoryViewDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemViews);
-
-XGL_VOID XGLAPI intelAttachNestedDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_DESCRIPTOR_SET_ATTACH_INFO*       pNestedDescriptorSets);
-
-XGL_VOID XGLAPI intelClearDescriptorSetSlots(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount);
-
 #endif /* DSET_H */

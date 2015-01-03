@@ -63,16 +63,4 @@ XGL_RESULT intel_query_get_results(struct intel_query *query,
                                    XGL_UINT slot_start, XGL_UINT slot_count,
                                    void *results);
 
-XGL_RESULT XGLAPI intelCreateQueryPool(
-    XGL_DEVICE                                  device,
-    const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
-    XGL_QUERY_POOL*                             pQueryPool);
-
-XGL_RESULT XGLAPI intelGetQueryPoolResults(
-    XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    startQuery,
-    XGL_UINT                                    queryCount,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
 #endif /* QUERY_H */

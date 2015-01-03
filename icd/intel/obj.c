@@ -326,7 +326,7 @@ void intel_base_destroy(struct intel_base *base)
     icd_free(base);
 }
 
-XGL_RESULT XGLAPI intelDestroyObject(
+ICD_EXPORT XGL_RESULT XGLAPI xglDestroyObject(
     XGL_OBJECT                                  object)
 {
     struct intel_obj *obj = intel_obj(object);
@@ -336,7 +336,7 @@ XGL_RESULT XGLAPI intelDestroyObject(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelGetObjectInfo(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
     XGL_BASE_OBJECT                             object,
     XGL_OBJECT_INFO_TYPE                        infoType,
     XGL_SIZE*                                   pDataSize,
@@ -347,7 +347,7 @@ XGL_RESULT XGLAPI intelGetObjectInfo(
     return base->get_info(base, infoType, pDataSize, pData);
 }
 
-XGL_RESULT XGLAPI intelBindObjectMemory(
+ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_OBJECT                                  object,
     XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                offset)
@@ -360,7 +360,7 @@ XGL_RESULT XGLAPI intelBindObjectMemory(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelDbgSetObjectTag(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
     XGL_BASE_OBJECT                             object,
     XGL_SIZE                                    tagSize,
     const XGL_VOID*                             pTag)

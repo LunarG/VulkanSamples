@@ -72,49 +72,4 @@ static inline struct intel_mem *intel_mem(XGL_GPU_MEMORY mem)
     return (struct intel_mem *) mem;
 }
 
-XGL_RESULT XGLAPI intelAllocMemory(
-    XGL_DEVICE                                  device,
-    const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    XGL_GPU_MEMORY*                             pMem);
-
-XGL_RESULT XGLAPI intelFreeMemory(
-    XGL_GPU_MEMORY                              mem);
-
-XGL_RESULT XGLAPI intelSetMemoryPriority(
-    XGL_GPU_MEMORY                              mem,
-    XGL_MEMORY_PRIORITY                         priority);
-
-XGL_RESULT XGLAPI intelMapMemory(
-    XGL_GPU_MEMORY                              mem,
-    XGL_FLAGS                                   flags,
-    XGL_VOID**                                  ppData);
-
-XGL_RESULT XGLAPI intelUnmapMemory(
-    XGL_GPU_MEMORY                              mem);
-
-XGL_RESULT XGLAPI intelPinSystemMemory(
-    XGL_DEVICE                                  device,
-    const XGL_VOID*                             pSysMem,
-    XGL_SIZE                                    memSize,
-    XGL_GPU_MEMORY*                             pMem);
-
-XGL_RESULT XGLAPI intelRemapVirtualMemoryPages(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    rangeCount,
-    const XGL_VIRTUAL_MEMORY_REMAP_RANGE*       pRanges,
-    XGL_UINT                                    preWaitSemaphoreCount,
-    const XGL_QUEUE_SEMAPHORE*                  pPreWaitSemaphores,
-    XGL_UINT                                    postSignalSemaphoreCount,
-    const XGL_QUEUE_SEMAPHORE*                  pPostSignalSemaphores);
-
-XGL_RESULT XGLAPI intelOpenSharedMemory(
-    XGL_DEVICE                                  device,
-    const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
-    XGL_GPU_MEMORY*                             pMem);
-
-XGL_RESULT XGLAPI intelOpenPeerMemory(
-    XGL_DEVICE                                  device,
-    const XGL_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
-    XGL_GPU_MEMORY*                             pMem);
-
 #endif /* MEM_H */

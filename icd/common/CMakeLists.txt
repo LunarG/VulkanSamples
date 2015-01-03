@@ -1,11 +1,5 @@
-add_custom_command(OUTPUT icd-dispatch-entrypoints.c
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-dispatch-entrypoints xglLayers.h > icd-dispatch-entrypoints.c
-	           DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py
-	                   ${PROJECT_SOURCE_DIR}/xgl.py)
-
 set(ICD_SOURCES
 	icd-alloc.c
-	icd-dispatch-entrypoints.c
 	icd-format.c
 	icd-log.c
 	icd-utils.c)

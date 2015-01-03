@@ -226,7 +226,7 @@ XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
         XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 
-XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     XGL_QUEUE                                   queue,
     XGL_UINT                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs)
@@ -238,7 +238,7 @@ XGL_RESULT XGLAPI intelQueueSetGlobalMemReferences(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelQueueWaitIdle(
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(
     XGL_QUEUE                                   queue_)
 {
     struct intel_queue *queue = intel_queue(queue_);
@@ -246,7 +246,7 @@ XGL_RESULT XGLAPI intelQueueWaitIdle(
     return intel_queue_wait(queue, -1);
 }
 
-XGL_RESULT XGLAPI intelQueueSubmit(
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     XGL_QUEUE                                   queue_,
     XGL_UINT                                    cmdBufferCount,
     const XGL_CMD_BUFFER*                       pCmdBuffers,
@@ -289,7 +289,7 @@ XGL_RESULT XGLAPI intelQueueSubmit(
     return ret;
 }
 
-XGL_RESULT XGLAPI intelOpenSharedQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(
     XGL_DEVICE                                  device,
     const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
@@ -297,7 +297,7 @@ XGL_RESULT XGLAPI intelOpenSharedQueueSemaphore(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelCreateQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(
     XGL_DEVICE                                  device,
     const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
@@ -313,14 +313,14 @@ XGL_RESULT XGLAPI intelCreateQueueSemaphore(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelSignalQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelWaitQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
 {

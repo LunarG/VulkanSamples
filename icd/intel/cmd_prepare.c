@@ -163,7 +163,7 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
     return flags;
 }
 
-XGL_VOID XGLAPI intelCmdPrepareMemoryRegions(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
     const XGL_MEMORY_STATE_TRANSITION*          pStateTransitions)
@@ -185,7 +185,7 @@ XGL_VOID XGLAPI intelCmdPrepareMemoryRegions(
     cmd_batch_flush(cmd, flush_flags);
 }
 
-XGL_VOID XGLAPI intelCmdPrepareImages(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
     const XGL_IMAGE_STATE_TRANSITION*           pStateTransitions)

@@ -216,31 +216,4 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
                                                                 enum intel_dev_meta_shader id);
 void intel_pipeline_shader_destroy(struct intel_pipeline_shader *sh);
 
-XGL_RESULT XGLAPI intelCreateGraphicsPipeline(
-    XGL_DEVICE                                  device,
-    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    XGL_PIPELINE*                               pPipeline);
-
-XGL_RESULT XGLAPI intelCreateComputePipeline(
-    XGL_DEVICE                                  device,
-    const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
-    XGL_PIPELINE*                               pPipeline);
-
-XGL_RESULT XGLAPI intelStorePipeline(
-    XGL_PIPELINE                                pipeline,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
-XGL_RESULT XGLAPI intelLoadPipeline(
-    XGL_DEVICE                                  device,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData,
-    XGL_PIPELINE*                               pPipeline);
-
-XGL_RESULT XGLAPI intelCreatePipelineDelta(
-    XGL_DEVICE                                  device,
-    XGL_PIPELINE                                p1,
-    XGL_PIPELINE                                p2,
-    XGL_PIPELINE_DELTA*                         delta);
-
 #endif /* PIPELINE_H */

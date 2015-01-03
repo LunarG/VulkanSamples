@@ -543,7 +543,7 @@ static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
+ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(
     XGL_PHYSICAL_GPU                            gpu_,
     const XGL_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
 {
@@ -581,7 +581,7 @@ XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelWsiX11GetMSC(
+ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(
     XGL_DEVICE                                  device,
     xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
@@ -608,7 +608,7 @@ XGL_RESULT XGLAPI intelWsiX11GetMSC(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelWsiX11CreatePresentableImage(
+ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(
     XGL_DEVICE                                  device,
     const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
     XGL_IMAGE*                                  pImage,
@@ -628,7 +628,7 @@ XGL_RESULT XGLAPI intelWsiX11CreatePresentableImage(
     return ret;
 }
 
-XGL_RESULT XGLAPI intelWsiX11QueuePresent(
+ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
     XGL_QUEUE                                   queue_,
     const XGL_WSI_X11_PRESENT_INFO*             pPresentInfo,
     XGL_FENCE                                   fence_)

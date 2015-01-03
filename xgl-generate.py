@@ -175,36 +175,6 @@ class LoaderSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
-class IcdDispatchEntrypointsSubcommand(Subcommand):
-    def generate_header(self):
-        return "#include \"icd.h\""
-
-    def _generate_icd_dispatch_entrypoints(self, qual=""):
-        if qual:
-            qual += " "
-
-        funcs = []
-        for proto in self.protos:
-            if not xgl.is_dispatchable(proto):
-                continue
-
-            decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-            stmt = "(*disp)->%s" % proto.c_call()
-            if proto.ret != "XGL_VOID":
-                stmt = "return " + stmt
-
-            funcs.append("%s%s\n"
-                     "{\n"
-                     "    const XGL_LAYER_DISPATCH_TABLE * const *disp =\n"
-                     "        (const XGL_LAYER_DISPATCH_TABLE * const *) %s;\n"
-                     "    %s;\n"
-                     "}" % (qual, decl, proto.params[0].name, stmt))
-
-        return "\n\n".join(funcs)
-
-    def generate_body(self):
-        return self._generate_icd_dispatch_entrypoints("ICD_EXPORT")
-
 class IcdDispatchDummyImplSubcommand(Subcommand):
     def run(self):
         if len(self.argv) != 1:
@@ -277,7 +247,6 @@ const XGL_LAYER_DISPATCH_TABLE %s_debug_dispatch_table = {
 def main():
     subcommands = {
             "loader": LoaderSubcommand,
-            "icd-dispatch-entrypoints": IcdDispatchEntrypointsSubcommand,
             "icd-dispatch-dummy-impl": IcdDispatchDummyImplSubcommand,
     }
 

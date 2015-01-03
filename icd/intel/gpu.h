@@ -126,19 +126,4 @@ void intel_gpu_close(struct intel_gpu *gpu);
 enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
                                                const char *ext);
 
-XGL_RESULT XGLAPI intelGetGpuInfo(
-    XGL_PHYSICAL_GPU                            gpu,
-    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
-XGL_RESULT XGLAPI intelGetExtensionSupport(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_CHAR*                             pExtName);
-
-XGL_RESULT XGLAPI intelGetMultiGpuCompatibility(
-    XGL_PHYSICAL_GPU                            gpu0,
-    XGL_PHYSICAL_GPU                            gpu1,
-    XGL_GPU_COMPATIBILITY_INFO*                 pInfo);
-
 #endif /* GPU_H */

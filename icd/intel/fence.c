@@ -81,7 +81,7 @@ XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelCreateFence(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateFence(
     XGL_DEVICE                                  device,
     const XGL_FENCE_CREATE_INFO*                pCreateInfo,
     XGL_FENCE*                                  pFence)
@@ -92,7 +92,7 @@ XGL_RESULT XGLAPI intelCreateFence(
             (struct intel_fence **) pFence);
 }
 
-XGL_RESULT XGLAPI intelGetFenceStatus(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(
     XGL_FENCE                                   fence_)
 {
     struct intel_fence *fence = intel_fence(fence_);
@@ -100,7 +100,7 @@ XGL_RESULT XGLAPI intelGetFenceStatus(
     return intel_fence_wait(fence, 0);
 }
 
-XGL_RESULT XGLAPI intelWaitForFences(
+ICD_EXPORT XGL_RESULT XGLAPI xglWaitForFences(
     XGL_DEVICE                                  device,
     XGL_UINT                                    fenceCount,
     const XGL_FENCE*                            pFences,

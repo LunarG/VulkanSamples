@@ -56,18 +56,4 @@ XGL_RESULT intel_event_set(struct intel_event *event);
 XGL_RESULT intel_event_reset(struct intel_event *event);
 XGL_RESULT intel_event_get_status(struct intel_event *event);
 
-XGL_RESULT XGLAPI intelCreateEvent(
-    XGL_DEVICE                                  device,
-    const XGL_EVENT_CREATE_INFO*                pCreateInfo,
-    XGL_EVENT*                                  pEvent);
-
-XGL_RESULT XGLAPI intelGetEventStatus(
-    XGL_EVENT                                   event);
-
-XGL_RESULT XGLAPI intelSetEvent(
-    XGL_EVENT                                   event);
-
-XGL_RESULT XGLAPI intelResetEvent(
-    XGL_EVENT                                   event);
-
 #endif /* EVENT_H */

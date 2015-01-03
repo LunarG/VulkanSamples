@@ -6,8 +6,6 @@ __pycache__
 XGLConfig.h
 *.so
 *.so.*
-icd/common/icd-dispatch-entrypoints.c
-icd/common/icd-dispatch-table.h
 loader/dispatch.c
 tests/xgl_image_tests
 tests/xgl_render_tests
@@ -17,4 +15,3 @@ layers/xgl_enum_string_helper.h
 layers/xgl_struct_string_helper.h
 layers/xgl_struct_wrappers.cpp
 layers/xgl_struct_wrappers.h
-

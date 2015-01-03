@@ -78,22 +78,4 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
 void intel_img_destroy(struct intel_img *img);
 
-XGL_RESULT XGLAPI intelOpenPeerImage(
-    XGL_DEVICE                                  device,
-    const XGL_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
-    XGL_IMAGE*                                  pImage,
-    XGL_GPU_MEMORY*                             pMem);
-
-XGL_RESULT XGLAPI intelCreateImage(
-    XGL_DEVICE                                  device,
-    const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
-    XGL_IMAGE*                                  pImage);
-
-XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
-    XGL_IMAGE                                   image,
-    const XGL_IMAGE_SUBRESOURCE*                pSubresource,
-    XGL_SUBRESOURCE_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
-
 #endif /* IMG_H */

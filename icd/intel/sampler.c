@@ -386,7 +386,7 @@ void intel_sampler_destroy(struct intel_sampler *sampler)
     intel_base_destroy(&sampler->obj.base);
 }
 
-XGL_RESULT XGLAPI intelCreateSampler(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateSampler(
     XGL_DEVICE                                  device,
     const XGL_SAMPLER_CREATE_INFO*              pCreateInfo,
     XGL_SAMPLER*                                pSampler)

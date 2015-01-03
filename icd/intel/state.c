@@ -720,7 +720,7 @@ void intel_ds_state_destroy(struct intel_ds_state *state)
     intel_base_destroy(&state->obj.base);
 }
 
-XGL_RESULT XGLAPI intelCreateViewportState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(
     XGL_DEVICE                                  device,
     const XGL_VIEWPORT_STATE_CREATE_INFO*       pCreateInfo,
     XGL_VIEWPORT_STATE_OBJECT*                  pState)
@@ -731,7 +731,7 @@ XGL_RESULT XGLAPI intelCreateViewportState(
             (struct intel_viewport_state **) pState);
 }
 
-XGL_RESULT XGLAPI intelCreateRasterState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(
     XGL_DEVICE                                  device,
     const XGL_RASTER_STATE_CREATE_INFO*         pCreateInfo,
     XGL_RASTER_STATE_OBJECT*                    pState)
@@ -742,7 +742,7 @@ XGL_RESULT XGLAPI intelCreateRasterState(
             (struct intel_raster_state **) pState);
 }
 
-XGL_RESULT XGLAPI intelCreateMsaaState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(
     XGL_DEVICE                                  device,
     const XGL_MSAA_STATE_CREATE_INFO*           pCreateInfo,
     XGL_MSAA_STATE_OBJECT*                      pState)
@@ -753,7 +753,7 @@ XGL_RESULT XGLAPI intelCreateMsaaState(
             (struct intel_msaa_state **) pState);
 }
 
-XGL_RESULT XGLAPI intelCreateColorBlendState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(
     XGL_DEVICE                                  device,
     const XGL_COLOR_BLEND_STATE_CREATE_INFO*    pCreateInfo,
     XGL_COLOR_BLEND_STATE_OBJECT*               pState)
@@ -764,7 +764,7 @@ XGL_RESULT XGLAPI intelCreateColorBlendState(
             (struct intel_blend_state **) pState);
 }
 
-XGL_RESULT XGLAPI intelCreateDepthStencilState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(
     XGL_DEVICE                                  device,
     const XGL_DEPTH_STENCIL_STATE_CREATE_INFO*  pCreateInfo,
     XGL_DEPTH_STENCIL_STATE_OBJECT*             pState)

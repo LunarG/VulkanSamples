@@ -464,7 +464,7 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
     return type;
 }
 
-XGL_RESULT XGLAPI intelGetGpuInfo(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
     XGL_PHYSICAL_GPU                            gpu_,
     XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
     XGL_SIZE*                                   pDataSize,
@@ -526,7 +526,7 @@ XGL_RESULT XGLAPI intelGetGpuInfo(
     return ret;
 }
 
-XGL_RESULT XGLAPI intelGetExtensionSupport(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(
     XGL_PHYSICAL_GPU                            gpu_,
     const XGL_CHAR*                             pExtName)
 {
@@ -537,7 +537,7 @@ XGL_RESULT XGLAPI intelGetExtensionSupport(
         XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;
 }
 
-XGL_RESULT XGLAPI intelGetMultiGpuCompatibility(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(
     XGL_PHYSICAL_GPU                            gpu0_,
     XGL_PHYSICAL_GPU                            gpu1_,
     XGL_GPU_COMPATIBILITY_INFO*                 pInfo)

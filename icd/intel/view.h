@@ -141,19 +141,4 @@ XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
                                 struct intel_ds_view **view_ret);
 void intel_ds_view_destroy(struct intel_ds_view *view);
 
-XGL_RESULT XGLAPI intelCreateImageView(
-    XGL_DEVICE                                  device,
-    const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-    XGL_IMAGE_VIEW*                             pView);
-
-XGL_RESULT XGLAPI intelCreateColorAttachmentView(
-    XGL_DEVICE                                  device,
-    const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
-    XGL_COLOR_ATTACHMENT_VIEW*                  pView);
-
-XGL_RESULT XGLAPI intelCreateDepthStencilView(
-    XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
-    XGL_DEPTH_STENCIL_VIEW*                     pView);
-
 #endif /* VIEW_H */

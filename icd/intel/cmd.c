@@ -416,7 +416,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
         return XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;
 }
 
-XGL_RESULT XGLAPI intelCreateCommandBuffer(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(
     XGL_DEVICE                                  device,
     const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
     XGL_CMD_BUFFER*                             pCmdBuffer)
@@ -427,7 +427,7 @@ XGL_RESULT XGLAPI intelCreateCommandBuffer(
             (struct intel_cmd **) pCmdBuffer);
 }
 
-XGL_RESULT XGLAPI intelBeginCommandBuffer(
+ICD_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_FLAGS                                   flags)
 {
@@ -436,7 +436,7 @@ XGL_RESULT XGLAPI intelBeginCommandBuffer(
     return intel_cmd_begin(cmd, flags);
 }
 
-XGL_RESULT XGLAPI intelEndCommandBuffer(
+ICD_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -444,7 +444,7 @@ XGL_RESULT XGLAPI intelEndCommandBuffer(
     return intel_cmd_end(cmd);
 }
 
-XGL_RESULT XGLAPI intelResetCommandBuffer(
+ICD_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -454,7 +454,7 @@ XGL_RESULT XGLAPI intelResetCommandBuffer(
     return XGL_SUCCESS;
 }
 
-XGL_VOID XGLAPI intelCmdMemoryAtomic(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdMemoryAtomic(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              destMem,
     XGL_GPU_SIZE                                destOffset,
@@ -463,7 +463,7 @@ XGL_VOID XGLAPI intelCmdMemoryAtomic(
 {
 }
 
-XGL_VOID XGLAPI intelCmdInitAtomicCounters(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdInitAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
@@ -472,7 +472,7 @@ XGL_VOID XGLAPI intelCmdInitAtomicCounters(
 {
 }
 
-XGL_VOID XGLAPI intelCmdLoadAtomicCounters(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdLoadAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
@@ -482,7 +482,7 @@ XGL_VOID XGLAPI intelCmdLoadAtomicCounters(
 {
 }
 
-XGL_VOID XGLAPI intelCmdSaveAtomicCounters(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    startCounter,
@@ -492,13 +492,13 @@ XGL_VOID XGLAPI intelCmdSaveAtomicCounters(
 {
 }
 
-XGL_VOID XGLAPI intelCmdDbgMarkerBegin(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerBegin(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_CHAR*                             pMarker)
 {
 }
 
-XGL_VOID XGLAPI intelCmdDbgMarkerEnd(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerEnd(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
 }

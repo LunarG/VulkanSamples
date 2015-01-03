@@ -3140,7 +3140,7 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
         cmd_batch_flush_all(cmd);
 }
 
-XGL_VOID XGLAPI intelCmdBindPipeline(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE                                pipeline)
@@ -3160,7 +3160,7 @@ XGL_VOID XGLAPI intelCmdBindPipeline(
     }
 }
 
-XGL_VOID XGLAPI intelCmdBindPipelineDelta(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE_DELTA                          delta)
@@ -3180,7 +3180,7 @@ XGL_VOID XGLAPI intelCmdBindPipelineDelta(
     }
 }
 
-XGL_VOID XGLAPI intelCmdBindStateObject(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_STATE_BIND_POINT                        stateBindPoint,
     XGL_STATE_OBJECT                            state)
@@ -3214,7 +3214,7 @@ XGL_VOID XGLAPI intelCmdBindStateObject(
     }
 }
 
-XGL_VOID XGLAPI intelCmdBindDescriptorSet(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_UINT                                    index,
@@ -3239,7 +3239,7 @@ XGL_VOID XGLAPI intelCmdBindDescriptorSet(
     }
 }
 
-XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     const XGL_MEMORY_VIEW_ATTACH_INFO*          pMemView)
@@ -3259,7 +3259,7 @@ XGL_VOID XGLAPI intelCmdBindDynamicMemoryView(
     }
 }
 
-XGL_VOID XGLAPI intelCmdBindVertexData(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                offset,
@@ -3271,7 +3271,7 @@ XGL_VOID XGLAPI intelCmdBindVertexData(
     cmd_bind_vertex_data(cmd, mem, offset, binding);
 }
 
-XGL_VOID XGLAPI intelCmdBindIndexData(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                offset,
@@ -3283,7 +3283,7 @@ XGL_VOID XGLAPI intelCmdBindIndexData(
     cmd_bind_index_data(cmd, mem, offset, indexType);
 }
 
-XGL_VOID XGLAPI intelCmdBindAttachments(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    colorAttachmentCount,
     const XGL_COLOR_ATTACHMENT_BIND_INFO*       pColorAttachments,
@@ -3295,7 +3295,7 @@ XGL_VOID XGLAPI intelCmdBindAttachments(
             pDepthStencilAttachment);
 }
 
-XGL_VOID XGLAPI intelCmdDraw(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDraw(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    firstVertex,
     XGL_UINT                                    vertexCount,
@@ -3308,7 +3308,7 @@ XGL_VOID XGLAPI intelCmdDraw(
             firstInstance, instanceCount, false, 0);
 }
 
-XGL_VOID XGLAPI intelCmdDrawIndexed(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    firstIndex,
     XGL_UINT                                    indexCount,
@@ -3322,7 +3322,7 @@ XGL_VOID XGLAPI intelCmdDrawIndexed(
             firstInstance, instanceCount, true, vertexOffset);
 }
 
-XGL_VOID XGLAPI intelCmdDrawIndirect(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                offset,
@@ -3334,7 +3334,7 @@ XGL_VOID XGLAPI intelCmdDrawIndirect(
     cmd->result = XGL_ERROR_UNKNOWN;
 }
 
-XGL_VOID XGLAPI intelCmdDrawIndexedIndirect(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                offset,
@@ -3346,7 +3346,7 @@ XGL_VOID XGLAPI intelCmdDrawIndexedIndirect(
     cmd->result = XGL_ERROR_UNKNOWN;
 }
 
-XGL_VOID XGLAPI intelCmdDispatch(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDispatch(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    x,
     XGL_UINT                                    y,
@@ -3357,7 +3357,7 @@ XGL_VOID XGLAPI intelCmdDispatch(
     cmd->result = XGL_ERROR_UNKNOWN;
 }
 
-XGL_VOID XGLAPI intelCmdDispatchIndirect(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdDispatchIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                offset)

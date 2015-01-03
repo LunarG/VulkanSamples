@@ -41,27 +41,6 @@ XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
 
 void intel_wsi_x11_destroy(struct intel_wsi_x11 *x11);
 
-XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_WSI_X11_CONNECTION_INFO*          pConnectionInfo);
-
-XGL_RESULT XGLAPI intelWsiX11GetMSC(
-    XGL_DEVICE                                  device,
-    xcb_window_t                                window,
-    xcb_randr_crtc_t                            crtc,
-    XGL_UINT64*                                 pMsc);
-
-XGL_RESULT XGLAPI intelWsiX11CreatePresentableImage(
-    XGL_DEVICE                                  device,
-    const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    XGL_IMAGE*                                  pImage,
-    XGL_GPU_MEMORY*                             pMem);
-
-XGL_RESULT XGLAPI intelWsiX11QueuePresent(
-    XGL_QUEUE                                   queue,
-    const XGL_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    XGL_FENCE                                   fence);
-
 #else /* ENABLE_WSI_X11 */
 
 static inline XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
@@ -73,39 +52,6 @@ static inline XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
 
 static inline void intel_wsi_x11_destroy(struct intel_wsi_x11 *x11)
 {
-}
-
-static inline XGL_RESULT XGLAPI intelWsiX11AssociateConnection(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
-{
-    return XGL_ERROR_UNKNOWN;
-}
-
-static inline XGL_RESULT XGLAPI intelWsiX11GetMSC(
-    XGL_DEVICE                                  device,
-    xcb_window_t                                window,
-    xcb_randr_crtc_t                            crtc,
-    XGL_UINT64*                                 pMsc)
-{
-    return XGL_ERROR_UNKNOWN;
-}
-
-static inline XGL_RESULT XGLAPI intelWsiX11CreatePresentableImage(
-    XGL_DEVICE                                  device,
-    const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    XGL_IMAGE*                                  pImage,
-    XGL_GPU_MEMORY*                             pMem)
-{
-    return XGL_ERROR_UNKNOWN;
-}
-
-static inline XGL_RESULT XGLAPI intelWsiX11QueuePresent(
-    XGL_QUEUE                                   queue,
-    const XGL_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    XGL_FENCE                                   fence)
-{
-    return XGL_ERROR_UNKNOWN;
 }
 
 #endif /* ENABLE_WSI_X11 */

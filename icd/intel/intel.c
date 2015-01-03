@@ -74,11 +74,6 @@ static void intel_debug_init(void)
     }
 }
 
-ICD_EXPORT XGL_VOID * xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName)
-{
-    return intelGetProcAddr(gpu, pName);
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     const XGL_APPLICATION_INFO*                 pAppInfo,
     const XGL_ALLOC_CALLBACKS*                  pAllocCb,
@@ -140,20 +135,20 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelDbgRegisterMsgCallback(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     XGL_VOID*                                   pUserData)
 {
     return icd_logger_add_callback(pfnMsgCallback, pUserData);
 }
 
-XGL_RESULT XGLAPI intelDbgUnregisterMsgCallback(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
     return icd_logger_remove_callback(pfnMsgCallback);
 }
 
-XGL_RESULT XGLAPI intelDbgSetGlobalOption(
+ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
     XGL_DBG_GLOBAL_OPTION                       dbgOption,
     XGL_SIZE                                    dataSize,
     const XGL_VOID*                             pData)

@@ -184,7 +184,7 @@ XGL_RESULT intel_query_get_results(struct intel_query *query,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelCreateQueryPool(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(
     XGL_DEVICE                                  device,
     const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
     XGL_QUERY_POOL*                             pQueryPool)
@@ -195,7 +195,7 @@ XGL_RESULT XGLAPI intelCreateQueryPool(
             (struct intel_query **) pQueryPool);
 }
 
-XGL_RESULT XGLAPI intelGetQueryPoolResults(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(
     XGL_QUERY_POOL                              queryPool,
     XGL_UINT                                    startQuery,
     XGL_UINT                                    queryCount,

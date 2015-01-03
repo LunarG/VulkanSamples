@@ -70,7 +70,7 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI intelCreateShader(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateShader(
         XGL_DEVICE                                  device,
         const XGL_SHADER_CREATE_INFO*               pCreateInfo,
         XGL_SHADER*                                 pShader)

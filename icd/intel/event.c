@@ -165,7 +165,7 @@ XGL_RESULT intel_event_get_status(struct intel_event *event)
     return (val) ? XGL_EVENT_SET : XGL_EVENT_RESET;
 }
 
-XGL_RESULT XGLAPI intelCreateEvent(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateEvent(
     XGL_DEVICE                                  device,
     const XGL_EVENT_CREATE_INFO*                pCreateInfo,
     XGL_EVENT*                                  pEvent)
@@ -176,7 +176,7 @@ XGL_RESULT XGLAPI intelCreateEvent(
             (struct intel_event **) pEvent);
 }
 
-XGL_RESULT XGLAPI intelGetEventStatus(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(
     XGL_EVENT                                   event_)
 {
     struct intel_event *event = intel_event(event_);
@@ -184,7 +184,7 @@ XGL_RESULT XGLAPI intelGetEventStatus(
     return intel_event_get_status(event);
 }
 
-XGL_RESULT XGLAPI intelSetEvent(
+ICD_EXPORT XGL_RESULT XGLAPI xglSetEvent(
     XGL_EVENT                                   event_)
 {
     struct intel_event *event = intel_event(event_);
@@ -192,7 +192,7 @@ XGL_RESULT XGLAPI intelSetEvent(
     return intel_event_set(event);
 }
 
-XGL_RESULT XGLAPI intelResetEvent(
+ICD_EXPORT XGL_RESULT XGLAPI xglResetEvent(
     XGL_EVENT                                   event_)
 {
     struct intel_event *event = intel_event(event_);

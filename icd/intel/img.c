@@ -162,7 +162,7 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
-XGL_RESULT XGLAPI intelOpenPeerImage(
+ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(
     XGL_DEVICE                                  device,
     const XGL_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
     XGL_IMAGE*                                  pImage,
@@ -171,7 +171,7 @@ XGL_RESULT XGLAPI intelOpenPeerImage(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-XGL_RESULT XGLAPI intelCreateImage(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateImage(
     XGL_DEVICE                                  device,
     const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
     XGL_IMAGE*                                  pImage)
@@ -182,7 +182,7 @@ XGL_RESULT XGLAPI intelCreateImage(
             (struct intel_img **) pImage);
 }
 
-XGL_RESULT XGLAPI intelGetImageSubresourceInfo(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     XGL_IMAGE                                   image,
     const XGL_IMAGE_SUBRESOURCE*                pSubresource,
     XGL_SUBRESOURCE_INFO_TYPE                   infoType,

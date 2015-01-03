@@ -50,9 +50,4 @@ static inline struct intel_shader *intel_shader_from_obj(struct intel_obj *obj)
     return (struct intel_shader *) obj;
 }
 
-XGL_RESULT XGLAPI intelCreateShader(
-    XGL_DEVICE                                  device,
-    const XGL_SHADER_CREATE_INFO*               pCreateInfo,
-    XGL_SHADER*                                 pShader);
-
 #endif /* SHADER_H */

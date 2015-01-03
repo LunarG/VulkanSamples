@@ -531,7 +531,7 @@ static void intel_format_get_props(const struct intel_dev *dev,
     }
 }
 
-XGL_RESULT XGLAPI intelGetFormatInfo(
+ICD_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(
     XGL_DEVICE                                  device,
     XGL_FORMAT                                  format,
     XGL_FORMAT_INFO_TYPE                        infoType,

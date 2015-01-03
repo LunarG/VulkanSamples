@@ -32,5 +32,5 @@
 #include "xglLayer.h"
 
 const XGL_LAYER_DISPATCH_TABLE *intel_dispatch_get(bool debug);
-XGL_VOID * intelGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName);
+
 #endif /* DISPATCH_H */

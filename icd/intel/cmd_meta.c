@@ -402,7 +402,7 @@ static XGL_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
     return format;
 }
 
-XGL_VOID XGLAPI intelCmdCopyMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemory(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              srcMem,
     XGL_GPU_MEMORY                              destMem,
@@ -474,7 +474,7 @@ XGL_VOID XGLAPI intelCmdCopyMemory(
     }
 }
 
-XGL_VOID XGLAPI intelCmdCopyImage(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
     XGL_IMAGE                                   destImage,
@@ -547,7 +547,7 @@ XGL_VOID XGLAPI intelCmdCopyImage(
     }
 }
 
-XGL_VOID XGLAPI intelCmdCopyMemoryToImage(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyMemoryToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              srcMem,
     XGL_IMAGE                                   destImage,
@@ -597,7 +597,7 @@ XGL_VOID XGLAPI intelCmdCopyMemoryToImage(
     }
 }
 
-XGL_VOID XGLAPI intelCmdCopyImageToMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToMemory(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
     XGL_GPU_MEMORY                              destMem,
@@ -683,7 +683,7 @@ XGL_VOID XGLAPI intelCmdCopyImageToMemory(
     }
 }
 
-XGL_VOID XGLAPI intelCmdCloneImageData(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdCloneImageData(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
     XGL_IMAGE_STATE                             srcImageState,
@@ -699,11 +699,11 @@ XGL_VOID XGLAPI intelCmdCloneImageData(
     region.copySize = src->obj.mem->size;
 
     cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH);
-    intelCmdCopyMemory(cmdBuffer, (XGL_GPU_MEMORY) src->obj.mem,
+    xglCmdCopyMemory(cmdBuffer, (XGL_GPU_MEMORY) src->obj.mem,
             (XGL_GPU_MEMORY) dst->obj.mem, 1, &region);
 }
 
-XGL_VOID XGLAPI intelCmdUpdateMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdUpdateMemory(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              destMem,
     XGL_GPU_SIZE                                destOffset,
@@ -752,7 +752,7 @@ XGL_VOID XGLAPI intelCmdUpdateMemory(
     cmd_draw_meta(cmd, &meta);
 }
 
-XGL_VOID XGLAPI intelCmdFillMemory(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdFillMemory(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_GPU_MEMORY                              destMem,
     XGL_GPU_SIZE                                destOffset,
@@ -844,7 +844,7 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
     }
 }
 
-XGL_VOID XGLAPI intelCmdClearColorImage(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdClearColorImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
     const XGL_FLOAT                             color[4],
@@ -873,7 +873,7 @@ XGL_VOID XGLAPI intelCmdClearColorImage(
     }
 }
 
-XGL_VOID XGLAPI intelCmdClearColorImageRaw(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdClearColorImageRaw(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
     const XGL_UINT32                            color[4],
@@ -899,7 +899,7 @@ XGL_VOID XGLAPI intelCmdClearColorImageRaw(
         cmd_meta_clear_image(cmd, img, format, &meta, &pRanges[i]);
 }
 
-XGL_VOID XGLAPI intelCmdClearDepthStencil(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdClearDepthStencil(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
     XGL_FLOAT                                   depth,
@@ -929,7 +929,7 @@ XGL_VOID XGLAPI intelCmdClearDepthStencil(
     }
 }
 
-XGL_VOID XGLAPI intelCmdResolveImage(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdResolveImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
     XGL_IMAGE                                   destImage,

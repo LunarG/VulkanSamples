@@ -367,6 +367,10 @@ add_library(XGL_i965 SHARED
    $<TARGET_OBJECTS:icd>
    )
 
+# set -Bsymbolic-functions for xglGetProcAddr()
+set_target_properties(XGL_i965 PROPERTIES
+	LINK_FLAGS -Wl,-Bsymbolic-functions)
+
 #add_executable(xglCompiler
 #   ${STANDALONE_COMPILER_SOURCES}
 #)
