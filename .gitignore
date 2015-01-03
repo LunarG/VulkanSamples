@@ -6,6 +6,7 @@ __pycache__
 XGLConfig.h
 *.so
 *.so.*
+icd/common/libicd.a
 loader/dispatch.c
 tests/xgl_image_tests
 tests/xgl_render_tests

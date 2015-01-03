@@ -13,15 +13,9 @@ endif()
 
 pkg_check_modules(ICD REQUIRED ${ICD_REQUIRED_MODULES})
 
-# icd-dispatch-table.h was generated in ${CMAKE_CURRENT_BINARY_DIR}
-set(ICD_INCLUDE_DIRS
-	${ICD_INCLUDE_DIRS}
-	${CMAKE_CURRENT_BINARY_DIR}
-	CACHE INTERNAL "")
-
 include_directories(
 	${ICD_INCLUDE_DIRS}
 )
 
-add_library(icd OBJECT ${ICD_SOURCES})
+add_library(icd STATIC ${ICD_SOURCES})
 set_target_properties(icd PROPERTIES POSITION_INDEPENDENT_CODE ON)

@@ -93,6 +93,7 @@ SET(COMPILER_LIBS
 )
 
 link_libraries (
+    icd
     ${ICD_LIBRARIES}
     ${DRM_LIBRARIES}
     ${COMPILER_LIBS}
@@ -362,10 +363,7 @@ if (DRI3_FOUND)
 	set(SOURCES ${SOURCES} wsi_x11.c)
 endif()
 
-add_library(XGL_i965 SHARED
-   ${SOURCES}
-   $<TARGET_OBJECTS:icd>
-   )
+add_library(XGL_i965 SHARED ${SOURCES})
 
 # set -Bsymbolic-functions for xglGetProcAddr()
 set_target_properties(XGL_i965 PROPERTIES
