@@ -175,13 +175,14 @@ class LoaderSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
-class IcdDispatchDummyImplSubcommand(Subcommand):
+class IcdDummyEntrypointsSubcommand(Subcommand):
     def run(self):
-        if len(self.argv) != 1:
-            print("IcdDispatchDummyImplSubcommand: <prefix> unspecified")
-            return
-
-        self.prefix = self.argv[0]
+        if len(self.argv) == 1:
+            self.prefix = self.argv[0]
+            self.qual = "static"
+        else:
+            self.prefix = "xgl"
+            self.qual = "ICD_EXPORT"
 
         super().run()
 
@@ -213,41 +214,21 @@ class IcdDispatchDummyImplSubcommand(Subcommand):
 
             decl = self._generate_stub_decl(proto)
             if proto.ret != "XGL_VOID":
-                stmt = "    return XGL_ERROR_UNAVAILABLE;\n"
+                stmt = "    return XGL_ERROR_UNKNOWN;\n"
             else:
                 stmt = ""
 
-            stubs.append("static %s\n{\n%s}" % (decl, stmt))
+            stubs.append("%s %s\n{\n%s}" % (self.qual, decl, stmt))
 
         return "\n\n".join(stubs)
 
-
-    def _generate_tables(self):
-        initializer = []
-        for proto in self.protos:
-            prefix = self.prefix if xgl.is_dispatchable(proto) else "xgl"
-            initializer.append(".%s = %s%s" %
-                    (proto.name, prefix, proto.name))
-
-        return """const XGL_LAYER_DISPATCH_TABLE %s_normal_dispatch_table = {
-    %s,
-};
-
-const XGL_LAYER_DISPATCH_TABLE %s_debug_dispatch_table = {
-    %s,
-};""" % (self.prefix, ",\n    ".join(initializer),
-         self.prefix, ",\n    ".join(initializer))
-
     def generate_body(self):
-        body = [self._generate_stubs(),
-                self._generate_tables()]
-
-        return "\n\n".join(body)
+        return self._generate_stubs()
 
 def main():
     subcommands = {
             "loader": LoaderSubcommand,
-            "icd-dispatch-dummy-impl": IcdDispatchDummyImplSubcommand,
+            "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
