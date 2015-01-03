@@ -280,13 +280,44 @@ static void demo_draw_build_cmd(struct demo *demo)
     const XGL_FLOAT clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
     const XGL_FLOAT clear_depth = 1.0f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
+    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
+        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
+        .pNext = NULL,
+        .operation = XGL_RENDER_PASS_OPERATION_BEGIN_AND_END,
+    };
     XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
+        .pNext = &graphics_cmd_buf_info,
         .flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
             XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
     XGL_RESULT err;
+    XGL_ATTACHMENT_LOAD_OP load_op = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
+    XGL_ATTACHMENT_STORE_OP store_op = XGL_ATTACHMENT_STORE_OP_DONT_CARE;
+    const XGL_FRAMEBUFFER_CREATE_INFO fb_info = {
+         .sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+         .pNext = NULL,
+         .colorAttachmentCount = 1,
+         .pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*) &color_attachment,
+         .pDepthStencilAttachment = (XGL_DEPTH_STENCIL_BIND_INFO*) &depth_stencil,
+         .sampleCount = 1,
+    };
+    XGL_RENDER_PASS_CREATE_INFO rp_info;
+
+    memset(&rp_info, 0 , sizeof(rp_info));
+    err = xglCreateFramebuffer(demo->device, &fb_info, &(rp_info.framebuffer));
+    assert(!err);
+    rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.renderArea.extent.width = demo->width;
+    rp_info.renderArea.extent.height = demo->height;
+    rp_info.pColorLoadOps = &load_op;
+    rp_info.pColorStoreOps = &store_op;
+    rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
+    rp_info.depthStoreOp = XGL_ATTACHMENT_STORE_OP_DONT_CARE;
+    rp_info.stencilLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
+    rp_info.stencilStoreOp = XGL_ATTACHMENT_STORE_OP_DONT_CARE;
+    err = xglCreateRenderPass(demo->device, &rp_info, &(graphics_cmd_buf_info.renderPass));
+    assert(!err);
 
     err = xglBeginCommandBuffer(demo->cmd, &cmd_buf_info);
     assert(!err);
@@ -303,8 +334,6 @@ static void demo_draw_build_cmd(struct demo *demo)
                                      demo->color_blend);
     xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_DEPTH_STENCIL,
                                      demo->depth_stencil);
-
-    xglCmdBindAttachments(demo->cmd, 1, &color_attachment, &depth_stencil);
 
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
