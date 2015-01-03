@@ -469,7 +469,7 @@ class Subcommand(object):
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
                     func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;')
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(XGL_SIZE));' % (proto.name))
-                elif proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
                         func_body.append('    customSize = (pCreateInfo != NULL) ? pCreateInfo->codeSize : 0;')
@@ -477,6 +477,20 @@ class Subcommand(object):
                     elif 'CreateGraphicsPipeline' == proto.name:
                         func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateGraphicsPipeline, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize);')
+                    elif 'CreateFramebuffer' == proto.name:
+                        func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(XGL_DEPTH_STENCIL_BIND_INFO) : 0;')
+                        func_body.append('    int colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
+                        func_body.append('    customSize = colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) + dsSize;')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, sizeof(XGL_FRAMEBUFFER_CREATE_INFO) + sizeof(XGL_FRAMEBUFFER) + customSize);')
+                    elif 'CreateRenderPass' == proto.name:
+# HACK ALERT, TODO this API currently has insufficient parameters to determine the count of the colorLoadOps, colorStoreOps, in the CREATE_INFO struct
+# assume number of colorAttachments  == 1  for now rather than tracing code keeping a list of framebuffer objects with colorAttachmentCounts
+                        func_body.append('    int colorCount = (pCreateInfo != NULL && pCreateInfo->pColorLoadOps != NULL && pCreateInfo->pColorStoreOps != NULL && pCreateInfo->pColorLoadClearValues != NULL) ? 1 : 0; //TODO fixme')
+                        func_body.append('    customSize = colorCount * (sizeof(XGL_ATTACHMENT_LOAD_OP) + sizeof(XGL_ATTACHMENT_STORE_OP) + sizeof(XGL_CLEAR_COLOR));')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
+                    elif 'BeginCommandBuffer' == proto.name:
+                        func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglBeginCommandBuffer, sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + customSize);')
                     else: #'CreateComputePipeline'
                         func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateComputePipeline, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize + calculate_pipeline_shader_size(&pCreateInfo->cs));')
@@ -532,10 +546,24 @@ class Subcommand(object):
                         else:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
                     # Some custom add_* and finalize_* function calls for Create* API calls
-                    if proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                    if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                         if 'CreateShader' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), customSize, pCreateInfo->pCode);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
+                        elif 'CreateFramebuffer' == proto.name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO), pCreateInfo->pColorAttachments);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment);')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments));')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment));')
+                        elif 'CreateRenderPass' == proto.name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(XGL_ATTACHMENT_LOAD_OP), pCreateInfo->pColorLoadOps);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(XGL_ATTACHMENT_STORE_OP), pCreateInfo->pColorStoreOps);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(XGL_CLEAR_COLOR), pCreateInfo->pColorLoadClearValues);')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps));')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));')
+                        elif 'BeginCommandBuffer' == proto.name:
+                            func_body.append('    add_begin_cmdbuf_to_trace_packet(pHeader, (XGL_VOID**)&pPacket->pBeginInfo->pNext, pBeginInfo->pNext);')
                         elif 'CreateGraphicsPipeline' == proto.name:
                             func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (XGL_VOID**)&pPacket->pCreateInfo->pNext, pCreateInfo->pNext);')
                         else:
@@ -765,6 +793,55 @@ class Subcommand(object):
         hf_body.append('        if (mInfo.numEntrys == 0)')
         hf_body.append('            delete_mem_info();')
         hf_body.append('    }')
+        hf_body.append('}')
+        hf_body.append('')
+
+
+        hf_body.append('static void add_begin_cmdbuf_to_trace_packet(glv_trace_packet_header* pHeader, XGL_VOID** ppOut, const XGL_VOID* pIn)')
+        hf_body.append('{')
+        hf_body.append('    const XGL_CMD_BUFFER_BEGIN_INFO* pInNow = pIn;')
+        hf_body.append('    XGL_CMD_BUFFER_BEGIN_INFO** ppOutNext = (XGL_CMD_BUFFER_BEGIN_INFO**)ppOut;')
+        hf_body.append('    while (pInNow != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        XGL_CMD_BUFFER_BEGIN_INFO** ppOutNow = ppOutNext;')
+        hf_body.append('        ppOutNext = NULL;')
+        hf_body.append('')
+        hf_body.append('        switch (pInNow->sType)')
+        hf_body.append('        {')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO), pInNow);')
+        hf_body.append('                ppOutNext = (XGL_CMD_BUFFER_BEGIN_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
+        hf_body.append('            default:')
+        hf_body.append('                assert(!"Encountered an unexpected type in pipeline state list");')
+        hf_body.append('        }')
+        hf_body.append('        pInNow = (XGL_CMD_BUFFER_BEGIN_INFO*)pInNow->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return;')
+        hf_body.append('}')
+
+        hf_body.append('static size_t calculate_begin_cmdbuf_size(const XGL_CMD_BUFFER_BEGIN_INFO* pNext)')
+        hf_body.append('{')
+        hf_body.append('    size_t siz = 0;')
+        hf_body.append('    while (pNext != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        switch (pNext->sType)')
+        hf_body.append('        {')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:')
+        hf_body.append('        {')
+        hf_body.append('            siz += sizeof(XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        default:')
+        hf_body.append('            glv_LogError("calculate_begin_cmdbuf_size() bad internal state sType\\n");')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        pNext = (XGL_CMD_BUFFER_BEGIN_INFO*)pNext->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return siz;')
         hf_body.append('}')
         hf_body.append('')
         hf_body.append('static size_t calculate_pipeline_shader_size(const XGL_PIPELINE_SHADER* shader)')
@@ -1213,10 +1290,42 @@ class Subcommand(object):
 
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
-        custom_case_dict = { 'InitAndEnumerateGpus' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n', 'pInfo->pAppName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n', 'pInfo->pEngineName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
-                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['XGL_SHADER_CREATE_INFO* pInfo = (XGL_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n', 'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
-                             'CreateGraphicsPipeline' : {'param': 'pCreateInfo', 'txt': ['assert(pPacket->pCreateInfo->sType == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);\n', '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n','XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pPacket->pCreateInfo->pNext;\n','*ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pNext);\n',
-                                                                                         'XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;\n', 'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
+        custom_case_dict = { 'InitAndEnumerateGpus' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n',
+                                                       'pInfo->pAppName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
+                                                       'pInfo->pEngineName = (const XGL_CHAR*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
+                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['XGL_SHADER_CREATE_INFO* pInfo = (XGL_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                                               'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
+                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['XGL_FRAMEBUFFER_CREATE_INFO* pInfo = (XGL_FRAMEBUFFER_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                                                    'pInfo->pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
+                                                    'pInfo->pDepthStencilAttachment = (XGL_DEPTH_STENCIL_BIND_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
+                             'CreateRenderPass' : {'param': 'pCreateInfo', 'txt': ['XGL_RENDER_PASS_CREATE_INFO* pInfo = (XGL_RENDER_PASS_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                                                   'pInfo->pColorLoadOps = (XGL_ATTACHMENT_LOAD_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadOps);\n',
+                                                   'pInfo->pColorStoreOps = (XGL_ATTACHMENT_STORE_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorStoreOps);\n',
+                                                   'pInfo->pColorLoadClearValues = (XGL_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
+                             'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['assert(pPacket->pBeginInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO);\n',
+                                                                                         '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
+                                                                                         'XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pPacket->pBeginInfo->pNext;\n',
+                                                                                         '*ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
+                                                                                         'XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pNext = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pPacket->pBeginInfo->pNext;\n',
+                                                                                         'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
+                                                                                         '    switch(pNext->sType)\n', '    {\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pNext->pNext;\n',
+                                                                                         '            *ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        default:\n',
+                                                                                         '            assert(!"Encountered an unexpected type in begin command buffer list");\n',
+                                                                                         '    }\n',
+                                                                                         '    pNext = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pNext->pNext;\n',
+                                                                                         '}']},
+                             'CreateGraphicsPipeline' : {'param': 'pCreateInfo', 'txt': ['assert(pPacket->pCreateInfo->sType == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);\n',
+                                                                                         '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
+                                                                                         'XGL_VOID** ppNextVoidPtr = (XGL_VOID**)&pPacket->pCreateInfo->pNext;\n',
+                                                                                         '*ppNextVoidPtr = (XGL_VOID*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pNext);\n',
+                                                                                         'XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;\n',
+                                                                                         'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
                                                                                          '    switch(pNext->sType)\n', '    {\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:\n',
@@ -2354,6 +2463,88 @@ class Subcommand(object):
         cgp_body.append('                *(saveShader[i].addr) = saveShader[i].val;')
         return "\n".join(cgp_body)
 
+    def _gen_replay_create_framebuffer(self):
+        cf_body = []
+        cf_body.append('            XGL_FRAMEBUFFER_CREATE_INFO *pInfo = (XGL_FRAMEBUFFER_CREATE_INFO *) pPacket->pCreateInfo;')
+        cf_body.append('            XGL_COLOR_ATTACHMENT_BIND_INFO *pColorAttachments, *pSavedColor = (XGL_COLOR_ATTACHMENT_BIND_INFO*)pInfo->pColorAttachments;')
+        cf_body.append('            bool allocatedColorAttachments = false;')
+        cf_body.append('            if (pSavedColor != NULL)')
+        cf_body.append('            {')
+        cf_body.append('                allocatedColorAttachments = true;')
+        cf_body.append('                pColorAttachments = GLV_NEW_ARRAY(XGL_COLOR_ATTACHMENT_BIND_INFO, pInfo->colorAttachmentCount);')
+        cf_body.append('                memcpy(pColorAttachments, pSavedColor, sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) * pInfo->colorAttachmentCount);')
+        cf_body.append('                for (XGL_UINT i = 0; i < pInfo->colorAttachmentCount; i++)')
+        cf_body.append('                {')
+        cf_body.append('                    pColorAttachments[i].view = remap(pInfo->pColorAttachments[i].view);')
+        cf_body.append('                }')
+        cf_body.append('                pInfo->pColorAttachments = pColorAttachments;')
+        cf_body.append('            }')
+        cf_body.append('            // remap depth stencil target')
+        cf_body.append('            XGL_DEPTH_STENCIL_BIND_INFO *pSavedDS = pInfo->pDepthStencilAttachment;')
+        cf_body.append('            XGL_DEPTH_STENCIL_BIND_INFO depthTarget;')
+        cf_body.append('            if (pSavedDS != NULL)')
+        cf_body.append('            {')
+        cf_body.append('                memcpy(&depthTarget, pSavedDS, sizeof(XGL_DEPTH_STENCIL_BIND_INFO));')
+        cf_body.append('                depthTarget.view = remap(pSavedDS->view);')
+        cf_body.append('                pInfo->pDepthStencilAttachment = &depthTarget;')
+        cf_body.append('            }')
+        cf_body.append('            XGL_FRAMEBUFFER local_framebuffer;')
+        cf_body.append('            replayResult = m_xglFuncs.real_xglCreateFramebuffer(remap(pPacket->device), pPacket->pCreateInfo, &local_framebuffer);')
+        cf_body.append('            pInfo->pColorAttachments = pSavedColor;')
+        cf_body.append('            pInfo->pDepthStencilAttachment = pSavedDS;')
+        cf_body.append('            if (replayResult == XGL_SUCCESS)')
+        cf_body.append('            {')
+        cf_body.append('                add_to_map(pPacket->pFramebuffer, &local_framebuffer);')
+        cf_body.append('            }')
+        cf_body.append('            if (allocatedColorAttachments)')
+        cf_body.append('            {')
+        cf_body.append('                GLV_DELETE((void*)pColorAttachments);')
+        cf_body.append('            }')
+        return "\n".join(cf_body)
+
+    def _gen_replay_create_renderpass(self):
+        cr_body = []
+        cr_body.append('            XGL_RENDER_PASS_CREATE_INFO *pInfo = (XGL_RENDER_PASS_CREATE_INFO *) pPacket->pCreateInfo;')
+        cr_body.append('            // remap framebuffer')
+        cr_body.append('            XGL_FRAMEBUFFER savedFB, *pFB = &(pInfo->framebuffer);')
+        cr_body.append('            if (*pFB != NULL)')
+        cr_body.append('            {')
+        cr_body.append('                savedFB = pInfo->framebuffer;')
+        cr_body.append('                *pFB = remap(pInfo->framebuffer);')
+        cr_body.append('            }')
+        cr_body.append('            XGL_RENDER_PASS local_renderpass;')
+        cr_body.append('            replayResult = m_xglFuncs.real_xglCreateRenderPass(remap(pPacket->device), pPacket->pCreateInfo, &local_renderpass);')
+        cr_body.append('            pInfo->framebuffer = savedFB;')
+        cr_body.append('            if (replayResult == XGL_SUCCESS)')
+        cr_body.append('            {')
+        cr_body.append('                add_to_map(pPacket->pRenderPass, &local_renderpass);')
+        cr_body.append('            }')
+        return "\n".join(cr_body)
+
+    def _gen_replay_begin_command_buffer(self):
+        bcb_body = []
+        bcb_body.append('            XGL_CMD_BUFFER_BEGIN_INFO* pInfo = (XGL_CMD_BUFFER_BEGIN_INFO*)pPacket->pBeginInfo;')
+        bcb_body.append('            // assume only zero or one graphics_begin_info in the chain')
+        bcb_body.append('            XGL_RENDER_PASS savedRP, *pRP;')
+        bcb_body.append('            XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *pGInfo = NULL;')
+        bcb_body.append('            while (pInfo != NULL)')
+        bcb_body.append('            {')
+        bcb_body.append('')
+        bcb_body.append('                if (pInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO)')
+        bcb_body.append('                {')
+        bcb_body.append('                    pGInfo = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) pInfo;')
+        bcb_body.append('                    savedRP = pGInfo->renderPass;')
+        bcb_body.append('                    pRP = &(pGInfo->renderPass);')
+        bcb_body.append('                    *pRP = remap(pGInfo->renderPass);')
+        bcb_body.append('                    break;')
+        bcb_body.append('                }')
+        bcb_body.append('                pInfo = (XGL_CMD_BUFFER_BEGIN_INFO*) pInfo->pNext;')
+        bcb_body.append('            }')
+        bcb_body.append('            replayResult = m_xglFuncs.real_xglBeginCommandBuffer(remap(pPacket->cmdBuffer), pPacket->pBeginInfo);')
+        bcb_body.append('            if (pGInfo != NULL)')
+        bcb_body.append('                pGInfo->renderPass = savedRP;')
+        return "\n".join(bcb_body)
+
     def _gen_replay_store_pipeline(self):
         sp_body = []
         sp_body.append('            XGL_SIZE size = 0;')
@@ -2377,39 +2568,6 @@ class Subcommand(object):
         sp_body.append('            }')
         sp_body.append('            glv_free(pData);')
         return "\n".join(sp_body)
-
-    def _gen_replay_cmd_bind_attachments(self):
-        cba_body = []
-        cba_body.append('            // adjust color targets')
-        cba_body.append('            XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*)pPacket->pColorAttachments;')
-        cba_body.append('            bool allocatedColorAttachments = false;')
-        cba_body.append('            if (pColorAttachments != NULL)')
-        cba_body.append('            {')
-        cba_body.append('                allocatedColorAttachments = true;')
-        cba_body.append('                pColorAttachments = GLV_NEW_ARRAY(XGL_COLOR_ATTACHMENT_BIND_INFO, pPacket->colorAttachmentCount);')
-        cba_body.append('                memcpy(pColorAttachments, pPacket->pColorAttachments, sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) * pPacket->colorAttachmentCount);')
-        cba_body.append('                for (XGL_UINT i = 0; i < pPacket->colorAttachmentCount; i++)')
-        cba_body.append('                {')
-        cba_body.append('                    pColorAttachments[i].view = remap(pPacket->pColorAttachments[i].view);')
-        cba_body.append('                }')
-        cba_body.append('            }')
-        cba_body.append('            // adjust depth stencil target')
-        cba_body.append('            const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment = pPacket->pDepthStencilAttachment;')
-        cba_body.append('            XGL_DEPTH_STENCIL_BIND_INFO depthTarget;')
-        cba_body.append('            if (pDepthStencilAttachment != NULL)')
-        cba_body.append('            {')
-        cba_body.append('                memcpy(&depthTarget, pPacket->pDepthStencilAttachment, sizeof(XGL_DEPTH_STENCIL_BIND_INFO));')
-        cba_body.append('                depthTarget.view = remap(pPacket->pDepthStencilAttachment->view);')
-        cba_body.append('                pDepthStencilAttachment = &depthTarget;')
-        cba_body.append('            }')
-        cba_body.append('            // make call')
-        cba_body.append('             m_xglFuncs.real_xglCmdBindAttachments(remap(pPacket->cmdBuffer), pPacket->colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);')
-        cba_body.append('            // cleanup')
-        cba_body.append('            if (allocatedColorAttachments)')
-        cba_body.append('            {')
-        cba_body.append('                GLV_DELETE((void*)pColorAttachments);')
-        cba_body.append('            }')
-        return "\n".join(cba_body)
 
     def _gen_replay_get_multi_gpu_compatibility(self):
         gmgc_body = []
@@ -2526,8 +2684,10 @@ class Subcommand(object):
                             'GetFormatInfo': self._gen_replay_get_format_info,
                             'GetImageSubresourceInfo': self._gen_replay_get_image_subresource_info,
                             'CreateGraphicsPipeline': self._gen_replay_create_graphics_pipeline,
+                            'CreateFramebuffer': self._gen_replay_create_framebuffer,
+                            'CreateRenderPass': self._gen_replay_create_renderpass,
+                            'BeginCommandBuffer': self._gen_replay_begin_command_buffer,
                             'StorePipeline': self._gen_replay_store_pipeline,
-                            'CmdBindAttachments': self._gen_replay_cmd_bind_attachments,
                             'GetMultiGpuCompatibility': self._gen_replay_get_multi_gpu_compatibility,
                             'DestroyObject': self._gen_replay_destroy_object,
                             'WaitForFences': self._gen_replay_wait_for_fences,
