@@ -54,6 +54,7 @@ public:
 
     XGL_DEVICE device() {return m_device->device();}
     XGL_PHYSICAL_GPU gpu() {return objs[0];}
+    XGL_RENDER_PASS renderPass() {return m_renderPass;}
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();
@@ -68,6 +69,7 @@ protected:
     XGL_UINT                        gpu_count;
     XglDevice                      *m_device;
     XGL_CMD_BUFFER                  m_cmdBuffer;
+    XGL_RENDER_PASS                 m_renderPass;
     XGL_MEMORY_REF                  m_memRefs[5];
     XGL_RASTER_STATE_OBJECT         m_stateRaster;
     XGL_COLOR_BLEND_STATE_OBJECT    m_colorBlend;
@@ -117,8 +119,7 @@ public:
     void AddDepthStencil();
     void ClearAllBuffers();
     void ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage);
-    void BindAttachments(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding);
-    void BindAttachments();
+    void PrepareAttachments();
     void BindPipeline(XGL_PIPELINE pipeline);
     void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
     void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding);

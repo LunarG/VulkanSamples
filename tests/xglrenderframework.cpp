@@ -172,6 +172,7 @@ void XglRenderFramework::InitViewport()
 void XglRenderFramework::InitRenderTarget()
 {
     XGL_UINT i;
+    XGL_RESULT err;
 
     for (i = 0; i < m_renderTargetCount; i++) {
         XglImage *img = new XglImage(m_device);
@@ -1035,10 +1036,9 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     }
 }
 
-void XglCommandBufferObj::BindAttachments(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding)
+void XglCommandBufferObj::PrepareAttachments()
 {
     XGL_UINT i;
-    XGL_COLOR_ATTACHMENT_BIND_INFO  colorBindings[XGL_MAX_COLOR_ATTACHMENTS];
     XGL_IMAGE_SUBRESOURCE_RANGE srRange = {};
     srRange.aspect = XGL_IMAGE_ASPECT_COLOR;
     srRange.baseMipLevel = 0;

@@ -968,20 +968,9 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-<<<<<<< HEAD
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
-=======
-    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
-        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
-        .flags = 0,
-    };
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(&cmd_buf_info));
-    cmdBuffer.ClearAllBuffers(NULL, NULL);
-    cmdBuffer.BindAttachments(NULL);
->>>>>>> tests: Update BeginCommandBuffer Api for Tiler GPUs
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
