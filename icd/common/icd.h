@@ -30,7 +30,7 @@
 
 #include <xgl.h>
 #include <xglDbg.h>
-#include <xglLayer.h>
+#include <xglWsiX11Ext.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define ICD_EXPORT __attribute__((visibility("default")))
