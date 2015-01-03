@@ -139,3 +139,40 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
 
     return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
 }
+
+XGL_RESULT XGLAPI intelDbgRegisterMsgCallback(
+    XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
+    XGL_VOID*                                   pUserData)
+{
+    return icd_logger_add_callback(pfnMsgCallback, pUserData);
+}
+
+XGL_RESULT XGLAPI intelDbgUnregisterMsgCallback(
+    XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
+{
+    return icd_logger_remove_callback(pfnMsgCallback);
+}
+
+XGL_RESULT XGLAPI intelDbgSetGlobalOption(
+    XGL_DBG_GLOBAL_OPTION                       dbgOption,
+    XGL_SIZE                                    dataSize,
+    const XGL_VOID*                             pData)
+{
+    XGL_RESULT res = XGL_SUCCESS;
+
+    if (dataSize == 0)
+        return XGL_ERROR_INVALID_VALUE;
+
+    switch (dbgOption) {
+    case XGL_DBG_OPTION_DEBUG_ECHO_ENABLE:
+    case XGL_DBG_OPTION_BREAK_ON_ERROR:
+    case XGL_DBG_OPTION_BREAK_ON_WARNING:
+        res = icd_logger_set_bool(dbgOption, *((const bool *) pData));
+        break;
+    default:
+        res = XGL_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return res;
+}

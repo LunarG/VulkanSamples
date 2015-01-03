@@ -33,6 +33,7 @@
 #include "fence.h"
 #include "format.h"
 #include "img.h"
+#include "intel.h"
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
@@ -156,11 +157,11 @@ static const XGL_LAYER_DISPATCH_TABLE intel_normal_dispatch_table = {
     .CmdLoadAtomicCounters = intelCmdLoadAtomicCounters,
     .CmdSaveAtomicCounters = intelCmdSaveAtomicCounters,
     .DbgSetValidationLevel = intelDbgSetValidationLevel,
-    .DbgRegisterMsgCallback = icdDbgRegisterMsgCallback,
-    .DbgUnregisterMsgCallback = icdDbgUnregisterMsgCallback,
+    .DbgRegisterMsgCallback = intelDbgRegisterMsgCallback,
+    .DbgUnregisterMsgCallback = intelDbgUnregisterMsgCallback,
     .DbgSetMessageFilter = intelDbgSetMessageFilter,
     .DbgSetObjectTag = intelDbgSetObjectTag,
-    .DbgSetGlobalOption = icdDbgSetGlobalOption,
+    .DbgSetGlobalOption = intelDbgSetGlobalOption,
     .DbgSetDeviceOption = intelDbgSetDeviceOption,
     .CmdDbgMarkerBegin = intelCmdDbgMarkerBegin,
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,
@@ -280,11 +281,11 @@ static const XGL_LAYER_DISPATCH_TABLE intel_debug_dispatch_table = {
     .CmdLoadAtomicCounters = intelCmdLoadAtomicCounters,
     .CmdSaveAtomicCounters = intelCmdSaveAtomicCounters,
     .DbgSetValidationLevel = intelDbgSetValidationLevel,
-    .DbgRegisterMsgCallback = icdDbgRegisterMsgCallback,
-    .DbgUnregisterMsgCallback = icdDbgUnregisterMsgCallback,
+    .DbgRegisterMsgCallback = intelDbgRegisterMsgCallback,
+    .DbgUnregisterMsgCallback = intelDbgUnregisterMsgCallback,
     .DbgSetMessageFilter = intelDbgSetMessageFilter,
     .DbgSetObjectTag = intelDbgSetObjectTag,
-    .DbgSetGlobalOption = icdDbgSetGlobalOption,
+    .DbgSetGlobalOption = intelDbgSetGlobalOption,
     .DbgSetDeviceOption = intelDbgSetDeviceOption,
     .CmdDbgMarkerBegin = intelCmdDbgMarkerBegin,
     .CmdDbgMarkerEnd = intelCmdDbgMarkerEnd,

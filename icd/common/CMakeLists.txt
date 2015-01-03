@@ -4,7 +4,6 @@ add_custom_command(OUTPUT icd-dispatch-entrypoints.c
 	                   ${PROJECT_SOURCE_DIR}/xgl.py)
 
 set(ICD_SOURCES
-	icd.c
 	icd-alloc.c
 	icd-dispatch-entrypoints.c
 	icd-format.c
