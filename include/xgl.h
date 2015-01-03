@@ -2381,12 +2381,6 @@ XGL_VOID XGLAPI xglCmdBindIndexData(
     XGL_GPU_SIZE                                offset,
     XGL_INDEX_TYPE                              indexType);
 
-XGL_VOID XGLAPI xglCmdBindAttachments(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    colorAttachmentCount,
-    const XGL_COLOR_ATTACHMENT_BIND_INFO*       pColorAttachments,
-    const XGL_DEPTH_STENCIL_BIND_INFO*          pDepthStencilAttachment);
-
 XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_UINT                                    transitionCount,
