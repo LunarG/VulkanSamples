@@ -37,6 +37,28 @@ class Param(object):
         else:
             return "%s %s" % (self.ty, self.name)
 
+    def indirection_level(self):
+        """Return the level of indirection."""
+        return self.ty.count("*") + self.ty.count("[")
+
+    def dereferenced_type(self, level=0):
+        """Return the type after dereferencing."""
+        if not level:
+            level = self.indirection_level()
+
+        deref = self.ty if level else ""
+        while level > 0:
+            idx = deref.rfind("[")
+            if idx < 0:
+                idx = deref.rfind("*")
+            if idx < 0:
+                deref = ""
+                break
+            deref = deref[:idx]
+            level -= 1;
+
+        return deref.rstrip()
+
     def __repr__(self):
         return "Param(\"%s\", \"%s\")" % (self.ty, self.name)
 
@@ -107,6 +129,15 @@ class Proto(object):
     def c_call(self):
         """Return a call to the prototype in C."""
         return "%s(%s)" % (self.name, self.c_params(need_type=False))
+
+    def object_in_params(self):
+        """Return the params that are simple XGL objects and are inputs."""
+        return [param for param in self.params if param.ty in objects]
+
+    def object_out_params(self):
+        """Return the params that are simple XGL objects and are outputs."""
+        return [param for param in self.params
+                if param.dereferenced_type() in objects]
 
     def __repr__(self):
         param_strs = []
