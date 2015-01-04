@@ -233,6 +233,11 @@ static void cmd_reset(struct intel_cmd *cmd)
     if (cmd->bind.shader_cache.entries)
         icd_free(cmd->bind.shader_cache.entries);
 
+    if (cmd->bind.dset.graphics_dynamic_offsets)
+        icd_free(cmd->bind.dset.graphics_dynamic_offsets);
+    if (cmd->bind.dset.compute_dynamic_offsets)
+        icd_free(cmd->bind.dset.compute_dynamic_offsets);
+
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
     cmd->reloc_used = 0;

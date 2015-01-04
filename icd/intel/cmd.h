@@ -41,7 +41,7 @@ struct intel_raster_state;
 struct intel_msaa_state;
 struct intel_blend_state;
 struct intel_ds_state;
-struct intel_dset;
+struct intel_desc_set;
 
 struct intel_cmd_item;
 struct intel_cmd_reloc;
@@ -169,16 +169,13 @@ struct intel_cmd_bind {
     } state;
 
     struct {
-        const struct intel_dset *graphics;
-        XGL_UINT graphics_offset;
-        const struct intel_dset *compute;
-        XGL_UINT compute_offset;
+        const struct intel_desc_set *graphics;
+        uint32_t *graphics_dynamic_offsets;
+        size_t graphics_dynamic_offset_size;
+        const struct intel_desc_set *compute;
+        uint32_t *compute_dynamic_offsets;
+        size_t compute_dynamic_offset_size;
     } dset;
-
-    struct {
-        struct intel_buf_view *graphics;
-        struct intel_buf_view *compute;
-    } dyn_view;
 
     struct {
         const struct intel_buf *buf[INTEL_MAX_VERTEX_BINDING_COUNT];

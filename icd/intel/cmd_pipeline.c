@@ -27,8 +27,8 @@
  */
 
 #include "genhw/genhw.h"
-#include "dset.h"
 #include "buf.h"
+#include "desc.h"
 #include "img.h"
 #include "mem.h"
 #include "pipeline.h"
@@ -1466,35 +1466,16 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
             &rmap->slots[surface_count + i];
         const struct intel_sampler *sampler;
 
-        switch (slot->path_len) {
-        case 0:
-            sampler = NULL;
+        switch (slot->type) {
+        case INTEL_PIPELINE_RMAP_SAMPLER:
+            intel_desc_pool_read_sampler(cmd->dev->desc_pool,
+                    &slot->u.sampler, &sampler);
             break;
-        case INTEL_PIPELINE_RMAP_SLOT_RT:
-        case INTEL_PIPELINE_RMAP_SLOT_DYN:
-            assert(!"unexpected rmap slot type");
+        case INTEL_PIPELINE_RMAP_UNUSED:
             sampler = NULL;
-            break;
-        case 1:
-            {
-                const struct intel_dset *dset = cmd->bind.dset.graphics;
-                const XGL_UINT slot_offset = cmd->bind.dset.graphics_offset;
-                const struct intel_dset_slot *dset_slot =
-                    &dset->slots[slot_offset + slot->u.index];
-
-                switch (dset_slot->type) {
-                case INTEL_DSET_SLOT_SAMPLER:
-                    sampler = dset_slot->u.sampler;
-                    break;
-                default:
-                    assert(!"unexpected dset slot type");
-                    sampler = NULL;
-                    break;
-                }
-            }
             break;
         default:
-            assert(!"nested descriptor set unsupported");
+            assert(!"unexpected rmap type");
             sampler = NULL;
             break;
         }
@@ -1539,16 +1520,15 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
 
     for (i = 0; i < surface_count; i++) {
         const struct intel_pipeline_rmap_slot *slot = &rmap->slots[i];
+        struct intel_null_view null_view;
+        bool need_null_view = false;
 
-        switch (slot->path_len) {
-        case 0:
-            offset = 0;
-            break;
-        case INTEL_PIPELINE_RMAP_SLOT_RT:
+        switch (slot->type) {
+        case INTEL_PIPELINE_RMAP_RT:
             {
                 const struct intel_rt_view *view =
-                    (slot->u.index < cmd->bind.render_pass->fb->rt_count) ?
-                    cmd->bind.render_pass->fb->rt[slot->u.index] : NULL;
+                    (slot->u.rt < cmd->bind.render_pass->fb->rt_count) ?
+                    cmd->bind.render_pass->fb->rt[slot->u.rt] : NULL;
 
                 if (view) {
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
@@ -1559,84 +1539,56 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                     cmd_surface_reloc(cmd, offset, 1, view->img->obj.mem->bo,
                             view->cmd[1], INTEL_RELOC_WRITE);
                 } else {
-                    struct intel_null_view null_view;
-                    intel_null_view_init(&null_view, cmd->dev);
-
-                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                            GEN6_ALIGNMENT_SURFACE_STATE,
-                            null_view.cmd_len, null_view.cmd);
+                    need_null_view = true;
                 }
             }
             break;
-        case INTEL_PIPELINE_RMAP_SLOT_DYN:
+        case INTEL_PIPELINE_RMAP_SURFACE:
             {
-                const struct intel_buf_view *view =
-                    cmd->bind.dyn_view.graphics;
+                const int32_t dyn_idx = slot->u.surface.dynamic_offset_index;
+                const struct intel_mem *mem;
+                bool read_only;
+                const uint32_t *cmd_data;
+                uint32_t cmd_len;
 
-                offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                        GEN6_ALIGNMENT_SURFACE_STATE,
-                        view->cmd_len, view->cmd);
+                assert(dyn_idx < 0 || dyn_idx <
+                        cmd->bind.dset.graphics->layout->dynamic_desc_count);
 
-                cmd_reserve_reloc(cmd, 1);
-                cmd_surface_reloc(cmd, offset, 1, view->buf->obj.mem->bo,
-                        view->cmd[1], INTEL_RELOC_WRITE);
-            }
-            break;
-        case 1:
-            {
-                const struct intel_dset *dset = cmd->bind.dset.graphics;
-                const XGL_UINT slot_offset = cmd->bind.dset.graphics_offset;
-                const struct intel_dset_slot *dset_slot =
-                    &dset->slots[slot_offset + slot->u.index];
-                const uint32_t reloc_flags =
-                    (dset_slot->read_only) ? 0 : INTEL_RELOC_WRITE;
+                intel_desc_pool_read_surface(cmd->dev->desc_pool,
+                        &slot->u.surface.offset, stage, &mem,
+                        &read_only, &cmd_data, &cmd_len);
+                if (mem) {
+                    const uint32_t dynamic_offset = (dyn_idx >= 0) ?
+                        cmd->bind.dset.graphics_dynamic_offsets[dyn_idx] : 0;
+                    const uint32_t reloc_flags =
+                        (read_only) ? 0 : INTEL_RELOC_WRITE;
 
-                switch (dset_slot->type) {
-                case INTEL_DSET_SLOT_IMG_VIEW:
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                             GEN6_ALIGNMENT_SURFACE_STATE,
-                            dset_slot->u.img_view->cmd_len,
-                            dset_slot->u.img_view->cmd);
+                            cmd_len, cmd_data);
 
                     cmd_reserve_reloc(cmd, 1);
-                    cmd_surface_reloc(cmd, offset, 1,
-                            dset_slot->u.img_view->img->obj.mem->bo,
-                            dset_slot->u.img_view->cmd[1], reloc_flags);
-                    break;
-                case INTEL_DSET_SLOT_BUF_VIEW:
-                    {
-                        const uint32_t *cmd_data =
-                            (stage != XGL_SHADER_STAGE_FRAGMENT) ?
-                            dset_slot->u.buf_view->cmd :
-                            dset_slot->u.buf_view->fs_cmd;
-
-                        offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                                GEN6_ALIGNMENT_SURFACE_STATE,
-                                dset_slot->u.buf_view->cmd_len,
-                                cmd_data);
-
-                        cmd_reserve_reloc(cmd, 1);
-                        cmd_surface_reloc(cmd, offset, 1,
-                                dset_slot->u.buf_view->buf->obj.mem->bo,
-                                cmd_data[1], reloc_flags);
-                    }
-                    break;
-                case INTEL_DSET_SLOT_SAMPLER:
-                    assert(0 == cmd->bind.dset.graphics_offset);
-
-                    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
-                                               GEN6_ALIGNMENT_SURFACE_STATE,
-                                               16, dset_slot->u.sampler->cmd);
-                    break;
-                default:
-                    assert(!"unexpected dset slot type");
-                    break;
+                    cmd_surface_reloc(cmd, offset, 1, mem->bo,
+                            cmd_data[1] + dynamic_offset, reloc_flags);
+                } else {
+                    need_null_view = true;
                 }
             }
             break;
-        default:
-            assert(!"nested descriptor set unsupported");
+        case INTEL_PIPELINE_RMAP_UNUSED:
+            need_null_view = true;
             break;
+        default:
+            assert(!"unexpected rmap type");
+            need_null_view = true;
+            break;
+        }
+
+        if (need_null_view) {
+            intel_null_view_init(&null_view, cmd->dev);
+            offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
+                    GEN6_ALIGNMENT_SURFACE_STATE,
+                    null_view.cmd_len, null_view.cmd);
         }
 
         binding_table[i] = offset;
@@ -2899,31 +2851,53 @@ static void cmd_bind_compute_delta(struct intel_cmd *cmd,
 }
 
 static void cmd_bind_graphics_dset(struct intel_cmd *cmd,
-                                   const struct intel_dset *dset,
-                                   XGL_UINT slot_offset)
+                                   const struct intel_desc_set *dset,
+                                   const uint32_t *dynamic_offsets)
 {
+    const uint32_t size = sizeof(*dynamic_offsets) *
+        dset->layout->dynamic_desc_count;
+
+    if (size > cmd->bind.dset.graphics_dynamic_offset_size) {
+        if (cmd->bind.dset.graphics_dynamic_offsets)
+            icd_free(cmd->bind.dset.graphics_dynamic_offsets);
+
+        cmd->bind.dset.graphics_dynamic_offsets = icd_alloc(size,
+                4, XGL_SYSTEM_ALLOC_INTERNAL);
+        if (!cmd->bind.dset.graphics_dynamic_offsets) {
+            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            return;
+        }
+
+        cmd->bind.dset.graphics_dynamic_offset_size = size;
+    }
+
     cmd->bind.dset.graphics = dset;
-    cmd->bind.dset.graphics_offset = slot_offset;
+    memcpy(cmd->bind.dset.graphics_dynamic_offsets, dynamic_offsets, size);
 }
 
 static void cmd_bind_compute_dset(struct intel_cmd *cmd,
-                                  const struct intel_dset *dset,
-                                  XGL_UINT slot_offset)
+                                  const struct intel_desc_set *dset,
+                                  const uint32_t *dynamic_offsets)
 {
+    const uint32_t size = sizeof(*dynamic_offsets) *
+        dset->layout->dynamic_desc_count;
+
+    if (size > cmd->bind.dset.compute_dynamic_offset_size) {
+        if (cmd->bind.dset.compute_dynamic_offsets)
+            icd_free(cmd->bind.dset.compute_dynamic_offsets);
+
+        cmd->bind.dset.compute_dynamic_offsets = icd_alloc(size,
+                4, XGL_SYSTEM_ALLOC_INTERNAL);
+        if (!cmd->bind.dset.compute_dynamic_offsets) {
+            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            return;
+        }
+
+        cmd->bind.dset.compute_dynamic_offset_size = size;
+    }
+
     cmd->bind.dset.compute = dset;
-    cmd->bind.dset.compute_offset = slot_offset;
-}
-
-static void cmd_bind_graphics_dyn_view(struct intel_cmd *cmd,
-                                       const XGL_BUFFER_VIEW_ATTACH_INFO *info)
-{
-    cmd->bind.dyn_view.graphics = intel_buf_view(info->view);
-}
-
-static void cmd_bind_compute_dyn_view(struct intel_cmd *cmd,
-                                      const XGL_BUFFER_VIEW_ATTACH_INFO *info)
-{
-    cmd->bind.dyn_view.compute = intel_buf_view(info->view);
+    memcpy(cmd->bind.dset.compute_dynamic_offsets, dynamic_offsets, size);
 }
 
 static void cmd_bind_vertex_data(struct intel_cmd *cmd,
@@ -3149,41 +3123,18 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicStateObject(
 ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_UINT                                    index,
     XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    slotOffset)
+    const XGL_UINT*                             pUserData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_dset *dset = intel_dset(descriptorSet);
-
-    assert(!index);
+    struct intel_desc_set *dset = intel_desc_set(descriptorSet);
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd_bind_compute_dset(cmd, dset, slotOffset);
+        cmd_bind_compute_dset(cmd, dset, pUserData);
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd_bind_graphics_dset(cmd, dset, slotOffset);
-        break;
-    default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
-        break;
-    }
-}
-
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicBufferView(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferView)
-{
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    switch (pipelineBindPoint) {
-    case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd_bind_compute_dyn_view(cmd, pBufferView);
-        break;
-    case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd_bind_graphics_dyn_view(cmd, pBufferView);
+        cmd_bind_graphics_dset(cmd, dset, pUserData);
         break;
     default:
         cmd->result = XGL_ERROR_INVALID_VALUE;

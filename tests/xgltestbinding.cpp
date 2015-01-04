@@ -471,6 +471,16 @@ XGL_RESULT Device::wait(const std::vector<const Fence *> &fences, bool wait_all,
     return err;
 }
 
+void Device::begin_descriptor_region_update(XGL_DESCRIPTOR_UPDATE_MODE mode)
+{
+    EXPECT(xglBeginDescriptorRegionUpdate(obj(), mode) == XGL_SUCCESS);
+}
+
+void Device::end_descriptor_region_update(CmdBuffer &cmd)
+{
+    EXPECT(xglEndDescriptorRegionUpdate(obj(), cmd.obj()) == XGL_SUCCESS);
+}
+
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence)
 {
     const std::vector<XGL_CMD_BUFFER> cmd_objs = make_objects<XGL_CMD_BUFFER>(cmds);
@@ -764,31 +774,78 @@ void Sampler::init(const Device &dev, const XGL_SAMPLER_CREATE_INFO &info)
     alloc_memory(dev);
 }
 
-void DescriptorSet::init(const Device &dev, const XGL_DESCRIPTOR_SET_CREATE_INFO &info)
+void DescriptorSetLayout::init(const Device &dev, XGL_FLAGS stage_mask,
+                               const std::vector<uint32_t> &bind_points,
+                               const DescriptorSetLayout &prior_layout,
+                               const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDescriptorSet, dev.obj(), &info);
-    info_ = info;
+    DERIVED_OBJECT_INIT(xglCreateDescriptorSetLayout, dev.obj(), stage_mask,
+            &bind_points[0], prior_layout.obj(), &info);
+    alloc_memory(dev);
 }
 
-void DescriptorSet::attach(uint32_t start_slot, const std::vector<const Sampler *> &samplers)
+void DescriptorSetLayout::init(const Device &dev, uint32_t bind_point,
+                               const DescriptorSetLayout &prior_layout,
+                               const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
 {
-    const std::vector<XGL_SAMPLER> sampler_objs = make_objects<XGL_SAMPLER>(samplers);
-    xglAttachSamplerDescriptors(obj(), start_slot, sampler_objs.size(), &sampler_objs[0]);
+    init(dev, XGL_SHADER_STAGE_FLAGS_ALL, std::vector<uint32_t>(1, bind_point), prior_layout, info);
 }
 
-void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_IMAGE_VIEW_ATTACH_INFO> &img_views)
+void DescriptorRegion::init(const Device &dev, XGL_DESCRIPTOR_REGION_USAGE usage,
+                            uint32_t max_sets, const XGL_DESCRIPTOR_REGION_CREATE_INFO &info)
 {
-    xglAttachImageViewDescriptors(obj(), start_slot, img_views.size(), &img_views[0]);
+    DERIVED_OBJECT_INIT(xglCreateDescriptorRegion, dev.obj(), usage, max_sets, &info);
+    alloc_memory(dev);
 }
 
-void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_BUFFER_VIEW_ATTACH_INFO> &buf_views)
+void DescriptorRegion::clear()
 {
-    xglAttachBufferViewDescriptors(obj(), start_slot, buf_views.size(), &buf_views[0]);
+    EXPECT(xglClearDescriptorRegion(obj()) == XGL_SUCCESS);
 }
 
-void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_DESCRIPTOR_SET_ATTACH_INFO> &sets)
+std::vector<DescriptorSet *> DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    xglAttachNestedDescriptors(obj(), start_slot, sets.size(), &sets[0]);
+    const std::vector<XGL_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<XGL_DESCRIPTOR_SET_LAYOUT>(layouts);
+
+    std::vector<XGL_DESCRIPTOR_SET> set_objs;
+    set_objs.resize(layout_objs.size());
+
+    uint32_t set_count;
+    XGL_RESULT err = xglAllocDescriptorSets(obj(), usage, layout_objs.size(), &layout_objs[0], &set_objs[0], &set_count);
+    if (err == XGL_SUCCESS)
+        EXPECT(set_count == set_objs.size());
+    set_objs.resize(set_count);
+
+    std::vector<DescriptorSet *> sets;
+    sets.reserve(set_count);
+    for (std::vector<XGL_DESCRIPTOR_SET>::const_iterator it = set_objs.begin(); it != set_objs.end(); it++) {
+        // do descriptor sets need memories bound?
+        sets.push_back(new DescriptorSet(*it));
+    }
+
+    return sets;
+}
+
+std::vector<DescriptorSet *> DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count)
+{
+    return alloc_sets(usage, std::vector<const DescriptorSetLayout *>(count, &layout));
+}
+
+DescriptorSet *DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout)
+{
+    std::vector<DescriptorSet *> set = alloc_sets(usage, layout, 1);
+    return (set.empty()) ? NULL : set[0];
+}
+
+void DescriptorRegion::clear_sets(const std::vector<DescriptorSet *> &sets)
+{
+    const std::vector<XGL_DESCRIPTOR_SET> set_objs = make_objects<XGL_DESCRIPTOR_SET>(sets);
+    xglClearDescriptorSets(obj(), set_objs.size(), &set_objs[0]);
+}
+
+void DescriptorSet::update(const void *update_chain)
+{
+    xglUpdateDescriptors(obj(), update_chain);
 }
 
 void DynamicVpStateObject::init(const Device &dev, const XGL_DYNAMIC_VP_STATE_CREATE_INFO &info)

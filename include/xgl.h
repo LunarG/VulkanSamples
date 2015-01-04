@@ -92,6 +92,8 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE_DELTA, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_SAMPLER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET_LAYOUT, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_REGION, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_STATE_OBJECT, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_VP_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_RS_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
@@ -276,24 +278,59 @@ typedef enum _XGL_CHANNEL_SWIZZLE
     XGL_MAX_ENUM(_XGL_CHANNEL_SWIZZLE)
 } XGL_CHANNEL_SWIZZLE;
 
-typedef enum _XGL_DESCRIPTOR_SET_SLOT_TYPE
+typedef enum _XGL_DESCRIPTOR_TYPE
 {
-    XGL_SLOT_UNUSED                                         = 0x00000000,
-    XGL_SLOT_SHADER_RESOURCE                                = 0x00000001,
-    XGL_SLOT_SHADER_UAV                                     = 0x00000002,
-    XGL_SLOT_SHADER_SAMPLER                                 = 0x00000003,
-    XGL_SLOT_NEXT_DESCRIPTOR_SET                            = 0x00000004,
+    XGL_DESCRIPTOR_TYPE_SAMPLER                             = 0x00000000,
+    XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE                     = 0x00000001,
+    XGL_DESCRIPTOR_TYPE_TEXTURE                             = 0x00000002,
+    XGL_DESCRIPTOR_TYPE_TEXTURE_BUFFER                      = 0x00000003,
+    XGL_DESCRIPTOR_TYPE_IMAGE                               = 0x00000004,
+    XGL_DESCRIPTOR_TYPE_IMAGE_BUFFER                        = 0x00000005,
+    XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER                      = 0x00000006,
+    XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER               = 0x00000007,
+    XGL_DESCRIPTOR_TYPE_RAW_BUFFER                          = 0x00000008,
+    XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC              = 0x00000009,
+    XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC       = 0x0000000a,
+    XGL_DESCRIPTOR_TYPE_RAW_BUFFER_DYNAMIC                  = 0x0000000b,
 
-    // LUNARG CHANGE BEGIN - differentiate between textures and buffers
-    XGL_SLOT_SHADER_TEXTURE_RESOURCE                        = 0x00000005,
+    XGL_DESCRIPTOR_TYPE_BEGIN_RANGE                         = XGL_DESCRIPTOR_TYPE_SAMPLER,
+    XGL_DESCRIPTOR_TYPE_END_RANGE                           = XGL_DESCRIPTOR_TYPE_RAW_BUFFER_DYNAMIC,
+    XGL_NUM_DESCRIPTOR_TYPE                                 = (XGL_DESCRIPTOR_TYPE_END_RANGE - XGL_DESCRIPTOR_TYPE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_DESCRIPTOR_TYPE)
+} XGL_DESCRIPTOR_TYPE;
 
-    XGL_DESCRIPTOR_SET_SLOT_TYPE_BEGIN_RANGE                = XGL_SLOT_UNUSED,
-    XGL_DESCRIPTOR_SET_SLOT_TYPE_END_RANGE                  = XGL_SLOT_SHADER_TEXTURE_RESOURCE,
-    // LUNARG CHANGE END
+typedef enum _XGL_DESCRIPTOR_REGION_USAGE
+{
+    XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT                    = 0x00000000,
+    XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC                     = 0x00000001,
 
-    XGL_NUM_DESCRIPTOR_SET_SLOT_TYPE                        = (XGL_DESCRIPTOR_SET_SLOT_TYPE_END_RANGE - XGL_DESCRIPTOR_SET_SLOT_TYPE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_DESCRIPTOR_SET_SLOT_TYPE)
-} XGL_DESCRIPTOR_SET_SLOT_TYPE;
+    XGL_DESCRIPTOR_REGION_USAGE_BEGIN_RANGE                 = XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT,
+    XGL_DESCRIPTOR_REGION_USAGE_END_RANGE                   = XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC,
+    XGL_NUM_DESCRIPTOR_REGION_USAGE                         = (XGL_DESCRIPTOR_REGION_USAGE_END_RANGE - XGL_DESCRIPTOR_REGION_USAGE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_DESCRIPTOR_REGION_USAGE)
+} XGL_DESCRIPTOR_REGION_USAGE;
+
+typedef enum _XGL_DESCRIPTOR_UPDATE_MODE
+{
+    XGL_DESCRIPTOR_UDPATE_MODE_COPY                         = 0x00000000,
+    XGL_DESCRIPTOR_UPDATE_MODE_FASTEST                      = 0x00000001,
+
+    XGL_DESCRIPTOR_UPDATE_MODE_BEGIN_RANGE                  = XGL_DESCRIPTOR_UDPATE_MODE_COPY,
+    XGL_DESCRIPTOR_UPDATE_MODE_END_RANGE                    = XGL_DESCRIPTOR_UPDATE_MODE_FASTEST,
+    XGL_NUM_DESCRIPTOR_UPDATE_MODE                          = (XGL_DESCRIPTOR_UPDATE_MODE_END_RANGE - XGL_DESCRIPTOR_UPDATE_MODE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_DESCRIPTOR_UPDATE_MODE)
+} XGL_DESCRIPTOR_UPDATE_MODE;
+
+typedef enum _XGL_DESCRIPTOR_SET_USAGE
+{
+    XGL_DESCRIPTOR_SET_USAGE_ONE_SHOT                       = 0x00000000,
+    XGL_DESCRIPTOR_SET_USAGE_STATIC                         = 0x00000001,
+
+    XGL_DESCRIPTOR_SET_USAGE_BEGIN_RANGE                    = XGL_DESCRIPTOR_SET_USAGE_ONE_SHOT,
+    XGL_DESCRIPTOR_SET_USAGE_END_RANGE                      = XGL_DESCRIPTOR_SET_USAGE_STATIC,
+    XGL_NUM_DESCRIPTOR_SET_USAGE                          = (XGL_DESCRIPTOR_SET_USAGE_END_RANGE - XGL_DESCRIPTOR_SET_USAGE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_DESCRIPTOR_SET_USAGE)
+} XGL_DESCRIPTOR_SET_USAGE;
 
 typedef enum _XGL_QUERY_TYPE
 {
@@ -854,6 +891,19 @@ typedef enum _XGL_PIPELINE_SHADER_STAGE
     XGL_MAX_ENUM(_XGL_PIPELINE_SHADER_STAGE)
 } XGL_PIPELINE_SHADER_STAGE;
 
+typedef enum _XGL_SHADER_STAGE_FLAGS
+{
+    XGL_SHADER_STAGE_FLAGS_VERTEX_BIT                       = 0x00000001,
+    XGL_SHADER_STAGE_FLAGS_TESS_CONTROL_BIT                 = 0x00000002,
+    XGL_SHADER_STAGE_FLAGS_TESS_EVALUATION_BIT              = 0x00000004,
+    XGL_SHADER_STAGE_FLAGS_GEOMETRY_BIT                     = 0x00000008,
+    XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT                     = 0x00000010,
+    XGL_SHADER_STAGE_FLAGS_COMPUTE_BIT                      = 0x00000020,
+
+    XGL_SHADER_STAGE_FLAGS_ALL                              = 0x7FFFFFFF,
+    XGL_MAX_ENUM(_XGL_SHADER_STAGE_FLAGS)
+} XGL_SHADER_STAGE_FLAGS;
+
 // Graphics workload submit type. Used for rendering workloads.
 typedef enum _XGL_RENDER_PASS_OPERATION
 {
@@ -882,7 +932,7 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO                   = 12,
     XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO         = 13,
     XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                  = 14,
-    XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO           = 15,
+    XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO    = 15,
     XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO         = 16,
     XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO         = 17,
     XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO         = 18,
@@ -915,6 +965,12 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_MEMORY_BARRIER                       = 45,
     XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                = 46,
     XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                 = 47,
+    XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO        = 48,
+    XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS                      = 49,
+    XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES              = 50,
+    XGL_STRUCTURE_TYPE_UPDATE_IMAGES                        = 51,
+    XGL_STRUCTURE_TYPE_UPDATE_BUFFERS                       = 52,
+    XGL_STRUCTURE_TYPE_UPDATE_AS_COPY                       = 53,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1299,6 +1355,60 @@ typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
     XGL_IMAGE_LAYOUT                        layout;
 } XGL_IMAGE_VIEW_ATTACH_INFO;
 
+typedef struct _XGL_UPDATE_SAMPLERS
+{
+    XGL_STRUCTURE_TYPE                      sType;
+    XGL_VOID*                               pNext;
+    XGL_UINT                                index;
+    XGL_UINT                                count;
+    const XGL_SAMPLER*                      pSamplers;
+} XGL_UPDATE_SAMPLERS;
+
+typedef struct _XGL_SAMPLER_IMAGE_VIEW_INFO
+{
+    XGL_SAMPLER                             pSampler;
+    const XGL_IMAGE_VIEW_ATTACH_INFO*       pImageView;
+} XGL_SAMPLER_IMAGE_VIEW_INFO;
+
+typedef struct _XGL_UPDATE_SAMPLER_TEXTURES
+{
+    XGL_STRUCTURE_TYPE                       sType;
+    XGL_VOID*                                pNext;
+    XGL_UINT                                 index;
+    XGL_UINT                                 count;
+    const XGL_SAMPLER_IMAGE_VIEW_INFO*       pSamplerImageViews;
+} XGL_UPDATE_SAMPLER_TEXTURES;
+
+typedef struct _XGL_UPDATE_IMAGES
+{
+    XGL_STRUCTURE_TYPE                       sType;
+    XGL_VOID*                                pNext;
+    XGL_DESCRIPTOR_TYPE                      descriptorType;
+    XGL_UINT                                 index;
+    XGL_UINT                                 count;
+    const XGL_IMAGE_VIEW_ATTACH_INFO* const* pImageViews;
+} XGL_UPDATE_IMAGES;
+
+typedef struct _XGL_UPDATE_BUFFERS
+{
+    XGL_STRUCTURE_TYPE                        sType;
+    XGL_VOID*                                 pNext;
+    XGL_DESCRIPTOR_TYPE                       descriptorType;
+    XGL_UINT                                  index;
+    XGL_UINT                                  count;
+    const XGL_BUFFER_VIEW_ATTACH_INFO* const* pBufferViews;
+} XGL_UPDATE_BUFFERS;
+
+typedef struct _XGL_UPDATE_AS_COPY
+{
+    XGL_STRUCTURE_TYPE                      sType;
+    const XGL_VOID*                         pNext;
+    XGL_DESCRIPTOR_TYPE                     descriptorType;
+    XGL_DESCRIPTOR_SET                      descriptorSet;
+    XGL_UINT                                descriptorIndex;
+    XGL_UINT                                count;
+} XGL_UPDATE_AS_COPY;
+
 typedef struct _XGL_BUFFER_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO
@@ -1531,23 +1641,29 @@ typedef struct _XGL_SHADER_CREATE_INFO
     XGL_FLAGS                               flags;              // Reserved
 } XGL_SHADER_CREATE_INFO;
 
-struct _XGL_DESCRIPTOR_SET_MAPPING;
-
-typedef struct _XGL_DESCRIPTOR_SLOT_INFO
+typedef struct _XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
 {
-    XGL_DESCRIPTOR_SET_SLOT_TYPE slotObjectType;
-    union
-    {
-        XGL_UINT                                  shaderEntityIndex;// Shader IL slot index for given entity type
-        const struct _XGL_DESCRIPTOR_SET_MAPPING* pNextLevelSet;    // Pointer to next descriptor set level
-    };
-} XGL_DESCRIPTOR_SLOT_INFO;
+    XGL_STRUCTURE_TYPE                      sType;
+    const XGL_VOID*                         pNext;
+    XGL_DESCRIPTOR_TYPE                     descriptorType;
+    XGL_UINT                                count;
+    XGL_FLAGS                               stageFlags;         // XGL_SHADER_STAGE_FLAGS
+    XGL_SAMPLER                             immutableSampler;
+} XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 
-typedef struct _XGL_DESCRIPTOR_SET_MAPPING
+typedef struct _XGL_DESCRIPTOR_TYPE_COUNT
 {
-    XGL_UINT                                    descriptorCount;
-    const XGL_DESCRIPTOR_SLOT_INFO*             pDescriptorInfo;
-} XGL_DESCRIPTOR_SET_MAPPING;
+    XGL_DESCRIPTOR_TYPE                     type;
+    XGL_UINT                                count;
+} XGL_DESCRIPTOR_TYPE_COUNT;
+
+typedef struct _XGL_DESCRIPTOR_REGION_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;
+    const XGL_VOID*                         pNext;
+    XGL_UINT                                count;
+    const XGL_DESCRIPTOR_TYPE_COUNT*        pTypeCount;
+} XGL_DESCRIPTOR_REGION_CREATE_INFO;
 
 typedef struct _XGL_LINK_CONST_BUFFER
 {
@@ -1556,21 +1672,12 @@ typedef struct _XGL_LINK_CONST_BUFFER
     const XGL_VOID*                             pBufferData;
 } XGL_LINK_CONST_BUFFER;
 
-typedef struct _XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO
-{
-    XGL_DESCRIPTOR_SET_SLOT_TYPE            slotObjectType;
-    XGL_UINT                                shaderEntityIndex;
-} XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO;
-
 typedef struct _XGL_PIPELINE_SHADER
 {
     XGL_PIPELINE_SHADER_STAGE               stage;
     XGL_SHADER                              shader;
-    XGL_UINT                                descriptorSetMappingCount;
-    XGL_DESCRIPTOR_SET_MAPPING*             pDescriptorSetMapping;
     XGL_UINT                                linkConstBufferCount;
     const XGL_LINK_CONST_BUFFER*            pLinkConstBufferInfo;
-    XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO       dynamicBufferViewMapping;
 } XGL_PIPELINE_SHADER;
 
 typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
@@ -1579,6 +1686,7 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_PIPELINE_SHADER                     cs;
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
+    XGL_DESCRIPTOR_SET_LAYOUT               lastSetLayout;
 } XGL_COMPUTE_PIPELINE_CREATE_INFO;
 
 typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
@@ -1723,6 +1831,7 @@ typedef struct _XGL_GRAPHICS_PIPELINE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
+    XGL_DESCRIPTOR_SET_LAYOUT               lastSetLayout;
 } XGL_GRAPHICS_PIPELINE_CREATE_INFO;
 
 typedef struct _XGL_SAMPLER_CREATE_INFO
@@ -1742,19 +1851,6 @@ typedef struct _XGL_SAMPLER_CREATE_INFO
     XGL_FLOAT                               maxLod;
     XGL_BORDER_COLOR_TYPE                   borderColorType;
 } XGL_SAMPLER_CREATE_INFO;
-
-typedef struct _XGL_DESCRIPTOR_SET_CREATE_INFO
-{
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO
-    const XGL_VOID*                         pNext;      // Pointer to next structure
-    XGL_UINT                                slots;
-} XGL_DESCRIPTOR_SET_CREATE_INFO;
-
-typedef struct _XGL_DESCRIPTOR_SET_ATTACH_INFO
-{
-    XGL_DESCRIPTOR_SET                      descriptorSet;
-    XGL_UINT                                slotOffset;
-} XGL_DESCRIPTOR_SET_ATTACH_INFO;
 
 typedef struct _XGL_DYNAMIC_VP_STATE_CREATE_INFO
 {
@@ -2015,14 +2111,14 @@ typedef XGL_RESULT (XGLAPI *xglStorePipelineType)(XGL_PIPELINE pipeline, XGL_SIZ
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineType)(XGL_DEVICE device, XGL_SIZE dataSize, const XGL_VOID* pData, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglCreatePipelineDeltaType)(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta);
 typedef XGL_RESULT (XGLAPI *xglCreateSamplerType)(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler);
-typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetType)(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet);
-typedef XGL_VOID (XGLAPI *xglBeginDescriptorSetUpdateType)(XGL_DESCRIPTOR_SET descriptorSet);
-typedef XGL_VOID (XGLAPI *xglEndDescriptorSetUpdateType)(XGL_DESCRIPTOR_SET descriptorSet);
-typedef XGL_VOID (XGLAPI *xglAttachSamplerDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_SAMPLER* pSamplers);
-typedef XGL_VOID (XGLAPI *xglAttachImageViewDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews);
-typedef XGL_VOID (XGLAPI *xglAttachBufferViewDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferViews);
-typedef XGL_VOID (XGLAPI *xglAttachNestedDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_DESCRIPTOR_SET_ATTACH_INFO* pNestedDescriptorSets);
-typedef XGL_VOID (XGLAPI *xglClearDescriptorSetSlotsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount);
+typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, XGL_FLAGS stageFlags, const XGL_UINT* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
+typedef XGL_RESULT (XGLAPI *xglBeginDescriptorRegionUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
+typedef XGL_RESULT (XGLAPI *xglEndDescriptorRegionUpdateType)(XGL_DEVICE device, XGL_CMD_BUFFER cmd);
+typedef XGL_RESULT (XGLAPI *xglCreateDescriptorRegionType)(XGL_DEVICE device, XGL_DESCRIPTOR_REGION_USAGE regionUsage, XGL_UINT maxSets, const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_REGION* pDescriptorRegion);
+typedef XGL_RESULT (XGLAPI *xglClearDescriptorRegionType)(XGL_DESCRIPTOR_REGION descriptorRegion);
+typedef XGL_RESULT (XGLAPI *xglAllocDescriptorSetsType)(XGL_DESCRIPTOR_REGION descriptorRegion, XGL_DESCRIPTOR_SET_USAGE setUsage, XGL_UINT count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, XGL_UINT* pCount);
+typedef XGL_VOID (XGLAPI *xglClearDescriptorSetsType)(XGL_DESCRIPTOR_REGION descriptorRegion, XGL_UINT count, const XGL_DESCRIPTOR_SET* pDescriptorSets);
+typedef XGL_VOID (XGLAPI *xglUpdateDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, const XGL_VOID* pUpdateChain);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicViewportStateType)(XGL_DEVICE device, const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_VP_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicRasterStateType)(XGL_DEVICE device, const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_RS_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicColorBlendStateType)(XGL_DEVICE device, const XGL_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_CB_STATE_OBJECT* pState);
@@ -2034,8 +2130,7 @@ typedef XGL_RESULT (XGLAPI *xglResetCommandBufferType)(XGL_CMD_BUFFER cmdBuffer)
 typedef XGL_VOID (XGLAPI *xglCmdBindPipelineType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline);
 typedef XGL_VOID (XGLAPI *xglCmdBindPipelineDeltaType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta);
 typedef XGL_VOID (XGLAPI *xglCmdBindDynamicStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state);
-typedef XGL_VOID (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset);
-typedef XGL_VOID (XGLAPI *xglCmdBindDynamicBufferViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferView);
+typedef XGL_VOID (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const XGL_UINT* pUserData);
 typedef XGL_VOID (XGLAPI *xglCmdBindVertexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT binding);
 typedef XGL_VOID (XGLAPI *xglCmdBindIndexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
 typedef XGL_VOID (XGLAPI *xglCmdDrawType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
@@ -2400,45 +2495,48 @@ XGL_RESULT XGLAPI xglCreateSampler(
 
 // Descriptor set functions
 
-XGL_RESULT XGLAPI xglCreateDescriptorSet(
-    XGL_DEVICE                                  device,
-    const XGL_DESCRIPTOR_SET_CREATE_INFO*       pCreateInfo,
-    XGL_DESCRIPTOR_SET*                         pDescriptorSet);
+XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
+    XGL_DEVICE                                   device,
+    XGL_FLAGS                                    stageFlags,            // XGL_SHADER_STAGE_FLAGS
+    const XGL_UINT*                              pSetBindPoints,
+    XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
+    XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout);
 
-XGL_VOID XGLAPI xglBeginDescriptorSetUpdate(
-    XGL_DESCRIPTOR_SET                          descriptorSet);
+XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
+    XGL_DEVICE                                   device,
+    XGL_DESCRIPTOR_UPDATE_MODE                   updateMode);
 
-XGL_VOID XGLAPI xglEndDescriptorSetUpdate(
-    XGL_DESCRIPTOR_SET                          descriptorSet);
+XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
+    XGL_DEVICE                                   device,
+    XGL_CMD_BUFFER                               cmd);
 
-XGL_VOID XGLAPI xglAttachSamplerDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_SAMPLER*                          pSamplers);
+XGL_RESULT XGLAPI xglCreateDescriptorRegion(
+    XGL_DEVICE                                   device,
+    XGL_DESCRIPTOR_REGION_USAGE                  regionUsage,
+    XGL_UINT                                     maxSets,
+    const XGL_DESCRIPTOR_REGION_CREATE_INFO*     pCreateInfo,
+    XGL_DESCRIPTOR_REGION*                       pDescriptorRegion);
 
-XGL_VOID XGLAPI xglAttachImageViewDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_IMAGE_VIEW_ATTACH_INFO*           pImageViews);
+XGL_RESULT XGLAPI xglClearDescriptorRegion(
+    XGL_DESCRIPTOR_REGION                        descriptorRegion);
 
-XGL_VOID XGLAPI xglAttachBufferViewDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferViews);
+XGL_RESULT XGLAPI xglAllocDescriptorSets(
+    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_SET_USAGE                     setUsage,
+    XGL_UINT                                     count,
+    const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
+    XGL_DESCRIPTOR_SET*                          pDescriptorSets,
+    XGL_UINT*                                    pCount);
 
-XGL_VOID XGLAPI xglAttachNestedDescriptors(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount,
-    const XGL_DESCRIPTOR_SET_ATTACH_INFO*       pNestedDescriptorSets);
+XGL_VOID XGLAPI xglClearDescriptorSets(
+    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_UINT                                     count,
+    const XGL_DESCRIPTOR_SET*                    pDescriptorSets);
 
-XGL_VOID XGLAPI xglClearDescriptorSetSlots(
-    XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    startSlot,
-    XGL_UINT                                    slotCount);
+XGL_VOID XGLAPI xglUpdateDescriptors(
+    XGL_DESCRIPTOR_SET                           descriptorSet,
+    const XGL_VOID*                              pUpdateChain);
 
 // State object functions
 
@@ -2499,14 +2597,8 @@ XGL_VOID XGLAPI xglCmdBindDynamicStateObject(
 XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_UINT                                    index,
     XGL_DESCRIPTOR_SET                          descriptorSet,
-    XGL_UINT                                    slotOffset);
-
-XGL_VOID XGLAPI xglCmdBindDynamicBufferView(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferView);
+    const XGL_UINT*                             pUserData);
 
 XGL_VOID XGLAPI xglCmdBindVertexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,

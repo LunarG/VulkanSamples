@@ -131,8 +131,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         shallow_copy = sizeof(XGL_SAMPLER_CREATE_INFO);
         break;
     case XGL_DBG_OBJECT_DESCRIPTOR_SET:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO);
+        /* no create info */
         break;
     case XGL_DBG_OBJECT_VIEWPORT_STATE:
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
@@ -168,6 +167,15 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
     case XGL_DBG_OBJECT_RENDER_PASS:
         assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
         shallow_copy = sizeof(XGL_RENDER_PASS_CREATE_INFO);
+        break;
+    case XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT:
+        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
+        /* TODO */
+        shallow_copy = sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) * 0;
+        break;
+    case XGL_DBG_OBJECT_DESCRIPTOR_REGION:
+        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO);
+        shallow_copy = sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO);
         break;
     default:
         // log debug message regarding invalid struct_type?

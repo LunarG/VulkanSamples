@@ -18,8 +18,8 @@ set(sources
     cmd_mi.c
     cmd_prepare.c
     cmd_pipeline.c
+    desc.c
     dev.c
-    dset.c
     intel.c
     intel_gpa.c
     event.c

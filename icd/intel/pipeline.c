@@ -167,12 +167,14 @@ void intel_pipeline_shader_destroy(struct intel_pipeline_shader *sh)
 }
 
 static XGL_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
-                                        struct intel_pipeline_shader *sh,
-                                        const XGL_PIPELINE_SHADER *sh_info)
+                                        const struct intel_desc_layout *layout,
+                                        const XGL_PIPELINE_SHADER *sh_info,
+                                        struct intel_pipeline_shader *sh)
 {
     XGL_RESULT ret;
 
-    ret = intel_pipeline_shader_compile(sh, pipeline->dev->gpu, sh_info);
+    ret = intel_pipeline_shader_compile(sh,
+            pipeline->dev->gpu, layout, sh_info);
     if (ret != XGL_SUCCESS)
         return ret;
 
@@ -192,21 +194,36 @@ static XGL_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
 static XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
                                          const struct intel_pipeline_create_info *info)
 {
+    const struct intel_desc_layout *layout =
+        intel_desc_layout(info->graphics.lastSetLayout);
     XGL_RESULT ret = XGL_SUCCESS;
 
-    if (ret == XGL_SUCCESS && info->vs.shader)
-        ret = pipeline_build_shader(pipeline, &pipeline->vs, &info->vs);
-    if (ret == XGL_SUCCESS && info->tcs.shader)
-        ret = pipeline_build_shader(pipeline, &pipeline->tcs, &info->tcs);
-    if (ret == XGL_SUCCESS && info->tes.shader)
-        ret = pipeline_build_shader(pipeline, &pipeline->tes, &info->tes);
-    if (ret == XGL_SUCCESS && info->gs.shader)
-        ret = pipeline_build_shader(pipeline, &pipeline->gs, &info->gs);
-    if (ret == XGL_SUCCESS && info->fs.shader)
-        ret = pipeline_build_shader(pipeline, &pipeline->fs, &info->fs);
+    if (ret == XGL_SUCCESS && info->vs.shader) {
+        ret = pipeline_build_shader(pipeline, layout,
+                &info->vs, &pipeline->vs);
+    }
+    if (ret == XGL_SUCCESS && info->tcs.shader) {
+        ret = pipeline_build_shader(pipeline, layout,
+                &info->tcs,&pipeline->tcs);
+    }
+    if (ret == XGL_SUCCESS && info->tes.shader) {
+        ret = pipeline_build_shader(pipeline, layout,
+                &info->tes,&pipeline->tes);
+    }
+    if (ret == XGL_SUCCESS && info->gs.shader) {
+        ret = pipeline_build_shader(pipeline, layout,
+                &info->gs, &pipeline->gs);
+    }
+    if (ret == XGL_SUCCESS && info->fs.shader) {
+        ret = pipeline_build_shader(pipeline, layout,
+                &info->fs, &pipeline->fs);
+    }
 
-    if (ret == XGL_SUCCESS && info->compute.cs.shader)
-        ret = pipeline_build_shader(pipeline, &pipeline->cs, &info->compute.cs);
+    if (ret == XGL_SUCCESS && info->compute.cs.shader) {
+        layout = intel_desc_layout(info->compute.lastSetLayout);
+        ret = pipeline_build_shader(pipeline, layout,
+                &info->compute.cs, &pipeline->cs);
+    }
 
     return ret;
 }

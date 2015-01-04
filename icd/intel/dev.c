@@ -27,6 +27,7 @@
 
 #include <stdarg.h>
 #include "kmd/winsys.h"
+#include "desc.h"
 #include "gpu.h"
 #include "pipeline.h"
 #include "queue.h"
@@ -147,6 +148,12 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
+    ret = intel_desc_pool_create(dev, &dev->desc_pool);
+    if (ret != XGL_SUCCESS) {
+        intel_dev_destroy(dev);
+        return ret;
+    }
+
     ret = dev_create_queues(dev, info->pRequestedQueues,
             info->queueRecordCount);
     if (ret != XGL_SUCCESS) {
@@ -186,6 +193,9 @@ void intel_dev_destroy(struct intel_dev *dev)
         if (dev->queues[i])
             intel_queue_destroy(dev->queues[i]);
     }
+
+    if (dev->desc_pool)
+        intel_desc_pool_destroy(dev->desc_pool);
 
     dev_destroy_meta_shaders(dev);
 

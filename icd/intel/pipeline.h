@@ -31,6 +31,7 @@
 
 #include "intel.h"
 #include "obj.h"
+#include "desc.h"
 #include "dev.h"
 
 enum intel_pipeline_shader_use {
@@ -50,22 +51,23 @@ enum intel_computed_depth_mode {
     INTEL_COMPUTED_DEPTH_MODE_ON_LE
 };
 
-#define INTEL_PIPELINE_RMAP_SLOT_RT ((XGL_UINT) -1)
-#define INTEL_PIPELINE_RMAP_SLOT_DYN ((XGL_UINT) -2)
+enum intel_pipeline_rmap_slot_type {
+    INTEL_PIPELINE_RMAP_UNUSED,
+    INTEL_PIPELINE_RMAP_RT,
+    INTEL_PIPELINE_RMAP_SURFACE,
+    INTEL_PIPELINE_RMAP_SAMPLER,
+};
+
 struct intel_pipeline_rmap_slot {
-    /*
-     *
-     * When path_len is 0, the slot is unused.
-     * When path_len is 1, the slot uses descriptor "index".
-     * When path_len is INTEL_RMAP_SLOT_RT, the slot uses RT "index".
-     * When path_len is INTEL_RMAP_SLOT_DYN, the slot uses the dynamic view.
-     * Otherwise, the slot uses "path" to find the descriptor.
-     */
-    XGL_UINT path_len;
+    enum intel_pipeline_rmap_slot_type type;
 
     union {
-        XGL_UINT index;
-        XGL_UINT *path;
+        uint32_t rt;
+        struct {
+            struct intel_desc_offset offset;
+            int dynamic_offset_index;
+        } surface;
+        struct intel_desc_offset sampler;
     } u;
 };
 

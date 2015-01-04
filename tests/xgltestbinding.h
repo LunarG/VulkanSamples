@@ -53,6 +53,8 @@ class Shader;
 class Pipeline;
 class PipelineDelta;
 class Sampler;
+class DescriptorSetLayout;
+class DescriptorSetRegion;
 class DescriptorSet;
 class DynamicVpStateObject;
 class DynamicRsStateObject;
@@ -225,6 +227,11 @@ public:
     // xglWaitForFences()
     XGL_RESULT wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
     XGL_RESULT wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
+
+    // xglBeginDescriptorRegionUpdate()
+    // xglEndDescriptorRegionUpdate()
+    void begin_descriptor_region_update(XGL_DESCRIPTOR_UPDATE_MODE mode);
+    void end_descriptor_region_update(CmdBuffer &cmd);
 
 private:
     enum QueueIndex {
@@ -493,58 +500,62 @@ public:
     void init(const Device &dev, const XGL_SAMPLER_CREATE_INFO &info);
 };
 
+class DescriptorSetLayout : public DerivedObject<XGL_DESCRIPTOR_SET_LAYOUT, Object> {
+public:
+    // xglCreateDescriptorSetLayout()
+    void init(const Device &dev, XGL_FLAGS stage_mask,
+              const std::vector<uint32_t> &bind_points,
+              const DescriptorSetLayout &prior_layout,
+              const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info);
+    void init(const Device &dev, uint32_t bind_point,
+              const DescriptorSetLayout &prior_layout,
+              const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info);
+    void init(const Device &dev, uint32_t bind_point,
+              const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info) { init(dev, bind_point, DescriptorSetLayout(), info); }
+};
+
+class DescriptorRegion : public DerivedObject<XGL_DESCRIPTOR_REGION, Object> {
+public:
+    // xglCreateDescriptorRegion()
+    void init(const Device &dev, XGL_DESCRIPTOR_REGION_USAGE usage,
+              uint32_t max_sets, const XGL_DESCRIPTOR_REGION_CREATE_INFO &info);
+
+    // xglClearDescriptorRegion()
+    void clear();
+
+    // xglAllocDescriptorSets()
+    std::vector<DescriptorSet *> alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts);
+    std::vector<DescriptorSet *> alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count);
+    DescriptorSet *alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout);
+
+    // xglClearDescriptorSets()
+    void clear_sets(const std::vector<DescriptorSet *> &sets);
+    void clear_sets(DescriptorSet &set) { clear_sets(std::vector<DescriptorSet *>(1, &set)); }
+};
+
 class DescriptorSet : public DerivedObject<XGL_DESCRIPTOR_SET, Object> {
 public:
-    // xglCreateDescriptorSet()
-    void init(const Device &dev, const XGL_DESCRIPTOR_SET_CREATE_INFO &info);
+    explicit DescriptorSet(XGL_DESCRIPTOR_SET set) : DerivedObject(set) {}
 
-    // xglBeginDescriptorSetUpdate()
-    // xglEndDescriptorSetUpdate()
-    void begin() { xglBeginDescriptorSetUpdate(obj()); }
-    void end() { xglEndDescriptorSetUpdate(obj()); }
+    // xglUpdateDescriptors()
+    void update(const void *update_chain);
 
-    // xglAttachSamplerDescriptors()
-    void attach(uint32_t start_slot, const std::vector<const Sampler *> &samplers);
-    void attach(uint32_t start_slot, const Sampler &sampler)
-    {
-        attach(start_slot, std::vector<const Sampler *>(1, &sampler));
-    }
+    static XGL_UPDATE_SAMPLERS update(uint32_t index, uint32_t count, const XGL_SAMPLER *samplers);
+    static XGL_UPDATE_SAMPLERS update(uint32_t index, const std::vector<XGL_SAMPLER> &samplers);
 
-    // xglAttachImageViewDescriptors()
-    void attach(uint32_t start_slot, const std::vector<XGL_IMAGE_VIEW_ATTACH_INFO> &img_views);
-    void attach(uint32_t start_slot, const XGL_IMAGE_VIEW_ATTACH_INFO &view)
-    {
-        attach(start_slot, std::vector<XGL_IMAGE_VIEW_ATTACH_INFO>(1, view));
-    }
+    static XGL_UPDATE_SAMPLER_TEXTURES update(uint32_t index, uint32_t count, const XGL_SAMPLER_IMAGE_VIEW_INFO *textures);
+    static XGL_UPDATE_SAMPLER_TEXTURES update(uint32_t index, const std::vector<XGL_SAMPLER_IMAGE_VIEW_INFO> &textures);
 
-    // xglAttachBufferViewDescriptors()
-    void attach(uint32_t start_slot, const std::vector<XGL_BUFFER_VIEW_ATTACH_INFO> &buf_views);
-    void attach(uint32_t start_slot, const XGL_BUFFER_VIEW_ATTACH_INFO &view)
-    {
-        attach(start_slot, std::vector<XGL_BUFFER_VIEW_ATTACH_INFO>(1, view));
-    }
+    static XGL_UPDATE_IMAGES update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const XGL_IMAGE_VIEW_ATTACH_INFO * const *views);
+    static XGL_UPDATE_IMAGES update(XGL_DESCRIPTOR_TYPE type, uint32_t index, const std::vector<const XGL_IMAGE_VIEW_ATTACH_INFO *> &views);
 
-    // xglAttachNestedDescriptors()
-    void attach(uint32_t start_slot, const std::vector<XGL_DESCRIPTOR_SET_ATTACH_INFO> &sets);
-    void attach(uint32_t start_slot, const XGL_DESCRIPTOR_SET_ATTACH_INFO &set)
-    {
-        attach(start_slot, std::vector<XGL_DESCRIPTOR_SET_ATTACH_INFO>(1, set));
-    }
+    static XGL_UPDATE_BUFFERS update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const XGL_BUFFER_VIEW_ATTACH_INFO * const *views);
+    static XGL_UPDATE_BUFFERS update(XGL_DESCRIPTOR_TYPE type, uint32_t index, const std::vector<const XGL_BUFFER_VIEW_ATTACH_INFO *> &views);
 
-    //  xglClearDescriptorSetSlots()
-    void clear(uint32_t start_slot, uint32_t count) { xglClearDescriptorSetSlots(obj(), start_slot, count); }
-    void clear() { clear(0, info_.slots); }
+    static XGL_UPDATE_AS_COPY update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const DescriptorSet &set);
 
-    static XGL_DESCRIPTOR_SET_CREATE_INFO create_info(uint32_t slot_count)
-    {
-        XGL_DESCRIPTOR_SET_CREATE_INFO info = {};
-        info.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO;
-        info.slots = slot_count;
-        return info;
-    }
-
-private:
-    XGL_DESCRIPTOR_SET_CREATE_INFO info_;
+    static XGL_BUFFER_VIEW_ATTACH_INFO attach_info(const BufferView &view);
+    static XGL_IMAGE_VIEW_ATTACH_INFO attach_info(const ImageView &view, XGL_IMAGE_LAYOUT layout);
 };
 
 class DynamicVpStateObject : public DerivedObject<XGL_DYNAMIC_VP_STATE_OBJECT, DynamicStateObject> {
@@ -756,6 +767,100 @@ inline XGL_SHADER_CREATE_INFO Shader::create_info(size_t code_size, const void *
     info.codeSize = code_size;
     info.pCode = code;
     info.flags = flags;
+    return info;
+}
+
+inline XGL_BUFFER_VIEW_ATTACH_INFO DescriptorSet::attach_info(const BufferView &view)
+{
+    XGL_BUFFER_VIEW_ATTACH_INFO info = {};
+    info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
+    info.view = view.obj();
+    return info;
+}
+
+inline XGL_IMAGE_VIEW_ATTACH_INFO DescriptorSet::attach_info(const ImageView &view, XGL_IMAGE_LAYOUT layout)
+{
+    XGL_IMAGE_VIEW_ATTACH_INFO info = {};
+    info.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+    info.view = view.obj();
+    info.layout = layout;
+    return info;
+}
+
+inline XGL_UPDATE_SAMPLERS DescriptorSet::update(uint32_t index, uint32_t count, const XGL_SAMPLER *samplers)
+{
+    XGL_UPDATE_SAMPLERS info = {};
+    info.sType = XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS;
+    info.index = index;
+    info.count = count;
+    info.pSamplers = samplers;
+    return info;
+}
+
+inline XGL_UPDATE_SAMPLERS DescriptorSet::update(uint32_t index, const std::vector<XGL_SAMPLER> &samplers)
+{
+    return update(index, samplers.size(), &samplers[0]);
+}
+
+inline XGL_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t index, uint32_t count, const XGL_SAMPLER_IMAGE_VIEW_INFO *textures)
+{
+    XGL_UPDATE_SAMPLER_TEXTURES info = {};
+    info.sType = XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES;
+    info.index = index;
+    info.count = count;
+    info.pSamplerImageViews = textures;
+    return info;
+}
+
+inline XGL_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t index, const std::vector<XGL_SAMPLER_IMAGE_VIEW_INFO> &textures)
+{
+    return update(index, textures.size(), &textures[0]);
+}
+
+inline XGL_UPDATE_IMAGES DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count,
+                                               const XGL_IMAGE_VIEW_ATTACH_INFO * const *views)
+{
+    XGL_UPDATE_IMAGES info = {};
+    info.sType = XGL_STRUCTURE_TYPE_UPDATE_IMAGES;
+    info.descriptorType = type;
+    info.index = index;
+    info.count = count;
+    info.pImageViews = views;
+    return info;
+}
+
+inline XGL_UPDATE_IMAGES DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index,
+                                               const std::vector<const XGL_IMAGE_VIEW_ATTACH_INFO *> &views)
+{
+    return update(type, index, views.size(), &views[0]);
+}
+
+inline XGL_UPDATE_BUFFERS DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count,
+                                                const XGL_BUFFER_VIEW_ATTACH_INFO * const *views)
+{
+    XGL_UPDATE_BUFFERS info = {};
+    info.sType = XGL_STRUCTURE_TYPE_UPDATE_BUFFERS;
+    info.descriptorType = type;
+    info.index = index;
+    info.count = count;
+    info.pBufferViews = views;
+    return info;
+}
+
+inline XGL_UPDATE_BUFFERS DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index,
+                                                const std::vector<const XGL_BUFFER_VIEW_ATTACH_INFO *> &views)
+{
+    return update(type, index, views.size(), &views[0]);
+}
+
+inline XGL_UPDATE_AS_COPY DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const DescriptorSet &set)
+{
+    XGL_UPDATE_AS_COPY info = {};
+    info.sType = XGL_STRUCTURE_TYPE_UPDATE_AS_COPY;
+    info.descriptorType = type;
+    info.descriptorIndex = index; // whose index?
+    info.count = count;
+    info.descriptorSet = set.obj();
     return info;
 }
 

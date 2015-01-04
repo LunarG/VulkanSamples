@@ -232,8 +232,9 @@ struct demo {
         XGL_BUFFER_VIEW_ATTACH_INFO attach;
     } uniform_data;
 
-    XGL_DESCRIPTOR_SET dset;
-
+    XGL_DESCRIPTOR_SET_LAYOUT desc_layout_vs;
+    XGL_DESCRIPTOR_SET_LAYOUT desc_layout_fs;
+    XGL_DESCRIPTOR_SET_LAYOUT *desc_layout_last;
     XGL_PIPELINE pipeline;
 
     XGL_DYNAMIC_VP_STATE_OBJECT viewport;
@@ -250,6 +251,9 @@ struct demo {
     bool pause;
 
     XGL_CMD_BUFFER cmd;
+
+    XGL_DESCRIPTOR_REGION desc_region;
+    XGL_DESCRIPTOR_SET desc_set;
 
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
@@ -316,7 +320,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     xglCmdBindPipeline(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
     xglCmdBindDescriptorSet(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
-            0, demo->dset, 0);
+            demo->desc_set, NULL);
 
     xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_VIEWPORT, demo->viewport);
     xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_RASTER, demo->raster);
@@ -874,36 +878,40 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     demo->uniform_data.attach.view = demo->uniform_data.view;
 }
 
-static void demo_prepare_descriptor_set(struct demo *demo)
+static void demo_prepare_descriptor_layout(struct demo *demo)
 {
-    const XGL_DESCRIPTOR_SET_CREATE_INFO descriptor_set = {
-        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO,
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout_vs = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = NULL,
-        .slots = DEMO_TEXTURE_COUNT * 2 + 2,
+        .descriptorType = XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count = 1,
+        .stageFlags = XGL_SHADER_STAGE_FLAGS_VERTEX_BIT,
+        .immutableSampler = XGL_NULL_HANDLE,
     };
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout_fs = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .descriptorType = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+        .count = DEMO_TEXTURE_COUNT,
+        .stageFlags = XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
+        .immutableSampler = XGL_NULL_HANDLE,
+    };
+    const uint32_t bind_point = 0;
     XGL_RESULT err;
 
-    err = xglCreateDescriptorSet(demo->device, &descriptor_set, &demo->dset);
+    err = xglCreateDescriptorSetLayout(demo->device,
+            XGL_SHADER_STAGE_FLAGS_VERTEX_BIT, &bind_point,
+            XGL_NULL_HANDLE, &descriptor_layout_vs,
+            &demo->desc_layout_vs);
     assert(!err);
 
-    xglBeginDescriptorSetUpdate(demo->dset);
-    xglClearDescriptorSetSlots(demo->dset, 0, DEMO_TEXTURE_COUNT * 2 + 2);
+    err = xglCreateDescriptorSetLayout(demo->device,
+            XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT, &bind_point,
+            demo->desc_layout_vs, &descriptor_layout_fs,
+            &demo->desc_layout_fs);
+    assert(!err);
 
-//    xglAttachMemoryViewDescriptors(demo->dset, 0, 1, &demo->vertices.view);
-
-    xglAttachBufferViewDescriptors(demo->dset, 0, 1, &demo->uniform_data.attach);
-
-    XGL_IMAGE_VIEW_ATTACH_INFO image_view;
-
-    image_view.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
-    image_view.pNext = NULL;
-    image_view.view = demo->textures[0].view;
-    image_view.layout = XGL_IMAGE_LAYOUT_GENERAL;
-
-    xglAttachSamplerDescriptors(demo->dset, 1, 1, &demo->textures[0].sampler);
-    xglAttachImageViewDescriptors(demo->dset, 2, 1, &image_view);
-
-    xglEndDescriptorSetUpdate(demo->dset);
+    demo->desc_layout_last = &demo->desc_layout_fs;
 }
 
 static XGL_SHADER demo_prepare_shader(struct demo *demo,
@@ -1047,12 +1055,11 @@ static void demo_prepare_pipeline(struct demo *demo)
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fs;
     XGL_PIPELINE_VP_STATE_CREATE_INFO vp;
     XGL_PIPELINE_MS_STATE_CREATE_INFO ms;
-    XGL_DESCRIPTOR_SLOT_INFO vs_slots[3];
-    XGL_DESCRIPTOR_SLOT_INFO fs_slots[3];
     XGL_RESULT err;
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline.lastSetLayout = *demo->desc_layout_last;
 
     memset(&ia, 0, sizeof(ia));
     ia.sType = XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
@@ -1091,39 +1098,17 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.stencilTestEnable = XGL_FALSE;
     ds.front = ds.back;
 
-    memset(&vs_slots, 0, sizeof(vs_slots));
-    vs_slots[0].slotObjectType = XGL_SLOT_SHADER_RESOURCE;
-    vs_slots[0].shaderEntityIndex = 0;
-
-    memset(&fs_slots, 0, sizeof(fs_slots));
-    fs_slots[1].slotObjectType = XGL_SLOT_SHADER_SAMPLER;
-    fs_slots[1].shaderEntityIndex = 0;
-    fs_slots[2].slotObjectType = XGL_SLOT_SHADER_TEXTURE_RESOURCE;
-    fs_slots[2].shaderEntityIndex = 0;
-
     memset(&vs, 0, sizeof(vs));
     vs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs.shader.shader = demo_prepare_vs(demo);
     assert(vs.shader.shader != NULL);
-    XGL_DESCRIPTOR_SET_MAPPING ds_mapping1;
-    ds_mapping1.descriptorCount = 3;
-    ds_mapping1.pDescriptorInfo = vs_slots;
-    vs.shader.pDescriptorSetMapping = &ds_mapping1;
-    vs.shader.linkConstBufferCount = 0;
-    vs.shader.descriptorSetMappingCount = 1;
 
     memset(&fs, 0, sizeof(fs));
     fs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fs.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     fs.shader.shader = demo_prepare_fs(demo);
     assert(fs.shader.shader != NULL);
-    XGL_DESCRIPTOR_SET_MAPPING ds_mapping2;
-    ds_mapping2.descriptorCount = 3;
-    ds_mapping2.pDescriptorInfo = fs_slots;
-    fs.shader.pDescriptorSetMapping = &ds_mapping2;
-    fs.shader.linkConstBufferCount = 0;
-    fs.shader.descriptorSetMappingCount = 1;
 
     memset(&ms, 0, sizeof(ms));
     ms.sType = XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
@@ -1193,6 +1178,82 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     assert(!err);
 }
 
+static void demo_prepare_descriptor_region(struct demo *demo)
+{
+    const XGL_DESCRIPTOR_TYPE_COUNT type_counts[2] = {
+        [0] = {
+            .type = XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .count = 1,
+        },
+        [1] = {
+            .type = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+            .count = DEMO_TEXTURE_COUNT,
+        },
+    };
+    const XGL_DESCRIPTOR_REGION_CREATE_INFO descriptor_region = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO,
+        .pNext = NULL,
+        .count = 2,
+        .pTypeCount = type_counts,
+    };
+    XGL_RESULT err;
+
+    err = xglCreateDescriptorRegion(demo->device,
+            XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT, 1,
+            &descriptor_region, &demo->desc_region);
+    assert(!err);
+}
+
+static void demo_prepare_descriptor_set(struct demo *demo)
+{
+    const XGL_BUFFER_VIEW_ATTACH_INFO *view_info_vs =
+        &demo->uniform_data.attach;
+    XGL_IMAGE_VIEW_ATTACH_INFO view_info[DEMO_TEXTURE_COUNT];
+    XGL_SAMPLER_IMAGE_VIEW_INFO combined_info[DEMO_TEXTURE_COUNT];
+    XGL_UPDATE_SAMPLER_TEXTURES update_fs;
+    XGL_UPDATE_BUFFERS update_vs;
+    XGL_RESULT err;
+    uint32_t count;
+    XGL_UINT i;
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        view_info[i].sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+        view_info[i].pNext = NULL;
+        view_info[i].view = demo->textures[i].view,
+        view_info[i].layout = XGL_IMAGE_LAYOUT_GENERAL;
+
+        combined_info[i].pSampler = demo->textures[i].sampler;
+        combined_info[i].pImageView = &view_info[i];
+    }
+
+    memset(&update_vs, 0, sizeof(update_vs));
+    update_vs.sType = XGL_STRUCTURE_TYPE_UPDATE_BUFFERS;
+    update_vs.pNext = &update_fs;
+    update_vs.descriptorType = XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    update_vs.count = 1;
+    update_vs.pBufferViews = &view_info_vs;
+
+    memset(&update_fs, 0, sizeof(update_fs));
+    update_fs.sType = XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES;
+    update_fs.index = 1;
+    update_fs.count = DEMO_TEXTURE_COUNT;
+    update_fs.pSamplerImageViews = combined_info;
+
+    err = xglAllocDescriptorSets(demo->desc_region,
+            XGL_DESCRIPTOR_SET_USAGE_STATIC,
+            1, demo->desc_layout_last,
+            &demo->desc_set, &count);
+    assert(!err && count == 1);
+
+    xglBeginDescriptorRegionUpdate(demo->device,
+            XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
+
+    xglClearDescriptorSets(demo->desc_region, 1, &demo->desc_set);
+    xglUpdateDescriptors(demo->desc_set, &update_vs);
+
+    xglEndDescriptorRegionUpdate(demo->device, demo->cmd);
+}
+
 static void demo_prepare(struct demo *demo)
 {
     const XGL_CMD_BUFFER_CREATE_INFO cmd = {
@@ -1207,13 +1268,16 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_depth(demo);
     demo_prepare_textures(demo);
     demo_prepare_cube_data_buffer(demo);
-    demo_prepare_descriptor_set(demo);
 
+    demo_prepare_descriptor_layout(demo);
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
     err = xglCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
     assert(!err);
+
+    demo_prepare_descriptor_region(demo);
+    demo_prepare_descriptor_set(demo);
 }
 
 static void demo_handle_event(struct demo *demo,
@@ -1420,6 +1484,9 @@ static void demo_cleanup(struct demo *demo)
 {
     XGL_UINT i;
 
+    xglDestroyObject(demo->desc_set);
+    xglDestroyObject(demo->desc_region);
+
     xglDestroyObject(demo->cmd);
 
     xglDestroyObject(demo->viewport);
@@ -1428,8 +1495,8 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->depth_stencil);
 
     xglDestroyObject(demo->pipeline);
-
-    xglDestroyObject(demo->dset);
+    xglDestroyObject(demo->desc_layout_fs);
+    xglDestroyObject(demo->desc_layout_vs);
 
 //    xglFreeMemory(demo->vertices.mem);
 

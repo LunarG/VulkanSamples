@@ -211,137 +211,123 @@ XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
 
 }
 
-void XglDescriptorSetObj::AttachBufferView(XglConstantBufferObj *constantBuffer)
+XglDescriptorSetObj::~XglDescriptorSetObj()
 {
-    m_bufferViews.push_back(&constantBuffer->m_bufferViewInfo);
-    m_bufferSlots.push_back(m_nextSlot);
-    m_nextSlot++;
-
+    delete m_set;
 }
 
-void XglDescriptorSetObj::AttachSampler(XglSamplerObj *sampler)
+int XglDescriptorSetObj::AppendDummy()
 {
-    m_samplers.push_back(sampler);
-    m_samplerSlots.push_back(m_nextSlot);
-    m_nextSlot++;
+    /* request a descriptor but do not update it */
+    XGL_DESCRIPTOR_TYPE_COUNT tc = {};
+    tc.type = XGL_DESCRIPTOR_TYPE_RAW_BUFFER;
+    tc.count = 1;
+    m_type_counts.push_back(tc);
 
+    return m_nextSlot++;
 }
 
-void XglDescriptorSetObj::AttachImageView(XglTextureObj *texture)
+int XglDescriptorSetObj::AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBufferObj *constantBuffer)
 {
-    m_imageViews.push_back(&texture->m_textureViewInfo);
-    m_imageSlots.push_back(m_nextSlot);
-    m_nextSlot++;
+    XGL_DESCRIPTOR_TYPE_COUNT tc = {};
+    tc.type = type;
+    tc.count = 1;
+    m_type_counts.push_back(tc);
 
+    m_bufferInfo.push_back(&constantBuffer->m_bufferViewInfo);
+
+    m_updateBuffers.push_back(xgl_testing::DescriptorSet::update(type, m_nextSlot, 1,
+                (const XGL_BUFFER_VIEW_ATTACH_INFO **) NULL));
+
+    return m_nextSlot++;
 }
 
-XGL_DESCRIPTOR_SLOT_INFO* XglDescriptorSetObj::GetSlotInfo(vector<int>slots,
-                                                           vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types,
-                                                           vector<void *>objs )
+int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextureObj* texture)
 {
-    int nSlots = m_bufferSlots.size() + m_imageSlots.size() + m_samplerSlots.size();
-    m_slotInfo = (XGL_DESCRIPTOR_SLOT_INFO*) malloc( nSlots * sizeof(XGL_DESCRIPTOR_SLOT_INFO) );
-    memset(m_slotInfo,0,nSlots*sizeof(XGL_DESCRIPTOR_SLOT_INFO));
+    XGL_DESCRIPTOR_TYPE_COUNT tc = {};
+    tc.type = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE;
+    tc.count = 1;
+    m_type_counts.push_back(tc);
 
-    for (int i=0; i<nSlots; i++)
-    {
-        m_slotInfo[i].slotObjectType = XGL_SLOT_UNUSED;
-    }
+    XGL_SAMPLER_IMAGE_VIEW_INFO tmp = {};
+    tmp.pSampler = sampler->obj();
+    tmp.pImageView = &texture->m_textureViewInfo;
+    m_samplerTextureInfo.push_back(tmp);
 
-    for (int i=0; i<slots.size(); i++)
-    {
-        for (int j=0; j<m_bufferSlots.size(); j++)
-        {
-            if ( m_bufferViews[j] == objs[i])
-            {
-                m_slotInfo[m_bufferSlots[j]].shaderEntityIndex = slots[i];
-                m_slotInfo[m_bufferSlots[j]].slotObjectType = types[i];
-            }
-        }
-        for (int j=0; j<m_imageSlots.size(); j++)
-        {
-            if ( m_imageViews[j] == objs[i])
-            {
-                m_slotInfo[m_imageSlots[j]].shaderEntityIndex = slots[i];
-                m_slotInfo[m_imageSlots[j]].slotObjectType = types[i];
-            }
-        }
-        for (int j=0; j<m_samplerSlots.size(); j++)
-        {
-            if ( m_samplers[j] == objs[i])
-            {
-                m_slotInfo[m_samplerSlots[j]].shaderEntityIndex = slots[i];
-                m_slotInfo[m_samplerSlots[j]].slotObjectType = types[i];
-            }
-        }
-    }
+    m_updateSamplerTextures.push_back(xgl_testing::DescriptorSet::update(m_nextSlot, 1,
+                (const XGL_SAMPLER_IMAGE_VIEW_INFO *) NULL));
 
-    // for (int i=0;i<nSlots;i++)
-    // {
-    //    printf("SlotInfo[%d]:  Index = %d, Type = %d\n",i,m_slotInfo[i].shaderEntityIndex, m_slotInfo[i].slotObjectType);
-    //    fflush(stdout);
-    // }
-
-    return(m_slotInfo);
-
+    return m_nextSlot++;
 }
-void XglDescriptorSetObj::CreateXGLDescriptorSet()
+
+XGL_DESCRIPTOR_SET_LAYOUT XglDescriptorSetObj::GetLayout()
 {
-    init(*m_device, xgl_testing::DescriptorSet::create_info(m_nextSlot));
-
-    begin();
-    clear();
-
-    for (int i=0; i<m_bufferViews.size();i++)
-    {
-        attach(m_bufferSlots[i], *m_bufferViews[i]);
-    }
-    for (int i=0; i<m_samplers.size();i++)
-    {
-        attach(m_samplerSlots[i], *m_samplers[i]);
-    }
-    for (int i=0; i<m_imageViews.size();i++)
-    {
-        attach(m_imageSlots[i], *m_imageViews[i]);
-    }
-
-    end();
+    return m_layout.obj();
 }
 
 XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle()
 {
-    return obj();
+    return m_set->obj();
 }
 
-int XglDescriptorSetObj::GetTotalSlots()
+void XglDescriptorSetObj::CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer)
 {
-    return m_nextSlot;
-}
+    // create XGL_DESCRIPTOR_REGION
+    XGL_DESCRIPTOR_REGION_CREATE_INFO region = {};
+    region.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO;
+    region.count = m_type_counts.size();
+    region.pTypeCount = &m_type_counts[0];
+    init(*m_device, XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT, 1, region);
 
-void XglDescriptorSetObj::BindCommandBuffer(XGL_CMD_BUFFER commandBuffer)
-{
-    init(*m_device, xgl_testing::DescriptorSet::create_info(m_nextSlot));
+    // create XGL_DESCRIPTOR_SET_LAYOUT
+    vector<XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO> layout;
+    layout.resize(m_type_counts.size());
+    for (int i = 0; i < m_type_counts.size(); i++) {
+        layout[i].sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layout[i].descriptorType = m_type_counts[i].type;
+        layout[i].count = m_type_counts[i].count;
+        layout[i].stageFlags = XGL_SHADER_STAGE_FLAGS_ALL;
+        layout[i].immutableSampler = XGL_NULL_HANDLE;
 
-    begin();
-    clear();
-
-    for (int i=0; i<m_bufferViews.size();i++)
-    {
-        attach(m_bufferSlots[i], *m_bufferViews[i]);
+        if (i < m_type_counts.size() - 1)
+            layout[i].pNext = &layout[i + 1];
+        else
+            layout[i].pNext = NULL;
     }
-    for (int i=0; i<m_samplers.size();i++)
-    {
-        attach(m_samplerSlots[i], *m_samplers[i]);
-    }
-    for (int i=0; i<m_imageViews.size();i++)
-    {
-        attach(m_imageSlots[i], *m_imageViews[i]);
-    }
 
-    end();
+    m_layout.init(*m_device, 0, layout[0]);
 
-    // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
-    xglCmdBindDescriptorSet(commandBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, obj(), 0 );
+    // create XGL_DESCRIPTOR_SET
+    m_set = alloc_sets(XGL_DESCRIPTOR_SET_USAGE_STATIC, m_layout);
+
+    // build the update chain
+    for (int i = 0; i < m_updateBuffers.size(); i++) {
+        m_updateBuffers[i].pBufferViews = &m_bufferInfo[i];
+
+        if (i < m_updateBuffers.size() - 1)
+            m_updateBuffers[i].pNext = &m_updateBuffers[i + 1];
+        else if (m_updateSamplerTextures.empty())
+            m_updateBuffers[i].pNext = NULL;
+        else
+            m_updateBuffers[i].pNext = &m_updateSamplerTextures[0];
+    }
+    for (int i = 0; i < m_updateSamplerTextures.size(); i++) {
+        m_updateSamplerTextures[i].pSamplerImageViews = &m_samplerTextureInfo[i];
+
+        if (i < m_updateSamplerTextures.size() - 1)
+            m_updateSamplerTextures[i].pNext = &m_updateSamplerTextures[i + 1];
+        else
+            m_updateSamplerTextures[i].pNext = NULL;
+    }
+    const void *chain = (!m_updateBuffers.empty()) ? (const void *) &m_updateBuffers[0] :
+                        (!m_updateSamplerTextures.empty()) ? (const void *) &m_updateSamplerTextures[0] :
+                        NULL;
+
+    // do the updates
+    m_device->begin_descriptor_region_update(XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
+    clear_sets(*m_set);
+    m_set->update(chain);
+    m_device->end_descriptor_region_update(*cmdBuffer);
 }
 
 XglImage::XglImage(XglDevice *dev)
@@ -702,79 +688,16 @@ XGL_INDEX_TYPE XglIndexBufferObj::GetIndexType()
     return m_indexType;
 }
 
-XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescriptorSetObj *descriptorSet)
+XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo()
 {
-    XGL_DESCRIPTOR_SLOT_INFO *slotInfo;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *stageInfo = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) calloc( 1,sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO) );
     stageInfo->sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stageInfo->shader.stage = m_stage;
     stageInfo->shader.shader = obj();
-    stageInfo->shader.descriptorSetMappingCount = 1;
-    stageInfo->shader.pDescriptorSetMapping = (XGL_DESCRIPTOR_SET_MAPPING *)malloc(sizeof(XGL_DESCRIPTOR_SET_MAPPING));
-    stageInfo->shader.pDescriptorSetMapping->descriptorCount = 0;
     stageInfo->shader.linkConstBufferCount = 0;
     stageInfo->shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
-    stageInfo->shader.dynamicBufferViewMapping.slotObjectType = XGL_SLOT_UNUSED;
-    stageInfo->shader.dynamicBufferViewMapping.shaderEntityIndex = 0;
 
-    stageInfo->shader.pDescriptorSetMapping->descriptorCount = descriptorSet->GetTotalSlots();
-    if (stageInfo->shader.pDescriptorSetMapping->descriptorCount)
-    {
-        vector<int> allSlots;
-        vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> allTypes;
-        vector<void *> allObjs;
-
-        allSlots.reserve(m_bufferSlots.size() + m_imageSlots.size() + m_samplerSlots.size());
-        allTypes.reserve(m_bufferTypes.size() + m_imageTypes.size() + m_samplerTypes.size());
-        allObjs.reserve(m_bufferObjs.size() + m_imageObjs.size() + m_samplerObjs.size());
-
-        if (m_bufferSlots.size())
-        {
-            allSlots.insert(allSlots.end(), m_bufferSlots.begin(), m_bufferSlots.end());
-            allTypes.insert(allTypes.end(), m_bufferTypes.begin(), m_bufferTypes.end());
-            allObjs.insert(allObjs.end(), m_bufferObjs.begin(), m_bufferObjs.end());
-        }
-        if (m_imageSlots.size())
-        {
-            allSlots.insert(allSlots.end(), m_imageSlots.begin(), m_imageSlots.end());
-            allTypes.insert(allTypes.end(), m_imageTypes.begin(), m_imageTypes.end());
-            allObjs.insert(allObjs.end(), m_imageObjs.begin(), m_imageObjs.end());
-        }
-        if (m_samplerSlots.size())
-        {
-            allSlots.insert(allSlots.end(), m_samplerSlots.begin(), m_samplerSlots.end());
-            allTypes.insert(allTypes.end(), m_samplerTypes.begin(), m_samplerTypes.end());
-            allObjs.insert(allObjs.end(), m_samplerObjs.begin(), m_samplerObjs.end());
-        }
-
-         slotInfo = descriptorSet->GetSlotInfo(allSlots, allTypes, allObjs);
-         stageInfo->shader.pDescriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
-    }
     return stageInfo;
-}
-
-void XglShaderObj::BindShaderEntitySlotToBuffer(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer)
-{
-    m_bufferSlots.push_back(slot);
-    m_bufferTypes.push_back(type);
-    m_bufferObjs.push_back(&constantBuffer->m_bufferViewInfo);
-
-}
-
-void XglShaderObj::BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture)
-{
-    m_imageSlots.push_back(slot);
-    m_imageTypes.push_back(type);
-    m_imageObjs.push_back(&texture->m_textureViewInfo);
-
-}
-
-void XglShaderObj::BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sampler)
-{
-    m_samplerSlots.push_back(slot);
-    m_samplerTypes.push_back(XGL_SLOT_SHADER_SAMPLER);
-    m_samplerObjs.push_back(sampler);
-
 }
 
 XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework)
@@ -935,7 +858,7 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
 
     for (int i=0; i<m_shaderObjs.size(); i++)
     {
-        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo(descriptorSet);
+        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo();
         shaderCreateInfo->pNext = head_ptr;
         head_ptr = shaderCreateInfo;
     }
@@ -950,6 +873,7 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = head_ptr;
     info.flags = 0;
+    info.lastSetLayout = descriptorSet->GetLayout();
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];
@@ -971,7 +895,7 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
 
     for (int i=0; i<m_shaderObjs.size(); i++)
     {
-        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo(descriptorSet);
+        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo();
         shaderCreateInfo->pNext = head_ptr;
         head_ptr = shaderCreateInfo;
     }
@@ -986,6 +910,7 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = head_ptr;
     info.flags = 0;
+    info.lastSetLayout = descriptorSet->GetLayout();
 
     init(*m_device, info);
 
@@ -1249,7 +1174,7 @@ void XglCommandBufferObj::BindPipeline(XGL_PIPELINE pipeline)
 void XglCommandBufferObj::BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet)
 {
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
-    xglCmdBindDescriptorSet(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, 0, descriptorSet, 0 );
+    xglCmdBindDescriptorSet(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet, NULL );
 }
 void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset)
 {

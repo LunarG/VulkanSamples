@@ -106,7 +106,7 @@ protected:
 class XglIndexBufferObj;
 class XglConstantBufferObj;
 
-class XglCommandBufferObj : xgl_testing::CmdBuffer
+class XglCommandBufferObj : public xgl_testing::CmdBuffer
 {
 public:
     XglCommandBufferObj(XglDevice *device);
@@ -264,29 +264,33 @@ protected:
 
 };
 
-class XglDescriptorSetObj : public xgl_testing::DescriptorSet
+class XglDescriptorSetObj : public xgl_testing::DescriptorRegion
 {
 public:
     XglDescriptorSetObj(XglDevice *device);
-    void AttachBufferView(XglConstantBufferObj* constantBuffer);
-    void AttachSampler( XglSamplerObj* sampler);
-    void AttachImageView( XglTextureObj* texture);
-    void BindCommandBuffer(XGL_CMD_BUFFER commandBuffer);
-    void CreateXGLDescriptorSet();
+    ~XglDescriptorSetObj();
+
+    int AppendDummy();
+    int AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBufferObj* constantBuffer);
+    int AppendSamplerTexture(XglSamplerObj* sampler, XglTextureObj* texture);
+    void CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer);
+
     XGL_DESCRIPTOR_SET GetDescriptorSetHandle();
-    int GetTotalSlots();
-    XGL_DESCRIPTOR_SLOT_INFO * GetSlotInfo(vector<int>slots, vector<XGL_DESCRIPTOR_SET_SLOT_TYPE>types, vector<void*>objs );
+    XGL_DESCRIPTOR_SET_LAYOUT GetLayout();
 
 protected:
     XglDevice                           *m_device;
-    XGL_DESCRIPTOR_SLOT_INFO            *m_slotInfo;
+    vector<XGL_DESCRIPTOR_TYPE_COUNT>    m_type_counts;
     int                                  m_nextSlot;
-    vector<int>                          m_bufferSlots;
-    vector<XGL_BUFFER_VIEW_ATTACH_INFO*> m_bufferViews;
-    vector<int>                          m_samplerSlots;
-    vector<XglSamplerObj*>               m_samplers;
-    vector<int>                          m_imageSlots;
-    vector<XGL_IMAGE_VIEW_ATTACH_INFO*>  m_imageViews;
+
+    vector<const XGL_BUFFER_VIEW_ATTACH_INFO *> m_bufferInfo;
+    vector<XGL_UPDATE_BUFFERS>           m_updateBuffers;
+
+    vector<XGL_SAMPLER_IMAGE_VIEW_INFO>  m_samplerTextureInfo;
+    vector<XGL_UPDATE_SAMPLER_TEXTURES>  m_updateSamplerTextures;
+
+    xgl_testing::DescriptorSetLayout     m_layout;
+    xgl_testing::DescriptorSet          *m_set;
 };
 
 
@@ -294,24 +298,12 @@ class XglShaderObj : public xgl_testing::Shader
 {
 public:
     XglShaderObj(XglDevice *device, const char * shaderText, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework);
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo(XglDescriptorSetObj *descriptorSet);
-    void BindShaderEntitySlotToBuffer(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglConstantBufferObj *constantBuffer);
-    void BindShaderEntitySlotToImage(int slot, XGL_DESCRIPTOR_SET_SLOT_TYPE type, XglTextureObj *texture);
-    void BindShaderEntitySlotToSampler(int slot, XglSamplerObj *sampler);
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo();
 
 protected:
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO stage_info;
     XGL_PIPELINE_SHADER_STAGE m_stage;
     XglDevice *m_device;
-    vector<int>    m_bufferSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_bufferTypes;
-    vector<XGL_BUFFER_VIEW_ATTACH_INFO*> m_bufferObjs;
-    vector<int>    m_samplerSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_samplerTypes;
-    vector<XglSamplerObj*> m_samplerObjs;
-    vector<int>    m_imageSlots;
-    vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> m_imageTypes;
-    vector<XGL_IMAGE_VIEW_ATTACH_INFO*> m_imageObjs;
 
 };
 

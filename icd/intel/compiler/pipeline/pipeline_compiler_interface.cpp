@@ -25,9 +25,13 @@
  *   LunarG
  */
 
+extern "C" {
+#include "desc.h"
 #include "gpu.h"
 #include "shader.h"
 #include "pipeline.h"
+}
+
 #include "compiler/shader/compiler_interface.h"
 #include "compiler/pipeline/pipeline_compiler_interface.h"
 #include "compiler/pipeline/brw_context.h"
@@ -37,6 +41,16 @@
 #include "compiler/pipeline/brw_device_info.h"
 #include "compiler/pipeline/brw_wm.h"
 
+struct brw_binding_table {
+    uint32_t count;
+
+    uint32_t rt_start;
+
+    uint32_t texture_start;
+    uint32_t texture_used;
+
+    uint32_t ubo_start;
+};
 
 static void initialize_brw_context(struct brw_context *brw,
                                    const struct intel_gpu *gpu)
@@ -259,202 +273,20 @@ static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
     fflush(fp);
 }
 
-static struct intel_pipeline_rmap_slot *rmap_get_slot(struct intel_pipeline_rmap *rmap,
-                                                      XGL_DESCRIPTOR_SET_SLOT_TYPE type,
-                                                      XGL_UINT index)
-{
-    // The ordering of below offsets is important.  Textures need to come before
-    // buffers with the current compiler conventions.
-    const XGL_UINT texture_resource_offset = rmap->rt_count;
-    const XGL_UINT resource_offset = texture_resource_offset + rmap->texture_resource_count;
-    const XGL_UINT uav_offset = resource_offset + rmap->resource_count;
-    const XGL_UINT sampler_offset = uav_offset + rmap->uav_count;
-    struct intel_pipeline_rmap_slot *slot;
-
-    switch (type) {
-    case XGL_SLOT_UNUSED:
-        slot = NULL;
-        break;
-    case XGL_SLOT_SHADER_TEXTURE_RESOURCE:
-        slot = &rmap->slots[texture_resource_offset + index];
-        break;
-    case XGL_SLOT_SHADER_RESOURCE:
-        slot = &rmap->slots[resource_offset + index];
-        break;
-    case XGL_SLOT_SHADER_UAV:
-        slot = &rmap->slots[uav_offset + index];
-        break;
-    case XGL_SLOT_SHADER_SAMPLER:
-        slot = &rmap->slots[sampler_offset + index];
-        break;
-    default:
-        assert(!"unknown rmap slot type");
-        slot = NULL;
-        break;
-    }
-
-    return slot;
-}
-
-static bool rmap_init_slots_with_path(struct intel_pipeline_rmap *rmap,
-                                      const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                                      XGL_UINT *nest_path,
-                                      XGL_UINT nest_level)
-{
-    XGL_UINT i;
-
-    for (i = 0; i < mapping->descriptorCount; i++) {
-        const XGL_DESCRIPTOR_SLOT_INFO *info = &mapping->pDescriptorInfo[i];
-        struct intel_pipeline_rmap_slot *slot;
-
-        if (info->slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET) {
-            nest_path[nest_level] = i;
-            if (!rmap_init_slots_with_path(rmap, info->pNextLevelSet,
-                        nest_path, nest_level + 1))
-                return false;
-
-            continue;
-        }
-
-        slot = rmap_get_slot(rmap, info->slotObjectType,
-                info->shaderEntityIndex);
-        if (!slot || slot->path_len)
-            continue;
-
-        slot->path_len = nest_level + 1;
-
-        if (nest_level) {
-            slot->u.path = (XGL_UINT *) icd_alloc(sizeof(slot->u.path[0]) *
-                    slot->path_len, 0, XGL_SYSTEM_ALLOC_INTERNAL);
-            if (!slot->u.path) {
-                slot->path_len = 0;
-                return false;
-            }
-
-            memcpy(slot->u.path, nest_path,
-                    sizeof(slot->u.path[0]) * nest_level);
-            slot->u.path[nest_level] = i;
-        } else {
-            slot->u.index = i;
-        }
-    }
-
-    return true;
-}
-
-static bool rmap_init_slots(struct intel_pipeline_rmap *rmap,
-                            const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                            XGL_UINT depth)
-{
-    XGL_UINT *nest_path;
-    bool ok;
-
-    if (depth) {
-        nest_path = (XGL_UINT *) icd_alloc(sizeof(nest_path[0]) * depth,
-                0, XGL_SYSTEM_ALLOC_INTERNAL_TEMP);
-        if (!nest_path)
-            return false;
-    } else {
-        nest_path = NULL;
-    }
-
-    ok = rmap_init_slots_with_path(rmap, mapping, nest_path, 0);
-
-    if (nest_path)
-        icd_free(nest_path);
-
-    return ok;
-}
-
-static void rmap_update_count(struct intel_pipeline_rmap *rmap,
-                              XGL_DESCRIPTOR_SET_SLOT_TYPE type,
-                              XGL_UINT index, XGL_UINT rt_count, XGL_UINT ubo_start)
-{
-    rmap->rt_count = rt_count;
-
-    switch (type) {
-    case XGL_SLOT_UNUSED:
-        break;
-    case XGL_SLOT_SHADER_TEXTURE_RESOURCE:
-        if (rmap->texture_resource_count < index + 1)
-            if (index < ubo_start - rt_count)
-                rmap->texture_resource_count = index + 1;
-        break;
-    case XGL_SLOT_SHADER_RESOURCE:
-        if (rmap->resource_count < index + 1)
-            rmap->resource_count = index + 1;
-        break;
-    case XGL_SLOT_SHADER_UAV:
-        if (rmap->uav_count < index + 1)
-            rmap->uav_count = index + 1;
-        break;
-    case XGL_SLOT_SHADER_SAMPLER:
-        if (rmap->sampler_count < index + 1)
-            rmap->sampler_count = index + 1;
-        break;
-    default:
-        assert(!"unknown rmap slot type");
-        break;
-    }
-}
-
-static XGL_UINT rmap_init_counts(struct intel_pipeline_rmap *rmap,
-                                 const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                                 XGL_UINT rt_count, XGL_UINT ubo_start)
-{
-    XGL_UINT depth = 0;
-    XGL_UINT i;
-
-    for (i = 0; i < mapping->descriptorCount; i++) {
-        const XGL_DESCRIPTOR_SLOT_INFO *info = &mapping->pDescriptorInfo[i];
-
-        if (info->slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET) {
-            const XGL_UINT d = rmap_init_counts(rmap,
-                    info->pNextLevelSet, rt_count, ubo_start);
-            if (depth < d + 1)
-                depth = d + 1;
-
-            continue;
-        }
-
-        rmap_update_count(rmap, info->slotObjectType,
-                info->shaderEntityIndex, rt_count, ubo_start);
-    }
-
-    return depth;
-}
-
 static void rmap_destroy(struct intel_pipeline_rmap *rmap)
 {
-    XGL_UINT i;
-
-    for (i = 0; i < rmap->slot_count; i++) {
-        struct intel_pipeline_rmap_slot *slot = &rmap->slots[i];
-
-        switch (slot->path_len) {
-        case 0:
-        case 1:
-        case INTEL_PIPELINE_RMAP_SLOT_RT:
-        case INTEL_PIPELINE_RMAP_SLOT_DYN:
-            break;
-        default:
-            icd_free(slot->u.path);
-            break;
-        }
-    }
-
     icd_free(rmap->slots);
     icd_free(rmap);
 }
 
 static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
-                                               const XGL_DESCRIPTOR_SET_MAPPING *mapping,
-                                               const XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO *dyn,
-                                               XGL_UINT rt_count, XGL_UINT ubo_start)
+                                               XGL_PIPELINE_SHADER_STAGE stage,
+                                               const struct intel_desc_layout *layout,
+                                               const struct brw_binding_table *bt)
 {
     struct intel_pipeline_rmap *rmap;
-    struct intel_pipeline_rmap_slot *slot;
-    XGL_UINT depth, rt;
+    struct intel_desc_layout_iter iter;
+    uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
         icd_alloc(sizeof(*rmap), 0, XGL_SYSTEM_ALLOC_INTERNAL);
@@ -463,13 +295,14 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     memset(rmap, 0, sizeof(*rmap));
 
-    depth = rmap_init_counts(rmap, mapping, rt_count, ubo_start);
-
-    /* add RTs and the dynamic buffer view */
-    rmap_update_count(rmap, dyn->slotObjectType, dyn->shaderEntityIndex, rt_count, ubo_start);
-
-    rmap->slot_count = rmap->rt_count + rmap->texture_resource_count + rmap->resource_count +
-        rmap->uav_count + rmap->sampler_count;
+    /* Fix the compiler and fix these!  No point in understanding them. */
+    rmap->rt_count = bt->texture_start;
+    rmap->texture_resource_count = bt->ubo_start - bt->texture_start;
+    rmap->uav_count = bt->count - bt->ubo_start;
+    rmap->sampler_count = rmap->texture_resource_count;
+    surface_count = rmap->rt_count + rmap->texture_resource_count +
+        rmap->uav_count;
+    rmap->slot_count = surface_count + rmap->sampler_count;
 
     rmap->slots = (struct intel_pipeline_rmap_slot *)
         icd_alloc(sizeof(rmap->slots[0]) * rmap->slot_count,
@@ -481,21 +314,42 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     memset(rmap->slots, 0, sizeof(rmap->slots[0]) * rmap->slot_count);
 
-    if (!rmap_init_slots(rmap, mapping, depth)) {
-        rmap_destroy(rmap);
-        return NULL;
+    for (i = 0; i < bt->rt_start; i++)
+        rmap->slots[i].type = INTEL_PIPELINE_RMAP_UNUSED;
+
+    for (i = bt->rt_start; i < bt->texture_start; i++) {
+        rmap->slots[i].type = INTEL_PIPELINE_RMAP_RT;
+        rmap->slots[i].u.rt = i - bt->rt_start;
     }
 
-    /* add RTs and the dynamic buffer view */
-    slot = rmap_get_slot(rmap, dyn->slotObjectType, dyn->shaderEntityIndex);
-    if (slot) {
-        slot->path_len = INTEL_PIPELINE_RMAP_SLOT_DYN;
-        slot->u.index = 0;
+    intel_desc_layout_find_bind_point(layout, stage, 0, 0, &iter);
+    for (i = bt->texture_start; i < bt->ubo_start; i++) {
+        if (bt->texture_used & (1 << (i - bt->texture_start))) {
+            rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
+            rmap->slots[i].u.surface.offset = iter.offset_begin;
+            rmap->slots[i].u.surface.dynamic_offset_index = -1;
+
+            rmap->slots[bt->count + i - bt->texture_start].type =
+                INTEL_PIPELINE_RMAP_SAMPLER;
+            rmap->slots[bt->count + i - bt->texture_start].u.sampler =
+                iter.offset_begin;
+        } else {
+            rmap->slots[i].type = INTEL_PIPELINE_RMAP_UNUSED;
+
+            rmap->slots[bt->count + i - bt->texture_start].type =
+                INTEL_PIPELINE_RMAP_UNUSED;;
+        }
+
+        intel_desc_layout_advance_iter(layout, &iter);
     }
-    for (rt = 0; rt < rmap->rt_count; rt++) {
-        slot = &rmap->slots[rt];
-        slot->path_len = INTEL_PIPELINE_RMAP_SLOT_RT;
-        slot->u.index = rt;
+
+    intel_desc_layout_find_bind_point(layout, stage, 0, 0, &iter);
+    for (i = bt->ubo_start; i < bt->count; i++) {
+        rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
+        rmap->slots[i].u.surface.offset = iter.offset_begin;
+        rmap->slots[i].u.surface.dynamic_offset_index = -1;
+
+        intel_desc_layout_advance_iter(layout, &iter);
     }
 
     return rmap;
@@ -523,14 +377,18 @@ void intel_destroy_brw_context(struct brw_context *brw)
 // invoke backend compiler to generate ISA and supporting data structures
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
+                                         const struct intel_desc_layout *layout,
                                          const XGL_PIPELINE_SHADER *info)
 {
     const struct intel_ir *ir = intel_shader(info->shader)->ir;
     /* XXX how about constness? */
     struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
     XGL_RESULT status = XGL_SUCCESS;
+    struct brw_binding_table bt;
 
     struct brw_context *brw = intel_create_brw_context(gpu);
+
+    memset(&bt, 0, sizeof(bt));
 
     // LunarG : TODO - should this have been set for us somewhere?
     sh_prog->Type = sh_prog->Shaders[0]->Stage;
@@ -590,6 +448,11 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             pipe_shader->urb_grf_start = data->base.dispatch_grf_start_reg;// = 1;
             pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
+
+            bt.count = data->base.base.binding_table.size_bytes / 4;
+            bt.texture_start = data->base.base.binding_table.texture_start;
+            bt.texture_used = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->Program->SamplersUsed;
+            bt.ubo_start = data->base.base.binding_table.ubo_start;
 
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
 
@@ -674,6 +537,12 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
                 }
             }
 
+            bt.count = data->base.binding_table.size_bytes / 4;
+            bt.rt_start = data->binding_table.render_target_start;
+            bt.texture_start = data->base.binding_table.texture_start;
+            bt.texture_used = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program->SamplersUsed;
+            bt.ubo_start = data->base.binding_table.ubo_start;
+
             // Ensure this is 1:1, or create a converter
             pipe_shader->barycentric_interps = data->barycentric_interp_modes;
 
@@ -711,36 +580,8 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     }
 
     if (status == XGL_SUCCESS) {
-        XGL_UINT rt_count = 0;
-
-        if (info->stage == XGL_SHADER_STAGE_FRAGMENT) {
-            const struct gl_program *prog =
-                sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program;
-
-            rt_count = _mesa_bitcount_64(prog->OutputsWritten &
-                    ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
-                      BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
-        }
-
-        XGL_DESCRIPTOR_SET_MAPPING null_map;
-        XGL_DESCRIPTOR_SET_MAPPING *pMapping = info->pDescriptorSetMapping;
-        null_map.descriptorCount = 0;
-
-        if (! info->descriptorSetMappingCount) {
-            pMapping = &null_map;
-        }
-
-        pipe_shader->rmap = rmap_create(gpu,
-                pMapping,
-                &info->dynamicBufferViewMapping,
-                rt_count, pipe_shader->ubo_start);
-
-        if (pipe_shader->rmap) {
-            // Ensure that all textures in descriptor set were consumed.  This
-            // is temporary until we move resource map building to compiler.
-            assert(pipe_shader->ubo_start == rt_count +
-                    pipe_shader->rmap->texture_resource_count);
-        } else {
+        pipe_shader->rmap = rmap_create(gpu, info->stage, layout, &bt);
+        if (!pipe_shader->rmap) {
             intel_pipeline_shader_cleanup(pipe_shader);
             status = XGL_ERROR_OUT_OF_MEMORY;
         }

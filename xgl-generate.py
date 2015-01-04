@@ -152,6 +152,17 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "    return res;\n"
                          "}"
                          % (qual, decl, proto.params[0].name, stmt, obj_write_stmt, proto.params[-1].name))
+            elif proto.name == "AllocDescriptorSets":
+                funcs.append("%s%s\n"
+                         "{\n"
+                         "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"
+                         "        (const XGL_LAYER_DISPATCH_TABLE **) %s;\n"
+                         "    uint32_t i;\n"
+                         "    XGL_RESULT res = %s;\n"
+                         "    for (i = 0; i < *%s; i++)\n"
+                         "        *(const XGL_LAYER_DISPATCH_TABLE **) (%s[i]) = *disp;\n"
+                         "    return res;\n"
+                         "}" % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name, proto.params[-2].name))
             elif proto.name == "GetMultiGpuCompatibility":
                 funcs.append("%s%s\n"
                          "{\n"
