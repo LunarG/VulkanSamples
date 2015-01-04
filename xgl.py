@@ -180,10 +180,6 @@ core = Extension(
         "XGL_QUERY_POOL",
     ],
     protos=[
-        Proto("XGL_VOID *", "GetProcAddr",
-            [Param("XGL_PHYSICAL_GPU", "gpu"),
-             Param("const XGL_CHAR*", "pName")]),
-
         Proto("XGL_RESULT", "InitAndEnumerateGpus",
             [Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
              Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),
@@ -196,6 +192,10 @@ core = Extension(
              Param("XGL_PHYSICAL_GPU_INFO_TYPE", "infoType"),
              Param("XGL_SIZE*", "pDataSize"),
              Param("XGL_VOID*", "pData")]),
+
+        Proto("XGL_VOID*", "GetProcAddr",
+            [Param("XGL_PHYSICAL_GPU", "gpu"),
+             Param("const XGL_CHAR*", "pName")]),
 
         Proto("XGL_RESULT", "CreateDevice",
             [Param("XGL_PHYSICAL_GPU", "gpu"),
@@ -214,8 +214,8 @@ core = Extension(
              Param("XGL_SIZE", "maxLayerCount"),
              Param("XGL_SIZE", "maxStringSize"),
              Param("XGL_CHAR* const*", "pOutLayers"),
-             Param("XGL_SIZE *", "pOutLayerCount"),
-             Param("XGL_VOID *", "pReserved")]),
+             Param("XGL_SIZE*", "pOutLayerCount"),
+             Param("XGL_VOID*", "pReserved")]),
 
         Proto("XGL_RESULT", "GetDeviceQueue",
             [Param("XGL_DEVICE", "device"),
