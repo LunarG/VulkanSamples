@@ -190,28 +190,11 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
         return "#include \"icd.h\""
 
     def _generate_stub_decl(self, proto):
-        plist = []
-        for param in proto.params:
-            idx = param.ty.find("[")
-            if idx < 0:
-                idx = len(param.ty)
-
-            pad = 44 - idx
-            if pad <= 0:
-                pad = 1
-
-            plist.append("    %s%s%s%s" % (param.ty[:idx],
-                " " * pad, param.name, param.ty[idx:]))
-
-        return "%s XGLAPI %s%s(\n%s)" % (proto.ret, self.prefix,
-                proto.name, ",\n".join(plist))
+        return proto.c_pretty_decl(self.prefix + proto.name, attr="XGLAPI")
 
     def _generate_stubs(self):
         stubs = []
         for proto in self.protos:
-            if not xgl.is_dispatchable(proto):
-                continue
-
             decl = self._generate_stub_decl(proto)
             if proto.ret != "XGL_VOID":
                 stmt = "    return XGL_ERROR_UNKNOWN;\n"
