@@ -73,6 +73,26 @@ class Proto(object):
         else:
             return "%s %s%s(%s)" % format_vals
 
+    def c_pretty_decl(self, name, attr=""):
+        """Return a named declaration in C, with xgl.h formatting."""
+        plist = []
+        for param in self.params:
+            idx = param.ty.find("[")
+            if idx < 0:
+                idx = len(param.ty)
+
+            pad = 44 - idx
+            if pad <= 0:
+                pad = 1
+
+            plist.append("    %s%s%s%s" % (param.ty[:idx],
+                " " * pad, param.name, param.ty[idx:]))
+
+        return "%s %s%s(\n%s)" % (self.ret,
+                attr + " " if attr else "",
+                name,
+                ",\n".join(plist))
+
     def c_typedef(self, suffix="", attr=""):
         """Return the typedef for the prototype in C."""
         return self.c_decl(self.name + suffix, attr=attr, typed=True)
