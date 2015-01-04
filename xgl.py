@@ -106,15 +106,44 @@ class Proto(object):
         return "%s(%s)" % (self.name, self.c_params(need_type=False))
 
 class Extension(object):
-    def __init__(self, name, headers, protos):
+    def __init__(self, name, headers, objects, protos):
         self.name = name
         self.headers = headers
+        self.objects = objects
         self.protos = protos
 
 # XGL core API
 core = Extension(
     name="XGL_CORE",
     headers=["xgl.h", "xglDbg.h"],
+    objects=[
+        "XGL_PHYSICAL_GPU",
+        "XGL_BASE_OBJECT",
+        "XGL_DEVICE",
+        "XGL_QUEUE",
+        "XGL_GPU_MEMORY",
+        "XGL_OBJECT",
+        "XGL_IMAGE",
+        "XGL_IMAGE_VIEW",
+        "XGL_COLOR_ATTACHMENT_VIEW",
+        "XGL_DEPTH_STENCIL_VIEW",
+        "XGL_SHADER",
+        "XGL_PIPELINE",
+        "XGL_PIPELINE_DELTA",
+        "XGL_SAMPLER",
+        "XGL_DESCRIPTOR_SET",
+        "XGL_STATE_OBJECT",
+        "XGL_VIEWPORT_STATE_OBJECT",
+        "XGL_RASTER_STATE_OBJECT",
+        "XGL_MSAA_STATE_OBJECT",
+        "XGL_COLOR_BLEND_STATE_OBJECT",
+        "XGL_DEPTH_STENCIL_STATE_OBJECT",
+        "XGL_CMD_BUFFER",
+        "XGL_FENCE",
+        "XGL_QUEUE_SEMAPHORE",
+        "XGL_EVENT",
+        "XGL_QUERY_POOL",
+    ],
     protos=[
         Proto("XGL_VOID *", "GetProcAddr",
             [Param("XGL_PHYSICAL_GPU", "gpu"),
@@ -747,6 +776,7 @@ core = Extension(
 wsi_x11 = Extension(
     name="XGL_WSI_X11",
     headers=["xglWsiX11Ext.h"],
+    objects=[],
     protos=[
         Proto("XGL_RESULT", "WsiX11AssociateConnection",
             [Param("XGL_PHYSICAL_GPU", "gpu"),
@@ -774,9 +804,11 @@ wsi_x11 = Extension(
 extensions = [core, wsi_x11]
 
 headers = []
+objects = []
 protos = []
 for ext in extensions:
     headers.extend(ext.headers)
+    objects.extend(ext.objects)
     protos.extend(ext.protos)
 
 proto_names = [proto.name for proto in protos]
