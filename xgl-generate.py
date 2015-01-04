@@ -175,6 +175,73 @@ class LoaderEntrypointsSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class DispatchTableOpsSubcommand(Subcommand):
+    def run(self):
+        if len(self.argv) != 1:
+            print("DispatchTableOpsSubcommand: <prefix> unspecified")
+            return
+
+        self.prefix = self.argv[0]
+        super().run()
+
+    def generate_header(self):
+        return "\n".join(["#include <xgl.h>",
+                          "#include <xglLayer.h>",
+                          "#include <string.h>"])
+
+    def _generate_init(self):
+        stmts = []
+        for proto in self.protos:
+            if proto.name == "GetProcAddr":
+                stmts.append("table->%s = gpa; /* direct assignment */" %
+                        proto.name)
+            else:
+                stmts.append("table->%s = (%sType) gpa(gpu, \"xgl%s\");" %
+                        (proto.name, proto.name, proto.name))
+
+        func = []
+        func.append("static inline void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
+                % self.prefix)
+        func.append("%s                                              GetProcAddrType gpa,"
+                % (" " * len(self.prefix)))
+        func.append("%s                                              XGL_PHYSICAL_GPU gpu)"
+                % (" " * len(self.prefix)))
+        func.append("{")
+        func.append("    %s" % "\n    ".join(stmts))
+        func.append("}")
+
+        return "\n".join(func)
+
+    def _generate_lookup(self):
+        lookups = []
+        for proto in self.protos:
+            lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
+            lookups.append("    return (void *) table->%s;"
+                    % (proto.name))
+
+        func = []
+        func.append("static inline void *%s_lookup_dispatch_table(const XGL_LAYER_DISPATCH_TABLE *table,"
+                % self.prefix)
+        func.append("%s                                           const char *name)"
+                % (" " * len(self.prefix)))
+        func.append("{")
+        func.append("    if (!name || name[0] != 'x' || name[1] != 'g' || name[2] != 'l')")
+        func.append("        return NULL;")
+        func.append("")
+        func.append("    name += 3;")
+        func.append("    %s" % "\n    ".join(lookups))
+        func.append("")
+        func.append("    return NULL;")
+        func.append("}")
+
+        return "\n".join(func)
+
+    def generate_body(self):
+        body = [self._generate_init(),
+                self._generate_lookup()]
+
+        return "\n\n".join(body)
+
 class IcdDummyEntrypointsSubcommand(Subcommand):
     def run(self):
         if len(self.argv) == 1:
@@ -245,6 +312,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 def main():
     subcommands = {
             "loader-entrypoints": LoaderEntrypointsSubcommand,
+            "dispatch-table-ops": DispatchTableOpsSubcommand,
             "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
             "icd-get-proc-addr": IcdGetProcAddrSubcommand,
     }
