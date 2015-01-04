@@ -9,6 +9,7 @@ XGLConfig.h
 icd/common/libicd.a
 icd/intel/intel_gpa.c
 loader/dispatch.c
+loader/table_ops.h
 tests/xgl_image_tests
 tests/xgl_render_tests
 tests/xglbase
