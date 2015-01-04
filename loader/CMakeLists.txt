@@ -1,7 +1,6 @@
 add_custom_command(OUTPUT dispatch.c
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py loader > dispatch.c
-	           DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py
-	                   ${PROJECT_SOURCE_DIR}/xgl.py)
+	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py loader-entrypoints > dispatch.c
+	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}

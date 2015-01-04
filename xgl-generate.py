@@ -92,7 +92,7 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-class LoaderSubcommand(Subcommand):
+class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
 
@@ -244,7 +244,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 
 def main():
     subcommands = {
-            "loader": LoaderSubcommand,
+            "loader-entrypoints": LoaderEntrypointsSubcommand,
             "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
             "icd-get-proc-addr": IcdGetProcAddrSubcommand,
     }
