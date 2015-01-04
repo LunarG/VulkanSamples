@@ -37,6 +37,9 @@ class Param(object):
         else:
             return "%s %s" % (self.ty, self.name)
 
+    def __repr__(self):
+        return "Param(\"%s\", \"%s\")" % (self.ty, self.name)
+
 class Proto(object):
     """A function prototype."""
 
@@ -105,12 +108,44 @@ class Proto(object):
         """Return a call to the prototype in C."""
         return "%s(%s)" % (self.name, self.c_params(need_type=False))
 
+    def __repr__(self):
+        param_strs = []
+        for param in self.params:
+            param_strs.append(str(param))
+        param_str = "    [%s]" % (",\n     ".join(param_strs))
+
+        return "Proto(\"%s\", \"%s\",\n%s)" % \
+                (self.ret, self.name, param_str)
+
 class Extension(object):
     def __init__(self, name, headers, objects, protos):
         self.name = name
         self.headers = headers
         self.objects = objects
         self.protos = protos
+
+    def __repr__(self):
+        lines = []
+        lines.append("Extension(")
+        lines.append("    name=\"%s\"," % self.name)
+        lines.append("    headers=[\"%s\"]," %
+                "\", \"".join(self.headers))
+
+        lines.append("    objects=[")
+        for obj in self.objects:
+            lines.append("        \"%s\"," % obj)
+        lines.append("    ],")
+
+        lines.append("    protos=[")
+        for proto in self.protos:
+            param_lines = str(proto).splitlines()
+            param_lines[-1] += ",\n" if proto != self.protos[-1] else ","
+            for p in param_lines:
+                lines.append("        " + p)
+        lines.append("    ],")
+        lines.append(")")
+
+        return "\n".join(lines)
 
 # XGL core API
 core = Extension(
@@ -862,3 +897,66 @@ def is_dispatchable(proto):
     XGL_BASE_OBJECT.
     """
     return is_name_dispatchable(proto.name)
+
+def parse_xgl_h(filename):
+    # read object and protoype typedefs
+    object_lines = []
+    proto_lines = []
+    with open(filename, "r") as fp:
+        for line in fp:
+            line = line.strip()
+            if line.startswith("XGL_DEFINE"):
+                begin = line.find("(") + 1
+                end = line.find(",")
+                # extract the object type
+                object_lines.append(line[begin:end])
+            if line.startswith("typedef") and line.endswith(");"):
+                # drop leading "typedef " and trailing ");"
+                proto_lines.append(line[8:-2])
+
+    # parse proto_lines to protos
+    protos = []
+    for line in proto_lines:
+        first, rest = line.split(" (XGLAPI *")
+        second, third = rest.split("Type)(")
+
+        # get the return type, no space before "*"
+        proto_ret = "*".join([t.rstrip() for t in first.split("*")])
+
+        # get the name
+        proto_name = second.strip()
+
+        # get the list of params
+        param_strs = third.split(", ")
+        params = []
+        for s in param_strs:
+            ty, name = s.rsplit(" ", 1)
+
+            # no space before "*"
+            ty = "*".join([t.rstrip() for t in ty.split("*")])
+            # attach [] to ty
+            idx = name.rfind("[")
+            if idx >= 0:
+                ty += name[idx:]
+                name = name[:idx]
+
+            params.append(Param(ty, name))
+
+        protos.append(Proto(proto_ret, proto_name, params))
+
+    # make them an extension and print
+    ext = Extension("XGL_CORE",
+            headers=["xgl.h", "xglDbg.h"],
+            objects=object_lines,
+            protos=protos)
+    print("core =", str(ext))
+
+    print("")
+    print("typedef struct _XGL_LAYER_DISPATCH_TABLE")
+    print("{")
+    for proto in ext.protos:
+        print("    %sType %s;" % (proto.name, proto.name))
+    print("} XGL_LAYER_DISPATCH_TABLE;")
+
+if __name__ == "__main__":
+    parse_xgl_h("include/xgl.h")
