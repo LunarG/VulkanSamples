@@ -96,38 +96,9 @@ class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
 
-    def _does_function_create_object(self, name):
-        return name in (
-            "CreateDevice",
-            "GetDeviceQueue",
-            "AllocMemory",
-            "PinSystemMemory",
-            "OpenSharedMemory",
-            "OpenSharedQueueSemaphore",
-            "OpenPeerMemory",
-            "OpenPeerImage",
-            "CreateFence",
-            "CreateQueueSemaphore",
-            "CreateEvent",
-            "CreateQueryPool",
-            "CreateImage",
-            "CreateImageView",
-            "CreateColorAttachmentView",
-            "CreateDepthStencilView",
-            "CreateShader",
-            "CreateGraphicsPipeline",
-            "CreateComputePipeline",
-            "LoadPipeline",
-            "CreatePipelineDelta",
-            "CreateSampler",
-            "CreateDescriptorSet",
-            "CreateViewportState",
-            "CreateRasterState",
-            "CreateMsaaState",
-            "CreateColorBlendState",
-            "CreateDepthStencilState",
-            "CreateCommandBuffer",
-            "WsiX11CreatePresentableImage")
+    def _does_function_create_object(self, proto):
+        out_objs = proto.object_out_params()
+        return out_objs and out_objs[-1] == proto.params[-1]
 
     def _is_dispatchable(self, proto):
         if proto.name in ["GetProcAddr", "EnumerateLayers"]:
@@ -160,7 +131,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
                                 proto.params[0].name, proto.params[0].name, stmt,
                                 proto.params[-1].name))
-            elif self._does_function_create_object(proto.name) and qual == "LOADER_EXPORT ":
+            elif self._does_function_create_object(proto):
                 funcs.append("%s%s\n"
                          "{\n"
                          "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"
