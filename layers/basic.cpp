@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unordered_map>
+#include "xgl_dispatch_table_helper.h"
 #include "xglLayer.h"
 
 static std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
@@ -44,129 +45,9 @@ static XGL_LAYER_DISPATCH_TABLE * initLayerTable(const XGL_BASE_LAYER_OBJECT *gp
     {
         return it->second;
     }
-    fpGPA = gpuw->pGPA;
-    assert(fpGPA);
-    pTable->GetProcAddr = fpGPA;
-    pTable->InitAndEnumerateGpus = (InitAndEnumerateGpusType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglInitAndEnumerateGpus");
-    pTable->GetGpuInfo = (GetGpuInfoType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetGpuInfo");
-    pTable->CreateDevice = (CreateDeviceType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateDevice");
-    pTable->DestroyDevice = (DestroyDeviceType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDestroyDevice");
-    pTable->GetExtensionSupport = (GetExtensionSupportType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetExtensionSupport");
-    pTable->EnumerateLayers = (EnumerateLayersType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglEnumerateLayers");
-    pTable->GetDeviceQueue = (GetDeviceQueueType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetDeviceQueue");
-    pTable->QueueSubmit = (QueueSubmitType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglQueueSubmit");
-    pTable->QueueSetGlobalMemReferences = (QueueSetGlobalMemReferencesType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglQueueSetGlobalMemReferences");
-    pTable->QueueWaitIdle = (QueueWaitIdleType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglQueueWaitIdle");
-    pTable->DeviceWaitIdle = (DeviceWaitIdleType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDeviceWaitIdle");
-    pTable->GetMemoryHeapCount = (GetMemoryHeapCountType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetMemoryHeapCount");
-    pTable->GetMemoryHeapInfo = (GetMemoryHeapInfoType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetMemoryHeapInfo");
-    pTable->AllocMemory = (AllocMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglAllocMemory");
-    pTable->FreeMemory = (FreeMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglFreeMemory");
-    pTable->SetMemoryPriority = (SetMemoryPriorityType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglSetMemoryPriority");
-    pTable->MapMemory = (MapMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglMapMemory");
-    pTable->UnmapMemory = (UnmapMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglUnmapMemory");
-    pTable->PinSystemMemory = (PinSystemMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglPinSystemMemory");
-    pTable->RemapVirtualMemoryPages = (RemapVirtualMemoryPagesType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglRemapVirtualMemoryPages");
-    pTable->GetMultiGpuCompatibility = (GetMultiGpuCompatibilityType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetMultiGpuCompatibility");
-    pTable->OpenSharedMemory = (OpenSharedMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglOpenSharedMemory");
-    pTable->OpenSharedQueueSemaphore = (OpenSharedQueueSemaphoreType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglOpenSharedQueueSemaphore");
-    pTable->OpenPeerMemory = (OpenPeerMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglOpenPeerMemory");
-    pTable->OpenPeerImage = (OpenPeerImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglOpenPeerImage");
-    pTable->DestroyObject = (DestroyObjectType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDestroyObject");
-    pTable->GetObjectInfo = (GetObjectInfoType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetObjectInfo");
-    pTable->BindObjectMemory = (BindObjectMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglBindObjectMemory");
-    pTable->CreateFence = (CreateFenceType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateFence");
-    pTable->GetFenceStatus = (GetFenceStatusType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetFenceStatus");
-    pTable->WaitForFences = (WaitForFencesType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglWaitForFences");
-    pTable->CreateQueueSemaphore = (CreateQueueSemaphoreType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateQueueSemaphore");
-    pTable->SignalQueueSemaphore = (SignalQueueSemaphoreType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglSignalQueueSemaphore");
-    pTable->WaitQueueSemaphore = (WaitQueueSemaphoreType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglWaitQueueSemaphore");
-    pTable->CreateEvent = (CreateEventType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateEvent");
-    pTable->GetEventStatus = (GetEventStatusType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetEventStatus");
-    pTable->SetEvent = (SetEventType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglSetEvent");
-    pTable->ResetEvent = (ResetEventType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglResetEvent");
-    pTable->CreateQueryPool = (CreateQueryPoolType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateQueryPool");
-    pTable->GetQueryPoolResults = (GetQueryPoolResultsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetQueryPoolResults");
-    pTable->GetFormatInfo = (GetFormatInfoType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetFormatInfo");
-    pTable->CreateImage = (CreateImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateImage");
-    pTable->GetImageSubresourceInfo = (GetImageSubresourceInfoType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetImageSubresourceInfo");
-    pTable->CreateImageView = (CreateImageViewType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateImageView");
-    pTable->CreateColorAttachmentView = (CreateColorAttachmentViewType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateColorAttachmentView");
-    pTable->CreateDepthStencilView = (CreateDepthStencilViewType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateDepthStencilView");
-    pTable->CreateShader = (CreateShaderType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateShader");
-    pTable->CreateGraphicsPipeline = (CreateGraphicsPipelineType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateGraphicsPipeline");
-    pTable->CreateComputePipeline = (CreateComputePipelineType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateComputePipeline");
-    pTable->StorePipeline = (StorePipelineType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglStorePipeline");
-    pTable->LoadPipeline = (LoadPipelineType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglLoadPipeline");
-    pTable->CreatePipelineDelta = (CreatePipelineDeltaType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreatePipelineDelta");
-    pTable->CreateSampler = (CreateSamplerType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateSampler");
-    pTable->CreateDescriptorSet = (CreateDescriptorSetType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateDescriptorSet");
-    pTable->BeginDescriptorSetUpdate = (BeginDescriptorSetUpdateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglBeginDescriptorSetUpdate");
-    pTable->EndDescriptorSetUpdate = (EndDescriptorSetUpdateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglEndDescriptorSetUpdate");
-    pTable->AttachSamplerDescriptors = (AttachSamplerDescriptorsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglAttachSamplerDescriptors");
-    pTable->AttachImageViewDescriptors = (AttachImageViewDescriptorsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglAttachImageViewDescriptors");
-    pTable->AttachMemoryViewDescriptors = (AttachMemoryViewDescriptorsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglAttachMemoryViewDescriptors");
-    pTable->AttachNestedDescriptors = (AttachNestedDescriptorsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglAttachNestedDescriptors");
-    pTable->ClearDescriptorSetSlots = (ClearDescriptorSetSlotsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglClearDescriptorSetSlots");
-    pTable->CreateViewportState = (CreateViewportStateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateViewportState");
-    pTable->CreateRasterState = (CreateRasterStateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateRasterState");
-    pTable->CreateMsaaState = (CreateMsaaStateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateMsaaState");
-    pTable->CreateColorBlendState = (CreateColorBlendStateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateColorBlendState");
-    pTable->CreateDepthStencilState = (CreateDepthStencilStateType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateDepthStencilState");
-    pTable->CreateCommandBuffer = (CreateCommandBufferType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCreateCommandBuffer");
-    pTable->BeginCommandBuffer = (BeginCommandBufferType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglBeginCommandBuffer");
-    pTable->EndCommandBuffer = (EndCommandBufferType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglEndCommandBuffer");
-    pTable->ResetCommandBuffer = (ResetCommandBufferType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglResetCommandBuffer");
-    pTable->CmdBindPipeline = (CmdBindPipelineType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindPipeline");
-    pTable->CmdBindPipelineDelta = (CmdBindPipelineDeltaType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindPipelineDelta");
-    pTable->CmdBindStateObject = (CmdBindStateObjectType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindStateObject");
-    pTable->CmdBindDescriptorSet = (CmdBindDescriptorSetType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindDescriptorSet");
-    pTable->CmdBindDynamicMemoryView = (CmdBindDynamicMemoryViewType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindDynamicMemoryView");
-    pTable->CmdBindVertexData = (CmdBindVertexDataType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindVertexData");
-    pTable->CmdBindIndexData = (CmdBindIndexDataType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindIndexData");
-    pTable->CmdBindAttachments = (CmdBindAttachmentsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBindAttachments");
-    pTable->CmdPrepareMemoryRegions = (CmdPrepareMemoryRegionsType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdPrepareMemoryRegions");
-    pTable->CmdPrepareImages = (CmdPrepareImagesType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdPrepareImages");
-    pTable->CmdDraw = (CmdDrawType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDraw");
-    pTable->CmdDrawIndexed = (CmdDrawIndexedType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDrawIndexed");
-    pTable->CmdDrawIndirect = (CmdDrawIndirectType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDrawIndirect");
-    pTable->CmdDrawIndexedIndirect = (CmdDrawIndexedIndirectType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDrawIndexedIndirect");
-    pTable->CmdDispatch = (CmdDispatchType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDispatch");
-    pTable->CmdDispatchIndirect = (CmdDispatchIndirectType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDispatchIndirect");
-    pTable->CmdCopyMemory = (CmdCopyMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdCopyMemory");
-    pTable->CmdCopyImage = (CmdCopyImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdCopyImage");
-    pTable->CmdCopyMemoryToImage = (CmdCopyMemoryToImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdCopyMemoryToImage");
-    pTable->CmdCopyImageToMemory = (CmdCopyImageToMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdCopyImageToMemory");
-    pTable->CmdCloneImageData = (CmdCloneImageDataType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdCloneImageData");
-    pTable->CmdUpdateMemory = (CmdUpdateMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdUpdateMemory");
-    pTable->CmdFillMemory = (CmdFillMemoryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdFillMemory");
-    pTable->CmdClearColorImage = (CmdClearColorImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdClearColorImage");
-    pTable->CmdClearColorImageRaw = (CmdClearColorImageRawType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdClearColorImageRaw");
-    pTable->CmdClearDepthStencil = (CmdClearDepthStencilType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdClearDepthStencil");
-    pTable->CmdResolveImage = (CmdResolveImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdResolveImage");
-    pTable->CmdSetEvent = (CmdSetEventType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdSetEvent");
-    pTable->CmdResetEvent = (CmdResetEventType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdResetEvent");
-    pTable->CmdMemoryAtomic = (CmdMemoryAtomicType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdMemoryAtomic");
-    pTable->CmdBeginQuery = (CmdBeginQueryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdBeginQuery");
-    pTable->CmdEndQuery = (CmdEndQueryType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdEndQuery");
-    pTable->CmdResetQueryPool = (CmdResetQueryPoolType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdResetQueryPool");
-    pTable->CmdWriteTimestamp = (CmdWriteTimestampType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdWriteTimestamp");
-    pTable->CmdInitAtomicCounters = (CmdInitAtomicCountersType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdInitAtomicCounters");
-    pTable->CmdLoadAtomicCounters = (CmdLoadAtomicCountersType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdLoadAtomicCounters");
-    pTable->CmdSaveAtomicCounters = (CmdSaveAtomicCountersType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdSaveAtomicCounters");
-    pTable->DbgSetValidationLevel = (DbgSetValidationLevelType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgSetValidationLevel");
-    pTable->DbgRegisterMsgCallback = (DbgRegisterMsgCallbackType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgRegisterMsgCallback");
-    pTable->DbgUnregisterMsgCallback = (DbgUnregisterMsgCallbackType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgUnregisterMsgCallback");
-    pTable->DbgSetMessageFilter = (DbgSetMessageFilterType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgSetMessageFilter");
-    pTable->DbgSetObjectTag = (DbgSetObjectTagType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgSetObjectTag");
-    pTable->DbgSetGlobalOption = (DbgSetGlobalOptionType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgSetGlobalOption");
-    pTable->DbgSetDeviceOption = (DbgSetDeviceOptionType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglDbgSetDeviceOption");
-    pTable->CmdDbgMarkerBegin = (CmdDbgMarkerBeginType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDbgMarkerBegin");
-    pTable->CmdDbgMarkerEnd = (CmdDbgMarkerEndType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglCmdDbgMarkerEnd");
-    pTable->WsiX11AssociateConnection = (WsiX11AssociateConnectionType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglWsiX11AssociateConnection");
-    pTable->WsiX11GetMSC = (WsiX11GetMSCType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglWsiX11GetMSC");
-    pTable->WsiX11CreatePresentableImage = (WsiX11CreatePresentableImageType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglWsiX11CreatePresentableImage");
-    pTable->WsiX11QueuePresent = (WsiX11QueuePresentType) fpGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglWsiX11QueuePresent");
+
+    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (XGL_PHYSICAL_GPU) gpuw->nextObject);
+
     return pTable;
 }
 

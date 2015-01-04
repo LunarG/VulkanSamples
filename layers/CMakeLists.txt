@@ -26,6 +26,10 @@ include_directories(
 
 set (CMAKE_CXX_FLAGS "-std=c++11")
 
+add_custom_command(OUTPUT xgl_dispatch_table_helper.h
+	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops layer > xgl_dispatch_table_helper.h
+	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+
 run_xgl_helper(gen_enum_string_helper xgl_enum_string_helper.h)
 run_xgl_helper(gen_struct_wrappers
 	xgl_struct_string_helper.h
@@ -36,6 +40,7 @@ run_xgl_helper(gen_struct_wrappers
 run_xgl_helper(gen_graphviz xgl_struct_graphviz_helper.h)
 
 add_custom_target(generate_xgl_layer_helpers DEPENDS
+	xgl_dispatch_table_helper.h
 	xgl_enum_string_helper.h
 	xgl_struct_string_helper.h
 	xgl_struct_string_helper_no_addr.h

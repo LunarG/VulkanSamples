@@ -14,6 +14,7 @@ tests/xgl_image_tests
 tests/xgl_render_tests
 tests/xglbase
 tests/xglinfo
+layers/xgl_dispatch_table_helper.h
 layers/xgl_enum_string_helper.h
 layers/xgl_struct_string_helper.h
 layers/xgl_struct_wrappers.cpp

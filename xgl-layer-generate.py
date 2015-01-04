@@ -585,17 +585,14 @@ class Subcommand(object):
         return "\n".join(func_body)
 
     def _generate_layer_dispatch_table(self, prefix='xgl'):
-        func_body = []
+        func_body = ["#include \"xgl_dispatch_table_helper.h\""]
         func_body.append('static void initLayerTable()\n'
                          '{\n'
                          '    GetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n');
 
-        for name in xgl.proto_names:
-            func_body.append('    %sType fp%s = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "%s%s");\n'
-                             '    nextTable.%s = fp%s;' % (name, name, prefix, name, name, name))
-
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (XGL_PHYSICAL_GPU) pCurObj->nextObject);")
         func_body.append("}\n")
         return "\n".join(func_body)
 
