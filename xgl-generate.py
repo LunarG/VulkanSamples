@@ -129,22 +129,12 @@ class LoaderEntrypointsSubcommand(Subcommand):
             "CreateCommandBuffer",
             "WsiX11CreatePresentableImage")
 
-    def _is_name_dispatchable(self, name):
-        return name not in (
-            "GetProcAddr",
-            "InitAndEnumerateGpus",
-            "EnumerateLayers",
-            "DbgRegisterMsgCallback",
-            "DbgUnregisterMsgCallback",
-            "DbgSetGlobalOption")
-
     def _is_dispatchable(self, proto):
-        """Return true if the prototype is dispatchable.
+        if proto.name in ["GetProcAddr", "EnumerateLayers"]:
+            return False
 
-        That is, return true when the prototype takes a XGL_PHYSICAL_GPU or
-        XGL_BASE_OBJECT.
-        """
-        return self._is_name_dispatchable(proto.name)
+        in_objs = proto.object_in_params()
+        return in_objs and in_objs[0] == proto.params[0]
 
     def _generate_loader_dispatch_entrypoints(self, qual=""):
         if qual:
