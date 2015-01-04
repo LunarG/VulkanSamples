@@ -96,13 +96,63 @@ class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
 
+    def _does_function_create_object(self, name):
+        return name in (
+            "CreateDevice",
+            "GetDeviceQueue",
+            "AllocMemory",
+            "PinSystemMemory",
+            "OpenSharedMemory",
+            "OpenSharedQueueSemaphore",
+            "OpenPeerMemory",
+            "OpenPeerImage",
+            "CreateFence",
+            "CreateQueueSemaphore",
+            "CreateEvent",
+            "CreateQueryPool",
+            "CreateImage",
+            "CreateImageView",
+            "CreateColorAttachmentView",
+            "CreateDepthStencilView",
+            "CreateShader",
+            "CreateGraphicsPipeline",
+            "CreateComputePipeline",
+            "LoadPipeline",
+            "CreatePipelineDelta",
+            "CreateSampler",
+            "CreateDescriptorSet",
+            "CreateViewportState",
+            "CreateRasterState",
+            "CreateMsaaState",
+            "CreateColorBlendState",
+            "CreateDepthStencilState",
+            "CreateCommandBuffer",
+            "WsiX11CreatePresentableImage")
+
+    def _is_name_dispatchable(self, name):
+        return name not in (
+            "GetProcAddr",
+            "InitAndEnumerateGpus",
+            "EnumerateLayers",
+            "DbgRegisterMsgCallback",
+            "DbgUnregisterMsgCallback",
+            "DbgSetGlobalOption")
+
+    def _is_dispatchable(self, proto):
+        """Return true if the prototype is dispatchable.
+
+        That is, return true when the prototype takes a XGL_PHYSICAL_GPU or
+        XGL_BASE_OBJECT.
+        """
+        return self._is_name_dispatchable(proto.name)
+
     def _generate_loader_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
 
         funcs = []
         for proto in self.protos:
-            if not xgl.is_dispatchable(proto):
+            if not self._is_dispatchable(proto):
                 continue
             decl = proto.c_func(prefix="xgl", attr="XGLAPI")
             stmt = "(*disp)->%s" % proto.c_call()
@@ -120,7 +170,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
                                 proto.params[0].name, proto.params[0].name, stmt,
                                 proto.params[-1].name))
-            elif xgl.does_function_create_object(proto.name) and qual == "LOADER_EXPORT ":
+            elif self._does_function_create_object(proto.name) and qual == "LOADER_EXPORT ":
                 funcs.append("%s%s\n"
                          "{\n"
                          "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"

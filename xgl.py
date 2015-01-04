@@ -879,56 +879,6 @@ for ext in extensions:
 
 proto_names = [proto.name for proto in protos]
 
-def does_function_create_object(name):
-    return name in (
-        "CreateDevice",
-        "GetDeviceQueue",
-        "AllocMemory",
-        "PinSystemMemory",
-        "OpenSharedMemory",
-        "OpenSharedQueueSemaphore",
-        "OpenPeerMemory",
-        "OpenPeerImage",
-        "CreateFence",
-        "CreateQueueSemaphore",
-        "CreateEvent",
-        "CreateQueryPool",
-        "CreateImage",
-        "CreateImageView",
-        "CreateColorAttachmentView",
-        "CreateDepthStencilView",
-        "CreateShader",
-        "CreateGraphicsPipeline",
-        "CreateComputePipeline",
-        "LoadPipeline",
-        "CreatePipelineDelta",
-        "CreateSampler",
-        "CreateDescriptorSet",
-        "CreateViewportState",
-        "CreateRasterState",
-        "CreateMsaaState",
-        "CreateColorBlendState",
-        "CreateDepthStencilState",
-        "CreateCommandBuffer",
-        "WsiX11CreatePresentableImage")
-
-def is_name_dispatchable(name):
-    return name not in (
-        "GetProcAddr",
-        "InitAndEnumerateGpus",
-        "EnumerateLayers",
-        "DbgRegisterMsgCallback",
-        "DbgUnregisterMsgCallback",
-        "DbgSetGlobalOption")
-
-def is_dispatchable(proto):
-    """Return true if the prototype is dispatchable.
-
-    That is, return true when the prototype takes a XGL_PHYSICAL_GPU or
-    XGL_BASE_OBJECT.
-    """
-    return is_name_dispatchable(proto.name)
-
 def parse_xgl_h(filename):
     # read object and protoype typedefs
     object_lines = []
