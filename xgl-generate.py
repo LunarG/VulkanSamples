@@ -29,6 +29,10 @@ import sys
 
 import xgl
 
+def generate_get_proc_addr_check(name):
+    return "    if (!%s || %s[0] != 'x' || %s[1] != 'g' || %s[2] != 'l')\n" \
+           "        return NULL;" % ((name,) * 4)
+
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
@@ -236,8 +240,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         func.append("%s                                           const char *name)"
                 % (" " * len(self.prefix)))
         func.append("{")
-        func.append("    if (!name || name[0] != 'x' || name[1] != 'g' || name[2] != 'l')")
-        func.append("        return NULL;")
+        func.append(generate_get_proc_addr_check("name"))
         func.append("")
         func.append("    name += 3;")
         func.append("    %s" % "\n    ".join(lookups))
@@ -308,9 +311,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
         body = []
         body.append("%s %s" % (self.qual, gpa_decl))
         body.append("{")
-        body.append("    if (!%s || %s[0] != 'x' || %s[1] != 'g' || %s[2] != 'l')" %
-                (gpa_pname, gpa_pname, gpa_pname, gpa_pname))
-        body.append("        return NULL;")
+        body.append(generate_get_proc_addr_check(gpa_pname))
         body.append("")
         body.append("    %s += 3;" % gpa_pname)
         body.append("    %s" % "\n    ".join(lookups))
