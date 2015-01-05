@@ -47,5 +47,9 @@ int main(int argc, char *argv[])
         w.pre_open_trace_file(g_settings.trace_file_to_open);
     }
 
-    return a.exec();
+    int result = a.exec();
+
+    glv_SettingGroup_Delete_Loaded(&g_pAllSettings, &g_numAllSettings);
+
+    return result;
 }

@@ -37,18 +37,37 @@ typedef enum GLV_SETTING_TYPE
 // ------------------------------------------------------------------------------------------------
 typedef struct glv_SettingInfo
 {
-    const char* const pShortName;
-    const char* const pLongName;
+    const char* pShortName;
+    const char* pLongName;
     GLV_SETTING_TYPE type;
     void* pType_data;
-    const void * const pType_default;
+    const void * pType_default;
     BOOL bPrintInHelp;
     const char* pDesc;
 } glv_SettingInfo;
 
-int glv_SettingInfo_init(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, int argc, char* argv[], char** ppOut_remaining_args);
-BOOL glv_SettingInfo_save(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, char* pRemaining_args);
-void glv_SettingInfo_delete(glv_SettingInfo* pSettings, unsigned int num_settings);
+typedef struct glv_SettingGroup
+{
+    const char* pName;
+    unsigned int numSettings;
+    glv_SettingInfo* pSettings;
+} glv_SettingGroup;
 
-void glv_SettingInfo_print_all(const glv_SettingInfo* pSettings, unsigned int num_settings);
+int glv_SettingGroup_init(glv_SettingGroup* pSettingGroup, FILE *pSettingsFile, int argc, char* argv[], char** ppOut_remaining_args);
+BOOL glv_SettingGroup_save(glv_SettingGroup* pSettingGroup, unsigned int numSettingGroups, FILE* pSettingsFile);
+void glv_SettingGroup_delete(glv_SettingGroup* pSettingGroup);
+void glv_SettingGroup_reset_default(glv_SettingGroup* pSettingGroup);
+
+int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
+void glv_SettingGroup_Delete_Loaded(glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
+
+void glv_SettingGroup_Apply_Overrides(glv_SettingGroup* pSettingGroup, glv_SettingGroup* pOverrideGroups, unsigned int numOverrideGroups);
+
+int glv_SettingGroup_init_from_cmdline(glv_SettingGroup* pSettingGroup, int argc, char* argv[], char** ppOut_remaining_args);
+
+void glv_SettingGroup_print(const glv_SettingGroup* pSettingGroup);
+void glv_SettingInfo_print(const glv_SettingInfo* pSetting);
+
+char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting);
+BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg);
 void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting);

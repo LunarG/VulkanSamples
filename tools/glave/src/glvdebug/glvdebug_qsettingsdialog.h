@@ -26,24 +26,39 @@
 #define _GLVDEBUG_QSETTINGSDIALOG_H_
 
 #include <QDialog>
+#include <QTabWidget>
+#include <QTableWidgetItem>
+#include "glvdebug_settings.h"
+
+Q_DECLARE_METATYPE(glv_SettingGroup)
 
 class glvdebug_QSettingsDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit glvdebug_QSettingsDialog(QWidget *parent = 0);
+    explicit glvdebug_QSettingsDialog(glv_SettingGroup* pSettingGroups, unsigned int numGroups, QWidget *parent = 0);
     ~glvdebug_QSettingsDialog();
 
     void save();
 
+private:
+    glv_SettingGroup* m_pSettingGroups;
+    unsigned int m_numSettingGroups;
+
+    QTabWidget* m_pTabWidget;
+    void add_tab(glv_SettingGroup* pGroup);
+
 signals:
-    void SaveSettings();
+    void SaveSettings(glv_SettingGroup* pUpdatedSettingGroups, unsigned int numGroups);
 
 private
 slots:
     void acceptCB();
     void cancelCB();
+
+    void settingEdited(QTableWidgetItem *pItem);
+
 };
 
 #endif // _GLVDEBUG_QSETTINGSDIALOG_H_

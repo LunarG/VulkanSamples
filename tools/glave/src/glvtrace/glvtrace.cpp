@@ -69,6 +69,13 @@ glv_SettingInfo g_settings_info[] =
     //{ "d", "debug", GLV_SETTING_BOOL, &g_settings.debug, &g_default_settings.debug, TRUE, "Enable verbose debug information" },
 };
 
+glv_SettingGroup g_settingGroup =
+{
+    "glvtrace",
+    sizeof(g_settings_info) / sizeof(g_settings_info[0]),
+    &g_settings_info[0]
+};
+
 // ------------------------------------------------------------------------------------------------
 #if defined(WIN32)
 void MessageLoop()
@@ -188,7 +195,7 @@ bool InjectTracersIntoProcess(glv_process_info* pInfo)
 int main(int argc, char* argv[])
 {
     unsigned int num_settings = sizeof(g_settings_info) / sizeof(g_settings_info[0]);
-
+    FILE* pFile = NULL;
     memset(&g_settings, 0, sizeof(glvtrace_settings));
 
     // setup defaults
@@ -197,16 +204,31 @@ int main(int argc, char* argv[])
     g_default_settings.tracelogfile = glv_allocate_and_copy("glv_log.txt");
     g_default_settings.print_trace_messages = FALSE;
 
-    if (glv_SettingInfo_init(g_settings_info, num_settings, "glvtrace_settings.txt", argc, argv, &g_settings.arguments) != 0)
+    pFile = fopen("glvtrace_settings.txt", "r");
+    if (pFile == NULL)
+    {
+        glv_LogWarn("Settings file not found: \'glvtrace_settings.txt\'\n");
+    }
+
+    if (glv_SettingGroup_init(&g_settingGroup, pFile, argc, argv, &g_settings.arguments) != 0)
     {
         // invalid cmd-line parameters
-        glv_SettingInfo_delete(g_settings_info, num_settings);
+        glv_SettingGroup_delete(&g_settingGroup);
         glv_free(g_default_settings.output_trace);
         glv_free(g_default_settings.tracelogfile);
+        if (pFile != NULL)
+        {
+            fclose(pFile);
+        }
         return -1;
     }
     else
     {
+        if (pFile != NULL)
+        {
+            fclose(pFile);
+        }
+
         BOOL validArgs = TRUE;
         if (g_settings.program == NULL || strlen(g_settings.program) == 0)
         {
@@ -232,7 +254,7 @@ int main(int argc, char* argv[])
     
         if (validArgs == FALSE)
         {
-            glv_SettingInfo_print_all(g_settings_info, num_settings);
+            glv_SettingGroup_print(&g_settingGroup);
             return -1;
         }
     }
@@ -328,7 +350,7 @@ int main(int argc, char* argv[])
         serverIndex++;
     } while (g_settings.program == NULL);
 
-    glv_SettingInfo_delete(g_settings_info, num_settings);
+    glv_SettingGroup_delete(&g_settingGroup);
     glv_free(g_default_settings.output_trace);
     glv_free(g_default_settings.tracelogfile);
     glv_tracelog_delete_log_file();

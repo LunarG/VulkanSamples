@@ -3,6 +3,13 @@
 
 #include <QString>
 
+extern "C" {
+#include "glv_settings.h"
+}
+
+extern glv_SettingGroup* g_pAllSettings;
+extern unsigned int g_numAllSettings;
+
 typedef struct glvdebug_settings
 {
     char * trace_file_to_open;
@@ -18,7 +25,11 @@ typedef struct glvdebug_settings
 } glvtrace_settings;
 
 extern glvdebug_settings g_settings;
+extern glv_SettingGroup g_settingGroup;
 
 bool initialize_settings(int argc, char* argv[]);
+
+QString get_settings_file_path();
+QString get_sessions_directory();
 
 #endif // GLVDEBUG_SETTINGS_H

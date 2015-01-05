@@ -42,7 +42,7 @@ extern "C" {
 #include "glvdebug_controller.h"
 #include "glvdebug_QTraceFileModel.h"
 #include "glvdebug_qgeneratetracedialog.h"
-
+#include "glvdebug_settings.h"
 namespace Ui
 {
     class glvdebug;
@@ -91,6 +91,8 @@ private slots:
     void on_actionE_xit_triggered();
     void on_actionExport_API_Calls_triggered();
     void on_actionEdit_triggered();
+
+    void on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int numGroups);
 
     void slot_treeView_currentChanged(const QModelIndex &current, const QModelIndex &previous);
 

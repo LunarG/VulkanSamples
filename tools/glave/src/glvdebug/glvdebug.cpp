@@ -373,13 +373,43 @@ void glvdebug::on_actionExport_API_Calls_triggered()
 
 void glvdebug::on_actionEdit_triggered()
 {
-    glvdebug_QSettingsDialog dialog(this);
+    glvdebug_QSettingsDialog dialog(g_pAllSettings, g_numAllSettings, this);
+    connect(&dialog, SIGNAL(SaveSettings(glv_SettingGroup*, unsigned int)), this, SLOT(on_settingsSaved(glv_SettingGroup*, unsigned int)));
     dialog.exec();
+}
 
-//    if (code == QDialog::Accepted)
-//    {
-//        dialog.save(g_SETTINGS_FILE);
-//    }
+void glvdebug::on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int numGroups)
+{
+    // pUpdatedSettings is already pointing to the same location as g_pAllSettings
+    g_numAllSettings = numGroups;
+
+    QDir sessionDir(get_sessions_directory());
+    if (sessionDir.mkpath(".") == false)
+    {
+        glvdebug_output_error("Failed to create /sessions/ directory\n");
+    }
+
+    QString filepath = get_settings_file_path();
+    FILE* pSettingsFile = fopen(filepath.toStdString().c_str(), "w");
+    if (pSettingsFile == NULL)
+    {
+        QString error = "Failed to open settings file for writing: " + filepath + "\n";
+        glvdebug_output_error(error.toStdString().c_str());
+    }
+    else
+    {
+        if (glv_SettingGroup_save(g_pAllSettings, g_numAllSettings, pSettingsFile) == FALSE)
+        {
+            QString error = "Failed to save settings file: " + filepath + "\n";
+            glvdebug_output_error(error.toStdString().c_str());
+        }
+
+        fclose(pSettingsFile);
+    }
+
+    // react to changes in settings
+    this->move(g_settings.window_position_left, g_settings.window_position_top);
+    this->resize(g_settings.window_size_width, g_settings.window_size_height);
 }
 
 bool glvdebug::pre_open_trace_file(const QString& filename)

@@ -25,9 +25,6 @@
 
 #include "glv_settings.h"
 
-// local functions
-void glv_SettingInfo_print(const glv_SettingInfo* pSetting);
-
 // ------------------------------------------------------------------------------------------------
 void glv_SettingInfo_print(const glv_SettingInfo* pSetting)
 {
@@ -51,15 +48,14 @@ void glv_SettingInfo_print(const glv_SettingInfo* pSetting)
 }
 
 // ------------------------------------------------------------------------------------------------
-void glv_SettingInfo_print_all(const glv_SettingInfo* pSettings, unsigned int num_settings)
+void glv_SettingGroup_print(const glv_SettingGroup* pSettingGroup)
 {
     unsigned int i;
+    printf("%s available options:\n", pSettingGroup->pName);
 
-    printf("Available options:\n");
-
-    for (i = 0; i < num_settings; i++)
+    for (i = 0; i < pSettingGroup->numSettings; i++)
     {
-        glv_SettingInfo_print(&(pSettings[i]));
+        glv_SettingInfo_print(&(pSettingGroup->pSettings[i]));
     }
 }
 
@@ -70,8 +66,8 @@ BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg)
     {
     case GLV_SETTING_STRING:
         {
-            glv_free(*((char**)pSetting->pType_data));
-            *((char**)pSetting->pType_data) = glv_allocate_and_copy(arg);
+            glv_free(pSetting->pType_data);
+            pSetting->pType_data = glv_allocate_and_copy(arg);
         }
         break;
     case GLV_SETTING_BOOL:
@@ -114,7 +110,7 @@ char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting)
     {
     case GLV_SETTING_STRING:
         {
-            return glv_allocate_and_copy(*((char**)pSetting->pType_data));
+            return glv_allocate_and_copy((const char*)pSetting->pType_data);
         }
         break;
     case GLV_SETTING_BOOL:
@@ -146,6 +142,19 @@ char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting)
 }
 
 // ------------------------------------------------------------------------------------------------
+void glv_SettingGroup_reset_defaults(glv_SettingGroup* pSettingGroup)
+{
+    if (pSettingGroup != NULL)
+    {
+        unsigned int u;
+        for (u = 0; u < pSettingGroup->numSettings; u++)
+        {
+            glv_SettingInfo_reset_default(&pSettingGroup->pSettings[u]);
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
 void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting)
 {
     assert(pSetting != NULL);
@@ -154,16 +163,16 @@ void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting)
     case GLV_SETTING_STRING:
         if (pSetting->pType_data != NULL)
         {
-            glv_free(*((char**)pSetting->pType_data));
+            glv_free(pSetting->pType_data);
         }
 
         if (pSetting->pType_default == NULL)
         {
-            *((char**)pSetting->pType_data) = NULL;
+            pSetting->pType_data = NULL;
         }
         else
         {
-            *((char**)pSetting->pType_data) = glv_allocate_and_copy(*((const char**)pSetting->pType_default));
+            pSetting->pType_data = glv_allocate_and_copy(*((const char**)pSetting->pType_default));
         }
         break;
     case GLV_SETTING_BOOL:
@@ -182,272 +191,400 @@ void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting)
 }
 
 // ------------------------------------------------------------------------------------------------
-int glv_SettingInfo_init_from_file(glv_SettingInfo* pSettings, unsigned int num_settings, const char* filename, char** ppOut_remaining_args)
+int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups)
 {
-    FILE* pFile = NULL;
     int retVal = 0;
+    char* line = GLV_NEW_ARRAY(char, 1024);
 
-    if (filename != NULL)
-    {
-        pFile = fopen(filename, "r");
-    }
+    assert(pFile != NULL);
+    assert(ppSettingGroups != NULL);
+    assert(pNumSettingGroups != NULL);
+    *pNumSettingGroups = 0;
 
-    if (pFile == NULL)
+    if (line == NULL)
     {
-        glv_LogWarn("Settings file not found: '%s'.\n", filename);
+        printf("Out of memory while reading settings file\n");
+        retVal = -1;
     }
     else
     {
-        char* line = GLV_NEW_ARRAY(char, 1024);
-        if (line == NULL)
+        glv_SettingGroup* pCurGroup = NULL;
+        while (feof(pFile) == 0 && ferror(pFile) == 0)
         {
-            printf("Out of memory while reading settings file\n");
-        }
-        else
-        {
-            char name[MAX_PATH];
-            char value[MAX_PATH];
-            while (feof(pFile) == 0 && ferror(pFile) == 0)
+            char* lineStart;
+            char* pOpenBracket;
+            char* pCloseBracket;
+            line = fgets(line, 1024, pFile);
+            if (line == NULL)
             {
-                line = fgets(line, 1024, pFile);
-                if (line == NULL)
+                break;
+            }
+
+            // if line ends with a newline, then replace it with a NULL
+            if (line[strlen(line)-1] == '\n')
+            {
+                line[strlen(line)-1] = '\0';
+            }
+
+            // remove any leading whitespace
+            lineStart = line;
+            while (*lineStart == ' ') { ++lineStart; }
+
+            // skip empty lines
+            if (strlen(lineStart) == 0)
+            {
+                continue;
+            }
+
+            // if the line starts with "#" or "//", then consider it a comment and ignore it.
+            // if the first 'word' is only "-- " then the remainder of the line is for application arguments
+            // else first 'word' in line should be a long setting name and the rest of line is value for setting
+            if (lineStart[0] == '#' || (lineStart[0] == '/' && lineStart[1] == '/'))
+            {
+                // its a comment, continue to next loop iteration
+                continue;
+            }
+
+            pOpenBracket = strchr(lineStart, '[');
+            pCloseBracket = strchr(lineStart, ']');
+            if (pOpenBracket != NULL && pCloseBracket != NULL)
+            {
+                // a group was found!
+                unsigned int i;
+                char* pGroupName = glv_allocate_and_copy_n(pOpenBracket + 1, pCloseBracket - pOpenBracket - 1);
+
+                // Check to see if we already have this group
+                pCurGroup = NULL;
+                for (i = 0; i < *pNumSettingGroups; i++)
                 {
-                    break;
+                    if (strcmp((*ppSettingGroups)[i].pName, pGroupName) == 0)
+                    {
+                        // we already have this group!
+                        pCurGroup = &(*ppSettingGroups)[i];
+                        break;
+                    }
                 }
 
-                // if line ends with a newline, then replace it with a NULL
-                if (line[strlen(line)-1] == '\n')
+                if (pCurGroup == NULL)
                 {
-                    line[strlen(line)-1] = '\0';
-                }
+                    // Need to grow our list of groups!
+                    glv_SettingGroup* pTmp = *ppSettingGroups;
+                    unsigned int lastIndex = *pNumSettingGroups;
 
-                // if the line starts with "#" or "//", then consider it a comment and ignore it.
-                // if the first 'word' is only "-- " then the remainder of the line is for application arguments
-                // else first 'word' in line should be a long setting name and the rest of line is value for setting
-                if (line[0] == '#' || (line[0] == '/' && line[1] == '/'))
-                {
-                    // its a comment, continue to next loop iteration
-                    continue;
+                    (*pNumSettingGroups) += 1;
+
+                    *ppSettingGroups = GLV_NEW_ARRAY(glv_SettingGroup, *pNumSettingGroups);
+                    memcpy(*ppSettingGroups, pTmp, lastIndex * sizeof(glv_SettingGroup));
+
+                    pCurGroup = &(*ppSettingGroups)[lastIndex];
+                    pCurGroup->pName = pGroupName;
                 }
-                else if (strncmp(line, "-- ", 3) == 0 && ppOut_remaining_args != NULL)
+            }
+            else
+            {
+                char* pTokName = strtok(lineStart, "=");
+                char* pTokValue = strtok(NULL, "=");
+                if (pTokName != NULL && pTokValue != NULL)
                 {
-                    // remainder of line is for the application arguments
-                    const char* strValue = &line[3];
-                    if (*ppOut_remaining_args == NULL || strlen(*ppOut_remaining_args) == 0)
+                    // A setting name and value were found!
+                    char* pValueStart = pTokValue;
+                    char* pTmpEndName = pTokName;
+
+                    assert(pCurGroup != NULL);
+                    if (pCurGroup != NULL)
                     {
-                        *ppOut_remaining_args = glv_allocate_and_copy(strValue);
+                        // create a SettingInfo to store this information
+                        glv_SettingInfo info;
+                        glv_SettingInfo* pTmp;
+                        memset(&info, 0, sizeof(glv_SettingInfo));
+
+                        // trim trailing whitespace by turning it into a null char
+                        while (*pTmpEndName != '\0')
+                        {
+                            if (*pTmpEndName == ' ')
+                            {
+                                *pTmpEndName = '\0';
+                                break;
+                            }
+                            else
+                            {
+                                ++pTmpEndName;
+                            }
+                        }
+
+                        info.pLongName = glv_allocate_and_copy(pTokName);
+                        info.type = GLV_SETTING_STRING;
+
+                        // remove leading whitespace from value
+                        while (*pValueStart == ' ') { ++pValueStart; }
+
+                        info.pType_data = glv_allocate_and_copy(pValueStart);
+
+                        // add it to the current group
+                        pTmp = pCurGroup->pSettings;
+                        pCurGroup->numSettings += 1;
+                        pCurGroup->pSettings = GLV_NEW_ARRAY(glv_SettingInfo, pCurGroup->numSettings);
+                        if (pTmp != NULL)
+                        {
+                            memcpy(pCurGroup->pSettings, pTmp, pCurGroup->numSettings * sizeof(glv_SettingInfo));
+                        }
+                        pCurGroup->pSettings[pCurGroup->numSettings - 1] = info;
                     }
-                    else
-                    {
-                        char* tmp = glv_copy_and_append(*ppOut_remaining_args, " ", &line[3]);
-                        glv_free(*ppOut_remaining_args);
-                        *ppOut_remaining_args = tmp;
-                    }
-                }
-                else if (sscanf(line, "%s = %c", name, value) != 2)
-                {
-                    printf("Could not parse settings file due to line: '%s'\n", line);
-                    retVal = -1;
                 }
                 else
                 {
-                    const char* strValue = &line[strlen(name) + strlen(" = ")];
-
-                    // figure out which setting it was
-                    unsigned int settingIndex;
-                    glv_SettingInfo* pSetting = NULL;
-                    for (settingIndex = 0; settingIndex < num_settings; settingIndex++)
-                    {
-                        pSetting = &pSettings[settingIndex];
-
-                        if (strcmp(name, pSetting->pLongName) == 0)
-                        {
-                            if (glv_SettingInfo_parse_value(&pSettings[settingIndex], strValue) == FALSE)
-                            {
-                                retVal = -1;
-                            }
-                            break;
-                        }
-                        pSetting = NULL;
-                    }
-
-                    if (pSetting == NULL)
-                    {
-                        printf("No matching setting found for '%s' in line '%s'\n", name, line);
-                        retVal = -1;
-                    }
-                }
-
-                if (retVal == -1)
-                {
-                    break;
+                    printf("Could not parse a line in settings file: '%s'\n", line);
                 }
             }
         }
-
-        fclose(pFile);
     }
+
+    GLV_DELETE(line);
 
     return retVal;
 }
 
-BOOL glv_SettingInfo_save(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, char *pRemaining_args)
+// ------------------------------------------------------------------------------------------------
+void glv_SettingGroup_Delete_Loaded(glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups)
 {
-    FILE* pFile = NULL;
+    unsigned int g;
+    unsigned int s;
+    assert(ppSettingGroups != NULL);
+    assert(*ppSettingGroups != NULL);
+    assert(pNumSettingGroups != NULL);
+
+    for (g = 0; g < *pNumSettingGroups; g++)
+    {
+        glv_SettingGroup* pGroup = &(*ppSettingGroups)[g];
+        glv_free((void*)pGroup->pName);
+        pGroup->pName = NULL;
+
+        for (s = 0; s < pGroup->numSettings; s++)
+        {
+            glv_free((void*)pGroup->pSettings[s].pLongName);
+            pGroup->pSettings[s].pLongName = NULL;
+            glv_free(pGroup->pSettings[s].pType_data);
+            pGroup->pSettings[s].pType_data = NULL;
+        }
+
+        GLV_DELETE(pGroup->pSettings);
+        pGroup->pSettings = NULL;
+    }
+
+    GLV_DELETE(*ppSettingGroups);
+    *pNumSettingGroups = 0;
+}
+
+// ------------------------------------------------------------------------------------------------
+void glv_SettingGroup_Apply_Overrides(glv_SettingGroup* pSettingGroup, glv_SettingGroup* pOverrideGroups, unsigned int numOverrideGroups)
+{
+    unsigned int g;
+    assert(pSettingGroup != NULL);
+    assert(pOverrideGroups != NULL);
+
+    // only override matching group (based on name)
+    for (g = 0; g < numOverrideGroups; g++)
+    {
+        if (strcmp(pSettingGroup->pName, pOverrideGroups[g].pName) == 0)
+        {
+            unsigned int s;
+            glv_SettingGroup* pOverride = &pOverrideGroups[g];
+
+            for (s = 0; s < pOverride->numSettings; s++)
+            {
+                // override matching settings based on long name
+                if (strcmp(pSettingGroup->pSettings[s].pLongName, pOverride->pSettings[s].pLongName) == 0)
+                {
+                    char* pTmp = glv_SettingInfo_stringify_value(&pOverride->pSettings[s]);
+                    if (glv_SettingInfo_parse_value(&pSettingGroup->pSettings[s], pTmp) == FALSE)
+                    {
+                        assert(!"Failed to parse override value");
+                    }
+                    glv_free(pTmp);
+                }
+            }
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
+BOOL glv_SettingGroup_save(glv_SettingGroup* pSettingGroup, unsigned int numSettingGroups, FILE* pSettingsFile)
+{
     BOOL retVal = TRUE;
 
-    if (settingsfile == NULL)
+    if (pSettingGroup == NULL)
     {
-        glv_LogError("Cannot save an unnamed settings file\n");
+        glv_LogError("Cannot save a null group of settings.\n");
         retVal = FALSE;
     }
-    else
+
+    if (pSettingsFile == NULL)
     {
-        pFile = fopen(settingsfile, "w");
+        glv_LogError("Cannot save an unnamed settings file.\n");
+        retVal = FALSE;
     }
 
-    if (pFile == NULL)
+    if (retVal == TRUE)
     {
-        glv_LogWarn("Settings file could not be opened for writing: '%s'.\n", settingsfile);
-    }
-    else
-    {
+        unsigned int g;
         unsigned int index;
-        for (index = 0; index < num_settings; index++)
-        {
-            char* value = NULL;
-            fputs(pSettings[index].pLongName, pFile);
-            fputs(" = ", pFile);
-            value = glv_SettingInfo_stringify_value(&pSettings[index]);
-            fputs(value, pFile);
-            glv_free(value);
-            fputs("\n", pFile);
-        }
 
-        if (pRemaining_args != NULL)
+        for (g = 0; g < numSettingGroups; g++)
         {
-            fputs("-- ", pFile);
-            fputs(pRemaining_args, pFile);
-        }
+            // group name
+            fputs("[", pSettingsFile);
+            fputs(pSettingGroup[g].pName, pSettingsFile);
+            fputs("]\n", pSettingsFile);
 
-        fclose(pFile);
+            // settings
+            for (index = 0; index < pSettingGroup[g].numSettings; index++)
+            {
+                char* value = NULL;
+                fputs("   ", pSettingsFile);
+                fputs(pSettingGroup[g].pSettings[index].pLongName, pSettingsFile);
+                fputs(" = ", pSettingsFile);
+                value = glv_SettingInfo_stringify_value(&pSettingGroup[g].pSettings[index]);
+                fputs(value, pSettingsFile);
+                glv_free(value);
+                fputs("\n", pSettingsFile);
+            }
+
+            fputs("\n", pSettingsFile);
+        }
     }
 
     return retVal;
 }
 
-int glv_SettingInfo_init_from_cmdline(glv_SettingInfo* pSettings, unsigned int num_settings, int argc, char* argv[], char** ppOut_remaining_args)
+//-----------------------------------------------------------------------------
+int glv_SettingGroup_init_from_cmdline(glv_SettingGroup* pSettingGroup, int argc, char* argv[], char** ppOut_remaining_args)
 {
     int i = 0;
 
-    // update settings based on command line options
-    for (i = 1; i < argc; )
+    if (pSettingGroup != NULL)
     {
-        unsigned int settingIndex;
-        int consumed = 0;
-        char* curArg = argv[i];
+        glv_SettingInfo* pSettings = pSettingGroup->pSettings;
+        unsigned int num_settings = pSettingGroup->numSettings;
 
-        // if the arg is only "--" then all following args are for the application;
-        // if the arg starts with "-" then it is referring to a short name;
-        // if the arg starts with "--" then it is referring to a long name.
-        if (strcmp("--", curArg) == 0 && ppOut_remaining_args != NULL)
+        // update settings based on command line options
+        for (i = 1; i < argc; )
         {
-            // all remaining args are for the application
+            unsigned int settingIndex;
+            int consumed = 0;
+            char* curArg = argv[i];
 
-            // increment past the current arg
-            i += 1;
-            consumed++;
-            for (; i < argc; i++)
+            // if the arg is only "--" then all following args are for the application;
+            // if the arg starts with "-" then it is referring to a short name;
+            // if the arg starts with "--" then it is referring to a long name.
+            if (strcmp("--", curArg) == 0 && ppOut_remaining_args != NULL)
             {
-                if (*ppOut_remaining_args == NULL || strlen(*ppOut_remaining_args) == 0)
-                {
-                    *ppOut_remaining_args = glv_allocate_and_copy(argv[i]);
-                }
-                else
-                {
-                    *ppOut_remaining_args = glv_copy_and_append(*ppOut_remaining_args, " ", argv[i]);
-                }
+                // all remaining args are for the application
+
+                // increment past the current arg
+                i += 1;
                 consumed++;
-            }
-        }
-        else
-        {
-            for (settingIndex = 0; settingIndex < num_settings; settingIndex++)
-            {
-                const char* pSettingName = NULL;
-                curArg = argv[i];
-                if (strncmp("--", curArg, 2) == 0)
+                for (; i < argc; i++)
                 {
-                    // long option name
-                    pSettingName = pSettings[settingIndex].pLongName;
-                    curArg += 2;
-                }
-                else if (strncmp("-", curArg, 1) == 0)
-                {
-                    // short option name
-                    pSettingName = pSettings[settingIndex].pShortName;
-                    curArg += 1;
-                }
-
-                if (pSettingName != NULL && strcmp(curArg, pSettingName) == 0)
-                {
-                    if (glv_SettingInfo_parse_value(&pSettings[settingIndex], argv[i+1]))
+                    if (*ppOut_remaining_args == NULL || strlen(*ppOut_remaining_args) == 0)
                     {
-                        consumed += 2;
+                        *ppOut_remaining_args = glv_allocate_and_copy(argv[i]);
                     }
-                    break;
+                    else
+                    {
+                        *ppOut_remaining_args = glv_copy_and_append(*ppOut_remaining_args, " ", argv[i]);
+                    }
+                    consumed++;
                 }
             }
-        }
+            else
+            {
+                for (settingIndex = 0; settingIndex < num_settings; settingIndex++)
+                {
+                    const char* pSettingName = NULL;
+                    curArg = argv[i];
+                    if (strncmp("--", curArg, 2) == 0)
+                    {
+                        // long option name
+                        pSettingName = pSettings[settingIndex].pLongName;
+                        curArg += 2;
+                    }
+                    else if (strncmp("-", curArg, 1) == 0)
+                    {
+                        // short option name
+                        pSettingName = pSettings[settingIndex].pShortName;
+                        curArg += 1;
+                    }
 
-        if (consumed == 0)
-        {
-            printf("Error: Invalid argument found '%s'\n", curArg);
-            glv_SettingInfo_print_all(pSettings, num_settings);
-            glv_SettingInfo_delete(pSettings, num_settings);
-            return -1;
-        }
+                    if (pSettingName != NULL && strcmp(curArg, pSettingName) == 0)
+                    {
+                        if (glv_SettingInfo_parse_value(&pSettings[settingIndex], argv[i+1]))
+                        {
+                            consumed += 2;
+                        }
+                        break;
+                    }
+                }
+            }
 
-        i += consumed;
+            if (consumed == 0)
+            {
+                printf("Error: Invalid argument found '%s'\n", curArg);
+                glv_SettingGroup_print(pSettingGroup);
+                glv_SettingGroup_delete(pSettingGroup);
+                return -1;
+            }
+
+            i += consumed;
+        }
     }
 
     return 0;
 }
 
 // ------------------------------------------------------------------------------------------------
-int glv_SettingInfo_init(glv_SettingInfo* pSettings, unsigned int num_settings, const char* settingsfile, int argc, char* argv[], char** ppOut_remaining_args)
+int glv_SettingGroup_init(glv_SettingGroup* pSettingGroup, FILE* pSettingsFile, int argc, char* argv[], char** ppOut_remaining_args)
 {
     unsigned int u;
+    unsigned int num_settings;
+    glv_SettingInfo* pSettings;
 
-    if (pSettings == NULL || num_settings == 0)
+    if (pSettingGroup == NULL)
     {
-        assert(!"No need to call glv_SettingInfo_init if the application has no settings");
+        assert(!"No need to call glv_SettingGroup_init if the application has no settings");
         return 0;
     }
 
     if (argc == 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0))
     {
-        glv_SettingInfo_print_all(pSettings, num_settings);
+        glv_SettingGroup_print(pSettingGroup);
         return -1;
     }
 
     // Initially, set all options to their defaults
-    for (u = 0; u < num_settings; u++)
-    {
-        glv_SettingInfo_reset_default(&pSettings[u]);
-    }
+    glv_SettingGroup_reset_defaults(pSettingGroup);
+    num_settings = pSettingGroup->numSettings;
+    pSettings = pSettingGroup->pSettings;
 
     // Secondly set options based on settings file
-    if (glv_SettingInfo_init_from_file(pSettings, num_settings, settingsfile, ppOut_remaining_args) == -1)
+    if (pSettingsFile != NULL)
     {
-        glv_SettingInfo_print_all(pSettings, num_settings);
-        return -1;
+        glv_SettingGroup* pGroups = NULL;
+        unsigned int numGroups = 0;
+        if (glv_SettingGroup_Load_from_file(pSettingsFile, &pGroups, &numGroups) == -1)
+        {
+            glv_SettingGroup_print(pSettingGroup);
+            return -1;
+        }
+
+        glv_SettingGroup_Apply_Overrides(pSettingGroup, pGroups, numGroups);
+
+        glv_SettingGroup_Delete_Loaded(&pGroups, &numGroups);
     }
 
     // Thirdly set options based on cmd line args
-    if (glv_SettingInfo_init_from_cmdline(pSettings, num_settings, argc, argv, ppOut_remaining_args) == -1)
+    if (glv_SettingGroup_init_from_cmdline(pSettingGroup, argc, argv, ppOut_remaining_args) == -1)
     {
-        glv_SettingInfo_print_all(pSettings, num_settings);
+        glv_SettingGroup_print(pSettingGroup);
         return -1;
     }
 
@@ -455,19 +592,22 @@ int glv_SettingInfo_init(glv_SettingInfo* pSettings, unsigned int num_settings, 
 }
 
 // ------------------------------------------------------------------------------------------------
-void glv_SettingInfo_delete(glv_SettingInfo* pSettings, unsigned int num_settings)
+void glv_SettingGroup_delete(glv_SettingGroup* pSettingGroup)
 {
-    unsigned int i;
-
-    // need to delete all strings
-    for (i = 0; i < num_settings; i++)
+    if (pSettingGroup != NULL)
     {
-        if (pSettings[i].type == GLV_SETTING_STRING)
+        unsigned int i;
+
+        // need to delete all strings
+        for (i = 0; i < pSettingGroup->numSettings; i++)
         {
-            if (pSettings[i].pType_data != NULL)
+            if (pSettingGroup->pSettings[i].type == GLV_SETTING_STRING)
             {
-                glv_free(*((char**)pSettings[i].pType_data));
-                pSettings[i].pType_data = NULL;
+                if (pSettingGroup->pSettings[i].pType_data != NULL)
+                {
+                    glv_free(pSettingGroup->pSettings[i].pType_data);
+                    pSettingGroup->pSettings[i].pType_data = NULL;
+                }
             }
         }
     }
