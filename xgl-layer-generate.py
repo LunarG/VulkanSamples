@@ -550,33 +550,25 @@ class Subcommand(object):
 
         return "\n".join(exts)
 
-    def _generate_layer_gpa_function(self, prefix="xgl", extensions=[]):
-        func_body = []
+    def _generate_layer_gpa_function(self, extensions=[]):
+        func_body = ["#include \"xgl_generic_intercept_proc_helper.h\""]
         func_body.append("XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)\n"
                          "{\n"
                          "    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
+                         "    void* addr;\n"
                          "    if (gpu == NULL)\n"
                          "        return NULL;\n"
                          "    pCurObj = gpuw;\n"
                          "    pthread_once(&tabOnce, initLayerTable);\n\n"
-                         '    if (!strncmp("xglGetProcAddr", funcName, sizeof("xglGetProcAddr")))\n'
-                         '        return xglGetProcAddr;')
+                         "    addr = layer_intercept_proc(funcName);\n"
+                         "    if (addr)\n"
+                         "        return addr;")
+
         if 0 != len(extensions):
             for ext_name in extensions:
                 func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
                                  '        return %s;' % (ext_name, ext_name, ext_name))
-        for name in xgl.proto_names:
-            if name == "GetProcAddr":
-                continue
-            if name == "InitAndEnumerateGpus":
-                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
-                             '        return nextTable.%s;' % (prefix, name, prefix, name, name))
-            else:
-                func_body.append('    else if (!strncmp("%s%s", funcName, sizeof("%s%s")))\n'
-                             '        return %s%s;' % (prefix, name, prefix, name, prefix, name))
-
         func_body.append("    else {\n"
-                         "        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
                          "        return gpuw->pGPA(gpuw->nextObject, funcName);\n"

@@ -16,6 +16,7 @@ tests/xglbase
 tests/xglinfo
 layers/xgl_dispatch_table_helper.h
 layers/xgl_enum_string_helper.h
+layers/xgl_generic_intercept_proc_helper.h
 layers/xgl_struct_string_helper.h
 layers/xgl_struct_wrappers.cpp
 layers/xgl_struct_wrappers.h
