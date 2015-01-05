@@ -321,12 +321,55 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 
         return "\n".join(body)
 
+class LayerInterceptProcSubcommand(Subcommand):
+    def run(self):
+        self.prefix = "xgl"
+
+        # we could get the list from argv if wanted
+        self.intercepted = [proto.name for proto in self.protos
+                if proto.name not in ["InitAndEnumerateGpus"]]
+
+        for proto in self.protos:
+            if proto.name == "GetProcAddr":
+                self.gpa = proto
+
+        super().run()
+
+    def generate_header(self):
+        return "\n".join(["#include <string.h>", "#include \"xglLayer.h\""])
+
+    def generate_body(self):
+        lookups = []
+        for proto in self.protos:
+            if proto.name not in self.intercepted:
+                lookups.append("/* no %s%s */" % (self.prefix, proto.name))
+                continue
+
+            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+            lookups.append("    return (%s) %s%s;" %
+                    (self.gpa.ret, self.prefix, proto.name))
+
+        body = []
+        body.append("static inline %s layer_intercept_proc(const char *name)" %
+                self.gpa.ret)
+        body.append("{")
+        body.append(generate_get_proc_addr_check("name"))
+        body.append("")
+        body.append("    name += 3;")
+        body.append("    %s" % "\n    ".join(lookups))
+        body.append("")
+        body.append("    return NULL;")
+        body.append("}")
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "loader-entrypoints": LoaderEntrypointsSubcommand,
             "dispatch-table-ops": DispatchTableOpsSubcommand,
             "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
             "icd-get-proc-addr": IcdGetProcAddrSubcommand,
+            "layer-intercept-proc": LayerInterceptProcSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
