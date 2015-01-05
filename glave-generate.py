@@ -1470,7 +1470,13 @@ class Subcommand(object):
             rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
             rc_body.append(self._remap_decl(obj_map_dict[var], var))
         # XGL_STATE_OBJECT code
-        state_obj_remap_types = ['XGL_VIEWPORT_STATE_OBJECT', 'XGL_RASTER_STATE_OBJECT', 'XGL_MSAA_STATE_OBJECT', 'XGL_COLOR_BLEND_STATE_OBJECT', 'XGL_DEPTH_STENCIL_STATE_OBJECT']
+        state_obj_remap_types = [
+                'XGL_VIEWPORT_STATE_OBJECT',
+                'XGL_RASTER_STATE_OBJECT',
+                'XGL_MSAA_STATE_OBJECT',
+                'XGL_COLOR_BLEND_STATE_OBJECT',
+                'XGL_DEPTH_STENCIL_STATE_OBJECT',
+        ]
         rc_body.append('    XGL_STATE_OBJECT remap(const XGL_STATE_OBJECT& state)\n    {')
         rc_body.append('        XGL_STATE_OBJECT obj;')
         for t in state_obj_remap_types:
@@ -1484,7 +1490,23 @@ class Subcommand(object):
         # OBJECT code
         rc_body.append('    XGL_OBJECT remap(const XGL_OBJECT& object)\n    {')
         rc_body.append('        XGL_OBJECT obj;')
-        obj_remap_types = ['XGL_CMD_BUFFER', 'XGL_IMAGE', 'XGL_IMAGE_VIEW', 'XGL_COLOR_ATTACHMENT_VIEW', 'XGL_DEPTH_STENCIL_VIEW', 'XGL_SHADER', 'XGL_PIPELINE', 'XGL_PIPELINE_DELTA', 'XGL_SAMPLER', 'XGL_DESCRIPTOR_SET', 'XGL_STATE_OBJECT', 'XGL_FENCE', 'XGL_QUEUE_SEMAPHORE', 'XGL_EVENT', 'XGL_QUERY_POOL']
+        obj_remap_types = [
+                'XGL_CMD_BUFFER',
+                'XGL_IMAGE',
+                'XGL_IMAGE_VIEW',
+                'XGL_COLOR_ATTACHMENT_VIEW',
+                'XGL_DEPTH_STENCIL_VIEW',
+                'XGL_SHADER',
+                'XGL_PIPELINE',
+                'XGL_PIPELINE_DELTA',
+                'XGL_SAMPLER',
+                'XGL_DESCRIPTOR_SET',
+                'XGL_STATE_OBJECT',
+                'XGL_FENCE',
+                'XGL_QUEUE_SEMAPHORE',
+                'XGL_EVENT',
+                'XGL_QUERY_POOL',
+        ]
         for var in obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % (var))
             rc_body.append('            return obj;')
@@ -1843,11 +1865,34 @@ class Subcommand(object):
 
     def _get_packet_param(self, t, n):
         # list of types that require remapping
-        remap_list = ['XGL_PHYSICAL_GPU', 'XGL_DEVICE', 'XGL_QUEUE', 'XGL_GPU_MEMORY', 'XGL_IMAGE', 'XGL_IMAGE_VIEW', 'XGL_COLOR_ATTACHMENT_VIEW',
-                        'XGL_DEPTH_STENCIL_VIEW', 'XGL_SHADER', 'XGL_PIPELINE', 'XGL_PIPELINE_DELTA', 'XGL_SAMPLER', 'XGL_DESCRIPTOR_SET',
-                        'XGL_VIEWPORT_STATE_OBJECT', 'XGL_RASTER_STATE_OBJECT', 'XGL_MSAA_STATE_OBJECT', 'XGL_COLOR_BLEND_STATE_OBJECT',
-                        'XGL_DEPTH_STENCIL_STATE_OBJECT', 'XGL_CMD_BUFFER', 'XGL_FENCE', 'XGL_QUEUE_SEMAPHORE', 'XGL_EVENT', 'XGL_QUERY_POOL',
-                        'XGL_STATE_OBJECT', 'XGL_BASE_OBJECT', 'XGL_OBJECT']
+        remap_list = [
+                'XGL_PHYSICAL_GPU',
+                'XGL_DEVICE',
+                'XGL_QUEUE',
+                'XGL_GPU_MEMORY',
+                'XGL_IMAGE',
+                'XGL_IMAGE_VIEW',
+                'XGL_COLOR_ATTACHMENT_VIEW',
+                'XGL_DEPTH_STENCIL_VIEW',
+                'XGL_SHADER',
+                'XGL_PIPELINE',
+                'XGL_PIPELINE_DELTA',
+                'XGL_SAMPLER',
+                'XGL_DESCRIPTOR_SET',
+                'XGL_VIEWPORT_STATE_OBJECT',
+                'XGL_RASTER_STATE_OBJECT',
+                'XGL_MSAA_STATE_OBJECT',
+                'XGL_COLOR_BLEND_STATE_OBJECT',
+                'XGL_DEPTH_STENCIL_STATE_OBJECT',
+                'XGL_CMD_BUFFER',
+                'XGL_FENCE',
+                'XGL_QUEUE_SEMAPHORE',
+                'XGL_EVENT',
+                'XGL_QUERY_POOL',
+                'XGL_STATE_OBJECT',
+                'XGL_BASE_OBJECT',
+                'XGL_OBJECT',
+        ]
         param_exclude_list = ['p1', 'p2']
         if t.strip('*').strip('const ') in remap_list and n not in param_exclude_list:
             return 'remap(pPacket->%s)' % (n)
