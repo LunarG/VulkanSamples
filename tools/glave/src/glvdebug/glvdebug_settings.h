@@ -1,11 +1,11 @@
 #ifndef GLVDEBUG_SETTINGS_H
 #define GLVDEBUG_SETTINGS_H
 
-#include <QString>
-
 extern "C" {
 #include "glv_settings.h"
 }
+
+#include <QString>
 
 extern glv_SettingGroup* g_pAllSettings;
 extern unsigned int g_numAllSettings;

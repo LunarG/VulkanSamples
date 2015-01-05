@@ -544,10 +544,6 @@ int glv_SettingGroup_init_from_cmdline(glv_SettingGroup* pSettingGroup, int argc
 // ------------------------------------------------------------------------------------------------
 int glv_SettingGroup_init(glv_SettingGroup* pSettingGroup, FILE* pSettingsFile, int argc, char* argv[], char** ppOut_remaining_args)
 {
-    unsigned int u;
-    unsigned int num_settings;
-    glv_SettingInfo* pSettings;
-
     if (pSettingGroup == NULL)
     {
         assert(!"No need to call glv_SettingGroup_init if the application has no settings");
@@ -562,8 +558,6 @@ int glv_SettingGroup_init(glv_SettingGroup* pSettingGroup, FILE* pSettingsFile, 
 
     // Initially, set all options to their defaults
     glv_SettingGroup_reset_defaults(pSettingGroup);
-    num_settings = pSettingGroup->numSettings;
-    pSettings = pSettingGroup->pSettings;
 
     // Secondly set options based on settings file
     if (pSettingsFile != NULL)
