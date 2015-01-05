@@ -81,7 +81,7 @@ glvdebug::glvdebug(QWidget *parent)
     
     // add buttons to toolbar
     m_pGenerateTraceButton = new QToolButton(ui->mainToolBar);
-    m_pGenerateTraceButton->setText("Generate Trace");
+    m_pGenerateTraceButton->setText("Generate Trace...");
     m_pGenerateTraceButton->setEnabled(true);
     connect(m_pGenerateTraceButton, SIGNAL(clicked()), this, SLOT(prompt_generate_trace()));
 

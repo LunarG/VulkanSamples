@@ -348,7 +348,7 @@
      <x>0</x>
      <y>0</y>
      <width>1025</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -404,9 +404,9 @@
    </property>
   </action>
   <action name="actionEdit">
-    <property name="text">
-      <string>Edit</string>
-    </property>
+   <property name="text">
+    <string>Edit...</string>
+   </property>
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
