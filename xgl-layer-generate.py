@@ -384,19 +384,33 @@ class Subcommand(object):
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, ret_val, c_call, f_open, log_func, f_close, stmt))
                 elif "ObjectTracker" == layer:
-                    obj_type_mapping = {"XGL_PHYSICAL_GPU" : "XGL_OBJECT_TYPE_PHYSICAL_GPU", "XGL_DEVICE" : "XGL_OBJECT_TYPE_DEVICE",
-                                        "XGL_QUEUE" : "XGL_OBJECT_TYPE_QUEUE", "XGL_QUEUE_SEMAPHORE" : "XGL_OBJECT_TYPE_QUEUE_SEMAPHORE",
-                                        "XGL_GPU_MEMORY" : "XGL_OBJECT_TYPE_GPU_MEMORY", "XGL_FENCE" : "XGL_OBJECT_TYPE_FENCE",
-                                        "XGL_QUERY_POOL" : "XGL_OBJECT_TYPE_QUERY_POOL", "XGL_EVENT" : "XGL_OBJECT_TYPE_EVENT",
-                                        "XGL_IMAGE" : "XGL_OBJECT_TYPE_IMAGE", "XGL_DESCRIPTOR_SET" : "XGL_OBJECT_TYPE_DESCRIPTOR_SET",
-                                        "XGL_CMD_BUFFER" : "XGL_OBJECT_TYPE_CMD_BUFFER", "XGL_SAMPLER" : "XGL_OBJECT_TYPE_SAMPLER",
-                                        "XGL_PIPELINE" : "XGL_OBJECT_TYPE_PIPELINE", "XGL_PIPELINE_DELTA" : "XGL_OBJECT_TYPE_PIPELINE_DELTA",
-                                        "XGL_SHADER" : "XGL_OBJECT_TYPE_SHADER", "XGL_IMAGE_VIEW" : "XGL_OBJECT_TYPE_IMAGE_VIEW",
-                                        "XGL_COLOR_ATTACHMENT_VIEW" : "XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW", "XGL_DEPTH_STENCIL_VIEW" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW",
-                                        "XGL_VIEWPORT_STATE_OBJECT" : "XGL_OBJECT_TYPE_VIEWPORT_STATE", "XGL_RASTER_STATE_OBJECT" : "XGL_OBJECT_TYPE_RASTER_STATE",
-                                        "XGL_MSAA_STATE_OBJECT" : "XGL_OBJECT_TYPE_MSAA_STATE", "XGL_COLOR_BLEND_STATE_OBJECT" : "XGL_OBJECT_TYPE_COLOR_BLEND_STATE",
-                                        "XGL_DEPTH_STENCIL_STATE_OBJECT" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE", "XGL_BASE_OBJECT" : "ll_get_obj_type(object)",
-                                        "XGL_OBJECT" : "ll_get_obj_type(object)"}
+                    obj_type_mapping = {
+                            "XGL_PHYSICAL_GPU" : "XGL_OBJECT_TYPE_PHYSICAL_GPU",
+                            "XGL_DEVICE" : "XGL_OBJECT_TYPE_DEVICE",
+                            "XGL_QUEUE" : "XGL_OBJECT_TYPE_QUEUE",
+                            "XGL_QUEUE_SEMAPHORE" : "XGL_OBJECT_TYPE_QUEUE_SEMAPHORE",
+                            "XGL_GPU_MEMORY" : "XGL_OBJECT_TYPE_GPU_MEMORY",
+                            "XGL_FENCE" : "XGL_OBJECT_TYPE_FENCE",
+                            "XGL_QUERY_POOL" : "XGL_OBJECT_TYPE_QUERY_POOL",
+                            "XGL_EVENT" : "XGL_OBJECT_TYPE_EVENT",
+                            "XGL_IMAGE" : "XGL_OBJECT_TYPE_IMAGE",
+                            "XGL_DESCRIPTOR_SET" : "XGL_OBJECT_TYPE_DESCRIPTOR_SET",
+                            "XGL_CMD_BUFFER" : "XGL_OBJECT_TYPE_CMD_BUFFER",
+                            "XGL_SAMPLER" : "XGL_OBJECT_TYPE_SAMPLER",
+                            "XGL_PIPELINE" : "XGL_OBJECT_TYPE_PIPELINE",
+                            "XGL_PIPELINE_DELTA" : "XGL_OBJECT_TYPE_PIPELINE_DELTA",
+                            "XGL_SHADER" : "XGL_OBJECT_TYPE_SHADER",
+                            "XGL_IMAGE_VIEW" : "XGL_OBJECT_TYPE_IMAGE_VIEW",
+                            "XGL_COLOR_ATTACHMENT_VIEW" : "XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW",
+                            "XGL_DEPTH_STENCIL_VIEW" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW",
+                            "XGL_VIEWPORT_STATE_OBJECT" : "XGL_OBJECT_TYPE_VIEWPORT_STATE",
+                            "XGL_RASTER_STATE_OBJECT" : "XGL_OBJECT_TYPE_RASTER_STATE",
+                            "XGL_MSAA_STATE_OBJECT" : "XGL_OBJECT_TYPE_MSAA_STATE",
+                            "XGL_COLOR_BLEND_STATE_OBJECT" : "XGL_OBJECT_TYPE_COLOR_BLEND_STATE",
+                            "XGL_DEPTH_STENCIL_STATE_OBJECT" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE",
+                            "XGL_BASE_OBJECT" : "ll_get_obj_type(object)",
+                            "XGL_OBJECT" : "ll_get_obj_type(object)"
+                    }
 
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
