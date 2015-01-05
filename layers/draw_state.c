@@ -2039,6 +2039,8 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
         return xglCmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", funcName, sizeof("xglCmdBindDynamicMemoryView")))
         return xglCmdBindDynamicMemoryView;
+    else if (!strncmp("xglCmdBindVertexData", funcName, sizeof("xglCmdBindVertexData")))
+        return xglCmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", funcName, sizeof("xglCmdBindIndexData")))
         return xglCmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", funcName, sizeof("xglCmdBindAttachments")))

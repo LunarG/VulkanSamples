@@ -862,8 +862,6 @@ static void initMemTracker()
 
     GetProcAddrType fpGetProcAddr = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (XGL_CHAR *) "xglGetProcAddr");
     nextTable.GetProcAddr = fpGetProcAddr;
-
-    nextTable.CmdBindVertexData = NULL;
 }
 
 
@@ -1447,6 +1445,17 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffe
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
 {
     nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
+}
+
+XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
+{
+    // Track this memory. What exactly is this call doing?
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+        char str[1024];
+        sprintf(str, "In xglCmdBindVertexData() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+    }
+    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
@@ -2036,6 +2045,8 @@ XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL
         return xglCmdBindDescriptorSet;
     else if (!strncmp("xglCmdBindDynamicMemoryView", funcName, sizeof("xglCmdBindDynamicMemoryView")))
         return xglCmdBindDynamicMemoryView;
+    else if (!strncmp("xglCmdBindVertexData", funcName, sizeof("xglCmdBindVertexData")))
+        return xglCmdBindVertexData;
     else if (!strncmp("xglCmdBindIndexData", funcName, sizeof("xglCmdBindIndexData")))
         return xglCmdBindIndexData;
     else if (!strncmp("xglCmdBindAttachments", funcName, sizeof("xglCmdBindAttachments")))
