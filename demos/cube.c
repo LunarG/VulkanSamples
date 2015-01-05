@@ -748,7 +748,7 @@ static void demo_prepare_textures(struct demo *demo)
             .arraySlice = 0,
         };
         XGL_SUBRESOURCE_LAYOUT layout;
-        XGL_SIZE layout_size;
+        XGL_SIZE layout_size = sizeof(layout);
         XGL_VOID *data;
 
         err = xglGetImageSubresourceInfo(demo->textures[i].image, &subres,
