@@ -26,48 +26,46 @@
 // Object Tracker ERROR codes
 typedef enum _OBJECT_TRACK_ERROR
 {
-    OBJTRACK_NONE                          = 0, // Used for INFO & other non-error messages
-    OBJTRACK_UNKNOWN_OBJECT                = 1, // Updating uses of object that's not in global object list
-    OBJTRACK_INTERNAL_ERROR                = 2, // Bug with data tracking within the layer
-    OBJTRACK_DESTROY_OBJECT_FAILED         = 3, // Couldn't find object to be destroyed
-    OBJTRACK_MISSING_OBJECT                = 4, // Attempted look-up on object that isn't in global object list
-    OBJTRACK_OBJECT_LEAK                   = 5, // OBJECT was not correctly freed/destroyed
-    OBJTRACK_OBJCOUNT_MAX_EXCEEDED         = 6, // Request for Object data in excess of max obj count
+    OBJTRACK_NONE,                              // Used for INFO & other non-error messages
+    OBJTRACK_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
+    OBJTRACK_INTERNAL_ERROR,                    // Bug with data tracking within the layer
+    OBJTRACK_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
+    OBJTRACK_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
+    OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
+    OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
 } OBJECT_TRACK_ERROR;
 
 
 // Object type enum
 typedef enum _XGL_OBJECT_TYPE
 {
-    XGL_OBJECT_TYPE_DEVICE                     = 0,
-    XGL_OBJECT_TYPE_GPU_MEMORY                 = 1,
-    XGL_OBJECT_TYPE_FENCE                      = 2,
-    XGL_OBJECT_TYPE_QUEUE_SEMAPHORE            = 4,
-    XGL_OBJECT_TYPE_QUEUE                      = 5,
-    XGL_OBJECT_TYPE_EVENT                      = 6,
-    XGL_OBJECT_TYPE_QUERY_POOL                 = 7,
-    XGL_OBJECT_TYPE_IMAGE                      = 8,
-    XGL_OBJECT_TYPE_IMAGE_VIEW                 = 9,
-    XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW      = 10,
-    XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW         = 11,
-    XGL_OBJECT_TYPE_SHADER                     = 12,
-    XGL_OBJECT_TYPE_PIPELINE                   = 13,
-    XGL_OBJECT_TYPE_PIPELINE_DELTA             = 14,
-    XGL_OBJECT_TYPE_SAMPLER                    = 15,
-    XGL_OBJECT_TYPE_DESCRIPTOR_SET             = 16,
-    XGL_OBJECT_TYPE_VIEWPORT_STATE             = 17,
-    XGL_OBJECT_TYPE_RASTER_STATE               = 18,
-    XGL_OBJECT_TYPE_MSAA_STATE                 = 19,
-    XGL_OBJECT_TYPE_COLOR_BLEND_STATE          = 20,
-    XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE        = 21,
-    XGL_OBJECT_TYPE_CMD_BUFFER                 = 22,
-    XGL_OBJECT_TYPE_PHYSICAL_GPU               = 23,
-    XGL_OBJECT_TYPE_UNKNOWN                    = 24,
-    XGL_OBJECT_TYPE_BEGIN_RANGE                = XGL_OBJECT_TYPE_DEVICE,
-    XGL_OBJECT_TYPE_END_RANGE                  = XGL_OBJECT_TYPE_UNKNOWN,
-    XGL_NUM_OBJECT_TYPE                        = (XGL_OBJECT_TYPE_END_RANGE - XGL_OBJECT_TYPE_BEGIN_RANGE + 1),
-    XGL_OBJECT_TYPE_ANY                        = (XGL_NUM_OBJECT_TYPE + 1), // Allow global object list to be queried/retrieved
-    XGL_MAX_ENUM(_XGL_OBJECT_TYPE)
+    XGL_OBJECT_TYPE_DEVICE,
+    XGL_OBJECT_TYPE_GPU_MEMORY,
+    XGL_OBJECT_TYPE_FENCE,
+    XGL_OBJECT_TYPE_QUEUE_SEMAPHORE,
+    XGL_OBJECT_TYPE_QUEUE,
+    XGL_OBJECT_TYPE_EVENT,
+    XGL_OBJECT_TYPE_QUERY_POOL,
+    XGL_OBJECT_TYPE_IMAGE,
+    XGL_OBJECT_TYPE_IMAGE_VIEW,
+    XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
+    XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
+    XGL_OBJECT_TYPE_SHADER,
+    XGL_OBJECT_TYPE_PIPELINE,
+    XGL_OBJECT_TYPE_PIPELINE_DELTA,
+    XGL_OBJECT_TYPE_SAMPLER,
+    XGL_OBJECT_TYPE_DESCRIPTOR_SET,
+    XGL_OBJECT_TYPE_VIEWPORT_STATE,
+    XGL_OBJECT_TYPE_RASTER_STATE,
+    XGL_OBJECT_TYPE_MSAA_STATE,
+    XGL_OBJECT_TYPE_COLOR_BLEND_STATE,
+    XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE,
+    XGL_OBJECT_TYPE_CMD_BUFFER,
+    XGL_OBJECT_TYPE_PHYSICAL_GPU,
+    XGL_OBJECT_TYPE_UNKNOWN,
+
+    XGL_NUM_OBJECT_TYPE,
+    XGL_OBJECT_TYPE_ANY, // Allow global object list to be queried/retrieved
 } XGL_OBJECT_TYPE;
 
 static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
