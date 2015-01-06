@@ -194,7 +194,6 @@ bool InjectTracersIntoProcess(glv_process_info* pInfo)
 // ------------------------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    unsigned int num_settings = sizeof(g_settings_info) / sizeof(g_settings_info[0]);
     FILE* pFile = NULL;
     memset(&g_settings, 0, sizeof(glvtrace_settings));
 
