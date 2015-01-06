@@ -383,6 +383,9 @@ void glvdebug::on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int
     // pUpdatedSettings is already pointing to the same location as g_pAllSettings
     g_numAllSettings = numGroups;
 
+    // apply updated settings to the settingGroup so that the UI will respond to the changes
+    glv_SettingGroup_Apply_Overrides(&g_settingGroup, pUpdatedSettings, numGroups);
+
     QDir sessionDir(get_sessions_directory());
     if (sessionDir.mkpath(".") == false)
     {
