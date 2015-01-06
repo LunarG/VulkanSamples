@@ -400,7 +400,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
             format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         default:
-            assert(!"unknown depth format");
+            assert(!cmd->bind.att.ds); // Must have valid format if ds attached
             format = 0;
             break;
         }
