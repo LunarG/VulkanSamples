@@ -100,6 +100,11 @@ bool initialize_settings(int argc, char* argv[])
         pFile = NULL;
     }
 
+    // Merge known glvdebug settings into the loaded settings.
+    // This ensures that new known settings are added to the settings dialog
+    // and will be re-written to the settings file upon saving.
+    glv_SettingGroup_merge(&g_settingGroup, &g_pAllSettings, &g_numAllSettings);
+
     // This would be a good place to validate any "required" settings, but right now there aren't any!
 
     if (bSuccess == false)

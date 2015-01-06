@@ -191,6 +191,132 @@ void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting)
 }
 
 // ------------------------------------------------------------------------------------------------
+void glv_SettingGroup_merge(glv_SettingGroup* pSrc, glv_SettingGroup** ppDestGroups, unsigned int* pNumDestGroups)
+{
+    unsigned int g;
+    glv_SettingGroup* pDestGroup = NULL;
+    assert(pSrc != NULL);
+    assert(ppDestGroups != NULL);
+    assert(pNumDestGroups != NULL);
+
+    for (g = 0; g < *pNumDestGroups; g++)
+    {
+        if (strcmp(pSrc->pName, (*ppDestGroups)[g].pName) == 0)
+        {
+            // group exists, store the pointer
+            pDestGroup = &(*ppDestGroups)[g];
+            break;
+        }
+    }
+
+    if (pDestGroup == NULL)
+    {
+        // need to replicate pSrc into ppDestGroups
+        pDestGroup = glv_SettingGroup_Create(glv_allocate_and_copy(pSrc->pName), ppDestGroups, pNumDestGroups);
+        assert(pDestGroup != NULL);
+    }
+
+    if (pDestGroup != NULL)
+    {
+        // now add all the settings!
+        unsigned int srcIndex;
+        for (srcIndex = 0; srcIndex < pSrc->numSettings; srcIndex++)
+        {
+            // search for pre-existing setting in the dest group
+            unsigned int destIndex;
+            BOOL bFound = FALSE;
+            for (destIndex = 0; destIndex < pDestGroup->numSettings; destIndex++)
+            {
+                if (strcmp(pDestGroup->pSettings[destIndex].pLongName, pSrc->pSettings[srcIndex].pLongName) == 0)
+                {
+                    bFound = TRUE;
+                    break;
+                }
+            }
+
+            if (bFound == FALSE)
+            {
+                glv_SettingGroup_Add_Info(&pSrc->pSettings[srcIndex], pDestGroup);
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+void glv_SettingGroup_Add_Info(glv_SettingInfo* pSrcInfo, glv_SettingGroup* pDestGroup)
+{
+    assert(pSrcInfo != NULL);
+    assert(pDestGroup != NULL);
+    if (pDestGroup != NULL)
+    {
+        // create a SettingInfo to store the copied information
+        glv_SettingInfo info;
+        glv_SettingInfo* pTmp;
+        memset(&info, 0, sizeof(glv_SettingInfo));
+
+        // copy necessary buffers so that deletion works correctly
+        info.pShortName = pSrcInfo->pShortName;
+        info.pLongName = glv_allocate_and_copy(pSrcInfo->pLongName);
+        info.type = GLV_SETTING_STRING;
+        info.pType_data = glv_SettingInfo_stringify_value(pSrcInfo);
+
+        // add it to the current group
+        pTmp = pDestGroup->pSettings;
+        pDestGroup->numSettings += 1;
+        pDestGroup->pSettings = GLV_NEW_ARRAY(glv_SettingInfo, pDestGroup->numSettings);
+        if (pDestGroup->pSettings == NULL)
+        {
+            // failed to allocate new info array
+            // restore original
+            pDestGroup->numSettings -= 1;
+            pDestGroup->pSettings = pTmp;
+        }
+        else
+        {
+            if (pTmp != NULL)
+            {
+                memcpy(pDestGroup->pSettings, pTmp, pDestGroup->numSettings * sizeof(glv_SettingInfo));
+            }
+
+            pDestGroup->pSettings[pDestGroup->numSettings - 1] = info;
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+glv_SettingGroup* glv_SettingGroup_Create(const char* pGroupName, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups)
+{
+    glv_SettingGroup* pNewGroup = NULL;
+    glv_SettingGroup* pTmp = *ppSettingGroups;
+    unsigned int lastIndex = *pNumSettingGroups;
+
+    (*pNumSettingGroups) += 1;
+
+    *ppSettingGroups = GLV_NEW_ARRAY(glv_SettingGroup, *pNumSettingGroups);
+    if (*ppSettingGroups == NULL)
+    {
+        // out of memory!
+        // Don't create the new group, and restore the list to it's original state
+        (*pNumSettingGroups) -= 1;
+        *ppSettingGroups = pTmp;
+    }
+    else
+    {
+        // copy old settings to new ones
+        memcpy(*ppSettingGroups, pTmp, lastIndex * sizeof(glv_SettingGroup));
+
+        // clean up old array
+        GLV_DELETE(pTmp);
+
+        // name the new group
+        pNewGroup = &(*ppSettingGroups)[lastIndex];
+        pNewGroup->pName = pGroupName;
+    }
+
+    return pNewGroup;
+}
+
+// ------------------------------------------------------------------------------------------------
 int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups)
 {
     int retVal = 0;
@@ -268,16 +394,7 @@ int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGro
                 if (pCurGroup == NULL)
                 {
                     // Need to grow our list of groups!
-                    glv_SettingGroup* pTmp = *ppSettingGroups;
-                    unsigned int lastIndex = *pNumSettingGroups;
-
-                    (*pNumSettingGroups) += 1;
-
-                    *ppSettingGroups = GLV_NEW_ARRAY(glv_SettingGroup, *pNumSettingGroups);
-                    memcpy(*ppSettingGroups, pTmp, lastIndex * sizeof(glv_SettingGroup));
-
-                    pCurGroup = &(*ppSettingGroups)[lastIndex];
-                    pCurGroup->pName = pGroupName;
+                    pCurGroup = glv_SettingGroup_Create(pGroupName, ppSettingGroups, pNumSettingGroups);
                 }
             }
             else
@@ -324,11 +441,22 @@ int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGro
                         pTmp = pCurGroup->pSettings;
                         pCurGroup->numSettings += 1;
                         pCurGroup->pSettings = GLV_NEW_ARRAY(glv_SettingInfo, pCurGroup->numSettings);
-                        if (pTmp != NULL)
+                        if (pCurGroup->pSettings == NULL)
                         {
-                            memcpy(pCurGroup->pSettings, pTmp, pCurGroup->numSettings * sizeof(glv_SettingInfo));
+                            // failed to allocate new info array
+                            // restore original
+                            pCurGroup->numSettings -= 1;
+                            pCurGroup->pSettings = pTmp;
                         }
-                        pCurGroup->pSettings[pCurGroup->numSettings - 1] = info;
+                        else
+                        {
+                            if (pTmp != NULL)
+                            {
+                                memcpy(pCurGroup->pSettings, pTmp, pCurGroup->numSettings * sizeof(glv_SettingInfo));
+                            }
+
+                            pCurGroup->pSettings[pCurGroup->numSettings - 1] = info;
+                        }
                     }
                 }
                 else

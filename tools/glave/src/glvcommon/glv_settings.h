@@ -58,6 +58,18 @@ BOOL glv_SettingGroup_save(glv_SettingGroup* pSettingGroup, unsigned int numSett
 void glv_SettingGroup_delete(glv_SettingGroup* pSettingGroup);
 void glv_SettingGroup_reset_default(glv_SettingGroup* pSettingGroup);
 
+// Adds pSrc group to ppDestGroups if the named group is not already there,
+// or adds missing settings from pSrc into the existing group in ppDestGroups.
+// pNumDestGroups is updated if pSrc is added to ppDestGroups.
+void glv_SettingGroup_merge(glv_SettingGroup* pSrc, glv_SettingGroup** ppDestGroups, unsigned int* pNumDestGroups);
+
+// Creates a new named group at the end of the ppSettingGroups array, and updates pNumSettingGroups.
+glv_SettingGroup* glv_SettingGroup_Create(const char* pGroupName, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
+
+// Adds a STRING settingInfo to pDestGroup which holds a copy of pSrcInfo, but with a stringified value.
+// The conversion to string is necessary for memory management purposes.
+void glv_SettingGroup_Add_Info(glv_SettingInfo* pSrcInfo, glv_SettingGroup* pDestGroup);
+
 int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
 void glv_SettingGroup_Delete_Loaded(glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
 
