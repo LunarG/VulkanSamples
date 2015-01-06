@@ -126,9 +126,15 @@ class LoaderSubcommand(Subcommand):
                          "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"
                          "        (const XGL_LAYER_DISPATCH_TABLE **) %s;\n"
                          "    XGL_RESULT res = %s;\n"
+                         % (qual, decl, proto.params[0].name, stmt))
+                if proto.name == "WsiX11CreatePresentableImage":
+                    funcs.append(
+                         "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
+                         % (  proto.params[-2].name))
+                funcs.append(
                          "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
                          "    return res;\n"
-                         "}" % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name))
+                         "}" % (  proto.params[-1].name))
             elif proto.name == "GetMultiGpuCompatibility":
                 funcs.append("%s%s\n"
                          "{\n"
