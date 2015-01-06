@@ -307,7 +307,7 @@ Device::~Device()
     EXPECT(xglDestroyDevice(obj()) == XGL_SUCCESS);
 }
 
-void Device::init()
+void Device::init(bool enable_layers)
 {
     // request all queues
     const std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props = gpu_.queue_properties();
@@ -320,13 +320,17 @@ void Device::init()
         queue_info.push_back(qi);
     }
 
-    // request all layers
-    std::vector<char> layer_buf;
-    const std::vector<const char *> layers = gpu_.layers(layer_buf);
     XGL_LAYER_CREATE_INFO layer_info = {};
     layer_info.sType = XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO;
-    layer_info.layerCount = layers.size();
-    layer_info.ppActiveLayerNames = &layers[0];
+
+    std::vector<const char *> layers;
+    std::vector<char> layer_buf;
+    // request all layers
+    if (enable_layers) {
+        layers = gpu_.layers(layer_buf);
+        layer_info.layerCount = layers.size();
+        layer_info.ppActiveLayerNames = &layers[0];
+    }
 
     const std::vector<const char *> exts = gpu_.extensions();
 

@@ -193,7 +193,8 @@ public:
 
     // xglCreateDevice()
     void init(const XGL_DEVICE_CREATE_INFO &info);
-    void init(); // all queues, all layers, all extensions, etc
+    void init(bool enable_layers); // all queues, all extensions, etc
+    void init() { init(false); };
 
     const PhysicalGpu &gpu() const { return gpu_; }
 
