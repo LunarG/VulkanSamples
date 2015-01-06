@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <QFileDialog>
+#include <QMoveEvent>
 #include <QPalette>
 #include <QProcess>
 #include <QToolButton>
@@ -61,12 +62,6 @@ glvdebug::glvdebug(QWidget *parent)
       m_bDelayUpdateUIForContext(false)
 {
     ui->setupUi(this);
-
-    // load the settings file. This will only succeed if the file already exists
-//    g_settings.load(g_SETTINGS_FILE);
-
-    // always save/resave so the file will either be created or so that new settings will be added
-//    g_settings.save(g_SETTINGS_FILE);
 
     memset(&m_traceFileInfo, 0, sizeof(glvdebug_trace_file_info));
 
@@ -113,13 +108,6 @@ glvdebug::glvdebug(QWidget *parent)
 
 glvdebug::~glvdebug()
 {
-    // update any settings and save the settings file
-    g_settings.window_position_left = this->x();
-    g_settings.window_position_top = this->y();
-    g_settings.window_size_width = this->width();
-    g_settings.window_size_height = this->height();
-    //g_settings.save(g_SETTINGS_FILE);
-
     close_trace_file();
 
     if (m_pTimeline != NULL)
@@ -132,6 +120,22 @@ glvdebug::~glvdebug()
 
     delete ui;
     glvdebug_output_deinit();
+}
+
+void glvdebug::moveEvent(QMoveEvent *pEvent)
+{
+    g_settings.window_position_left = pEvent->pos().x();
+    g_settings.window_position_top = pEvent->pos().y();
+
+    glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+}
+
+void glvdebug::resizeEvent(QResizeEvent *pEvent)
+{
+    g_settings.window_size_width = pEvent->size().width();
+    g_settings.window_size_height = pEvent->size().height();
+
+    glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
 }
 
 int glvdebug::add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront)
@@ -257,6 +261,7 @@ glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
 
 void glvdebug::on_actionE_xit_triggered()
 {
+    glvdebug_save_settings();
     close_trace_file();
     qApp->quit();
 }
@@ -326,6 +331,14 @@ void glvdebug::close_trace_file()
 
         glvdebug_output_message("Closing trace file.");
         glvdebug_output_message("-------------------");
+
+        // update settings
+        if (g_settings.trace_file_to_open != NULL)
+        {
+            glv_free(g_settings.trace_file_to_open);
+            g_settings.trace_file_to_open = NULL;
+            glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+        }
     }
 
     setWindowTitle(g_PROJECT_NAME);
@@ -386,29 +399,7 @@ void glvdebug::on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int
     // apply updated settings to the settingGroup so that the UI will respond to the changes
     glv_SettingGroup_Apply_Overrides(&g_settingGroup, pUpdatedSettings, numGroups);
 
-    QDir sessionDir(get_sessions_directory());
-    if (sessionDir.mkpath(".") == false)
-    {
-        glvdebug_output_error("Failed to create /sessions/ directory\n");
-    }
-
-    QString filepath = get_settings_file_path();
-    FILE* pSettingsFile = fopen(filepath.toStdString().c_str(), "w");
-    if (pSettingsFile == NULL)
-    {
-        QString error = "Failed to open settings file for writing: " + filepath + "\n";
-        glvdebug_output_error(error.toStdString().c_str());
-    }
-    else
-    {
-        if (glv_SettingGroup_save(g_pAllSettings, g_numAllSettings, pSettingsFile) == FALSE)
-        {
-            QString error = "Failed to save settings file: " + filepath + "\n";
-            glvdebug_output_error(error.toStdString().c_str());
-        }
-
-        fclose(pSettingsFile);
-    }
+    glvdebug_save_settings();
 
     // react to changes in settings
     this->move(g_settings.window_position_left, g_settings.window_position_top);
@@ -508,7 +499,6 @@ bool glvdebug::open_trace_file(const std::string &filename)
             }
         }
 
-
         // TODO: We don't really want to close the trace file yet.
         // I think we want to keep it open so that we can dynamically read from it. 
         // BUT we definitely don't want it to get locked open, so we need a smart
@@ -539,6 +529,10 @@ bool glvdebug::open_trace_file(const std::string &filename)
         //ui->nextSnapshotButton->setEnabled(true);
         ui->prevDrawcallButton->setEnabled(true);
         ui->nextDrawcallButton->setEnabled(true);
+
+        // update settings
+        g_settings.trace_file_to_open = glv_allocate_and_copy(filename.c_str());
+        glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
     }
 
     this->setCursor(origCursor);

@@ -1,7 +1,9 @@
 #include "glvdebug_settings.h"
+#include "glvdebug_output.h"
 #include <assert.h>
 
 #include <QCoreApplication>
+#include <QDir>
 
 extern "C" {
 #include "glv_settings.h"
@@ -20,13 +22,13 @@ unsigned int g_numAllSettings = 0;
 
 glv_SettingInfo g_settings_info[] =
 {
-    //{ "tltps", "trim_large_trace_prompt_size", GLV_SETTING_UINT, &g_settings.trim_large_trace_prompt_size, &s_default_settings.trim_large_trace_prompt_size, TRUE, "The number of frames in a trace file at which the user should be prompted to trim the trace before loading."},
-
+    { "o", "open_trace_file", GLV_SETTING_STRING, &g_settings.trace_file_to_open, &s_default_settings.trace_file_to_open, TRUE, "Load the specified trace file when glvdebug is opened."},
     { "wl", "window_left", GLV_SETTING_INT, &g_settings.window_position_left, &s_default_settings.window_position_left, TRUE, "Left coordinate of GLVDebug window on startup."},
     { "wt", "window_top", GLV_SETTING_INT, &g_settings.window_position_top, &s_default_settings.window_position_top, TRUE, "Top coordinate of GLVDebug window on startup."},
     { "ww", "window_width", GLV_SETTING_INT, &g_settings.window_size_width, &s_default_settings.window_size_width, TRUE, "Width of GLVDebug window on startup."},
     { "wh", "window_height", GLV_SETTING_INT, &g_settings.window_size_height, &s_default_settings.window_size_height, TRUE, "Height of GLVDebug window on startup."},
 
+    //{ "tltps", "trim_large_trace_prompt_size", GLV_SETTING_UINT, &g_settings.trim_large_trace_prompt_size, &s_default_settings.trim_large_trace_prompt_size, TRUE, "The number of frames in a trace file at which the user should be prompted to trim the trace before loading."},
     //{ "gsr", "group_state_render", GLV_SETTING_BOOL, &g_settings.groups_state_render, &s_default_settings.groups_state_render, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     //{ "gppm", "groups_push_pop_markers", GLV_SETTING_BOOL, &g_settings.groups_push_pop_markers, &s_default_settings.groups_push_pop_markers, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     //{ "gnc", "groups_nested_calls", GLV_SETTING_BOOL, &g_settings.groups_nested_calls, &s_default_settings.groups_nested_calls, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
@@ -49,13 +51,14 @@ QString get_sessions_directory()
     return QCoreApplication::applicationDirPath() + "/sessions/";
 }
 
-bool initialize_settings(int argc, char* argv[])
+bool glvdebug_initialize_settings(int argc, char* argv[])
 {
     bool bSuccess = true;
 
     // setup default values
     memset(&s_default_settings, 0, sizeof(glvdebug_settings));
 
+    s_default_settings.trace_file_to_open = NULL;
     s_default_settings.window_position_left = 0;
     s_default_settings.window_position_top = 0;
     s_default_settings.window_size_width = 1024;
@@ -82,10 +85,11 @@ bool initialize_settings(int argc, char* argv[])
             return false;
         }
 
-        glv_SettingGroup_Apply_Overrides(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+        if (g_pAllSettings != NULL && g_numAllSettings > 0)
+        {
+            glv_SettingGroup_Apply_Overrides(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+        }
     }
-
-    glv_SettingGroup_init_from_cmdline(&g_settingGroup, argc, argv, &g_settings.trace_file_to_open);
 
     // apply settings from settings file and from cmd-line args
     if (glv_SettingGroup_init_from_cmdline(&g_settingGroup, argc, argv, &g_settings.trace_file_to_open) != 0)
@@ -114,4 +118,31 @@ bool initialize_settings(int argc, char* argv[])
     }
 
     return bSuccess;
+}
+
+void glvdebug_save_settings()
+{
+    QDir sessionDir(get_sessions_directory());
+    if (sessionDir.mkpath(".") == false)
+    {
+        glvdebug_output_error("Failed to create /sessions/ directory\n");
+    }
+
+    QString filepath = get_settings_file_path();
+    FILE* pSettingsFile = fopen(filepath.toStdString().c_str(), "w");
+    if (pSettingsFile == NULL)
+    {
+        QString error = "Failed to open settings file for writing: " + filepath + "\n";
+        glvdebug_output_error(error.toStdString().c_str());
+    }
+    else
+    {
+        if (glv_SettingGroup_save(g_pAllSettings, g_numAllSettings, pSettingsFile) == FALSE)
+        {
+            QString error = "Failed to save settings file: " + filepath + "\n";
+            glvdebug_output_error(error.toStdString().c_str());
+        }
+
+        fclose(pSettingsFile);
+    }
 }

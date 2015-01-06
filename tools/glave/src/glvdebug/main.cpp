@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     // initialize settings
-    if (initialize_settings(argc, argv) == false)
+    if (glvdebug_initialize_settings(argc, argv) == false)
     {
         return -1;
     }
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     glvdebug w;
     w.show();
 
-    if (g_settings.trace_file_to_open != NULL)
+    if (g_settings.trace_file_to_open != NULL && strlen(g_settings.trace_file_to_open) > 0)
     {
         w.pre_open_trace_file(g_settings.trace_file_to_open);
     }

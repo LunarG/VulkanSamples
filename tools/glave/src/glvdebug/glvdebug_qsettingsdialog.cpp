@@ -86,7 +86,9 @@ glvdebug_QSettingsDialog::glvdebug_QSettingsDialog(glv_SettingGroup* pSettingGro
     //QLineEdit* pHeightTextEdit = new QLineEdit(pPositionGroup);
     //pPositionGroupLayout->addWidget(pHeightTextEdit, 4, 1, 1, 1, Qt::AlignLeft);
 
-    QDialogButtonBox* pButtonBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
+    QDialogButtonBox* pButtonBox = new QDialogButtonBox(/*QDialogButtonBox::Save | QDialogButtonBox::Cancel*/);
+    pButtonBox->addButton("OK", QDialogButtonBox::RejectRole);
+    pButtonBox->addButton("Save && Apply", QDialogButtonBox::AcceptRole);
     pLayout->addWidget(pButtonBox);
     connect(pButtonBox, SIGNAL(accepted()), this, SLOT(acceptCB()));
     connect(pButtonBox, SIGNAL(rejected()), this, SLOT(cancelCB()));

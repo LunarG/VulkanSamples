@@ -66,20 +66,20 @@ BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg)
     {
     case GLV_SETTING_STRING:
         {
-            glv_free(pSetting->pType_data);
-            pSetting->pType_data = glv_allocate_and_copy(arg);
+            glv_free(*pSetting->Data.ppChar);
+            *pSetting->Data.ppChar = glv_allocate_and_copy(arg);
         }
         break;
     case GLV_SETTING_BOOL:
         {
             BOOL bTrue = FALSE;
             bTrue = strncmp(arg, "true", 4) == 0 || strncmp(arg, "TRUE", 4) == 0 || strncmp(arg, "True", 4) == 0;
-            *(BOOL*)pSetting->pType_data = bTrue;
+            *pSetting->Data.pBool = bTrue;
         }
         break;
     case GLV_SETTING_UINT:
         {
-            if (sscanf(arg, "%u", (unsigned int*)pSetting->pType_data) != 1)
+            if (sscanf(arg, "%u", pSetting->Data.pUint) != 1)
             {
                 printf("Invalid unsigned int setting: '%s'\n", arg);
                 return FALSE;
@@ -88,7 +88,7 @@ BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg)
         break;
     case GLV_SETTING_INT:
         {
-            if (sscanf(arg, "%d", (int*)pSetting->pType_data) != 1)
+            if (sscanf(arg, "%d", pSetting->Data.pInt) != 1)
             {
                 printf("Invalid int setting: '%s'\n", arg);
                 return FALSE;
@@ -110,19 +110,19 @@ char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting)
     {
     case GLV_SETTING_STRING:
         {
-            return glv_allocate_and_copy((const char*)pSetting->pType_data);
+            return glv_allocate_and_copy(*pSetting->Data.ppChar);
         }
         break;
     case GLV_SETTING_BOOL:
         {
-            return (*(BOOL*)pSetting->pType_data ? glv_allocate_and_copy("TRUE") : glv_allocate_and_copy("FALSE"));
+            return (*pSetting->Data.pBool ? glv_allocate_and_copy("TRUE") : glv_allocate_and_copy("FALSE"));
         }
         break;
     case GLV_SETTING_UINT:
         {
             char value[100];
             memset(value, 0, 100);
-            sprintf(value, "%u", *(unsigned int*)pSetting->pType_data);
+            sprintf(value, "%u", *pSetting->Data.pUint);
             return glv_allocate_and_copy(value);
         }
         break;
@@ -130,7 +130,7 @@ char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting)
         {
             char value[100];
             memset(value, 0, 100);
-            sprintf(value, "%d", *(int*)pSetting->pType_data);
+            sprintf(value, "%d", *pSetting->Data.pInt);
             return glv_allocate_and_copy(value);
         }
         break;
@@ -161,28 +161,28 @@ void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting)
     switch(pSetting->type)
     {
     case GLV_SETTING_STRING:
-        if (pSetting->pType_data != NULL)
+        if (*pSetting->Data.ppChar != NULL)
         {
-            glv_free(pSetting->pType_data);
+            glv_free(*pSetting->Data.ppChar);
         }
 
-        if (pSetting->pType_default == NULL)
+        if (pSetting->Default.ppChar == NULL)
         {
-            pSetting->pType_data = NULL;
+            *pSetting->Data.ppChar = NULL;
         }
         else
         {
-            pSetting->pType_data = glv_allocate_and_copy(*((const char**)pSetting->pType_default));
+            *pSetting->Data.ppChar = glv_allocate_and_copy(*pSetting->Default.ppChar);
         }
         break;
     case GLV_SETTING_BOOL:
-        *(BOOL*)pSetting->pType_data = *(BOOL*)pSetting->pType_default;
+        *pSetting->Data.pBool = *pSetting->Default.pBool;
         break;
     case GLV_SETTING_UINT:
-        *(unsigned int*)pSetting->pType_data = *(unsigned int*)pSetting->pType_default;
+        *pSetting->Data.pUint = *pSetting->Default.pUint;
         break;
     case GLV_SETTING_INT:
-        *(int*)pSetting->pType_data = *(int*)pSetting->pType_default;
+        *pSetting->Data.pInt = *pSetting->Default.pInt;
         break;
     default:
         assert(!"Unhandled GLV_SETTING_TYPE");
@@ -258,7 +258,8 @@ void glv_SettingGroup_Add_Info(glv_SettingInfo* pSrcInfo, glv_SettingGroup* pDes
         info.pShortName = pSrcInfo->pShortName;
         info.pLongName = glv_allocate_and_copy(pSrcInfo->pLongName);
         info.type = GLV_SETTING_STRING;
-        info.pType_data = glv_SettingInfo_stringify_value(pSrcInfo);
+        info.Data.ppChar = glv_malloc(sizeof(char**));
+        *info.Data.ppChar = glv_SettingInfo_stringify_value(pSrcInfo);
 
         // add it to the current group
         pTmp = pDestGroup->pSettings;
@@ -314,6 +315,22 @@ glv_SettingGroup* glv_SettingGroup_Create(const char* pGroupName, glv_SettingGro
     }
 
     return pNewGroup;
+}
+
+// ------------------------------------------------------------------------------------------------
+void glv_SettingGroup_update(glv_SettingGroup* pSrc, glv_SettingGroup* pDestGroups, unsigned int numDestGroups)
+{
+    unsigned int i;
+    glv_SettingGroup* pGroup;
+    for (i = 0; i < numDestGroups; i++)
+    {
+        pGroup = &pDestGroups[i];
+        if (strcmp(pSrc->pName, pGroup->pName) == 0)
+        {
+            glv_SettingGroup_Apply_Overrides(pGroup, pSrc, 1);
+            break;
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -434,8 +451,8 @@ int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGro
 
                         // remove leading whitespace from value
                         while (*pValueStart == ' ') { ++pValueStart; }
-
-                        info.pType_data = glv_allocate_and_copy(pValueStart);
+                        info.Data.ppChar = glv_malloc(sizeof(char**));
+                        *info.Data.ppChar = glv_allocate_and_copy(pValueStart);
 
                         // add it to the current group
                         pTmp = pCurGroup->pSettings;
@@ -491,8 +508,8 @@ void glv_SettingGroup_Delete_Loaded(glv_SettingGroup** ppSettingGroups, unsigned
         {
             glv_free((void*)pGroup->pSettings[s].pLongName);
             pGroup->pSettings[s].pLongName = NULL;
-            glv_free(pGroup->pSettings[s].pType_data);
-            pGroup->pSettings[s].pType_data = NULL;
+            glv_free(*pGroup->pSettings[s].Data.ppChar);
+            glv_free(pGroup->pSettings[s].Data.ppChar);
         }
 
         GLV_DELETE(pGroup->pSettings);
@@ -506,31 +523,39 @@ void glv_SettingGroup_Delete_Loaded(glv_SettingGroup** ppSettingGroups, unsigned
 // ------------------------------------------------------------------------------------------------
 void glv_SettingGroup_Apply_Overrides(glv_SettingGroup* pSettingGroup, glv_SettingGroup* pOverrideGroups, unsigned int numOverrideGroups)
 {
-    unsigned int g;
+    unsigned int overrideGroupIndex;
     assert(pSettingGroup != NULL);
     assert(pOverrideGroups != NULL);
 
     // only override matching group (based on name)
-    for (g = 0; g < numOverrideGroups; g++)
+    for (overrideGroupIndex = 0; overrideGroupIndex < numOverrideGroups; overrideGroupIndex++)
     {
-        if (strcmp(pSettingGroup->pName, pOverrideGroups[g].pName) == 0)
+        if (strcmp(pSettingGroup->pName, pOverrideGroups[overrideGroupIndex].pName) == 0)
         {
-            unsigned int s;
-            glv_SettingGroup* pOverride = &pOverrideGroups[g];
+            unsigned int overrideSettingIndex;
+            glv_SettingGroup* pOverride = &pOverrideGroups[overrideGroupIndex];
 
-            for (s = 0; s < pOverride->numSettings; s++)
+            for (overrideSettingIndex = 0; overrideSettingIndex < pOverride->numSettings; overrideSettingIndex++)
             {
+                unsigned int baseSettingIndex;
+                glv_SettingInfo* pOverrideSetting = &pOverride->pSettings[overrideSettingIndex];
+
                 // override matching settings based on long name
-                if (strcmp(pSettingGroup->pSettings[s].pLongName, pOverride->pSettings[s].pLongName) == 0)
+                for (baseSettingIndex = 0; baseSettingIndex < pSettingGroup->numSettings; baseSettingIndex++)
                 {
-                    char* pTmp = glv_SettingInfo_stringify_value(&pOverride->pSettings[s]);
-                    if (glv_SettingInfo_parse_value(&pSettingGroup->pSettings[s], pTmp) == FALSE)
+                    if (strcmp(pSettingGroup->pSettings[baseSettingIndex].pLongName, pOverrideSetting->pLongName) == 0)
                     {
-                        assert(!"Failed to parse override value");
+                        char* pTmp = glv_SettingInfo_stringify_value(pOverrideSetting);
+                        if (glv_SettingInfo_parse_value(&pSettingGroup->pSettings[baseSettingIndex], pTmp) == FALSE)
+                        {
+                            assert(!"Failed to parse override value");
+                        }
+                        glv_free(pTmp);
+                        break;
                     }
-                    glv_free(pTmp);
                 }
             }
+            break;
         }
     }
 }
@@ -572,8 +597,15 @@ BOOL glv_SettingGroup_save(glv_SettingGroup* pSettingGroup, unsigned int numSett
                 fputs(pSettingGroup[g].pSettings[index].pLongName, pSettingsFile);
                 fputs(" = ", pSettingsFile);
                 value = glv_SettingInfo_stringify_value(&pSettingGroup[g].pSettings[index]);
-                fputs(value, pSettingsFile);
-                glv_free(value);
+                if (value != NULL)
+                {
+                    fputs(value, pSettingsFile);
+                    glv_free(value);
+                }
+                else
+                {
+                    fputs("", pSettingsFile);
+                }
                 fputs("\n", pSettingsFile);
             }
 
@@ -725,10 +757,10 @@ void glv_SettingGroup_delete(glv_SettingGroup* pSettingGroup)
         {
             if (pSettingGroup->pSettings[i].type == GLV_SETTING_STRING)
             {
-                if (pSettingGroup->pSettings[i].pType_data != NULL)
+                if (*(pSettingGroup->pSettings[i].Data.ppChar) != NULL)
                 {
-                    glv_free(pSettingGroup->pSettings[i].pType_data);
-                    pSettingGroup->pSettings[i].pType_data = NULL;
+                    glv_free(*pSettingGroup->pSettings[i].Data.ppChar);
+                    *pSettingGroup->pSettings[i].Data.ppChar = NULL;
                 }
             }
         }

@@ -27,7 +27,9 @@ typedef struct glvdebug_settings
 extern glvdebug_settings g_settings;
 extern glv_SettingGroup g_settingGroup;
 
-bool initialize_settings(int argc, char* argv[]);
+bool glvdebug_initialize_settings(int argc, char* argv[]);
+
+void glvdebug_save_settings();
 
 QString get_settings_file_path();
 QString get_sessions_directory();

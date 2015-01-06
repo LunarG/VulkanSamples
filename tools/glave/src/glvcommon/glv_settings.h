@@ -40,8 +40,22 @@ typedef struct glv_SettingInfo
     const char* pShortName;
     const char* pLongName;
     GLV_SETTING_TYPE type;
-    void* pType_data;
-    const void * pType_default;
+    union Data
+    {
+        void* pVoid;
+        char** ppChar;
+        BOOL* pBool;
+        unsigned int* pUint;
+        int* pInt;
+    } Data;
+    union Default
+    {
+        void* pVoid;
+        char** ppChar;
+        BOOL* pBool;
+        unsigned int* pUint;
+        int* pInt;
+    } Default;
     BOOL bPrintInHelp;
     const char* pDesc;
 } glv_SettingInfo;
@@ -62,6 +76,8 @@ void glv_SettingGroup_reset_default(glv_SettingGroup* pSettingGroup);
 // or adds missing settings from pSrc into the existing group in ppDestGroups.
 // pNumDestGroups is updated if pSrc is added to ppDestGroups.
 void glv_SettingGroup_merge(glv_SettingGroup* pSrc, glv_SettingGroup** ppDestGroups, unsigned int* pNumDestGroups);
+
+void glv_SettingGroup_update(glv_SettingGroup* pSrc, glv_SettingGroup* pDestGroups, unsigned int numDestGroups);
 
 // Creates a new named group at the end of the ppSettingGroups array, and updates pNumSettingGroups.
 glv_SettingGroup* glv_SettingGroup_Create(const char* pGroupName, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);

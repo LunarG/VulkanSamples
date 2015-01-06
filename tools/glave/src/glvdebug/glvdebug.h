@@ -83,6 +83,11 @@ public:
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel);
     virtual void select_call_at_packet_index(unsigned long long packetIndex);
 
+protected:
+    // re-implemented from QMainWindow
+    virtual void moveEvent(QMoveEvent *pEvent);
+    virtual void resizeEvent(QResizeEvent *pEvent);
+
 public slots:
 
 private slots:
