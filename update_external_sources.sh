@@ -11,6 +11,7 @@ BASEDIR=$BUILDDIR/..
 
 function create_glslang () {
    rm -rf $BASEDIR/glslang
+   echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
    svn checkout https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/tools/glslang .
@@ -24,6 +25,7 @@ function update_glslang () {
 
 function create_LunarGLASS () {
    rm -rf $BASEDIR/LunarGLASS
+   echo "Creating local LunarGLASS repository ($BASEDIR/LunarGLASS)."
    mkdir -p $BASEDIR/LunarGLASS/Core/LLVM
    cd $BASEDIR/LunarGLASS/Core/LLVM 
    wget http://llvm.org/releases/3.4/llvm-3.4.src.tar.gz
@@ -35,14 +37,10 @@ function create_LunarGLASS () {
 
 function create_BIL () {
    rm -rf $BASEDIR/BIL
+   echo "Creating local BIL repository ($BASEDIR/BIL)."
    mkdir -p $BASEDIR/BIL
    cd $BASEDIR/BIL
-   if [ -z "$KHRONOS_ACCOUNT_NAME" ]; then
-      echo "Must define KHRONOS_ACCOUNT_NAME to access BIL component"
-      exit 1
-   else
-      svn checkout --username "$KHRONOS_ACCOUNT_NAME" https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL .
-   fi
+   svn checkout --username "$KHRONOS_ACCOUNT_NAME" https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL .
 }
 
 function update_LunarGLASS () {
@@ -52,22 +50,22 @@ function update_LunarGLASS () {
 }
 
 function update_BIL () {
-   if [ -d "$BASEDIR/BIL" ]; then
-     # Update source
-     cd $BASEDIR/BIL
-     svn update -r "$BIL_REVISION"
-     # copy of necessary BIL pieces into glslang
-     cp $BASEDIR/BIL/glslangOverlay_into_BIL/* $BASEDIR/glslang/BIL
-     cp $BASEDIR/BIL/Bil.h $BASEDIR/glslang/BIL
-     cp $BASEDIR/BIL/GLSL450Lib.h $BASEDIR/glslang/BIL
-     # copy of necessary BIL pieces into LLVM
-     cp $BASEDIR/BIL/ToLLVM/CMakeLists.txt $BASEDIR/LunarGLASS
-     cp -r $BASEDIR/BIL/ToLLVM/Standalone $BASEDIR/LunarGLASS
-     cp -r $BASEDIR/BIL/ToLLVM/FrontEnds/* $BASEDIR/LunarGLASS/Frontends/
-   fi
+   # Update source
+   cd $BASEDIR/BIL
+   echo "Updating $BASEDIR/BIL"
+   svn update -r "$BIL_REVISION"
+   # copy of necessary BIL pieces into glslang
+   cp $BASEDIR/BIL/glslangOverlay_into_BIL/* $BASEDIR/glslang/BIL
+   cp $BASEDIR/BIL/Bil.h $BASEDIR/glslang/BIL
+   cp $BASEDIR/BIL/GLSL450Lib.h $BASEDIR/glslang/BIL
+   # copy of necessary BIL pieces into LLVM
+   cp $BASEDIR/BIL/ToLLVM/CMakeLists.txt $BASEDIR/LunarGLASS
+   cp -r $BASEDIR/BIL/ToLLVM/Standalone $BASEDIR/LunarGLASS
+   cp -r $BASEDIR/BIL/ToLLVM/FrontEnds/* $BASEDIR/LunarGLASS/Frontends/
 }
 
 function build_glslang () {
+   echo "Building $BASEDIR/glslang"
    cd $BASEDIR/glslang
    mkdir -p build
    cd build
@@ -78,6 +76,7 @@ function build_glslang () {
 }
 
 function build_LunarGLASS () {
+   echo "Building $BASEDIR/LunarGLASS"
    cd $BASEDIR/LunarGLASS/Core/LLVM/llvm-3.4
    if [ ! -d "$BASEDIR/LunarGLASS/Core/LLVM/llvm-3.4/build" ]; then
       mkdir -p build
@@ -94,6 +93,11 @@ function build_LunarGLASS () {
    make install
 }
 
+if [ -z "$KHRONOS_ACCOUNT_NAME" ]; then
+   echo "Must define KHRONOS_ACCOUNT_NAME to access BIL component"
+   exit 1
+fi
+
 if [ ! -d "$BASEDIR/glslang" ]; then
    create_glslang
 fi
@@ -102,6 +106,11 @@ if [ ! -d "$BASEDIR/LunarGLASS" ]; then
 fi
 if [ ! -d "$BASEDIR/BIL" ]; then
    create_BIL
+fi
+
+if [ ! -d "$BASEDIR/BIL" -o ! -f "$BASEDIR/BIL/Bil.h"]; then
+      echo "Missing BIL, is your Khronos account correct?"
+      exit 1
 fi
 
 update_glslang
