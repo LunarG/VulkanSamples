@@ -16,8 +16,10 @@ on multiple GPUs.
 
 ## Environment Variables
 LIBXGL\_DRIVERS\_PATH  directory for loader to search for ICD driver libraries to open
-LIBXGL\_LAYERS\_PATH directory for loader to search for layer libraries that may get activated  and used at xglCreateDevice() time.
-LIBXGL\_LAYER\_NAMES  colon separate list of layer names to be activated. Example,
+
+LIBXGL\_LAYERS\_PATH   directory for loader to search for layer libraries that may get activated  and used at xglCreateDevice() time.
+
+LIBXGL\_LAYER\_NAMES   colon separate list of layer names to be activated. Example,
    LIBXGL\_LAYER\_NAMES=MemTracker:DrawState
 
 ## Interface to driver (ICD)
@@ -25,9 +27,11 @@ LIBXGL\_LAYER\_NAMES  colon separate list of layer names to be activated. Exampl
 - xglGetProcAddr exported and returns valid function pointers for all the XGL API entrypoints
 - all objects created by ICD can be cast to (XGL\_LAYER\_DISPATCH\_TABLE **)
  where the loader will replace the first entry with a pointer to the dispatch table which is
- owned by the loader. This implies teo things for ICD drivers: 1) the ICD must return a pointer for the opaque
- object handle, 2) this pointer points to a structure with the first entry being
- a pointer.
-- the ICD  may or may not implement a dispatch table
-- ICD entrypoints can be named anything including the offcial xgl name  such as xglCreateDevice().  However, beware of interposing by dynamic OS library loaders if the offical names are used.  On Linux,
-if offical names are used the ICD library must be linked with -Bsymbolic-functions
+ owned by the loader. This implies two things for ICD drivers:
+  1. the ICD must return a pointer for the opaque object handle
+  2. this pointer points to a structure with the first entry being a pointer.
+- the ICD may or may not implement a dispatch table
+- ICD entrypoints can be named anything including the offcial xgl name such as xglCreateDevice().  However, beware of inter
+posing by dynamic OS library loaders if the offical names are used.  On Linux,
+if offical names are used, the ICD library must be linked with -Bsymbolic-functions
+
