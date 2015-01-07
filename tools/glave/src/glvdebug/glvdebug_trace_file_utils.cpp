@@ -93,7 +93,7 @@ BOOL glvdebug_populate_trace_file_info(glvdebug_trace_file_info* pTraceFileInfo)
             pTraceFileInfo->pPacketOffsets[packetIndex].fileOffset = fileOffset;
 
             // rewind slightly
-            fseek(pTraceFileInfo->pFile, -1*sizeof(uint64_t), SEEK_CUR);
+            fseek(pTraceFileInfo->pFile, -1*(long)sizeof(uint64_t), SEEK_CUR);
 
             // allocate space for the packet and read it in
             pTraceFileInfo->pPacketOffsets[packetIndex].pHeader = (glv_trace_packet_header*)glv_malloc(packetSize);
@@ -108,7 +108,6 @@ BOOL glvdebug_populate_trace_file_info(glvdebug_trace_file_info* pTraceFileInfo)
 
             // now seek to what should be the next packet
             fileOffset += packetSize;
-//            fseek(pTraceFileInfo->pFile, fileOffset, SEEK_SET);
             packetIndex++;
         }
 

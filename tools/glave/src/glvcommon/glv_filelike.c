@@ -104,11 +104,12 @@ FileLike* glv_FileLike_create_msg(MessageStream* _msgStream)
 // ------------------------------------------------------------------------------------------------
 size_t glv_FileLike_Read(FileLike* pFileLike, void* _bytes, size_t _len)
 {
+    size_t minSize = 0;
     size_t bytesInStream = 0;
     if (glv_FileLike_ReadRaw(pFileLike, &bytesInStream, sizeof(bytesInStream)) == FALSE)
         return 0;
 
-    size_t minSize = (_len < bytesInStream) ? _len: bytesInStream;
+    minSize = (_len < bytesInStream) ? _len: bytesInStream;
     if (bytesInStream > 0) {
         assert(_len >= bytesInStream);
         if (glv_FileLike_ReadRaw(pFileLike, _bytes, minSize) == FALSE)
