@@ -642,7 +642,7 @@ static XGL_UINT loader_get_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index
                 layerNames[i].layer_name[len] = '\0';
                 layerNames[i].lib_name = lib_name;
             }
-            return pCi->layerCount;
+            return pCi->layerCount + loader_get_layer_env(icd, gpu_index, layerNames);
         }
         pCi = pCi->pNext;
     }
