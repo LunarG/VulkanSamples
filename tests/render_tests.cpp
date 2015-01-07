@@ -952,8 +952,38 @@ TEST_F(XglRenderTest, TriangleMRT)
     att.channelWriteMask = 0xf;
     pipelineobj.SetColorAttachment(1, &att);
 
-    GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
-    QueueCommandBuffer(NULL, 0);
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    cmdBuffer.AddRenderTarget(m_renderTargets[1]);
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    cmdBuffer.ClearAllBuffers(NULL, NULL);
+    cmdBuffer.BindAttachments(NULL);
+
+    cmdBuffer.BindState(m_stateRaster, m_stateViewport, m_colorBlend, m_stateDepthStencil, m_stateMsaa);
+    pipelineobj.CreateXGLPipeline(&descriptorSet);
+    cmdBuffer.BindPipeline(pipelineobj.GetPipelineHandle());
+    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+
+    descriptorSet.CreateXGLDescriptorSet();
+    cmdBuffer.BindDescriptorSet(descriptorSet.GetDescriptorSetHandle());
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest2.dot");
+#endif
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    cmdBuffer.EndCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(NULL, 0);
+
+    for (int i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
+
+    // GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
+    // QueueCommandBuffer(NULL, 0);
+
 }
 
 TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
