@@ -32,6 +32,15 @@ environment variable LIBXGL_DRIVERS_PATH to the driver path. For example:
 export LIBXGL_DRIVERS_PATH=$PWD/icd/intel
 ```
 
+To enable debug and validation layers with your XGL programs you must tell the icd loader
+where to find the layer libraries. Set the environment variable LIBXGL_LAYERS_PATH to
+the layer folder and indicate the layers you want loaded via LIBXGL_LAYER_NAMES.
+For example, to enable the APIDump and DrawState layers, do:
+```
+export LIBXGL_LAYERS_PATH=$PWD/layers
+export LIBXGL_LAYER_NAMES=APIDump:DrawState
+```
+
 ##Test
 
 The test executibles can be found in the dbuild/tests directory. The tests use the Google
