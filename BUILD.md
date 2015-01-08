@@ -63,6 +63,8 @@ sudo tee /etc/modprobe.d/drm.conf << EOF
 # Enable render nodes
 options drm rnodes=1
 EOF
+# this will add the rnodes=1 option into the boot environment
+sudo update-initramfs -k all -u
 ```
 ```
 sudo tee /etc/udev/rules.d/drm.rules << EOF
