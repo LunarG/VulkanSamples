@@ -35,25 +35,30 @@ extern "C" {
 #include "glvreplay_window.h"
 #include "getopt/getopt.h"
 
-const static char *shortOptions = "hb";
-
-enum {
-    DEBUG_OPT = 1
-};
-const static struct option longOptions[] = {
-        {"help", no_argument, 0, 'h'},
-        {"benchmark", no_argument, 0, 'b'},
-        {"debug", required_argument, 0, DEBUG_OPT},
-        //TODO add more options
-        {0, 0, 0, 0}};
-
-static void usage(const char *argv0)
+typedef struct glvreplay_settings
 {
-   glv_LogInfo("%s [options] [trace file]\n",argv0);
-   glv_LogInfo("-h | --help print usage\n");
-   glv_LogInfo("-d debug_level 0-N higher is more debug features\n");
-   //TODO add details
-}
+    char* pTraceFilePath;
+    BOOL benchmark;
+    unsigned int numLoops;
+} glvreplay_settings;
+
+// declared as extern in header
+glvreplay_settings g_defaultReplaySettings = { NULL, FALSE, 1 };
+glvreplay_settings g_replaySettings = g_defaultReplaySettings;
+
+glv_SettingInfo g_settings_info[] =
+{
+    { "t", "trace_file", GLV_SETTING_STRING, &g_replaySettings.pTraceFilePath, &g_defaultReplaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
+    { "l", "numLoops", GLV_SETTING_UINT, &g_replaySettings.numLoops, &g_defaultReplaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
+    { "b", "benchmark", GLV_SETTING_BOOL, &g_replaySettings.benchmark, &g_defaultReplaySettings.benchmark, TRUE, "(unsupported) Disables some debug features so that replaying happens as fast as possible."},
+};
+
+glv_SettingGroup g_replaySettingGroup =
+{
+    "glvreplay",
+    sizeof(g_settings_info) / sizeof(g_settings_info[0]),
+    &g_settings_info[0]
+};
 
 namespace glv_replay {
 int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[], unsigned int numLoops)
@@ -127,46 +132,77 @@ using namespace glv_replay;
 extern "C"
 int main(int argc, char **argv)
 {
-    //bool hasSnapshot = false;
-    //bool fastReplay = false;
-    unsigned int debugLevel = 1;
-    unsigned int numLoops = 1;
-    int err;
+    int err = 0;
+    FILE* pSettingsFile = NULL;
+    glv_SettingGroup* pAllSettings = NULL;
+    unsigned int numAllSettings = 0;
 
-    // parse command line options
-    int opt;
-    while ((opt = getopt_long_only(argc, argv, shortOptions, longOptions, NULL)) != -1) {
-        switch (opt) {
-        case 'h':
-            usage(argv[0]);
-            return 0;
-        case 'b':
-            //fastReplay = true;
-            break;
-        case DEBUG_OPT:
-            debugLevel = atoi(optarg);
-            break;
-        default:
-            glv_LogError("unknown option %d\n", opt);
-            usage(argv[0]);
-            return 1;
+    // Override options based on settings file
+    pSettingsFile = fopen("glvreplay_settings.txt", "r");
+    if (pSettingsFile == NULL)
+    {
+        glv_LogWarn("Failed to open glvreplay_settings.txt\n");
+    }
+
+    if (pSettingsFile != NULL)
+    {
+        if (glv_SettingGroup_Load_from_file(pSettingsFile, &pAllSettings, &numAllSettings) == -1)
+        {
+            glv_LogWarn("Failed to parse glvreplay_settings.txt\n");
         }
+
+        // apply overrides from settings file
+        if (pAllSettings != NULL && numAllSettings > 0)
+        {
+            glv_SettingGroup_Apply_Overrides(&g_replaySettingGroup, pAllSettings, numAllSettings);
+        }
+    }
+
+    // apply settings from cmd-line args
+    if (glv_SettingGroup_init_from_cmdline(&g_replaySettingGroup, argc, argv, &g_replaySettings.pTraceFilePath) != 0)
+    {
+        // invalid options specified
+        if (pAllSettings != NULL)
+        {
+            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+        }
+        return err;
+    }
+
+    // merge settings so that new settings will get written into the settings file
+    glv_SettingGroup_merge(&g_replaySettingGroup, &pAllSettings, &numAllSettings);
+
+    if (pSettingsFile != NULL)
+    {
+        fclose(pSettingsFile);
+        // Do not set pSettingsFile = NULL !!
+        // The non-NULL value is used farther down to determine 
+        // if a settings file previously existed (and if not, it is 
+        // written out after all the replayers' settings are merged in.
     }
 
     // open trace file and read in header
+    char* pTraceFile = g_replaySettings.pTraceFilePath;
     glv_trace_file_header fileHeader;
     FILE *tracefp;
 
-    if (optind < argc  && strlen(argv[optind]) > 0) {
-        tracefp = fopen(argv[optind], "rb");
-        if (tracefp == NULL) {
-            glv_LogError("Cannot open trace file: '%s'\n", argv[optind]);
+    if (pTraceFile != NULL && strlen(pTraceFile) > 0)
+    {
+        tracefp = fopen(pTraceFile, "rb");
+        if (tracefp == NULL)
+        {
+            glv_LogError("Cannot open trace file: '%s'\n", pTraceFile);
             return 1;
         }
     }
-    else {
-        glv_LogError("No trace file specified\n");
-        usage(argv[0]);
+    else
+    {
+        glv_LogError("No trace file specified.\n");
+        glv_SettingGroup_print(&g_replaySettingGroup);
+        if (pAllSettings != NULL)
+        {
+            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+        }
         return 1;
     }
 
@@ -174,10 +210,14 @@ int main(int argc, char **argv)
     if (glv_FileLike_ReadRaw(traceFile, &fileHeader, sizeof(fileHeader)) == false)
     {
         glv_LogError("Unable to read header from file.\n");
+        if (pAllSettings != NULL)
+        {
+            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+        }
         GLV_DELETE(traceFile);
         return 1;
     }
-    
+
     // Make sure trace file version is supported
     if (fileHeader.trace_file_version < GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE)
     {
@@ -189,7 +229,7 @@ int main(int argc, char **argv)
     glv_trace_packet_replay_library* replayer[GLV_MAX_TRACER_ID_ARRAY_SIZE];
     ReplayFactory makeReplayer;
     Display disp(1024, 768, 0, false);
-    
+
     for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {
         replayer[i] = NULL;
@@ -215,15 +255,27 @@ int main(int argc, char **argv)
             if (replayer[tracerId] == NULL)
             {
                 // replayer failed to be created
+                if (pAllSettings != NULL)
+                {
+                    glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+                }
                 return err;
             }
 
-            // TODO: Will need to address settings here and pass them to the replayer
+            // merge the replayer's settings into the list of all settings so that we can output a comprehensive settings file later on.
+            glv_SettingGroup_merge(replayer[tracerId]->GetSettings(), &pAllSettings, &numAllSettings);
 
-            // Initalize the replayer
+            // update the replayer with the loaded settings
+            replayer[tracerId]->UpdateFromSettings(pAllSettings, numAllSettings);
+
+            // Initialize the replayer
             err = replayer[tracerId]->Initialize(&disp);
             if (err) {
                 glv_LogError("Couldn't Initialize replayer for TracerId %d.\n", tracerId);
+                if (pAllSettings != NULL)
+                {
+                    glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+                }
                 return err;
             }
         }
@@ -231,9 +283,28 @@ int main(int argc, char **argv)
 
     if (tidApi == GLV_TID_RESERVED) {
         glv_LogError("No API specified in tracefile for replaying.\n");
+        if (pAllSettings != NULL)
+        {
+            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+        }
         return -1;
     }
  
+    // if no settings file existed before, then write one out
+    if (pSettingsFile == NULL)
+    {
+        pSettingsFile = fopen("glvreplay_settings.txt", "w");
+        if (pSettingsFile == NULL)
+        {
+            glv_LogWarn("Failed to open glvreplay_settings.txt for writing.\n");
+        }
+        else
+        {
+            glv_SettingGroup_save(pAllSettings, numAllSettings, pSettingsFile);
+            fclose(pSettingsFile);
+        }
+    }
+
     // process snapshot if present
     if (fileHeader.contains_state_snapshot) {
         //TODO
@@ -241,7 +312,7 @@ int main(int argc, char **argv)
 
     // main loop
     Sequencer sequencer(traceFile);
-    err = glv_replay::main_loop(sequencer, replayer, numLoops);
+    err = glv_replay::main_loop(sequencer, replayer, g_replaySettings.numLoops);
 
     for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {
@@ -250,6 +321,11 @@ int main(int argc, char **argv)
             replayer[i]->Deinitialize();
             makeReplayer.Destroy(&replayer[i]);
         }
+    }
+
+    if (pAllSettings != NULL)
+    {
+        glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
     }
     return err;
 }
