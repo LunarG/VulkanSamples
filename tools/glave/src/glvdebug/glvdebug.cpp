@@ -399,6 +399,11 @@ void glvdebug::on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int
     // apply updated settings to the settingGroup so that the UI will respond to the changes
     glv_SettingGroup_Apply_Overrides(&g_settingGroup, pUpdatedSettings, numGroups);
 
+    if (m_pController != NULL)
+    {
+        m_pController->UpdateFromSettings(pUpdatedSettings, numGroups);
+    }
+
     glvdebug_save_settings();
 
     // react to changes in settings
@@ -461,6 +466,13 @@ bool glvdebug::open_trace_file(const std::string &filename)
             }
             else if (bOpened)
             {
+                // Merge in settings from the controller.
+                // This won't replace settings that may have already been loaded from disk.
+                glv_SettingGroup_merge(m_pController->GetSettings(), &g_pAllSettings, &g_numAllSettings);
+
+                // now update the controller with the loaded settings
+                m_pController->UpdateFromSettings(g_pAllSettings, g_numAllSettings);
+
                 // interpret the trace file packets
                 for (unsigned int i = 0; i < m_traceFileInfo.packetCount; i++)
                 {

@@ -35,9 +35,14 @@ glvdebug_controller* glvdebug_controller_factory::Load(const char* filename)
         pController->InterpretTracePacket = (funcptr_glvdebug_controller_interpret_trace_packet)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_interpret_trace_packet");
         pController->LoadTraceFile = (funcptr_glvdebug_controller_load_trace_file)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_load_trace_file");
         pController->UnloadTraceFile = (funcptr_glvdebug_controller_unload_trace_file)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_unload_trace_file");
+        pController->GetSettings = (funcptr_glvdebug_controller_get_settings)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_get_settings");
+        pController->UpdateFromSettings = (funcptr_glvdebug_controller_update_from_settings)glv_platform_get_library_entrypoint(pLibrary, "glvdebug_controller_update_from_settings");
+
         assert(pController->InterpretTracePacket != NULL);
         assert(pController->LoadTraceFile != NULL);
         assert(pController->UnloadTraceFile != NULL);
+        assert(pController->GetSettings != NULL);
+        assert(pController->UpdateFromSettings != NULL);
     }
 
     return pController;

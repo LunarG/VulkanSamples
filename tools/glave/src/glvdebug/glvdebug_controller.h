@@ -27,6 +27,8 @@
 
 extern "C"
 {
+#include "glv_settings.h"
+
 GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL glvdebug_controller_interpret_trace_packet(glv_trace_packet_header* pHeader);
 
 GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
@@ -37,6 +39,8 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_unload_trace_file(void
 typedef glv_trace_packet_header* (GLVTRACER_CDECL *funcptr_glvdebug_controller_interpret_trace_packet)(glv_trace_packet_header* pHeader);
 typedef bool (GLVTRACER_CDECL *funcptr_glvdebug_controller_load_trace_file)(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
 typedef void (GLVTRACER_CDECL *funcptr_glvdebug_controller_unload_trace_file)(void);
+typedef glv_SettingGroup* (GLVTRACER_CDECL *funcptr_glvdebug_controller_get_settings)();
+typedef void (GLVTRACER_CDECL *funcptr_glvdebug_controller_update_from_settings)(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
 
 struct glvdebug_controller
 {
@@ -44,6 +48,8 @@ struct glvdebug_controller
     funcptr_glvdebug_controller_interpret_trace_packet InterpretTracePacket;
     funcptr_glvdebug_controller_load_trace_file LoadTraceFile;
     funcptr_glvdebug_controller_unload_trace_file UnloadTraceFile;
+    funcptr_glvdebug_controller_get_settings GetSettings;
+    funcptr_glvdebug_controller_update_from_settings UpdateFromSettings;
 };
 
 }

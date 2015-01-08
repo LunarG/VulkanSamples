@@ -22,7 +22,7 @@ typedef struct glvdebug_settings
     //bool groups_state_render;
     //bool groups_push_pop_markers;
     //bool groups_nested_calls;
-} glvtrace_settings;
+} glvdebug_settings;
 
 extern glvdebug_settings g_settings;
 extern glv_SettingGroup g_settingGroup;
