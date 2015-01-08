@@ -1557,6 +1557,11 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffe
 {
     if (getDS(descriptorSet)) {
         assert(index < XGL_MAX_DESCRIPTOR_SETS);
+        if (dsUpdate(descriptorSet)) {
+            char str[1024];
+            sprintf(str, "You must call xglEndDescriptorSetUpdate(%p) before this call to xglCmdBindDescriptorSet()!", (void*)descriptorSet);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
+        }
         pthread_mutex_lock(&globalLock);
         lastBoundDS[index] = descriptorSet;
         lastBoundSlotOffset[index] = slotOffset;

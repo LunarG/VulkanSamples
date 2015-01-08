@@ -40,5 +40,105 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_MEMORY_BINDING_ERROR          = 12, // Error during one of many calls that bind memory to object or CB
     MEMTRACK_OUT_OF_MEMORY_ERROR           = 13, // malloc failed
     MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
+    MEMTRACK_INVALID_STATE                 = 15, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
 } MEM_TRACK_ERROR;
 
+/*
+ * Data Structure overview
+ *  There are 3 global Linked-Lists (LLs)
+ *  pGlobalCBHead points to head of Command Buffer (CB) LL
+ *    Off of each node in this LL there is a separate LL of
+ *    memory objects that are referenced by this CB
+ *  pGlobalMemObjHead points to head of Memory Object LL
+ *    Off of each node in this LL there are 2 separate LL
+ *    One is a list of all CBs referencing this mem obj
+ *    Two is a list of all XGL Objects that are bound to this memory
+ *  pGlobalObjHead point to head of XGL Objects w/ bound mem LL
+ *    Each node of this LL contains a ptr to global Mem Obj node for bound mem
+ *
+ * The "Global" nodes are for the main LLs
+ * The "mini" nodes are for ancillary LLs that are pointed to from global nodes
+ *
+ * Algorithm overview
+ * These are the primary events that should happen related to different objects
+ * 1. Command buffers
+ *   CREATION - Add node to global LL
+ *   CMD BIND - If mem associated, add mem reference to mini LL
+ *   DESTROY - Remove from global LL, decrement (and report) mem references
+ * 2. Mem Objects
+ *   CREATION - Add node to global LL
+ *   OBJ BIND - Add obj node to mini LL for that mem node
+ *   CMB BIND - If mem-related add CB node to mini LL for that mem node
+ *   DESTROY - Flag as errors any remaining refs and Remove from global LL
+ * 3. Generic Objects
+ *   MEM BIND - DESTROY any previous binding, Add global obj node w/ ref to global mem obj node, Add obj node to mini LL for that mem node
+ *   DESTROY - If mem bound, remove reference from mini LL for that mem Node, remove global obj node
+ */
+// TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
+// TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
+
+// Generic data struct for various "mini" Linked-Lists
+//  This just wraps some type of XGL OBJ and a pNext ptr
+//  Used for xgl obj, cmd buffer, and mem obj wrapping
+typedef struct _MINI_NODE {
+    struct _MINI_NODE* pNext;
+    union { // different objects that can be wrapped
+        XGL_OBJECT object;
+        XGL_GPU_MEMORY mem;
+        XGL_CMD_BUFFER cmdBuffer;
+        XGL_BASE_OBJECT data;     // for generic handling of data
+    };
+} MINI_NODE;
+
+struct GLOBAL_MEM_OBJ_NODE;
+
+// Store a single LL of command buffers
+typedef struct _GLOBAL_CB_NODE {
+    struct _GLOBAL_CB_NODE* pNextGlobalCBNode;
+    MINI_NODE* pMemObjList; // LL of Mem objs referenced by this CB
+    XGL_CMD_BUFFER cmdBuffer;
+    XGL_FENCE fence; // fence tracking this cmd buffer
+} GLOBAL_CB_NODE;
+
+// Data struct for tracking memory object
+typedef struct _GLOBAL_MEM_OBJ_NODE {
+    struct _GLOBAL_MEM_OBJ_NODE* pNextGlobalNode; // Ptr to next mem obj in global list of all objs
+    MINI_NODE* pObjBindings; // Ptr to list of objects bound to this memory
+    MINI_NODE* pCmdBufferBindings; // Ptr to list of cmd buffers that this mem object references
+    XGL_UINT refCount; // Count of references (obj bindings or CB use)
+    XGL_GPU_MEMORY mem;
+    XGL_MEMORY_ALLOC_INFO allocInfo;
+    // TODO : Currently using MEM state struct to also track Image states
+    union {
+        XGL_MEMORY_STATE_TRANSITION memory;
+        XGL_IMAGE_STATE_TRANSITION image; // use when img attached to this mem obj
+    } transition;
+} GLOBAL_MEM_OBJ_NODE;
+
+typedef struct _GLOBAL_OBJECT_NODE {
+    struct _GLOBAL_OBJECT_NODE* pNext;
+    GLOBAL_MEM_OBJ_NODE* pMemNode;
+    XGL_OBJECT object;
+    XGL_STRUCTURE_TYPE sType;
+    int ref_count;
+    // Capture all object types that may have memory bound. From prog guide:
+    // The only objects that are guaranteed to have no external memory
+    //   requirements are devices, queues, command buffers, shaders and memory objects.
+    union {
+        XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO color_attachment_view_create_info;
+        XGL_DEPTH_STENCIL_VIEW_CREATE_INFO ds_view_create_info;
+        XGL_IMAGE_VIEW_CREATE_INFO image_view_create_info;
+        XGL_IMAGE_CREATE_INFO image_create_info;
+        XGL_GRAPHICS_PIPELINE_CREATE_INFO graphics_pipeline_create_info;
+        XGL_COMPUTE_PIPELINE_CREATE_INFO compute_pipeline_create_info;
+        XGL_SAMPLER_CREATE_INFO sampler_create_info;
+        XGL_DESCRIPTOR_SET_CREATE_INFO descriptor_set_create_info;
+        XGL_VIEWPORT_STATE_CREATE_INFO viewport_create_info;
+        XGL_DEPTH_STENCIL_STATE_CREATE_INFO ds_state_create_info;
+        XGL_RASTER_STATE_CREATE_INFO raster_state_create_info;
+        XGL_COLOR_BLEND_STATE_CREATE_INFO cb_state_create_info;
+        XGL_MSAA_STATE_CREATE_INFO msaa_state_create_info;
+        XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
+    } create_info;
+    char object_name[32];
+} GLOBAL_OBJECT_NODE;

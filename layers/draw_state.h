@@ -45,6 +45,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS       = 17, // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT  = 18, // Invalid dyn state object
     DRAWSTATE_MISSING_DOT_PROGRAM           = 19, // No "dot" program in order to generate png image
+    DRAWSTATE_BINDING_DS_NO_END_UPDATE      = 20, // DS bound to CmdBuffer w/o call to xglEndDescriptorSetUpdate())
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE

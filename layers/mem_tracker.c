@@ -102,78 +102,6 @@ static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
         }
     }
 }
-/*
- * Data Structure overview
- *  There are 3 global Linked-Lists (LLs)
- *  pGlobalCBHead points to head of Command Buffer (CB) LL
- *    Off of each node in this LL there is a separate LL of
- *    memory objects that are referenced by this CB
- *  pGlobalMemObjHead points to head of Memory Object LL
- *    Off of each node in this LL there are 2 separate LL
- *    One is a list of all CBs referencing this mem obj
- *    Two is a list of all XGL Objects that are bound to this memory
- *  pGlobalObjHead point to head of XGL Objects w/ bound mem LL
- *    Each node of this LL contains a ptr to global Mem Obj node for bound mem
- *
- * The "Global" nodes are for the main LLs
- * The "mini" nodes are for ancillary LLs that are pointed to from global nodes
- *
- * Algorithm overview
- * These are the primary events that should happen related to different objects
- * 1. Command buffers
- *   CREATION - Add node to global LL
- *   CMD BIND - If mem associated, add mem reference to mini LL
- *   DESTROY - Remove from global LL, decrement (and report) mem references
- * 2. Mem Objects
- *   CREATION - Add node to global LL
- *   OBJ BIND - Add obj node to mini LL for that mem node
- *   CMB BIND - If mem-related add CB node to mini LL for that mem node
- *   DESTROY - Flag as errors any remaining refs and Remove from global LL
- * 3. Generic Objects
- *   MEM BIND - DESTROY any previous binding, Add global obj node w/ ref to global mem obj node, Add obj node to mini LL for that mem node
- *   DESTROY - If mem bound, remove reference from mini LL for that mem Node, remove global obj node
- */
-// TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
-// TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
-
-// Generic data struct for various "mini" Linked-Lists
-//  This just wraps some type of XGL OBJ and a pNext ptr
-//  Used for xgl obj, cmd buffer, and mem obj wrapping
-typedef struct _MINI_NODE {
-    struct _MINI_NODE* pNext;
-    union { // different objects that can be wrapped
-        XGL_OBJECT object;
-        XGL_GPU_MEMORY mem;
-        XGL_CMD_BUFFER cmdBuffer;
-        XGL_BASE_OBJECT data;     // for generic handling of data
-    };
-} MINI_NODE;
-
-struct GLOBAL_MEM_OBJ_NODE;
-
-// Store a single LL of command buffers
-typedef struct _GLOBAL_CB_NODE {
-    struct _GLOBAL_CB_NODE* pNextGlobalCBNode;
-    MINI_NODE* pMemObjList; // LL of Mem objs referenced by this CB
-    XGL_CMD_BUFFER cmdBuffer;
-    XGL_FENCE fence; // fence tracking this cmd buffer
-} GLOBAL_CB_NODE;
-
-// Data struct for tracking memory object
-typedef struct _GLOBAL_MEM_OBJ_NODE {
-    struct _GLOBAL_MEM_OBJ_NODE* pNextGlobalNode; // Ptr to next mem obj in global list of all objs
-    MINI_NODE* pObjBindings; // Ptr to list of objects bound to this memory
-    MINI_NODE* pCmdBufferBindings; // Ptr to list of cmd buffers that this mem object references
-    XGL_UINT refCount; // Count of references (obj bindings or CB use)
-    XGL_GPU_MEMORY mem;
-    XGL_MEMORY_ALLOC_INFO allocInfo;
-} GLOBAL_MEM_OBJ_NODE;
-
-typedef struct _GLOBAL_OBJECT_NODE {
-    struct _GLOBAL_OBJECT_NODE* pNext;
-    GLOBAL_MEM_OBJ_NODE* pMemNode;
-    XGL_OBJECT object;
-} GLOBAL_OBJECT_NODE;
 
 static GLOBAL_CB_NODE* pGlobalCBHead = NULL;
 static GLOBAL_MEM_OBJ_NODE* pGlobalMemObjHead = NULL;
@@ -309,7 +237,7 @@ static XGL_BOOL validateCBMemRef(const XGL_CMD_BUFFER cb, XGL_UINT memRefCount, 
     return XGL_TRUE;
 }
 
-static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo)
+static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_IMAGE_STATE defaultState)
 {
     GLOBAL_MEM_OBJ_NODE* pTrav = pGlobalMemObjHead;
     if (!pTrav) {
@@ -333,6 +261,8 @@ static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_
         if (pAllocInfo) // MEM alloc created by xglWsiX11CreatePresentableImage() doesn't have alloc info struct
             memcpy(&pTrav->allocInfo, pAllocInfo, sizeof(XGL_MEMORY_ALLOC_INFO));
         pTrav->mem = mem;
+        pTrav->transition.memory.oldState = defaultState;
+        pTrav->transition.memory.newState = defaultState;
     }
 }
 
@@ -580,7 +510,7 @@ static GLOBAL_OBJECT_NODE* getGlobalObjectNode(const XGL_OBJECT object)
     return pTrav;
 }
 
-static GLOBAL_OBJECT_NODE* insertGlobalObjectNode(XGL_OBJECT object)
+static GLOBAL_OBJECT_NODE* insertGlobalObjectNode(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, char *name_prefix)
 {
     GLOBAL_OBJECT_NODE* pTrav = pGlobalObjectHead;
     if (!pTrav) {
@@ -607,6 +537,10 @@ static GLOBAL_OBJECT_NODE* insertGlobalObjectNode(XGL_OBJECT object)
     else {
         numObjectNodes++;
         pTrav->object = object;
+        pTrav->ref_count = 1;
+        pTrav->sType = sType;
+        memcpy(&pTrav->create_info, pCreateInfo, struct_size);
+        sprintf(pTrav->object_name, "%s_%p", name_prefix, object);
         return pTrav;
     }
 }
@@ -665,15 +599,16 @@ static XGL_BOOL updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
         clearObjectBinding(object);
         return XGL_TRUE;
     }
-    // Find obj node or add it if we don't have one
+    char str[1024];
     GLOBAL_OBJECT_NODE* pGlobalObjTrav = getGlobalObjectNode(object);
-    if (!pGlobalObjTrav)
-        pGlobalObjTrav = insertGlobalObjectNode(object);
-
+    assert(pGlobalObjTrav);
+    if (!pGlobalObjTrav) {
+        sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+    }
     // non-null case so should have real mem obj
     GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
     if (!pTrav) {
-        char str[1024];
         sprintf(str, "While trying to bind mem for obj %p, couldn't find node for mem obj %p", (void*)object, (void*)mem);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         return XGL_FALSE;
@@ -684,9 +619,15 @@ static XGL_BOOL updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
 
     if (pGlobalObjTrav->pMemNode) {
         clearObjectBinding(object); // Need to clear the previous object binding before setting new binding
-        char str[1024];
         sprintf(str, "Updating memory binding for object %p from mem obj %p to %p", object, pGlobalObjTrav->pMemNode->mem, mem);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_NONE, "MEM", str);
+    }
+    // For image objects, make sure default memory state is correctly set
+    if (XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pGlobalObjTrav->sType) {
+        if (pGlobalObjTrav->create_info.image_create_info.usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
+            pTrav->transition.image.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+            pTrav->transition.image.newState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+        }
     }
     pGlobalObjTrav->pMemNode = pTrav;
     return XGL_TRUE;
@@ -1008,7 +949,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_M
 {
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
-    insertGlobalMemObj(*pMem, pAllocInfo);
+    insertGlobalMemObj(*pMem, pAllocInfo, XGL_MEMORY_STATE_DATA_TRANSFER);
     printMemList();
     return result;
 }
@@ -1250,6 +1191,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
 {
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
+    if (XGL_SUCCESS == result) {
+        insertGlobalObjectNode(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_CREATE_INFO), "image");
+    }
     return result;
 }
 
@@ -1262,18 +1206,27 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(XGL_IMAGE image, c
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO), "image_view");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE device, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, XGL_COLOR_ATTACHMENT_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO), "color_attachment_view");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO), "ds_view");
+    }
     return result;
 }
 
@@ -1286,12 +1239,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), "compute_pipeline");
+    }
     return result;
 }
 
@@ -1316,12 +1275,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pSampler, pCreateInfo->sType, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO), "sampler");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet)
 {
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pDescriptorSet, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO), "descriptor_set");
+    }
     return result;
 }
 
@@ -1363,30 +1328,46 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET d
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
+    if (result == XGL_SUCCESS) {
+        // viewport doesn't have an sType
+        insertGlobalObjectNode(*pState, _XGL_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(XGL_VIEWPORT_STATE_CREATE_INFO), "viewport_state");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_RASTER_STATE_CREATE_INFO), "raster_state");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_MSAA_STATE_CREATE_INFO), "msaa_state");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COLOR_BLEND_STATE_CREATE_INFO), "cb_state");
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState)
 {
     XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
+    if (result == XGL_SUCCESS) {
+        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DEPTH_STENCIL_STATE_CREATE_INFO), "ds_state");
+    }
     return result;
 }
 
@@ -1478,26 +1459,45 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(XGL_CMD_BUFFER cmdBuffer,
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions)
 {
-    // TODO : Track memory state transitions
-    //   Flag incorrect transitions when states don't match
-    XGL_GPU_MEMORY mem = pStateTransitions->mem;
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdPrepareMemoryRegions() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+    for (int i=0; i < transitionCount; i++) {
+        XGL_GPU_MEMORY mem = pStateTransitions[i].mem;
+        if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+            char str[1024];
+            sprintf(str, "In xglCmdPrepareMemoryRegions() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
+        } else {
+            GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
+            // Validate mem state in order
+            if (pMem->transition.memory.newState != pStateTransitions[i].oldState) {
+                char str[1024];
+                sprintf(str, "In xglCmdPrepareMemoryRegions() call, mem %p actual oldState of %s doesn't match transition oldState of %s", mem, string_XGL_MEMORY_STATE(pMem->transition.memory.newState), string_XGL_MEMORY_STATE(pStateTransitions[i].oldState));
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_STATE, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
+            }
+            // Once state is validated, update to current state
+            memcpy(&pMem->transition, &pStateTransitions[i], sizeof(XGL_MEMORY_STATE_TRANSITION));
+        }
     }
     nextTable.CmdPrepareMemoryRegions(cmdBuffer, transitionCount, pStateTransitions);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions)
 {
-    // TODO : This will have an image object that's bound to memory in the pStateTransitions struct
-    //   Need to pull object based on image and then pull mem mapping from that object
-    XGL_GPU_MEMORY mem = getMemBindingFromObject((XGL_OBJECT)pStateTransitions->image);
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdPrepareImages() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+    for (int i=0; i < transitionCount; i++) {
+        XGL_GPU_MEMORY mem = getMemBindingFromObject(pStateTransitions[i].image);
+        if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+            char str[1024];
+            sprintf(str, "In xglCmdPrepareImages() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
+        } else {
+            GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
+            // Validate mem state in order
+            if ((XGL_IMAGE_STATE)pMem->transition.image.newState != pStateTransitions[i].oldState) {
+                char str[1024];
+                sprintf(str, "In xglCmdPrepareImages() call, mem %p w/ image %p actual oldState of %s doesn't match transition oldState of %s", mem, pStateTransitions[i].image, string_XGL_IMAGE_STATE(pMem->transition.image.newState), string_XGL_IMAGE_STATE(pStateTransitions[i].oldState));
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_STATE, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
+            }
+            memcpy(&pMem->transition, &pStateTransitions[i], sizeof(XGL_IMAGE_STATE_TRANSITION));
+        }
     }
     nextTable.CmdPrepareImages(cmdBuffer, transitionCount, pStateTransitions);
 }
@@ -1869,12 +1869,15 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_window
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
 {
     XGL_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
-    // First insert the new Mem Object and then bind it to created image
-    insertGlobalMemObj(*pMem, NULL);
-    if (XGL_FALSE == updateObjectBinding(*pImage, *pMem)) {
-        char str[1024];
-        sprintf(str, "In xglWsiX11CreatePresentableImage(), unable to set image %p binding to mem obj %p", (void*)*pImage, (void*)*pMem);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, *pImage, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+    if (XGL_SUCCESS == result) {
+        // Add image object, then insert the new Mem Object and then bind it to created image
+        insertGlobalObjectNode(*pImage, _XGL_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
+        insertGlobalMemObj(*pMem, NULL, XGL_IMAGE_STATE_UNINITIALIZED_TARGET);
+        if (XGL_FALSE == updateObjectBinding(*pImage, *pMem)) {
+            char str[1024];
+            sprintf(str, "In xglWsiX11CreatePresentableImage(), unable to set image %p binding to mem obj %p", (void*)*pImage, (void*)*pMem);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, *pImage, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        }
     }
     printObjList();
     printMemList();
