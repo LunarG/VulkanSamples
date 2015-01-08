@@ -666,7 +666,7 @@ static void dsDumpDot(FILE* pOutFile)
                         strcat(ds_config_str, tmp_str);
                         skipUnusedCount = 0;
                     }*/
-                    sprintf(label, "ImageAttachInfo Slot%u", j);
+                    sprintf(label, "SamplerAttachInfo Slot%u", j);
                     fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(getSamplerCreateInfo(pDS->dsSlot[j].sampler), label));
                     fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
                     break;

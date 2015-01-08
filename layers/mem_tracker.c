@@ -43,6 +43,9 @@ static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_INFO;
 static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
 static FILE *g_logFile = NULL;
 
+#define MAX_BINDING 0xFFFFFFFF
+static XGL_UINT lastVtxBinding = MAX_BINDING;
+
 // Utility function to handle reporting
 static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     XGL_VALIDATION_LEVEL validationLevel,
@@ -236,6 +239,108 @@ static XGL_BOOL validateCBMemRef(const XGL_CMD_BUFFER cb, XGL_UINT memRefCount, 
     }
     return XGL_TRUE;
 }
+// Return ptr to node in global LL containing mem, or NULL if not found
+static GLOBAL_MEM_OBJ_NODE* getGlobalMemNode(const XGL_GPU_MEMORY mem)
+{
+    GLOBAL_MEM_OBJ_NODE* pTrav = pGlobalMemObjHead;
+    while (pTrav && (pTrav->mem != mem))
+        pTrav = pTrav->pNextGlobalNode;
+    return pTrav;
+}
+
+// Set a memory state transition for region of memory
+static void setMemTransition(const XGL_GPU_MEMORY mem, const XGL_MEMORY_STATE_TRANSITION* pTransition)
+{
+    // find memory node
+    GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
+    if (NULL == pTrav) {
+        // TODO : Flag error for missing node
+    }
+    else {
+        MEM_STATE_TRANSITION_NODE* pMTNode = pTrav->pTransitions;
+        MEM_STATE_TRANSITION_NODE* pPrevMTNode = pMTNode;
+        // TODO : Not sure of best way (or need) to distinguish mem from image here
+        // Verify that it's being used as memory (not image)
+        //if (!pTrav->pTransitions.isMem) {
+            // TODO : Flag error for setting mem transition on image memory
+        //}
+        // Basic state update algorithm
+        // 1. Find insertion point where offset of new region will fall
+        // 1a. If insertion falls in middle of existing region, split that region
+        // 2. Find end point where offset+regionSize of new region will fall
+        // 2b. If end falls in middle of existing region, split
+        // 3. Free any newly unneeded regions
+
+        // As we make insertions, set ptr to first node to free and count number of nodes to free
+        uint32_t numToFree = 0;
+        MEM_STATE_TRANSITION_NODE* pFreeMe = NULL;
+        // Bool to track if start node was split so we don't delete it
+        uint32_t saveStartNode = 0;
+        // Create new node
+        MEM_STATE_TRANSITION_NODE* pNewNode = (MEM_STATE_TRANSITION_NODE*)malloc(sizeof(MEM_STATE_TRANSITION_NODE));
+        memset(pNewNode, 0, sizeof(MEM_STATE_TRANSITION_NODE));
+        memcpy(&pNewNode->transition, pTransition, sizeof(XGL_MEMORY_STATE_TRANSITION));
+        if (!pMTNode) { // Initialization case, just set HEAD ptr to new node
+            pTrav->pTransitions = pNewNode;
+        }
+        else {
+            // If offset of new state is less than current offset, insert it & update state after it as needed
+            while (pMTNode->transition.memory.offset > pTransition->offset) {
+                pPrevMTNode = pMTNode;
+                pMTNode = pMTNode->pNext;
+            }
+            // pMTNode is the region where new region's start will fall
+            if (pTransition->offset > pMTNode->transition.memory.offset) {
+                // split start region
+                saveStartNode = 1;
+                pMTNode->transition.memory.regionSize = pTransition->offset - pMTNode->transition.memory.offset;
+                pMTNode->pNext = pNewNode;
+            }
+            else { // start point of regions are equal
+                // Prev ptr now points to new region
+                if (pPrevMTNode == pTrav->pTransitions)
+                    pTrav->pTransitions = pNewNode;
+                else
+                    pPrevMTNode->pNext = pNewNode;
+            }
+            // Start point insertion complete, find end point
+            XGL_GPU_SIZE newEndPoint = pTransition->offset + pTransition->regionSize;
+            XGL_GPU_SIZE curEndPoint = pMTNode->transition.memory.offset + pMTNode->transition.memory.regionSize;
+            while (newEndPoint > curEndPoint) {
+                // Flag any passed-over regions here for deletion
+                if (NULL == pFreeMe) {
+                    pFreeMe = pMTNode;
+                }
+                numToFree++;
+                pPrevMTNode = pMTNode;
+                pMTNode = pMTNode->pNext;
+                // TODO : Handle NULL pMTNode case
+                curEndPoint = pMTNode->transition.memory.offset + pMTNode->transition.memory.regionSize;
+            }
+            if (newEndPoint < curEndPoint) {
+                // split end region
+                pMTNode->transition.memory.offset = pTransition->offset + pTransition->regionSize;
+                pNewNode->pNext = pMTNode;
+            }
+            else { // end points of regions are equal
+                pNewNode->pNext = pMTNode->pNext;
+                numToFree++;
+                if (NULL == pFreeMe)
+                    pFreeMe = pMTNode;
+            }
+            // Free any regions that are no longer needed
+            if ((1 == saveStartNode) && (NULL != pFreeMe))
+                pFreeMe = pFreeMe->pNext;
+            MEM_STATE_TRANSITION_NODE* pNodeToFree;
+            while (numToFree) {
+                pNodeToFree = pFreeMe;
+                pFreeMe = pFreeMe->pNext;
+                free(pNodeToFree);
+                numToFree--;
+            }
+        }
+    }
+}
 
 static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_IMAGE_STATE defaultState)
 {
@@ -261,18 +366,20 @@ static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_
         if (pAllocInfo) // MEM alloc created by xglWsiX11CreatePresentableImage() doesn't have alloc info struct
             memcpy(&pTrav->allocInfo, pAllocInfo, sizeof(XGL_MEMORY_ALLOC_INFO));
         pTrav->mem = mem;
-        pTrav->transition.memory.oldState = defaultState;
-        pTrav->transition.memory.newState = defaultState;
+        if (pAllocInfo) { // TODO : How to handle Wsi-created alloc?
+            // Create initial state node that covers entire allocation
+            // TODO : How to handle image memory?
+            XGL_MEMORY_STATE_TRANSITION initMemStateTrans;
+            memset(&initMemStateTrans, 0, sizeof(XGL_MEMORY_STATE_TRANSITION));
+            initMemStateTrans.sType = XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION;
+            initMemStateTrans.mem = mem;
+            initMemStateTrans.oldState = defaultState;
+            initMemStateTrans.newState = defaultState;
+            initMemStateTrans.offset = 0;
+            initMemStateTrans.regionSize = pAllocInfo->allocationSize;
+            setMemTransition(mem, &initMemStateTrans);
+        }
     }
-}
-
-// Return ptr to node in global LL containing mem, or NULL if not found
-static GLOBAL_MEM_OBJ_NODE* getGlobalMemNode(const XGL_GPU_MEMORY mem)
-{
-    GLOBAL_MEM_OBJ_NODE* pTrav = pGlobalMemObjHead;
-    while (pTrav && (pTrav->mem != mem))
-        pTrav = pTrav->pNextGlobalNode;
-    return pTrav;
 }
 
 // Find Global CB Node and add mem binding to mini LL
@@ -430,6 +537,14 @@ static void deleteGlobalMemNode(XGL_GPU_MEMORY mem)
         pPrev->pNextGlobalNode = pTrav->pNextGlobalNode;
         if (pGlobalMemObjHead == pTrav)
             pGlobalMemObjHead = pTrav->pNextGlobalNode;
+        // delete transition list off of this node
+        MEM_STATE_TRANSITION_NODE* pMSTNode = pTrav->pTransitions;
+        MEM_STATE_TRANSITION_NODE* pPrevMSTNode = pMSTNode;
+        while(pMSTNode) {
+            pPrevMSTNode = pMSTNode;
+            pMSTNode = pMSTNode->pNext;
+            free(pPrevMSTNode);
+        }
         free(pTrav);
     }
     else {
@@ -623,10 +738,21 @@ static XGL_BOOL updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_NONE, "MEM", str);
     }
     // For image objects, make sure default memory state is correctly set
+    // TODO : What's the best/correct way to handle this?
     if (XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pGlobalObjTrav->sType) {
         if (pGlobalObjTrav->create_info.image_create_info.usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
+            XGL_MEMORY_STATE_TRANSITION initMemStateTrans;
+            memset(&initMemStateTrans, 0, sizeof(XGL_MEMORY_STATE_TRANSITION));
+            initMemStateTrans.mem = mem;
+            initMemStateTrans.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+            initMemStateTrans.newState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+            initMemStateTrans.offset = 0;
+            initMemStateTrans.regionSize = pTrav->allocInfo.allocationSize;
+            setMemTransition(mem, &initMemStateTrans);
+/*
             pTrav->transition.image.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
             pTrav->transition.image.newState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+*/
         }
     }
     pGlobalObjTrav->pMemNode = pTrav;
@@ -1407,6 +1533,24 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffe
 //    need to account for that mem now having binding to given cmdBuffer
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline)
 {
+#if 0
+    // TODO : If memory bound to pipeline, then need to tie that mem to cmdBuffer
+    if (getPipeline(pipeline)) {
+        GLOBAL_CB_NODE *pCBTrav = getGlobalCBNode(cmdBuffer);
+        if (pCBTrav) {
+            pCBTrav->pipelines[pipelineBindPoint] = pipeline;
+        } else {
+            char str[1024];
+            sprintf(str, "Attempt to bind Pipeline %p to non-existant command buffer %p!", (void*)pipeline, cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, (XGL_CHAR *) "DS", (XGL_CHAR *) str);
+        }
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, MEMTRACK_INVALID_OBJECT, (XGL_CHAR *) "DS", (XGL_CHAR *) str);
+    }
+#endif
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
@@ -1417,11 +1561,26 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffe
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state)
 {
+    GLOBAL_OBJECT_NODE *pNode;
+    GLOBAL_CB_NODE *pCmdBuf = getGlobalCBNode(cmdBuffer);
+    if (!pCmdBuf) {
+        char str[1024];
+        sprintf(str, "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, "DD", str);
+    }
+    pNode = getGlobalObjectNode(state);
+    if (!pNode) {
+        char str[1024];
+        sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, MEMTRACK_INVALID_OBJECT, "DD", str);
+    }
+    pCmdBuf->pDynamicState[stateBindPoint] = pNode;
     nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset)
 {
+    // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
     nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, index, descriptorSet, slotOffset);
 }
 
@@ -1432,28 +1591,73 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdB
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding)
 {
-    // Track this memory. What exactly is this call doing?
     if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In xglCmdBindVertexData() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
+    // Now update CB's vertex binding list
+    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
+    if (!pCBTrav) {
+        char str[1024];
+        sprintf(str, "Trying to BindVertexData mem obj %p to CB %p but no Node for that CB. Was CB incorrectly destroyed?", mem, cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, "MEM", str);
+    } else {
+        MEMORY_BINDING *pBindInfo;
+        XGL_UINT dontCare;
+        XGL_RESULT result;
+        pBindInfo = malloc(sizeof(MEMORY_BINDING));
+        pBindInfo->offset = offset;
+        pBindInfo->binding = binding;
+        pBindInfo->mem = mem;
+        result = insertMiniNode(&pCBTrav->pVertexBufList, pBindInfo, &dontCare);
+        if (result) {
+            char str[1024];
+            sprintf(str, "In xglCmdBindVertexData and ran out of memory to track binding. CmdBuffer: %p, memory %p", cmdBuffer, mem);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_OUT_OF_MEMORY_ERROR, "MEM", str);
+        }
+    }
+    lastVtxBinding = binding;
     nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
     // Track this memory. What exactly is this call doing?
+    // TODO : verify state of memory is XGL_MEMORY_STATE_INDEX_DATA
     if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In xglCmdBindIndexData() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+    }
+    // Now update CB's index binding list
+    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
+    if (!pCBTrav) {
+        char str[1024];
+        sprintf(str, "Trying to BindIndexData mem obj %p to CB %p but no Node for that CB. Was CB incorrectly destroyed?", mem, cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_MEM_OBJ, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
+    } else {
+        MEMORY_BINDING *pBindInfo;
+        XGL_UINT dontCare;
+        XGL_RESULT result;
+        pBindInfo = malloc(sizeof(MEMORY_BINDING));
+        pBindInfo->indexType = indexType;
+        pBindInfo->mem = mem;
+        pBindInfo->offset = offset;
+        pBindInfo->binding = 0;
+        result = insertMiniNode(&pCBTrav->pIndexBufList, pBindInfo, &dontCare);
+        if (result) {
+            char str[1024];
+            sprintf(str, "In xglCmdBindIndexData and ran out of memory to track binding. CmdBuffer: %p, memory %p", cmdBuffer, mem);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_OUT_OF_MEMORY_ERROR, "MEM", str);
+        }
     }
     nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
 }
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(XGL_CMD_BUFFER cmdBuffer, XGL_UINT colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment)
 {
+    // TODO : Verify that memory for attachments is in the correct state
     nextTable.CmdBindAttachments(cmdBuffer, colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);
 }
 
@@ -1466,8 +1670,10 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBu
             sprintf(str, "In xglCmdPrepareMemoryRegions() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
         } else {
-            GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
+            // TODO : Need to intelligently set state so it's captured on per-region basis (not per mem obj)
+            setMemTransition(mem, &pStateTransitions[i]);
             // Validate mem state in order
+/*          GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
             if (pMem->transition.memory.newState != pStateTransitions[i].oldState) {
                 char str[1024];
                 sprintf(str, "In xglCmdPrepareMemoryRegions() call, mem %p actual oldState of %s doesn't match transition oldState of %s", mem, string_XGL_MEMORY_STATE(pMem->transition.memory.newState), string_XGL_MEMORY_STATE(pStateTransitions[i].oldState));
@@ -1475,6 +1681,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBu
             }
             // Once state is validated, update to current state
             memcpy(&pMem->transition, &pStateTransitions[i], sizeof(XGL_MEMORY_STATE_TRANSITION));
+*/
         }
     }
     nextTable.CmdPrepareMemoryRegions(cmdBuffer, transitionCount, pStateTransitions);
@@ -1489,14 +1696,17 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, X
             sprintf(str, "In xglCmdPrepareImages() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
         } else {
-            GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
+            // TODO : Need to intelligently set state so it's captured on per-region basis (not per mem obj)
+            //GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
             // Validate mem state in order
+/*
             if ((XGL_IMAGE_STATE)pMem->transition.image.newState != pStateTransitions[i].oldState) {
                 char str[1024];
                 sprintf(str, "In xglCmdPrepareImages() call, mem %p w/ image %p actual oldState of %s doesn't match transition oldState of %s", mem, pStateTransitions[i].image, string_XGL_IMAGE_STATE(pMem->transition.image.newState), string_XGL_IMAGE_STATE(pStateTransitions[i].oldState));
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_STATE, (XGL_CHAR *) "MEM", (XGL_CHAR *) str);
             }
             memcpy(&pMem->transition, &pStateTransitions[i], sizeof(XGL_IMAGE_STATE_TRANSITION));
+*/
         }
     }
     nextTable.CmdPrepareImages(cmdBuffer, transitionCount, pStateTransitions);
@@ -1642,6 +1852,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdFillMemory(XGL_CMD_BUFFER cmdBuffer, XGL_
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_FLOAT color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
+    // TODO : Verify memory is in XGL_IMAGE_STATE_CLEAR state
     XGL_GPU_MEMORY mem = getMemBindingFromObject(image);
     if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
@@ -1653,6 +1864,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer,
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const XGL_UINT32 color[4], XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
+    // TODO : Verify memory is in XGL_IMAGE_STATE_CLEAR state
     XGL_GPU_MEMORY mem = getMemBindingFromObject(image);
     if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
@@ -1664,6 +1876,7 @@ XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuff
 
 XGL_LAYER_EXPORT XGL_VOID XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_FLOAT depth, XGL_UINT32 stencil, XGL_UINT rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
+    // TODO : Verify memory is in XGL_IMAGE_STATE_CLEAR state
     XGL_GPU_MEMORY mem = getMemBindingFromObject(image);
     if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];

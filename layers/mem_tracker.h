@@ -91,14 +91,16 @@ typedef struct _MINI_NODE {
 } MINI_NODE;
 
 struct GLOBAL_MEM_OBJ_NODE;
-
-// Store a single LL of command buffers
-typedef struct _GLOBAL_CB_NODE {
-    struct _GLOBAL_CB_NODE* pNextGlobalCBNode;
-    MINI_NODE* pMemObjList; // LL of Mem objs referenced by this CB
-    XGL_CMD_BUFFER cmdBuffer;
-    XGL_FENCE fence; // fence tracking this cmd buffer
-} GLOBAL_CB_NODE;
+// Store a linked-list of transition nodes to account for different states across a single mem obj
+typedef struct _MEM_STATE_TRANSITION_NODE {
+    struct _MEM_STATE_TRANSITION_NODE* pNext;
+    uint32_t numRegions; // Allocation may be broken into various regions
+    uint32_t isMem; // 1 for memory, 0 for image
+    union {
+        XGL_MEMORY_STATE_TRANSITION memory;
+        XGL_IMAGE_STATE_TRANSITION image; // use when img attached to this mem obj
+    } transition;
+} MEM_STATE_TRANSITION_NODE;
 
 // Data struct for tracking memory object
 typedef struct _GLOBAL_MEM_OBJ_NODE {
@@ -108,11 +110,7 @@ typedef struct _GLOBAL_MEM_OBJ_NODE {
     XGL_UINT refCount; // Count of references (obj bindings or CB use)
     XGL_GPU_MEMORY mem;
     XGL_MEMORY_ALLOC_INFO allocInfo;
-    // TODO : Currently using MEM state struct to also track Image states
-    union {
-        XGL_MEMORY_STATE_TRANSITION memory;
-        XGL_IMAGE_STATE_TRANSITION image; // use when img attached to this mem obj
-    } transition;
+    MEM_STATE_TRANSITION_NODE* pTransitions; // LL of transitions for this Mem Obj
 } GLOBAL_MEM_OBJ_NODE;
 
 typedef struct _GLOBAL_OBJECT_NODE {
@@ -142,3 +140,39 @@ typedef struct _GLOBAL_OBJECT_NODE {
     } create_info;
     char object_name[32];
 } GLOBAL_OBJECT_NODE;
+
+/*
+ * Track a Vertex or Index buffer binding
+ */
+typedef struct _MEMORY_BINDING {
+    XGL_OBJECT      mem;
+    XGL_GPU_SIZE    offset;
+    XGL_UINT        binding;
+    XGL_INDEX_TYPE  indexType;
+} MEMORY_BINDING;
+
+/*
+ * Track a Descriptor Set binding
+ */
+typedef struct _DS_BINDING {
+    XGL_PIPELINE_BIND_POINT     pipelineBindPoint;
+    XGL_DESCRIPTOR_SET          descriptorSet;
+    XGL_UINT                    slotOffset;
+} DS_BINDING;
+
+// Store a single LL of command buffers
+typedef struct _GLOBAL_CB_NODE {
+    struct _GLOBAL_CB_NODE* pNextGlobalCBNode;
+    XGL_CMD_BUFFER_CREATE_INFO      createInfo;
+    MINI_NODE*                      pMemObjList; // LL of Mem objs referenced by this CB
+    MINI_NODE*                      pVertexBufList;
+    MINI_NODE*                      pIndexBufList;
+    GLOBAL_OBJECT_NODE*             pDynamicState[XGL_NUM_STATE_BIND_POINT];
+    XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
+    DS_BINDING                      descriptorSets[XGL_MAX_DESCRIPTOR_SETS];
+    XGL_UINT                        colorAttachmentCount;
+    XGL_COLOR_ATTACHMENT_BIND_INFO  attachments[XGL_MAX_COLOR_ATTACHMENTS];
+    XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
+    XGL_CMD_BUFFER cmdBuffer;
+    XGL_FENCE fence; // fence tracking this cmd buffer
+} GLOBAL_CB_NODE;
