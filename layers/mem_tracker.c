@@ -39,7 +39,7 @@ static pthread_once_t g_initOnce = PTHREAD_ONCE_INIT;
 
 // Ptr to LL of dbg functions
 static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
-static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_ERROR;
+static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_INFO;
 static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
 static FILE *g_logFile = NULL;
 
@@ -838,16 +838,17 @@ static void initMemTracker()
     strOpt = getLayerOption("MemTrackerReportLevel");
     if (strOpt != NULL)
         g_reportingLevel = atoi(strOpt);
+
     strOpt = getLayerOption("MemTrackerDebugAction");
     if (strOpt != NULL)
-       g_debugAction = atoi(strOpt);
+        g_debugAction = atoi(strOpt);
+
     if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
     {
         strOpt = getLayerOption("MemTrackerLogFilename");
         if (strOpt)
         {
             g_logFile = fopen(strOpt, "w");
-
         }
         if (g_logFile == NULL)
             g_logFile = stdout;

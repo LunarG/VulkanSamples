@@ -43,7 +43,7 @@ pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
 
 // Ptr to LL of dbg functions
 static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
-static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_ERROR;
+static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_INFO;
 static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
 static FILE *g_logFile = NULL;
 
@@ -922,20 +922,21 @@ static void synchAndPrintDSConfig()
 static void initDrawState()
 {
     const char *strOpt;
-    // initialize MemTracker options
+    // initialize DrawState options
     strOpt = getLayerOption("DrawStateReportLevel");
     if (strOpt != NULL)
         g_reportingLevel = atoi(strOpt);
+
     strOpt = getLayerOption("DrawStateDebugAction");
     if (strOpt != NULL)
-       g_debugAction = atoi(strOpt);
+        g_debugAction = atoi(strOpt);
+
     if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
     {
         strOpt = getLayerOption("DrawStateLogFilename");
         if (strOpt)
         {
             g_logFile = fopen(strOpt, "w");
-
         }
         if (g_logFile == NULL)
             g_logFile = stdout;
