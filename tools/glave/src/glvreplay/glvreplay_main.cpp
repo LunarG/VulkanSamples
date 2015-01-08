@@ -218,8 +218,10 @@ int main(int argc, char **argv)
                 return err;
             }
 
+            // TODO: Will need to address settings here and pass them to the replayer
+
             // Initalize the replayer
-            err = replayer[tracerId]->Initialize(&disp, debugLevel);
+            err = replayer[tracerId]->Initialize(&disp);
             if (err) {
                 glv_LogError("Couldn't Initialize replayer for TracerId %d.\n", tracerId);
                 return err;

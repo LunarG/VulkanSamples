@@ -26,6 +26,7 @@
 
 extern "C" {
 #include "glv_common.h"
+#include "glv_settings.h"
 #include "glv_trace_packet_identifiers.h"
 }
 #include "glvreplay_window.h"
@@ -46,7 +47,9 @@ enum GLV_REPLAY_RESULT
 // entrypoints that must be exposed by each replayer library
 extern "C"
 {
-typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay, unsigned int debugLevel);
+typedef glv_SettingGroup* (GLVTRACER_CDECL *funcptr_glvreplayer_getSettings)();
+typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_updatefromsettings)(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
+typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay);
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_deinitialize)();
 typedef glv_trace_packet_header* (GLVTRACER_CDECL *funcptr_glvreplayer_interpret)(glv_trace_packet_header* pPacket);
 typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
@@ -55,6 +58,8 @@ typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_repl
 struct glv_trace_packet_replay_library
 {
     void* pLibrary;
+    funcptr_glvreplayer_getSettings GetSettings;
+    funcptr_glvreplayer_updatefromsettings UpdateFromSettings;
     funcptr_glvreplayer_initialize Initialize;
     funcptr_glvreplayer_deinitialize Deinitialize;
     funcptr_glvreplayer_interpret Interpret;

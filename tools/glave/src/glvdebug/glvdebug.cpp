@@ -224,6 +224,21 @@ void glvdebug::output_error(QString message, bool bRefresh)
     glvdebug_output_error(message.toStdString().c_str(), bRefresh);
 }
 
+void glvdebug::add_setting_group(glv_SettingGroup* pGroup)
+{
+    glv_SettingGroup_merge(pGroup, &g_pAllSettings, &g_numAllSettings);
+}
+
+unsigned int glvdebug::get_global_settings(glv_SettingGroup** ppGroups)
+{
+    if (ppGroups != NULL)
+    {
+        *ppGroups = g_pAllSettings;
+    }
+
+    return g_numAllSettings;
+}
+
 glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
 {
     int ret = QMessageBox::warning(this, tr(g_PROJECT_NAME.toStdString().c_str()), tr("Would you like to load the new trace file?"),

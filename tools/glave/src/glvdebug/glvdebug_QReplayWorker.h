@@ -154,6 +154,21 @@ public slots:
         m_bStopReplay = true;
     }
 
+    void onSettingsUpdated(glv_SettingGroup* pGroups, unsigned int numGroups)
+    {
+        if (m_pReplayers != NULL)
+        {
+            for (unsigned int tracerId = 0; tracerId < GLV_MAX_TRACER_ID_ARRAY_SIZE; tracerId++)
+            {
+                if (m_pReplayers[tracerId] != NULL)
+                {
+                    // now update the replayer with the loaded settings
+                    m_pReplayers[tracerId]->UpdateFromSettings(pGroups, numGroups);
+                }
+            }
+        }
+    }
+
 signals:
     void ReplayStarted();
     void ReplayPaused(uint64_t packetIndex);
@@ -179,7 +194,6 @@ protected:
         windowHeight = pReplayWidget->geometry().height();
 
         // load any API specific driver libraries and init replayer objects
-        int debuglevel = 4;
         uint8_t tidApi = GLV_TID_RESERVED;
 
         // uncomment this to display in a separate window (and then comment out the line below it)
@@ -215,8 +229,16 @@ protected:
                 }
                 else
                 {
+                    // get settings from the replayer
+                    m_pView->add_setting_group(m_pReplayers[tracerId]->GetSettings());
+
+                    // update replayer with updated state
+                    glv_SettingGroup* pGlobalSettings = NULL;
+                    unsigned int numGlobalSettings = m_pView->get_global_settings(&pGlobalSettings);
+                    m_pReplayers[tracerId]->UpdateFromSettings(pGlobalSettings, numGlobalSettings);
+
                     // Initialize the replayer
-                    int err = m_pReplayers[tracerId]->Initialize(&disp, debuglevel);
+                    int err = m_pReplayers[tracerId]->Initialize(&disp);
                     if (err) {
                         glv_LogError("Couldn't Initialize replayer for TracerId %d.\n", tracerId);
                         return false;

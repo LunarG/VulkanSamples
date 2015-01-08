@@ -195,6 +195,14 @@ public slots:
         emit StopButtonClicked();
     }
 
+    void OnSettingsUpdated(glv_SettingGroup* pGroups, unsigned int numGroups)
+    {
+        if (m_pWorker != NULL)
+        {
+            m_pWorker->onSettingsUpdated(pGroups, numGroups);
+        }
+    }
+
 private:
     glvdebug_QReplayWorker* m_pWorker;
     QWidget* m_pReplayWindow;
@@ -205,6 +213,5 @@ private:
     QToolButton* m_pStopButton;
     QThread m_replayThread;
 };
-
 
 #endif //_GLVDEBUG_QREPLAYWIDGET_H_

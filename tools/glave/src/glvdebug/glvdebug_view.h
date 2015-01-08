@@ -26,6 +26,7 @@
 #include "glvdebug_QTraceFileModel.h"
 
 struct glvdebug_trace_file_info;
+struct glv_SettingGroup;
 class QWidget;
 class QToolButton;
 
@@ -37,6 +38,9 @@ public:
     virtual void output_message(QString message, bool bRefresh = true) = 0;
     virtual void output_warning(QString message, bool bRefresh = true) = 0;
     virtual void output_error(QString message, bool bRefresh = true) = 0;
+
+    virtual void add_setting_group(glv_SettingGroup* pGroup) = 0;
+    virtual unsigned int get_global_settings(glv_SettingGroup** ppGroups) = 0;
 
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel) = 0;
 
