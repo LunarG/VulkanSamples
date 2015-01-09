@@ -130,16 +130,22 @@ class HeaderFileParser:
                     #print("Skipping empty line")
                     continue
                 elif line.split()[0].strip().startswith("//"):
-                    #print("Skipping commentted line %s" % line)
+                    #print("Skipping commented line %s" % line)
                     continue
                 elif 'typedef enum' in line:
                     (ty_txt, en_txt, base_type) = line.strip().split(None, 2)
                     #print("Found ENUM type %s" % base_type)
                     parse_enum = True
+                    default_enum_val = 0
                     self.types_dict[base_type] = 'enum'
                 elif 'typedef struct' in line:
                     (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
                     #print("Found STRUCT type: %s" % base_type)
+                    parse_struct = True
+                    self.types_dict[base_type] = 'struct'
+                elif 'typedef union' in line:
+                    (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
+                    #print("Found UNION type: %s" % base_type)
                     parse_struct = True
                     self.types_dict[base_type] = 'struct'
                 elif '}' in line and (parse_enum or parse_struct):
@@ -152,8 +158,9 @@ class HeaderFileParser:
                         self.typedef_fwd_dict[base_type] = targ_type.strip(';')
                         self.typedef_rev_dict[targ_type.strip(';')] = base_type
                 elif parse_enum:
-                    if '=' in line:
-                        self._add_enum(line, base_type)
+                    if 'XGL_MAX_ENUM' not in line and '{' not in line:
+                        self._add_enum(line, base_type, default_enum_val)
+                        default_enum_val += 1
                 elif parse_struct:
                     if ';' in line:
                         self._add_struct(line, base_type, member_num)
@@ -162,11 +169,13 @@ class HeaderFileParser:
                     #print("Function: %s" % line)
     
     # populate enum dicts based on enum lines
-    def _add_enum(self, line_txt, enum_type):    
+    def _add_enum(self, line_txt, enum_type, def_enum_val):
         #print("Parsing enum line %s" % line_txt)
-        (enum_name, eq_char, enum_val) = line_txt.split(None, 2)
-        if '=' != eq_char:
-            print("ERROR: Couldn't parse enum line: %s" % line_txt)
+        if '=' in line_txt:
+            (enum_name, eq_char, enum_val) = line_txt.split(None, 2)
+        else:
+            enum_name = line_txt.split(',')[0]
+            enum_val = str(def_enum_val)
         self.enum_val_dict[enum_name] = {}
         self.enum_val_dict[enum_name]['type'] = enum_type
         # strip comma and comment, then extra split in case of no comma w/ comments
@@ -445,6 +454,8 @@ class StructWrapperGen:
             cast_type = "(void*)"
         elif is_type(struct_member['type'], 'enum'):
             cast_type = "string_%s" % struct_member['type']
+            if struct_member['ptr']:
+                struct_var_name = "*" + struct_var_name
             print_type = "s"
         elif is_type(struct_member['type'], 'struct'): # print struct address for now
             cast_type = "(void*)"
@@ -879,6 +890,8 @@ class GraphVizGen:
             # Just print base address of array when not full print_array
             cast_type = "(void*)"
         elif is_type(struct_member['type'], 'enum'):
+            if struct_member['ptr']:
+                struct_var_name = "*" + struct_var_name
             cast_type = "string_%s" % struct_member['type']
             print_type = "s"
         elif is_type(struct_member['type'], 'struct'): # print struct address for now
