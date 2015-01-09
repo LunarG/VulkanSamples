@@ -21,35 +21,20 @@
  * THE SOFTWARE.
  *
  *************************************************************************/
-#ifndef GLVDEBUG_XGL_QCONTROLLER_H
-#define GLVDEBUG_XGL_QCONTROLLER_H
+#ifndef GLVDEBUG_XGL_SETTINGS_H
+#define GLVDEBUG_XGL_SETTINGS_H
 
-#include "glv_trace_packet_identifiers.h"
-#include "glvdebug_QReplayWidget.h"
-#include "glvdebug_QReplayWorker.h"
-#include "glvdebug_xgl_qfile_model.h"
-#include <QObject>
+extern "C" {
+#include "glv_settings.h"
+}
 
-class glvdebug_xgl_QController : public glvdebug_QReplayWorker
+typedef struct glvdebug_xgl_settings
 {
-    Q_OBJECT
-public:
-    glvdebug_xgl_QController();
-    virtual ~glvdebug_xgl_QController();
+    bool supportDrawCalls;
+} glvdebug_xgl_settings;
 
-    glv_trace_packet_header* InterpretTracePacket(glv_trace_packet_header* pHeader);
-    bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
-    void UnloadTraceFile(void);
+extern glvdebug_xgl_settings g_xglDebugSettings;
+extern glv_SettingGroup g_xglDebugSettingGroup;
 
-    void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
+#endif // GLVDEBUG_XGL_SETTINGS_H
 
-protected slots:
-    void playCurrentTraceFile();
-    void onReplayPaused(uint64_t packetIndex);
-
-private:
-    glvdebug_QReplayWidget* m_pReplayWidget;
-    glvdebug_xgl_QFileModel* m_pTraceFileModel;
-};
-
-#endif // GLVDEBUG_XGL_QCONTROLLER_H

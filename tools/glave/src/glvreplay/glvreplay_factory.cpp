@@ -45,7 +45,14 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
     {
         char* replayerPath = glv_copy_and_append(exeDir,"/", pReplayerInfo->replayerLibraryName);
         pLibrary = glv_platform_open_library(replayerPath);
-        if (pLibrary == NULL) glv_LogError("Failed to load replayer '%s.'\n", replayerPath);
+        if (pLibrary == NULL)
+        {
+            glv_LogError("Failed to load replayer '%s.\n", replayerPath);
+#if defined(PLATFORM_LINUX)
+            char* error = dlerror();
+            glv_LogError(error);
+#endif
+        }
         glv_free(replayerPath);
     }
     else

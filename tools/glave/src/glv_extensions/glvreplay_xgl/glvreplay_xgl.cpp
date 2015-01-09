@@ -65,11 +65,21 @@ static XGL_VOID xglErrorHandler(
 
 extern "C"
 {
-GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, unsigned int debugLevel)
+GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings()
+{
+    return &g_xglReplaySettingGroup;
+}
+
+GLVTRACER_EXPORT void GLVTRACER_CDECL UpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
+{
+    glv_SettingGroup_Apply_Overrides(&g_xglReplaySettingGroup, pSettingGroups, numSettingGroups);
+}
+
+GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay)
 {
     try
     {
-        g_pReplayer = (ApiReplay*)new xglReplay(debugLevel);
+        g_pReplayer = (ApiReplay*)new xglReplay();
     }
     catch (int e)
     {

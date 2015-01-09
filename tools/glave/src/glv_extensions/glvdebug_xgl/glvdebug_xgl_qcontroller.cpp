@@ -26,6 +26,7 @@ extern "C" {
 #include "glvtrace_xgl_packet_id.h"
 }
 
+#include "glvdebug_xgl_settings.h"
 #include "glvdebug_xgl_qcontroller.h"
 
 #include <assert.h>
@@ -101,6 +102,16 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
     m_pView->select_call_at_packet_index(packetIndex);
     m_pView->output_message(QString("Paused at packet index %1").arg(packetIndex));
+}
+
+void glvdebug_xgl_QController::onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups)
+{
+    glv_SettingGroup_Apply_Overrides(&g_xglDebugSettingGroup, pGroups, numGroups);
+
+    if (m_pReplayWidget != NULL)
+    {
+        m_pReplayWidget->OnSettingsUpdated(pGroups, numGroups);
+    }
 }
 
 void glvdebug_xgl_QController::UnloadTraceFile(void)

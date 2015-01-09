@@ -22,7 +22,7 @@
  *
  *************************************************************************/
 #include "glvdebug_xgl_qcontroller.h"
-
+#include "glvdebug_xgl_settings.h"
 #include "glvdebug_controller.h"
 
 static glvdebug_xgl_QController* s_pQController;
@@ -31,6 +31,22 @@ static glvdebug_xgl_QController* s_pQController;
 
 extern "C"
 {
+GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL glvdebug_controller_get_settings()
+{
+    CREATE_CONTROLLER()
+
+    return &g_xglDebugSettingGroup;
+}
+
+GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_update_from_settings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
+{
+    CREATE_CONTROLLER()
+
+    if (s_pQController != NULL)
+    {
+        s_pQController->onSettingsUpdated(pSettingGroups, numSettingGroups);
+    }
+}
 
 GLVTRACER_EXPORT bool GLVTRACER_CDECL glvdebug_controller_load_trace_file(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView)
 {

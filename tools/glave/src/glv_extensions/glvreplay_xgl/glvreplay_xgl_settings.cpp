@@ -1,6 +1,8 @@
+
 /**************************************************************************
  *
- * Copyright 2014 Valve Software. All Rights Reserved.
+ * Copyright 2014 Valve Software, Inc.
+ * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,36 +22,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- *************************************************************************/
-#ifndef GLVDEBUG_XGL_QCONTROLLER_H
-#define GLVDEBUG_XGL_QCONTROLLER_H
+ **************************************************************************/
 
-#include "glv_trace_packet_identifiers.h"
-#include "glvdebug_QReplayWidget.h"
-#include "glvdebug_QReplayWorker.h"
-#include "glvdebug_xgl_qfile_model.h"
-#include <QObject>
+#include "glvreplay_xgl_settings.h"
 
-class glvdebug_xgl_QController : public glvdebug_QReplayWorker
+// declared as extern in header
+static glvreplay_xgl_settings s_defaultXglReplaySettings = { 1 };
+glvreplay_xgl_settings g_xglReplaySettings = s_defaultXglReplaySettings;
+
+glv_SettingInfo g_settings_info[] =
 {
-    Q_OBJECT
-public:
-    glvdebug_xgl_QController();
-    virtual ~glvdebug_xgl_QController();
-
-    glv_trace_packet_header* InterpretTracePacket(glv_trace_packet_header* pHeader);
-    bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
-    void UnloadTraceFile(void);
-
-    void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
-
-protected slots:
-    void playCurrentTraceFile();
-    void onReplayPaused(uint64_t packetIndex);
-
-private:
-    glvdebug_QReplayWidget* m_pReplayWidget;
-    glvdebug_xgl_QFileModel* m_pTraceFileModel;
+    { "dl", "DebugLevel", GLV_SETTING_UINT, &g_xglReplaySettings.debugLevel, &s_defaultXglReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Mantle validation layers."},
 };
 
-#endif // GLVDEBUG_XGL_QCONTROLLER_H
+glv_SettingGroup g_xglReplaySettingGroup =
+{
+    "glvreplay_xgl",
+    sizeof(g_settings_info) / sizeof(g_settings_info[0]),
+    &g_settings_info[0]
+};

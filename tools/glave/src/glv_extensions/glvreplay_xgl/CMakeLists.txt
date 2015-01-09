@@ -37,6 +37,7 @@ endif()
 set(SRC_LIST
     ${SRC_LIST}
     glvreplay_xgl.cpp
+    glvreplay_xgl_settings.cpp
     glvreplay_xgl_replay.cpp
 )
 
@@ -47,6 +48,7 @@ set (HDR_LIST
     glvtrace_xgl_xgldbg_structs.h
     xgl_enum_string_helper.h
     glvreplay_xgl.h
+    glvreplay_xgl_settings.h
     glvreplay_xgl_replay.h
 )
 

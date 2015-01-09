@@ -1,6 +1,7 @@
 /**************************************************************************
  *
- * Copyright 2014 Valve Software. All Rights Reserved.
+ * Copyright 2014 Valve Software, Inc.
+ * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,36 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- *************************************************************************/
-#ifndef GLVDEBUG_XGL_QCONTROLLER_H
-#define GLVDEBUG_XGL_QCONTROLLER_H
+ **************************************************************************/
+#ifndef GLVREPLAY_XGL_SETTINGS_H
+#define GLVREPLAY_XGL_SETTINGS_H
 
-#include "glv_trace_packet_identifiers.h"
-#include "glvdebug_QReplayWidget.h"
-#include "glvdebug_QReplayWorker.h"
-#include "glvdebug_xgl_qfile_model.h"
-#include <QObject>
-
-class glvdebug_xgl_QController : public glvdebug_QReplayWorker
+extern "C"
 {
-    Q_OBJECT
-public:
-    glvdebug_xgl_QController();
-    virtual ~glvdebug_xgl_QController();
+#include "glv_settings.h"
+}
 
-    glv_trace_packet_header* InterpretTracePacket(glv_trace_packet_header* pHeader);
-    bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
-    void UnloadTraceFile(void);
+typedef struct glvreplay_xgl_settings
+{
+    unsigned int debugLevel;
+} glvreplay_xgl_settings;
 
-    void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
+extern glvreplay_xgl_settings g_xglReplaySettings;
+extern glv_SettingGroup g_xglReplaySettingGroup;
+#endif // GLVREPLAY_XGL_SETTINGS_H
 
-protected slots:
-    void playCurrentTraceFile();
-    void onReplayPaused(uint64_t packetIndex);
-
-private:
-    glvdebug_QReplayWidget* m_pReplayWidget;
-    glvdebug_xgl_QFileModel* m_pTraceFileModel;
-};
-
-#endif // GLVDEBUG_XGL_QCONTROLLER_H

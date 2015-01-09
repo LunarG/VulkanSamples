@@ -42,6 +42,7 @@ endif()
 set(SRC_LIST
     ${SRC_LIST}
     glvdebug_xgl.cpp
+    glvdebug_xgl_settings.cpp
     glvdebug_xgl_qcontroller.cpp
     glvdebug_xgl_qfile_model.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
@@ -59,6 +60,7 @@ set(UI_HEADER_LIST
 
 set(HDR_LIST
     glvtrace_xgl_packet_id.h
+    glvdebug_xgl_settings.h
     glvtrace_xgl_xgl_structs.h
     glvtrace_xgl_xglwsix11ext_structs.h
     glvtrace_xgl_xgldbg_structs.h

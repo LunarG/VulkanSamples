@@ -21,35 +21,19 @@
  * THE SOFTWARE.
  *
  *************************************************************************/
-#ifndef GLVDEBUG_XGL_QCONTROLLER_H
-#define GLVDEBUG_XGL_QCONTROLLER_H
 
-#include "glv_trace_packet_identifiers.h"
-#include "glvdebug_QReplayWidget.h"
-#include "glvdebug_QReplayWorker.h"
-#include "glvdebug_xgl_qfile_model.h"
-#include <QObject>
+#include "glvdebug_xgl_settings.h"
 
-class glvdebug_xgl_QController : public glvdebug_QReplayWorker
-{
-    Q_OBJECT
-public:
-    glvdebug_xgl_QController();
-    virtual ~glvdebug_xgl_QController();
-
-    glv_trace_packet_header* InterpretTracePacket(glv_trace_packet_header* pHeader);
-    bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
-    void UnloadTraceFile(void);
-
-    void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
-
-protected slots:
-    void playCurrentTraceFile();
-    void onReplayPaused(uint64_t packetIndex);
-
-private:
-    glvdebug_QReplayWidget* m_pReplayWidget;
-    glvdebug_xgl_QFileModel* m_pTraceFileModel;
+// declared as extern in header
+glvdebug_xgl_settings g_xglDebugSettings;
+static glvdebug_xgl_settings s_defaultXglSettings = { FALSE };
+glv_SettingInfo g_settings_info[] =
+{    { "", "supportDrawCalls", GLV_SETTING_BOOL, &g_xglDebugSettings.supportDrawCalls, &s_defaultXglSettings.supportDrawCalls, FALSE, "Indicates whether or not draw call highlighting and draw call navigation are supported."},
 };
 
-#endif // GLVDEBUG_XGL_QCONTROLLER_H
+glv_SettingGroup g_xglDebugSettingGroup =
+{
+    "glvdebug_xgl",
+    sizeof(g_settings_info) / sizeof(g_settings_info[0]),
+    &g_settings_info[0]
+};
