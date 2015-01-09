@@ -192,14 +192,7 @@ struct intel_cmd_bind {
         XGL_INDEX_TYPE type;
     } index;
 
-    struct {
-        const struct intel_rt_view *rt[XGL_MAX_COLOR_ATTACHMENTS];
-        XGL_UINT rt_count;
-
-        const struct intel_ds_view *ds;
-
-        XGL_UINT width, height;
-    } att;
+    struct intel_render_pass *render_pass;
 
     XGL_UINT draw_count;
     uint32_t wa_flags;
@@ -253,7 +246,7 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
                             struct intel_cmd **cmd_ret);
 void intel_cmd_destroy(struct intel_cmd *cmd);
 
-XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags);
+XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo);
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd);
 
 void intel_cmd_decode(struct intel_cmd *cmd);

@@ -32,6 +32,7 @@
 #include "mem.h"
 #include "obj.h"
 #include "cmd_priv.h"
+#include "fb.h"
 
 /**
  * Free all resources used by a writer.  Note that the initial size is not
@@ -232,6 +233,8 @@ static void cmd_reset(struct intel_cmd *cmd)
     if (cmd->bind.shader_cache.entries)
         icd_free(cmd->bind.shader_cache.entries);
 
+    icd_free(cmd->bind.render_pass);  // TODO remove once CmdBindAttachment is removed
+
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
     cmd->reloc_used = 0;
@@ -304,12 +307,36 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
     intel_base_destroy(&cmd->obj.base);
 }
 
-XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, XGL_FLAGS flags)
+XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INFO* info)
 {
     XGL_RESULT ret;
     XGL_UINT i;
+    XGL_FLAGS flags = 0;
+    XGL_CMD_BUFFER_BEGIN_INFO* next= (XGL_CMD_BUFFER_BEGIN_INFO*) info;
+    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
 
     cmd_reset(cmd);
+
+    while (next != NULL) {
+        switch (next->sType) {
+        case XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
+            flags = next->flags;
+            break;
+        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
+            ginfo = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) next;
+            cmd->bind.render_pass = (struct intel_render_pass *)
+                                        ginfo->renderPass;
+            break;
+        default:
+            return XGL_ERROR_INVALID_VALUE;
+            break;
+        }
+        next = (XGL_CMD_BUFFER_BEGIN_INFO*) next->pNext;
+    }
+
+    if (cmd->bind.render_pass == NULL)  //  TODO remove once CmmdBindAttachment is removed
+        cmd->bind.render_pass = icd_alloc(sizeof(struct intel_render_pass), 0,
+                                  XGL_SYSTEM_ALLOC_INTERNAL);
 
     if (cmd->flags != flags) {
         cmd->flags = flags;
@@ -429,11 +456,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_FLAGS                                   flags)
+    const XGL_CMD_BUFFER_BEGIN_INFO            *info)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    return intel_cmd_begin(cmd, flags);
+    return intel_cmd_begin(cmd, info);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(

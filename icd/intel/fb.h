@@ -25,14 +25,52 @@
 #pragma once
 
 struct intel_framebuffer {
-    struct intel_base base;
+    struct intel_obj obj;
 
+    const struct intel_rt_view *rt[XGL_MAX_COLOR_ATTACHMENTS];
+    XGL_UINT rt_count;
+
+    const struct intel_ds_view *ds;
+
+    XGL_UINT sample_count;
+    XGL_UINT width, height;
 };
 
 struct intel_render_pass {
-    struct intel_base base;
+    struct intel_obj obj;
 
+    struct intel_framebuffer *fb;
 };
+
+static inline struct intel_framebuffer *intel_framebuffer(XGL_FRAMEBUFFER fb)
+{
+    return (struct intel_framebuffer *) fb;
+}
+
+static inline struct intel_framebuffer *intel_fb_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_framebuffer *) obj;
+}
+
+static inline struct intel_render_pass *intel_render_pass(XGL_RENDER_PASS rp)
+{
+    return (struct intel_render_pass *) rp;
+}
+
+static inline struct intel_render_pass *intel_rp_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_render_pass *) obj;
+}
+
+XGL_RESULT intel_fb_create(struct intel_dev *dev,
+                           const XGL_FRAMEBUFFER_CREATE_INFO* pInfo,
+                           struct intel_framebuffer ** ppFramebuffer);
+void intel_fb_destroy(struct intel_framebuffer *fb);
+
+XGL_RESULT intel_rp_create(struct intel_dev *dev,
+                           const XGL_RENDER_PASS_CREATE_INFO* pInfo,
+                           struct intel_render_pass** ppRenderPass);
+void intel_rp_destroy(struct intel_render_pass *rp);
 
 XGL_RESULT XGLAPI intelCreateFramebuffer(
     XGL_DEVICE                                  device,

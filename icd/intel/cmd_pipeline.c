@@ -36,6 +36,7 @@
 #include "state.h"
 #include "view.h"
 #include "cmd_priv.h"
+#include "fb.h"
 
 static void gen6_3DPRIMITIVE(struct intel_cmd *cmd,
                              int prim_type, bool indexed,
@@ -1586,8 +1587,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         case INTEL_PIPELINE_RMAP_SLOT_RT:
             {
                 const struct intel_rt_view *view =
-                    (slot->u.index < cmd->bind.att.rt_count) ?
-                    cmd->bind.att.rt[slot->u.index] : NULL;
+                    (slot->u.index < cmd->bind.render_pass->fb->rt_count) ?
+                    cmd->bind.render_pass->fb->rt[slot->u.index] : NULL;
 
                 if (view) {
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
@@ -1893,13 +1894,13 @@ static void emit_shader_resources(struct intel_cmd *cmd)
 static void emit_rt(struct intel_cmd *cmd)
 {
     cmd_wa_gen6_pre_depth_stall_write(cmd);
-    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, cmd->bind.att.width,
-            cmd->bind.att.height);
+    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, cmd->bind.render_pass->fb->width,
+            cmd->bind.render_pass->fb->height);
 }
 
 static void emit_ds(struct intel_cmd *cmd)
 {
-    const struct intel_ds_view *ds = cmd->bind.att.ds;
+    const struct intel_ds_view *ds = cmd->bind.render_pass->fb->ds;
 
     if (!ds) {
         /* all zeros */
@@ -2986,27 +2987,27 @@ static void cmd_bind_attachments(struct intel_cmd *cmd,
                 height = layout->height0;
         }
 
-        cmd->bind.att.rt[i] = rt;
+        cmd->bind.render_pass->fb->rt[i] = rt;
     }
 
-    cmd->bind.att.rt_count = rt_count;
+    cmd->bind.render_pass->fb->rt_count = rt_count;
 
     if (ds_info) {
         const struct intel_layout *layout;
 
-        cmd->bind.att.ds = intel_ds_view(ds_info->view);
-        layout = &cmd->bind.att.ds->img->layout;
+        cmd->bind.render_pass->fb->ds = intel_ds_view(ds_info->view);
+        layout = &cmd->bind.render_pass->fb->ds->img->layout;
 
         if (width > layout->width0)
             width = layout->width0;
         if (height > layout->height0)
             height = layout->height0;
     } else {
-        cmd->bind.att.ds = NULL;
+        cmd->bind.render_pass->fb->ds = NULL;
     }
 
-    cmd->bind.att.width = width;
-    cmd->bind.att.height = height;
+    cmd->bind.render_pass->fb->width = width;
+    cmd->bind.render_pass->fb->height = height;
 }
 
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
