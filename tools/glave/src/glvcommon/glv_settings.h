@@ -70,7 +70,7 @@ typedef struct glv_SettingGroup
 int glv_SettingGroup_init(glv_SettingGroup* pSettingGroup, FILE *pSettingsFile, int argc, char* argv[], char** ppOut_remaining_args);
 BOOL glv_SettingGroup_save(glv_SettingGroup* pSettingGroup, unsigned int numSettingGroups, FILE* pSettingsFile);
 void glv_SettingGroup_delete(glv_SettingGroup* pSettingGroup);
-void glv_SettingGroup_reset_default(glv_SettingGroup* pSettingGroup);
+void glv_SettingGroup_reset_defaults(glv_SettingGroup* pSettingGroup);
 
 // Adds pSrc group to ppDestGroups if the named group is not already there,
 // or adds missing settings from pSrc into the existing group in ppDestGroups.
