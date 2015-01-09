@@ -224,7 +224,7 @@ public:
 
     void InitDepthStencil();
     void GenerateClearAndPrepareBufferCmds();
-    void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText);
+    void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const int rotate);
 
 
 protected:
@@ -607,7 +607,7 @@ struct xgltriangle_vs_uniform {
     XGL_FLOAT   color[3][4];
 };
 
-void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText)
+void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const int rotate)
 {
 #ifdef DEBUG_CALLBACK
     xglDbgRegisterMsgCallback(myDbgFunc, NULL);
@@ -659,10 +659,32 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     descriptorSet.AttachMemoryView(&constantBuffer);
     m_memoryRefManager.AddMemoryRef(&constantBuffer);
 
-    GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
-    QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    RotateTriangleVSUniform(Projection, View, Model, &constantBuffer);
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
+
+    cmdBuffer.BindVertexBuffer(&constantBuffer, 0, 0);
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest2.dot");
+#endif
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    cmdBuffer.EndCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
+
+    for (int i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
+
+    if (rotate)
+            RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
+
 #ifdef PRINT_OBJECTS
     //XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)
     OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjectCount");
@@ -714,7 +736,7 @@ TEST_F(XglRenderTest, XGLTriangle_FragColor)
         "}\n";
 
     TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to GLSL built-in gl_FragColor");
-    XGLTriangleTest(vertShaderText, fragShaderText);
+    XGLTriangleTest(vertShaderText, fragShaderText, 1);
 }
 
 TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
@@ -753,7 +775,7 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
 
     TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to output location 0, which should be the same as gl_FragColor");
 
-    XGLTriangleTest(vertShaderText, fragShaderText);
+    XGLTriangleTest(vertShaderText, fragShaderText, 1);
 }
 
 TEST_F(XglRenderTest, BIL_XGLTriangle)
@@ -795,7 +817,7 @@ TEST_F(XglRenderTest, BIL_XGLTriangle)
 
     XglTestFramework::m_use_bil = true;
 
-    XGLTriangleTest(vertShaderText, fragShaderText);
+    XGLTriangleTest(vertShaderText, fragShaderText, 1);
 
     XglTestFramework::m_use_bil = saved_use_bil;
 }
@@ -820,7 +842,7 @@ TEST_F(XglRenderTest, GreenTriangle)
 
     TEST_DESCRIPTION("Basic shader that renders a fixed Green triangle coded as part of the vertex shader.");
 
-    DrawTriangleTest(vertShaderText, fragShaderText);
+    XGLTriangleTest(vertShaderText, fragShaderText, 0);
 }
 
 TEST_F(XglRenderTest, BIL_GreenTriangle)
@@ -846,7 +868,7 @@ TEST_F(XglRenderTest, BIL_GreenTriangle)
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to BIL and gives BIL to driver.");
 
     XglTestFramework::m_use_bil = true;
-    DrawTriangleTest(vertShaderText, fragShaderText);
+    XGLTriangleTest(vertShaderText, fragShaderText, 0);
     XglTestFramework::m_use_bil = saved_use_bil;
 }
 
@@ -872,7 +894,7 @@ TEST_F(XglRenderTest, YellowTriangle)
             "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
             "}\n";
 
-    DrawTriangleTest(vertShaderText, fragShaderText);
+    XGLTriangleTest(vertShaderText, fragShaderText, 0);
 }
 
 TEST_F(XglRenderTest, TriangleWithVertexFetch)
