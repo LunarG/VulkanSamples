@@ -2964,52 +2964,6 @@ static void cmd_bind_index_data(struct intel_cmd *cmd,
     cmd->bind.index.type = type;
 }
 
-static void cmd_bind_attachments(struct intel_cmd *cmd,
-                                 XGL_UINT rt_count,
-                                 const XGL_COLOR_ATTACHMENT_BIND_INFO *rt_info,
-                                 const XGL_DEPTH_STENCIL_BIND_INFO *ds_info)
-{
-    XGL_UINT width = 0, height = 0;
-    XGL_UINT i;
-
-    for (i = 0; i < rt_count; i++) {
-        const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &rt_info[i];
-        const struct intel_rt_view *rt = intel_rt_view(att->view);
-        const struct intel_layout *layout = &rt->img->layout;
-
-        if (i == 0) {
-            width = layout->width0;
-            height = layout->height0;
-        } else {
-            if (width > layout->width0)
-                width = layout->width0;
-            if (height > layout->height0)
-                height = layout->height0;
-        }
-
-        cmd->bind.render_pass->fb->rt[i] = rt;
-    }
-
-    cmd->bind.render_pass->fb->rt_count = rt_count;
-
-    if (ds_info) {
-        const struct intel_layout *layout;
-
-        cmd->bind.render_pass->fb->ds = intel_ds_view(ds_info->view);
-        layout = &cmd->bind.render_pass->fb->ds->img->layout;
-
-        if (width > layout->width0)
-            width = layout->width0;
-        if (height > layout->height0)
-            height = layout->height0;
-    } else {
-        cmd->bind.render_pass->fb->ds = NULL;
-    }
-
-    cmd->bind.render_pass->fb->width = width;
-    cmd->bind.render_pass->fb->height = height;
-}
-
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
                                     const struct intel_viewport_state *state)
 {

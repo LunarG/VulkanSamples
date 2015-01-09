@@ -233,8 +233,6 @@ static void cmd_reset(struct intel_cmd *cmd)
     if (cmd->bind.shader_cache.entries)
         icd_free(cmd->bind.shader_cache.entries);
 
-    icd_free(cmd->bind.render_pass);  // TODO remove once CmdBindAttachment is removed
-
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
     cmd->reloc_used = 0;
@@ -333,10 +331,6 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
         }
         next = (XGL_CMD_BUFFER_BEGIN_INFO*) next->pNext;
     }
-
-    if (cmd->bind.render_pass == NULL)  //  TODO remove once CmmdBindAttachment is removed
-        cmd->bind.render_pass = icd_alloc(sizeof(struct intel_render_pass), 0,
-                                  XGL_SYSTEM_ALLOC_INTERNAL);
 
     if (cmd->flags != flags) {
         cmd->flags = flags;
