@@ -1119,23 +1119,16 @@ void XglCommandBufferObj::BindAttachments(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         colorBindings[i].view  = m_renderTargets[i]->targetView();
         colorBindings[i].colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     }
-    if (depthStencilBinding) {
+    if (depthStencilBinding->view) {
        xglCmdBindAttachments(obj(), m_renderTargetCount, colorBindings, depthStencilBinding );
     } else {
        xglCmdBindAttachments(obj(), m_renderTargetCount, colorBindings, XGL_NULL_HANDLE );
     }
 }
 
-void XglCommandBufferObj::BindState(XGL_RASTER_STATE_OBJECT stateRaster, XGL_VIEWPORT_STATE_OBJECT stateViewport,
-                                                        XGL_COLOR_BLEND_STATE_OBJECT colorBlend, XGL_DEPTH_STENCIL_STATE_OBJECT stateDepthStencil,
-                                                        XGL_MSAA_STATE_OBJECT stateMsaa)
+void XglCommandBufferObj::BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT stateObject)
 {
-    // set all states
-    xglCmdBindStateObject( obj(), XGL_STATE_BIND_RASTER, stateRaster );
-    xglCmdBindStateObject( obj(), XGL_STATE_BIND_VIEWPORT, stateViewport );
-    xglCmdBindStateObject( obj(), XGL_STATE_BIND_COLOR_BLEND, colorBlend);
-    xglCmdBindStateObject( obj(), XGL_STATE_BIND_DEPTH_STENCIL, stateDepthStencil );
-    xglCmdBindStateObject( obj(), XGL_STATE_BIND_MSAA, stateMsaa );
+    xglCmdBindStateObject( obj(), stateBindPoint, stateObject);
 }
 
 void XglCommandBufferObj::AddRenderTarget(XglImage *renderTarget)

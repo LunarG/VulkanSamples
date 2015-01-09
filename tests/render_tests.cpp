@@ -217,6 +217,7 @@ public:
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  XglConstantBufferObj *constantBuffer);
     void GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet, int numTris);
+    void GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
 
     void InitDepthStencil();
@@ -262,6 +263,20 @@ protected:
     }
 };
 
+void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet)
+{
+    cmdBuffer->ClearAllBuffers(&m_depthStencilBinding, m_depthStencilImage);
+    cmdBuffer->BindAttachments(&m_depthStencilBinding);
+    cmdBuffer->BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
+    cmdBuffer->BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
+    cmdBuffer->BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
+    cmdBuffer->BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
+    cmdBuffer->BindStateObject(XGL_STATE_BIND_MSAA, m_stateMsaa);
+    pipelineobj->CreateXGLPipeline(descriptorSet);
+    cmdBuffer->BindPipeline(pipelineobj->GetPipelineHandle());
+    descriptorSet->CreateXGLDescriptorSet();
+    cmdBuffer->BindDescriptorSet(descriptorSet->GetDescriptorSetHandle());
+}
 
 void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet,int numTris)
 {
@@ -958,9 +973,13 @@ TEST_F(XglRenderTest, TriangleMRT)
     cmdBuffer.AddRenderTarget(m_renderTargets[1]);
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
     cmdBuffer.ClearAllBuffers(NULL, NULL);
-    cmdBuffer.BindAttachments(NULL);
+    cmdBuffer.BindAttachments(&m_depthStencilBinding);
 
-    cmdBuffer.BindState(m_stateRaster, m_stateViewport, m_colorBlend, m_stateDepthStencil, m_stateMsaa);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_MSAA, m_stateMsaa);
     pipelineobj.CreateXGLPipeline(&descriptorSet);
     cmdBuffer.BindPipeline(pipelineobj.GetPipelineHandle());
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
@@ -1072,13 +1091,18 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
     cmdBuffer.ClearAllBuffers(NULL, NULL);
-    cmdBuffer.BindAttachments(NULL);
+    cmdBuffer.BindAttachments(&m_depthStencilBinding);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
-    cmdBuffer.BindState(m_stateRaster, m_stateViewport, m_colorBlend, m_stateDepthStencil, m_stateMsaa);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
+    cmdBuffer.BindStateObject(XGL_STATE_BIND_MSAA, m_stateMsaa);
+
     cmdBuffer.BindPipeline(pipelineobj.GetPipelineHandle());
     cmdBuffer.BindDescriptorSet(descriptorSet.GetDescriptorSetHandle());
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);

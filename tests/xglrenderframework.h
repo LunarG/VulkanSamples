@@ -126,9 +126,7 @@ public:
     void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
     void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding);
     void BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset);
-    void BindState(XGL_RASTER_STATE_OBJECT stateRaster, XGL_VIEWPORT_STATE_OBJECT stateViewport,
-                   XGL_COLOR_BLEND_STATE_OBJECT colorBlend, XGL_DEPTH_STENCIL_STATE_OBJECT stateDepthStencil,
-                   XGL_MSAA_STATE_OBJECT stateMsaa);
+    void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT stateObject);
     void Draw(XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
     void DrawIndexed(XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
