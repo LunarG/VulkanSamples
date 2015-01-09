@@ -130,26 +130,28 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "            (const XGL_LAYER_DISPATCH_TABLE **) wrapped_obj->baseObject;\n"
                          "    %s = wrapped_obj->nextObject;\n"
                          "    XGL_RESULT res = %s;\n"
-                         "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
+                         "    if (res == XGL_SUCCESS)\n"
+                         "        *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
                          "    return res;\n"
                          "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
                                 proto.params[0].name, proto.params[0].name, stmt,
                                 proto.params[-1].name))
             elif self._does_function_create_object(proto):
+                if proto.name == "WsiX11CreatePresentableImage":
+                    obj_write_stmt = "\n        *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;" % (  proto.params[-2].name)
+                else:
+                    obj_write_stmt = ""
                 funcs.append("%s%s\n"
                          "{\n"
                          "    const XGL_LAYER_DISPATCH_TABLE **disp =\n"
                          "        (const XGL_LAYER_DISPATCH_TABLE **) %s;\n"
                          "    XGL_RESULT res = %s;\n"
-                         % (qual, decl, proto.params[0].name, stmt))
-                if proto.name == "WsiX11CreatePresentableImage":
-                    funcs.append(
-                         "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
-                         % (  proto.params[-2].name))
-                funcs.append(
-                         "    *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
+                         "    if (res == XGL_SUCCESS) {%s\n"
+                         "        *(const XGL_LAYER_DISPATCH_TABLE **) (*%s) = *disp;\n"
+                         "    }\n"
                          "    return res;\n"
-                         "}" % (  proto.params[-1].name))
+                         "}"
+                         % (qual, decl, proto.params[0].name, stmt, obj_write_stmt, proto.params[-1].name))
             elif proto.name == "GetMultiGpuCompatibility":
                 funcs.append("%s%s\n"
                          "{\n"
