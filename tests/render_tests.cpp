@@ -903,9 +903,27 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 2);
-    QueueCommandBuffer(NULL, 0);
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
+
+    //GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 2);
+    //QueueCommandBuffer(NULL, 0);
+
+    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+
+    // render two triangles
+    cmdBuffer.Draw(0, 6, 0, 1);
+
+    // finalize recording of the command buffer
+    cmdBuffer.EndCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(NULL, 0);
+
+    for (int i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
 }
 
 TEST_F(XglRenderTest, TriangleMRT)
@@ -960,6 +978,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     XglDescriptorSetObj descriptorSet(m_device);
 
     m_renderTargetCount = 2;
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
     att.blendEnable = XGL_FALSE;
@@ -967,25 +986,16 @@ TEST_F(XglRenderTest, TriangleMRT)
     att.channelWriteMask = 0xf;
     pipelineobj.SetColorAttachment(1, &att);
 
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
+
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     cmdBuffer.AddRenderTarget(m_renderTargets[1]);
+
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
-    cmdBuffer.ClearAllBuffers(NULL, NULL);
-    cmdBuffer.BindAttachments(&m_depthStencilBinding);
 
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_MSAA, m_stateMsaa);
-    pipelineobj.CreateXGLPipeline(&descriptorSet);
-    cmdBuffer.BindPipeline(pipelineobj.GetPipelineHandle());
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
+
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
-
-    descriptorSet.CreateXGLDescriptorSet();
-    cmdBuffer.BindDescriptorSet(descriptorSet.GetDescriptorSetHandle());
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
@@ -999,9 +1009,6 @@ TEST_F(XglRenderTest, TriangleMRT)
 
     for (int i = 0; i < m_renderTargetCount; i++)
         RecordImage(m_renderTargets[i]);
-
-    // GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 1);
-    // QueueCommandBuffer(NULL, 0);
 
 }
 
@@ -1083,28 +1090,21 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.CreateXGLPipeline(&descriptorSet);
-    descriptorSet.CreateXGLDescriptorSet();
+    // pipelineobj.CreateXGLPipeline(&descriptorSet);
+    // descriptorSet.CreateXGLDescriptorSet();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
-    cmdBuffer.ClearAllBuffers(NULL, NULL);
-    cmdBuffer.BindAttachments(&m_depthStencilBinding);
+
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
-    cmdBuffer.BindStateObject(XGL_STATE_BIND_MSAA, m_stateMsaa);
 
-    cmdBuffer.BindPipeline(pipelineobj.GetPipelineHandle());
-    cmdBuffer.BindDescriptorSet(descriptorSet.GetDescriptorSetHandle());
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
     cmdBuffer.BindIndexBuffer(&indexBuffer,0);
 
@@ -1759,10 +1759,27 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    GenericDrawTriangleTest(&pipelineobj, &descriptorSet, 12);
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
+    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest2.dot");
+#endif
+    // render triangle
+    cmdBuffer.Draw(0, 36, 0, 1);
+
+    // finalize recording of the command buffer
+    cmdBuffer.EndCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(NULL, 0);
+
+    for (int i = 0; i < m_renderTargetCount; i++)
+        RecordImage(m_renderTargets[i]);
 }
 
 TEST_F(XglRenderTest, VSTexture)
