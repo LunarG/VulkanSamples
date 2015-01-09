@@ -67,6 +67,13 @@ extern "C"
 {
 GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings()
 {
+    static BOOL bFirstTime = TRUE;
+    if (bFirstTime == TRUE)
+    {
+        glv_SettingGroup_reset_defaults(&g_xglReplaySettingGroup);
+        bFirstTime = FALSE;
+    }
+
     return &g_xglReplaySettingGroup;
 }
 

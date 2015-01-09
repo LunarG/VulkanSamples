@@ -30,12 +30,19 @@ extern "C"
 #include "glv_settings.h"
 }
 
+#include <xgl.h>
+
 typedef struct glvreplay_xgl_settings
 {
     unsigned int debugLevel;
+    const char* enableLayers;
 } glvreplay_xgl_settings;
 
 extern glvreplay_xgl_settings g_xglReplaySettings;
 extern glv_SettingGroup g_xglReplaySettingGroup;
+
+XGL_CHAR** get_enableLayers_list(unsigned int* pNumLayers);
+void release_enableLayer_list(XGL_CHAR** pList);
+
 #endif // GLVREPLAY_XGL_SETTINGS_H
 
