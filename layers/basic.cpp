@@ -32,7 +32,7 @@ static std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
 
 static XGL_LAYER_DISPATCH_TABLE * initLayerTable(const XGL_BASE_LAYER_OBJECT *gpuw)
 {
-    GetProcAddrType fpGPA;
+    xglGetProcAddrType fpGPA;
     XGL_LAYER_DISPATCH_TABLE *pTable;
 
     assert(gpuw);
@@ -95,7 +95,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount, XGL_VOID* pReserved)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers, XGL_VOID* pReserved)
 {
     if (gpu != NULL)
     {
@@ -103,7 +103,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
         XGL_LAYER_DISPATCH_TABLE* pTable = initLayerTable(gpuw);
 
         printf("At start of wrapped xglEnumerateLayers() call w/ gpu: %p\n", gpu);
-        XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
+        XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
     {
@@ -112,10 +112,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
 
         // Example of a layer that is only compatible with Intel's GPUs
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT*) pReserved;
-        GetGpuInfoType fpGetGpuInfo;
+        xglGetGpuInfoType fpGetGpuInfo;
         XGL_PHYSICAL_GPU_PROPERTIES gpuProps;
         XGL_SIZE dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
-        fpGetGpuInfo = (GetGpuInfoType) gpuw->pGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetGpuInfo");
+        fpGetGpuInfo = (xglGetGpuInfoType) gpuw->pGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetGpuInfo");
         fpGetGpuInfo((XGL_PHYSICAL_GPU) gpuw->nextObject, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
         if (gpuProps.vendorId == 0x8086)
         {

@@ -244,8 +244,8 @@ core = Extension(
             [Param("XGL_PHYSICAL_GPU", "gpu"),
              Param("XGL_SIZE", "maxLayerCount"),
              Param("XGL_SIZE", "maxStringSize"),
-             Param("XGL_CHAR* const*", "pOutLayers"),
              Param("XGL_SIZE*", "pOutLayerCount"),
+             Param("XGL_CHAR* const*", "pOutLayers"),
              Param("XGL_VOID*", "pReserved")]),
 
         Proto("XGL_RESULT", "GetDeviceQueue",

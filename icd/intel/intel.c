@@ -138,8 +138,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
     XGL_PHYSICAL_GPU                            gpu,
     XGL_SIZE                                    maxLayerCount,
     XGL_SIZE                                    maxStringSize,
-    XGL_CHAR* const*                            pOutLayers,
     XGL_SIZE*                                   pOutLayerCount,
+    XGL_CHAR* const*                            pOutLayers,
     XGL_VOID*                                   pReserved)
 {
     if (!pOutLayerCount)

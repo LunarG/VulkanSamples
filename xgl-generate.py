@@ -213,13 +213,13 @@ class DispatchTableOpsSubcommand(Subcommand):
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
             else:
-                stmts.append("table->%s = (%sType) gpa(gpu, \"xgl%s\");" %
+                stmts.append("table->%s = (xgl%sType) gpa(gpu, \"xgl%s\");" %
                         (proto.name, proto.name, proto.name))
 
         func = []
         func.append("static inline void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
-        func.append("%s                                              GetProcAddrType gpa,"
+        func.append("%s                                              xglGetProcAddrType gpa,"
                 % (" " * len(self.prefix)))
         func.append("%s                                              XGL_PHYSICAL_GPU gpu)"
                 % (" " * len(self.prefix)))

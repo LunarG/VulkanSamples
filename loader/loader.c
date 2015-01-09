@@ -62,8 +62,8 @@ struct loader_icd {
     XGL_UINT gpu_count;
     XGL_BASE_LAYER_OBJECT *gpus;
 
-    GetProcAddrType GetProcAddr;
-    InitAndEnumerateGpusType InitAndEnumerateGpus;
+    xglGetProcAddrType GetProcAddr;
+    xglInitAndEnumerateGpusType InitAndEnumerateGpus;
 
     struct loader_icd *next;
 };
@@ -215,7 +215,7 @@ loader_icd_create(const char *filename)
     }
 
 #define LOOKUP(icd, func) do {                              \
-    icd->func = (func## Type) dlsym(icd->handle, "xgl" #func); \
+    icd->func = (xgl ##func## Type) dlsym(icd->handle, "xgl" #func); \
     if (!icd->func) {                                       \
         loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());      \
         loader_icd_destroy(icd);                            \
@@ -459,7 +459,7 @@ static void layer_lib_scan(const char * libInPaths)
     loader.layer_scanned = true;
 }
 
-static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, GetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
+static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, xglGetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
 {
     loader_initialize_dispatch_table(tab, fpGPA, gpu);
 
@@ -521,7 +521,7 @@ static void loader_init_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index, s
 static bool find_layer_name(struct loader_icd *icd, XGL_UINT gpu_index, const char * layer_name, const char **lib_name)
 {
     void *handle;
-    EnumerateLayersType fpEnumerateLayers;
+    xglEnumerateLayersType fpEnumerateLayers;
     XGL_CHAR layer_buf[16][256];
     XGL_CHAR * layers[16];
 
@@ -548,7 +548,7 @@ static bool find_layer_name(struct loader_icd *icd, XGL_UINT gpu_index, const ch
         }
         else {
             XGL_SIZE cnt;
-            fpEnumerateLayers(NULL, 16, 256, layers, &cnt, (XGL_VOID *) icd->gpus + gpu_index);
+            fpEnumerateLayers(NULL, 16, 256, &cnt, layers, (XGL_VOID *) icd->gpus + gpu_index);
             for (unsigned int i = 0; i < cnt; i++) {
                 if (!strcmp((char *) layers[i], layer_name)) {
                     dlclose(handle);
@@ -693,7 +693,7 @@ extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
     if (!loader_layers_activated(icd, gpu_index)) {
         XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) gpu;
         XGL_BASE_LAYER_OBJECT *nextGpuObj, *baseObj = gpuObj->baseObject;
-        GetProcAddrType nextGPA = xglGetProcAddr;
+        xglGetProcAddrType nextGPA = xglGetProcAddr;
 
         count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
         if (!count)
@@ -787,7 +787,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     while (icd) {
         XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
         XGL_BASE_LAYER_OBJECT * wrappedGpus;
-        GetProcAddrType getProcAddr = icd->GetProcAddr;
+        xglGetProcAddrType getProcAddr = icd->GetProcAddr;
         XGL_UINT n, max = maxGpus - count;
 
         if (max > XGL_MAX_PHYSICAL_GPUS) {
@@ -838,14 +838,14 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     return (count > 0) ? XGL_SUCCESS : res;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_CHAR* const* pOutLayers, XGL_SIZE* pOutLayerCount, XGL_VOID* pReserved)
+LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers, XGL_VOID* pReserved)
 {
     XGL_UINT gpu_index;
     XGL_UINT count = 0;
     char *lib_name;
     struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
     void *handle;
-    EnumerateLayersType fpEnumerateLayers;
+    xglEnumerateLayersType fpEnumerateLayers;
     XGL_CHAR layer_buf[16][256];
     XGL_CHAR * layers[16];
 
@@ -888,7 +888,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZ
             XGL_UINT n;
             XGL_RESULT res;
             n = (maxStringSize < 256) ? maxStringSize : 256;
-            res = fpEnumerateLayers(NULL, 16, n, layers, &cnt, (XGL_VOID *) icd->gpus + gpu_index);
+            res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (XGL_VOID *) icd->gpus + gpu_index);
             dlclose(handle);
             if (res != XGL_SUCCESS)
                 continue;

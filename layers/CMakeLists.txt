@@ -25,6 +25,8 @@ include_directories(
 )
 
 set (CMAKE_CXX_FLAGS "-std=c++11")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
 
 add_custom_command(OUTPUT xgl_dispatch_table_helper.h
 	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops layer > xgl_dispatch_table_helper.h

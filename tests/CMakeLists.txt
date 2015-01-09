@@ -12,6 +12,8 @@ if(NOT ImageMagick_FOUND)
     message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev")
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES")
+
 SET(COMMON_CPP
     xglrenderframework.cpp
     xgltestbinding.cpp

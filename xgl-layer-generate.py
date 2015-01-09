@@ -699,7 +699,7 @@ class Subcommand(object):
         func_body = ["#include \"xgl_dispatch_table_helper.h\""]
         func_body.append('static void initLayerTable()\n'
                          '{\n'
-                         '    GetProcAddrType fpNextGPA;\n'
+                         '    xglGetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n');
 

@@ -80,10 +80,10 @@ typedef struct _XGL_WSI_X11_PRESENT_INFO
     XGL_BOOL flip;
 } XGL_WSI_X11_PRESENT_INFO;
 
-typedef XGL_RESULT (XGLAPI *WsiX11AssociateConnectionType)(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo);
-typedef XGL_RESULT (XGLAPI *WsiX11GetMSCType)(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc);
-typedef XGL_RESULT (XGLAPI *WsiX11CreatePresentableImageType)(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem);
-typedef XGL_RESULT (XGLAPI *WsiX11QueuePresentType)(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence);
+typedef XGL_RESULT (XGLAPI *xglWsiX11AssociateConnectionType)(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo);
+typedef XGL_RESULT (XGLAPI *xglWsiX11GetMSCType)(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc);
+typedef XGL_RESULT (XGLAPI *xglWsiX11CreatePresentableImageType)(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem);
+typedef XGL_RESULT (XGLAPI *xglWsiX11QueuePresentType)(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence);
 
 /**
  * Associate an X11 connection with a GPU.  This should be done before device

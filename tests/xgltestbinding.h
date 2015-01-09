@@ -25,7 +25,6 @@
 
 #include <vector>
 
-#define XGL_PROTOTYPES
 #include "xgl.h"
 
 namespace xgl_testing {

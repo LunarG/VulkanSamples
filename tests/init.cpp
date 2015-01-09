@@ -140,7 +140,7 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
 
     for (int i = 0; i < 16; i++)
         layers[i] = &layer_buf[i][0];
-    err = xglEnumerateLayers(objs[0], 16, 256, (XGL_CHAR * const *) layers, &layer_count, NULL);
+    err = xglEnumerateLayers(objs[0], 16, 256, &layer_count, (XGL_CHAR * const *) layers, NULL);
     ASSERT_XGL_SUCCESS(err);
     for (int i = 0; i < layer_count; i++) {
         printf("Enumerated layers: %s ", layers[i]);

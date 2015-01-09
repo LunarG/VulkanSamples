@@ -96,17 +96,17 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1StorePipeline(XGL_PIPELINE pipeline, XG
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1EnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize,
-                                                         XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount,
+                                                         XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers,
                                                          XGL_VOID* pReserved)
 {
     if (gpu == NULL)
-        return xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
+        return xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
 
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     XGL_LAYER_DISPATCH_TABLE* pTable = getLayer1Table(gpuw);
 
     printf("At start of multi1 layer xglEnumerateLayers()\n");
-    XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
+    XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
     printf("Completed multi1 layer xglEnumerateLayers()\n");
     return result;
 }
@@ -196,17 +196,17 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2BeginCommandBuffer( XGL_CMD_BUFFER cmdB
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2EnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize,
-                                                         XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount,
+                                                         XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers,
                                                          XGL_VOID* pReserved)
 {
     if (gpu == NULL)
-        return xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
+        return xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
 
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     XGL_LAYER_DISPATCH_TABLE* pTable = getLayer2Table(gpuw);
 
     printf("At start of multi2 layer xglEnumerateLayers()\n");
-    XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayers, pOutLayerCount, pReserved);
+    XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
     printf("Completed multi2 layer xglEnumerateLayers()\n");
     return result;
 }
@@ -237,7 +237,7 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi2GetProcAddr(XGL_PHYSICAL_GPU gpu, const
 
 /********************************* Common functions ********************************/
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize,
-                                                      XGL_CHAR* const* pOutLayers, XGL_SIZE * pOutLayerCount,
+                                                      XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers,
                                                       XGL_VOID* pReserved)
 {
     if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)

@@ -137,7 +137,7 @@ std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
 
     char * const *out = const_cast<char * const *>(&layers[0]);
     size_t count;
-    if (!EXPECT(xglEnumerateLayers(gpu_, max_layer_count, max_string_size, out, &count, NULL) == XGL_SUCCESS))
+    if (!EXPECT(xglEnumerateLayers(gpu_, max_layer_count, max_string_size, &count, out, NULL) == XGL_SUCCESS))
         count = 0;
     layers.resize(count);
 

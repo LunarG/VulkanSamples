@@ -5,6 +5,8 @@ add_definitions(-D_GNU_SOURCE -DHAVE_PTHREAD)
 # LLVM required defines
 add_definitions(-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+
 # DEBUG and NDEBUG flags are important for proper mesa behavior
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DNDEBUG")

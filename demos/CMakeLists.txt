@@ -14,6 +14,8 @@ file(GLOB TEXTURES
   )
 file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
    COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -b ${PROJECT_SOURCE_DIR}/demos/cube.vert 
    COMMAND mv vert.bil ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
