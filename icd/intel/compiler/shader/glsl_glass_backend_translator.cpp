@@ -875,6 +875,64 @@ inline void MesaGlassTranslator::emitIRTexture(const llvm::IntrinsicInst* llvmIn
    addIRInstruction(llvmInst, call);
 }
 
+/**
+ * -----------------------------------------------------------------------------
+ * Emit IR texture query intrinsics
+ *    (declare (uniform ) sampler2D surface)
+ *    (declare () ivec2 textureSize_retval)
+ *    (call textureSize (var_ref textureSize_retval)  ((var_ref surface) (var_ref lod) ))
+ * -----------------------------------------------------------------------------
+ */
+inline void MesaGlassTranslator::emitIRTextureQuery(const llvm::IntrinsicInst* llvmInst)
+{
+   const char* name;
+
+   // This is OK on the stack, because the ir_call constructor will move out of it.
+   exec_list parameters;
+
+   // Sampler operand
+   parameters.push_tail(getIRValue(llvmInst->getOperand(GetTextureOpIndex(ETOSamplerLoc))));
+
+   // Inspired by LunarGlass GLSL backend
+   switch (llvmInst->getIntrinsicID()) {
+   case llvm::Intrinsic::gla_queryTextureSize:
+   case llvm::Intrinsic::gla_queryTextureSizeNoLod:
+      name = "textureSize";
+      if (llvmInst->getNumArgOperands() > 2)
+         parameters.push_tail(getIRValue(llvmInst->getOperand(2)));
+      break;
+
+   case llvm::Intrinsic::gla_fQueryTextureLod:
+      name = "textureLod";
+      parameters.push_tail(getIRValue(llvmInst->getOperand(2)));
+      break;
+
+   default:
+      error("unexpected texture query intrinsic");
+      break;
+   }
+
+   // The rest of this function is very similar to emitIRTexture
+
+   // Find the right function signature to call
+   // This sets state->uses_builtin_functions
+   ir_function_signature *sig =
+      _mesa_glsl_find_builtin_function(state, name, &parameters);
+
+   if (sig == 0) {
+      return error("no matching texture signature found");
+   }
+
+   const std::string retName = std::string(name) + "_retval";
+   ir_dereference* dest = newIRVariableDeref(llvmInst->getType(), llvmInst, retName, ir_var_auto);
+
+   ir_call *call = new(shader) ir_call(sig, dest->as_dereference_variable(), &parameters);
+
+   // TODO: Should we insert a prototype?
+
+   addIRInstruction(llvmInst, call);
+}
+
 
 /**
  * -----------------------------------------------------------------------------
@@ -2844,8 +2902,8 @@ inline void MesaGlassTranslator::emitIRIntrinsic(const llvm::IntrinsicInst* llvm
 
    // Handle Texturing ------------------------------------------------------------------------
    case llvm::Intrinsic::gla_queryTextureSize:                  // ... fall through...
-   case llvm::Intrinsic::gla_queryTextureSizeNoLod:             return emitFn("textureSize", llvmInst);
-   case llvm::Intrinsic::gla_fQueryTextureLod:                  return emitFn("textureLod", llvmInst);
+   case llvm::Intrinsic::gla_queryTextureSizeNoLod:             // ...
+   case llvm::Intrinsic::gla_fQueryTextureLod:                  return emitIRTextureQuery(llvmInst);
    // TODO: Goo: 430 Functionality: textureQueryLevels()
    // case llvm::Intrinsic::gla_queryTextureLevels: // TODO:
 

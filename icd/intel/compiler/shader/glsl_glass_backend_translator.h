@@ -229,6 +229,7 @@ namespace gla {
 
         // IR texture intrinsics
         inline void emitIRTexture(const llvm::IntrinsicInst*, bool gather);
+        inline void emitIRTextureQuery(const llvm::IntrinsicInst*);
 
         // IR insertion intrinsics
         inline void emitIRMultiInsert(const llvm::IntrinsicInst*);
