@@ -138,13 +138,13 @@ The Glave replayer takes  a trace file  and will launch an XGL session based
 on trace file.
 ```
 cd <xgl build dir>/tools/glave
-./glvreplay64 <options> trace_filename
+./glvreplay64 <options> -t trace_filename
 ```
 Example to replay trace file captured above
 ```
 export LIBXGL_DRIVERS_PATH=/home/jon/dbuild/icd/intel
 export LD_LIBRARY_PATH=/home/jon/dbuild/loader
-./glvreplay64 glvtrace_cube.glv
+./glvreplay64 -t glvtrace_cube.glv
 ```
 ###Running debugger###
 ```
