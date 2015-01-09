@@ -33,6 +33,7 @@ extern "C"
 ApiReplay* g_pReplayer = NULL;
 GLV_CRITICAL_SECTION g_handlerLock;
 XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
+glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION g_fpGlvCallback = NULL;
 
 static XGL_VOID xglErrorHandler(
                                             XGL_DBG_MSG_TYPE     msgType,
@@ -49,15 +50,27 @@ static XGL_VOID xglErrorHandler(
             glv_LogError("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
                          validationLevel, srcObject, location, msgCode, (char *) pMsg);
             g_pReplayer->push_validation_msg(validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            if (g_fpGlvCallback != NULL)
+            {
+                g_fpGlvCallback(glv_replay::GLV_DBG_MSG_ERROR, pMsg);
+            }
             break;
         case XGL_DBG_MSG_WARNING:
         case XGL_DBG_MSG_PERF_WARNING:
             //glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
             //            validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            if (g_fpGlvCallback != NULL)
+            {
+                g_fpGlvCallback(glv_replay::GLV_DBG_MSG_WARNING, pMsg);
+            }
             break;
         default:
             //glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
             //            validationLevel, srcObject, location, msgCode, (char *) pMsg);
+            if (g_fpGlvCallback != NULL)
+            {
+                g_fpGlvCallback(glv_replay::GLV_DBG_MSG_INFO, pMsg);
+            }
             break;
     }
     glv_leave_critical_section(&g_handlerLock);
@@ -65,6 +78,11 @@ static XGL_VOID xglErrorHandler(
 
 extern "C"
 {
+GLVTRACER_EXPORT void RegisterDbgMsgCallback(glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION pCallback)
+{
+    g_fpGlvCallback = pCallback;
+}
+
 GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings()
 {
     static BOOL bFirstTime = TRUE;

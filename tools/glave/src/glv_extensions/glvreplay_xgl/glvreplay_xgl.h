@@ -30,6 +30,7 @@
 
 extern "C"
 {
+GLVTRACER_EXPORT void RegisterDbgMsgCallback(glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION pCallback);
 GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings();
 GLVTRACER_EXPORT void GLVTRACER_CDECL UpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
 GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay);

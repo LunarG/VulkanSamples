@@ -63,7 +63,7 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
 {
     assert(pTraceFileInfo != NULL);
     assert(pView != NULL);
-    m_pView = pView;
+    setView(pView);
     m_pTraceFileInfo = pTraceFileInfo;
 
     //m_pView->add_custom_state_viewer(new QWidget(), QString("Framebuffer"));

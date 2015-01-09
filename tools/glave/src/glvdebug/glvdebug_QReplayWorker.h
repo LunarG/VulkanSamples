@@ -32,6 +32,27 @@
 #include "glvdebug_trace_file_utils.h"
 #include "glvreplay_factory.h"
 
+static glvdebug_view* s_pView = NULL;
+
+static void dbg_msg_callback(glv_replay::GLV_DBG_MSG_TYPE msgType, const char* pMsg)
+{
+    if (s_pView != NULL)
+    {
+        if (msgType == glv_replay::GLV_DBG_MSG_ERROR)
+        {
+            s_pView->output_error(pMsg);
+        }
+        else if (msgType == glv_replay::GLV_DBG_MSG_WARNING)
+        {
+            s_pView->output_warning(pMsg);
+        }
+        else
+        {
+            s_pView->output_message(pMsg);
+        }
+    }
+}
+
 class glvdebug_QReplayWorker : public QObject
 {
     Q_OBJECT
@@ -48,6 +69,7 @@ public:
 
     virtual ~glvdebug_QReplayWorker()
     {
+        setView(NULL);
     }
 
 protected slots:
@@ -57,7 +79,6 @@ protected slots:
         glvdebug_trace_file_packet_offsets* pCurPacket;
         unsigned int res;
         glv_replay::glv_trace_packet_replay_library *replayer;
-    //    glv_trace_packet_message* msgPacket;
 
         for (uint64_t i = startPacketIndex; i < pTraceFileInfo->packetCount; i++)
         {
@@ -78,6 +99,8 @@ protected slots:
             pCurPacket = &pTraceFileInfo->pPacketOffsets[i];
             switch (pCurPacket->pHeader->packet_id) {
                 case GLV_TPI_MESSAGE:
+                {
+    //                glv_trace_packet_message* msgPacket;
     //                msgPacket = (glv_trace_packet_message*)pCurPacket->pHeader;
     //                if(msgPacket->type == TLLWarn) {
     //                    s_pView->output_warning(msgPacket->message);
@@ -86,6 +109,7 @@ protected slots:
     //                } else {
     //                    s_pView->output_message(msgPacket->message);
     //                }
+                }
                     break;
                 case GLV_TPI_MARKER_CHECKPOINT:
                     break;
@@ -183,6 +207,12 @@ protected:
     glvdebug_trace_file_info* m_pTraceFileInfo;
     uint64_t m_currentReplayPacketIndex;
 
+    void setView(glvdebug_view* pView)
+    {
+        m_pView = pView;
+        s_pView = pView;
+    }
+
     bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget)
     {
         // Get window handle of the widget to replay into.
@@ -229,6 +259,8 @@ protected:
                 }
                 else
                 {
+                    m_pReplayers[tracerId]->RegisterDbgMsgCallback((glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION)&dbg_msg_callback);
+
                     // get settings from the replayer
                     m_pView->add_setting_group(m_pReplayers[tracerId]->GetSettings());
 

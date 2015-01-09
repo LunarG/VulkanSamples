@@ -44,9 +44,21 @@ enum GLV_REPLAY_RESULT
     GLV_REPLAY_VALIDATION_ERROR // callback Msg error from validation layer
 };
 
+enum GLV_DBG_MSG_TYPE
+{
+    GLV_DBG_MSG_INFO = 0,
+    GLV_DBG_MSG_WARNING,
+    GLV_DBG_MSG_ERROR
+};
+
+// callback signature
+typedef void (*GLV_DBG_MSG_CALLBACK_FUNCTION)(GLV_DBG_MSG_TYPE msgType, const char* pMsg);
+
 // entrypoints that must be exposed by each replayer library
 extern "C"
 {
+// entrypoints
+typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_registerdbgmsgcallback)(GLV_DBG_MSG_CALLBACK_FUNCTION pCallback);
 typedef glv_SettingGroup* (GLVTRACER_CDECL *funcptr_glvreplayer_getSettings)();
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_updatefromsettings)(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
 typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay);
@@ -58,6 +70,7 @@ typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_repl
 struct glv_trace_packet_replay_library
 {
     void* pLibrary;
+    funcptr_glvreplayer_registerdbgmsgcallback RegisterDbgMsgCallback;
     funcptr_glvreplayer_getSettings GetSettings;
     funcptr_glvreplayer_updatefromsettings UpdateFromSettings;
     funcptr_glvreplayer_initialize Initialize;

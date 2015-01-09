@@ -69,6 +69,7 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
         assert(pReplayer != NULL);
         pReplayer->pLibrary = pLibrary;
 
+        pReplayer->RegisterDbgMsgCallback = (funcptr_glvreplayer_registerdbgmsgcallback)glv_platform_get_library_entrypoint(pLibrary, "RegisterDbgMsgCallback");
         pReplayer->GetSettings = (funcptr_glvreplayer_getSettings)glv_platform_get_library_entrypoint(pLibrary, "GetSettings");
         pReplayer->UpdateFromSettings = (funcptr_glvreplayer_updatefromsettings)glv_platform_get_library_entrypoint(pLibrary, "UpdateFromSettings");
         pReplayer->Initialize = (funcptr_glvreplayer_initialize)glv_platform_get_library_entrypoint(pLibrary, "Initialize");
@@ -76,6 +77,7 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
         pReplayer->Interpret = (funcptr_glvreplayer_interpret)glv_platform_get_library_entrypoint(pLibrary, "Interpret");
         pReplayer->Replay = (funcptr_glvreplayer_replay)glv_platform_get_library_entrypoint(pLibrary, "Replay");
 
+        assert(pReplayer->RegisterDbgMsgCallback != NULL);
         assert(pReplayer->GetSettings != NULL);
         assert(pReplayer->UpdateFromSettings != NULL);
         assert(pReplayer->Initialize != NULL);
