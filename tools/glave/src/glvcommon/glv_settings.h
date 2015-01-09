@@ -77,6 +77,7 @@ void glv_SettingGroup_reset_default(glv_SettingGroup* pSettingGroup);
 // pNumDestGroups is updated if pSrc is added to ppDestGroups.
 void glv_SettingGroup_merge(glv_SettingGroup* pSrc, glv_SettingGroup** ppDestGroups, unsigned int* pNumDestGroups);
 
+// Updates DestGroups with values from Src
 void glv_SettingGroup_update(glv_SettingGroup* pSrc, glv_SettingGroup* pDestGroups, unsigned int numDestGroups);
 
 // Creates a new named group at the end of the ppSettingGroups array, and updates pNumSettingGroups.
