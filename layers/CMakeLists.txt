@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 2.8.11)
 macro(run_xgl_helper subcmd)
 	add_custom_command(OUTPUT ${ARGN}
 		COMMAND ${PROJECT_SOURCE_DIR}/xgl-helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-helper.py
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-helper.py ${PROJECT_SOURCE_DIR}/include/xgl.h
 	)
 endmacro()
 
