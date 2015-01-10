@@ -59,6 +59,36 @@ public:
         s_pWorker = NULL;
     }
 
+    virtual BOOL PrintReplayInfoMsgs()
+    {
+        return FALSE;
+    }
+
+    virtual BOOL PrintReplayWarningMsgs()
+    {
+        return TRUE;
+    }
+
+    virtual BOOL PrintReplayErrorMsgs()
+    {
+        return TRUE;
+    }
+
+    virtual BOOL PauseOnReplayInfoMsg()
+    {
+        return FALSE;
+    }
+
+    virtual BOOL PauseOnReplayWarningMsg()
+    {
+        return TRUE;
+    }
+
+    virtual BOOL PauseOnReplayErrorMsg()
+    {
+        return TRUE;
+    }
+
 protected slots:
     void playCurrentTraceFile(uint64_t startPacketIndex)
     {
@@ -70,18 +100,6 @@ protected slots:
         for (uint64_t i = startPacketIndex; i < pTraceFileInfo->packetCount; i++)
         {
             m_currentReplayPacketIndex = i;
-            QCoreApplication::processEvents();
-            if (m_bPauseReplay)
-            {
-                emit ReplayPaused(m_currentReplayPacketIndex);
-                return;
-            }
-
-            if (m_bStopReplay)
-            {
-                emit ReplayStopped(m_currentReplayPacketIndex);
-                return;
-            }
 
             pCurPacket = &pTraceFileInfo->pPacketOffsets[i];
             switch (pCurPacket->pHeader->packet_id) {
@@ -133,6 +151,20 @@ protected slots:
                     }
                 }
             }
+
+            // Process events and pause or stop if needed
+            QCoreApplication::processEvents();
+            if (m_bPauseReplay)
+            {
+                emit ReplayPaused(m_currentReplayPacketIndex);
+                return;
+            }
+
+            if (m_bStopReplay)
+            {
+                emit ReplayStopped(m_currentReplayPacketIndex);
+                return;
+            }
         }
 
         emit ReplayFinished();
@@ -157,7 +189,7 @@ public slots:
     {
         m_bPauseReplay = false;
         emit ReplayContinued();
-        playCurrentTraceFile(m_currentReplayPacketIndex);
+        playCurrentTraceFile(m_currentReplayPacketIndex+1);
     }
 
     void StopReplay()
@@ -282,22 +314,40 @@ protected:
 
 static void dbg_msg_callback(glv_replay::GLV_DBG_MSG_TYPE msgType, const char* pMsg)
 {
-    if (s_pView != NULL)
+    if (s_pView != NULL && s_pWorker != NULL)
     {
         if (msgType == glv_replay::GLV_DBG_MSG_ERROR)
         {
-            s_pView->output_error(pMsg);
-            s_pWorker->PauseReplay();
+            if (s_pWorker->PrintReplayErrorMsgs())
+            {
+                s_pView->output_error(pMsg);
+            }
+            if (s_pWorker->PauseOnReplayErrorMsg())
+            {
+                s_pWorker->PauseReplay();
+            }
         }
         else if (msgType == glv_replay::GLV_DBG_MSG_WARNING)
         {
-            s_pView->output_warning(pMsg);
-            s_pWorker->PauseReplay();
+            if (s_pWorker->PrintReplayWarningMsgs())
+            {
+                s_pView->output_warning(pMsg);
+            }
+            if (s_pWorker->PauseOnReplayWarningMsg())
+            {
+                s_pWorker->PauseReplay();
+            }
         }
         else
         {
-            s_pView->output_message(pMsg);
-            s_pWorker->PauseReplay();
+            if (s_pWorker->PrintReplayInfoMsgs())
+            {
+                s_pView->output_message(pMsg);
+            }
+            if (s_pWorker->PauseOnReplayInfoMsg())
+            {
+                s_pWorker->PauseReplay();
+            }
         }
     }
 }
