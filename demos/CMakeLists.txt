@@ -1,7 +1,5 @@
-pkg_check_modules(XCB REQUIRED xcb)
-if (NOT XCB_FOUND)
-	message(FATAL_ERROR "xcb not found")
-endif()
+find_package(XCB REQUIRED)
+
 if(NOT EXISTS /usr/include/glm/glm.hpp)
     message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
 endif()
@@ -33,7 +31,6 @@ include_directories (
    "${PROJECT_SOURCE_DIR}/icd/common"
    )
 
-link_directories(${XCB_LIBRARY_DIRS})
 link_libraries(${XCB_LIBRARIES} XGL png m)
 
 add_executable(xglinfo xglinfo.c)

@@ -359,12 +359,12 @@ SET(SOURCES
     ${COMPILER_SOURCES}
     )
 
-pkg_check_modules(DRI3 xcb xcb-dri3 xcb-present)
-if (DRI3_FOUND)
+find_package(XCB COMPONENTS xcb xcb-dri3 xcb-present)
+
+if (XCB_FOUND)
 	add_definitions(-DENABLE_WSI_X11)
-	include_directories(${DRI3_INCLUDE_DIRS})
-	link_directories(${DRI3_LIBRARY_DIRS})
-	link_libraries(${DRI3_LIBRARIES})
+        include_directories(${XCB_INCLUDE_DIRS})
+        link_libraries(${XCB_LIBRARIES})
 	set(SOURCES ${SOURCES} wsi_x11.c)
 endif()
 
