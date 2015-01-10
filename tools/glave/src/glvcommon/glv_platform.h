@@ -81,6 +81,9 @@ BOOL glv_is_loaded_into_glvtrace();
 // Get the thread id for this thread.
 glv_thread_id glv_platform_get_thread_id();
 
+// Get the Registry or Environment variable
+char *glv_get_global_var(const char *);
+
 // Provides out_array_length uint32s of random data from a secure service
 size_t glv_platform_rand_s(uint32_t* out_array, size_t byteCount);
 

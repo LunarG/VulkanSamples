@@ -105,6 +105,11 @@ Trace file is written into "glvtrace_cube<number>.glv".
 As the app is rerun, the Glave tracer server will increment the output file
 number for each succesive run of the app.
 
+One can also set GLVLIB_TRACE_IPADDR to a remote system IP address. Then
+the tracer inserted into an app will send the tarce packets to the remote
+system rather than local system. In this case, the remote system should be
+running the trace server.
+
 Rather than giving command line options, one can instead put tracer options in
 a settings file: "glvtrace_settings.txt".
 

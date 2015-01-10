@@ -124,6 +124,16 @@ glv_thread_id glv_platform_get_thread_id()
 #endif
 }
 
+char *glv_get_global_var(const char *name)
+{
+#if defined(PLATFORM_LINUX)
+    return getenv(name);
+#else
+    return NULL;
+    //TODO add code for reading from Windows registry
+#endif
+}
+
 size_t glv_platform_rand_s(uint32_t* out_array, size_t out_array_length)
 {
 #if defined(PLATFORM_LINUX)

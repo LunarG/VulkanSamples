@@ -300,7 +300,10 @@ class Subcommand(object):
         init_tracer.append('    FINISH_TRACE_PACKET();\n}\n')
 
         init_tracer.append('void InitTracer()\n{')
-        init_tracer.append('    gMessageStream = glv_MessageStream_create(FALSE, "127.0.0.1", GLV_BASE_PORT + GLV_TID_XGL);')
+        init_tracer.append('char *ipAddr = glv_get_global_var("GLVLIB_TRACE_IPADDR");')
+        init_tracer.append('if (ipAddr == NULL)')
+        init_tracer.append('    ipAddr = "127.0.0.1";')
+        init_tracer.append('    gMessageStream = glv_MessageStream_create(FALSE, ipAddr, GLV_BASE_PORT + GLV_TID_XGL);')
         init_tracer.append('    glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));')
         init_tracer.append('//    glv_tracelog_set_log_file(glv_FileLike_create_file(fopen("glv_log_traceside.txt","w")));')
         init_tracer.append('    glv_tracelog_set_tracer_id(GLV_TID_XGL);')
