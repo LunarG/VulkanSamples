@@ -93,7 +93,7 @@ class Subcommand(object):
         pass
 
     # Return set of printf '%' qualifier and input to that qualifier
-    def _get_printf_params(self, xgl_type, name, output_param):
+    def _get_printf_params(self, xgl_type, name, output_param, cpp=False):
         # TODO : Need ENUM and STRUCT checks here
         if "_TYPE" in xgl_type: # TODO : This should be generic ENUM check
             return ("%s", "string_%s(%s)" % (xgl_type.strip('const ').strip('*'), name))
@@ -109,19 +109,25 @@ class Subcommand(object):
             return ("%zu", name)
         if "FLOAT" in xgl_type:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
+                if cpp:
+                    return ("[%i, %i, %i, %i]", '"[" << %s[0] << "," << %s[1] << "," << %s[2] << "," << %s[3] << "]"' % (name, name, name, name))
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
         if "BOOL" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
             return ("%u", name)
         if True in [t in xgl_type for t in ["INT", "FLAGS", "MASK", "xcb_window_t"]]:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
+                if cpp:
+                    return ("[%i, %i, %i, %i]", "%s[0] << %s[1] << %s[2] << %s[3]" % (name, name, name, name))
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             if '*' in xgl_type:
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
         if "XGL_FORMAT" == xgl_type:
-           return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_XGL_CHANNEL_FORMAT(%s.channelFormat), string_XGL_NUM_FORMAT(%s.numericFormat)" % (name, name))
+            if cpp:
+                return ("%p", "&%s" % name)
+            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_XGL_CHANNEL_FORMAT(%s.channelFormat), string_XGL_NUM_FORMAT(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
         return ("%p", "(void*)(%s)" % name)
@@ -211,6 +217,8 @@ class Subcommand(object):
         layer_name = layer
         if no_addr:
             layer_name = "%sNoAddr" % layer
+            if 'Cpp' in layer_name:
+                layer_name = "APIDumpNoAddrCpp"
         funcs = []
         for proto in self.protos:
             if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
@@ -273,6 +281,117 @@ class Subcommand(object):
                                  '    fflush(stdout);\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
+                elif "APIDumpCpp" in layer:
+                    decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+                    param0_name = proto.params[0].name
+                    ret_val = ''
+                    stmt = ''
+                    cis_param_index = [] # Store list of indices when func has struct params
+                    create_params = 0 # Num of params at end of function that are created and returned as output values
+                    if 'WsiX11CreatePresentableImage' in proto.name:
+                        create_params = -2
+                    elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
+                        create_params = -1
+                    if proto.ret != "XGL_VOID":
+                        ret_val = "XGL_RESULT result = "
+                        stmt = "    return result;\n"
+                    f_open = ''
+                    f_close = ''
+                    if "File" in layer:
+                        file_mode = "a"
+                        if 'CreateDevice' in proto.name:
+                            file_mode = "w"
+                        f_open = 'pthread_mutex_lock( &file_lock );\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
+                        log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
+                        f_close = '\n    fclose(pOutFile);\n    pthread_mutex_unlock( &file_lock );'
+                    else:
+                        f_open = 'pthread_mutex_lock( &print_lock );\n    '
+                        log_func = 'cout << "t{" << getTIDIndex() << "} xgl%s(' % proto.name
+                        f_close = '\n    pthread_mutex_unlock( &print_lock );'
+                    pindex = 0
+                    for p in proto.params:
+                        # TODO : Need to handle xglWsiX11CreatePresentableImage for which the last 2 params are returned vals
+                        cp = False
+                        if 0 != create_params:
+                            # If this is any of the N last params of the func, treat as output
+                            for y in range(-1, create_params-1, -1):
+                                if p.name == proto.params[y].name:
+                                    cp = True
+                        (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
+                        if no_addr and "%p" == pft:
+                            (pft, pfi) = ("%s", '"addr"')
+                        log_func += '%s = " << %s << ", ' % (p.name, pfi)
+                        #print_vals += ', %s' % (pfi)
+                        # TODO : Just want this to be simple check for params of STRUCT type
+                        if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['XGL_CHAR', 'XGL_VOID', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'XGL_UINT32']]):
+                            if 'Wsi' not in proto.name:
+                                cis_param_index.append(pindex)
+                        pindex += 1
+                    log_func = log_func.strip(', ')
+                    if proto.ret != "XGL_VOID":
+                        log_func += ') = " << string_XGL_RESULT(result) << "\\n"'
+                        #print_vals += ', string_XGL_RESULT(result)'
+                    else:
+                        log_func += ')\\n"'
+                    log_func += ';'
+                    if len(cis_param_index) > 0:
+                        log_func += '\n    string tmp_str;'
+                        for sp_index in cis_param_index:
+                            cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                            log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                            log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
+                            if "File" in layer:
+                                if no_addr:
+                                    log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                else:
+                                    log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            else:
+                                if no_addr:
+                                    #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                    log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
+                                else:
+                                    #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                    log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                #log_func += '\n        fflush(stdout);'
+                            log_func += '\n    }'
+                    if proto.name == "EnumerateLayers":
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    if (gpu != NULL) {\n'
+                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '        pCurObj = gpuw;\n'
+                                 '        pthread_once(&tabOnce, initLayerTable);\n'
+                                 '        %snextTable.%s;\n'
+                                 '        %s    %s    %s\n'
+                                 '    %s'
+                                 '    } else {\n'
+                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                                 '            return XGL_ERROR_INVALID_POINTER;\n'
+                                 '        // This layer compatible with all GPUs\n'
+                                 '        *pOutLayerCount = 1;\n'
+                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
+                                 '        return XGL_SUCCESS;\n'
+                                 '    }\n'
+                                     '}' % (qual, decl, proto.params[0].name, ret_val, c_call,f_open, log_func, f_close, stmt, layer_name))
+                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    %snextTable.%s;\n'
+                                 '    %s%s%s\n'
+                                 '%s'
+                                 '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+                    else:
+                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        funcs.append('%s%s\n'
+                                 '{\n'
+                                 '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                                 '    pCurObj = gpuw;\n'
+                                 '    pthread_once(&tabOnce, initLayerTable);\n'
+                                 '    %snextTable.%s;\n'
+                                 '    %s%s%s\n'
+                                 '%s'
+                                 '}' % (qual, decl, proto.params[0].name, ret_val, c_call, f_open, log_func, f_close, stmt))
                 elif "APIDump" in layer:
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
@@ -571,7 +690,7 @@ class Subcommand(object):
         func_body.append("    else {\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
-                         "        return gpuw->pGPA(gpuw->nextObject, funcName);\n"
+                         "        return gpuw->pGPA((XGL_PHYSICAL_GPU)gpuw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
         return "\n".join(func_body)
@@ -644,6 +763,36 @@ class ApiDumpSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class ApiDumpCppSubcommand(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper_cpp.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\npthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;\n')
+        header_txt.append('#define MAX_TID 513')
+        header_txt.append('static pthread_t tidMapping[MAX_TID] = {0};')
+        header_txt.append('static uint32_t maxTID = 0;')
+        header_txt.append('// Map actual TID to an index value and return that index')
+        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
+        header_txt.append('static uint32_t getTIDIndex() {')
+        header_txt.append('    pthread_t tid = pthread_self();')
+        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
+        header_txt.append('        if (tid == tidMapping[i])')
+        header_txt.append('            return i;')
+        header_txt.append('    }')
+        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
+        header_txt.append('    uint32_t retVal = (uint32_t)maxTID;')
+        header_txt.append('    tidMapping[maxTID++] = tid;')
+        header_txt.append('    assert(maxTID < MAX_TID);')
+        header_txt.append('    return retVal;')
+        header_txt.append('}')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_layer_dispatch_table(),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp"),
+                self._generate_layer_gpa_function()]
+
+        return "\n\n".join(body)
+
 class ApiDumpFileSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
@@ -700,6 +849,36 @@ class ApiDumpNoAddrSubcommand(Subcommand):
     def generate_body(self):
         body = [self._generate_layer_dispatch_table(),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump", True),
+                self._generate_layer_gpa_function()]
+
+        return "\n\n".join(body)
+
+class ApiDumpNoAddrCppSubcommand(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <assert.h>\n#include <pthread.h>\n#include "xglLayer.h"\n#include "xgl_struct_string_helper_no_addr_cpp.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic pthread_once_t tabOnce = PTHREAD_ONCE_INIT;\npthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;\n')
+        header_txt.append('#define MAX_TID 513')
+        header_txt.append('static pthread_t tidMapping[MAX_TID] = {0};')
+        header_txt.append('static uint32_t maxTID = 0;')
+        header_txt.append('// Map actual TID to an index value and return that index')
+        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
+        header_txt.append('static uint32_t getTIDIndex() {')
+        header_txt.append('    pthread_t tid = pthread_self();')
+        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
+        header_txt.append('        if (tid == tidMapping[i])')
+        header_txt.append('            return i;')
+        header_txt.append('    }')
+        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
+        header_txt.append('    uint32_t retVal = (uint32_t)maxTID;')
+        header_txt.append('    tidMapping[maxTID++] = tid;')
+        header_txt.append('    assert(maxTID < MAX_TID);')
+        header_txt.append('    return retVal;')
+        header_txt.append('}')
+        return "\n".join(header_txt)
+
+    def generate_body(self):
+        body = [self._generate_layer_dispatch_table(),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp", True),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -915,6 +1094,8 @@ def main():
             "ApiDump" : ApiDumpSubcommand,
             "ApiDumpFile" : ApiDumpFileSubcommand,
             "ApiDumpNoAddr" : ApiDumpNoAddrSubcommand,
+            "ApiDumpCpp" : ApiDumpCppSubcommand,
+            "ApiDumpNoAddrCpp" : ApiDumpNoAddrCppSubcommand,
             "ObjectTracker" : ObjectTrackerSubcommand,
     }
 

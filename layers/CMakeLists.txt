@@ -37,7 +37,9 @@ add_custom_command(OUTPUT xgl_generic_intercept_proc_helper.h
 run_xgl_helper(gen_enum_string_helper xgl_enum_string_helper.h)
 run_xgl_helper(gen_struct_wrappers
 	xgl_struct_string_helper.h
+        xgl_struct_string_helper_cpp.h
 	xgl_struct_string_helper_no_addr.h
+	xgl_struct_string_helper_no_addr_cpp.h
 	xgl_struct_wrappers.h
 	xgl_struct_wrappers.cpp
 )
@@ -49,6 +51,8 @@ add_custom_target(generate_xgl_layer_helpers DEPENDS
 	xgl_enum_string_helper.h
 	xgl_struct_string_helper.h
 	xgl_struct_string_helper_no_addr.h
+        xgl_struct_string_helper_cpp.h
+	xgl_struct_string_helper_no_addr_cpp.h
 	xgl_struct_wrappers.h
 	xgl_struct_wrappers.cpp
 	xgl_struct_graphviz_helper.h
@@ -58,6 +62,8 @@ run_xgl_layer_generate(Generic generic_layer.c)
 run_xgl_layer_generate(ApiDump api_dump.c)
 run_xgl_layer_generate(ApiDumpFile api_dump_file.c)
 run_xgl_layer_generate(ApiDumpNoAddr api_dump_no_addr.c)
+run_xgl_layer_generate(ApiDumpCpp api_dump.cpp)
+run_xgl_layer_generate(ApiDumpNoAddrCpp api_dump_no_addr.cpp)
 run_xgl_layer_generate(ObjectTracker object_track.c)
 
 add_xgl_layer(Basic basic.cpp)
@@ -69,4 +75,6 @@ add_xgl_layer(Generic generic_layer.c)
 add_xgl_layer(APIDump api_dump.c)
 add_xgl_layer(APIDumpFile api_dump_file.c)
 add_xgl_layer(APIDumpNoAddr api_dump_no_addr.c)
+add_xgl_layer(APIDumpCpp api_dump.cpp)
+add_xgl_layer(APIDumpNoAddrCpp api_dump_no_addr.cpp)
 add_xgl_layer(ObjectTracker object_track.c)

@@ -319,10 +319,13 @@ class StructWrapperGen:
         self.class_filename = os.path.join(out_dir, self.api+"_struct_wrappers.cpp")
         self.string_helper_filename = os.path.join(out_dir, self.api+"_struct_string_helper.h")
         self.string_helper_no_addr_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr.h")
+        self.string_helper_cpp_filename = os.path.join(out_dir, self.api+"_struct_string_helper_cpp.h")
+        self.string_helper_no_addr_cpp_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr_cpp.h")
         self.no_addr = False
         self.hfg = CommonFileGen(self.header_filename)
         self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
+        self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
         #print(self.header_filename)
         self.header_txt = ""
         self.definition_txt = ""
@@ -334,8 +337,10 @@ class StructWrapperGen:
         self.no_addr = no_addr
         if self.no_addr:
             self.shg = CommonFileGen(self.string_helper_no_addr_filename)
+            self.shcppg = CommonFileGen(self.string_helper_no_addr_cpp_filename)
         else:
             self.shg = CommonFileGen(self.string_helper_filename)
+            self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
 
     # Return class name for given struct name
     def get_class_name(self, struct_name):
@@ -368,6 +373,14 @@ class StructWrapperGen:
         self.shg.setHeader(self._generateStringHelperHeader())
         self.shg.setBody(self._generateStringHelperFunctions())
         self.shg.generate()
+
+    # Generate cpp-style .h file that contains functions for printing structs
+    def generateStringHelperCpp(self):
+        print("Generating struct string helper cpp")
+        self.shcppg.setCopyright(self._generateCopyright())
+        self.shcppg.setHeader(self._generateStringHelperHeaderCpp())
+        self.shcppg.setBody(self._generateStringHelperFunctionsCpp())
+        self.shcppg.generate()
 
     def _generateCopyright(self):
         return "//This is the copyright\n"
@@ -503,11 +516,9 @@ class StructWrapperGen:
             p_args = ""
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
             # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext
-            struct_char_count = 0 # TODO : Use this to vary size of memory allocations for strings?
             for m in self.struct_dict[s]:
                 if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
                     stp_list.append(self.struct_dict[s][m])
-                struct_char_count += len(self.struct_dict[s][m]['name']) + 32
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix)\n{\n    char* str;\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             sh_funcs.append("    size_t len;\n")
             num_stps = len(stp_list);
@@ -526,9 +537,9 @@ class StructWrapperGen:
                             sh_funcs.append('        len = 256+strlen(tmpStr);\n')
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);\n' % index)
                             if self.no_addr:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, "   %%spNext (addr)\\n%%s", prefix, tmpStr);\n' % index)
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (addr)\\n%%s", prefix, tmpStr);\n' % index)
                             else:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, "   %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
                             sh_funcs.append('        free(tmpStr);\n')
                         else:
                             sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
@@ -605,7 +616,139 @@ class StructWrapperGen:
                 sh_funcs.append("    }\n")
         sh_funcs.append("}")
         return "".join(sh_funcs)
-                
+
+    def _generateStringHelperFunctionsCpp(self):
+        # declare str & tmp str
+        # declare array of stringstreams for every struct ptr in current struct
+        # declare array of stringstreams for every non-string element in current struct
+        # For every struct ptr, it non-Null, then set it's string, else set to NULL str
+        # For every non-string element, set it's string stream
+        # create and return final string
+        sh_funcs = []
+        # First generate prototypes for every struct
+        for s in self.struct_dict:
+            sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+        sh_funcs.append('\n')
+        for s in self.struct_dict:
+            num_non_enum_elems = [is_type(self.struct_dict[s][elem]['type'], 'enum') for elem in self.struct_dict[s]].count(False)
+            stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
+            # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext
+            for m in self.struct_dict[s]:
+                if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
+                    stp_list.append(self.struct_dict[s][m])
+            sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            sh_funcs.append('    string final_str;')
+            sh_funcs.append('    string tmp_str;')
+            sh_funcs.append('    string extra_indent = "  " + prefix;')
+            sh_funcs.append('    stringstream ss[%u];' % num_non_enum_elems)
+            num_stps = len(stp_list)
+            # First generate code for any embedded structs
+            if 0 < num_stps:
+                sh_funcs.append('    string stp_strs[%u];' % num_stps)
+                idx_ss_decl = False # Make sure to only decl this once
+                for index in range(num_stps):
+                    addr_char = '&'
+                    if stp_list[index]['ptr']:
+                        addr_char = ''
+                    if (stp_list[index]['ptr']):
+                        sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
+                        if 'pNext' == stp_list[index]['name']:
+                            sh_funcs.append('        tmp_str = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);')
+                        else:
+                            sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        sh_funcs.append('        ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
+                        if self.no_addr:
+                            sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
+                        else:
+                            sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
+                        sh_funcs.append('        ss[%u].str("");' % (index))
+                        sh_funcs.append('    }')
+                        sh_funcs.append('    else')
+                        sh_funcs.append('        stp_strs[%u] = "";' % index)
+                    elif (stp_list[index]['array']):
+                        sh_funcs.append('    stp_strs[%u] = "";' % index)
+                        if not idx_ss_decl:
+                            sh_funcs.append('    stringstream index_ss;')
+                            idx_ss_decl = True
+                        sh_funcs.append('    for (uint32_t i = 0; i < %s; i++) {' % stp_list[index]['array_size'])
+                        sh_funcs.append('        index_ss.str("");')
+                        sh_funcs.append('        index_ss << i;')
+                        sh_funcs.append('        ss[%u] << %spStruct->%s[i];' % (index, addr_char, stp_list[index]['name']))
+                        sh_funcs.append('        tmp_str = %s(&pStruct->%s[i], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        if self.no_addr:
+                            sh_funcs.append('        stp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
+                        else:
+                            sh_funcs.append('        stp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
+                        sh_funcs.append('        ss[%u].str("");' % index)
+                        sh_funcs.append('    }')
+                    else:
+                        sh_funcs.append('    tmp_str = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                        sh_funcs.append('    ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
+                        if self.no_addr:
+                            sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
+                        else:
+                            sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
+                        sh_funcs.append('    ss[%u].str("");' % index)
+            # Now print non-enum data members
+            index = 0
+            final_str = ''
+            for m in sorted(self.struct_dict[s]):
+                if not is_type(self.struct_dict[s][m]['type'], 'enum'):
+                    if is_type(self.struct_dict[s][m]['type'], 'struct') and not self.struct_dict[s][m]['ptr']:
+                        if self.no_addr:
+                            sh_funcs.append('    ss[%u].str("addr");' % (index))
+                        else:
+                            sh_funcs.append('    ss[%u] << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                    elif 'BOOL' in self.struct_dict[s][m]['type']:
+                        sh_funcs.append('    ss[%u].str(pStruct->%s ? "TRUE" : "FALSE");' % (index, self.struct_dict[s][m]['name']))
+                    elif 'UINT8' in self.struct_dict[s][m]['type']:
+                        sh_funcs.append('    ss[%u] << (uint32_t)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                    else:
+                        (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
+                        if "addr" in po or self.struct_dict[s][m]['ptr']:
+                            sh_funcs.append('    ss[%u].str("addr");' % (index))
+                        else:
+                            sh_funcs.append('    ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                    value_print = 'ss[%u].str()' % index
+                    index += 1
+                else:
+                    value_print = 'string_%s(pStruct->%s)' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name'])
+                final_str += ' + prefix + "%s = " + %s + "\\n"' % (self.struct_dict[s][m]['name'], value_print)
+            final_str = final_str[3:] # strip off the initial ' + '
+            if 0 != num_stps:
+                final_str += " + %s" % " + ".join(['stp_strs[%u]' % n for n in reversed(range(num_stps))])
+            sh_funcs.append('    final_str = %s;' % final_str)
+            sh_funcs.append('    return final_str;\n}')
+        # Add function to dynamically print out unknown struct
+        sh_funcs.append("string dynamic_display(const XGL_VOID* pStruct, const string prefix)\n{")
+        sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")
+        sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;")
+        sh_funcs.append('    string indent = "    ";')
+        sh_funcs.append('    indent += prefix;')
+        sh_funcs.append("    switch (sType)\n    {")
+        for e in enum_type_dict:
+            if "_STRUCTURE_TYPE" in e:
+                for v in sorted(enum_type_dict[e]):
+                    struct_name = v.replace("_STRUCTURE_TYPE", "")
+                    print_func_name = self._get_sh_func_name(struct_name)
+                    # TODO : Hand-coded fixes for some exceptions
+                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                        struct_name = 'XGL_PIPELINE_CB_STATE'
+                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
+                        struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
+                        print_func_name = self._get_sh_func_name(struct_name)
+                    elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
+                        struct_name = 'XGL_QUEUE_SEMAPHORE_OPEN_INFO'
+                        print_func_name = self._get_sh_func_name(struct_name)
+                    sh_funcs.append('        case %s:\n        {' % (v))
+                    sh_funcs.append('            return %s((%s*)pStruct, indent);' % (print_func_name, struct_name))
+                    sh_funcs.append('        }')
+                    sh_funcs.append('        break;')
+                sh_funcs.append("        default:")
+                sh_funcs.append("        return NULL;")
+                sh_funcs.append("    }")
+        sh_funcs.append("}")
+        return "\n".join(sh_funcs)
         
     def _genStructMemberPrint(self, member, s, array, struct_array):
         (p_out, p_arg) = self._get_struct_print_formatted(self.struct_dict[s][member], pre_var_name="&m_dummy_prefix", struct_var_name="m_struct", struct_ptr=False, print_array=True)
@@ -708,7 +851,18 @@ class StructWrapperGen:
         header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
         header.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix);\n")
         return "".join(header)
-        
+
+    def _generateStringHelperHeaderCpp(self):
+        header = []
+        header.append("//#includes, #defines, globals and such...\n")
+        for f in self.include_headers:
+            if 'xgl_enum_string_helper' not in f:
+                header.append("#include <%s>\n" % f)
+        header.append('#include "xgl_enum_string_helper.h"\n')
+        header.append('using namespace std;\n\n// Function Prototypes\n')
+        header.append("string dynamic_display(const XGL_VOID* pStruct, const string prefix);\n")
+        return "".join(header)
+
     def _generateHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
@@ -1150,6 +1304,11 @@ def main(argv=None):
         # Generate a 2nd helper file that excludes addrs
         sw.set_no_addr(True)
         sw.generateStringHelper()
+        sw.set_no_addr(False)
+        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h","iostream","sstream","string"])
+        sw.generateStringHelperCpp()
+        sw.set_no_addr(True)
+        sw.generateStringHelperCpp()
     if opts.gen_cmake:
         cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
         cmg.generate()
