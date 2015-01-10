@@ -75,11 +75,10 @@ SET(COMPILER_LINK_DIRS
     ${LUNARGLASS_PREFIX}/build/Core/Passes/Util
 )
 
-pkg_check_modules(DRM REQUIRED libdrm libdrm_intel)
+find_package(DRM REQUIRED COMPONENTS libdrm libdrm_intel)
 
 link_directories (
     ${ICD_LIBRARY_DIRS}
-    ${DRM_LIBRARY_DIRS}
     ${COMPILER_LINK_DIRS}
 )
 
