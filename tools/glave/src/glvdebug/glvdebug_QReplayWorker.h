@@ -32,26 +32,11 @@
 #include "glvdebug_trace_file_utils.h"
 #include "glvreplay_factory.h"
 
-static glvdebug_view* s_pView = NULL;
+class glvdebug_QReplayWorker;
+static void dbg_msg_callback(glv_replay::GLV_DBG_MSG_TYPE msgType, const char* pMsg);
 
-static void dbg_msg_callback(glv_replay::GLV_DBG_MSG_TYPE msgType, const char* pMsg)
-{
-    if (s_pView != NULL)
-    {
-        if (msgType == glv_replay::GLV_DBG_MSG_ERROR)
-        {
-            s_pView->output_error(pMsg);
-        }
-        else if (msgType == glv_replay::GLV_DBG_MSG_WARNING)
-        {
-            s_pView->output_warning(pMsg);
-        }
-        else
-        {
-            s_pView->output_message(pMsg);
-        }
-    }
-}
+static glvdebug_view* s_pView = NULL;
+static glvdebug_QReplayWorker* s_pWorker = NULL;
 
 class glvdebug_QReplayWorker : public QObject
 {
@@ -65,11 +50,13 @@ public:
           m_currentReplayPacketIndex(0)
     {
         memset(m_pReplayers, 0, sizeof(glv_replay::glv_trace_packet_replay_library*) * GLV_MAX_TRACER_ID_ARRAY_SIZE);
+        s_pWorker = this;
     }
 
     virtual ~glvdebug_QReplayWorker()
     {
         setView(NULL);
+        s_pWorker = NULL;
     }
 
 protected slots:
@@ -292,5 +279,27 @@ protected:
     glv_replay::glv_trace_packet_replay_library* m_pReplayers[GLV_MAX_TRACER_ID_ARRAY_SIZE];
 
 };
+
+static void dbg_msg_callback(glv_replay::GLV_DBG_MSG_TYPE msgType, const char* pMsg)
+{
+    if (s_pView != NULL)
+    {
+        if (msgType == glv_replay::GLV_DBG_MSG_ERROR)
+        {
+            s_pView->output_error(pMsg);
+            s_pWorker->PauseReplay();
+        }
+        else if (msgType == glv_replay::GLV_DBG_MSG_WARNING)
+        {
+            s_pView->output_warning(pMsg);
+            s_pWorker->PauseReplay();
+        }
+        else
+        {
+            s_pView->output_message(pMsg);
+            s_pWorker->PauseReplay();
+        }
+    }
+}
 
 #endif // GLVDEBUG_QREPLAYWORKER_H
