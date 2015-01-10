@@ -1,21 +1,22 @@
-set(ICD_SOURCES
-	icd-alloc.c
-	icd-format.c
-	icd-log.c
-	icd-utils.c)
+set(sources
+    icd-alloc.c
+    icd-format.c
+    icd-log.c
+    icd-utils.c)
 
-set(ICD_REQUIRED_MODULES)
+set(include_dirs "")
+set(libraries "")
 
-if (UNIX)
-	set(ICD_REQUIRED_MODULES ${ICD_REQUIRED_MODULES} libudev)
-	set(ICD_SOURCES ${ICD_SOURCES} icd-enumerate-drm.c)
+if(UNIX)
+    find_package(UDev REQUIRED)
+    list(APPEND include_dirs ${UDEV_INCLUDE_DIRS})
+    list(APPEND libraries ${UDEV_LIBRARIES})
+    list(APPEND sources icd-enumerate-drm.c)
 endif()
 
-pkg_check_modules(ICD REQUIRED ${ICD_REQUIRED_MODULES})
-
-include_directories(
-	${ICD_INCLUDE_DIRS}
-)
-
-add_library(icd STATIC ${ICD_SOURCES})
+add_library(icd STATIC ${sources})
+target_include_directories(icd
+    PRIVATE ${include_dirs}
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(icd ${libraries})
 set_target_properties(icd PROPERTIES POSITION_INDEPENDENT_CODE ON)
