@@ -73,7 +73,11 @@ BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg)
     case GLV_SETTING_BOOL:
         {
             BOOL bTrue = FALSE;
-            bTrue = strncmp(arg, "true", 4) == 0 || strncmp(arg, "TRUE", 4) == 0 || strncmp(arg, "True", 4) == 0;
+#if defined(PLATFORM_LINUX)
+            bTrue = (strncasecmp(arg, "true", 4) == 0);
+#elif defined(PLATFORM_WINDOWS)
+            bTrue = (strnicmp(arg, "true", 4) == 0);
+#endif
             *pSetting->Data.pBool = bTrue;
         }
         break;
