@@ -430,8 +430,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     _mesa_glsl_compile_shader(ctx, shader, dump_ast, dump_hir);
 
-    if (strlen(shader->InfoLog) > 0)
+    if (strlen(shader->InfoLog) > 0) {
         printf("Info log:\n%s\n", shader->InfoLog);
+        fflush(stdout);
+    }
 
     if (!shader->CompileStatus) {
         _mesa_destroy_shader_compiler();
@@ -446,8 +448,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     link_shaders(ctx, shader_program);
 
-    if (strlen(shader_program->InfoLog) > 0)
+    if (strlen(shader_program->InfoLog) > 0) {
         printf("Info log for linking:\n%s\n", shader_program->InfoLog);
+        fflush(stdout);
+    }
 
     if (!shader_program->LinkStatus) {
         _mesa_destroy_shader_compiler();
