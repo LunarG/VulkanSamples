@@ -213,17 +213,10 @@ class XglRenderTest : public XglRenderFramework
 {
 public:
 
-    void DrawTriangleTest(const char *vertShaderText, const char *fragShaderText);
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  XglConstantBufferObj *constantBuffer, XglCommandBufferObj *cmdBuffer);
-    void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
-                                 XglConstantBufferObj *constantBuffer);
-    void GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet, int numTris);
     void GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet);
-    void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
-
     void InitDepthStencil();
-    void GenerateClearAndPrepareBufferCmds();
     void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const int rotate);
 
 
@@ -280,111 +273,6 @@ void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPi
     cmdBuffer->BindDescriptorSet(descriptorSet->GetDescriptorSetHandle());
 }
 
-void XglRenderTest::GenericDrawTriangleTest(XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet,int numTris)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    // Build command buffer
-    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
-    ASSERT_XGL_SUCCESS(err);
-
-    GenerateClearAndPrepareBufferCmds();
-    GenerateBindRenderTargetCmd();
-
-    GenerateBindStateAndPipelineCmds();
-
-    pipelineobj->BindPipelineCommandBuffer(m_cmdBuffer,descriptorSet);
-    descriptorSet->BindCommandBuffer(m_cmdBuffer);
-#ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
-    pDSDumpDot((char*)"triTest.dot");
-    DRAW_STATE_DUMP_PNG_FILE pDSDumpPng = (DRAW_STATE_DUMP_PNG_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpPngFile");
-    pDSDumpPng((char*)"triTest.png");
-#endif
-    // render the triangle
-    xglCmdDraw( m_cmdBuffer, 0, 3*numTris, 0, 1 );
-
-    // finalize recording of the command buffer
-    err = xglEndCommandBuffer( m_cmdBuffer );
-    ASSERT_XGL_SUCCESS( err );
-}
-
-void XglRenderTest::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs)
-{
-    XGL_RESULT err = XGL_SUCCESS;
-    XGL_UINT i;
-
-    // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, numMemRefs, memRefs, NULL );
-    ASSERT_XGL_SUCCESS( err );
-
-    err = xglQueueWaitIdle( m_device->m_queue );
-    ASSERT_XGL_SUCCESS( err );
-
-    // Wait for work to finish before cleaning up.
-    xglDeviceWaitIdle(m_device->device());
-
-    for (i = 0; i < m_renderTargetCount; i++)
-        RecordImage(m_renderTargets[i]);
-}
-
-void XglRenderTest::DrawTriangleTest(const char *vertShaderText, const char *fragShaderText)
-{
-    XGL_RESULT err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitViewport());
-
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
-
-
-    XglPipelineObj pipelineobj(m_device);
-    pipelineobj.AddShader(&vs);
-    pipelineobj.AddShader(&ps);
-
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    // Create descriptor set
-    XglDescriptorSetObj descriptorSet(m_device);
-
-    // Build command buffer
-    err = xglBeginCommandBuffer(m_cmdBuffer, 0);
-    ASSERT_XGL_SUCCESS(err);
-
-    GenerateClearAndPrepareBufferCmds();
-    GenerateBindRenderTargetCmd();
-    GenerateBindStateAndPipelineCmds();
-
-    pipelineobj.BindPipelineCommandBuffer(m_cmdBuffer,&descriptorSet);
-    descriptorSet.BindCommandBuffer(m_cmdBuffer);
-#ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
-    pDSDumpDot((char*)"triUniFS.dot");
-#endif
-    // render the triangle
-    xglCmdDraw( m_cmdBuffer, 0, 3, 0, 1 );
-
-    // finalize recording of the command buffer
-    err = xglEndCommandBuffer( m_cmdBuffer );
-    ASSERT_XGL_SUCCESS( err );
-
-    // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, 0, m_memRefs, NULL );
-    ASSERT_XGL_SUCCESS( err );
-
-    err = xglQueueWaitIdle( m_device->m_queue );
-    ASSERT_XGL_SUCCESS( err );
-
-    // Wait for work to finish before cleaning up.
-    xglDeviceWaitIdle(m_device->device());
-
-    assert(m_renderTargetCount == 1);
-    RecordImage(m_renderTargets[0]);
-
-}
-
 void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                             XglConstantBufferObj *constantBuffer, XglCommandBufferObj *cmdBuffer)
 {
@@ -405,9 +293,6 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
         // submit the command buffer to the universal queue
         cmdBuffer->QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-        // err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_memoryRefManager.GetNumRefs(), m_memoryRefManager.GetMemoryRefList(), NULL );
-        // ASSERT_XGL_SUCCESS( err );
-
         err = xglQueueWaitIdle( m_device->m_queue );
         ASSERT_XGL_SUCCESS( err );
 
@@ -418,37 +303,7 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
         RecordImage(m_renderTargets[0]);
     }
 }
-void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
-                                            XglConstantBufferObj *constantBuffer)
-{
-    int i;
-    glm::mat4 MVP;
-    int matrixSize = sizeof(MVP);
-    XGL_RESULT err;
 
-    for (i = 0; i < 8; i++) {
-        void *pData = constantBuffer->map();
-
-        Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
-        MVP = Projection * View * Model;
-        memcpy(pData, (const void*) &MVP[0][0], matrixSize);
-
-        constantBuffer->unmap();
-
-        // submit the command buffer to the universal queue
-        err = xglQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer, m_memoryRefManager.GetNumRefs(), m_memoryRefManager.GetMemoryRefList(), NULL );
-        ASSERT_XGL_SUCCESS( err );
-
-        err = xglQueueWaitIdle( m_device->m_queue );
-        ASSERT_XGL_SUCCESS( err );
-
-        // Wait for work to finish before cleaning up.
-        xglDeviceWaitIdle(m_device->device());
-
-        assert(m_renderTargetCount == 1);
-        RecordImage(m_renderTargets[0]);
-    }
-}
 void dumpMatrix(const char *note, glm::mat4 MVP)
 {
     int i;
@@ -467,40 +322,6 @@ void dumpVec4(const char *note, glm::vec4 vector)
         printf("%f, %f, %f, %f\n", vector[0], vector[1], vector[2], vector[3]);
     printf("\n");
     fflush(stdout);
-}
-
-void XglRenderTest::GenerateClearAndPrepareBufferCmds()
-{
-    XglRenderFramework::GenerateClearAndPrepareBufferCmds();
-
-    if (m_depthStencilImage) {
-            XGL_IMAGE_SUBRESOURCE_RANGE dsRange = {};
-            dsRange.aspect = XGL_IMAGE_ASPECT_DEPTH;
-            dsRange.baseMipLevel = 0;
-            dsRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
-            dsRange.baseArraySlice = 0;
-            dsRange.arraySize = XGL_LAST_MIP_OR_SLICE;
-
-            // prepare the depth buffer for clear
-            XGL_IMAGE_STATE_TRANSITION transitionToClear = {};
-            transitionToClear.image = m_depthStencilImage;
-            transitionToClear.oldState = m_depthStencilBinding.depthState;
-            transitionToClear.newState = XGL_IMAGE_STATE_CLEAR;
-            transitionToClear.subresourceRange = dsRange;
-            xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToClear );
-            m_depthStencilBinding.depthState = transitionToClear.newState;
-
-            xglCmdClearDepthStencil(m_cmdBuffer, m_depthStencilImage, 1.0f, 0, 1, &dsRange);
-
-            // prepare depth buffer for rendering
-            XGL_IMAGE_STATE_TRANSITION transitionToRender = {};
-            transitionToRender.image = m_depthStencilImage;
-            transitionToRender.oldState = XGL_IMAGE_STATE_CLEAR;
-            transitionToRender.newState = m_depthStencilBinding.depthState;
-            transitionToRender.subresourceRange = dsRange;
-            xglCmdPrepareImages( m_cmdBuffer, 1, &transitionToRender );
-            m_depthStencilBinding.depthState = transitionToClear.newState;
-        }
 }
 
 void XglRenderTest::InitDepthStencil()

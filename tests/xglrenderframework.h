@@ -60,9 +60,6 @@ public:
     void InitFramework();
     void ShutdownFramework();
     void InitState();
-    void GenerateClearAndPrepareBufferCmds();
-    void GenerateBindRenderTargetCmd();
-    void GenerateBindStateAndPipelineCmds();
 
 
 protected:
