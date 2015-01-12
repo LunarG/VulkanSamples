@@ -217,7 +217,7 @@ public:
                                  XglConstantBufferObj *constantBuffer, XglCommandBufferObj *cmdBuffer);
     void GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet);
     void InitDepthStencil();
-    void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const int rotate);
+    void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
 
 protected:
@@ -428,7 +428,7 @@ struct xgltriangle_vs_uniform {
     XGL_FLOAT   color[3][4];
 };
 
-void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const int rotate)
+void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
 {
 #ifdef DEBUG_CALLBACK
     xglDbgRegisterMsgCallback(myDbgFunc, NULL);
@@ -557,7 +557,7 @@ TEST_F(XglRenderTest, XGLTriangle_FragColor)
         "}\n";
 
     TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to GLSL built-in gl_FragColor");
-    XGLTriangleTest(vertShaderText, fragShaderText, 1);
+    XGLTriangleTest(vertShaderText, fragShaderText, true);
 }
 
 TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
@@ -596,7 +596,7 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
 
     TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to output location 0, which should be the same as gl_FragColor");
 
-    XGLTriangleTest(vertShaderText, fragShaderText, 1);
+    XGLTriangleTest(vertShaderText, fragShaderText, true);
 }
 
 TEST_F(XglRenderTest, BIL_XGLTriangle)
@@ -638,7 +638,7 @@ TEST_F(XglRenderTest, BIL_XGLTriangle)
 
     XglTestFramework::m_use_bil = true;
 
-    XGLTriangleTest(vertShaderText, fragShaderText, 1);
+    XGLTriangleTest(vertShaderText, fragShaderText, true);
 
     XglTestFramework::m_use_bil = saved_use_bil;
 }
@@ -663,7 +663,7 @@ TEST_F(XglRenderTest, GreenTriangle)
 
     TEST_DESCRIPTION("Basic shader that renders a fixed Green triangle coded as part of the vertex shader.");
 
-    XGLTriangleTest(vertShaderText, fragShaderText, 0);
+    XGLTriangleTest(vertShaderText, fragShaderText, false);
 }
 
 TEST_F(XglRenderTest, BIL_GreenTriangle)
@@ -689,7 +689,7 @@ TEST_F(XglRenderTest, BIL_GreenTriangle)
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to BIL and gives BIL to driver.");
 
     XglTestFramework::m_use_bil = true;
-    XGLTriangleTest(vertShaderText, fragShaderText, 0);
+    XGLTriangleTest(vertShaderText, fragShaderText, false);
     XglTestFramework::m_use_bil = saved_use_bil;
 }
 
@@ -715,7 +715,7 @@ TEST_F(XglRenderTest, YellowTriangle)
             "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
             "}\n";
 
-    XGLTriangleTest(vertShaderText, fragShaderText, 0);
+    XGLTriangleTest(vertShaderText, fragShaderText, false);
 }
 
 TEST_F(XglRenderTest, TriangleWithVertexFetch)
