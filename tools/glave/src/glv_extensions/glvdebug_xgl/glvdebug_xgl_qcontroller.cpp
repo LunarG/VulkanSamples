@@ -41,6 +41,8 @@ glvdebug_xgl_QController::glvdebug_xgl_QController()
     : m_pReplayWidget(NULL),
       m_pTraceFileModel(NULL)
 {
+    initialize_default_settings();
+    glv_SettingGroup_reset_defaults(&g_xglDebugSettingGroup);
 }
 
 glvdebug_xgl_QController::~glvdebug_xgl_QController()
@@ -102,6 +104,36 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
     m_pView->select_call_at_packet_index(packetIndex);
     m_pView->output_message(QString("Paused at packet index %1").arg(packetIndex));
+}
+
+BOOL glvdebug_xgl_QController::PrintReplayInfoMsgs()
+{
+    return g_xglDebugSettings.printReplayInfoMsgs;
+}
+
+BOOL glvdebug_xgl_QController::PrintReplayWarningMsgs()
+{
+    return g_xglDebugSettings.printReplayWarningMsgs;
+}
+
+BOOL glvdebug_xgl_QController::PrintReplayErrorMsgs()
+{
+    return g_xglDebugSettings.printReplayErrorMsgs;
+}
+
+BOOL glvdebug_xgl_QController::PauseOnReplayInfoMsg()
+{
+    return g_xglDebugSettings.pauseOnReplayInfo;
+}
+
+BOOL glvdebug_xgl_QController::PauseOnReplayWarningMsg()
+{
+    return g_xglDebugSettings.pauseOnReplayWarning;
+}
+
+BOOL glvdebug_xgl_QController::PauseOnReplayErrorMsg()
+{
+    return g_xglDebugSettings.pauseOnReplayError;
 }
 
 void glvdebug_xgl_QController::onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups)

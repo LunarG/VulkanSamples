@@ -30,11 +30,18 @@ extern "C" {
 
 typedef struct glvdebug_xgl_settings
 {
-    bool supportDrawCalls;
+    BOOL printReplayInfoMsgs;
+    BOOL printReplayWarningMsgs;
+    BOOL printReplayErrorMsgs;
+    BOOL pauseOnReplayInfo;
+    BOOL pauseOnReplayWarning;
+    BOOL pauseOnReplayError;
 } glvdebug_xgl_settings;
 
 extern glvdebug_xgl_settings g_xglDebugSettings;
 extern glv_SettingGroup g_xglDebugSettingGroup;
+
+void initialize_default_settings();
 
 #endif // GLVDEBUG_XGL_SETTINGS_H
 

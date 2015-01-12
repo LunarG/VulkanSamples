@@ -41,10 +41,18 @@ public:
     bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
     void UnloadTraceFile(void);
 
+    virtual BOOL PrintReplayInfoMsgs();
+    virtual BOOL PrintReplayWarningMsgs();
+    virtual BOOL PrintReplayErrorMsgs();
+    virtual BOOL PauseOnReplayInfoMsg();
+    virtual BOOL PauseOnReplayWarningMsg();
+    virtual BOOL PauseOnReplayErrorMsg();
+
     void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
 
 protected slots:
     void playCurrentTraceFile();
+
     void onReplayPaused(uint64_t packetIndex);
 
 private:

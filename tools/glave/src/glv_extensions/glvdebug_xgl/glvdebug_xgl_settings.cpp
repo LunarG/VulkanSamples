@@ -26,9 +26,16 @@
 
 // declared as extern in header
 glvdebug_xgl_settings g_xglDebugSettings;
-static glvdebug_xgl_settings s_defaultXglSettings = { FALSE };
+static glvdebug_xgl_settings s_defaultXglSettings;
+
 glv_SettingInfo g_settings_info[] =
-{    { "", "supportDrawCalls", GLV_SETTING_BOOL, &g_xglDebugSettings.supportDrawCalls, &s_defaultXglSettings.supportDrawCalls, FALSE, "Indicates whether or not draw call highlighting and draw call navigation are supported."},
+{
+    { "ri", "PrintReplayInfoMsgs", GLV_SETTING_BOOL, &g_xglDebugSettings.printReplayInfoMsgs, &s_defaultXglSettings.printReplayInfoMsgs, TRUE, "Print info messages reported when replaying trace file."},
+    { "rw", "PrintReplayWarningMsgs", GLV_SETTING_BOOL, &g_xglDebugSettings.printReplayWarningMsgs, &s_defaultXglSettings.printReplayWarningMsgs, TRUE, "Print warning messages reported when replaying trace file."},
+    { "re", "PrintReplayErrorMsgs", GLV_SETTING_BOOL, &g_xglDebugSettings.printReplayErrorMsgs, &s_defaultXglSettings.printReplayErrorMsgs, TRUE, "Print error messages reported when replaying trace file."},
+    { "pi", "PauseOnReplayInfo", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayInfo, &s_defaultXglSettings.pauseOnReplayInfo, TRUE, "Pause replay if an info message is reported."},
+    { "pw", "PauseOnReplayWarning", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayWarning, &s_defaultXglSettings.pauseOnReplayWarning, TRUE, "Pause replay if a warning message is reported."},
+    { "pe", "PauseOnReplayError", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayError, &s_defaultXglSettings.pauseOnReplayError, TRUE, "Pause replay if an error message is reported."},
 };
 
 glv_SettingGroup g_xglDebugSettingGroup =
@@ -36,4 +43,14 @@ glv_SettingGroup g_xglDebugSettingGroup =
     "glvdebug_xgl",
     sizeof(g_settings_info) / sizeof(g_settings_info[0]),
     &g_settings_info[0]
+};
+
+void initialize_default_settings()
+{
+    s_defaultXglSettings.printReplayInfoMsgs = FALSE;
+    s_defaultXglSettings.printReplayWarningMsgs = TRUE;
+    s_defaultXglSettings.printReplayErrorMsgs = TRUE;
+    s_defaultXglSettings.pauseOnReplayInfo = FALSE;
+    s_defaultXglSettings.pauseOnReplayWarning = FALSE;
+    s_defaultXglSettings.pauseOnReplayError = TRUE;
 };
