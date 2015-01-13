@@ -486,7 +486,11 @@ class Subcommand(object):
                                 if not i_decl:
                                     log_func += '\n    uint32_t i;'
                                     i_decl = True
-                                log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
+                                if '*' in proto.params[sp_index-1].ty:
+                                    log_func += '\n    for (i = 0; i < *%s; i++) {' % (sp_param_dict[sp_index])
+                                else:
+                                    log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
+
                                 log_func += '\n        %s' % (cis_print_func)
                                 if "File" in layer:
                                     if no_addr:
