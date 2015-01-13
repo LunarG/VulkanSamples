@@ -7,6 +7,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 **SUPPORTED FEATURES IN DEBUGGER**
 * Generating & loading traces
 * Replay traces within the UI w/ pause, continue, stop ability
+  * Auto-pause on Validation Layer Messages (info, warnings, and/or errors), controlled by settings
 * Timeline shows CPU time of each API call
 * API entrypoints names & parameters displayed in UI
 * Tracing and replay standard output gets directed to Output window
@@ -17,17 +18,16 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Draw call navigation buttons
   * Draw calls are shown in bold font
 * Export API Calls as Text file
+* Settings dialog
 
 **TODO LIST IN DEBUGGER**
 * Hide / show columns on API Call Tree
 * Additional replay support:
-  * Auto-pause on Validation layer error or warning
   * Single-step the replay
   * Timeline pointer gets updated in real-time of replayed API call
     * I (PeterLValve) implemented this locally, but the performance cost to update the UI was not worthwhile. This should be revisited once the replay is actually performed in a different thread.
   * Run the replay in a separate thread from the UI
   * Pop-out replay window to be floating so it can replay at larger dimensions
-* Settings dialog
 * State dependency graph at selected API Call
 * Group API Calls by:
   * Frame boundary
@@ -55,7 +55,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 * Command line Replayer app (glvreplay) replays a XGL trace file with Window display on Linux
 
 **TODO LIST IN TRACING/REPLAYING COMMAND LINE TOOLS AND LIBRARIES**
-* Optimize replay speed  by using hash maps for opaque handles
+* Optimize replay speed by using hash maps for opaque handles
 * Handle XGL persistently CPU mapped buffers during tracing, rather then relying on updating data at unmap time
 * Optimize Replayer speed by memory-mapping the file and/or reading file in a separate thread
 * Looping in Replayer over arbitrary frames or calls
