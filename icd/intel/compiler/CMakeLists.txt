@@ -233,7 +233,6 @@ SET(COMPILER_SOURCES
     shader/glsl_glass_backend.cpp
 
     shader/glsl_parser_extras.cpp
-    shader/ossource.cpp
     shader/standalone_scaffolding.cpp
     shader/glsl_types.cpp
     shader/glsl_symbol_table.cpp
@@ -299,6 +298,11 @@ SET(STANDALONE_COMPILER_SOURCES
     ${COMPILER_SOURCES}
 )
 
+# needed by libglslang.a
+add_library(intelcompiler-os STATIC shader/ossource.cpp)
+target_include_directories(intelcompiler-os PRIVATE ${COMPILER_INCLUDE_DIRS})
+set_target_properties(intelcompiler-os PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 add_library(intelcompiler STATIC ${COMPILER_SOURCES})
 
 target_include_directories(intelcompiler
@@ -310,6 +314,7 @@ target_link_libraries(intelcompiler
     ${DRM_LIBRARIES}
     ${COMPILER_LINK_DIRS}
     ${COMPILER_LIBS}
+    intelcompiler-os
     m
     pthread
     dl
