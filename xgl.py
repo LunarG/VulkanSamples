@@ -898,7 +898,7 @@ def parse_xgl_h(filename):
     # parse proto_lines to protos
     protos = []
     for line in proto_lines:
-        first, rest = line.split(" (XGLAPI *")
+        first, rest = line.split(" (XGLAPI *xgl")
         second, third = rest.split("Type)(")
 
         # get the return type, no space before "*"
