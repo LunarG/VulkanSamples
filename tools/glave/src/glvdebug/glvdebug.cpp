@@ -185,6 +185,7 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
 {
     if (m_pTraceFileModel != NULL)
     {
+        QApplication::setOverrideCursor(Qt::WaitCursor);
         QModelIndex start = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_PacketIndex);
         QModelIndexList matches = m_pTraceFileModel->match(start, Qt::DisplayRole, QVariant(packetIndex), 1);
         if (matches.count() > 0)
@@ -198,6 +199,7 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
             m_pTimeline->setCurrentApiCall(packetIndex);
             m_pTimeline->repaint();
         }
+        QApplication::restoreOverrideCursor();
     }
 }
 
