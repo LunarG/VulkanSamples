@@ -283,7 +283,7 @@ SET(COMPILER_SOURCES
     pipeline/brw_vec4_copy_propagation.cpp
     pipeline/brw_vec4_reg_allocate.cpp
     pipeline/brw_vec4_generator.cpp
-    pipeline/gen8_vec4_generator.cpp
+    # pipeline/gen8_vec4_generator.cpp
     )
 
 set_source_files_properties(

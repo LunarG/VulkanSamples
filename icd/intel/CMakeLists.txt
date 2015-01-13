@@ -63,4 +63,4 @@ target_link_libraries(XGL_i965 ${libraries})
 
 # set -Bsymbolic-functions for xglGetProcAddr()
 set_target_properties(XGL_i965 PROPERTIES
-	LINK_FLAGS -Wl,-Bsymbolic-functions)
+    LINK_FLAGS "-Wl,-Bsymbolic-functions -Wl,-no-undefined")

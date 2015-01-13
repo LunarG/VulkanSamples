@@ -185,8 +185,8 @@ vec4_vs_visitor::emit_urb_write_opcode(bool complete)
 {
    /* For VS, the URB writes end the thread. */
    if (complete) {
-      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-         emit_shader_time_end();
+//      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+//         emit_shader_time_end();
    }
 
    vec4_instruction *inst = emit(VS_OPCODE_URB_WRITE);

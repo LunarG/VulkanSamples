@@ -1290,11 +1290,11 @@ vec4_generator::generate_code(exec_list *instructions)
                if (shader_prog) {
                   ((ir_instruction *) last_annotation_ir)->fprint(stderr);
                } else {
-                  const prog_instruction *vpi;
-                  vpi = (const prog_instruction *) inst->ir;
-                  fprintf(stderr, "%d: ", (int)(vpi - prog->Instructions));
-                  _mesa_fprint_instruction_opt(stderr, vpi, 0,
-                                               PROG_PRINT_DEBUG, NULL);
+//                  const prog_instruction *vpi;
+//                  vpi = (const prog_instruction *) inst->ir;
+//                  fprintf(stderr, "%d: ", (int)(vpi - prog->Instructions));
+//                  _mesa_fprint_instruction_opt(stderr, vpi, 0,
+//                                               PROG_PRINT_DEBUG, NULL);
                }
 	       fprintf(stderr, "\n");
 	    }
