@@ -1651,6 +1651,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                         /* The compiler expects uniform buffers to have pitch of
                          * 4 for fragment shaders, but 16 for other stages.
                          */
+                        tmp_info.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+                        tmp_info.format.numericFormat = XGL_NUM_FMT_FLOAT;
                         if (XGL_SHADER_STAGE_FRAGMENT == stage) {
                             tmp_info.stride = 4;
                         } else {
