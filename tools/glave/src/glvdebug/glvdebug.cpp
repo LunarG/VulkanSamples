@@ -129,7 +129,7 @@ void glvdebug::moveEvent(QMoveEvent *pEvent)
     g_settings.window_position_left = pEvent->pos().x();
     g_settings.window_position_top = pEvent->pos().y();
 
-    glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+    glvdebug_settings_updated();
 }
 
 void glvdebug::resizeEvent(QResizeEvent *pEvent)
@@ -137,7 +137,7 @@ void glvdebug::resizeEvent(QResizeEvent *pEvent)
     g_settings.window_size_width = pEvent->size().width();
     g_settings.window_size_height = pEvent->size().height();
 
-    glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+    glvdebug_settings_updated();
 }
 
 int glvdebug::add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront)
@@ -356,7 +356,7 @@ void glvdebug::close_trace_file()
         {
             glv_free(g_settings.trace_file_to_open);
             g_settings.trace_file_to_open = NULL;
-            glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+            glvdebug_settings_updated();
         }
     }
 
@@ -563,7 +563,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
 
         // update settings
         g_settings.trace_file_to_open = glv_allocate_and_copy(filename.c_str());
-        glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
+        glvdebug_settings_updated();
     }
 
     this->setCursor(origCursor);
