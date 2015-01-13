@@ -192,8 +192,7 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
         QModelIndexList matches = m_pTraceFileModel->match(start, Qt::DisplayRole, QVariant(packetIndex), 1);
         if (matches.count() > 0)
         {
-            ui->treeView->setCurrentIndex(matches[0]);
-            ui->treeView->setFocus();
+            selectApicallModelIndex(matches[0], true, true);
         }
 
         if (m_pTimeline != NULL)
@@ -453,8 +452,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
     glvdebug_output_message("Opening trace file...");
     glvdebug_output_message(filename.c_str());
 
-    QCursor origCursor = this->cursor();
-    this->setCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     // open trace file and read in header
     memset(&m_traceFileInfo, 0, sizeof(glvdebug_trace_file_info));
@@ -566,7 +564,7 @@ bool glvdebug::open_trace_file(const std::string &filename)
         glvdebug_settings_updated();
     }
 
-    this->setCursor(origCursor);
+    QApplication::restoreOverrideCursor();
 
     return bOpened;
 }
@@ -670,7 +668,7 @@ void glvdebug::selectApicallModelIndex(QModelIndex index, bool scrollTo, bool se
     if (select)
     {
         ui->treeView->setCurrentIndex(index);
-    }
+    }   
 }
 
 float glvdebug::u64ToFloat(uint64_t value)
