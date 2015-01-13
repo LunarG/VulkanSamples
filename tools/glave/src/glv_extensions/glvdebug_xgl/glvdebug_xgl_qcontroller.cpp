@@ -91,7 +91,10 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
         {
             m_pView->add_custom_state_viewer(m_pReplayWidget, "Replayer", true);
             m_pReplayWidget->setEnabled(true);
+            connect(m_pReplayWidget, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()));
             connect(m_pReplayWidget, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)));
+            connect(m_pReplayWidget, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)));
+            connect(m_pReplayWidget, SIGNAL(ReplayFinished()), this, SLOT(onReplayFinished()));
         }
     }
 
@@ -100,10 +103,25 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     return true;
 }
 
+void glvdebug_xgl_QController::onReplayStarted()
+{
+    m_pView->output_message(QString("Replay Started"));
+}
+
 void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
     m_pView->select_call_at_packet_index(packetIndex);
-    m_pView->output_message(QString("Paused at packet index %1").arg(packetIndex));
+    m_pView->output_message(QString("Replay Paused at packet index %1").arg(packetIndex));
+}
+
+void glvdebug_xgl_QController::onReplayStopped(uint64_t packetIndex)
+{
+    m_pView->output_message(QString("Replay Stopped at packet index %1").arg(packetIndex));
+}
+
+void glvdebug_xgl_QController::onReplayFinished()
+{
+    m_pView->output_message(QString("Replay Finished"));
 }
 
 BOOL glvdebug_xgl_QController::PrintReplayInfoMsgs()
