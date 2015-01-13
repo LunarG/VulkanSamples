@@ -1058,31 +1058,7 @@ void intel_mem_view_init(struct intel_mem_view *view,
                          struct intel_dev *dev,
                          const XGL_MEMORY_VIEW_ATTACH_INFO *info)
 {
-    XGL_FORMAT format;
-    XGL_GPU_SIZE stride;
     bool will_write;
-
-    if (icd_format_is_undef(info->format)) {
-        /*
-         * The compiler does not support raw/structured buffers.  It always
-         * generates oword (dual) block read or ld.  The use of ld in this
-         * case is an issue.  Firstly, it expects the channel format to be
-         * XGL_CH_FMT_R32G32B32A32.  This we can do.  But it also expects the
-         * stride to be 16 for VS and 4 for FS.  We have to break either of
-         * them.
-         */
-        format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-        format.numericFormat = XGL_NUM_FMT_FLOAT;
-        stride = 16;
-    } else {
-        format = info->format;
-        stride = icd_format_get_size(format);
-
-        if (info->stride != stride) {
-            intel_dev_log(dev, XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0,
-                    XGL_NULL_HANDLE, 0, 0, "invalid stride for typed buffer");
-        }
-    }
 
     switch (info->state) {
     case XGL_MEMORY_STATE_GRAPHICS_SHADER_WRITE_ONLY:
@@ -1101,12 +1077,12 @@ void intel_mem_view_init(struct intel_mem_view *view,
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_buf_gen7(dev->gpu, info->offset,
-                info->range, stride, format,
+                info->range, info->stride, info->format,
                 will_write, will_write, view->cmd);
         view->cmd_len = 8;
     } else {
         surface_state_buf_gen6(dev->gpu, info->offset,
-                info->range, stride, format,
+                info->range, info->stride, info->format,
                 will_write, will_write, view->cmd);
         view->cmd_len = 6;
     }
