@@ -22,6 +22,7 @@
  *
  *************************************************************************/
 #include "glvdebug_qgeneratetracedialog.h"
+#include "glvdebug_settings.h"
 #include <QDir>
 #include <QFileDialog>
 #include <QGridLayout>
@@ -210,6 +211,27 @@ glvdebug_QGenerateTraceDialog::~glvdebug_QGenerateTraceDialog()
 
 int glvdebug_QGenerateTraceDialog::exec()
 {
+    if (g_settings.gentrace_application != NULL)
+    {
+        m_pApplicationLineEdit->setText(QString(g_settings.gentrace_application));
+    }
+    if (g_settings.gentrace_arguments != NULL)
+    {
+        m_pArgumentsLineEdit->setText(QString(g_settings.gentrace_arguments));
+    }
+    if (g_settings.gentrace_working_dir != NULL)
+    {
+        m_pWorkingDirLineEdit->setText(QString(g_settings.gentrace_working_dir));
+    }
+    if (g_settings.gentrace_tracer_lib != NULL)
+    {
+        m_pTracerLibLineEdit->setText(QString(g_settings.gentrace_tracer_lib));
+    }
+    if (g_settings.gentrace_output_file != NULL)
+    {
+        m_pTraceFileLineEdit->setText(QString(g_settings.gentrace_output_file));
+    }
+
     int result = QDialog::exec();
 
     if (result == QDialog::Accepted)
@@ -299,10 +321,42 @@ void glvdebug_QGenerateTraceDialog::on_findTraceFileButton_clicked()
 bool glvdebug_QGenerateTraceDialog::launch_application_to_generate_trace()
 {
     QString application = m_pApplicationLineEdit->text();
+    QString arguments = m_pArgumentsLineEdit->text();
     QString workingDirectory = m_pWorkingDirLineEdit->text();
     QString tracerLibrary = m_pTracerLibLineEdit->text();
     QString outputTraceFile = m_pTraceFileLineEdit->text();
-    QString arguments = m_pArgumentsLineEdit->text();
+
+    // update settings
+    if (g_settings.gentrace_application != NULL)
+    {
+        glv_free(g_settings.gentrace_application);
+    }
+    g_settings.gentrace_application = glv_allocate_and_copy(application.toStdString().c_str());
+
+    if (g_settings.gentrace_arguments != NULL)
+    {
+        glv_free(g_settings.gentrace_arguments);
+    }
+    g_settings.gentrace_arguments = glv_allocate_and_copy(arguments.toStdString().c_str());
+
+    if (g_settings.gentrace_working_dir != NULL)
+    {
+        glv_free(g_settings.gentrace_working_dir);
+    }
+    g_settings.gentrace_working_dir = glv_allocate_and_copy(workingDirectory.toStdString().c_str());
+
+    if (g_settings.gentrace_tracer_lib != NULL)
+    {
+        glv_free(g_settings.gentrace_tracer_lib);
+    }
+    g_settings.gentrace_tracer_lib = glv_allocate_and_copy(tracerLibrary.toStdString().c_str());
+
+    if (g_settings.gentrace_output_file != NULL)
+    {
+        glv_free(g_settings.gentrace_output_file);
+    }
+    g_settings.gentrace_output_file = glv_allocate_and_copy(outputTraceFile.toStdString().c_str());
+    glvdebug_settings_updated();
 
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
 

@@ -41,6 +41,11 @@ typedef struct glvdebug_settings
     int window_position_top;
     int window_size_width;
     int window_size_height;
+    char * gentrace_application;
+    char * gentrace_arguments;
+    char * gentrace_working_dir;
+    char * gentrace_tracer_lib;
+    char * gentrace_output_file;
     //unsigned int trim_large_trace_prompt_size;
 
     //bool groups_state_render;
@@ -52,6 +57,8 @@ extern glvdebug_settings g_settings;
 extern glv_SettingGroup g_settingGroup;
 
 bool glvdebug_initialize_settings(int argc, char* argv[]);
+
+void glvdebug_settings_updated();
 
 void glvdebug_save_settings();
 

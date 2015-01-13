@@ -28,6 +28,12 @@ glv_SettingInfo g_settings_info[] =
     { "ww", "window_width", GLV_SETTING_INT, &g_settings.window_size_width, &s_default_settings.window_size_width, TRUE, "Width of GLVDebug window on startup."},
     { "wh", "window_height", GLV_SETTING_INT, &g_settings.window_size_height, &s_default_settings.window_size_height, TRUE, "Height of GLVDebug window on startup."},
 
+    { "", "GenTrace_Application", GLV_SETTING_STRING, &g_settings.gentrace_application, &s_default_settings.gentrace_application, FALSE, "The most recent application path in the 'Generate Trace' dialog."},
+    { "", "GenTrace_Arguments", GLV_SETTING_STRING, &g_settings.gentrace_arguments, &s_default_settings.gentrace_arguments, FALSE, "The most recent application arguments in the 'Generate Trace' dialog."},
+    { "", "GenTrace_WorkingDir", GLV_SETTING_STRING, &g_settings.gentrace_working_dir, &s_default_settings.gentrace_working_dir, FALSE, "The most recent working directory in the 'Generate Trace' dialog."},
+    { "", "GenTrace_TracerLib", GLV_SETTING_STRING, &g_settings.gentrace_tracer_lib, &s_default_settings.gentrace_tracer_lib, FALSE, "The most recent tracer library in the 'Generate Trace' dialog."},
+    { "", "GenTrace_OutputFile", GLV_SETTING_STRING, &g_settings.gentrace_output_file, &s_default_settings.gentrace_output_file, FALSE, "The most recent output trace file in the 'Generate Trace' dialog."},
+
     //{ "tltps", "trim_large_trace_prompt_size", GLV_SETTING_UINT, &g_settings.trim_large_trace_prompt_size, &s_default_settings.trim_large_trace_prompt_size, TRUE, "The number of frames in a trace file at which the user should be prompted to trim the trace before loading."},
     //{ "gsr", "group_state_render", GLV_SETTING_BOOL, &g_settings.groups_state_render, &s_default_settings.groups_state_render, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     //{ "gppm", "groups_push_pop_markers", GLV_SETTING_BOOL, &g_settings.groups_push_pop_markers, &s_default_settings.groups_push_pop_markers, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
@@ -63,6 +69,12 @@ bool glvdebug_initialize_settings(int argc, char* argv[])
     s_default_settings.window_position_top = 0;
     s_default_settings.window_size_width = 1024;
     s_default_settings.window_size_height = 768;
+
+    s_default_settings.gentrace_application = NULL;
+    s_default_settings.gentrace_arguments = NULL;
+    s_default_settings.gentrace_working_dir = NULL;
+    s_default_settings.gentrace_tracer_lib = NULL;
+    s_default_settings.gentrace_output_file = NULL;
 
     // initialize settings as defaults
     g_settings = s_default_settings;
@@ -118,6 +130,11 @@ bool glvdebug_initialize_settings(int argc, char* argv[])
     }
 
     return bSuccess;
+}
+
+void glvdebug_settings_updated()
+{
+    glv_SettingGroup_update(&g_settingGroup, g_pAllSettings, g_numAllSettings);
 }
 
 void glvdebug_save_settings()
