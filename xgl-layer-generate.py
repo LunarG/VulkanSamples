@@ -444,7 +444,10 @@ class Subcommand(object):
                             sp_param_dict[pindex] = 'index'
                         pindex += 1
                         if p.name.endswith('Count'):
-                            prev_count_name = p.name
+                            if '*' in p.ty:
+                                prev_count_name = "*%s" % p.name
+                            else:
+                                prev_count_name = p.name
                         else:
                             prev_count_name = ''
                     log_func = log_func.strip(', ')
