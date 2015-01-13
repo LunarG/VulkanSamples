@@ -26,6 +26,7 @@
 
 #include <QColor>
 #include <QFont>
+#include <QSize>
 #include <qabstractitemmodel.h>
 #include "glvdebug_trace_file_utils.h"
 
@@ -129,6 +130,11 @@ public:
                 font.setBold(true);
                 return font;
             }
+        }
+
+        if (role == Qt::SizeHintRole)
+        {
+            return QSize(20, 20);
         }
 
         if (role == Qt::BackgroundRole && !m_searchString.isEmpty())
