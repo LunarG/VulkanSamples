@@ -994,7 +994,7 @@ class EnumCodeGen:
         body = []
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("static uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
+            body.append("static inline uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
                     body.append('    case %s:' % (e))
