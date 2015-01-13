@@ -288,7 +288,7 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    sp_param_dict = {} # Store 'index' func has struct param to print, or an name of binding "Count" param for array to print
+                    cis_param_index = [] # Store 'index' func has struct param to print, or an name of binding "Count" param for array to print
                     create_params = 0 # Num of params at end of function that are created and returned as output values
                     if 'WsiX11CreatePresentableImage' in proto.name:
                         create_params = -2
@@ -399,7 +399,7 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    cis_param_index = [] # Store list of indices when func has struct params
+                    sp_param_dict = {} # Store list of indices when func has struct params
                     create_params = 0 # Num of params at end of function that are created and returned as output values
                     if 'WsiX11CreatePresentableImage' in proto.name:
                         create_params = -2
