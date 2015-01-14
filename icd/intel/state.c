@@ -112,7 +112,7 @@ raster_state_init(struct intel_raster_state *state,
                   const XGL_RASTER_STATE_CREATE_INFO *info)
 {
     switch (info->fillMode) {
-    case XFL_FILL_POINTS:
+    case XGL_FILL_POINTS:
         state->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
                               GEN7_SF_DW1_BACKFACE_POINT;
         break;

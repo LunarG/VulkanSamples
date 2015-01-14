@@ -48,42 +48,18 @@
 #ifndef __XGL_H__
 #define __XGL_H__
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define XGL_MAKE_VERSION(major, minor, patch) \
     ((major << 22) | (minor << 12) | patch)
 
+#include "xglPlatform.h"
+
 // XGL API version supported by this file
 #define XGL_API_VERSION XGL_MAKE_VERSION(0, 22, 1)
-
-#ifndef XGLAPI
-   #define XGLAPI
-#endif
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif // __cplusplus
-
-/*
- * Datatypes
- */
-typedef uint32_t        XGL_BOOL;
-typedef void            XGL_VOID;
-typedef char            XGL_CHAR;       /* 1-byte signed */
-typedef int32_t         XGL_INT;        /* 4-byte signed */
-typedef int32_t         XGL_INT32;      /* 4-byte signed */
-typedef uint32_t        XGL_UINT;       /* 4-byte unsigned */
-typedef uint32_t        XGL_UINT32;     /* 4-byte unsigned */
-typedef uint64_t        XGL_UINT64;     /* 8-byte unsigned */
-typedef size_t          XGL_SIZE;       /* 4-byte unsigned */
-typedef uint64_t        XGL_GPU_SIZE;   /* 4-byte unsigned */
-typedef uint32_t        XGL_FLAGS;      /* 4-byte unsigned */
-typedef uint32_t        XGL_SAMPLE_MASK; /* 4-byte unsigned */
-typedef uint8_t         XGL_UINT8;      /* 1-byte unsigned */
-typedef float           XGL_FLOAT;      /* single precision float */
-typedef double          XGL_DOUBLE;       /* double precision float in [0,1] */
 
 /*
 ***************************************************************************************************
@@ -441,12 +417,12 @@ typedef enum _XGL_COMPARE_FUNC
 
 typedef enum _XGL_FILL_MODE
 {
-    XFL_FILL_POINTS                                         = 0x00000000,
+    XGL_FILL_POINTS                                         = 0x00000000,
     XGL_FILL_WIREFRAME                                      = 0x00000001,
     XGL_FILL_SOLID                                          = 0x00000002,
 
-    XGL_FILL_MODE_BEGIN_RANGE                               = XGL_FILL_SOLID,
-    XGL_FILL_MODE_END_RANGE                                 = XFL_FILL_POINTS,
+    XGL_FILL_MODE_BEGIN_RANGE                               = XGL_FILL_POINTS,
+    XGL_FILL_MODE_END_RANGE                                 = XGL_FILL_SOLID,
     XGL_NUM_FILL_MODE                                       = (XGL_FILL_MODE_END_RANGE - XGL_FILL_MODE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_FILL_MODE)
 } XGL_FILL_MODE;
@@ -2507,7 +2483,7 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
 #endif /* XGL_PROTOTYPES */
 
 #ifdef __cplusplus
-} // extern "C"
+}; // extern "C"
 #endif // __cplusplus
 
 #endif // __XGL_H__
