@@ -257,11 +257,11 @@ static void setMemTransition(const XGL_GPU_MEMORY mem, const XGL_MEMORY_STATE_TR
         // TODO : Flag error for missing node
     }
     else {
-        MEM_STATE_TRANSITION_NODE* pMTNode = pTrav->pTransitions;
+        MEM_STATE_TRANSITION_NODE* pMTNode = pTrav->pRegions;
         MEM_STATE_TRANSITION_NODE* pPrevMTNode = pMTNode;
         // TODO : Not sure of best way (or need) to distinguish mem from image here
         // Verify that it's being used as memory (not image)
-        //if (!pTrav->pTransitions.isMem) {
+        //if (!pTrav->pRegions.isMem) {
             // TODO : Flag error for setting mem transition on image memory
         //}
         // Basic state update algorithm
@@ -280,8 +280,10 @@ static void setMemTransition(const XGL_GPU_MEMORY mem, const XGL_MEMORY_STATE_TR
         MEM_STATE_TRANSITION_NODE* pNewNode = (MEM_STATE_TRANSITION_NODE*)malloc(sizeof(MEM_STATE_TRANSITION_NODE));
         memset(pNewNode, 0, sizeof(MEM_STATE_TRANSITION_NODE));
         memcpy(&pNewNode->transition, pTransition, sizeof(XGL_MEMORY_STATE_TRANSITION));
+        // Increment numRegions here and will be appropriately decremented below if needed
+        pTrav->numRegions++;
         if (!pMTNode) { // Initialization case, just set HEAD ptr to new node
-            pTrav->pTransitions = pNewNode;
+            pTrav->pRegions = pNewNode;
         }
         else {
             // If offset of new state is less than current offset, insert it & update state after it as needed
@@ -295,13 +297,20 @@ static void setMemTransition(const XGL_GPU_MEMORY mem, const XGL_MEMORY_STATE_TR
                 saveStartNode = 1;
                 pMTNode->transition.memory.regionSize = pTransition->offset - pMTNode->transition.memory.offset;
                 pMTNode->pNext = pNewNode;
+                // TODO: Verify that prev newState matches new oldState
             }
             else { // start point of regions are equal
                 // Prev ptr now points to new region
-                if (pPrevMTNode == pTrav->pTransitions)
-                    pTrav->pTransitions = pNewNode;
+                if (pPrevMTNode == pTrav->pRegions)
+                    pTrav->pRegions = pNewNode;
                 else
                     pPrevMTNode->pNext = pNewNode;
+            }
+            // New region is overlaying old region so make sure states match
+            if (pMTNode->transition.memory.newState != pNewNode->transition.memory.oldState) {
+                char str[1024];
+                sprintf(str, "Setting Memory state transition for mem %p, current newState of %s doesn't match overlapping transition oldState of %s", mem, string_XGL_MEMORY_STATE(pMTNode->transition.memory.newState), string_XGL_MEMORY_STATE(pNewNode->transition.memory.oldState));
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
             }
             // Start point insertion complete, find end point
             XGL_GPU_SIZE newEndPoint = pTransition->offset + pTransition->regionSize;
@@ -316,6 +325,11 @@ static void setMemTransition(const XGL_GPU_MEMORY mem, const XGL_MEMORY_STATE_TR
                 pMTNode = pMTNode->pNext;
                 // TODO : Handle NULL pMTNode case
                 curEndPoint = pMTNode->transition.memory.offset + pMTNode->transition.memory.regionSize;
+                if (pMTNode->transition.memory.newState != pNewNode->transition.memory.oldState) {
+                    char str[1024];
+                    sprintf(str, "Setting Memory state transition for mem %p, current newState of %s doesn't match overlapping transition oldState of %s", mem, string_XGL_MEMORY_STATE(pMTNode->transition.memory.newState), string_XGL_MEMORY_STATE(pNewNode->transition.memory.oldState));
+                    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
+                }
             }
             if (newEndPoint < curEndPoint) {
                 // split end region
@@ -329,8 +343,11 @@ static void setMemTransition(const XGL_GPU_MEMORY mem, const XGL_MEMORY_STATE_TR
                     pFreeMe = pMTNode;
             }
             // Free any regions that are no longer needed
-            if ((1 == saveStartNode) && (NULL != pFreeMe))
+            if ((1 == saveStartNode) && (NULL != pFreeMe)) {
                 pFreeMe = pFreeMe->pNext;
+                numToFree--;
+            }
+            pTrav->numRegions -= numToFree;
             MEM_STATE_TRANSITION_NODE* pNodeToFree;
             while (numToFree) {
                 pNodeToFree = pFreeMe;
@@ -369,6 +386,7 @@ static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_
         if (pAllocInfo) { // TODO : How to handle Wsi-created alloc?
             // Create initial state node that covers entire allocation
             // TODO : How to handle image memory?
+            pTrav->numRegions = 0; // This will be updated during setMemTransition call
             XGL_MEMORY_STATE_TRANSITION initMemStateTrans;
             memset(&initMemStateTrans, 0, sizeof(XGL_MEMORY_STATE_TRANSITION));
             initMemStateTrans.sType = XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION;
@@ -538,7 +556,7 @@ static void deleteGlobalMemNode(XGL_GPU_MEMORY mem)
         if (pGlobalMemObjHead == pTrav)
             pGlobalMemObjHead = pTrav->pNextGlobalNode;
         // delete transition list off of this node
-        MEM_STATE_TRANSITION_NODE* pMSTNode = pTrav->pTransitions;
+        MEM_STATE_TRANSITION_NODE* pMSTNode = pTrav->pRegions;
         MEM_STATE_TRANSITION_NODE* pPrevMSTNode = pMSTNode;
         while(pMSTNode) {
             pPrevMSTNode = pMSTNode;
@@ -744,8 +762,11 @@ static XGL_BOOL updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
             XGL_MEMORY_STATE_TRANSITION initMemStateTrans;
             memset(&initMemStateTrans, 0, sizeof(XGL_MEMORY_STATE_TRANSITION));
             initMemStateTrans.mem = mem;
-            initMemStateTrans.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
-            initMemStateTrans.newState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+            //initMemStateTrans.oldState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+            //initMemStateTrans.newState = XGL_IMAGE_STATE_UNINITIALIZED_TARGET;
+            // TODO : For now just using initial memory state
+            initMemStateTrans.oldState = XGL_MEMORY_STATE_DATA_TRANSFER;
+            initMemStateTrans.newState = XGL_MEMORY_STATE_DATA_TRANSFER;
             initMemStateTrans.offset = 0;
             initMemStateTrans.regionSize = pTrav->allocInfo.allocationSize;
             setMemTransition(mem, &initMemStateTrans);
@@ -855,6 +876,20 @@ static void printMemList()
                     sprintf(str, "      CB_NODE(%p): XGL CB %p, pNext %p", pCBTrav, pCBTrav->cmdBuffer, pCBTrav->pNext);
                     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
                     pCBTrav = pCBTrav->pNext;
+                }
+            }
+            MEM_STATE_TRANSITION_NODE* pTrans = pTrav->pRegions;
+            if (!pTrans) {
+                sprintf(str, "    No regions");
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            }
+            else {
+                sprintf(str, "    XGL_MEMORY_STATE_TRANSITION (MST) regions list w/ HEAD at %p:", pTrans);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+                while (pTrans) {
+                    sprintf(str, "      MST_NODE(%p):\n%s", pTrans, xgl_print_xgl_memory_state_transition(&pTrans->transition.memory, "{MEM}INFO :         "));
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+                    pTrans = pTrans->pNext;
                 }
             }
             pTrav = pTrav->pNextGlobalNode;

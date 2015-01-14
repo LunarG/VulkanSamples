@@ -40,7 +40,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_MEMORY_BINDING_ERROR          = 12, // Error during one of many calls that bind memory to object or CB
     MEMTRACK_OUT_OF_MEMORY_ERROR           = 13, // malloc failed
     MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
-    MEMTRACK_INVALID_STATE                 = 15, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
+    MEMTRACK_INVALID_STATE                 = 15, // Memory not in the correct state
 } MEM_TRACK_ERROR;
 
 /*
@@ -94,8 +94,7 @@ struct GLOBAL_MEM_OBJ_NODE;
 // Store a linked-list of transition nodes to account for different states across a single mem obj
 typedef struct _MEM_STATE_TRANSITION_NODE {
     struct _MEM_STATE_TRANSITION_NODE* pNext;
-    uint32_t numRegions; // Allocation may be broken into various regions
-    uint32_t isMem; // 1 for memory, 0 for image
+    //uint32_t isMem; // 1 for memory, 0 for image
     union {
         XGL_MEMORY_STATE_TRANSITION memory;
         XGL_IMAGE_STATE_TRANSITION image; // use when img attached to this mem obj
@@ -110,7 +109,8 @@ typedef struct _GLOBAL_MEM_OBJ_NODE {
     XGL_UINT refCount; // Count of references (obj bindings or CB use)
     XGL_GPU_MEMORY mem;
     XGL_MEMORY_ALLOC_INFO allocInfo;
-    MEM_STATE_TRANSITION_NODE* pTransitions; // LL of transitions for this Mem Obj
+    uint32_t numRegions; // Allocation may be broken into various regions
+    MEM_STATE_TRANSITION_NODE* pRegions; // LL of transitions for this Mem Obj
 } GLOBAL_MEM_OBJ_NODE;
 
 typedef struct _GLOBAL_OBJECT_NODE {

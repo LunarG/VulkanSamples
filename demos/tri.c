@@ -153,7 +153,8 @@ static void demo_draw(struct demo *demo)
     err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((XGL_UINT64) 0));
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
-    XGL_MEMORY_REF memRefs[4];
+    static const uint32_t NUM_MEM_REFS = 5;
+    XGL_MEMORY_REF memRefs[NUM_MEM_REFS];
     memRefs[0].mem = demo->depth.mem;
     memRefs[0].flags = 0;
     memRefs[1].mem = demo->textures[0].mem;
@@ -162,8 +163,10 @@ static void demo_draw(struct demo *demo)
     memRefs[2].flags = 0;
     memRefs[3].mem = demo->buffers[1].mem;
     memRefs[3].flags = 0;
+    memRefs[4].mem = demo->vertices.mem;
+    memRefs[4].flags = 0;
     err = xglQueueSubmit(demo->queue, 1, &demo->cmd,
-            4, memRefs, XGL_NULL_HANDLE);
+            NUM_MEM_REFS, memRefs, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
