@@ -144,7 +144,7 @@ namespace gla {
         bool irCmpUnsigned(int) const;
 
         ir_rvalue *mk_ir_expression(const int, const glsl_type*, ir_rvalue*, ir_rvalue*, ir_rvalue*,
-                                    const bool = false, const bool = false);
+                                    const bool = false, const bool = false, const bool = false);
 
         // For loop with ir_rvalue inputs
         void beginForLoop(const llvm::PHINode* phi, llvm::ICmpInst::Predicate, ir_rvalue* bound, ir_rvalue* increment);
@@ -178,10 +178,12 @@ namespace gla {
         inline void emitIRalloca(const llvm::Instruction*);
 
         // Add a binary op
-        template <int ops> inline void emitOp(int /* ir_expression_operation */, const llvm::Instruction*, const bool = false, const bool = false);
+        template <int ops> inline void emitOp(int /* ir_expression_operation */, const llvm::Instruction*,
+                                              const bool = false, const bool = false, const bool = false);
 
         // Add a binary op of either logical or bitwise type
-        template <int ops> inline void emitOpBit(int /* logical_op */, int /* bitwise_op */, const llvm::Instruction*);
+        template <int ops> inline void emitOpBit(int /* logical_op */, int /* bitwise_op */, const llvm::Instruction*,
+                                                 const bool = false /* genUnsigned */);
 
         // Add a builtin function call
         inline void emitFn(const char* name, const llvm::Instruction*);
@@ -194,7 +196,7 @@ namespace gla {
         // for LunarGlass to do it, but there's a defect in the LunarGlass decomposition
         // exposed by taiji-shaders/shader_32.frag.  This is a workaround until
         // that's sorted.
-        inline void emitIRClamp(const llvm::CallInst*);
+        inline void emitIRClamp(const llvm::CallInst*, const bool = false);
 
         // Add a conditional discard
         inline void emitIRDiscardCond(const llvm::CallInst*);

@@ -1925,7 +1925,8 @@ ir_rvalue* MesaGlassTranslator::mk_ir_expression(const int irOp,
                             ir_rvalue* op1,
                             ir_rvalue* op2,
                             const bool genUnsigned0,
-                            const bool genUnsigned1)
+                            const bool genUnsigned1,
+                            const bool genUnsigned2)
 {
     static const int maxOp = 3;
     ir_rvalue* op[maxOp];
@@ -1943,6 +1944,7 @@ ir_rvalue* MesaGlassTranslator::mk_ir_expression(const int irOp,
        op[0] = op0;
     }
 
+    op[1] = op1;
     if (op1)
     {
        if (genUnsigned1 && op1->type->base_type == GLSL_TYPE_INT)
@@ -1953,17 +1955,20 @@ ir_rvalue* MesaGlassTranslator::mk_ir_expression(const int irOp,
        {
            op[1] = new(shader) ir_expression(ir_unop_u2i, op1);
        }
-       else
-       {
-          op[1] = op1;
-       }
-    }
-    else
-    {
-        op[1] = 0;
     }
 
     op[2] = op2;
+    if (op2)
+    {
+       if (genUnsigned2 && op2->type->base_type == GLSL_TYPE_INT)
+       {
+           op[2] = new(shader) ir_expression(ir_unop_i2u, op2);
+       }
+       else if (!genUnsigned2 && op2->type->base_type == GLSL_TYPE_UINT)
+       {
+           op[2] = new(shader) ir_expression(ir_unop_u2i, op2);
+       }
+    }
 
     return new(shader) ir_expression(irOp, hirType, op[0], op[1], op[2]);
 }
@@ -1977,7 +1982,8 @@ template <int ops>
 inline void MesaGlassTranslator::emitOp(int irOp,
                                         const llvm::Instruction* llvmInst,
                                         const bool genUnsigned0,
-                                        const bool genUnsigned1)
+                                        const bool genUnsigned1,
+                                        const bool genUnsigned2)
 {
    static const int maxOp = 3;
    ir_rvalue* op[maxOp];
@@ -1990,7 +1996,8 @@ inline void MesaGlassTranslator::emitOp(int irOp,
       op[i] = ops > i ? getIRValue(llvmInst->getOperand(i)) : 0;
    }
 
-   ir_rvalue* result = mk_ir_expression(irOp, hirType, op[0], op[1], op[2], genUnsigned0, genUnsigned1);
+   ir_rvalue* result = mk_ir_expression(irOp, hirType, op[0], op[1], op[2],
+                                        genUnsigned0, genUnsigned1, genUnsigned2);
    assert(result && (op[0] || ops < 1) && (op[1] || ops < 2) && (op[2] || ops < 3));
    
    addIRInstruction(llvmInst, result);
@@ -2084,11 +2091,12 @@ inline void MesaGlassTranslator::emitIREndPrimitive(const llvm::Instruction* llv
  */
 template <int ops>
 inline void MesaGlassTranslator::emitOpBit(int irLogicalOp, int irBitwiseOp,
-                                           const llvm::Instruction* llvmInst)
+                                           const llvm::Instruction* llvmInst,
+                                           const bool genUnsigned)
 {
    const bool isBool = gla::IsBoolean(llvmInst->getOperand(0)->getType());
 
-   return emitOp<ops>(isBool ? irLogicalOp : irBitwiseOp, llvmInst);
+   return emitOp<ops>(isBool ? irLogicalOp : irBitwiseOp, llvmInst, genUnsigned /* genUnsigned */);
 }
 
 
@@ -2696,17 +2704,20 @@ inline void MesaGlassTranslator::emitIRSaturate(const llvm::CallInst* llvmInst)
  * but can leave this here for testing purposes.
  * -----------------------------------------------------------------------------
  */
-inline void MesaGlassTranslator::emitIRClamp(const llvm::CallInst* llvmInst)
+inline void MesaGlassTranslator::emitIRClamp(const llvm::CallInst* llvmInst,
+                                             const bool genUnsigned)
 {
-   const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst);
+   const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst, genUnsigned);
 
-   ir_rvalue* minOp = new(shader) ir_expression(ir_binop_max, hirType,
-                                                getIRValue(llvmInst->getOperand(0)),
-                                                getIRValue(llvmInst->getOperand(1)));
+   ir_rvalue* minOp = mk_ir_expression(ir_binop_max, hirType,
+                                       getIRValue(llvmInst->getOperand(0)),
+                                       getIRValue(llvmInst->getOperand(1)),
+                                       0, genUnsigned, genUnsigned);
 
-   ir_rvalue* result = new(shader) ir_expression(ir_binop_min, hirType,
-                                                 minOp,
-                                                 getIRValue(llvmInst->getOperand(2)));
+   ir_rvalue* result = mk_ir_expression(ir_binop_min, hirType,
+                                        minOp,
+                                        getIRValue(llvmInst->getOperand(2)),
+                                        0, genUnsigned, genUnsigned);
 
    addIRInstruction(llvmInst, result);
 }
@@ -3073,16 +3084,16 @@ inline void MesaGlassTranslator::emitIRIntrinsic(const llvm::IntrinsicInst* llvm
    case llvm::Intrinsic::gla_fAbs:                              return emitOp<1>(ir_unop_abs, llvmInst);
 
    case llvm::Intrinsic::gla_sMin:                              // fall through...
-   case llvm::Intrinsic::gla_uMin:                              // ...
    case llvm::Intrinsic::gla_fMin:                              return emitOp<2>(ir_binop_min, llvmInst);
+   case llvm::Intrinsic::gla_uMin:                              return emitOp<2>(ir_binop_min, llvmInst, true, true /* genUnsigned */);
 
    case llvm::Intrinsic::gla_sMax:                              // fall through...
-   case llvm::Intrinsic::gla_uMax:                              // ...
    case llvm::Intrinsic::gla_fMax:                              return emitOp<2>(ir_binop_max, llvmInst);
+   case llvm::Intrinsic::gla_uMax:                              return emitOp<2>(ir_binop_max, llvmInst, true, true /* genUnsigned */);
 
    case llvm::Intrinsic::gla_sClamp:                            // fall through...
-   case llvm::Intrinsic::gla_uClamp:                            // ...
    case llvm::Intrinsic::gla_fClamp:                            return emitIRClamp(llvmInst);
+   case llvm::Intrinsic::gla_uClamp:                            return emitIRClamp(llvmInst, true /* genUnsigned */);
 
    case llvm::Intrinsic::gla_fRadians:                          return emitFn("radians", llvmInst);
    case llvm::Intrinsic::gla_fDegrees:                          return emitFn("degrees", llvmInst);
@@ -3155,14 +3166,14 @@ inline void MesaGlassTranslator::emitIRIntrinsic(const llvm::IntrinsicInst* llvm
    // Handle bit operations -------------------------------------------------------------------
    case llvm::Intrinsic::gla_fFloatBitsToInt:                   return emitFn("floatBitsToInt", llvmInst);
    case llvm::Intrinsic::gla_fIntBitsTofloat:                   return emitFn("intBitsToFloat", llvmInst);
-   case llvm::Intrinsic::gla_sBitFieldExtract:                  // Fall through...
-   case llvm::Intrinsic::gla_uBitFieldExtract:                  return emitOp<3>(ir_triop_bitfield_extract, llvmInst);
+   case llvm::Intrinsic::gla_sBitFieldExtract:                  return emitOp<3>(ir_triop_bitfield_extract, llvmInst);
+   case llvm::Intrinsic::gla_uBitFieldExtract:                  return emitOp<3>(ir_triop_bitfield_extract, llvmInst, true, true, true /* genUnsigned*/);
    case llvm::Intrinsic::gla_bitFieldInsert:                    return emitOp<3>(ir_triop_bfi, llvmInst);
    case llvm::Intrinsic::gla_bitReverse:                        return emitOp<1>(ir_unop_bitfield_reverse, llvmInst);
    case llvm::Intrinsic::gla_bitCount:                          return emitOp<1>(ir_unop_bit_count, llvmInst);
    case llvm::Intrinsic::gla_findLSB:                           return emitOp<1>(ir_unop_find_lsb, llvmInst);
-   case llvm::Intrinsic::gla_sFindMSB:                          // Fall through...
-   case llvm::Intrinsic::gla_uFindMSB:                          return emitOp<1>(ir_unop_find_msb, llvmInst);
+   case llvm::Intrinsic::gla_sFindMSB:                          return emitOp<1>(ir_unop_find_msb, llvmInst);
+   case llvm::Intrinsic::gla_uFindMSB:                          return emitOp<1>(ir_unop_find_msb, llvmInst, true /* genUnsigned */);
 
    // Handle pack/unpack ----------------------------------------------------------------------
    case llvm::Intrinsic::gla_fFrexp:                            return emitFn("frexp", llvmInst);
@@ -3721,14 +3732,14 @@ void MesaGlassTranslator::addInstruction(const llvm::Instruction* llvmInst, bool
     case llvm::Instruction::FSub:           return emitOp<2>(ir_binop_sub,     llvmInst);
     case llvm::Instruction::Mul:            // fall through...
     case llvm::Instruction::FMul:           return emitOp<2>(ir_binop_mul,     llvmInst);
-    case llvm::Instruction::UDiv:           // fall through...
+    case llvm::Instruction::UDiv:           return emitOp<2>(ir_binop_div,     llvmInst, true, true /* genUnsigned */);
     case llvm::Instruction::SDiv:           // fall through...
     case llvm::Instruction::FDiv:           return emitOp<2>(ir_binop_div,     llvmInst);
-    case llvm::Instruction::URem:           // fall through...
+    case llvm::Instruction::URem:           return emitOp<2>(ir_binop_mod,     llvmInst, true, true /* genUnsigned */);
     case llvm::Instruction::SRem:           return emitOp<2>(ir_binop_mod,     llvmInst);
     case llvm::Instruction::FRem:           return emitFn("mod", llvmInst);
     case llvm::Instruction::Shl:            return emitOp<2>(ir_binop_lshift,  llvmInst);
-    case llvm::Instruction::LShr:           return emitOp<2>(ir_binop_rshift,  llvmInst, true /* +genUnsigned */);
+    case llvm::Instruction::LShr:           return emitOp<2>(ir_binop_rshift,  llvmInst, true /* genUnsigned */);
     case llvm::Instruction::AShr:           return emitOp<2>(ir_binop_rshift,  llvmInst);
     case llvm::Instruction::And:            return emitOpBit<2>(ir_binop_logic_and, ir_binop_bit_and, llvmInst);
     case llvm::Instruction::Or:             return emitOpBit<2>(ir_binop_logic_or,  ir_binop_bit_or,  llvmInst);
@@ -3743,7 +3754,7 @@ void MesaGlassTranslator::addInstruction(const llvm::Instruction* llvmInst, bool
     case llvm::Instruction::ZExt:           return emitOp<1>(ir_unop_b2i,      llvmInst);
     case llvm::Instruction::SExt:           return emitIRSext(llvmInst);
     case llvm::Instruction::FPToSI:         return emitOp<1>(ir_unop_f2i,      llvmInst);
-    case llvm::Instruction::UIToFP:         return emitOpBit<1>(ir_unop_b2f, ir_unop_u2f, llvmInst);
+    case llvm::Instruction::UIToFP:         return emitOpBit<1>(ir_unop_b2f, ir_unop_u2f, llvmInst, true /* genUnsigned */);
     case llvm::Instruction::SIToFP:         return emitOp<1>(ir_unop_i2f,      llvmInst);
     case llvm::Instruction::Call:           return emitIRCallOrIntrinsic(llvmInst);
     case llvm::Instruction::Ret:            return emitIRReturn(llvmInst, lastBlock);
