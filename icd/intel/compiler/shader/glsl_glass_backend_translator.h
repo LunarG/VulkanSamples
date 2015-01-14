@@ -141,6 +141,10 @@ namespace gla {
         const llvm::GetElementPtrInst* getGepAsInst(const llvm::Value* gep);
 
         int irCmpOp(int) const; // use ints to avoid lack of forward decls of enums in C++
+        bool irCmpUnsigned(int) const;
+
+        ir_rvalue *mk_ir_expression(const int, const glsl_type*, ir_rvalue*, ir_rvalue*, ir_rvalue*,
+                                    const bool = false, const bool = false);
 
         // For loop with ir_rvalue inputs
         void beginForLoop(const llvm::PHINode* phi, llvm::ICmpInst::Predicate, ir_rvalue* bound, ir_rvalue* increment);
@@ -159,7 +163,7 @@ namespace gla {
                                            gla::EMdTypeLayout, gla::EVariableQualifier, bool isBlock);
 
         // Convert an LLVM type to an HIR type
-        const glsl_type* llvmTypeToHirType(const llvm::Type*, const llvm::MDNode* = 0, const llvm::Value* = 0);
+        const glsl_type* llvmTypeToHirType(const llvm::Type*, const llvm::MDNode* = 0, const llvm::Value* = 0, const bool = false);
 
         // Emit vertex
         inline void emitIREmitVertex(const llvm::Instruction*);
@@ -174,7 +178,7 @@ namespace gla {
         inline void emitIRalloca(const llvm::Instruction*);
 
         // Add a binary op
-        template <int ops> inline void emitOp(int /* ir_expression_operation */, const llvm::Instruction*);
+        template <int ops> inline void emitOp(int /* ir_expression_operation */, const llvm::Instruction*, const bool = false, const bool = false);
 
         // Add a binary op of either logical or bitwise type
         template <int ops> inline void emitOpBit(int /* logical_op */, int /* bitwise_op */, const llvm::Instruction*);
@@ -349,14 +353,15 @@ namespace gla {
         typedef std::tr1::unordered_map<std::string, const llvm::MDNode*> tTypenameMdMap;
         tTypenameMdMap typenameMdMap;
 
-        typedef std::pair<const llvm::Type*, const llvm::MDNode*> tTypeData;
+        typedef std::pair<const llvm::MDNode*, const bool> tTypeData2;
+        typedef std::pair<const llvm::Type*, const tTypeData2> tTypeData;
 
-        struct TypePairHash {
-           size_t operator()(const tTypeData& p) const { return size_t(p.first) ^ size_t(p.second); }
+        struct TypeHash {
+           size_t operator()(const tTypeData& p) const { return size_t(p.first) ^ size_t(p.second.first) ^ size_t(p.second.second); }
         };
 
         // map to track mapping from LLVM to HIR types
-        typedef std::tr1::unordered_map<tTypeData, const glsl_type*, TypePairHash> tTypeMap;
+        typedef std::tr1::unordered_map<tTypeData, const glsl_type*, TypeHash> tTypeMap;
         tTypeMap typeMap;
 
         // This is the declaration map.  We map uses of globals to their declarations

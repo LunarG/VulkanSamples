@@ -1227,7 +1227,8 @@ MesaGlassTranslator::convertStructType(const llvm::Type*       structType,
 const glsl_type*
 MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
                                        const llvm::MDNode* mdNode,
-                                       const llvm::Value*  llvmValue)
+                                       const llvm::Value*  llvmValue,
+                                       const bool genUnsigned)
 {
    // Find any aggregate metadata we may have stored away in a prior declaration
    const tMDMap::const_iterator aggMdFromMap = typeMdAggregateMap.find(type);
@@ -1236,7 +1237,8 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
    if (!mdNode)
       mdNode = mdAggNode;
 
-   const tTypeData typeData(type, mdNode);
+   const tTypeData2 typeData2(mdNode, genUnsigned);
+   const tTypeData typeData(type, typeData2);
 
    // See if we've already converted this type.  If so, use the one we did already.
    const tTypeMap::const_iterator foundType = typeMap.find(typeData);
@@ -1249,8 +1251,9 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
 
    const EMdTypeLayout mdType = mdNode ? GetMdTypeLayout(mdNode) : gla::EMtlNone;
 
-   const bool signedInt = (llvmValue && sintValues.find(llvmValue) != sintValues.end()) ||
-      (mdType != EMtlUnsigned);
+   const bool signedInt = !genUnsigned &&
+           ((llvmValue && sintValues.find(llvmValue) != sintValues.end()) ||
+               (mdType != EMtlUnsigned));
 
    // TODO: handle precision, etc
    switch (type->getTypeID())
@@ -1916,6 +1919,54 @@ MesaGlassTranslator::emitFn(const char* name, const llvm::Instruction* llvmInst)
    addIRInstruction(llvmInst, call);
 }
 
+ir_rvalue* MesaGlassTranslator::mk_ir_expression(const int irOp,
+                            const glsl_type* hirType,
+                            ir_rvalue* op0,
+                            ir_rvalue* op1,
+                            ir_rvalue* op2,
+                            const bool genUnsigned0,
+                            const bool genUnsigned1)
+{
+    static const int maxOp = 3;
+    ir_rvalue* op[maxOp];
+
+    if (genUnsigned0 && op0->type->base_type == GLSL_TYPE_INT)
+    {
+       op[0] = new(shader) ir_expression(ir_unop_i2u, op0);
+    }
+    else if (!genUnsigned0 && op0->type->base_type == GLSL_TYPE_UINT)
+    {
+       op[0] = new(shader) ir_expression(ir_unop_u2i, op0);
+    }
+    else
+    {
+       op[0] = op0;
+    }
+
+    if (op1)
+    {
+       if (genUnsigned1 && op1->type->base_type == GLSL_TYPE_INT)
+       {
+           op[1] = new(shader) ir_expression(ir_unop_i2u, op1);
+       }
+       else if (!genUnsigned1 && op1->type->base_type == GLSL_TYPE_UINT)
+       {
+           op[1] = new(shader) ir_expression(ir_unop_u2i, op1);
+       }
+       else
+       {
+          op[1] = op1;
+       }
+    }
+    else
+    {
+        op[1] = 0;
+    }
+
+    op[2] = op2;
+
+    return new(shader) ir_expression(irOp, hirType, op[0], op[1], op[2]);
+}
 
 /**
  * -----------------------------------------------------------------------------
@@ -1923,18 +1974,23 @@ MesaGlassTranslator::emitFn(const char* name, const llvm::Instruction* llvmInst)
  * -----------------------------------------------------------------------------
  */
 template <int ops>
-inline void MesaGlassTranslator::emitOp(int irOp, const llvm::Instruction* llvmInst)
+inline void MesaGlassTranslator::emitOp(int irOp,
+                                        const llvm::Instruction* llvmInst,
+                                        const bool genUnsigned0,
+                                        const bool genUnsigned1)
 {
    static const int maxOp = 3;
    ir_rvalue* op[maxOp];
    assert(ops <= maxOp);
 
-   const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst);
+   const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst, genUnsigned0);
 
    for (int i=0; i<maxOp; ++i)
+   {
       op[i] = ops > i ? getIRValue(llvmInst->getOperand(i)) : 0;
+   }
 
-   ir_rvalue* result = new(shader) ir_expression(irOp, hirType, op[0], op[1], op[2]);
+   ir_rvalue* result = mk_ir_expression(irOp, hirType, op[0], op[1], op[2], genUnsigned0, genUnsigned1);
    assert(result && (op[0] || ops < 1) && (op[1] || ops < 2) && (op[2] || ops < 3));
    
    addIRInstruction(llvmInst, result);
@@ -2082,6 +2138,51 @@ int MesaGlassTranslator::irCmpOp(int pred) const
 
 /**
  * -----------------------------------------------------------------------------
+ * Return if predicate is unsigned
+ * use ints in interface to avoid lack of forward decls of enums in C++
+ * -----------------------------------------------------------------------------
+ */
+bool MesaGlassTranslator::irCmpUnsigned(int pred) const
+{
+   switch (pred) {
+   case llvm::ICmpInst::ICMP_UGT: // ...
+   case llvm::ICmpInst::ICMP_UGE: // ...
+   case llvm::ICmpInst::ICMP_ULT: // ...
+   case llvm::ICmpInst::ICMP_ULE: return true;
+
+   case llvm::FCmpInst::FCMP_OEQ: // fall through
+   case llvm::FCmpInst::FCMP_UEQ: // ...
+   case llvm::ICmpInst::ICMP_EQ:  // ...
+
+   case llvm::FCmpInst::FCMP_ONE: // ...
+   case llvm::FCmpInst::FCMP_UNE: // ...
+   case llvm::ICmpInst::ICMP_NE:  // ...
+
+   case llvm::FCmpInst::FCMP_OGT: // ...
+   case llvm::FCmpInst::FCMP_UGT: // ...
+   case llvm::ICmpInst::ICMP_SGT: // ...
+
+   case llvm::FCmpInst::FCMP_OGE: // ...
+   case llvm::FCmpInst::FCMP_UGE: // ...
+   case llvm::ICmpInst::ICMP_SGE: // ...
+
+   case llvm::FCmpInst::FCMP_OLT: // ...
+   case llvm::FCmpInst::FCMP_ULT: // ...
+   case llvm::ICmpInst::ICMP_SLT: // ...
+
+   case llvm::FCmpInst::FCMP_OLE: // ...
+   case llvm::FCmpInst::FCMP_ULE: // ...
+   case llvm::ICmpInst::ICMP_SLE: return false;
+
+   default:
+      error("unknown comparison op");
+      return false;
+   }
+}
+
+
+/**
+ * -----------------------------------------------------------------------------
  * Emit comparison op
  * -----------------------------------------------------------------------------
  */
@@ -2096,9 +2197,10 @@ inline void MesaGlassTranslator::emitCmp(const llvm::Instruction* llvmInst)
    }
 
    const int cmpOp = irCmpOp(cmp->getPredicate());
+   const bool genUnsigned = irCmpUnsigned(cmp->getPredicate());
 
    // TODO: handle arrays, structs
-   return emitOp<2>(cmpOp, llvmInst);
+   return emitOp<2>(cmpOp, llvmInst, genUnsigned, genUnsigned);
 }
 
 
@@ -2297,17 +2399,18 @@ void MesaGlassTranslator::beginForLoop(const llvm::PHINode* phi,
    beginLoop();
 
    // Add a conditional break
-   ir_rvalue* cmp = new(shader) ir_expression(irCmpOp(pred), glsl_type::bool_type, 
-                                              loopVar, bound);
+   bool genUnsigned = irCmpUnsigned(pred);
+   ir_rvalue* cmp = mk_ir_expression(irCmpOp(pred), glsl_type::bool_type,
+                                     loopVar, bound, 0, genUnsigned, genUnsigned);
 
    addIRLoopExit(cmp);
 
    // Create terminator statement (for ++index)
    ir_assignment* terminator =
       new(shader) ir_assignment(loopVar->clone(shader, 0),
-                                new(shader) ir_expression(ir_binop_add, loopVar->type,
-                                                          loopVar->clone(shader, 0), 
-                                                          increment));
+                                mk_ir_expression(ir_binop_add, loopVar->type,
+                                                 loopVar->clone(shader, 0),
+                                                 increment, 0));
 
    loopTerminatorStack.back() = terminator;
 }
@@ -3625,7 +3728,7 @@ void MesaGlassTranslator::addInstruction(const llvm::Instruction* llvmInst, bool
     case llvm::Instruction::SRem:           return emitOp<2>(ir_binop_mod,     llvmInst);
     case llvm::Instruction::FRem:           return emitFn("mod", llvmInst);
     case llvm::Instruction::Shl:            return emitOp<2>(ir_binop_lshift,  llvmInst);
-    case llvm::Instruction::LShr:           // fall through
+    case llvm::Instruction::LShr:           return emitOp<2>(ir_binop_rshift,  llvmInst, true /* +genUnsigned */);
     case llvm::Instruction::AShr:           return emitOp<2>(ir_binop_rshift,  llvmInst);
     case llvm::Instruction::And:            return emitOpBit<2>(ir_binop_logic_and, ir_binop_bit_and, llvmInst);
     case llvm::Instruction::Or:             return emitOpBit<2>(ir_binop_logic_or,  ir_binop_bit_or,  llvmInst);
