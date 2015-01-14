@@ -193,6 +193,7 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
         if (matches.count() > 0)
         {
             selectApicallModelIndex(matches[0], true, true);
+            ui->treeView->setFocus();
         }
 
         if (m_pTimeline != NULL)
