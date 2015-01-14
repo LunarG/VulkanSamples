@@ -55,12 +55,15 @@ protected slots:
 
     void onReplayStarted();
     void onReplayPaused(uint64_t packetIndex);
+    void onReplayContinued();
     void onReplayStopped(uint64_t packetIndex);
     void onReplayFinished();
 
 private:
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
+
+    void setStateWidgetsEnabled(bool bEnabled);
 };
 
 #endif // GLVDEBUG_XGL_QCONTROLLER_H

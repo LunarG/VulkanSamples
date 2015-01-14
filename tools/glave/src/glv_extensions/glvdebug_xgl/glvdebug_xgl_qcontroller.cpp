@@ -68,15 +68,6 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     setView(pView);
     m_pTraceFileInfo = pTraceFileInfo;
 
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Framebuffer"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Textures"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Programs"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("ARB Programs"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Shaders"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Renderbuffers"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Buffers"));
-    //m_pView->add_custom_state_viewer(new QWidget(), QString("Vertex Arrays"));
-
     m_pReplayWidget = new glvdebug_QReplayWidget(this);
     if (m_pReplayWidget != NULL)
     {
@@ -93,6 +84,7 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
             m_pReplayWidget->setEnabled(true);
             connect(m_pReplayWidget, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()));
             connect(m_pReplayWidget, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)));
+            connect(m_pReplayWidget, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()));
             connect(m_pReplayWidget, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)));
             connect(m_pReplayWidget, SIGNAL(ReplayFinished()), this, SLOT(onReplayFinished()));
         }
@@ -103,15 +95,46 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     return true;
 }
 
+void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
+{
+    // TODO: enable or disable state widgets
+    // m_pWidget->setEnabled(bEnabled);
+}
+
 void glvdebug_xgl_QController::onReplayStarted()
 {
     m_pView->output_message(QString("Replay Started"));
+    setStateWidgetsEnabled(false);
 }
 
 void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
-    m_pView->select_call_at_packet_index(packetIndex);
     m_pView->output_message(QString("Replay Paused at packet index %1").arg(packetIndex));
+    m_pView->select_call_at_packet_index(packetIndex);
+
+    // TODO: Get state data from XGL layers (if they are enabled) and use m_pView->add_custom_state_viewer(...) to add the necessary widgets to the UI.
+    // The widgets should be allocated here and kept as members variable, so that they can be made more dynamic as features are added.
+    // eg:
+    // if (m_pWidget == NULL)
+    // {
+    //     bool bringToFront = false;
+    //     m_pWidget = new QSomeKindOfNewXGLWidget();
+    //     m_pView->add_custom_state_viewer(m_pWidget, QString("Cool State Feature"), bringToFront);
+    // }
+    //
+    // // update the widget with the current state information
+    // m_pWidget->SomeKindOfStateSettingFunction(somePieceOfCoolState);
+    //
+    // otherwise, if that particular "cool state feature" is not applicable to the current API call, using the member variable allows us to hide it:
+    // m_pWidget->setVisible(false);
+
+    setStateWidgetsEnabled(true);
+}
+
+void glvdebug_xgl_QController::onReplayContinued()
+{
+    m_pView->output_message(QString("Replay Continued"));
+    setStateWidgetsEnabled(false);
 }
 
 void glvdebug_xgl_QController::onReplayStopped(uint64_t packetIndex)
