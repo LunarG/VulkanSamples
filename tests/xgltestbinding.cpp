@@ -262,20 +262,12 @@ void Object::alloc_memory(const Device &dev, bool for_linear_img)
         XGL_MEMORY_ALLOC_INFO info = GpuMemory::alloc_info(mem_reqs[i]);
         std::vector<uint32_t> heap_ids;
 
-        // prefer CPU visible heaps
-        std::vector<uint32_t> non_visible_heaps;
         info.heapCount = 0;
         for (uint32_t j = 0; j < mem_reqs[i].heapCount; j++) {
             const uint32_t heap = mem_reqs[i].pHeaps[j];
-            const XGL_MEMORY_HEAP_PROPERTIES &props = dev.heap_properties()[heap];
 
-            if (props.flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT)
-                heap_ids.push_back(heap);
-            else
-                non_visible_heaps.push_back(heap);
+            heap_ids.push_back(heap);
         }
-        for (std::vector<uint32_t>::const_iterator it = non_visible_heaps.begin(); it != non_visible_heaps.end(); it++)
-            heap_ids.push_back(*it);
 
         info.heapCount = heap_ids.size();
         info.pHeaps = &heap_ids[0];
@@ -377,7 +369,6 @@ void Device::init(const XGL_DEVICE_CREATE_INFO &info)
     DERIVED_OBJECT_INIT(xglCreateDevice, gpu_.obj(), &info);
 
     init_queues();
-    init_heap_props();
     init_formats();
 }
 
@@ -405,22 +396,6 @@ void Device::init_queues()
     }
 
     EXPECT(!queues_[GRAPHICS].empty() || !queues_[COMPUTE].empty());
-}
-
-void Device::init_heap_props()
-{
-    uint32_t count;
-    if (!EXPECT(xglGetMemoryHeapCount(obj(), &count) == XGL_SUCCESS && count))
-        return;
-
-    heap_props_.reserve(count);
-    for (uint32_t i = 0; i < count; i++) {
-        const XGL_MEMORY_HEAP_INFO_TYPE type = XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES;
-        XGL_MEMORY_HEAP_PROPERTIES props;
-        XGL_SIZE size = sizeof(props);
-        if (EXPECT(xglGetMemoryHeapInfo(obj(), i, type, &size, &props) == XGL_SUCCESS && size == sizeof(props)))
-            heap_props_.push_back(props);
-    }
 }
 
 void Device::init_formats()

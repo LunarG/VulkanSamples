@@ -210,7 +210,6 @@ public:
     const std::vector<Queue *> &compute_queues() { return queues_[COMPUTE]; }
     const std::vector<Queue *> &dma_queues() { return queues_[DMA]; }
 
-    const std::vector<XGL_MEMORY_HEAP_PROPERTIES> &heap_properties() const { return heap_props_; }
 
     struct Format {
         XGL_FORMAT format;
@@ -242,13 +241,11 @@ private:
     };
 
     void init_queues();
-    void init_heap_props();
     void init_formats();
 
     PhysicalGpu gpu_;
 
     std::vector<Queue *> queues_[QUEUE_COUNT];
-    std::vector<XGL_MEMORY_HEAP_PROPERTIES> heap_props_;
     std::vector<Format> formats_;
 };
 
