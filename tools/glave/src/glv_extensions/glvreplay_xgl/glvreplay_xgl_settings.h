@@ -36,11 +36,16 @@ typedef struct glvreplay_xgl_settings
 {
     uint32_t debugLevel;
     const char* enableLayers;
+    const char* drawStateReportLevel;
+    const char* drawStateDebugAction;
+    const char* memTrackerReportLevel;
+    const char* memTrackerDebugAction;
 } glvreplay_xgl_settings;
 
 extern glvreplay_xgl_settings g_xglReplaySettings;
 extern glv_SettingGroup g_xglReplaySettingGroup;
 
+void apply_layerSettings_overrides();
 char** get_enableLayers_list(unsigned int* pNumLayers);
 void release_enableLayer_list(char** pList);
 

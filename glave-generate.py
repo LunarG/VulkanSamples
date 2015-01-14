@@ -2528,6 +2528,7 @@ class Subcommand(object):
 
         cd_body.append('                    unsigned int numLayers = 0;')
         cd_body.append('                    char ** layersStr = get_enableLayers_list(&numLayers);')
+        cd_body.append('                    apply_layerSettings_overrides();')
         cd_body.append('                    XGL_LAYER_CREATE_INFO layerInfo;')
         cd_body.append('                    pCreateInfoSaved = (XGL_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;')
         cd_body.append('                    ci = (XGL_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;')

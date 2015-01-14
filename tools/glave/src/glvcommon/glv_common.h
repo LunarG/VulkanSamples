@@ -36,6 +36,10 @@
 #include "glv_memory.h"
 #include "glv_tracelog.h"
 
+#ifndef STRINGIFY
+#define STRINGIFY(x) #x
+#endif
+
 #if defined(WIN32)
 
 #define GLVTRACER_EXPORT __declspec(dllexport)

@@ -7,7 +7,7 @@ project(glvreplay_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include ${SRC_DIR}/glv_extensions/glvreplay_xgl)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include ${SRC_DIR}/../../../layers ${SRC_DIR}/glv_extensions/glvreplay_xgl)
 
 # This file is shared between replayer and tracer and are generated to each dir.  Should generate them to common area
 add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg_structs.h glvreplay_xgl_replay.h glvreplay_xgl_replay.cpp
@@ -65,6 +65,7 @@ target_link_libraries(${PROJECT_NAME}
     ${OS_REPLAYER_LIBS}
     getopt_bundled
     glvcommon
+    layer_utils
 )
 
 build_options_finalize()
