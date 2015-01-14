@@ -22,24 +22,30 @@ if (CMAKE_COMPILER_IS_GNUCC)
     endif()
 endif()
 
-# Hard code our LunarGLASS and glslang paths for now
-get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
-get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
+if (NOT WIN32)
+    # Hard code our LunarGLASS and glslang paths for now
+    get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
+    get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
 
-if(NOT EXISTS ${GLSLANG_PREFIX})
-    message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
-endif()
+    if(NOT EXISTS ${GLSLANG_PREFIX})
+        message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
+    endif()
 
-if(NOT EXISTS ${LUNARGLASS_PREFIX})
-    message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${GLSLANG_PREFIX})
+    if(NOT EXISTS ${LUNARGLASS_PREFIX})
+        message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${GLSLANG_PREFIX})
+    endif()
 endif()
 
 # loader: Generic XGL ICD loader
 # icd: Device dependent (DD) XGL components
 # tests: XGL tests
 add_subdirectory(loader)
-add_subdirectory(icd)
-add_subdirectory(tests)
-add_subdirectory(layers)
-add_subdirectory(demos)
-add_subdirectory(tools/glave)
+if (NOT WIN32)
+    add_subdirectory(icd)
+    add_subdirectory(tests)
+endif()
+    add_subdirectory(layers)
+if (NOT WIN32)
+    add_subdirectory(demos)
+endif()
+    add_subdirectory(tools/glave)

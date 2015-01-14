@@ -119,6 +119,8 @@ class LoaderEntrypointsSubcommand(Subcommand):
         for proto in self.protos:
             if not self._is_dispatchable(proto):
                 continue
+            if 'WsiX11AssociateConnection' == proto.name:
+                funcs.append("#if !defined(_WIN32)")
             decl = proto.c_func(prefix="xgl", attr="XGLAPI")
             stmt = "(*disp)->%s" % proto.c_call()
             if proto.name == "CreateDevice":
@@ -196,6 +198,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "    %s;\n"
                              "}" % (qual, decl, proto.params[0].name, proto.params[0].name, stmt))
 
+        funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -215,20 +218,24 @@ class DispatchTableOpsSubcommand(Subcommand):
     def generate_header(self):
         return "\n".join(["#include <xgl.h>",
                           "#include <xglLayer.h>",
-                          "#include <string.h>"])
+                          "#include <string.h>",
+                          "#include \"loader_platform.h\""])
 
     def _generate_init(self):
         stmts = []
         for proto in self.protos:
+            if 'WsiX11AssociateConnection' == proto.name:
+                stmts.append("#if !defined(_WIN32)")
             if proto.name == "GetProcAddr":
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
             else:
                 stmts.append("table->%s = (xgl%sType) gpa(gpu, \"xgl%s\");" %
                         (proto.name, proto.name, proto.name))
+        stmts.append("#endif")
 
         func = []
-        func.append("static inline void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
+        func.append("STATIC_INLINE void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
         func.append("%s                                              xglGetProcAddrType gpa,"
                 % (" " * len(self.prefix)))
@@ -243,12 +250,15 @@ class DispatchTableOpsSubcommand(Subcommand):
     def _generate_lookup(self):
         lookups = []
         for proto in self.protos:
+            if 'WsiX11AssociateConnection' == proto.name:
+                lookups.append("#if !defined(_WIN32)")
             lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
             lookups.append("    return (void *) table->%s;"
                     % (proto.name))
+        lookups.append("#endif")
 
         func = []
-        func.append("static inline void *%s_lookup_dispatch_table(const XGL_LAYER_DISPATCH_TABLE *table,"
+        func.append("STATIC_INLINE void *%s_lookup_dispatch_table(const XGL_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
         func.append("%s                                           const char *name)"
                 % (" " * len(self.prefix)))
@@ -316,10 +326,13 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 
         lookups = []
         for proto in self.protos:
+            if 'WsiX11AssociateConnection' == proto.name:
+                lookups.append("#if !defined(_WIN32)")
             lookups.append("if (!strcmp(%s, \"%s\"))" %
                     (gpa_pname, proto.name))
             lookups.append("    return (%s) %s%s;" %
                     (gpa_proto.ret, self.prefix, proto.name))
+        lookups.append("#endif")
 
         body = []
         body.append("%s %s" % (self.qual, gpa_decl))
@@ -358,12 +371,15 @@ class LayerInterceptProcSubcommand(Subcommand):
                 lookups.append("/* no %s%s */" % (self.prefix, proto.name))
                 continue
 
+            if 'WsiX11AssociateConnection' == proto.name:
+                lookups.append("#if !defined(_WIN32)")
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (%s) %s%s;" %
                     (self.gpa.ret, self.prefix, proto.name))
+        lookups.append("#endif")
 
         body = []
-        body.append("static inline %s layer_intercept_proc(const char *name)" %
+        body.append("STATIC_INLINE %s layer_intercept_proc(const char *name)" %
                 self.gpa.ret)
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))

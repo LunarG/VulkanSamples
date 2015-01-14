@@ -13,6 +13,11 @@ include_directories(
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
 
-add_library(XGL SHARED loader.c dispatch.c table_ops.h)
+if (WIN32)
+    add_library(XGL SHARED loader.c dirent_on_windows.c dispatch.c table_ops.h)
+endif()
+if (NOT WIN32)
+    add_library(XGL SHARED loader.c dispatch.c table_ops.h)
+endif()
 set_target_properties(XGL PROPERTIES SOVERSION 0)
 target_link_libraries(XGL -ldl -lpthread)

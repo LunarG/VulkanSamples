@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <pthread.h>
+#include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
 #include "xgl_generic_intercept_proc_helper.h"
 #include "xgl_struct_string_helper.h"
@@ -35,7 +35,7 @@
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
-static pthread_once_t g_initOnce = PTHREAD_ONCE_INIT;
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
 // Ptr to LL of dbg functions
 static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
@@ -414,8 +414,9 @@ static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY me
     }
 
     XGL_RESULT result = insertMiniNode(&pMemTrav->pCmdBufferBindings, cb, &pMemTrav->refCount);
-    if (XGL_SUCCESS != result)
+    if (XGL_SUCCESS != result) {
         return result;
+    }
 
     // Now update Global CB's Mini Mem binding list
     GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cb);
@@ -483,8 +484,9 @@ static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
 // TODO : When should this be called?  There's no Destroy of CBs that I see
 static bool32_t deleteGlobalCBNode(const XGL_CMD_BUFFER cb)
 {
-    if (XGL_FALSE == freeCBBindings(cb))
+    if (XGL_FALSE == freeCBBindings(cb)) {
         return XGL_FALSE;
+    }
     // Delete the Global CB node
     GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cb);
     pCBTrav = pGlobalCBHead;
@@ -990,7 +992,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
     return result;
 }
@@ -999,7 +1001,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     // Save off device in case we need it to create Fences
     globalDevice = *pDevice;
@@ -1033,7 +1035,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
     return result;
 }
@@ -1044,7 +1046,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     {
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
         pCurObj = gpuw;
-        pthread_once(&g_initOnce, initMemTracker);
+        loader_platform_thread_once(&g_initOnce, initMemTracker);
         XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
@@ -1171,7 +1173,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
     return result;
 }
@@ -2085,11 +2087,14 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 
+#if defined(_WIN32)
+// FIXME: NEED WINDOWS EQUIVALENT
+#else // WIN32
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
     return result;
 }
@@ -2123,6 +2128,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
     XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
     return result;
 }
+#endif // WIN32
 
 XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)
 {
@@ -2132,7 +2138,7 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
     if (gpu == NULL)
         return NULL;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
 
     addr = layer_intercept_proc(funcName);
     if (addr)

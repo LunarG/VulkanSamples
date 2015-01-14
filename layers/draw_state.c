@@ -25,9 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include <pthread.h>
-#include <unistd.h>
+#include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
 #include "xgl_generic_intercept_proc_helper.h"
 #include "xgl_struct_string_helper.h"
@@ -37,9 +35,9 @@
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
-static pthread_once_t g_initOnce = PTHREAD_ONCE_INIT;
-// Could be smarter about locking with unique locks for various tasks, but just using one for now
-pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
+static int globalLockInitialized = 0;
+static loader_platform_thread_mutex globalLock;
 
 // Ptr to LL of dbg functions
 static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
@@ -267,7 +265,7 @@ static DYNAMIC_STATE_NODE* g_pLastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = 
 
 static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENERIC_HEADER* pCreateInfo, XGL_STATE_BIND_POINT bindPoint)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     // Insert new node at head of appropriate LL
     DYNAMIC_STATE_NODE* pStateNode = (DYNAMIC_STATE_NODE*)malloc(sizeof(DYNAMIC_STATE_NODE));
     pStateNode->pNext = g_pDynamicStateHead[bindPoint];
@@ -275,13 +273,13 @@ static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENER
     pStateNode->stateObj = state;
     pStateNode->pCreateInfo = (GENERIC_HEADER*)malloc(dynStateCreateInfoSize(pCreateInfo->sType));
     memcpy(pStateNode->pCreateInfo, pCreateInfo, dynStateCreateInfoSize(pCreateInfo->sType));
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Set the last bound dynamic state of given type
 // TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
 static void setLastBoundDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
     while (pTrav && (state != pTrav->stateObj)) {
         pTrav = pTrav->pNext;
@@ -292,12 +290,12 @@ static void setLastBoundDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
     }
     g_pLastBoundDynamicState[sType] = pTrav;
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Print the last bound dynamic state
 static void printDynamicState()
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     char str[1024];
     for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
         if (g_pLastBoundDynamicState[i]) {
@@ -318,37 +316,37 @@ static void printDynamicState()
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
         }
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Retrieve pipeline node ptr for given pipeline object
 static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     PIPELINE_NODE *pTrav = g_pPipelineHead;
     while (pTrav) {
         if (pTrav->pipeline == pipeline) {
-            pthread_mutex_unlock(&globalLock);
+            loader_platform_thread_unlock_mutex(&globalLock);
             return pTrav;
         }
         pTrav = pTrav->pNext;
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
 
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
 static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     SAMPLER_NODE *pTrav = g_pSamplerHead;
     while (pTrav) {
         if (sampler == pTrav->sampler) {
-            pthread_mutex_unlock(&globalLock);
+            loader_platform_thread_unlock_mutex(&globalLock);
             return &pTrav->createInfo;
         }
         pTrav = pTrav->pNext;
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
 
@@ -704,16 +702,16 @@ static void clearDescriptorRegion(XGL_DESCRIPTOR_REGION region)
 /*
 static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     DS_LL_HEAD *pTrav = pDSHead;
     while (pTrav) {
         if (pTrav->dsID == ds) {
-            pthread_mutex_unlock(&globalLock);
+            loader_platform_thread_unlock_mutex(&globalLock);
             return pTrav;
         }
         pTrav = pTrav->pNextDS;
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
 
@@ -733,16 +731,16 @@ static bool32_t dsUpdate(XGL_DESCRIPTOR_SET ds)
 static bool32_t clearDS(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount)
 {
     DS_LL_HEAD *pTrav = getDS(descriptorSet);
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     if (!pTrav || ((startSlot + slotCount) > pTrav->numSlots)) {
         // TODO : Log more meaningful error here
-        pthread_mutex_unlock(&globalLock);
+        loader_platform_thread_unlock_mutex(&globalLock);
         return XGL_FALSE;
     }
     for (uint32_t i = startSlot; i < slotCount; i++) {
         memset((void*)&pTrav->dsSlot[i], 0, sizeof(DS_SLOT));
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return XGL_TRUE;
 }
 
@@ -1004,9 +1002,13 @@ static void synchAndPrintDSConfig()
         autoDumpOnce = 0;
         dumpDotFile("pipeline_dump.dot");
         // Convert dot to png if dot available
+#if defined(_WIN32)
+// FIXME: NEED WINDOWS EQUIVALENT
+#else // WIN32
         if(access( "/usr/bin/dot", X_OK) != -1) {
             system("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
         }
+#endif // WIN32
     }
 }
 
@@ -1042,6 +1044,17 @@ static void initDrawState()
 
     xglGetProcAddrType fpGetProcAddr = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (char *) "xglGetProcAddr");
     nextTable.GetProcAddr = fpGetProcAddr;
+
+    if (!globalLockInitialized)
+    {
+        // TODO/TBD: Need to delete this mutex sometime.  How???  One
+        // suggestion is to call this during xglCreateInstance(), and then we
+        // can clean it up during xglDestroyInstance().  However, that requires
+        // that the layer have per-instance locks.  We need to come back and
+        // address this soon.
+        loader_platform_thread_create_mutex(&globalLock);
+        globalLockInitialized = 1;
+    }
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
@@ -1066,7 +1079,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initDrawState);
+    loader_platform_thread_once(&g_initOnce, initDrawState);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
     return result;
 }
@@ -1075,7 +1088,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initDrawState);
+    loader_platform_thread_once(&g_initOnce, initDrawState);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     return result;
 }
@@ -1090,7 +1103,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initDrawState);
+    loader_platform_thread_once(&g_initOnce, initDrawState);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
     return result;
 }
@@ -1101,7 +1114,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     {
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
         pCurObj = gpuw;
-        pthread_once(&g_initOnce, initDrawState);
+        loader_platform_thread_once(&g_initOnce, initDrawState);
         XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
@@ -1185,7 +1198,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initDrawState);
+    loader_platform_thread_once(&g_initOnce, initDrawState);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
     return result;
 }
@@ -1407,7 +1420,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pPipeline, 0, DRAWSTATE_NONE, "DS", str);
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     PIPELINE_NODE *pTrav = g_pPipelineHead;
     if (pTrav) {
         while (pTrav->pNext)
@@ -1422,7 +1435,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     memset((void*)pTrav, 0, sizeof(PIPELINE_NODE));
     pTrav->pipeline = *pPipeline;
     initPipeline(pTrav, pCreateInfo);
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
 
@@ -1454,13 +1467,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
 {
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     if (XGL_SUCCESS == result) {
-        pthread_mutex_lock(&globalLock);
+        loader_platform_thread_lock_mutex(&globalLock);
         SAMPLER_NODE *pNewNode = (SAMPLER_NODE*)malloc(sizeof(SAMPLER_NODE));
         pNewNode->sampler = *pSampler;
         memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO));
         pNewNode->pNext = g_pSamplerHead;
         g_pSamplerHead = pNewNode;
-        pthread_mutex_unlock(&globalLock);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -1743,10 +1756,10 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
             sprintf(str, "You must call xglEndDescriptorSetUpdate(%p) before this call to xglCmdBindDescriptorSet()!", (void*)descriptorSet);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
         }
-        pthread_mutex_lock(&globalLock);
+        loader_platform_thread_lock_mutex(&globalLock);
         lastBoundDS[index] = descriptorSet;
         lastBoundSlotOffset[index] = slotOffset;
-        pthread_mutex_unlock(&globalLock);
+        loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "DS %p bound to DS index %u on pipeline %s", (void*)descriptorSet, index, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_NONE, "DS", str);
@@ -2037,11 +2050,14 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 
+#if defined(WIN32)
+// FIXME: NEED WINDOWS EQUIVALENT
+#else // WIN32
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initDrawState);
+    loader_platform_thread_once(&g_initOnce, initDrawState);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
     return result;
 }
@@ -2063,6 +2079,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
     XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
     return result;
 }
+#endif // WIN32
 
 void drawStateDumpDotFile(char* outFileName)
 {
@@ -2071,6 +2088,12 @@ void drawStateDumpDotFile(char* outFileName)
 
 void drawStateDumpPngFile(char* outFileName)
 {
+#if defined(_WIN32)
+// FIXME: NEED WINDOWS EQUIVALENT
+        char str[1024];
+        sprintf(str, "Cannot execute dot program yet on Windows.");
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
+#else // WIN32
     char dotExe[32] = "/usr/bin/dot";
     if( access(dotExe, X_OK) != -1) {
         dumpDotFile("/tmp/tmp.dot");
@@ -2084,6 +2107,7 @@ void drawStateDumpPngFile(char* outFileName)
         sprintf(str, "Cannot execute dot program at (%s) to dump requested %s file.", dotExe, outFileName);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
     }
+#endif // WIN32
 }
 
 XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)
@@ -2094,7 +2118,7 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
     if (gpu == NULL)
         return NULL;
     pCurObj = gpuw;
-    pthread_once(&g_initOnce, initDrawState);
+    loader_platform_thread_once(&g_initOnce, initDrawState);
 
     addr = layer_intercept_proc(funcName);
     if (addr)

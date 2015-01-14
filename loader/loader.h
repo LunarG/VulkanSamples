@@ -30,7 +30,11 @@
 
 #include <xgl.h>
 #include <xglDbg.h>
+#if defined(WIN32)
+// FIXME: NEED WINDOWS EQUIVALENT
+#else // WIN32
 #include <xglWsiX11Ext.h>
+#endif // WIN32
 #include <xglLayer.h>
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define LOADER_EXPORT __attribute__((visibility("default")))

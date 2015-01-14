@@ -34,11 +34,12 @@
 #include <string.h>
 
 #include <sys/types.h>
+#if defined(WIN32)
+#include "dirent_on_windows.h"
+#else // WIN32
 #include <dirent.h>
-#include <unistd.h>
-#include <dlfcn.h>
-#include <pthread.h>
-#include <assert.h>
+#endif // WIN32
+#include "loader_platform.h"
 #include "table_ops.h"
 #include "loader.h"
 
@@ -48,7 +49,7 @@ struct loader_instance {
 };
 
 struct loader_layers {
-    void *lib_handle;
+    loader_platform_dl_handle lib_handle;
     char name[256];
 };
 
@@ -79,7 +80,7 @@ struct loader_msg_callback {
 };
 
 struct loader_scanned_icds {
-    void *handle;
+    loader_platform_dl_handle handle;
     xglGetProcAddrType GetProcAddr;
     xglCreateInstanceType CreateInstance;
     xglDestroyInstanceType DestroyInstance;
@@ -104,6 +105,7 @@ static struct {
     bool break_on_error;
     bool break_on_warning;
 } loader;
+
 
 static XGL_RESULT loader_msg_callback_add(XGL_DBG_MSG_CALLBACK_FUNCTION func,
                                           void *data)
@@ -206,7 +208,7 @@ static void loader_log(XGL_DBG_MSG_TYPE msg_type, int32_t msg_code,
 static void
 loader_icd_destroy(struct loader_icd *icd)
 {
-    dlclose(icd->scanned_icds->handle);
+    loader_platform_close_library(icd->scanned_icds->handle);
     free(icd);
 }
 
@@ -296,20 +298,21 @@ static struct loader_icd *loader_icd_add(struct loader_instance *ptr_inst,
 
 static void loader_scanned_icd_add(const char *filename)
 {
-    void *handle;
+    loader_platform_dl_handle handle;
     void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst;
     struct loader_scanned_icds *new_node;
 
-    handle = dlopen(filename, RTLD_LAZY);
+    // Used to call: dlopen(filename, RTLD_LAZY);
+    handle = loader_platform_open_library(filename);
     if (!handle) {
-        loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());
+        loader_log(XGL_DBG_MSG_WARNING, 0, loader_platform_open_library_error(filename));
         return;
     }
 
 #define LOOKUP(func_ptr, func) do {                            \
-    func_ptr = (xgl ##func## Type) dlsym(handle, "xgl" #func); \
+    func_ptr = (xgl ##func## Type) loader_platform_get_proc_address(handle, "xgl" #func); \
     if (!func_ptr) {                                           \
-        loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());         \
+        loader_log(XGL_DBG_MSG_WARNING, 0, loader_platform_get_proc_address_error("xgl" #func)); \
         return;                                                \
     }                                                          \
 } while (0)
@@ -335,11 +338,49 @@ static void loader_scanned_icd_add(const char *filename)
     loader.scanned_icd_list = new_node;
 }
 
+#if defined(WIN32)
+
+#define PATH_SEPERATOR ';'
+#define DIRECTORY_SYMBOL "\\"
+#ifndef DEFAULT_XGL_DRIVERS_PATH
+// TODO: Is this a good default location?
+// Need to search for both 32bit and 64bit ICDs
+#define DEFAULT_XGL_DRIVERS_PATH "C:\\Windows\\System32"
+// TODO/TBD: Is this an appropriate prefix for Windows?
+#define XGL_DRIVER_LIBRARY_PREFIX "XGL_"
+#define XGL_DRIVER_LIBRARY_PREFIX_LEN 4
+// TODO/TBD: Is this an appropriate suffix for Windows?
+#define XGL_LAYER_LIBRARY_PREFIX "XGLLayer"
+#define XGL_LAYER_LIBRARY_PREFIX_LEN 8
+#define XGL_LIBRARY_SUFFIX ".dll"
+#define XGL_LIBRARY_SUFFIX_LEN 4
+#endif //  DEFAULT_XGL_DRIVERS_PATH
+#ifndef DEFAULT_XGL_LAYERS_PATH
+// TODO: Is this a good default location?
+#define DEFAULT_XGL_LAYERS_PATH "C:\\Windows\\System32"
+#endif //  DEFAULT_XGL_LAYERS_PATH
+
+#else // WIN32
+
+#define PATH_SEPERATOR ':'
+#define DIRECTORY_SYMBOL "/"
 #ifndef DEFAULT_XGL_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
 #define DEFAULT_XGL_DRIVERS_PATH "/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
+#define XGL_DRIVER_LIBRARY_PREFIX "libXGL_"
+#define XGL_DRIVER_LIBRARY_PREFIX_LEN 7
+#define XGL_LAYER_LIBRARY_PREFIX "libXGLLayer"
+#define XGL_LAYER_LIBRARY_PREFIX_LEN 11
+#define XGL_LIBRARY_SUFFIX ".so"
+#define XGL_LIBRARY_SUFFIX_LEN 3
+#endif //  DEFAULT_XGL_DRIVERS_PATH
+#ifndef DEFAULT_XGL_LAYERS_PATH
+// TODO: Are these good default locations?
+#define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
 #endif
+
+#endif // WIN32
 
 /**
  * Try to \c loader_icd_scan XGL driver(s).
@@ -361,15 +402,19 @@ static void loader_icd_scan(void)
     int len;
 
     libPaths = NULL;
+#if !defined(WIN32)
     if (geteuid() == getuid()) {
-       /* don't allow setuid apps to use LIBXGL_DRIVERS_PATH */
+       /* Don't allow setuid apps to use LIBXGL_DRIVERS_PATH */
+#endif // WIN32
        libPaths = getenv("LIBXGL_DRIVERS_PATH");
+#if !defined(WIN32)
     }
+#endif // WIN32
     if (libPaths == NULL)
        libPaths = DEFAULT_XGL_DRIVERS_PATH;
 
     for (p = libPaths; *p; p = next) {
-       next = strchr(p, ':');
+       next = strchr(p, PATH_SEPERATOR);
        if (next == NULL) {
           len = strlen(p);
           next = p + len;
@@ -381,16 +426,28 @@ static void loader_icd_scan(void)
           next++;
        }
 
+       // TODO/TBD: Do we want to do this on Windows, or just let Windows take
+       // care of its own search path (which it apparently has)?
        sysdir = opendir(p);
        if (sysdir) {
           dent = readdir(sysdir);
           while (dent) {
-             /* look for ICDs starting with "libXGL_" */
-             if (!strncmp(dent->d_name, "libXGL_", 7)) {
-                snprintf(icd_library, 1024, "%s/%s",p,dent->d_name);
-
-                loader_scanned_icd_add(icd_library);
-             }
+             /* Look for ICDs starting with XGL_DRIVER_LIBRARY_PREFIX and
+              * ending with XGL_LIBRARY_SUFFIX
+              */
+              if (!strncmp(dent->d_name,
+                          XGL_DRIVER_LIBRARY_PREFIX,
+                          XGL_DRIVER_LIBRARY_PREFIX_LEN)) {
+                 int nlen = strlen(dent->d_name);
+                 const char *suf = dent->d_name + nlen - XGL_LIBRARY_SUFFIX_LEN;
+                 if ((nlen > XGL_LIBRARY_SUFFIX_LEN) &&
+                     !strncmp(suf,
+                              XGL_LIBRARY_SUFFIX,
+                              XGL_LIBRARY_SUFFIX_LEN)) {
+                    snprintf(icd_library, 1024, "%s" DIRECTORY_SYMBOL "%s", p,dent->d_name);
+                    loader_scanned_icd_add(icd_library);
+                 }
+              }
 
              dent = readdir(sysdir);
           }
@@ -398,14 +455,9 @@ static void loader_icd_scan(void)
        }
     }
 
-
     loader.icds_scanned = true;
 }
 
-#ifndef DEFAULT_XGL_LAYERS_PATH
-// TODO: Are these good default locations?
-#define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
-#endif
 
 static void layer_lib_scan_path(const char * libInPaths)
 {
@@ -423,11 +475,15 @@ static void layer_lib_scan_path(const char * libInPaths)
         p = libInPaths;
     }
     else {
+#if !defined(WIN32)
         if (geteuid() == getuid()) {
+#endif // WIN32
             p = getenv("LIBXGL_LAYERS_PATH");
             if (p != NULL)
                 len = strlen(p);
+#if !defined(WIN32)
         }
+#endif // WIN32
     }
 
     if (len == 0) {
@@ -456,7 +512,7 @@ static void layer_lib_scan_path(const char * libInPaths)
     loader.scanned_layer_count = 0;
 
     for (p = libPaths; *p; p = next) {
-       next = strchr(p, ':');
+       next = strchr(p, PATH_SEPERATOR);
        if (next == NULL) {
           len = strlen(p);
           next = p + len;
@@ -471,25 +527,37 @@ static void layer_lib_scan_path(const char * libInPaths)
        if (curdir) {
           dent = readdir(curdir);
           while (dent) {
-             /* look for wrappers starting with "libXGLlayer" */
-             if (!strncmp(dent->d_name, "libXGLLayer", strlen("libXGLLayer"))) {
-                void * handle;
-                snprintf(temp_str, sizeof(temp_str), "%s/%s",p,dent->d_name);
-                if ((handle = dlopen(temp_str, RTLD_LAZY)) == NULL) {
-                    dent = readdir(curdir);
-                    continue;
-                }
-                if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
-                    loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
-                    break;
-                }
-                if ((loader.scanned_layer_names[loader.scanned_layer_count] = malloc(strlen(temp_str) + 1)) == NULL) {
-                     loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: out of memory", temp_str);
-                     break;
-                }
-                strcpy(loader.scanned_layer_names[loader.scanned_layer_count], temp_str);
-                loader.scanned_layer_count++;
-                dlclose(handle);
+             /* Look for layers starting with XGL_LAYER_LIBRARY_PREFIX and
+              * ending with XGL_LIBRARY_SUFFIX
+              */
+              if (!strncmp(dent->d_name,
+                          XGL_LAYER_LIBRARY_PREFIX,
+                          XGL_LAYER_LIBRARY_PREFIX_LEN)) {
+                 int nlen = strlen(dent->d_name);
+                 const char *suf = dent->d_name + nlen - XGL_LIBRARY_SUFFIX_LEN;
+                 if ((nlen > XGL_LIBRARY_SUFFIX_LEN) &&
+                     !strncmp(suf,
+                              XGL_LIBRARY_SUFFIX,
+                              XGL_LIBRARY_SUFFIX_LEN)) {
+                     loader_platform_dl_handle handle;
+                     snprintf(temp_str, sizeof(temp_str), "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
+                     // Used to call: dlopen(temp_str, RTLD_LAZY)
+                     if ((handle = loader_platform_open_library(temp_str)) == NULL) {
+                         dent = readdir(curdir);
+                         continue;
+                     }
+                     if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
+                         loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
+                         break;
+                     }
+                     if ((loader.scanned_layer_names[loader.scanned_layer_count] = malloc(strlen(temp_str) + 1)) == NULL) {
+                         loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: out of memory", temp_str);
+                         break;
+                     }
+                     strcpy(loader.scanned_layer_names[loader.scanned_layer_count], temp_str);
+                     loader.scanned_layer_count++;
+                     loader_platform_close_library(handle);
+                 }
              }
 
              dent = readdir(curdir);
@@ -556,8 +624,9 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
             obj = &(icd->layer_libs[gpu_index][i]);
             strncpy(obj->name, (char *) pLayerNames[i].layer_name, sizeof(obj->name) - 1);
             obj->name[sizeof(obj->name) - 1] = '\0';
-            if ((obj->lib_handle = dlopen(pLayerNames[i].lib_name, RTLD_LAZY | RTLD_DEEPBIND)) == NULL) {
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to open layer library %s got error %d", pLayerNames[i].lib_name, dlerror());
+            // Used to call: dlopen(pLayerNames[i].lib_name, RTLD_LAZY | RTLD_DEEPBIND)
+            if ((obj->lib_handle = loader_platform_open_library(pLayerNames[i].lib_name)) == NULL) {
+                loader_log(XGL_DBG_MSG_ERROR, 0, loader_platform_open_library_error(pLayerNames[i].lib_name));
                 continue;
             } else {
                 loader_log(XGL_DBG_MSG_UNKNOWN, 0, "Inserting layer %s from library %s", pLayerNames[i].layer_name, pLayerNames[i].lib_name);
@@ -570,7 +639,7 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
 
 static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const char * layer_name, const char **lib_name)
 {
-    void *handle;
+    loader_platform_dl_handle handle;
     xglEnumerateLayersType fpEnumerateLayers;
     char layer_buf[16][256];
     char * layers[16];
@@ -580,14 +649,17 @@ static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const ch
 
     for (unsigned int j = 0; j < loader.scanned_layer_count; j++) {
         *lib_name = loader.scanned_layer_names[j];
-        if ((handle = dlopen(*lib_name, RTLD_LAZY)) == NULL)
+        // Used to call: dlopen(*lib_name, RTLD_LAZY)
+        if ((handle = loader_platform_open_library(*lib_name)) == NULL)
             continue;
-        if ((fpEnumerateLayers = dlsym(handle, "xglEnumerateLayers")) == NULL) {
-            //use default layer name based on library name libXGLLayer<name>.so
+        if ((fpEnumerateLayers = (xglEnumerateLayersType) loader_platform_get_proc_address(handle, "xglEnumerateLayers")) == NULL) {
             char * lib_str = malloc(strlen(*lib_name) + 1 + strlen(layer_name));
-            snprintf(lib_str, strlen(*lib_name) + strlen(layer_name), "libXGLLayer%s.so", layer_name);
-            dlclose(handle);
-            if (!strcmp(basename(*lib_name), lib_str)) {
+            //use default layer name
+            snprintf(lib_str, strlen(*lib_name) + strlen(layer_name),
+                     XGL_DRIVER_LIBRARY_PREFIX "%s" XGL_LIBRARY_SUFFIX,
+                     layer_name);
+            loader_platform_close_library(handle);
+            if (!strcmp(*lib_name, lib_str)) {
                 free(lib_str);
                 return true;
             }
@@ -598,16 +670,16 @@ static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const ch
         }
         else {
             size_t cnt;
-            fpEnumerateLayers(NULL, 16, 256, &cnt, layers, (void *) icd->gpus + gpu_index);
+            fpEnumerateLayers(NULL, 16, 256, &cnt, layers, (char *) icd->gpus + gpu_index);
             for (unsigned int i = 0; i < cnt; i++) {
                 if (!strcmp((char *) layers[i], layer_name)) {
-                    dlclose(handle);
+                    loader_platform_close_library(handle);
                     return true;
                 }
             }
         }
 
-        dlclose(handle);
+        loader_platform_close_library(handle);
     }
 
     return false;
@@ -630,7 +702,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
 
     while (p && *p && count < MAX_LAYER_LIBRARIES) {
         const char *lib_name = NULL;
-        next = strchr(p, ':');
+        next = strchr(p, PATH_SEPERATOR);
         if (next == NULL) {
             len = strlen(p);
             next = p + len;
@@ -717,7 +789,7 @@ static void loader_deactivate_layer(const struct loader_instance *instance)
                 for (uint32_t i = 0; i < icd->layer_count[j]; i++) {
                     libs = &(icd->layer_libs[j][i]);
                     if (libs->lib_handle)
-                        dlclose(libs->lib_handle);
+                        loader_platform_close_library(libs->lib_handle);
                     libs->lib_handle = NULL;
                 }
                 if (icd->wrappedGpus[j])
@@ -763,8 +835,8 @@ extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
 
             char funcStr[256];
             snprintf(funcStr, 256, "%sGetProcAddr",icd->layer_libs[gpu_index][i].name);
-            if ((nextGPA = dlsym(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
-                nextGPA = dlsym(icd->layer_libs[gpu_index][i].lib_handle, "xglGetProcAddr");
+            if ((nextGPA = (xglGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
+                nextGPA = (xglGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "xglGetProcAddr");
             if (!nextGPA) {
                 loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to find xglGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
                 continue;
@@ -803,17 +875,18 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
         const XGL_ALLOC_CALLBACKS*                  pAllocCb,
         XGL_INSTANCE*                               pInstance)
 {
-    static pthread_once_t once_icd = PTHREAD_ONCE_INIT;
-    static pthread_once_t once_layer = PTHREAD_ONCE_INIT;
+    static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
+    static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
     struct loader_instance *ptr_instance = NULL;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
     XGL_RESULT res;
 
-    pthread_once(&once_icd, loader_icd_scan);
+    /* Scan/discover all ICD libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_icd, loader_icd_scan);
 
-    /* get layer libraries */
-    pthread_once(&once_layer, layer_lib_scan);
+    /* get layer libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_layer, layer_lib_scan);
 
     ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
     if (ptr_instance == NULL) {
@@ -967,8 +1040,9 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 
 LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pName)
 {
-    if (gpu == NULL)
+    if (gpu == NULL) {
         return NULL;
+    }
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     XGL_LAYER_DISPATCH_TABLE * disp_table = * (XGL_LAYER_DISPATCH_TABLE **) gpuw->baseObject;
     void *addr;
@@ -992,7 +1066,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
     uint32_t count = 0;
     char *lib_name;
     struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
-    void *handle;
+    loader_platform_dl_handle handle;
     xglEnumerateLayersType fpEnumerateLayers;
     char layer_buf[16][256];
     char * layers[16];
@@ -1008,16 +1082,17 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
 
     for (unsigned int j = 0; j < loader.scanned_layer_count && count < maxLayerCount; j++) {
         lib_name = loader.scanned_layer_names[j];
-        if ((handle = dlopen(lib_name, RTLD_LAZY)) == NULL)
+        // Used to call: dlopen(*lib_name, RTLD_LAZY)
+        if ((handle = loader_platform_open_library(lib_name)) == NULL)
             continue;
-        if ((fpEnumerateLayers = dlsym(handle, "xglEnumerateLayers")) == NULL) {
-            //use default layer name based on library name libXGLLayer<name>.so
+        if ((fpEnumerateLayers = loader_platform_get_proc_address(handle, "xglEnumerateLayers")) == NULL) {
+            //use default layer name based on library name XGL_LAYER_LIBRARY_PREFIX<name>.XGL_LIBRARY_SUFFIX
             char *pEnd, *cpyStr;
             int siz;
-            dlclose(handle);
+            loader_platform_close_library(handle);
             lib_name = basename(lib_name);
             pEnd = strrchr(lib_name, '.');
-            siz = pEnd - lib_name - strlen("libXGLLayer") + 1;
+            siz = pEnd - lib_name - strlen(XGL_LAYER_LIBRARY_PREFIX) + 1;
             if (pEnd == NULL || siz <= 0)
                 continue;
             cpyStr = malloc(siz);
@@ -1025,7 +1100,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
                 free(cpyStr);
                 continue;
             }
-            strncpy(cpyStr, lib_name + strlen("libXGLLayer"), siz);
+            strncpy(cpyStr, lib_name + strlen(XGL_LAYER_LIBRARY_PREFIX), siz);
             cpyStr[siz - 1] = '\0';
             if (siz > maxStringSize)
                 siz = maxStringSize;
@@ -1039,8 +1114,8 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
             uint32_t n;
             XGL_RESULT res;
             n = (maxStringSize < 256) ? maxStringSize : 256;
-            res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (void *) icd->gpus + gpu_index);
-            dlclose(handle);
+            res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (char *) icd->gpus + gpu_index);
+            loader_platform_close_library(handle);
             if (res != XGL_SUCCESS)
                 continue;
             if (cnt + count > maxLayerCount)

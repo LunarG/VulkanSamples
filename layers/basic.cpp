@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unordered_map>
+#include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
 #include "xglLayer.h"
 

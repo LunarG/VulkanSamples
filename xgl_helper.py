@@ -528,6 +528,12 @@ class StructWrapperGen:
         for s in sorted(self.struct_dict):
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix);\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
+        sh_funcs.append('#if defined(_WIN32)\n')
+        sh_funcs.append('// Microsoft did not implement C99 in Visual Studio; but started adding it with\n')
+        sh_funcs.append('// VS2013.  However, VS2013 still did not have snprintf().  The following is a\n')
+        sh_funcs.append('// work-around.\n')
+        sh_funcs.append('#define snprintf _snprintf\n')
+        sh_funcs.append('#endif // _WIN32\n\n')
         for s in self.struct_dict:
             p_out = ""
             p_args = ""
@@ -1007,7 +1013,7 @@ class EnumCodeGen:
         body = []
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("static inline uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
+            body.append("STATIC_INLINE uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
                     body.append('        case %s:' % (e))
@@ -1020,7 +1026,7 @@ class EnumCodeGen:
             # bet == base_enum_type, fet == final_enum_type
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
+            body.append("STATIC_INLINE const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
                     body.append('        case %s:\n            return "%s";' % (e, e))
@@ -1028,7 +1034,15 @@ class EnumCodeGen:
         return "\n".join(body)
     
     def _generateSHHeader(self):
-        return "#pragma once\n\n#include <%s>\n\n" % self.in_file
+        header = []
+        header.append('#pragma once\n')
+        header.append('#include <%s>\n' % self.in_file)
+        header.append('#if defined(_WIN32)')
+        header.append('#define STATIC_INLINE static')
+        header.append('#else  // defined(_WIN32)')
+        header.append('#define STATIC_INLINE static inline')
+        header.append('#endif // defined(_WIN32)\n\n\n')
+        return "\n".join(header)
         
 
 class CMakeGen:

@@ -14,13 +14,27 @@ macro(run_xgl_layer_generate subcmd output)
 	)
 endmacro()
 
-macro(add_xgl_layer target)
+if (WIN32)
+    macro(add_xgl_layer target)
+	add_custom_command(OUTPUT XGLLayer${target}.def
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py ${target} > XGLLayer${target}.def
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py
+	)
+	add_library(XGLLayer${target} SHARED ${ARGN} XGLLayer${target}.def)
+	add_dependencies(XGLLayer${target} generate_xgl_layer_helpers)
+	add_dependencies(XGLLayer${target} ${CMAKE_CURRENT_BINARY_DIR}/XGLLayer${target}.def)
+	set_target_properties(XGLLayer${target} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/XGLLayer${target}.def")
+    endmacro()
+else()
+    macro(add_xgl_layer target)
 	add_library(XGLLayer${target} SHARED ${ARGN})
 	add_dependencies(XGLLayer${target} generate_xgl_layer_helpers)
-endmacro()
+    endmacro()
+endif()
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/../loader
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
