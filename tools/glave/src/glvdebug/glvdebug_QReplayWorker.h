@@ -179,6 +179,7 @@ protected slots:
             if (m_bStopReplay)
             {
                 emit ReplayStopped(m_currentReplayPacketIndex);
+                m_currentReplayPacketIndex = 0;
                 return;
             }
         }
@@ -194,6 +195,13 @@ public slots:
 
         emit ReplayStarted();
         playCurrentTraceFile(0);
+    }
+
+    void StepReplay()
+    {
+        emit ReplayContinued();
+        m_bPauseReplay = true;
+        playCurrentTraceFile(m_currentReplayPacketIndex+1);
     }
 
     void PauseReplay()

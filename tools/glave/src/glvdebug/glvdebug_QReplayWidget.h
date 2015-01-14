@@ -53,6 +53,12 @@ public:
         m_pToolBar->addWidget(m_pPlayButton);
         connect(m_pPlayButton, SIGNAL(clicked()), this, SLOT(onPlayButtonClicked()));
 
+        m_pStepButton = new QToolButton(m_pToolBar);
+        m_pStepButton->setText("Step");
+        m_pStepButton->setEnabled(true);
+        m_pToolBar->addWidget(m_pStepButton);
+        connect(m_pStepButton, SIGNAL(clicked()), this, SLOT(onStepButtonClicked()));
+
         m_pPauseButton = new QToolButton(m_pToolBar);
         m_pPauseButton->setText("Pause");
         m_pPauseButton->setEnabled(false);
@@ -75,6 +81,7 @@ public:
         pLayout->addWidget(m_pReplayWindow);
 
         connect(this, SIGNAL(PlayButtonClicked()), m_pWorker, SLOT(StartReplay()));
+        connect(this, SIGNAL(StepButtonClicked()), m_pWorker, SLOT(StepReplay()));
         connect(this, SIGNAL(PauseButtonClicked()), m_pWorker, SLOT(PauseReplay()));
         connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()));
         connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()));
@@ -83,6 +90,7 @@ public:
 
         // connect worker signals to widget actions
         connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(slotReplayStarted()));
+        connect(m_pWorker, SIGNAL(ReplayStepped()), this, SLOT(slotReplayStepped()));
         connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(slotReplayPaused(uint64_t)));
         connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(slotReplayContinued()));
         connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(slotReplayStopped(uint64_t)));
@@ -117,6 +125,7 @@ public:
 
 signals:
     void PlayButtonClicked();
+    void StepButtonClicked();
     void PauseButtonClicked();
     void ContinueButtonClicked();
     void StopButtonClicked();
@@ -132,14 +141,22 @@ private slots:
     void slotReplayStarted()
     {
         m_pPlayButton->setEnabled(false);
+        m_pStepButton->setEnabled(false);
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
     }
 
+    void slotReplayStepped()
+    {
+        // treated the same as continue
+        slotReplayContinued();
+    }
+
     void slotReplayPaused(uint64_t)
     {
         m_pPlayButton->setEnabled(false);
+        m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(true);
         m_pStopButton->setEnabled(false);
@@ -148,6 +165,7 @@ private slots:
     void slotReplayContinued()
     {
         m_pPlayButton->setEnabled(false);
+        m_pStepButton->setEnabled(false);
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
@@ -156,6 +174,7 @@ private slots:
     void slotReplayStopped(uint64_t)
     {
         m_pPlayButton->setEnabled(true);
+        m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
@@ -164,6 +183,7 @@ private slots:
     void slotReplayFinished()
     {
         m_pPlayButton->setEnabled(true);
+        m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
@@ -173,6 +193,11 @@ public slots:
     void onPlayButtonClicked()
     {
         emit PlayButtonClicked();
+    }
+
+    void onStepButtonClicked()
+    {
+        emit StepButtonClicked();
     }
 
     void onPauseButtonClicked()
@@ -208,6 +233,7 @@ private:
     QWidget* m_pReplayWindow;
     QToolBar* m_pToolBar;
     QToolButton* m_pPlayButton;
+    QToolButton* m_pStepButton;
     QToolButton* m_pPauseButton;
     QToolButton* m_pContinueButton;
     QToolButton* m_pStopButton;
