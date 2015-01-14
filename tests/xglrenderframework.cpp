@@ -172,7 +172,6 @@ void XglRenderFramework::InitViewport()
 void XglRenderFramework::InitRenderTarget()
 {
     XGL_UINT i;
-    XGL_RESULT err;
 
     for (i = 0; i < m_renderTargetCount; i++) {
         XglImage *img = new XglImage(m_device);
@@ -180,7 +179,39 @@ void XglRenderFramework::InitRenderTarget()
                 XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
                 XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
         m_renderTargets[i] = img;
+        m_colorBindings[i].view  = m_renderTargets[i]->targetView();
+        m_colorBindings[i].colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
     }
+      // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
+    XGL_ATTACHMENT_LOAD_OP load_op = XGL_ATTACHMENT_LOAD_OP_LOAD;
+    XGL_ATTACHMENT_STORE_OP store_op = XGL_ATTACHMENT_STORE_OP_STORE;
+    XGL_DEPTH_STENCIL_BIND_INFO *dsBinding;
+    if (m_depthStencilBinding.view)
+        dsBinding = &m_depthStencilBinding;
+    else
+        dsBinding = NULL;
+    const XGL_FRAMEBUFFER_CREATE_INFO fb_info = {
+         .sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+         .pNext = NULL,
+         .colorAttachmentCount = m_renderTargetCount,
+         .pColorAttachments = m_colorBindings,
+         .pDepthStencilAttachment = dsBinding,
+         .sampleCount = 1,
+    };
+    XGL_RENDER_PASS_CREATE_INFO rp_info;
+    memset(&rp_info, 0 , sizeof(rp_info));
+    xglCreateFramebuffer(device(), &fb_info, &(rp_info.framebuffer));
+    rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.renderArea.extent.width = m_width;
+    rp_info.renderArea.extent.height = m_height;
+    rp_info.pColorLoadOps = &load_op;
+    rp_info.pColorStoreOps = &store_op;
+    rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
+    rp_info.depthStoreOp = XGL_ATTACHMENT_STORE_OP_STORE;
+    rp_info.stencilLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
+    rp_info.stencilStoreOp = XGL_ATTACHMENT_STORE_OP_STORE;
+    xglCreateRenderPass(device(), &rp_info, &m_renderPass);
+  
 }
 
 XglDevice::XglDevice(XGL_UINT id, XGL_PHYSICAL_GPU obj) :
@@ -964,7 +995,19 @@ XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
 
 XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pInfo)
 {
-    begin(flags);
+    begin(pInfo);
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj)
+{
+    begin(renderpass_obj);
+    return XGL_SUCCESS;
+}
+
+XGL_RESULT XglCommandBufferObj::BeginCommandBuffer()
+{
+    begin();
     return XGL_SUCCESS;
 }
 
@@ -1055,15 +1098,6 @@ void XglCommandBufferObj::PrepareAttachments()
         transitionToRender.subresourceRange = srRange;
         xglCmdPrepareImages(obj(), 1, &transitionToRender );
         m_renderTargets[i]->state(( XGL_IMAGE_STATE ) transitionToRender.newState);
-    }
-    for (i = 0; i < m_renderTargetCount; i++) {
-        colorBindings[i].view  = m_renderTargets[i]->targetView();
-        colorBindings[i].colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
-    }
-    if (depthStencilBinding->view) {
-       xglCmdBindAttachments(obj(), m_renderTargetCount, colorBindings, depthStencilBinding );
-    } else {
-       xglCmdBindAttachments(obj(), m_renderTargetCount, colorBindings, XGL_NULL_HANDLE );
     }
 }
 

@@ -261,7 +261,7 @@ protected:
 void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet)
 {
     cmdBuffer->ClearAllBuffers(&m_depthStencilBinding, m_depthStencilImage);
-    cmdBuffer->BindAttachments(&m_depthStencilBinding);
+    cmdBuffer->PrepareAttachments();
     cmdBuffer->BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
     cmdBuffer->BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
     cmdBuffer->BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
@@ -484,7 +484,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -784,7 +784,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
@@ -865,7 +865,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     cmdBuffer.AddRenderTarget(m_renderTargets[1]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -968,7 +968,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1065,7 +1065,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1159,7 +1159,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1263,7 +1263,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1357,7 +1357,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1433,7 +1433,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1509,7 +1509,7 @@ TEST_F(XglRenderTest, MixTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1597,7 +1597,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1690,7 +1690,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1792,7 +1792,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
@@ -1865,7 +1865,7 @@ TEST_F(XglRenderTest, VSTexture)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -1941,7 +1941,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2028,7 +2028,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2104,7 +2104,7 @@ TEST_F(XglRenderTest, FSTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2207,7 +2207,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2291,7 +2291,7 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2397,7 +2397,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2498,7 +2498,7 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2621,7 +2621,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
@@ -2761,7 +2761,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -2896,7 +2896,7 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
@@ -3150,7 +3150,7 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(0));
+    ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 

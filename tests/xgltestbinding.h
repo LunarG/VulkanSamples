@@ -552,7 +552,8 @@ public:
     void init(const Device &dev, const XGL_CMD_BUFFER_CREATE_INFO &info);
 
     // xglBeginCommandBuffer()
-    void begin(XGL_FLAGS flags);
+    void begin(const XGL_CMD_BUFFER_BEGIN_INFO *info);
+    void begin(XGL_RENDER_PASS renderpass_obj);
     void begin();
 
     // xglEndCommandBuffer()

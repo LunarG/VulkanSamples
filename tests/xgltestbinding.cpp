@@ -797,15 +797,36 @@ void CmdBuffer::init(const Device &dev, const XGL_CMD_BUFFER_CREATE_INFO &info)
     DERIVED_OBJECT_INIT(xglCreateCommandBuffer, dev.obj(), &info);
 }
 
-void CmdBuffer::begin(XGL_FLAGS flags)
+void CmdBuffer::begin(const XGL_CMD_BUFFER_BEGIN_INFO *info)
 {
-    EXPECT(xglBeginCommandBuffer(obj(), flags) == XGL_SUCCESS);
+    EXPECT(xglBeginCommandBuffer(obj(), info) == XGL_SUCCESS);
+}
+
+void CmdBuffer::begin(XGL_RENDER_PASS renderpass_obj)
+{
+    XGL_CMD_BUFFER_BEGIN_INFO info = {};
+    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
+        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
+        .pNext = NULL,
+        .renderPass = renderpass_obj,
+        .operation = XGL_RENDER_PASS_OPERATION_BEGIN_AND_END,
+    };
+    info.flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+          XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    info.pNext = &graphics_cmd_buf_info;
+
+    begin(&info);
 }
 
 void CmdBuffer::begin()
 {
-    begin(XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
-          XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT);
+    XGL_CMD_BUFFER_BEGIN_INFO info = {};
+    info.flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+          XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+
+    begin(&info);
 }
 
 void CmdBuffer::end()

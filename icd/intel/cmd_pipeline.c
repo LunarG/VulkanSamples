@@ -401,7 +401,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
             format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         default:
-            assert(!cmd->bind.att.ds); // Must have valid format if ds attached
+            assert(!cmd->bind.render_pass->fb->ds); // Must have valid format if ds attached
             format = 0;
             break;
         }
@@ -3239,18 +3239,6 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindIndexData(
     struct intel_mem *mem = intel_mem(mem_);
 
     cmd_bind_index_data(cmd, mem, offset, indexType);
-}
-
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindAttachments(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    colorAttachmentCount,
-    const XGL_COLOR_ATTACHMENT_BIND_INFO*       pColorAttachments,
-    const XGL_DEPTH_STENCIL_BIND_INFO*          pDepthStencilAttachment)
-{
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    cmd_bind_attachments(cmd, colorAttachmentCount, pColorAttachments,
-            pDepthStencilAttachment);
 }
 
 ICD_EXPORT XGL_VOID XGLAPI xglCmdDraw(

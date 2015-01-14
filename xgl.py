@@ -209,6 +209,8 @@ core = Extension(
         "XGL_QUEUE_SEMAPHORE",
         "XGL_EVENT",
         "XGL_QUERY_POOL",
+        "XGL_FRAMEBUFFER",
+        "XGL_RENDER_PASS"
     ],
     protos=[
         Proto("XGL_RESULT", "InitAndEnumerateGpus",
@@ -556,7 +558,7 @@ core = Extension(
 
         Proto("XGL_RESULT", "BeginCommandBuffer",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_FLAGS", "flags")]),
+             Param("const XGL_CMD_BUFFER_BEGIN_INFO*", "pBeginInfo")]),
 
         Proto("XGL_RESULT", "EndCommandBuffer",
             [Param("XGL_CMD_BUFFER", "cmdBuffer")]),
@@ -602,12 +604,6 @@ core = Extension(
              Param("XGL_GPU_MEMORY", "mem"),
              Param("XGL_GPU_SIZE", "offset"),
              Param("XGL_INDEX_TYPE", "indexType")]),
-
-        Proto("XGL_VOID", "CmdBindAttachments",
-            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_UINT", "colorAttachmentCount"),
-             Param("const XGL_COLOR_ATTACHMENT_BIND_INFO*", "pColorAttachments"),
-             Param("const XGL_DEPTH_STENCIL_BIND_INFO*", "pDepthStencilAttachment")]),
 
         Proto("XGL_VOID", "CmdPrepareMemoryRegions",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
@@ -797,6 +793,16 @@ core = Extension(
              Param("XGL_UINT", "counterCount"),
              Param("XGL_GPU_MEMORY", "destMem"),
              Param("XGL_GPU_SIZE", "destOffset")]),
+
+        Proto("XGL_RESULT", "CreateFramebuffer",
+            [Param("XGL_DEVICE", "device"),
+             Param("const XGL_FRAMEBUFFER_CREATE_INFO*", "pCreateInfo"),
+             Param("XGL_FRAMEBUFFER*", "pFramebuffer")]),
+
+        Proto("XGL_RESULT", "CreateRenderPass",
+            [Param("XGL_DEVICE", "device"),
+             Param("const XGL_RENDER_PASS_CREATE_INFO*", "pCreateInfo"),
+             Param("XGL_RENDER_PASS*", "pRenderPass")]),
 
         Proto("XGL_RESULT", "DbgSetValidationLevel",
             [Param("XGL_DEVICE", "device"),

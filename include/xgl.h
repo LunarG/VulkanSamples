@@ -1901,7 +1901,7 @@ typedef XGL_RESULT (XGLAPI *xglCreateMsaaStateType)(XGL_DEVICE device, const XGL
 typedef XGL_RESULT (XGLAPI *xglCreateColorBlendStateType)(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateDepthStencilStateType)(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateCommandBufferType)(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer);
-typedef XGL_RESULT (XGLAPI *xglBeginCommandBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_FLAGS flags);
+typedef XGL_RESULT (XGLAPI *xglBeginCommandBufferType)(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo);
 typedef XGL_RESULT (XGLAPI *xglEndCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef XGL_RESULT (XGLAPI *xglResetCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef XGL_VOID (XGLAPI *xglCmdBindPipelineType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline);
@@ -1911,7 +1911,6 @@ typedef XGL_VOID (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer,
 typedef XGL_VOID (XGLAPI *xglCmdBindDynamicMemoryViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView);
 typedef XGL_VOID (XGLAPI *xglCmdBindVertexDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_UINT binding);
 typedef XGL_VOID (XGLAPI *xglCmdBindIndexDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
-typedef XGL_VOID (XGLAPI *xglCmdBindAttachmentsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment);
 typedef XGL_VOID (XGLAPI *xglCmdPrepareMemoryRegionsType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions);
 typedef XGL_VOID (XGLAPI *xglCmdPrepareImagesType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions);
 typedef XGL_VOID (XGLAPI *xglCmdDrawType)(XGL_CMD_BUFFER cmdBuffer, XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
@@ -1941,6 +1940,8 @@ typedef XGL_VOID (XGLAPI *xglCmdWriteTimestampType)(XGL_CMD_BUFFER cmdBuffer, XG
 typedef XGL_VOID (XGLAPI *xglCmdInitAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, const XGL_UINT32* pData);
 typedef XGL_VOID (XGLAPI *xglCmdLoadAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY srcMem, XGL_GPU_SIZE srcOffset);
 typedef XGL_VOID (XGLAPI *xglCmdSaveAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT startCounter, XGL_UINT counterCount, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset);
+typedef XGL_RESULT (XGLAPI *xglCreateFramebufferType)(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer);
+typedef XGL_RESULT (XGLAPI *xglCreateRenderPassType)(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass);
 
 #ifdef XGL_PROTOTYPES
 
@@ -2570,12 +2571,12 @@ XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
     XGL_GPU_MEMORY                              destMem,
     XGL_GPU_SIZE                                destOffset);
 
-XGL_RESULT xglCreateFramebuffer(
+XGL_RESULT XGLAPI xglCreateFramebuffer(
     XGL_DEVICE                                  device,
     const XGL_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
     XGL_FRAMEBUFFER*                            pFramebuffer);
 
-XGL_RESULT xglCreateRenderPass(
+XGL_RESULT XGLAPI xglCreateRenderPass(
     XGL_DEVICE                                  device,
     const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
     XGL_RENDER_PASS*                            pRenderPass);

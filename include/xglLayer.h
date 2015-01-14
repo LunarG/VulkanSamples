@@ -103,7 +103,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdBindDynamicMemoryViewType CmdBindDynamicMemoryView;
     xglCmdBindVertexDataType CmdBindVertexData;
     xglCmdBindIndexDataType CmdBindIndexData;
-    xglCmdBindAttachmentsType CmdBindAttachments;
     xglCmdPrepareMemoryRegionsType CmdPrepareMemoryRegions;
     xglCmdPrepareImagesType CmdPrepareImages;
     xglCmdDrawType CmdDraw;
@@ -133,6 +132,8 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdInitAtomicCountersType CmdInitAtomicCounters;
     xglCmdLoadAtomicCountersType CmdLoadAtomicCounters;
     xglCmdSaveAtomicCountersType CmdSaveAtomicCounters;
+    xglCreateFramebufferType CreateFramebuffer;
+    xglCreateRenderPassType CreateRenderPass;
     xglDbgSetValidationLevelType DbgSetValidationLevel;
     xglDbgRegisterMsgCallbackType DbgRegisterMsgCallback;
     xglDbgUnregisterMsgCallbackType DbgUnregisterMsgCallback;

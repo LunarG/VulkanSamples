@@ -113,6 +113,8 @@ public:
     XglCommandBufferObj(XglDevice *device);
     XGL_CMD_BUFFER GetBufferHandle();
     XGL_RESULT BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pInfo);
+    XGL_RESULT BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj);
+    XGL_RESULT BeginCommandBuffer();
     XGL_RESULT EndCommandBuffer();
     void PrepareMemoryRegions(int transitionCount, XGL_MEMORY_STATE_TRANSITION *transitionPtr);
     void AddRenderTarget(XglImage *renderTarget);
