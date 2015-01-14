@@ -30,6 +30,8 @@ extern "C" {
 
 const char *getLayerOption(const char *_option);
 
+void setLayerOption(const char *_option, const char *_val);
+void setLayerOptionEnum(const char *_option, const char *_valEnum);
 #ifdef __cplusplus
 }
 #endif

@@ -26,6 +26,7 @@
 #include <string>
 #include <map>
 #include <string.h>
+#include <xglLayer.h>
 #include "layers_config.h"
 
 #define MAX_CHARS_PER_LINE 4096
@@ -37,6 +38,8 @@ public:
     ~ConfigFile();
 
     const char *getOption(const std::string &_option);
+    void setOption(const std::string &_option, const std::string &_val);
+
 private:
     bool m_fileIsParsed;
     std::map<std::string, std::string> m_valueMap;
@@ -45,10 +48,46 @@ private:
 };
 
 static ConfigFile g_configFileObj;
+
+static unsigned int convertStringEnumVal(const char *_enum)
+{
+    // only handles single enum values
+    if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_IGNORE"))
+        return XGL_DBG_LAYER_ACTION_IGNORE;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_CALLBACK"))
+        return XGL_DBG_LAYER_ACTION_CALLBACK;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_LOG_MSG"))
+        return XGL_DBG_LAYER_ACTION_LOG_MSG;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_BREAK"))
+        return XGL_DBG_LAYER_ACTION_BREAK;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_INFO"))
+        return XGL_DBG_LAYER_LEVEL_INFO;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_WARN"))
+        return XGL_DBG_LAYER_LEVEL_WARN;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_PERF_WARN"))
+        return XGL_DBG_LAYER_LEVEL_PERF_WARN;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_ERROR"))
+        return XGL_DBG_LAYER_LEVEL_ERROR;
+    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_NONE"))
+        return XGL_DBG_LAYER_LEVEL_NONE;
+    return 0;
+}
 const char *getLayerOption(const char *_option)
 {
-    std::string option(_option);
     return g_configFileObj.getOption(_option);
+}
+
+void setLayerOptionEnum(const char *_option, const char *_valEnum)
+{
+    unsigned int val = convertStringEnumVal(_valEnum);
+    char strVal[24];
+    snprintf(strVal, 24, "%u", val);
+    g_configFileObj.setOption(_option, strVal);
+}
+
+void setLayerOption(const char *_option, const char *_val)
+{
+    g_configFileObj.setOption(_option, _val);
 }
 
 ConfigFile::ConfigFile() : m_fileIsParsed(false)
@@ -71,6 +110,16 @@ const char *ConfigFile::getOption(const std::string &_option)
         return NULL;
     else
         return it->second.c_str();
+}
+
+void ConfigFile::setOption(const std::string &_option, const std::string &_val)
+{
+    if (!m_fileIsParsed)
+    {
+        parseFile("xgl_layer_settings.txt");
+    }
+
+    m_valueMap[_option] = _val;
 }
 
 void ConfigFile::parseFile(const char *filename)
