@@ -47,8 +47,6 @@ struct app_dev {
 
     XGL_DEVICE obj;
 
-    XGL_UINT heap_count;
-    XGL_MEMORY_HEAP_PROPERTIES *heap_props;
 
     XGL_FORMAT_PROPERTIES format_props[XGL_MAX_CH_FMT][XGL_MAX_NUM_FMT];
 };
@@ -131,19 +129,6 @@ static const char *xgl_gpu_type_string(XGL_PHYSICAL_GPU_TYPE type)
     STR(VIRTUAL);
 #undef STR
     default: return "UNKNOWN_GPU";
-    }
-}
-
-static const char *xgl_heap_type_string(XGL_HEAP_MEMORY_TYPE type)
-{
-    switch (type) {
-#define STR(r) case XGL_HEAP_MEMORY_ ##r: return #r
-    STR(OTHER);
-    STR(LOCAL);
-    STR(REMOTE);
-    STR(EMBEDDED);
-#undef STR
-    default: return "UNKNOWN_HEAP";
     }
 }
 
@@ -254,8 +239,6 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .flags = XGL_DEVICE_CREATE_VALIDATION_BIT,
     };
     XGL_RESULT err;
-    XGL_SIZE size;
-    XGL_UINT i;
 
     /* request all queues */
     info.queueRecordCount = gpu->queue_count;
@@ -269,28 +252,10 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     if (err)
         ERR_EXIT(err);
 
-    err = xglGetMemoryHeapCount(dev->obj, &dev->heap_count);
-    if (err)
-        ERR_EXIT(err);
-
-    dev->heap_props =
-            malloc(sizeof(dev->heap_props[0]) * dev->heap_count);
-    if (!dev->heap_props)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
-
-    for (i = 0; i < dev->heap_count; i++) {
-        size = sizeof(dev->heap_props[0]);
-        err = xglGetMemoryHeapInfo(dev->obj, i,
-                                   XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES,
-                                   &size, &dev->heap_props[i]);
-        if (err || size != sizeof(dev->heap_props[0]))
-            ERR_EXIT(err);
-    }
 }
 
 static void app_dev_destroy(struct app_dev *dev)
 {
-    free(dev->heap_props);
     xglDestroyDevice(dev->obj);
 }
 
@@ -435,41 +400,12 @@ static void app_dev_dump_format_props(const struct app_dev *dev, XGL_CHANNEL_FOR
     }
 }
 
-static void app_dev_dump_heap_props(const struct app_dev *dev, XGL_UINT id)
-{
-    const XGL_MEMORY_HEAP_PROPERTIES *props = &dev->heap_props[id];
-
-    printf("XGL_MEMORY_HEAP_PROPERTIES[%u]\n", id);
-    printf("\tstructSize = %zu\n",      props->structSize);
-    printf("\theapMemoryType = %s\n",   xgl_heap_type_string(props->heapMemoryType));
-    printf("\theapSize = %zu\n",        props->heapSize);
-    printf("\tpagesSize = %zu\n",       props->pageSize);
-
-    printf("\tflags =%s%s%s%s%s%s\n",
-            (props->flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT)        ? " visible" : "",
-            (props->flags & XGL_MEMORY_HEAP_CPU_GPU_COHERENT_BIT)   ? " coherent" : "",
-            (props->flags & XGL_MEMORY_HEAP_CPU_UNCACHED_BIT)       ? " uc" : "",
-            (props->flags & XGL_MEMORY_HEAP_CPU_WRITE_COMBINED_BIT) ? " wc" : "",
-            (props->flags & XGL_MEMORY_HEAP_HOLDS_PINNED_BIT)       ? " pinnable" : "",
-            (props->flags & XGL_MEMORY_HEAP_SHAREABLE_BIT)          ? " shareable" : "");
-
-    printf("\tgpuReadPerfRating = %f\n",    props->gpuReadPerfRating);
-    printf("\tgpuWritePerfRating = %f\n",   props->gpuWritePerfRating);
-    printf("\tcpuReadPerfRating = %f\n",    props->cpuReadPerfRating);
-    printf("\tcpuWritePerfRating = %f\n",   props->cpuWritePerfRating);
-}
 
 static void
 app_dev_dump(const struct app_dev *dev)
 {
     XGL_CHANNEL_FORMAT ch;
     XGL_NUM_FORMAT num;
-    XGL_UINT i;
-
-    for (i = 0; i < dev->heap_count; i++) {
-        app_dev_dump_heap_props(dev, i);
-        printf("\n");
-    }
 
     for (ch = 0; ch < XGL_MAX_CH_FMT; ch++) {
         for (num = 0; num < XGL_MAX_NUM_FMT; num++)
