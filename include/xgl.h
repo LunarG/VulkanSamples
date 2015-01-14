@@ -668,19 +668,6 @@ typedef enum _XGL_SYSTEM_ALLOC_TYPE
     XGL_MAX_ENUM(_XGL_SYSTEM_ALLOC_TYPE)
 } XGL_SYSTEM_ALLOC_TYPE;
 
-typedef enum _XGL_HEAP_MEMORY_TYPE
-{
-    XGL_HEAP_MEMORY_OTHER                                   = 0x00000000,
-    XGL_HEAP_MEMORY_LOCAL                                   = 0x00000001,
-    XGL_HEAP_MEMORY_REMOTE                                  = 0x00000002,
-    XGL_HEAP_MEMORY_EMBEDDED                                = 0x00000003,
-
-    XGL_HEAP_MEMORY_BEGIN_RANGE                             = XGL_HEAP_MEMORY_OTHER,
-    XGL_HEAP_MEMORY_END_RANGE                               = XGL_HEAP_MEMORY_EMBEDDED,
-    XGL_NUM_HEAP_MEMORY_TYPE                                = (XGL_HEAP_MEMORY_END_RANGE - XGL_HEAP_MEMORY_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_HEAP_MEMORY_TYPE)
-} XGL_HEAP_MEMORY_TYPE;
-
 typedef enum _XGL_PHYSICAL_GPU_TYPE
 {
     XGL_GPU_TYPE_OTHER                                      = 0x00000000,
@@ -704,14 +691,6 @@ typedef enum _XGL_PHYSICAL_GPU_INFO_TYPE
 
     XGL_MAX_ENUM(_XGL_PHYSICAL_GPU_INFO_TYPE)
 } XGL_PHYSICAL_GPU_INFO_TYPE;
-
-typedef enum _XGL_MEMORY_HEAP_INFO_TYPE
-{
-    // Info type for xglGetMemoryHeapInfo()
-    XGL_INFO_TYPE_MEMORY_HEAP_PROPERTIES                    = 0x00000000,
-
-    XGL_MAX_ENUM(_XGL_MEMORY_HEAP_INFO_TYPE)
-} XGL_MEMORY_HEAP_INFO_TYPE;
 
 typedef enum _XGL_FORMAT_INFO_TYPE
 {
@@ -1285,19 +1264,6 @@ typedef struct _XGL_PHYSICAL_GPU_MEMORY_PROPERTIES
     XGL_BOOL                                supportsMigration;
     XGL_BOOL                                supportsPinning;
 } XGL_PHYSICAL_GPU_MEMORY_PROPERTIES;
-
-typedef struct _XGL_MEMORY_HEAP_PROPERTIES
-{
-    XGL_SIZE                                structSize;                 // Size of structure in bytes
-    XGL_HEAP_MEMORY_TYPE                    heapMemoryType;             // XGL_HEAP_MEMORY_TYPE
-    XGL_GPU_SIZE                            heapSize;                   // Specified in bytes
-    XGL_GPU_SIZE                            pageSize;                   // Specified in bytes
-    XGL_FLAGS                               flags;                      // XGL_MEMORY_HEAP_FLAGS
-    XGL_FLOAT                               gpuReadPerfRating;
-    XGL_FLOAT                               gpuWritePerfRating;
-    XGL_FLOAT                               cpuReadPerfRating;
-    XGL_FLOAT                               cpuWritePerfRating;
-} XGL_MEMORY_HEAP_PROPERTIES;
 
 typedef struct _XGL_MEMORY_ALLOC_INFO
 {
@@ -2066,8 +2032,6 @@ typedef XGL_RESULT (XGLAPI *xglQueueSubmitType)(XGL_QUEUE queue, XGL_UINT cmdBuf
 typedef XGL_RESULT (XGLAPI *xglQueueSetGlobalMemReferencesType)(XGL_QUEUE queue, XGL_UINT memRefCount, const XGL_MEMORY_REF* pMemRefs);
 typedef XGL_RESULT (XGLAPI *xglQueueWaitIdleType)(XGL_QUEUE queue);
 typedef XGL_RESULT (XGLAPI *xglDeviceWaitIdleType)(XGL_DEVICE device);
-typedef XGL_RESULT (XGLAPI *xglGetMemoryHeapCountType)(XGL_DEVICE device, XGL_UINT* pCount);
-typedef XGL_RESULT (XGLAPI *xglGetMemoryHeapInfoType)(XGL_DEVICE device, XGL_UINT heapId, XGL_MEMORY_HEAP_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
 typedef XGL_RESULT (XGLAPI *xglAllocMemoryType)(XGL_DEVICE device, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglFreeMemoryType)(XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglSetMemoryPriorityType)(XGL_GPU_MEMORY mem, XGL_MEMORY_PRIORITY priority);
@@ -2239,17 +2203,6 @@ XGL_RESULT XGLAPI xglDeviceWaitIdle(
     XGL_DEVICE                                  device);
 
 // Memory functions
-
-XGL_RESULT XGLAPI xglGetMemoryHeapCount(
-    XGL_DEVICE                                  device,
-    XGL_UINT*                                   pCount);
-
-XGL_RESULT XGLAPI xglGetMemoryHeapInfo(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    heapId,
-    XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData);
 
 XGL_RESULT XGLAPI xglAllocMemory(
     XGL_DEVICE                                  device,

@@ -1560,7 +1560,6 @@ class Subcommand(object):
         rc_body.append('    struct xglFuncs m_xglFuncs;')
         rc_body.append('    void copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange);')
         rc_body.append('    xglDisplay *m_display;')
-        rc_body.append('    XGL_MEMORY_HEAP_PROPERTIES m_heapProps[XGL_MAX_MEMORY_HEAPS];')
         rc_body.append('    struct shaderPair {')
         rc_body.append('        XGL_SHADER *addr;')
         rc_body.append('        XGL_SHADER val;')
@@ -2312,30 +2311,6 @@ class Subcommand(object):
         qs_body.append('            GLV_DELETE(memRefs);')
         return "\n".join(qs_body)
 
-    def _gen_replay_get_memory_heap_count(self):
-        mhc_body = []
-        mhc_body.append('            XGL_UINT count;')
-        mhc_body.append('            replayResult = m_xglFuncs.real_xglGetMemoryHeapCount(remap(pPacket->device), &count);')
-        mhc_body.append('            if (count < 1 || count >= XGL_MAX_MEMORY_HEAPS)')
-        mhc_body.append('                glv_LogError("xglGetMemoryHeapCount returned bad value count = %u\\n", count);')
-        return "\n".join(mhc_body)
-
-    def _gen_replay_get_memory_heap_info(self):
-        mhi_body = []
-        mhi_body.append('            // TODO handle case where traced heap count, ids and properties do not match replay heaps')
-        mhi_body.append('            XGL_SIZE dataSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);')
-        mhi_body.append('            // TODO check returned properties match queried properties if this makes sense')
-        mhi_body.append('            if (pPacket->heapId >= XGL_MAX_MEMORY_HEAPS)')
-        mhi_body.append('            {')
-        mhi_body.append('                glv_LogError("xglGetMemoryHeapInfo bad heapid (%d) skipping packet\\n");')
-        mhi_body.append('                break;')
-        mhi_body.append('            }')
-        mhi_body.append('            replayResult = m_xglFuncs.real_xglGetMemoryHeapInfo(remap(pPacket->device), pPacket->heapId, pPacket->infoType, &dataSize,')
-        mhi_body.append('                                               static_cast <XGL_VOID *> (&(m_heapProps[pPacket->heapId])));')
-        mhi_body.append('            if (dataSize != sizeof(XGL_MEMORY_HEAP_PROPERTIES))')
-        mhi_body.append('                glv_LogError("xglGetMemoryHeapInfo returned bad size = %u\\n", dataSize);')
-        return "\n".join(mhi_body)
-
     def _gen_replay_remap_virtual_memory_pages(self):
         rvm_body = []
         rvm_body.append('            XGL_VIRTUAL_MEMORY_REMAP_RANGE *pRemappedRanges = GLV_NEW_ARRAY( XGL_VIRTUAL_MEMORY_REMAP_RANGE, pPacket->rangeCount);')
@@ -2677,8 +2652,6 @@ class Subcommand(object):
                             'CreateDevice': self._gen_replay_create_device,
                             'GetExtensionSupport': self._gen_replay_get_extension_support,
                             'QueueSubmit': self._gen_replay_queue_submit,
-                            'GetMemoryHeapCount': self._gen_replay_get_memory_heap_count,
-                            'GetMemoryHeapInfo': self._gen_replay_get_memory_heap_info,
                             'RemapVirtualMemoryPages': self._gen_replay_remap_virtual_memory_pages,
                             'GetObjectInfo': self._gen_replay_get_object_info,
                             'GetFormatInfo': self._gen_replay_get_format_info,

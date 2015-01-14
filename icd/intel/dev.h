@@ -185,9 +185,6 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
                             struct intel_dev **dev_ret);
 void intel_dev_destroy(struct intel_dev *dev);
 
-void intel_dev_get_heap_props(const struct intel_dev *dev,
-                              XGL_MEMORY_HEAP_PROPERTIES *props);
-
 XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
                                     XGL_INT msg_code,
                                     XGL_DBG_MSG_FILTER filter);

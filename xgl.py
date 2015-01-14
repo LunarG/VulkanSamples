@@ -278,17 +278,6 @@ core = Extension(
         Proto("XGL_RESULT", "DeviceWaitIdle",
             [Param("XGL_DEVICE", "device")]),
 
-        Proto("XGL_RESULT", "GetMemoryHeapCount",
-            [Param("XGL_DEVICE", "device"),
-             Param("XGL_UINT*", "pCount")]),
-
-        Proto("XGL_RESULT", "GetMemoryHeapInfo",
-            [Param("XGL_DEVICE", "device"),
-             Param("XGL_UINT", "heapId"),
-             Param("XGL_MEMORY_HEAP_INFO_TYPE", "infoType"),
-             Param("XGL_SIZE*", "pDataSize"),
-             Param("XGL_VOID*", "pData")]),
-
         Proto("XGL_RESULT", "AllocMemory",
             [Param("XGL_DEVICE", "device"),
              Param("const XGL_MEMORY_ALLOC_INFO*", "pAllocInfo"),

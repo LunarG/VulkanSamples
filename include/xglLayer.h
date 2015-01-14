@@ -37,8 +37,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglQueueSetGlobalMemReferencesType QueueSetGlobalMemReferences;
     xglQueueWaitIdleType QueueWaitIdle;
     xglDeviceWaitIdleType DeviceWaitIdle;
-    xglGetMemoryHeapCountType GetMemoryHeapCount;
-    xglGetMemoryHeapInfoType GetMemoryHeapInfo;
     xglAllocMemoryType AllocMemory;
     xglFreeMemoryType FreeMemory;
     xglSetMemoryPriorityType SetMemoryPriority;

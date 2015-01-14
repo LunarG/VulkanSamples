@@ -208,28 +208,6 @@ void intel_dev_destroy(struct intel_dev *dev)
         intel_gpu_close(gpu);
 }
 
-void intel_dev_get_heap_props(const struct intel_dev *dev,
-                              XGL_MEMORY_HEAP_PROPERTIES *props)
-{
-    props->structSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);
-
-    props->heapMemoryType = XGL_HEAP_MEMORY_LOCAL;
-
-    props->heapSize = 0xffffffff; /* TODO system memory size */
-
-    props->pageSize = 4096;
-    props->flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT |
-                   XGL_MEMORY_HEAP_CPU_GPU_COHERENT_BIT |
-                   XGL_MEMORY_HEAP_CPU_WRITE_COMBINED_BIT |
-                   XGL_MEMORY_HEAP_HOLDS_PINNED_BIT |
-                   XGL_MEMORY_HEAP_SHAREABLE_BIT;
-
-    props->gpuReadPerfRating = 100.0f;
-    props->gpuWritePerfRating = 100.0f;
-    props->cpuReadPerfRating = 10.0f;
-    props->cpuWritePerfRating = 80.0f;
-}
-
 XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
                                     XGL_INT msg_code,
                                     XGL_DBG_MSG_FILTER filter)
@@ -353,30 +331,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(
     struct intel_dev *dev = intel_dev(device);
 
     intel_dev_destroy(dev);
-
-    return XGL_SUCCESS;
-}
-
-ICD_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapCount(
-    XGL_DEVICE                                  device,
-    XGL_UINT*                                   pCount)
-{
-    *pCount = 1;
-    return XGL_SUCCESS;
-}
-
-ICD_EXPORT XGL_RESULT XGLAPI xglGetMemoryHeapInfo(
-    XGL_DEVICE                                  device,
-    XGL_UINT                                    heapId,
-    XGL_MEMORY_HEAP_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    *pDataSize = sizeof(XGL_MEMORY_HEAP_PROPERTIES);
-    if (pData != NULL)
-        intel_dev_get_heap_props(dev, pData);
 
     return XGL_SUCCESS;
 }
