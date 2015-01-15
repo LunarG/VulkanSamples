@@ -511,8 +511,11 @@ ds_state_init(struct intel_ds_state *state,
       if (info->stencilWriteMask)
          dw[0] |= 1 << 18;
 
+      /* same read and write masks for both front and back faces */
       dw[1] = (info->stencilReadMask & 0xff) << 24 |
-              (info->stencilWriteMask & 0xff) << 16;
+              (info->stencilWriteMask & 0xff) << 16 |
+              (info->stencilReadMask & 0xff) << 8 |
+              (info->stencilWriteMask & 0xff);
 
       state->cmd_stencil_ref = (info->front.stencilRef & 0xff) << 24 |
                                (info->back.stencilRef & 0xff) << 16;
