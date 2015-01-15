@@ -936,7 +936,7 @@ def parse_xgl_h(filename):
     print("typedef struct _XGL_LAYER_DISPATCH_TABLE")
     print("{")
     for proto in ext.protos:
-        print("    %sType %s;" % (proto.name, proto.name))
+        print("    xgl%sType %s;" % (proto.name, proto.name))
     print("} XGL_LAYER_DISPATCH_TABLE;")
 
 if __name__ == "__main__":
