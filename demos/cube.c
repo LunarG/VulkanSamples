@@ -507,7 +507,7 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 
     /* bind memory */
-    err = xglBindObjectMemory(demo->depth.image,
+    err = xglBindObjectMemory(demo->depth.image, 0,
             demo->depth.mem, 0);
     assert(!err);
 
@@ -762,7 +762,7 @@ static void demo_prepare_textures(struct demo *demo)
         assert(!err);
 
         /* bind memory */
-        err = xglBindObjectMemory(demo->textures[i].image,
+        err = xglBindObjectMemory(demo->textures[i].image, 0,
                 demo->textures[i].mem, 0);
         assert(!err);
 
@@ -860,7 +860,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = xglUnmapMemory(demo->uniform_data.mem);
     assert(!err);
 
-    err = xglBindObjectMemory(demo->uniform_data.buf,
+    err = xglBindObjectMemory(demo->uniform_data.buf, 0,
             demo->uniform_data.mem, 0);
     assert(!err);
 

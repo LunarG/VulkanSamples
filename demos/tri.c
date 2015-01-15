@@ -318,7 +318,7 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 
     /* bind memory */
-    err = xglBindObjectMemory(demo->depth.image,
+    err = xglBindObjectMemory(demo->depth.image, 0,
             demo->depth.mem, 0);
     assert(!err);
 
@@ -424,7 +424,7 @@ static void demo_prepare_textures(struct demo *demo)
         assert(!err);
 
         /* bind memory */
-        err = xglBindObjectMemory(demo->textures[i].image,
+        err = xglBindObjectMemory(demo->textures[i].image, 0,
                 demo->textures[i].mem, 0);
         assert(!err);
 
@@ -521,7 +521,7 @@ static void demo_prepare_vertices(struct demo *demo)
     err = xglUnmapMemory(demo->vertices.mem);
     assert(!err);
 
-    err = xglBindObjectMemory(demo->vertices.buf, demo->vertices.mem, 0);
+    err = xglBindObjectMemory(demo->vertices.buf, 0, demo->vertices.mem, 0);
     assert(!err);
 
     demo->vertices.vi.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
@@ -1037,20 +1037,20 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->pipeline);
     xglDestroyObject(demo->desc_layout);
 
-    xglBindObjectMemory(demo->vertices.buf, XGL_NULL_HANDLE, 0);
+    xglBindObjectMemory(demo->vertices.buf, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->vertices.buf);
     xglFreeMemory(demo->vertices.mem);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         xglDestroyObject(demo->textures[i].view);
-        xglBindObjectMemory(demo->textures[i].image, XGL_NULL_HANDLE, 0);
+        xglBindObjectMemory(demo->textures[i].image, 0, XGL_NULL_HANDLE, 0);
         xglDestroyObject(demo->textures[i].image);
         xglFreeMemory(demo->textures[i].mem);
         xglDestroyObject(demo->textures[i].sampler);
     }
 
     xglDestroyObject(demo->depth.view);
-    xglBindObjectMemory(demo->depth.image, XGL_NULL_HANDLE, 0);
+    xglBindObjectMemory(demo->depth.image, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->depth.image);
     xglFreeMemory(demo->depth.mem);
 

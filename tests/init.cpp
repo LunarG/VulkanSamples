@@ -235,7 +235,7 @@ TEST_F(XglTest, Event) {
     err = xglAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(event, event_mem, 0);
+    err = xglBindObjectMemory(event, 0, event_mem, 0);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglResetEvent(event);
@@ -253,7 +253,7 @@ TEST_F(XglTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = xglBindObjectMemory(event, XGL_NULL_HANDLE, 0);
+    err = xglBindObjectMemory(event, 0, XGL_NULL_HANDLE, 0);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglDestroyObject(event);
@@ -374,7 +374,7 @@ TEST_F(XglTest, Query) {
     err = xglAllocMemory(device(), &mem_info, &query_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(query_pool, query_mem, 0);
+    err = xglBindObjectMemory(query_pool, 0, query_mem, 0);
     ASSERT_XGL_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
@@ -399,7 +399,7 @@ TEST_F(XglTest, Query) {
     }
 
     // All done with QueryPool memory, clean up
-    err = xglBindObjectMemory(query_pool, XGL_NULL_HANDLE, 0);
+    err = xglBindObjectMemory(query_pool, 0, XGL_NULL_HANDLE, 0);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglDestroyObject(query_pool);
@@ -645,7 +645,7 @@ void XglTest::CreateImageTest()
     err = xglAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(image, image_mem, 0);
+    err = xglBindObjectMemory(image, 0, image_mem, 0);
     ASSERT_XGL_SUCCESS(err);
 
 //    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
@@ -688,7 +688,7 @@ void XglTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_XGL_SUCCESS(xglBindObjectMemory(image, XGL_NULL_HANDLE, 0));
+    ASSERT_XGL_SUCCESS(xglBindObjectMemory(image, 0, XGL_NULL_HANDLE, 0));
 
     ASSERT_XGL_SUCCESS(xglFreeMemory(image_mem));
 

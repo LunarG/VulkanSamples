@@ -384,7 +384,7 @@ void XglRenderTest::InitDepthStencil()
     ASSERT_XGL_SUCCESS(err);
 
     /* bind memory */
-    err = xglBindObjectMemory(m_depthStencilImage, m_depthStencilMem, 0);
+    err = xglBindObjectMemory(m_depthStencilImage, 0, m_depthStencilMem, 0);
     ASSERT_XGL_SUCCESS(err);
 
     XGL_DYNAMIC_DS_STATE_CREATE_INFO depthStencil = {};

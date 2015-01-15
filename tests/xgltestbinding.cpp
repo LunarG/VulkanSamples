@@ -230,18 +230,18 @@ void Object::cleanup()
 
 void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
 {
-    EXPECT(!alloc_idx && xglBindObjectMemory(obj(), mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(!alloc_idx && xglBindObjectMemory(obj(), 0, mem.obj(), mem_offset) == XGL_SUCCESS);
 }
 
 void Object::bind_memory(uint32_t alloc_idx, XGL_GPU_SIZE offset, XGL_GPU_SIZE size,
                          const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
 {
-    EXPECT(!alloc_idx && xglBindObjectMemoryRange(obj(), offset, size, mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(!alloc_idx && xglBindObjectMemoryRange(obj(), 0, offset, size, mem.obj(), mem_offset) == XGL_SUCCESS);
 }
 
 void Object::unbind_memory(uint32_t alloc_idx)
 {
-    EXPECT(!alloc_idx && xglBindObjectMemory(obj(), XGL_NULL_HANDLE, 0) == XGL_SUCCESS);
+    EXPECT(!alloc_idx && xglBindObjectMemory(obj(), 0, XGL_NULL_HANDLE, 0) == XGL_SUCCESS);
 }
 
 void Object::unbind_memory()
@@ -656,7 +656,7 @@ void Image::init_info(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
 void Image::bind_memory(uint32_t alloc_idx, const XGL_IMAGE_MEMORY_BIND_INFO &info,
                         const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
 {
-    EXPECT(!alloc_idx && xglBindImageMemoryRange(obj(), &info, mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(!alloc_idx && xglBindImageMemoryRange(obj(), 0, &info, mem.obj(), mem_offset) == XGL_SUCCESS);
 }
 
 XGL_SUBRESOURCE_LAYOUT Image::subresource_layout(const XGL_IMAGE_SUBRESOURCE &subres) const

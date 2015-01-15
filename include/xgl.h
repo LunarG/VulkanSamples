@@ -2045,9 +2045,9 @@ typedef XGL_RESULT (XGLAPI *xglOpenPeerMemoryType)(XGL_DEVICE device, const XGL_
 typedef XGL_RESULT (XGLAPI *xglOpenPeerImageType)(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglDestroyObjectType)(XGL_OBJECT object);
 typedef XGL_RESULT (XGLAPI *xglGetObjectInfoType)(XGL_BASE_OBJECT object, XGL_OBJECT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
-typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryType)(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
-typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryRangeType)(XGL_OBJECT object, XGL_GPU_SIZE rangeOffset, XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
-typedef XGL_RESULT (XGLAPI *xglBindImageMemoryRangeType)(XGL_IMAGE image, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
+typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryType)(XGL_OBJECT object, XGL_UINT allocationIdx, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
+typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryRangeType)(XGL_OBJECT object, XGL_UINT allocationIdx, XGL_GPU_SIZE rangeOffset, XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
+typedef XGL_RESULT (XGLAPI *xglBindImageMemoryRangeType)(XGL_IMAGE image, XGL_UINT allocationIdx, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
 typedef XGL_RESULT (XGLAPI *xglCreateFenceType)(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence);
 typedef XGL_RESULT (XGLAPI *xglGetFenceStatusType)(XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglWaitForFencesType)(XGL_DEVICE device, XGL_UINT fenceCount, const XGL_FENCE* pFences, XGL_BOOL waitAll, XGL_UINT64 timeout);
@@ -2271,11 +2271,13 @@ XGL_RESULT XGLAPI xglGetObjectInfo(
 
 XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_OBJECT                                  object,
+    XGL_UINT                                    allocationIdx,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                memOffset);
 
 XGL_RESULT XGLAPI xglBindObjectMemoryRange(
     XGL_OBJECT                                  object,
+    XGL_UINT                                    allocationIdx,
     XGL_GPU_SIZE                                rangeOffset,
     XGL_GPU_SIZE                                rangeSize,
     XGL_GPU_MEMORY                              mem,
@@ -2283,6 +2285,7 @@ XGL_RESULT XGLAPI xglBindObjectMemoryRange(
 
 XGL_RESULT XGLAPI xglBindImageMemoryRange(
     XGL_IMAGE                                   image,
+    XGL_UINT                                    allocationIdx,
     const XGL_IMAGE_MEMORY_BIND_INFO*           bindInfo,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                memOffset);

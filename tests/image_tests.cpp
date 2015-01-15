@@ -215,14 +215,14 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     err = xglAllocMemory(device(), &mem_info, &m_image_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(m_image, m_image_mem, 0);
+    err = xglBindObjectMemory(m_image, 0, m_image_mem, 0);
     ASSERT_XGL_SUCCESS(err);
 }
 
 void XglImageTest::DestroyImage()
 {
     // All done with image memory, clean up
-    ASSERT_XGL_SUCCESS(xglBindObjectMemory(m_image, XGL_NULL_HANDLE, 0));
+    ASSERT_XGL_SUCCESS(xglBindObjectMemory(m_image, 0, XGL_NULL_HANDLE, 0));
 
     ASSERT_XGL_SUCCESS(xglFreeMemory(m_image_mem));
 

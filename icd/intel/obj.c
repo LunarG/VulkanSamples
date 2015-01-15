@@ -363,6 +363,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_OBJECT                                  object,
+    XGL_UINT                                    allocationIdx,
     XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                memOffset)
 {
@@ -376,6 +377,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
     XGL_OBJECT                                  object,
+    XGL_UINT                                    allocationIdx,
     XGL_GPU_SIZE                                rangeOffset,
     XGL_GPU_SIZE                                rangeSize,
     XGL_GPU_MEMORY                              mem,
@@ -386,6 +388,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(
     XGL_IMAGE                                   image,
+    XGL_UINT                                    allocationIdx,
     const XGL_IMAGE_MEMORY_BIND_INFO*           bindInfo,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                memOffset)

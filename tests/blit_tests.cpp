@@ -754,7 +754,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     err = xglAllocMemory(dev_.obj(), &mem_info, &event_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglBindObjectMemory(event, event_mem, 0);
+    err = xglBindObjectMemory(event, 0, event_mem, 0);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglResetEvent(event);
@@ -829,7 +829,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     bufs[2].unmap();
 
     // All done with event memory, clean up
-    err = xglBindObjectMemory(event, XGL_NULL_HANDLE, 0);
+    err = xglBindObjectMemory(event, 0, XGL_NULL_HANDLE, 0);
     ASSERT_XGL_SUCCESS(err);
 
     err = xglDestroyObject(event);

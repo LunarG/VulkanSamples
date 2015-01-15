@@ -341,11 +341,13 @@ core = Extension(
 
         Proto("XGL_RESULT", "BindObjectMemory",
             [Param("XGL_OBJECT", "object"),
+             Param("XGL_UINT", "allocationIdx"),
              Param("XGL_GPU_MEMORY", "mem"),
              Param("XGL_GPU_SIZE", "memOffset")]),
 
         Proto("XGL_RESULT", "BindObjectMemoryRange",
             [Param("XGL_OBJECT", "object"),
+             Param("XGL_UINT", "allocationIdx"),
              Param("XGL_GPU_SIZE", "rangeOffset"),
              Param("XGL_GPU_SIZE", "rangeSize"),
              Param("XGL_GPU_MEMORY", "mem"),
@@ -353,6 +355,7 @@ core = Extension(
 
         Proto("XGL_RESULT", "BindImageMemoryRange",
             [Param("XGL_IMAGE", "image"),
+             Param("XGL_UINT", "allocationIdx"),
              Param("const XGL_IMAGE_MEMORY_BIND_INFO*", "bindInfo"),
              Param("XGL_GPU_MEMORY", "mem"),
              Param("XGL_GPU_SIZE", "memOffset")]),

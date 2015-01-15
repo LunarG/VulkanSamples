@@ -1243,9 +1243,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(XGL_BASE_OBJECT object, XGL_
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, XGL_UINT allocationIdx, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
-    XGL_RESULT result = nextTable.BindObjectMemory(object, mem, offset);
+    XGL_RESULT result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
     // Track objects tied to memory
     if (XGL_FALSE == updateObjectBinding(object, mem)) {
         char str[1024];
