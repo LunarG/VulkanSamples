@@ -1237,8 +1237,7 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
    if (!mdNode)
       mdNode = mdAggNode;
 
-   const tTypeData2 typeData2(mdNode, genUnsigned);
-   const tTypeData typeData(type, typeData2);
+   const tTypeData typeData(type, mdNode, genUnsigned);
 
    // See if we've already converted this type.  If so, use the one we did already.
    const tTypeMap::const_iterator foundType = typeMap.find(typeData);
@@ -1919,7 +1918,7 @@ MesaGlassTranslator::emitFn(const char* name, const llvm::Instruction* llvmInst)
    addIRInstruction(llvmInst, call);
 }
 
-ir_rvalue* MesaGlassTranslator::mk_ir_expression(const int irOp,
+ir_expression* MesaGlassTranslator::glass_to_ir_expression(const int irOp,
                             const glsl_type* hirType,
                             ir_rvalue* op0,
                             ir_rvalue* op1,
@@ -1989,6 +1988,10 @@ inline void MesaGlassTranslator::emitOp(int irOp,
    ir_rvalue* op[maxOp];
    assert(ops <= maxOp);
 
+   /* Assumes genUnsigned -> genUnsigned1 -> genUnsigned0 */
+   assert(!genUnsigned2 || genUnsigned1);
+   assert(!genUnsigned1 || genUnsigned0);
+
    const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst, genUnsigned0);
 
    for (int i=0; i<maxOp; ++i)
@@ -1996,7 +1999,7 @@ inline void MesaGlassTranslator::emitOp(int irOp,
       op[i] = ops > i ? getIRValue(llvmInst->getOperand(i)) : 0;
    }
 
-   ir_rvalue* result = mk_ir_expression(irOp, hirType, op[0], op[1], op[2],
+   ir_rvalue* result = glass_to_ir_expression(irOp, hirType, op[0], op[1], op[2],
                                         genUnsigned0, genUnsigned1, genUnsigned2);
    assert(result && (op[0] || ops < 1) && (op[1] || ops < 2) && (op[2] || ops < 3));
    
@@ -2054,7 +2057,7 @@ inline void MesaGlassTranslator::emitIRSext(const llvm::Instruction* llvmInst)
    if (op[0]->type->vector_elements != op[1]->type->vector_elements)
       op[0] = new(shader) ir_swizzle(op[0], 0, 0, 0, 0, op[1]->type->vector_elements);
 
-   ir_rvalue* result = new(shader) ir_expression(ir_triop_csel, hirType, op[0], op[1], op[2]);
+   ir_rvalue* result = glass_to_ir_expression(ir_triop_csel, hirType, op[0], op[1], op[2]);
    assert(result && op[0] && op[1] && op[2]);
    
    addIRInstruction(llvmInst, result);
@@ -2153,7 +2156,7 @@ int MesaGlassTranslator::irCmpOp(int pred) const
 bool MesaGlassTranslator::irCmpUnsigned(int pred) const
 {
    switch (pred) {
-   case llvm::ICmpInst::ICMP_UGT: // ...
+   case llvm::ICmpInst::ICMP_UGT: // fall through
    case llvm::ICmpInst::ICMP_UGE: // ...
    case llvm::ICmpInst::ICMP_ULT: // ...
    case llvm::ICmpInst::ICMP_ULE: return true;
@@ -2161,23 +2164,18 @@ bool MesaGlassTranslator::irCmpUnsigned(int pred) const
    case llvm::FCmpInst::FCMP_OEQ: // fall through
    case llvm::FCmpInst::FCMP_UEQ: // ...
    case llvm::ICmpInst::ICMP_EQ:  // ...
-
    case llvm::FCmpInst::FCMP_ONE: // ...
    case llvm::FCmpInst::FCMP_UNE: // ...
    case llvm::ICmpInst::ICMP_NE:  // ...
-
    case llvm::FCmpInst::FCMP_OGT: // ...
    case llvm::FCmpInst::FCMP_UGT: // ...
    case llvm::ICmpInst::ICMP_SGT: // ...
-
    case llvm::FCmpInst::FCMP_OGE: // ...
    case llvm::FCmpInst::FCMP_UGE: // ...
    case llvm::ICmpInst::ICMP_SGE: // ...
-
    case llvm::FCmpInst::FCMP_OLT: // ...
    case llvm::FCmpInst::FCMP_ULT: // ...
    case llvm::ICmpInst::ICMP_SLT: // ...
-
    case llvm::FCmpInst::FCMP_OLE: // ...
    case llvm::FCmpInst::FCMP_ULE: // ...
    case llvm::ICmpInst::ICMP_SLE: return false;
@@ -2296,7 +2294,7 @@ void MesaGlassTranslator::addPhiCopy(const llvm::Value* dst, const llvm::Value* 
 inline void MesaGlassTranslator::addIf(ir_rvalue* cond, bool invert)
 {
    if (invert)
-      cond = new(shader) ir_expression(ir_unop_logic_not, cond->type, cond);
+      cond = glass_to_ir_expression(ir_unop_logic_not, cond->type, cond);
 
    ir_if *const ifStmt = new(shader) ir_if(cond);
 
@@ -2408,7 +2406,7 @@ void MesaGlassTranslator::beginForLoop(const llvm::PHINode* phi,
 
    // Add a conditional break
    bool genUnsigned = irCmpUnsigned(pred);
-   ir_rvalue* cmp = mk_ir_expression(irCmpOp(pred), glsl_type::bool_type,
+   ir_rvalue* cmp = glass_to_ir_expression(irCmpOp(pred), glsl_type::bool_type,
                                      loopVar, bound, 0, genUnsigned, genUnsigned);
 
    addIRLoopExit(cmp);
@@ -2416,9 +2414,9 @@ void MesaGlassTranslator::beginForLoop(const llvm::PHINode* phi,
    // Create terminator statement (for ++index)
    ir_assignment* terminator =
       new(shader) ir_assignment(loopVar->clone(shader, 0),
-                                mk_ir_expression(ir_binop_add, loopVar->type,
+                                glass_to_ir_expression(ir_binop_add, loopVar->type,
                                                  loopVar->clone(shader, 0),
-                                                 increment, 0));
+                                                 increment));
 
    loopTerminatorStack.back() = terminator;
 }
@@ -2687,11 +2685,11 @@ inline void MesaGlassTranslator::emitIRSaturate(const llvm::CallInst* llvmInst)
 {
    const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst);
 
-   ir_rvalue* minOp = new(shader) ir_expression(ir_binop_min, hirType,
+   ir_rvalue* minOp = glass_to_ir_expression(ir_binop_min, hirType,
                                                 getIRValue(llvmInst->getOperand(0)),
                                                 new(shader) ir_constant(1.0f));
 
-   ir_rvalue* result = new(shader) ir_expression(ir_binop_max, hirType,
+   ir_rvalue* result = glass_to_ir_expression(ir_binop_max, hirType,
                                                  minOp, new(shader) ir_constant(0.0f));
                                            
    addIRInstruction(llvmInst, result);
@@ -2709,12 +2707,12 @@ inline void MesaGlassTranslator::emitIRClamp(const llvm::CallInst* llvmInst,
 {
    const glsl_type *hirType = llvmTypeToHirType(llvmInst->getType(), 0, llvmInst, genUnsigned);
 
-   ir_rvalue* minOp = mk_ir_expression(ir_binop_max, hirType,
+   ir_rvalue* minOp = glass_to_ir_expression(ir_binop_max, hirType,
                                        getIRValue(llvmInst->getOperand(0)),
                                        getIRValue(llvmInst->getOperand(1)),
                                        0, genUnsigned, genUnsigned);
 
-   ir_rvalue* result = mk_ir_expression(ir_binop_min, hirType,
+   ir_rvalue* result = glass_to_ir_expression(ir_binop_min, hirType,
                                         minOp,
                                         getIRValue(llvmInst->getOperand(2)),
                                         0, genUnsigned, genUnsigned);
@@ -2961,7 +2959,7 @@ MesaGlassTranslator::emitIRMatTimesMat(const llvm::Instruction* llvmInst,
    ir_rvalue* leftMat  = intrinsicMat(llvmInst, 0, numLeftCols, leftRows);
    ir_rvalue* rightMat = intrinsicMat(llvmInst, numLeftCols, numRightCols, rightRows);
    
-   ir_rvalue* result   = new(shader) ir_expression(ir_binop_mul, resultType, leftMat, rightMat);
+   ir_rvalue* result   = glass_to_ir_expression(ir_binop_mul, resultType, leftMat, rightMat);
 
    addIRInstruction(llvmInst, result);
 }
@@ -2993,9 +2991,9 @@ MesaGlassTranslator::emitIRMatMul(const llvm::Instruction* llvmInst, int numCols
 
    // Issue the matrix multiply, in the requested order
    if (matLeft)
-      result = new(shader) ir_expression(ir_binop_mul, resultType, matrix, vector);
+      result = glass_to_ir_expression(ir_binop_mul, resultType, matrix, vector);
    else
-      result = new(shader) ir_expression(ir_binop_mul, resultType, vector, matrix);
+      result = glass_to_ir_expression(ir_binop_mul, resultType, vector, matrix);
 
    addIRInstruction(llvmInst, result);
 }
@@ -3319,7 +3317,7 @@ inline void MesaGlassTranslator::emitIRSelect(const llvm::Instruction* llvmInst)
       if (op[1]->type->is_vector() && !op[0]->type->is_vector())
          op[0] = new(shader) ir_swizzle(op[0], 0, 0, 0, 0, op[1]->type->vector_elements);
 
-      result = new(shader) ir_expression(ir_triop_csel, hirType, op[0], op[1], op[2]);
+      result = glass_to_ir_expression(ir_triop_csel, hirType, op[0], op[1], op[2]);
    }
    
    assert(result && op[0] && op[1] && op[2]);
@@ -3351,7 +3349,7 @@ ir_instruction* MesaGlassTranslator::fixIRLValue(ir_rvalue* lhs, ir_rvalue* rhs)
    if (ir_expression* lval = lhs->as_expression()) {
       if (lval->operation == ir_binop_vector_extract) {
          ir_expression* vecIns =
-            new(shader) ir_expression(ir_triop_vector_insert,
+            glass_to_ir_expression(ir_triop_vector_insert,
                                       lval->operands[0]->type,
                                       lval->operands[0], 
                                       rhs,
@@ -3543,7 +3541,7 @@ ir_rvalue* MesaGlassTranslator::dereferenceGep(const llvm::Type*& type, ir_rvalu
       } else if (aggregate->type->is_vector()) {
          type = type->getContainedType(0);
 
-         return new(shader) ir_expression(ir_binop_vector_extract,
+         return glass_to_ir_expression(ir_binop_vector_extract,
                                           llvmTypeToHirType(type), aggregate,
                                           getIRValue(operand));
       } else if (aggregate->type->is_record() ||

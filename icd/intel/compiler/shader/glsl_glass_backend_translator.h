@@ -49,6 +49,7 @@
 #include <vector>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
+#include <tr1/tuple>
 
 // Forward declare to avoid pulling in entire unneeded definitions
 struct _mesa_glsl_parse_state;
@@ -58,6 +59,7 @@ struct gl_context;
 struct ir_instruction;
 struct ir_function;
 struct ir_rvalue;
+struct ir_expression;
 struct ir_constant;
 struct ir_function_signature;
 struct ir_variable;
@@ -143,7 +145,7 @@ namespace gla {
         int irCmpOp(int) const; // use ints to avoid lack of forward decls of enums in C++
         bool irCmpUnsigned(int) const;
 
-        ir_rvalue *mk_ir_expression(const int, const glsl_type*, ir_rvalue*, ir_rvalue*, ir_rvalue*,
+        ir_expression *glass_to_ir_expression(const int, const glsl_type*, ir_rvalue* = NULL, ir_rvalue* = NULL, ir_rvalue* = NULL,
                                     const bool = false, const bool = false, const bool = false);
 
         // For loop with ir_rvalue inputs
@@ -355,11 +357,10 @@ namespace gla {
         typedef std::tr1::unordered_map<std::string, const llvm::MDNode*> tTypenameMdMap;
         tTypenameMdMap typenameMdMap;
 
-        typedef std::pair<const llvm::MDNode*, const bool> tTypeData2;
-        typedef std::pair<const llvm::Type*, const tTypeData2> tTypeData;
+        typedef std::tr1::tuple<const llvm::Type*, const llvm::MDNode*, const bool> tTypeData;
 
         struct TypeHash {
-           size_t operator()(const tTypeData& p) const { return size_t(p.first) ^ size_t(p.second.first) ^ size_t(p.second.second); }
+           size_t operator()(const tTypeData& p) const { return size_t(std::tr1::get<0>(p)) ^ size_t(std::tr1::get<1>(p)) ^ size_t(std::tr1::get<2>(p)); }
         };
 
         // map to track mapping from LLVM to HIR types
