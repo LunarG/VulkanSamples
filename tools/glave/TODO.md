@@ -8,6 +8,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 * Generating & loading traces
 * Replay traces within the UI w/ pause, continue, stop ability
   * Auto-pause on Validation Layer Messages (info, warnings, and/or errors), controlled by settings
+  * Single-step the replay
 * Timeline shows CPU time of each API call
 * API entrypoints names & parameters displayed in UI
 * Tracing and replay standard output gets directed to Output window
@@ -23,7 +24,6 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 **TODO LIST IN DEBUGGER**
 * Hide / show columns on API Call Tree
 * Additional replay support:
-  * Single-step the replay
   * Timeline pointer gets updated in real-time of replayed API call
     * I (PeterLValve) implemented this locally, but the performance cost to update the UI was not worthwhile. This should be revisited once the replay is actually performed in a different thread.
   * Run the replay in a separate thread from the UI
