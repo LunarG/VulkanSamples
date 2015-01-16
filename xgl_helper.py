@@ -158,7 +158,8 @@ class HeaderFileParser:
                         self.typedef_fwd_dict[base_type] = targ_type.strip(';')
                         self.typedef_rev_dict[targ_type.strip(';')] = base_type
                 elif parse_enum:
-                    if 'XGL_MAX_ENUM' not in line and '{' not in line:
+                    #if 'XGL_MAX_ENUM' not in line and '{' not in line:
+                    if True not in [ens in line for ens in ['{', 'XGL_MAX_ENUM', '_RANGE']]:
                         self._add_enum(line, base_type, default_enum_val)
                         default_enum_val += 1
                 elif parse_struct:
@@ -435,9 +436,9 @@ class StructWrapperGen:
                     struct_name = v.replace("_STRUCTURE_TYPE", "")
                     class_name = self.get_class_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_PIPELINE_CB_STATE'
-                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
+                    #if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                        #struct_name = 'XGL_PIPELINE_CB_STATE'
+                    if 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
                         struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
                         class_name = self.get_class_name(struct_name)
                     elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
@@ -490,20 +491,20 @@ class StructWrapperGen:
             cast_type = "(void*)"
             if not struct_member['ptr']:
                 cast_type = "(void*)&"
-        elif 'BOOL' in struct_member['type']:
+        elif 'bool' in struct_member['type']:
             print_type = "s"
             member_post = ' ? "TRUE" : "FALSE"'
-        elif 'FLOAT' in struct_member['type']:
+        elif 'float' in struct_member['type']:
             print_type = "f"
-        elif 'UINT64' in struct_member['type']:
+        elif 'uint64' in struct_member['type']:
             print_type = "lu"
-        elif 'UINT8' in struct_member['type']:
+        elif 'uint8' in struct_member['type']:
             print_type = "hu"
-        elif '_SIZE' in struct_member['type']:
+        elif '_size' in struct_member['type']:
             print_type = "zu"
-        elif True in [ui_str in struct_member['type'] for ui_str in ['UINT', '_FLAGS', '_SAMPLE_MASK']]:
+        elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', '_FLAGS', '_SAMPLE_MASK']]:
             print_type = "u"
-        elif 'INT' in struct_member['type']:
+        elif 'int' in struct_member['type']:
             print_type = "i"
         elif struct_member['ptr']:
             pass
@@ -615,9 +616,9 @@ class StructWrapperGen:
                     struct_name = v.replace("_STRUCTURE_TYPE", "")
                     print_func_name = self._get_sh_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_PIPELINE_CB_STATE'
-                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
+                    #if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                      #  struct_name = 'XGL_PIPELINE_CB_STATE'
+                    if 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
                         struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
                         print_func_name = self._get_sh_func_name(struct_name)
                     elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
@@ -709,15 +710,16 @@ class StructWrapperGen:
             index = 0
             final_str = ''
             for m in sorted(self.struct_dict[s]):
+                deref = ''
                 if not is_type(self.struct_dict[s][m]['type'], 'enum'):
                     if is_type(self.struct_dict[s][m]['type'], 'struct') and not self.struct_dict[s][m]['ptr']:
                         if self.no_addr:
                             sh_funcs.append('    ss[%u].str("addr");' % (index))
                         else:
                             sh_funcs.append('    ss[%u] << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
-                    elif 'BOOL' in self.struct_dict[s][m]['type']:
+                    elif 'bool' in self.struct_dict[s][m]['type']:
                         sh_funcs.append('    ss[%u].str(pStruct->%s ? "TRUE" : "FALSE");' % (index, self.struct_dict[s][m]['name']))
-                    elif 'UINT8' in self.struct_dict[s][m]['type']:
+                    elif 'uint8' in self.struct_dict[s][m]['type']:
                         sh_funcs.append('    ss[%u] << (uint32_t)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     else:
                         (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
@@ -728,7 +730,9 @@ class StructWrapperGen:
                     value_print = 'ss[%u].str()' % index
                     index += 1
                 else:
-                    value_print = 'string_%s(pStruct->%s)' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name'])
+                    if self.struct_dict[s][m]['ptr']:
+                        deref = '*'
+                    value_print = 'string_%s(%spStruct->%s)' % (self.struct_dict[s][m]['type'], deref, self.struct_dict[s][m]['name'])
                 final_str += ' + prefix + "%s = " + %s + "\\n"' % (self.struct_dict[s][m]['name'], value_print)
             final_str = final_str[3:] # strip off the initial ' + '
             if 0 != num_stps:
@@ -748,9 +752,9 @@ class StructWrapperGen:
                     struct_name = v.replace("_STRUCTURE_TYPE", "")
                     print_func_name = self._get_sh_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_PIPELINE_CB_STATE'
-                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
+                    #if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                     #   struct_name = 'XGL_PIPELINE_CB_STATE'
+                    if 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
                         struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
                         print_func_name = self._get_sh_func_name(struct_name)
                     elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
@@ -774,8 +778,8 @@ class StructWrapperGen:
         if is_type(self.struct_dict[s][member]['type'], 'struct'): # print struct address for now
             struct_array.insert(0, self.struct_dict[s][member])
         elif self.struct_dict[s][member]['ptr']:
-            # Special case for VOID* named "pNext"
-            if "VOID" in self.struct_dict[s][member]['type'] and "pNext" == self.struct_dict[s][member]['name']:
+            # Special case for void* named "pNext"
+            if "void" in self.struct_dict[s][member]['type'] and "pNext" == self.struct_dict[s][member]['name']:
                 struct_array.insert(0, self.struct_dict[s][member])
         return ('    %sprintf("%%*s    %s", m_indent, ""%s);' % (extra_indent, p_out, p_arg), struct_array)
 
@@ -888,7 +892,8 @@ class StructWrapperGen:
         for s in self.struct_dict:
             sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
             for m in sorted(self.struct_dict[s]):
-                if is_type(self.struct_dict[s][m]['type'], 'enum'):
+                # TODO : Need to handle arrays of enums like in XGL_RENDER_PASS_CREATE_INFO struct
+                if is_type(self.struct_dict[s][m]['type'], 'enum') and not self.struct_dict[s][m]['ptr']:
                     sh_funcs.append('    if (!validate_%s(pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                 # TODO : Need a little refinement to this code to make sure type of struct matches expected input (ptr, const...)
                 if is_type(self.struct_dict[s][m]['type'], 'struct'):
@@ -1099,20 +1104,20 @@ class GraphVizGen:
             cast_type = "(void*)"
             if not struct_member['ptr']:
                 cast_type = "(void*)&"
-        elif 'BOOL' in struct_member['type']:
+        elif 'bool' in struct_member['type']:
             print_type = "s"
             member_post = ' ? "TRUE" : "FALSE"'
-        elif 'FLOAT' in struct_member['type']:
+        elif 'float' in struct_member['type']:
             print_type = "f"
-        elif 'UINT64' in struct_member['type']:
+        elif 'uint64' in struct_member['type']:
             print_type = "lu"
-        elif 'UINT8' in struct_member['type']:
+        elif 'uint8' in struct_member['type']:
             print_type = "hu"
         elif '_SIZE' in struct_member['type']:
             print_type = "zu"
-        elif True in [ui_str in struct_member['type'] for ui_str in ['UINT', '_FLAGS', '_SAMPLE_MASK']]:
+        elif True in [ui_str in struct_member['type'] for ui_str in ['uint', '_FLAGS', '_SAMPLE_MASK']]:
             print_type = "u"
-        elif 'INT' in struct_member['type']:
+        elif 'int' in struct_member['type']:
             print_type = "i"
         elif struct_member['ptr']:
             pass
@@ -1260,9 +1265,9 @@ class GraphVizGen:
                     struct_name = v.replace("_STRUCTURE_TYPE", "")
                     print_func_name = self._get_gv_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_PIPELINE_CB_STATE'
-                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
+                    #if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                    #    struct_name = 'XGL_PIPELINE_CB_STATE'
+                    if 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
                         struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
                         print_func_name = self._get_gv_func_name(struct_name)
                     elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:

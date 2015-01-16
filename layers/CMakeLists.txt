@@ -71,8 +71,8 @@ run_xgl_layer_generate(ParamChecker param_checker.c)
 
 add_xgl_layer(Basic basic.cpp)
 add_xgl_layer(Multi multi.cpp)
-add_xgl_layer(DrawState draw_state.c layers_config.cpp)
-add_xgl_layer(MemTracker mem_tracker.c layers_config.cpp)
+#add_xgl_layer(DrawState draw_state.c layers_config.cpp)
+#add_xgl_layer(MemTracker mem_tracker.c layers_config.cpp)
 # generated
 add_xgl_layer(Generic generic_layer.c)
 add_xgl_layer(APIDump api_dump.c)

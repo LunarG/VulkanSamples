@@ -223,7 +223,7 @@ core = Extension(
              Param("XGL_INSTANCE*", "pInstance")]),
 
         Proto("XGL_RESULT", "DestroyInstance",
-             [Param("XGL_INSTANCE", "pInstance")]),
+            [Param("XGL_INSTANCE", "instance")]),
 
         Proto("XGL_RESULT", "EnumerateGpus",
             [Param("XGL_INSTANCE", "instance"),
@@ -445,11 +445,11 @@ core = Extension(
              Param("XGL_IMAGE*", "pImage")]),
 
         Proto("XGL_RESULT", "SetFastClearColor",
-            [Param("XGL_IMAGE", "pImage"),
+            [Param("XGL_IMAGE", "image"),
              Param("const float[4]", "color")]),
 
         Proto("XGL_RESULT", "SetFastClearDepth",
-            [Param("XGL_IMAGE", "pImage"),
+            [Param("XGL_IMAGE", "image"),
              Param("float", "depth")]),
 
         Proto("XGL_RESULT", "GetImageSubresourceInfo",
@@ -883,6 +883,54 @@ wsi_x11 = Extension(
 )
 
 extensions = [core, wsi_x11]
+
+object_root_list = [
+    "XGL_INSTANCE",
+    "XGL_PHYSICAL_GPU",
+    "XGL_BASE_OBJECT"
+]
+
+object_base_list = [
+    "XGL_DEVICE",
+    "XGL_QUEUE",
+    "XGL_GPU_MEMORY",
+    "XGL_OBJECT"
+]
+
+object_list = [
+    "XGL_BUFFER",
+    "XGL_BUFFER_VIEW",
+    "XGL_IMAGE",
+    "XGL_IMAGE_VIEW",
+    "XGL_COLOR_ATTACHMENT_VIEW",
+    "XGL_DEPTH_STENCIL_VIEW",
+    "XGL_SHADER",
+    "XGL_PIPELINE",
+    "XGL_PIPELINE_DELTA",
+    "XGL_SAMPLER",
+    "XGL_DESCRIPTOR_SET",
+    "XGL_DESCRIPTOR_SET_LAYOUT",
+    "XGL_DESCRIPTOR_REGION",
+    "XGL_DYNAMIC_STATE_OBJECT",
+    "XGL_CMD_BUFFER",
+    "XGL_FENCE",
+    "XGL_QUEUE_SEMAPHORE",
+    "XGL_EVENT",
+    "XGL_QUERY_POOL",
+    "XGL_FRAMEBUFFER",
+    "XGL_RENDER_PASS"
+]
+
+object_dynamic_state_list = [
+    "XGL_DYNAMIC_VP_STATE_OBJECT",
+    "XGL_DYNAMIC_RS_STATE_OBJECT",
+    "XGL_DYNAMIC_CB_STATE_OBJECT",
+    "XGL_DYNAMIC_DS_STATE_OBJECT"
+]
+
+object_type_list = object_root_list + object_base_list + object_list + object_dynamic_state_list
+
+object_parent_list = ["XGL_BASE_OBJECT", "XGL_OBJECT", "XGL_DYNAMIC_STATE_OBJECT"]
 
 headers = []
 objects = []

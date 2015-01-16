@@ -122,12 +122,12 @@ static size_t sTypeStructSize(XGL_STRUCTURE_TYPE sType)
             return sizeof(XGL_MEMORY_OPEN_INFO);
         case XGL_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO:
             return sizeof(XGL_PEER_MEMORY_OPEN_INFO);
-        case XGL_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO:
-            return sizeof(XGL_MEMORY_VIEW_ATTACH_INFO);
+        case XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO:
+            return sizeof(XGL_BUFFER_VIEW_ATTACH_INFO);
         case XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO:
             return sizeof(XGL_IMAGE_VIEW_ATTACH_INFO);
-        case XGL_STRUCTURE_TYPE_MEMORY_STATE_TRANSITION:
-            return sizeof(XGL_MEMORY_STATE_TRANSITION);
+        case XGL_STRUCTURE_TYPE_EVENT_WAIT_INFO:
+            return sizeof(XGL_EVENT_WAIT_INFO);
         case XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO:
             return sizeof(XGL_IMAGE_VIEW_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO:
@@ -140,16 +140,16 @@ static size_t sTypeStructSize(XGL_STRUCTURE_TYPE sType)
             return sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO:
             return sizeof(XGL_SAMPLER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO:
-            return sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO:
-            return sizeof(XGL_RASTER_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO:
-            return sizeof(XGL_MSAA_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO:
-            return sizeof(XGL_COLOR_BLEND_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO:
-            return sizeof(XGL_DEPTH_STENCIL_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO:
+            return sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO:
             return sizeof(XGL_CMD_BUFFER_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO:
@@ -166,22 +166,62 @@ static size_t sTypeStructSize(XGL_STRUCTURE_TYPE sType)
             return sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
             return sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_DB_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_CB_STATE);
-        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO:
-            return sizeof(XGL_IMAGE_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
             return sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_VP_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_MS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
+            return sizeof(XGL_PIPELINE_DS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO:
+            return sizeof(XGL_IMAGE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO:
+            return sizeof(XGL_BUFFER_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO:
+            return sizeof(XGL_BUFFER_VIEW_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO:
+            return sizeof(XGL_FRAMEBUFFER_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
+            return sizeof(XGL_CMD_BUFFER_BEGIN_INFO);
+        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
+            return sizeof(XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO);
+        case XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO:
+            return sizeof(XGL_RENDER_PASS_CREATE_INFO);
         case XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO:
             return sizeof(XGL_LAYER_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_PIPELINE_BARRIER:
+            return sizeof(XGL_PIPELINE_BARRIER);
+        case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
+            return sizeof(XGL_MEMORY_BARRIER);
+        case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
+            return sizeof(XGL_BUFFER_MEMORY_BARRIER);
+        case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
+            return sizeof(XGL_IMAGE_MEMORY_BARRIER);
+        case XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO:
+            return sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
+            return sizeof(XGL_UPDATE_SAMPLERS);
+        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
+            return sizeof(XGL_UPDATE_SAMPLER_TEXTURES);
+        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
+            return sizeof(XGL_UPDATE_IMAGES);
+        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
+            return sizeof(XGL_UPDATE_BUFFERS);
+        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
+            return sizeof(XGL_UPDATE_AS_COPY);
+        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
+            return sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
+        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
+            return sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);
         default:
             return 0;
     }
@@ -193,15 +233,13 @@ static size_t dynStateCreateInfoSize(XGL_STATE_BIND_POINT sType)
     switch (sType)
     {
         case XGL_STATE_BIND_VIEWPORT:
-            return sizeof(XGL_VIEWPORT_STATE_CREATE_INFO);
+            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
         case XGL_STATE_BIND_RASTER:
-            return sizeof(XGL_RASTER_STATE_CREATE_INFO);
+            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
         case XGL_STATE_BIND_DEPTH_STENCIL:
-            return sizeof(XGL_DEPTH_STENCIL_STATE_CREATE_INFO);
+            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
         case XGL_STATE_BIND_COLOR_BLEND:
-            return sizeof(XGL_COLOR_BLEND_STATE_CREATE_INFO);
-        case XGL_STATE_BIND_MSAA:
-            return sizeof(XGL_MSAA_STATE_CREATE_INFO);
+            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
         default:
             return 0;
     }
@@ -215,12 +253,13 @@ static uint64_t drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
 
 typedef struct _SHADER_DS_MAPPING {
     uint32_t slotCount;
-    XGL_DESCRIPTOR_SLOT_INFO* pShaderMappingSlot;
+    // TODO : Need to understand this with new binding model, changed to LAYOUT_CI for now
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
 } SHADER_DS_MAPPING;
 
 typedef struct _PIPELINE_LL_HEADER {
     XGL_STRUCTURE_TYPE sType;
-    const void*        pNext;
+    const void*    pNext;
 } PIPELINE_LL_HEADER;
 
 typedef struct _PIPELINE_NODE {
@@ -228,7 +267,7 @@ typedef struct _PIPELINE_NODE {
     struct _PIPELINE_NODE  *pNext;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
     // 1st dimension of array is shader type
-    SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS][XGL_MAX_DESCRIPTOR_SETS];
+    SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS];
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
@@ -243,7 +282,7 @@ typedef struct _SAMPLER_NODE {
 } SAMPLER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
-    XGL_STATE_OBJECT     stateObj;
+    XGL_DYNAMIC_STATE_OBJECT     stateObj;
     XGL_STATE_BIND_POINT sType; // Extra data as VIEWPORT CreateInfo doesn't have sType
     PIPELINE_LL_HEADER   *pCreateInfo;
     struct _DYNAMIC_STATE_NODE *pNext;
@@ -262,7 +301,7 @@ static DYNAMIC_STATE_NODE* pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
 static DYNAMIC_STATE_NODE* pLastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {0};
 
 // Viewport state create info doesn't have sType so we have to pass in BIND_POINT
-static void insertDynamicState(const XGL_STATE_OBJECT state, const PIPELINE_LL_HEADER* pCreateInfo, const XGL_STATE_BIND_POINT sType)
+static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const PIPELINE_LL_HEADER* pCreateInfo, const XGL_STATE_BIND_POINT sType)
 {
     pthread_mutex_lock(&globalLock);
     // Insert new node at head of appropriate LL
@@ -277,7 +316,7 @@ static void insertDynamicState(const XGL_STATE_OBJECT state, const PIPELINE_LL_H
 }
 // Set the last bound dynamic state of given type
 // TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
-static void setLastBoundDynamicState(const XGL_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
+static void setLastBoundDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
 {
     pthread_mutex_lock(&globalLock);
     DYNAMIC_STATE_NODE* pTrav = pDynamicStateHead[sType];
@@ -304,7 +343,7 @@ static void printDynamicState()
             switch (pLastBoundDynamicState[i]->sType)
             {
                 case XGL_STATE_BIND_VIEWPORT:
-                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", xgl_print_xgl_viewport_state_create_info((XGL_VIEWPORT_STATE_CREATE_INFO*)pLastBoundDynamicState[i]->pCreateInfo, "  "));
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", xgl_print_xgl_dynamic_vp_state_create_info((XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pLastBoundDynamicState[i]->pCreateInfo, "  "));
                     break;
                 default:
                     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pLastBoundDynamicState[i]->pCreateInfo, "  "));
@@ -366,11 +405,13 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
         memcpy((void*)pShadowTrav->pNext, pTrav, sTypeStructSize(pTrav->sType));
         pShadowTrav = (PIPELINE_LL_HEADER*)pShadowTrav->pNext;
         // For deep copy DS Mapping into shadow
-        XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *pShadowShaderCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pShadowTrav;
+        //XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *pShadowShaderCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pShadowTrav;
         // TODO : Now that we shadow whole create info, the special copies are just a convenience that can be done away with once shadow is complete and correct
         // Special copy of DS Mapping info
         if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pTrav->sType) {
-            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *pSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
+            //XGL_PIPELINE_SHADER_STAGE_CREATE_INFO *pSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
+            // TODO : Fix this for new binding model
+/*
             for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
                 if (pSSCI->shader.descriptorSetMapping[i].descriptorCount > MAX_SLOTS) {
                     char str[1024];
@@ -380,13 +421,14 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
                 }
                 pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
                 // Deep copy DS Slot array into our shortcut data structure
-                pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
-                memcpy(pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
+                pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
+                memcpy(pPipeline->dsMapping[pSSCI->shader.stage][i].pShaderMappingSlot, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)*pPipeline->dsMapping[pSSCI->shader.stage][i].slotCount);
                 // Deep copy into shadow tree
                 pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount = pSSCI->shader.descriptorSetMapping[i].descriptorCount;
-                pShadowShaderCI->shader.descriptorSetMapping[i].pDescriptorInfo = (XGL_DESCRIPTOR_SLOT_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount);
-                memcpy((XGL_DESCRIPTOR_SLOT_INFO*)pShadowShaderCI->shader.descriptorSetMapping[i].pDescriptorInfo, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SLOT_INFO)*pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount);
+                pShadowShaderCI->shader.descriptorSetMapping[i].pDescriptorInfo = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)*pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount);
+                memcpy((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pShadowShaderCI->shader.descriptorSetMapping[i].pDescriptorInfo, pSSCI->shader.descriptorSetMapping[i].pDescriptorInfo, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)*pShadowShaderCI->shader.descriptorSetMapping[i].descriptorCount);
             }
+*/
         }
         else if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pTrav->sType) {
             // Special copy of Vtx info
@@ -427,11 +469,12 @@ static char* stringSlotBinding(uint32_t binding)
 
 typedef struct _DS_SLOT {
     uint32_t                     slot;
-    XGL_DESCRIPTOR_SLOT_INFO     shaderSlotInfo[XGL_NUM_GRAPHICS_SHADERS];
+    // TODO : Fix this for latest binding model
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     shaderSlotInfo[XGL_NUM_GRAPHICS_SHADERS];
     // Only 1 of 4 possible slot mappings active
     uint32_t                     activeMapping;
     uint32_t                     mappingMask; // store record of different mappings used
-    XGL_MEMORY_VIEW_ATTACH_INFO  memView;
+    XGL_BUFFER_VIEW_ATTACH_INFO  buffView;
     XGL_IMAGE_VIEW_ATTACH_INFO   imageView;
     XGL_SAMPLER                  sampler;            
 } DS_SLOT;
@@ -448,8 +491,9 @@ typedef struct _DS_LL_HEAD {
 // ptr to HEAD of LL of DSs
 static DS_LL_HEAD *pDSHead = NULL;
 // Last DS that was bound, and slotOffset for the binding
-static XGL_DESCRIPTOR_SET lastBoundDS[XGL_MAX_DESCRIPTOR_SETS] = {NULL, NULL};
-static uint32_t lastBoundSlotOffset[XGL_MAX_DESCRIPTOR_SETS] = {0, 0};
+static XGL_DESCRIPTOR_SET lastBoundDS = NULL;
+static uint32_t lastBoundSlotOffset = 0;
+
 
 // Return DS Head ptr for specified ds or else NULL
 static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
@@ -509,7 +553,7 @@ static void dsSetMapping(DS_SLOT* pSlot, uint32_t mapping)
     pSlot->activeMapping = mapping;
 }
 // Populate pStr w/ a string noting all of the slot mappings based on mapping flag
-static char* noteSlotMapping(uint32_t mapping, char *pStr)
+static char* noteSlotMapping(uint32_t32 mapping, char *pStr)
 {
     if (MAPPING_MEMORY & mapping)
         strcat(pStr, "\n\tMemory View previously mapped");
@@ -522,7 +566,7 @@ static char* noteSlotMapping(uint32_t mapping, char *pStr)
     return pStr;
 }
 
-static void dsSetMemMapping(XGL_DESCRIPTOR_SET descriptorSet, DS_SLOT* pSlot, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
+static void dsSetMemMapping(XGL_DESCRIPTOR_SET descriptorSet, DS_SLOT* pSlot, const XGL_BUFFER_VIEW_ATTACH_INFO* pMemView)
 {
     if (pSlot->mappingMask) {
         char str[1024];
@@ -530,11 +574,11 @@ static void dsSetMemMapping(XGL_DESCRIPTOR_SET descriptorSet, DS_SLOT* pSlot, co
         sprintf(str, "While mapping Memory View to slot %u previous Mapping(s) identified:%s", pSlot->slot, noteSlotMapping(pSlot->mappingMask, map_str));
         layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_SLOT_REMAPPING, "DS", str);
     }
-    memcpy(&pSlot->memView, pMemView, sizeof(XGL_MEMORY_VIEW_ATTACH_INFO));
+    memcpy(&pSlot->buffView, pMemView, sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));
     dsSetMapping(pSlot, MAPPING_MEMORY);
 }
 
-static bool32_t dsMemMapping(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemViews)
+static bool32_t dsMemMapping(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount, const XGL_BUFFER_VIEW_ATTACH_INFO* pMemViews)
 {
     DS_LL_HEAD *pTrav = getDS(descriptorSet);
     if (pTrav) {
@@ -622,7 +666,7 @@ static void dsDumpDot(FILE* pOutFile)
 {
     const int i = 0; // hard-coding to just the first DS index for now
     uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
-    DS_LL_HEAD *pDS = getDS(lastBoundDS[i]);
+    DS_LL_HEAD *pDS = getDS(lastBoundDS);
     if (pDS) {
         fprintf(pOutFile, "subgraph DS_SLOTS\n{\nlabel=\"DS0 Slots\"\n");
         // First create simple array node as central DS reference point
@@ -647,7 +691,7 @@ static void dsDumpDot(FILE* pOutFile)
                         skipUnusedCount = 0;
                     }*/
                     sprintf(label, "MemAttachInfo Slot%u", j);
-                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].memView, label));
+                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].buffView, label));
                     fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
                     break;
                 case MAPPING_IMAGE:
@@ -732,24 +776,24 @@ static void synchDSMapping()
     }
     else {
         // Synch Descriptor Set Mapping
-        for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
+        //for (uint32_t i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++) {
             DS_LL_HEAD *pDS;
-            if (lastBoundDS[i]) {
-                pDS = getDS(lastBoundDS[i]);
+            if (lastBoundDS) {
+                pDS = getDS(lastBoundDS);
                 if (!pDS) {
-                    sprintf(str, "Can't find last bound DS %p. Did you need to bind DS to index %u?", (void*)lastBoundDS[i], i);
+                    sprintf(str, "Can't find last bound DS %p. Did you need to bind DS?", (void*)lastBoundDS);
                     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_DS_BOUND, "DS", str);
                 }
                 else { // We have a good DS & Pipeline, store pipeline mappings in DS
-                    uint32_t slotOffset = lastBoundSlotOffset[i];
+                    uint32_t slotOffset = lastBoundSlotOffset;
                     for (uint32_t j = 0; j < XGL_NUM_GRAPHICS_SHADERS; j++) { // j is shader selector
-                        if (pPipeTrav->dsMapping[j][i].slotCount > (pDS->numSlots - slotOffset)) {
-                            sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u) minus slotOffset (%u) (%u slots available)!", j, pPipeTrav->dsMapping[j][i].slotCount, (void*)pDS->dsID, pDS->numSlots, slotOffset, (pDS->numSlots - slotOffset));
+                        if (pPipeTrav->dsMapping[j].count > (pDS->numSlots - slotOffset)) {
+                            sprintf(str, "DS Mapping for shader %u has more slots (%u) than DS %p (%u) minus slotOffset (%u) (%u slots available)!", j, pPipeTrav->dsMapping[j].count, (void*)pDS->dsID, pDS->numSlots, slotOffset, (pDS->numSlots - slotOffset));
                             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_SLOT_NUM_MISMATCH, "DS", str);
                         }
                         else {
-                            for (uint32_t r = 0; r < pPipeTrav->dsMapping[j][i].slotCount; r++) {
-                                pDS->dsSlot[r+slotOffset].shaderSlotInfo[j] = pPipeTrav->dsMapping[j][i].pShaderMappingSlot[r];
+                            for (uint32_t r = 0; r < pPipeTrav->dsMapping[j].count; r++) {
+                                pDS->dsSlot[r+slotOffset].shaderSlotInfo[j] = pPipeTrav->dsMapping[j].pShaderMappingSlot[r];
                             }
                         }
                     }
@@ -759,18 +803,18 @@ static void synchDSMapping()
                 // Verify that no shader is mapping this DS
                 uint32_t dsUsed = 0;
                 for (uint32_t j = 0; j < XGL_NUM_GRAPHICS_SHADERS; j++) { // j is shader selector
-                    if (pPipeTrav->dsMapping[j][i].slotCount > 0) {
+                    if (pPipeTrav->dsMapping[j].count > 0) {
                         dsUsed = 1;
-                        sprintf(str, "No DS was bound to index %u, but shader type %s has slots bound to that DS.", i, string_XGL_PIPELINE_SHADER_STAGE(j));
+                        sprintf(str, "No DS was bound, but shader type %s has slots bound to that DS.", string_XGL_PIPELINE_SHADER_STAGE(j));
                         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_DS_BOUND, "DS", str);
                     }
                 }
                 if (0 == dsUsed) {
-                    sprintf(str, "No DS was bound to index %u, but no shaders are using that DS so this is not an issue.", i);
+                    sprintf(str, "No DS was bound, but no shaders are using that DS so this is not an issue.");
                     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
                 }
             }
-        }
+        //}
         // Verify Vtx binding
         if (MAX_BINDING != lastVtxBinding) {
             if (lastVtxBinding >= pPipeTrav->vtxBindingCount) {
@@ -848,7 +892,7 @@ static void printDSConfig()
                                 strcat(ds_config_str, tmp_str);
                                 skipUnusedCount = 0;
                             }
-                            sprintf(tmp_str, "----Slot %u\n    Mapped to Memory View %p:\n%s", j, (void*)&pDS->dsSlot[j].memView, xgl_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].memView, "        "));
+                            sprintf(tmp_str, "----Slot %u\n    Mapped to Memory View %p:\n%s", j, (void*)&pDS->dsSlot[j].buffView, xgl_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].buffView, "        "));
                             strcat(ds_config_str, tmp_str);
                             break;
                         case MAPPING_IMAGE:
@@ -1337,6 +1381,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, con
     pthread_mutex_unlock(&globalLock);
     return result;
 }
+/* TODO : Update these functions for new binding model
 
 XGL_LAYER_EXPORT void XGLAPI xglBeginDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
 {
@@ -1457,6 +1502,7 @@ XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET descr
     }
     nextTable.ClearDescriptorSetSlots(descriptorSet, startSlot, slotCount);
 }
+*/
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
 {
@@ -1535,7 +1581,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, X
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
 {
     setLastBoundDynamicState(state, stateBindPoint);
     nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
@@ -1564,11 +1610,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_INVALID_DS, "DS", str);
     }
     nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, index, descriptorSet, slotOffset);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
-{
-    nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t binding)
@@ -1661,16 +1702,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToMemory(XGL_CMD_BUFFER cmdBuffer, X
 XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout)
 {
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData)
-{
-    nextTable.CmdUpdateMemory(cmdBuffer, destMem, destOffset, dataSize, pData);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdFillMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data)
-{
-    nextTable.CmdFillMemory(cmdBuffer, destMem, destOffset, fillSize, data);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)

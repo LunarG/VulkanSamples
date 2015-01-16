@@ -184,7 +184,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2CreateCommandBuffer(XGL_DEVICE device, 
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2BeginCommandBuffer( XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2BeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
     XGL_LAYER_DISPATCH_TABLE* pTable = tableMap2[cmdBuffer];
 

@@ -97,27 +97,27 @@ class Subcommand(object):
     # Return set of printf '%' qualifier and input to that qualifier
     def _get_printf_params(self, xgl_type, name, output_param, cpp=False):
         # TODO : Need ENUM and STRUCT checks here
-        if "_TYPE" in xgl_type: # TODO : This should be generic ENUM check
+        if xgl_helper.is_type(xgl_type, 'enum'):#"_TYPE" in xgl_type: # TODO : This should be generic ENUM check
             return ("%s", "string_%s(%s)" % (xgl_type.strip('const ').strip('*'), name))
         if "char*" == xgl_type:
             return ("%s", name)
-        if "UINT64" in xgl_type:
+        if "uint64" in xgl_type:
             if '*' in xgl_type:
                 return ("%lu", "*%s" % name)
             return ("%lu", name)
-        if "SIZE" in xgl_type:
+        if "size" in xgl_type:
             if '*' in xgl_type:
                 return ("%zu", "*%s" % name)
             return ("%zu", name)
-        if "FLOAT" in xgl_type:
+        if "float" in xgl_type:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 if cpp:
                     return ("[%i, %i, %i, %i]", '"[" << %s[0] << "," << %s[1] << "," << %s[2] << "," << %s[3] << "]"' % (name, name, name, name))
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
-        if "BOOL" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
+        if "bool" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
             return ("%u", name)
-        if True in [t in xgl_type for t in ["INT", "FLAGS", "MASK", "xcb_window_t"]]:
+        if True in [t in xgl_type for t in ["int", "FLAGS", "MASK", "xcb_window_t"]]:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 if cpp:
                     return ("[%i, %i, %i, %i]", "%s[0] << %s[1] << %s[2] << %s[3]" % (name, name, name, name))
@@ -325,14 +325,15 @@ class Subcommand(object):
                         log_func += '%s = " << %s << ", ' % (p.name, pfi)
                         #print_vals += ', %s' % (pfi)
                         # TODO : Just want this to be simple check for params of STRUCT type
-                        if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['char', 'void', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'uint32_t']]):
+                        #if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['char', 'void', 'int', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER']]):
+                        if xgl_helper.is_type(p.ty.strip('const').strip('*'), 'struct'):
                             if 'Wsi' not in proto.name:
                                 cis_param_index.append(pindex)
                         pindex += 1
                     log_func = log_func.strip(', ')
                     if proto.ret != "void":
-                        log_func += ') = " << string_XGL_RESULT(result) << "\\n"'
-                        #print_vals += ', string_XGL_RESULT(result)'
+                        log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << "\\n"'
+                        #print_vals += ', string_XGL_RESULT_CODE(result)'
                     else:
                         log_func += ')\\n"'
                     log_func += ';'
@@ -439,8 +440,7 @@ class Subcommand(object):
                         # Catch array inputs that are bound by a "Count" param
                         if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
                             sp_param_dict[pindex] = prev_count_name
-                        # 'format' gets special treatment as a small struct that we print inline
-                        elif 'Wsi' not in proto.name and 'format' != p.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+                        elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
                             sp_param_dict[pindex] = 'index'
                         pindex += 1
                         if p.name.endswith('Count'):
@@ -539,37 +539,14 @@ class Subcommand(object):
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, ret_val, c_call, f_open, log_func, f_close, stmt))
                 elif "ObjectTracker" == layer:
-                    obj_type_mapping = {
-                            "XGL_PHYSICAL_GPU" : "XGL_OBJECT_TYPE_PHYSICAL_GPU",
-                            "XGL_DEVICE" : "XGL_OBJECT_TYPE_DEVICE",
-                            "XGL_QUEUE" : "XGL_OBJECT_TYPE_QUEUE",
-                            "XGL_QUEUE_SEMAPHORE" : "XGL_OBJECT_TYPE_QUEUE_SEMAPHORE",
-                            "XGL_GPU_MEMORY" : "XGL_OBJECT_TYPE_GPU_MEMORY",
-                            "XGL_FENCE" : "XGL_OBJECT_TYPE_FENCE",
-                            "XGL_QUERY_POOL" : "XGL_OBJECT_TYPE_QUERY_POOL",
-                            "XGL_EVENT" : "XGL_OBJECT_TYPE_EVENT",
-                            "XGL_IMAGE" : "XGL_OBJECT_TYPE_IMAGE",
-                            "XGL_DESCRIPTOR_SET" : "XGL_OBJECT_TYPE_DESCRIPTOR_SET",
-                            "XGL_CMD_BUFFER" : "XGL_OBJECT_TYPE_CMD_BUFFER",
-                            "XGL_SAMPLER" : "XGL_OBJECT_TYPE_SAMPLER",
-                            "XGL_PIPELINE" : "XGL_OBJECT_TYPE_PIPELINE",
-                            "XGL_PIPELINE_DELTA" : "XGL_OBJECT_TYPE_PIPELINE_DELTA",
-                            "XGL_SHADER" : "XGL_OBJECT_TYPE_SHADER",
-                            "XGL_IMAGE_VIEW" : "XGL_OBJECT_TYPE_IMAGE_VIEW",
-                            "XGL_COLOR_ATTACHMENT_VIEW" : "XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW",
-                            "XGL_DEPTH_STENCIL_VIEW" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW",
-                            "XGL_DYNAMIC_VP_STATE_OBJECT" : "XGL_OBJECT_TYPE_VIEWPORT_STATE",
-                            "XGL_DYNAMIC_RS_STATE_OBJECT" : "XGL_OBJECT_TYPE_RASTER_STATE",
-                            "XGL_MSAA_STATE_OBJECT" : "XGL_OBJECT_TYPE_MSAA_STATE",
-                            "XGL_DYNAMIC_CB_STATE_OBJECT" : "XGL_OBJECT_TYPE_COLOR_BLEND_STATE",
-                            "XGL_DYNAMIC_DS_STATE_OBJECT" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE",
-                            "XGL_BASE_OBJECT" : "ll_get_obj_type(object)",
-                            "XGL_OBJECT" : "ll_get_obj_type(object)"
-                    }
+                    obj_type_mapping = {base_t : base_t.replace("XGL_", "XGL_OBJECT_TYPE_") for base_t in xgl.object_type_list}
+                    # For the various "super-types" we have to use function to distinguish sub type
+                    for obj_type in ["XGL_BASE_OBJECT", "XGL_OBJECT", "XGL_DYNAMIC_STATE_OBJECT"]:
+                        obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
 
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
-                    p0_type = proto.params[0].ty
+                    p0_type = proto.params[0].ty.strip('*').strip('const ')
                     create_line = ''
                     destroy_line = ''
                     if 'DbgRegisterMsgCallback' in proto.name:
@@ -595,12 +572,17 @@ class Subcommand(object):
                         using_line += '        pPrev = pTrav;\n'
                         using_line += '        pTrav = pTrav->pNext;\n'
                         using_line += '    }\n'
-                    elif 'GlobalOption' in proto.name:
+                    # Special cases for API funcs that don't use an object as first arg
+                    elif True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance']]:
                         using_line = ''
                     else:
                         using_line = '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
-                    if 'Create' in proto.name or 'Alloc' in proto.name:
-                        create_line = '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*')])
+                    if 'AllocDescriptor' in proto.name: # Allocates array of DSs
+                        create_line =  '    for (uint32_t i; i < *pCount; i++) {\n'
+                        create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
+                        create_line += '    }\n'
+                    elif 'Create' in proto.name or 'Alloc' in proto.name:
+                        create_line = '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
                     if 'DestroyObject' in proto.name:
                         destroy_line = '    ll_destroy_obj((void*)%s);\n' % (param0_name)
                         using_line = ''
@@ -1028,7 +1010,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
         header_txt.append('    XGL_VALIDATION_LEVEL validationLevel,')
         header_txt.append('    XGL_BASE_OBJECT      srcObject,')
-        header_txt.append('    size_t               location,')
+        header_txt.append('    size_t             location,')
         header_txt.append('    int32_t              msgCode,')
         header_txt.append('    const char*          pLayerPrefix,')
         header_txt.append('    const char*          pMsg)')
@@ -1247,7 +1229,7 @@ def main():
     if len(sys.argv) < 3 or sys.argv[1] not in subcommands or not os.path.exists(sys.argv[2]):
         print("Usage: %s <subcommand> <input_header> [options]" % sys.argv[0])
         print
-        print("Available sucommands are: %s" % " ".join(subcommands))
+        print("Available subcommands are: %s" % " ".join(subcommands))
         exit(1)
 
     hfp = xgl_helper.HeaderFileParser(sys.argv[2])
