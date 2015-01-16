@@ -33,8 +33,16 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
     OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
     OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
+    OBJTRACK_INVALID_FENCE,                     // Requested status of unsubmitted fence object
 } OBJECT_TRACK_ERROR;
 
+// Object Status -- used to track state of individual objects
+typedef enum _OBJECT_STATUS
+{
+    OBJSTATUS_NONE,                             // No status is set
+    OBJSTATUS_FENCE_IS_SUBMITTED,               // Fence has been submitted
+} OBJECT_STATUS;
+// TODO : Make this code-generated
 // Object type enum
 typedef enum _XGL_OBJECT_TYPE
 {
@@ -143,6 +151,7 @@ typedef struct _OBJTRACK_NODE {
     void            *pObj;
     XGL_OBJECT_TYPE objType;
     uint64_t        numUses;
+    OBJECT_STATUS   status;
 } OBJTRACK_NODE;
 // prototype for extension functions
 uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type);

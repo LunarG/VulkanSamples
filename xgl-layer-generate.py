@@ -577,6 +577,11 @@ class Subcommand(object):
                         using_line = ''
                     else:
                         using_line = '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                    if 'QueueSubmit' in proto.name:
+                        using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
+                    elif 'GetFenceStatus' in proto.name:
+                        using_line += '    // Warn if submitted_flag is not set\n'
+                        using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, "Status Requested for Unsubmitted Fence");\n'
                     if 'AllocDescriptor' in proto.name: # Allocates array of DSs
                         create_line =  '    for (uint32_t i; i < *pCount; i++) {\n'
                         create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
@@ -1188,6 +1193,41 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    char str[1024];')
         header_txt.append('    sprintf(str, "Unable to remove obj %p. Was it created? Has it already been destroyed?", pObj);')
         header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_DESTROY_OBJECT_FAILED, "OBJTRACK", str);')
+        header_txt.append('}')
+        header_txt.append('// Set selected flag state for an object node')
+        header_txt.append('static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            pTrav->obj.status |= status_flag;')
+        header_txt.append('            return;')
+        header_txt.append('        }')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
+        header_txt.append('    }')
+        header_txt.append('    // If we do not find it print an error')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to set status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('// Check object status for selected flag state')
+        header_txt.append('static void validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag, char* fail_msg) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            if ((pTrav->obj.status && status_flag) != status_flag) {')
+        header_txt.append('                char str[1024];')
+        header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_XGL_OBJECT_TYPE(objType), (void*)pObj, fail_msg);')
+        header_txt.append('                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_INVALID_FENCE, "OBJTRACK", str);')
+        header_txt.append('            }')
+        header_txt.append('            return;')
+        header_txt.append('        }')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
+        header_txt.append('    }')
+        header_txt.append('    // If we do not find it print an error')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
 
         return "\n".join(header_txt)
