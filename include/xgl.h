@@ -55,7 +55,7 @@
     ((major << 22) | (minor << 12) | patch)
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 30, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 22, 1)
 
 #ifndef XGLAPI
    #define XGLAPI
