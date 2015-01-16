@@ -54,7 +54,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 30, 3)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 30, 4)
 
 #ifdef __cplusplus
 extern "C"
