@@ -230,7 +230,8 @@ protected:
 
     XGL_FORMAT                  m_depth_stencil_fmt;
     XGL_IMAGE                   m_depthStencilImage;
-    XGL_GPU_MEMORY              m_depthStencilMem;
+    XGL_UINT                    m_num_mem;
+    XGL_GPU_MEMORY              *m_depthStencilMem;
     XGL_DEPTH_STENCIL_VIEW      m_depthStencilView;
     XglMemoryRefManager         m_memoryRefManager;
 
@@ -329,8 +330,10 @@ void XglRenderTest::InitDepthStencil()
     XGL_IMAGE_CREATE_INFO image;
     XGL_MEMORY_ALLOC_INFO mem_alloc;
     XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view;
-    XGL_MEMORY_REQUIREMENTS mem_reqs;
+    XGL_MEMORY_REQUIREMENTS *mem_reqs;
     XGL_SIZE mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_UINT num_allocations = 0;
+    XGL_SIZE num_alloc_size = sizeof(num_allocations);
 
     // Clean up default state created by framework
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
@@ -366,26 +369,37 @@ void XglRenderTest::InitDepthStencil()
     ASSERT_XGL_SUCCESS(err);
 
     err = xglGetObjectInfo(m_depthStencilImage,
-                           XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &mem_reqs_size, &mem_reqs);
+                    XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                    &num_alloc_size, &num_allocations);
     ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(mem_reqs_size, sizeof(mem_reqs));
-
-    XGL_UINT heapInfo[mem_reqs.heapCount];
-    mem_alloc.allocationSize = mem_reqs.size;
-    mem_alloc.alignment = mem_reqs.alignment;
-    mem_alloc.heapCount = mem_reqs.heapCount;
-    mem_alloc.pHeaps = heapInfo;
-    memcpy(heapInfo, mem_reqs.pHeaps,
-           sizeof(mem_reqs.pHeaps) * mem_reqs.heapCount);
-
-    /* allocate memory */
-    err = xglAllocMemory(device(), &mem_alloc, &m_depthStencilMem);
+    ASSERT_EQ(num_alloc_size, sizeof(num_allocations));
+    mem_reqs = (XGL_MEMORY_REQUIREMENTS *) malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+    m_depthStencilMem = (XGL_GPU_MEMORY *) malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+    m_num_mem = num_allocations;
+    err = xglGetObjectInfo(m_depthStencilImage,
+                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                    &mem_reqs_size, mem_reqs);
     ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(mem_reqs_size, sizeof(*mem_reqs));
 
-    /* bind memory */
-    err = xglBindObjectMemory(m_depthStencilImage, 0, m_depthStencilMem, 0);
-    ASSERT_XGL_SUCCESS(err);
+    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+        mem_alloc.allocationSize = mem_reqs[i].size;
+        mem_alloc.alignment = mem_reqs[i].alignment;
+        mem_alloc.heapCount = mem_reqs[i].heapCount;
+        XGL_UINT heapInfo[mem_reqs[i].heapCount];
+        mem_alloc.pHeaps = heapInfo;
+        memcpy(heapInfo, mem_reqs[i].pHeaps,
+            sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
+
+        /* allocate memory */
+        err = xglAllocMemory(device(), &mem_alloc, &m_depthStencilMem[i]);
+        ASSERT_XGL_SUCCESS(err);
+
+        /* bind memory */
+        err = xglBindObjectMemory(m_depthStencilImage, i,
+                m_depthStencilMem[i], 0);
+        ASSERT_XGL_SUCCESS(err);
+    }
 
     XGL_DYNAMIC_DS_STATE_CREATE_INFO depthStencil = {};
     depthStencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;

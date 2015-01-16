@@ -79,7 +79,8 @@ protected:
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     XGL_UINT gpu_count;
     XGL_IMAGE m_image;
-    XGL_GPU_MEMORY m_image_mem;
+    XGL_GPU_MEMORY *m_image_mem;
+    XGL_UINT m_num_mem;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -188,43 +189,60 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     err = xglCreateImage(device(), &imageCreateInfo, &m_image);
     ASSERT_XGL_SUCCESS(err);
 
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    size_t data_size = sizeof(mem_req);
-    err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
-
-    //        XGL_RESULT XGLAPI xglAllocMemory(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    //            XGL_GPU_MEMORY*                             pMem);
+    XGL_MEMORY_REQUIREMENTS *mem_req;
+    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_UINT num_allocations = 0;
+    XGL_SIZE num_alloc_size = sizeof(num_allocations);
     XGL_MEMORY_ALLOC_INFO mem_info;
-    XGL_UINT heapInfo[mem_req.heapCount];
 
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
-    mem_info.heapCount = mem_req.heapCount;
-    mem_info.pHeaps = heapInfo;
-    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
-    err = xglAllocMemory(device(), &mem_info, &m_image_mem);
+    err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                    &num_alloc_size, &num_allocations);
     ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(num_alloc_size,sizeof(num_allocations));
+    mem_req = (XGL_MEMORY_REQUIREMENTS *) malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+    m_image_mem = (XGL_GPU_MEMORY *) malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+    m_num_mem = num_allocations;
+    err = xglGetObjectInfo(m_image,
+                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                    &mem_reqs_size, mem_req);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
 
-    err = xglBindObjectMemory(m_image, 0, m_image_mem, 0);
-    ASSERT_XGL_SUCCESS(err);
+
+    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+        ASSERT_NE(0, mem_req[i].size) << "xglGetObjectInfo (Image): Failed - expect images to require memory";
+        memset(&mem_info, 0, sizeof(mem_info));
+        mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_info.allocationSize = mem_req[i].size;
+        mem_info.alignment = mem_req[i].alignment;
+        mem_info.heapCount = mem_req[i].heapCount;
+        XGL_UINT heapInfo[mem_req[i].heapCount];
+        mem_info.pHeaps = heapInfo;
+        memcpy(heapInfo, mem_req[i].pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
+        mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+        mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+
+        /* allocate memory */
+        err = xglAllocMemory(device(), &mem_info, &m_image_mem[i]);
+        ASSERT_XGL_SUCCESS(err);
+
+        /* bind memory */
+        err = xglBindObjectMemory(m_image, i, m_image_mem[i], 0);
+        ASSERT_XGL_SUCCESS(err);
+    }
 }
 
 void XglImageTest::DestroyImage()
 {
+    XGL_RESULT err;
     // All done with image memory, clean up
     ASSERT_XGL_SUCCESS(xglBindObjectMemory(m_image, 0, XGL_NULL_HANDLE, 0));
 
-    ASSERT_XGL_SUCCESS(xglFreeMemory(m_image_mem));
+    for (XGL_UINT i = 0 ; i < m_num_mem; i++) {
+        err = xglFreeMemory(m_image_mem[i]);
+        ASSERT_XGL_SUCCESS(err);
+    }
+
 
     ASSERT_XGL_SUCCESS(xglDestroyObject(m_image));
 }

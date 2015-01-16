@@ -49,6 +49,7 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
 {
     XGL_RESULT ret = XGL_SUCCESS;
     XGL_SIZE s;
+    XGL_UINT *count;
 
     switch (type) {
     case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
@@ -58,6 +59,13 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
             return ret;
         memset(data, 0, s);
 
+        break;
+    case XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
+        *size = sizeof(XGL_UINT);
+        if (data == NULL)
+            return ret;
+        count = (XGL_UINT *) data;
+        *count = 1;
         break;
     default:
         ret = XGL_ERROR_INVALID_VALUE;

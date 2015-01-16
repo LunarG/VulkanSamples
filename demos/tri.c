@@ -43,7 +43,8 @@ struct demo {
         XGL_FORMAT format;
 
         XGL_IMAGE image;
-        XGL_GPU_MEMORY mem;
+        XGL_UINT  num_mem;
+        XGL_GPU_MEMORY *mem;
         XGL_DEPTH_STENCIL_VIEW view;
     } depth;
 
@@ -51,7 +52,8 @@ struct demo {
         XGL_SAMPLER sampler;
 
         XGL_IMAGE image;
-        XGL_GPU_MEMORY mem;
+        XGL_UINT  num_mem;
+        XGL_GPU_MEMORY *mem;
         XGL_IMAGE_VIEW view;
     } textures[DEMO_TEXTURE_COUNT];
 
@@ -288,9 +290,12 @@ static void demo_prepare_depth(struct demo *demo)
         .arraySize = 1,
         .flags = 0,
     };
-    XGL_MEMORY_REQUIREMENTS mem_reqs;
-    XGL_SIZE mem_reqs_size= sizeof(XGL_MEMORY_REQUIREMENTS);
+
+    XGL_MEMORY_REQUIREMENTS *mem_reqs;
+    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_RESULT err;
+    XGL_UINT num_allocations = 0;
+    XGL_SIZE num_alloc_size = sizeof(num_allocations);
 
     demo->depth.format = depth_format;
 
@@ -299,28 +304,36 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
+
+    err = xglGetObjectInfo(demo->depth.image, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
+    assert(!err && num_alloc_size == sizeof(num_allocations));
+    mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+    demo->depth.mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+    demo->depth.num_mem = num_allocations;
     err = xglGetObjectInfo(demo->depth.image,
-            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-            &mem_reqs_size, &mem_reqs);
-    assert(!err && mem_reqs_size == sizeof(mem_reqs));
+                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                    &mem_reqs_size, mem_reqs);
+    assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
 
-    mem_alloc.allocationSize = mem_reqs.size;
-    mem_alloc.alignment = mem_reqs.alignment;
-    mem_alloc.heapCount = mem_reqs.heapCount;
-    XGL_UINT heapInfo[1];
-    mem_alloc.pHeaps = (const XGL_UINT *)&heapInfo;
-    memcpy(&heapInfo, mem_reqs.pHeaps,
-            sizeof(mem_reqs.pHeaps[0]) * mem_reqs.heapCount);
+    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+        mem_alloc.allocationSize = mem_reqs[i].size;
+        mem_alloc.alignment = mem_reqs[i].alignment;
+        mem_alloc.heapCount = mem_reqs[i].heapCount;
+        XGL_UINT heapInfo[mem_reqs[i].heapCount];
+        mem_alloc.pHeaps = (const XGL_UINT *)heapInfo;
+        memcpy(heapInfo, mem_reqs[i].pHeaps,
+            sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
 
-    /* allocate memory */
-    err = xglAllocMemory(demo->device, &mem_alloc,
-            &demo->depth.mem);
-    assert(!err);
+        /* allocate memory */
+        err = xglAllocMemory(demo->device, &mem_alloc,
+                    &(demo->depth.mem[i]));
+        assert(!err);
 
-    /* bind memory */
-    err = xglBindObjectMemory(demo->depth.image, 0,
-            demo->depth.mem, 0);
-    assert(!err);
+        /* bind memory */
+        err = xglBindObjectMemory(demo->depth.image, i,
+                demo->depth.mem[i], 0);
+        assert(!err);
+    }
 
     /* create image view */
     view.image = demo->depth.image;
@@ -392,8 +405,11 @@ static void demo_prepare_textures(struct demo *demo)
             .subresourceRange = { XGL_IMAGE_ASPECT_COLOR, 0, 1, 0, 1 },
             .minLod = 0.0f,
         };
-        XGL_MEMORY_REQUIREMENTS mem_reqs;
-        XGL_SIZE mem_reqs_size= sizeof(XGL_MEMORY_REQUIREMENTS);
+
+        XGL_MEMORY_REQUIREMENTS *mem_reqs;
+        XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+        XGL_UINT num_allocations = 0;
+        XGL_SIZE num_alloc_size = sizeof(num_allocations);
 
         /* create sampler */
         err = xglCreateSampler(demo->device, &sampler,
@@ -406,27 +422,36 @@ static void demo_prepare_textures(struct demo *demo)
         assert(!err);
 
         err = xglGetObjectInfo(demo->textures[i].image,
-                XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                &mem_reqs_size, &mem_reqs);
-        assert(!err && mem_reqs_size == sizeof(mem_reqs));
+                    XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                    &num_alloc_size, &num_allocations);
+        assert(!err && num_alloc_size == sizeof(num_allocations));
+        mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+        demo->textures[i].mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+        demo->textures[i].num_mem = num_allocations;
+        err = xglGetObjectInfo(demo->textures[i].image,
+                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                    &mem_reqs_size, mem_reqs);
+        assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
 
-        mem_alloc.allocationSize = mem_reqs.size;
-        mem_alloc.alignment = mem_reqs.alignment;
-        mem_alloc.heapCount = mem_reqs.heapCount;
-        XGL_UINT heapInfo[0];
-        mem_alloc.pHeaps = (const XGL_UINT *)&heapInfo;
-        memcpy(&heapInfo, mem_reqs.pHeaps,
-                sizeof(mem_reqs.pHeaps[0]) * mem_reqs.heapCount);
+        for (XGL_UINT j = 0; j < num_allocations; j ++) {
+            mem_alloc.allocationSize = mem_reqs[j].size;
+            mem_alloc.alignment = mem_reqs[j].alignment;
+            mem_alloc.heapCount = mem_reqs[j].heapCount;
+            XGL_UINT heapInfo[mem_reqs[j].heapCount];
+            mem_alloc.pHeaps = (const XGL_UINT *)heapInfo;
+            memcpy(heapInfo, mem_reqs[j].pHeaps,
+                sizeof(mem_reqs[j].pHeaps[0]) * mem_reqs[j].heapCount);
 
-        /* allocate memory */
-        err = xglAllocMemory(demo->device, &mem_alloc,
-                &demo->textures[i].mem);
-        assert(!err);
+            /* allocate memory */
+            err = xglAllocMemory(demo->device, &mem_alloc,
+                        &(demo->textures[i].mem[j]));
+            assert(!err);
 
-        /* bind memory */
-        err = xglBindObjectMemory(demo->textures[i].image, 0,
-                demo->textures[i].mem, 0);
-        assert(!err);
+            /* bind memory */
+            err = xglBindObjectMemory(demo->textures[i].image, j,
+                    demo->textures[i].mem[j], 0);
+            assert(!err);
+        }
 
         /* create image view */
         view.image = demo->textures[i].image;
@@ -449,8 +474,9 @@ static void demo_prepare_textures(struct demo *demo)
         err = xglGetImageSubresourceInfo(demo->textures[i].image, &subres,
                 XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
+        assert(demo->textures[i].num_mem == 1);
 
-        err = xglMapMemory(demo->textures[i].mem, 0, &data);
+        err = xglMapMemory(demo->textures[i].mem[0], 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
@@ -459,7 +485,7 @@ static void demo_prepare_textures(struct demo *demo)
                 row[x] = tex_colors[i][(x & 1) ^ (y & 1)];
         }
 
-        err = xglUnmapMemory(demo->textures[i].mem);
+        err = xglUnmapMemory(demo->textures[i].mem[0]);
         assert(!err);
     }
 }
@@ -1022,7 +1048,7 @@ static void demo_init(struct demo *demo)
 
 static void demo_cleanup(struct demo *demo)
 {
-    XGL_UINT i;
+    XGL_UINT i, j;
 
     xglDestroyObject(demo->desc_set);
     xglDestroyObject(demo->desc_region);
@@ -1045,14 +1071,16 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->textures[i].view);
         xglBindObjectMemory(demo->textures[i].image, 0, XGL_NULL_HANDLE, 0);
         xglDestroyObject(demo->textures[i].image);
-        xglFreeMemory(demo->textures[i].mem);
+        for (j = 0; j < demo->textures[i].num_mem; j++)
+            xglFreeMemory(demo->textures[i].mem[j]);
         xglDestroyObject(demo->textures[i].sampler);
     }
 
     xglDestroyObject(demo->depth.view);
     xglBindObjectMemory(demo->depth.image, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->depth.image);
-    xglFreeMemory(demo->depth.mem);
+    for (j = 0; j < demo->depth.num_mem; j++)
+        xglFreeMemory(demo->depth.mem[j]);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         xglDestroyObject(demo->buffers[i].fence);

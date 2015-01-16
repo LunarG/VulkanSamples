@@ -183,13 +183,20 @@ void BaseObject::reinit(XGL_BASE_OBJECT obj, bool own)
 
 uint32_t BaseObject::memory_allocation_count() const
 {
-    return memory_requirements().size();
+    return get_info<uint32_t>(obj_, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
 }
 
 std::vector<XGL_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
 {
+    XGL_RESULT err;
+    XGL_UINT num_allocations = 0;
+    XGL_SIZE num_alloc_size = sizeof(num_allocations);
+    err = xglGetObjectInfo(obj_, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                           &num_alloc_size, &num_allocations);
+    EXPECT(err == XGL_SUCCESS && num_alloc_size == sizeof(num_allocations));
     std::vector<XGL_MEMORY_REQUIREMENTS> info =
         get_info<XGL_MEMORY_REQUIREMENTS>(obj_, XGL_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
+    EXPECT(info.size() == num_allocations);
     if (info.size() == 1 && !info[0].size)
         info.clear();
 
@@ -230,7 +237,7 @@ void Object::cleanup()
 
 void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
 {
-    EXPECT(!alloc_idx && xglBindObjectMemory(obj(), 0, mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(xglBindObjectMemory(obj(), alloc_idx, mem.obj(), mem_offset) == XGL_SUCCESS);
 }
 
 void Object::bind_memory(uint32_t alloc_idx, XGL_GPU_SIZE offset, XGL_GPU_SIZE size,
@@ -241,7 +248,7 @@ void Object::bind_memory(uint32_t alloc_idx, XGL_GPU_SIZE offset, XGL_GPU_SIZE s
 
 void Object::unbind_memory(uint32_t alloc_idx)
 {
-    EXPECT(!alloc_idx && xglBindObjectMemory(obj(), 0, XGL_NULL_HANDLE, 0) == XGL_SUCCESS);
+    EXPECT(xglBindObjectMemory(obj(), alloc_idx, XGL_NULL_HANDLE, 0) == XGL_SUCCESS);
 }
 
 void Object::unbind_memory()
