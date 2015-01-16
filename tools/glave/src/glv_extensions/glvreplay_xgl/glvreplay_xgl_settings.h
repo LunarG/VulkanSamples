@@ -45,4 +45,3 @@ char** get_enableLayers_list(unsigned int* pNumLayers);
 void release_enableLayer_list(char** pList);
 
 #endif // GLVREPLAY_XGL_SETTINGS_H
-

@@ -96,32 +96,29 @@ class Subcommand(object):
     def _get_printf_params(self, xgl_type, name, output_param):
         # TODO : Need ENUM and STRUCT checks here
         if "_TYPE" in xgl_type: # TODO : This should be generic ENUM check
-            return ("%s", "string_%s(%s)" % (xgl_type.strip('const ').strip('*'), name))
+            return ("%s", "string_%s(%s)" % (xgl_type.replace('const ', '').strip('*'), name))
         if "char*" == xgl_type:
             return ("%s", name)
-        if "UINT64" in xgl_type:
+        if "uint64_t" in xgl_type:
             if '*' in xgl_type:
                 return ("%lu", "*%s" % name)
             return ("%lu", name)
-        if "SIZE" in xgl_type:
+        if "size_t" in xgl_type:
             if '*' in xgl_type:
                 return ("%zu", "*%s" % name)
             return ("%zu", name)
-        if "FLOAT" in xgl_type:
+        if "float" in xgl_type:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
-        if "BOOL" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
+        if "bool" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
             return ("%u", name)
-        if True in [t in xgl_type for t in ["INT", "FLAGS", "MASK", "xcb_window_t"]]:
+        if True in [t in xgl_type for t in ["int", "FLAGS", "MASK", "xcb_window_t"]]:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             if '*' in xgl_type:
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
-        # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
-        if "XGL_FORMAT" == xgl_type:
-           return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_XGL_CHANNEL_FORMAT(%s.channelFormat), string_XGL_NUM_FORMAT(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
         return ("%p", "(void*)(%s)" % name)
@@ -206,7 +203,8 @@ class Subcommand(object):
         hooks_txt = []
         hooks_txt.append('void AttachHooks()\n{\n   BOOL hookSuccess = TRUE;\n#if defined(WIN32)')
         hooks_txt.append('    Mhook_BeginMultiOperation(FALSE);')
-        hooks_txt.append('    if (real_xglInitAndEnumerateGpus != NULL)')
+        # TODO : Verify if CreateInstance is appropriate to key off of here
+        hooks_txt.append('    if (real_xglCreateInstance != NULL)')
         hooks_txt.append('    {\n        isHooked = TRUE;')
         hook_operator = '='
         for proto in self.protos:
@@ -218,11 +216,11 @@ class Subcommand(object):
         hooks_txt.append('        glv_LogError("Failed to hook XGL.");\n    }\n')
         hooks_txt.append('    Mhook_EndMultiOperation();\n')
         hooks_txt.append('#elif defined(__linux__)')
-        hooks_txt.append('    if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)')
-        hooks_txt.append('        hookSuccess = glv_platform_get_next_lib_sym((PVOID*)&real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");')
+        hooks_txt.append('    if (real_xglCreateInstance == xglCreateInstance)')
+        hooks_txt.append('        hookSuccess = glv_platform_get_next_lib_sym((PVOID*)&real_xglCreateInstance,"xglCreateInstance");')
         hooks_txt.append('    isHooked = TRUE;')
         for proto in self.protos:
-            if 'Dbg' not in proto.name and 'Wsi' not in proto.name and 'InitAndEnumerateGpus' not in proto.name:
+            if 'Dbg' not in proto.name and 'Wsi' not in proto.name and 'CreateInstance' not in proto.name:
                 hooks_txt.append('    hookSuccess %s glv_platform_get_next_lib_sym((PVOID*)&real_xgl%s, "xgl%s");' % (hook_operator, proto.name, proto.name))
         hooks_txt.append('    if (!hookSuccess)\n    {')
         hooks_txt.append('        glv_LogError("Failed to hook XGL.");\n    }\n')
@@ -310,59 +308,6 @@ class Subcommand(object):
         init_tracer.append('    send_xgl_api_version_packet();\n}\n')
         return "\n".join(init_tracer)
 
-    # InitAndEnumerateGpus is unique enough that it gets custom generation code
-    def _gen_iande_gpus(self):
-        iae_body = []
-        iae_body.append('GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglInitAndEnumerateGpus(')
-        iae_body.append('    const XGL_APPLICATION_INFO* pAppInfo,')
-        iae_body.append('    const XGL_ALLOC_CALLBACKS* pAllocCb,')
-        iae_body.append('    uint32_t maxGpus,')
-        iae_body.append('    uint32_t* pGpuCount,')
-        iae_body.append('    XGL_PHYSICAL_GPU* pGpus)')
-        iae_body.append('{')
-        iae_body.append('    glv_trace_packet_header* pHeader;')
-        iae_body.append('    XGL_RESULT result;')
-        iae_body.append('    uint64_t startTime;')
-        iae_body.append('    struct_xglInitAndEnumerateGpus* pPacket;')
-        iae_body.append('')
-        iae_body.append('    glv_platform_thread_once(&gInitOnce, InitTracer);')
-        iae_body.append('    SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);')
-        iae_body.append('    if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)')
-        iae_body.append('    {')
-        iae_body.append('        glv_platform_get_next_lib_sym((void **) &real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");')
-        iae_body.append('    }')
-        iae_body.append('    startTime = glv_get_time();')
-        iae_body.append('    result = real_xglInitAndEnumerateGpus(pAppInfo, pAllocCb, maxGpus, pGpuCount, pGpus);')
-        iae_body.append('')
-        iae_body.append('    // since we do not know how many gpus will be found must create trace packet after calling xglInit')
-        iae_body.append('    CREATE_TRACE_PACKET(xglInitAndEnumerateGpus, calc_size_XGL_APPLICATION_INFO(pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS))')
-        iae_body.append('        + sizeof(uint32_t) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(XGL_PHYSICAL_GPU) : 0));')
-        iae_body.append('    pHeader->entrypoint_begin_time = startTime;')
-        iae_body.append('    if (isHooked == FALSE) {')
-        iae_body.append('        AttachHooks();')
-        iae_body.append('        AttachHooks_xgldbg();')
-        iae_body.append('        AttachHooks_xglwsix11ext();')
-        iae_body.append('    }')
-        iae_body.append('    pPacket = interpret_body_as_xglInitAndEnumerateGpus(pHeader);')
-        iae_body.append('    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);')
-        iae_body.append('    if (pAllocCb) {')
-        iae_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pAllocCb);')
-        iae_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocCb));')
-        iae_body.append('    }')
-        iae_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpuCount), sizeof(uint32_t), pGpuCount);')
-        iae_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpuCount));')
-        iae_body.append('    if (pGpuCount && pGpus)')
-        iae_body.append('    {')
-        iae_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), sizeof(XGL_PHYSICAL_GPU) * *pGpuCount, pGpus);')
-        iae_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpus));')
-        iae_body.append('    }')
-        iae_body.append('    pPacket->maxGpus = maxGpus;')
-        iae_body.append('    pPacket->result = result;')
-        iae_body.append('    FINISH_TRACE_PACKET();')
-        iae_body.append('    return result;')
-        iae_body.append('}\n')
-        return "\n".join(iae_body)
-
     def _gen_unmap_memory(self):
         um_body = []
         um_body.append('GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglUnmapMemory(')
@@ -402,9 +347,7 @@ class Subcommand(object):
     def _generate_trace_funcs(self):
         func_body = []
         for proto in self.protos:
-            if 'InitAndEnumerateGpus' == proto.name:
-                func_body.append(self._gen_iande_gpus())
-            elif 'UnmapMemory' == proto.name:
+            if 'UnmapMemory' == proto.name:
                 func_body.append(self._gen_unmap_memory())
             elif 'Dbg' not in proto.name and 'Wsi' not in proto.name:
                 packet_update_txt = ''
@@ -423,14 +366,14 @@ class Subcommand(object):
                             if 'dataSize' == proto.params[proto.params.index(p)-1].name:
                                 packet_size += 'dataSize + '
                             elif 'counterCount' == proto.params[proto.params.index(p)-1].name:
-                                packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
+                                packet_size += 'sizeof(%s) + ' % p.ty.strip('*').replace('const ', '')
                             else:
                                 packet_size += '((pDataSize != NULL && pData != NULL) ? *pDataSize : 0) + '
-                        elif '**' in p.ty and 'VOID' in p.ty:
+                        elif '**' in p.ty and 'void' in p.ty:
                             packet_size += 'sizeof(void*) + '
-                        elif 'VOID' in p.ty:
+                        elif 'void' in p.ty:
                             packet_size += 'sizeof(%s) + ' % p.name
-                        elif 'CHAR' in p.ty:
+                        elif 'char' in p.ty:
                             packet_size += '((%s != NULL) ? strlen(%s) + 1 : 0) + ' % (p.name, p.name)
                         elif 'DEVICE_CREATE_INFO' in p.ty:
                             packet_size += 'calc_size_XGL_DEVICE_CREATE_INFO(pCreateInfo) + '
@@ -440,7 +383,7 @@ class Subcommand(object):
                         elif 'IMAGE_SUBRESOURCE' in p.ty and 'pSubresource' == p.name:
                             packet_size += '((pSubresource != NULL) ? sizeof(XGL_IMAGE_SUBRESOURCE) : 0) + '
                         else:
-                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
+                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').replace('const ', '')
                         buff_ptr_indices.append(proto.params.index(p))
                     else:
                         if 'color' == p.name:
@@ -448,14 +391,17 @@ class Subcommand(object):
                         else:
                             packet_update_txt += '    pPacket->%s = %s;\n' % (p.name, p.name)
                     if 'Count' in p.name and proto.params[-1].name != p.name and p.name not in ['queryCount', 'vertexCount', 'indexCount', 'startCounter'] and proto.name not in ['CmdLoadAtomicCounters', 'CmdSaveAtomicCounters']:
-                        packet_size += '%s*' % p.name
+                        if '*' in p.ty:
+                            packet_size += '*%s*' % p.name
+                        else:
+                            packet_size += '%s*' % p.name
                 if '' == packet_size:
                     packet_size = '0'
                 else:
                     packet_size = packet_size.strip(' + ')
                 func_body[-1] = func_body[-1].replace(',', ')')
                 func_body.append('{\n    glv_trace_packet_header* pHeader;')
-                if 'VOID' not in proto.ret or '*' in proto.ret:
+                if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    %s result;' % proto.ret)
                     return_txt = 'result = '
                 if in_data_size:
@@ -469,7 +415,7 @@ class Subcommand(object):
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
                     func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;')
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(size_t));' % (proto.name))
-                elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                elif proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateComputePipeline']:
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
                         func_body.append('    customSize = (pCreateInfo != NULL) ? pCreateInfo->codeSize : 0;')
@@ -528,10 +474,13 @@ class Subcommand(object):
                     for idx in buff_ptr_indices:
                         if 'DEVICE_CREATE_INFO' in proto.params[idx].ty:
                             func_body.append('    add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo);')
-                        elif 'CHAR' in proto.params[idx].ty:
+                        elif 'char' in proto.params[idx].ty:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
                         elif 'Count' in proto.params[idx-1].name and 'queryCount' != proto.params[idx-1].name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
+                            deref = ''
+                            if '*' in proto.params[idx-1].ty:
+                                deref = '*'
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s%s*sizeof(%s), %s);' % (proto.params[idx].name, deref, proto.params[idx-1].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                         elif 'dataSize' == proto.params[idx].name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
                         elif 'pDataSize' == proto.params[idx].name:
@@ -544,7 +493,7 @@ class Subcommand(object):
                             else:
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, %s);' % (proto.params[idx].name, proto.params[idx].name))
                         else:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                     # Some custom add_* and finalize_* function calls for Create* API calls
                     if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                         if 'CreateShader' == proto.name:
@@ -570,7 +519,7 @@ class Subcommand(object):
                             func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
                             func_body.append('    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs);')
                             func_body.append('    finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);')
-                    if 'VOID' not in proto.ret or '*' in proto.ret:
+                    if 'void' not in proto.ret or '*' in proto.ret:
                         func_body.append('    pPacket->result = result;')
                     for idx in buff_ptr_indices:
                         if 'DEVICE_CREATE_INFO' not in proto.params[idx].ty:
@@ -580,7 +529,7 @@ class Subcommand(object):
                         func_body.append('    add_new_handle_to_mem_info(*pMem, pAllocInfo->allocationSize, NULL);')
                     elif 'FreeMemory' in proto.name:
                         func_body.append('    rm_handle_from_mem_info(mem);')
-                if 'VOID' not in proto.ret or '*' in proto.ret:
+                if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    return result;')
                 func_body.append('}\n')
         return "\n".join(func_body)
@@ -600,10 +549,10 @@ class Subcommand(object):
                     if 'Size' in p.name:
                         packet_size += p.name
                     if '*' in p.ty and 'pSysMem' != p.name:
-                        if 'CHAR' in p.ty:
+                        if 'char' in p.ty:
                             packet_size += '((%s != NULL) ? strlen(%s) + 1 : 0) + ' % (p.name, p.name)
                         elif 'Size' not in packet_size:
-                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').strip('const ')
+                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').replace('const ', '')
                         buff_ptr_indices.append(proto.params.index(p))
                         if 'pConnectionInfo' in p.name:
                             packet_size += '((pConnectionInfo->pConnection != NULL) ? sizeof(void *) : 0)'
@@ -615,7 +564,7 @@ class Subcommand(object):
                     packet_size = packet_size.strip(' + ')
                 func_body[-1] = func_body[-1].replace(',', ')')
                 func_body.append('{\n    glv_trace_packet_header* pHeader;')
-                if 'VOID' not in proto.ret or '*' in proto.ret:
+                if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    %s result;' % proto.ret)
                     return_txt = 'result = '
                 func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
@@ -627,23 +576,23 @@ class Subcommand(object):
                 func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
                 func_body.append(packet_update_txt.strip('\n'))
                 for idx in buff_ptr_indices:
-                    if 'CHAR' in proto.params[idx].ty:
+                    if 'char' in proto.params[idx].ty:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
                     elif 'Size' in proto.params[idx-1].name:
                         func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s, %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].name))
                     else:
-                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').strip('const '), proto.params[idx].name))
+                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                 if 'WsiX11AssociateConnection' in proto.name:
                     func_body.append('    if (pConnectionInfo->pConnection != NULL) {')
                     func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pConnectionInfo->pConnection), sizeof(void *), pConnectionInfo->pConnection);')
                     func_body.append('        glv_finalize_buffer_address(pHeader, (void**) &(pPacket->pConnectionInfo->pConnection));')
                     func_body.append('    }')
-                if 'VOID' not in proto.ret or '*' in proto.ret:
+                if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    pPacket->result = result;')
                 for idx in buff_ptr_indices:
                     func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s));' % (proto.params[idx].name))
                 func_body.append('    FINISH_TRACE_PACKET();')
-                if 'VOID' not in proto.ret or '*' in proto.ret:
+                if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    return result;')
                 func_body.append('}\n')
         return "\n".join(func_body)
@@ -846,20 +795,18 @@ class Subcommand(object):
         hf_body.append('')
         hf_body.append('static size_t calculate_pipeline_shader_size(const XGL_PIPELINE_SHADER* shader)')
         hf_body.append('{')
+        hf_body.append('    // TODO : Figure this out for new binding mode')
         hf_body.append('    size_t size = 0;')
         hf_body.append('    uint32_t i, j;')
         hf_body.append('    ')
         hf_body.append('    size += sizeof(XGL_PIPELINE_SHADER);')
         hf_body.append('    // descriptor sets')
-        hf_body.append('    for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        hf_body.append('    /*for (j = 0; j < shader->descriptorSetMapping[i].descriptorCount; j++)')
         hf_body.append('    {')
-        hf_body.append('        for (j = 0; j < shader->descriptorSetMapping[i].descriptorCount; j++)')
+        hf_body.append('        size += sizeof(XGL_DESCRIPTOR_SLOT_INFO);')
+        hf_body.append('        if (shader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
         hf_body.append('        {')
-        hf_body.append('            size += sizeof(XGL_DESCRIPTOR_SLOT_INFO);')
-        hf_body.append('            if (shader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        hf_body.append('            {')
-        hf_body.append('                size += sizeof(XGL_DESCRIPTOR_SET_MAPPING);')
-        hf_body.append('            }')
+        hf_body.append('            size += sizeof(XGL_DESCRIPTOR_SET_MAPPING);')
         hf_body.append('        }')
         hf_body.append('    }')
         hf_body.append('')
@@ -872,27 +819,25 @@ class Subcommand(object):
         hf_body.append('            size += sizeof(XGL_LINK_CONST_BUFFER);')
         hf_body.append('            size += shader->pLinkConstBufferInfo[i].bufferSize;')
         hf_body.append('        }')
-        hf_body.append('    }')
+        hf_body.append('    }*/')
         hf_body.append('    return size;')
         hf_body.append('}')
         hf_body.append('')
         hf_body.append('static void add_pipeline_shader_to_trace_packet(glv_trace_packet_header* pHeader, XGL_PIPELINE_SHADER* packetShader, const XGL_PIPELINE_SHADER* paramShader)')
         hf_body.append('{')
+        hf_body.append('    // TODO : Figure this out for new binding mode')
         hf_body.append('    uint32_t i, j;')
         hf_body.append('    // descriptor sets')
-        hf_body.append('    for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        hf_body.append('    /*glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo), sizeof(XGL_DESCRIPTOR_SLOT_INFO)* paramShader->descriptorSetMapping[i].descriptorCount, paramShader->descriptorSetMapping[i].pDescriptorInfo);')
+        hf_body.append('    for (j = 0; j < paramShader->descriptorSetMapping[i].descriptorCount; j++)')
         hf_body.append('    {')
-        hf_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo), sizeof(XGL_DESCRIPTOR_SLOT_INFO)* paramShader->descriptorSetMapping[i].descriptorCount, paramShader->descriptorSetMapping[i].pDescriptorInfo);')
-        hf_body.append('        for (j = 0; j < paramShader->descriptorSetMapping[i].descriptorCount; j++)')
+        hf_body.append('        if (paramShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
         hf_body.append('        {')
-        hf_body.append('            if (paramShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        hf_body.append('            {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet), sizeof(XGL_DESCRIPTOR_SET_MAPPING), paramShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
-        hf_body.append('            }')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet), sizeof(XGL_DESCRIPTOR_SET_MAPPING), paramShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
         hf_body.append('        }')
-        hf_body.append('        packetShader->descriptorSetMapping[i].descriptorCount = paramShader->descriptorSetMapping[i].descriptorCount;')
         hf_body.append('    }')
-        hf_body.append('')
+        hf_body.append('    packetShader->descriptorSetMapping[i].descriptorCount = paramShader->descriptorSetMapping[i].descriptorCount;')
+        hf_body.append('*/')
         hf_body.append('    // constant buffers')
         hf_body.append('    if (paramShader->linkConstBufferCount > 0 && paramShader->pLinkConstBufferInfo != NULL)')
         hf_body.append('    {')
@@ -907,19 +852,17 @@ class Subcommand(object):
         hf_body.append('static void finalize_pipeline_shader_address(glv_trace_packet_header* pHeader, const XGL_PIPELINE_SHADER* packetShader)')
         hf_body.append('{')
         hf_body.append('    uint32_t i, j;')
+        hf_body.append('    // TODO : Figure this out for new binding mode')
         hf_body.append('    // descriptor sets')
-        hf_body.append('    for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        hf_body.append('    /*for (j = 0; j < packetShader->descriptorSetMapping[i].descriptorCount; j++)')
         hf_body.append('    {')
-        hf_body.append('        for (j = 0; j < packetShader->descriptorSetMapping[i].descriptorCount; j++)')
+        hf_body.append('        if (packetShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
         hf_body.append('        {')
-        hf_body.append('            if (packetShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        hf_body.append('            {')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet));')
-        hf_body.append('            }')
+        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet));')
         hf_body.append('        }')
-        hf_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo));')
         hf_body.append('    }')
-        hf_body.append('')
+        hf_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo));')
+        hf_body.append('*/')
         hf_body.append('    // constant buffers')
         hf_body.append('    if (packetShader->linkConstBufferCount > 0 && packetShader->pLinkConstBufferInfo != NULL)')
         hf_body.append('    {')
@@ -939,21 +882,18 @@ class Subcommand(object):
         hf_body.append('    {')
         hf_body.append('        switch (pNext->sType)')
         hf_body.append('        {')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:')
-        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);')
-        hf_body.append('                break;')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:')
-        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO);')
-        hf_body.append('                break;')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:')
-        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO);')
-        hf_body.append('                break;')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:')
-        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_DB_STATE_CREATE_INFO);')
-        hf_body.append('                break;')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:')
-        hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_CB_STATE);')
-        hf_body.append('                break;')
+        pipe_state_list = ['IA_STATE_CREATE_INFO',
+                           'TESS_STATE_CREATE_INFO',
+                           'RS_STATE_CREATE_INFO',
+                           'DS_STATE_CREATE_INFO',
+                           'CB_STATE_CREATE_INFO',
+                           'VP_STATE_CREATE_INFO',
+                           'MS_STATE_CREATE_INFO'
+                           ]
+        for pipe_state in pipe_state_list:
+            hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_%s:' % pipe_state)
+            hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_%s);' % pipe_state)
+            hf_body.append('                break;')
         hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:')
         hf_body.append('            {')
         hf_body.append('                const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pShaderStage = (const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext;')
@@ -986,41 +926,15 @@ class Subcommand(object):
         hf_body.append('')
         hf_body.append('        switch (pInNow->sType)')
         hf_body.append('        {')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:')
-        hf_body.append('            {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO), pInNow);')
-        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
-        hf_body.append('                break;')
-        hf_body.append('            }')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:')
-        hf_body.append('            {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO), pInNow);')
-        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
-        hf_body.append('                break;')
-        hf_body.append('            }')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:')
-        hf_body.append('            {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO), pInNow);')
-        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
-        hf_body.append('                break;')
-        hf_body.append('            }')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:')
-        hf_body.append('            {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_DB_STATE_CREATE_INFO), pInNow);')
-        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
-        hf_body.append('                break;')
-        hf_body.append('            }')
-        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:')
-        hf_body.append('            {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_CB_STATE), pInNow);')
-        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
-        hf_body.append('                break;')
-        hf_body.append('            }')
+        # TODO : FINISH THIS LOOP AND DELETE CODE BELOW IT
+        for pipe_state in pipe_state_list:
+            hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_%s:' % pipe_state)
+            hf_body.append('            {')
+            hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_%s), pInNow);' % pipe_state)
+            hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+            hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+            hf_body.append('                break;')
+            hf_body.append('            }')
         hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:')
         hf_body.append('            {')
         hf_body.append('                XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacket = NULL;')
@@ -1253,23 +1167,20 @@ class Subcommand(object):
         pid_enum.append('    }\n')
         pid_enum.append('    return pXGL_DEVICE_CREATE_INFO;')
         pid_enum.append('}\n')
+        pid_enum.append('#if 0 // Need to update this code for new resource binding method')
         pid_enum.append('static void interpret_pipeline_shader(glv_trace_packet_header*  pHeader, XGL_PIPELINE_SHADER* pShader)')
         pid_enum.append('{')
         pid_enum.append('    uint32_t i, j;')
         pid_enum.append('    if (pShader != NULL)')
         pid_enum.append('    {')
         pid_enum.append('        // descriptor sets')
-        pid_enum.append('        // TODO: need to ensure XGL_MAX_DESCRIPTOR_SETS is equal in replay as it was at trace time - meta data')
-        pid_enum.append('        for (i = 0; i < XGL_MAX_DESCRIPTOR_SETS; i++)')
+        pid_enum.append('        pShader->descriptorSetMapping[i].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo);')
+        pid_enum.append('        for (j = 0; j < pShader->descriptorSetMapping[i].descriptorCount; j++)')
         pid_enum.append('        {')
-        pid_enum.append('            pShader->descriptorSetMapping[i].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo);')
-        pid_enum.append('            for (j = 0; j < pShader->descriptorSetMapping[i].descriptorCount; j++)')
+        pid_enum.append('            if (pShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
         pid_enum.append('            {')
-        pid_enum.append('                if (pShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        pid_enum.append('                {')
-        pid_enum.append('                    XGL_DESCRIPTOR_SLOT_INFO* pInfo = (XGL_DESCRIPTOR_SLOT_INFO*)pShader->descriptorSetMapping[i].pDescriptorInfo;')
-        pid_enum.append('                    pInfo[j].pNextLevelSet = (const XGL_DESCRIPTOR_SET_MAPPING*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
-        pid_enum.append('                }')
+        pid_enum.append('                XGL_DESCRIPTOR_SLOT_INFO* pInfo = (XGL_DESCRIPTOR_SLOT_INFO*)pShader->descriptorSetMapping[i].pDescriptorInfo;')
+        pid_enum.append('                pInfo[j].pNextLevelSet = (const XGL_DESCRIPTOR_SET_MAPPING*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
         pid_enum.append('            }')
         pid_enum.append('        }\n')
         pid_enum.append('        // constant buffers')
@@ -1285,6 +1196,7 @@ class Subcommand(object):
         pid_enum.append('        }')
         pid_enum.append('    }')
         pid_enum.append('}\n')
+        pid_enum.append('#endif')
         pid_enum.append('//=============================================================================')
         return "\n".join(pid_enum)
 
@@ -1330,8 +1242,10 @@ class Subcommand(object):
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:\n',
-                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:\n',
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
@@ -1341,7 +1255,7 @@ class Subcommand(object):
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            interpret_pipeline_shader(pHeader, &pNext->shader);\n',
+                                                                                         '            // TODO : update interpret_pipeline_shader(pHeader, &pNext->shader);\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:\n',
@@ -1358,7 +1272,7 @@ class Subcommand(object):
                                                                                          '    }\n',
                                                                                          '    pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;\n',
                                                                                          '}']},
-                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
+                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['// TODO : Update interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
         if_body = []
         if_body.append('typedef struct struct_xglApiVersion {')
         if_body.append('    glv_trace_packet_header* header;')
@@ -1519,32 +1433,39 @@ class Subcommand(object):
         return txt
 
     def _generate_replay_class(self):
-        obj_map_dict = {'m_gpus': 'XGL_PHYSICAL_GPU',
-                        'm_devices': 'XGL_DEVICE',
-                        'm_queues': 'XGL_QUEUE',
-                        'm_memories': 'XGL_GPU_MEMORY',
-                        'm_images': 'XGL_IMAGE',
-                        'm_imageViews': 'XGL_IMAGE_VIEW',
-                        'm_colorTargetViews': 'XGL_COLOR_ATTACHMENT_VIEW',
-                        'm_depthStencilViews': 'XGL_DEPTH_STENCIL_VIEW',
-                        'm_shader': 'XGL_SHADER',
-                        'm_pipeline': 'XGL_PIPELINE',
-                        'm_pipelineDelta': 'XGL_PIPELINE_DELTA',
-                        'm_sampler': 'XGL_SAMPLER',
-                        'm_descriptorSets': 'XGL_DESCRIPTOR_SET',
-                        'm_viewportStates': 'XGL_VIEWPORT_STATE_OBJECT',
-                        'm_rasterStates': 'XGL_RASTER_STATE_OBJECT',
-                        'm_msaaStates': 'XGL_MSAA_STATE_OBJECT',
-                        'm_colorBlendStates': 'XGL_COLOR_BLEND_STATE_OBJECT',
-                        'm_depthStencilStates': 'XGL_DEPTH_STENCIL_STATE_OBJECT',
-                        'm_cmdBuffers': 'XGL_CMD_BUFFER',
-                        'm_fences': 'XGL_FENCE',
-                        'm_queue_semaphores': 'XGL_QUEUE_SEMAPHORE',
-                        'm_events': 'XGL_EVENT',
-                        'm_queryPools': 'XGL_QUERY_POOL',
-                        'm_framebuffers': 'XGL_FRAMEBUFFER',
-                        'm_renderPasses': 'XGL_RENDER_PASS'
-                        }
+#        obj_map_dict = {'m_gpus': 'XGL_PHYSICAL_GPU',
+#                        'm_devices': 'XGL_DEVICE',
+#                        'm_queues': 'XGL_QUEUE',
+#                        'm_memories': 'XGL_GPU_MEMORY',
+#                        'm_images': 'XGL_IMAGE',
+#                        'm_imageViews': 'XGL_IMAGE_VIEW',
+#                        'm_colorTargetViews': 'XGL_COLOR_ATTACHMENT_VIEW',
+#                        'm_depthStencilViews': 'XGL_DEPTH_STENCIL_VIEW',
+#                        'm_shader': 'XGL_SHADER',
+#                        'm_pipeline': 'XGL_PIPELINE',
+#                        'm_pipelineDelta': 'XGL_PIPELINE_DELTA',
+#                        'm_sampler': 'XGL_SAMPLER',
+#                        'm_descriptorSets': 'XGL_DESCRIPTOR_SET',
+#                        'm_viewportStates': 'XGL_DYNAMIC_VP_STATE_OBJECT',
+#                        'm_rasterStates': 'XGL_DYNAMIC_RS_STATE_OBJECT',
+#                        'm_colorBlendStates': 'XGL_DYNAMIC_CB_STATE_OBJECT',
+#                        'm_depthStencilStates': 'XGL_DYNAMIC_DS_STATE_OBJECT',
+#                        'm_cmdBuffers': 'XGL_CMD_BUFFER',
+#                        'm_fences': 'XGL_FENCE',
+#                        'm_queue_semaphores': 'XGL_QUEUE_SEMAPHORE',
+#                        'm_events': 'XGL_EVENT',
+#                        'm_queryPools': 'XGL_QUERY_POOL',
+#                        }
+        # Create dict mapping member var names to XGL type (i.e. 'm_imageViews' : 'XGL_IMAGE_VIEW')
+        obj_map_dict = {}
+        for ty in xgl.object_type_list:
+            if ty in xgl.object_parent_list:
+                continue
+            mem_var = ty.replace('XGL_', '').lower()
+            mem_var_list = mem_var.split('_')
+#            mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([x.title() for x in mem_var_list[1:]])
+            mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
+            obj_map_dict[mem_var] = ty
         rc_body = []
         rc_body.append('class xglReplay : public ApiReplay {')
         rc_body.append('public:')
@@ -1558,7 +1479,6 @@ class Subcommand(object):
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();')
         rc_body.append('private:')
         rc_body.append('    struct xglFuncs m_xglFuncs;')
-        rc_body.append('    void copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange);')
         rc_body.append('    xglDisplay *m_display;')
         rc_body.append('    struct shaderPair {')
         rc_body.append('        XGL_SHADER *addr;')
@@ -1639,44 +1559,22 @@ class Subcommand(object):
             rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
             rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
             rc_body.append(self._remap_decl(obj_map_dict[var], var))
-        # XGL_STATE_OBJECT code
-        state_obj_remap_types = [
-                'XGL_VIEWPORT_STATE_OBJECT',
-                'XGL_RASTER_STATE_OBJECT',
-                'XGL_MSAA_STATE_OBJECT',
-                'XGL_COLOR_BLEND_STATE_OBJECT',
-                'XGL_DEPTH_STENCIL_STATE_OBJECT',
-        ]
-        rc_body.append('    XGL_STATE_OBJECT remap(const XGL_STATE_OBJECT& state)\n    {')
-        rc_body.append('        XGL_STATE_OBJECT obj;')
+        # XGL_DYNAMIC_STATE_OBJECT code
+        state_obj_remap_types = xgl.object_dynamic_state_list
+        rc_body.append('    XGL_DYNAMIC_STATE_OBJECT remap(const XGL_DYNAMIC_STATE_OBJECT& state)\n    {')
+        rc_body.append('        XGL_DYNAMIC_STATE_OBJECT obj;')
         for t in state_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (state))) != XGL_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
         rc_body.append('        return XGL_NULL_HANDLE;\n    }')
-        rc_body.append('    void rm_from_map(const XGL_STATE_OBJECT& state)\n    {')
+        rc_body.append('    void rm_from_map(const XGL_DYNAMIC_STATE_OBJECT& state)\n    {')
         for t in state_obj_remap_types:
             rc_body.append('        rm_from_map(static_cast <%s> (state));' % t)
         rc_body.append('    }')
         # OBJECT code
         rc_body.append('    XGL_OBJECT remap(const XGL_OBJECT& object)\n    {')
         rc_body.append('        XGL_OBJECT obj;')
-        obj_remap_types = [
-                'XGL_CMD_BUFFER',
-                'XGL_IMAGE',
-                'XGL_IMAGE_VIEW',
-                'XGL_COLOR_ATTACHMENT_VIEW',
-                'XGL_DEPTH_STENCIL_VIEW',
-                'XGL_SHADER',
-                'XGL_PIPELINE',
-                'XGL_PIPELINE_DELTA',
-                'XGL_SAMPLER',
-                'XGL_DESCRIPTOR_SET',
-                'XGL_STATE_OBJECT',
-                'XGL_FENCE',
-                'XGL_QUEUE_SEMAPHORE',
-                'XGL_EVENT',
-                'XGL_QUERY_POOL',
-        ]
+        obj_remap_types = xgl.object_list
         for var in obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % (var))
             rc_body.append('            return obj;')
@@ -1992,19 +1890,6 @@ class Subcommand(object):
         ri_body.append('}')
         return "\n".join(ri_body)
 
-    def _generate_replay_remap(self):
-        # values to map and bool indicates if remap required for source
-        rr_dict = {'pageCount': False, 'realStartPage': False, 'realMem': True, 'virtualStartPage': False, 'virtualMem': True}
-        rr_body = []
-        rr_body.append('void xglReplay::copy_mem_remap_range_struct(XGL_VIRTUAL_MEMORY_REMAP_RANGE *outRange, const XGL_VIRTUAL_MEMORY_REMAP_RANGE *inRange)\n{')
-        for k in rr_dict:
-            if rr_dict[k]:
-                rr_body.append('    outRange->%s = remap(inRange->%s);' % (k, k))
-            else:
-                rr_body.append('    outRange->%s = inRange->%s;' % (k, k))
-        rr_body.append('}')
-        return "\n".join(rr_body)
-
     def _generate_replay_errors(self):
         re_body = []
         re_body.append('glv_replay::GLV_REPLAY_RESULT xglReplay::handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn)')
@@ -2012,7 +1897,7 @@ class Subcommand(object):
         re_body.append('    glv_replay::GLV_REPLAY_RESULT res = resIn;')
         re_body.append('    if (resCall != resTrace) {')
         re_body.append('        glv_LogWarn("Mismatched return from API call (%s) traced result %s, replay result %s\\n", entrypointName,')
-        re_body.append('                string_XGL_RESULT(resTrace), string_XGL_RESULT(resCall));')
+        re_body.append('                string_XGL_RESULT((XGL_RESULT)resTrace), string_XGL_RESULT((XGL_RESULT)resCall));')
         re_body.append('        res = glv_replay::GLV_REPLAY_BAD_RETURN;')
         re_body.append('    }')
         re_body.append('#if 0')
@@ -2056,36 +1941,42 @@ class Subcommand(object):
 
     def _get_packet_param(self, t, n):
         # list of types that require remapping
-        remap_list = [
-                'XGL_PHYSICAL_GPU',
-                'XGL_DEVICE',
-                'XGL_QUEUE',
-                'XGL_GPU_MEMORY',
-                'XGL_IMAGE',
-                'XGL_IMAGE_VIEW',
-                'XGL_COLOR_ATTACHMENT_VIEW',
-                'XGL_DEPTH_STENCIL_VIEW',
-                'XGL_SHADER',
-                'XGL_PIPELINE',
-                'XGL_PIPELINE_DELTA',
-                'XGL_SAMPLER',
-                'XGL_DESCRIPTOR_SET',
-                'XGL_VIEWPORT_STATE_OBJECT',
-                'XGL_RASTER_STATE_OBJECT',
-                'XGL_MSAA_STATE_OBJECT',
-                'XGL_COLOR_BLEND_STATE_OBJECT',
-                'XGL_DEPTH_STENCIL_STATE_OBJECT',
-                'XGL_CMD_BUFFER',
-                'XGL_FENCE',
-                'XGL_QUEUE_SEMAPHORE',
-                'XGL_EVENT',
-                'XGL_QUERY_POOL',
-                'XGL_STATE_OBJECT',
-                'XGL_BASE_OBJECT',
-                'XGL_OBJECT',
-        ]
-        param_exclude_list = ['p1', 'p2']
-        if t.strip('*').strip('const ') in remap_list and n not in param_exclude_list:
+        remap_list = xgl.object_type_list
+#[
+#                'XGL_PHYSICAL_GPU',
+#                'XGL_DEVICE',
+#                'XGL_QUEUE',
+#                'XGL_GPU_MEMORY',
+#                'XGL_IMAGE',
+#                'XGL_IMAGE_VIEW',
+#                'XGL_COLOR_ATTACHMENT_VIEW',
+#                'XGL_DEPTH_STENCIL_VIEW',
+#                'XGL_SHADER',
+#                'XGL_PIPELINE',
+#                'XGL_PIPELINE_DELTA',
+#                'XGL_SAMPLER',
+#                'XGL_DESCRIPTOR_SET',
+#                'XGL_VIEWPORT_STATE_OBJECT',
+#                'XGL_RASTER_STATE_OBJECT',
+#                'XGL_MSAA_STATE_OBJECT',
+#                'XGL_COLOR_BLEND_STATE_OBJECT',
+#                'XGL_DEPTH_STENCIL_STATE_OBJECT',
+#                'XGL_CMD_BUFFER',
+#                'XGL_FENCE',
+#                'XGL_QUEUE_SEMAPHORE',
+#                'XGL_EVENT',
+#                'XGL_QUERY_POOL',
+#                'XGL_STATE_OBJECT',
+#                'XGL_BASE_OBJECT',
+#                'XGL_OBJECT',
+#        ]
+        param_exclude_list = ['p1', 'p2', 'pGpus', 'pDescriptorSets']
+        if t.strip('*').replace('const ', '') in remap_list and n not in param_exclude_list:
+            if '*' in t:
+                if 'const ' not in t:
+                    return 'remap(*pPacket->%s)' % (n)
+                else: # TODO : Don't remap array ptrs?
+                    return 'pPacket->%s' % (n)
             return 'remap(pPacket->%s)' % (n)
         return 'pPacket->%s' % (n)
 
@@ -2240,7 +2131,7 @@ class Subcommand(object):
 
         cd_body.append('                    memcpy(&cInfo, pPacket->pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));')
         cd_body.append('                    cInfo.flags = pPacket->pCreateInfo->flags | XGL_DEVICE_CREATE_VALIDATION_BIT;')
-        cd_body.append('                    cInfo.maxValidationLevel = (XGL_VALIDATION_LEVEL)((g_xglReplaySettings.debugLevel <= 4) ? XGL_VALIDATION_LEVEL_0 + g_xglReplaySettings.debugLevel : XGL_VALIDATION_LEVEL_0);')
+        cd_body.append('                    cInfo.maxValidationLevel = (XGL_VALIDATION_LEVEL)((g_xglReplaySettings.debugLevel <= 4) ? (unsigned int) XGL_VALIDATION_LEVEL_0 + g_xglReplaySettings.debugLevel : (unsigned int) XGL_VALIDATION_LEVEL_0);')
         cd_body.append('                    pPacket->pCreateInfo = &cInfo;')
         cd_body.append('                    replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);')
         cd_body.append('                    // restore the packet for next replay')
@@ -2310,30 +2201,6 @@ class Subcommand(object):
         qs_body.append('            GLV_DELETE(remappedBuffers);')
         qs_body.append('            GLV_DELETE(memRefs);')
         return "\n".join(qs_body)
-
-    def _gen_replay_remap_virtual_memory_pages(self):
-        rvm_body = []
-        rvm_body.append('            XGL_VIRTUAL_MEMORY_REMAP_RANGE *pRemappedRanges = GLV_NEW_ARRAY( XGL_VIRTUAL_MEMORY_REMAP_RANGE, pPacket->rangeCount);')
-        rvm_body.append('            for (uint32_t i = 0; i < pPacket->rangeCount; i++)')
-        rvm_body.append('            {')
-        rvm_body.append('                copy_mem_remap_range_struct(pRemappedRanges + i, (pPacket->pRanges + i));')
-        rvm_body.append('            }')
-        rvm_body.append('            XGL_QUEUE_SEMAPHORE *pRemappedPreSema = GLV_NEW_ARRAY(XGL_QUEUE_SEMAPHORE, pPacket->preWaitSemaphoreCount);')
-        rvm_body.append('            for (uint32_t i = 0; i < pPacket->preWaitSemaphoreCount; i++)')
-        rvm_body.append('            {')
-        rvm_body.append('                *(pRemappedPreSema + i) = *(pPacket->pPreWaitSemaphores + i);')
-        rvm_body.append('            }')
-        rvm_body.append('            XGL_QUEUE_SEMAPHORE *pRemappedPostSema = GLV_NEW_ARRAY(XGL_QUEUE_SEMAPHORE, pPacket->postSignalSemaphoreCount);')
-        rvm_body.append('            for (uint32_t i = 0; i < pPacket->postSignalSemaphoreCount; i++)')
-        rvm_body.append('            {')
-        rvm_body.append('                *(pRemappedPostSema + i) = *(pPacket->pPostSignalSemaphores + i);')
-        rvm_body.append('            }')
-        rvm_body.append('            replayResult = m_xglFuncs.real_xglRemapVirtualMemoryPages(remap(pPacket->device), pPacket->rangeCount, pRemappedRanges, pPacket->preWaitSemaphoreCount,')
-        rvm_body.append('                                                     pPacket->pPreWaitSemaphores, pPacket->postSignalSemaphoreCount, pPacket->pPostSignalSemaphores);')
-        rvm_body.append('            GLV_DELETE(pRemappedRanges);')
-        rvm_body.append('            GLV_DELETE(pRemappedPreSema);')
-        rvm_body.append('            GLV_DELETE(pRemappedPostSema);')
-        return "\n".join(rvm_body)
 
     def _gen_replay_get_object_info(self):
         goi_body = []
@@ -2455,7 +2322,7 @@ class Subcommand(object):
         cf_body.append('                pInfo->pColorAttachments = pColorAttachments;')
         cf_body.append('            }')
         cf_body.append('            // remap depth stencil target')
-        cf_body.append('            XGL_DEPTH_STENCIL_BIND_INFO *pSavedDS = pInfo->pDepthStencilAttachment;')
+        cf_body.append('            const XGL_DEPTH_STENCIL_BIND_INFO *pSavedDS = pInfo->pDepthStencilAttachment;')
         cf_body.append('            XGL_DEPTH_STENCIL_BIND_INFO depthTarget;')
         cf_body.append('            if (pSavedDS != NULL)')
         cf_body.append('            {')
@@ -2652,7 +2519,6 @@ class Subcommand(object):
                             'CreateDevice': self._gen_replay_create_device,
                             'GetExtensionSupport': self._gen_replay_get_extension_support,
                             'QueueSubmit': self._gen_replay_queue_submit,
-                            'RemapVirtualMemoryPages': self._gen_replay_remap_virtual_memory_pages,
                             'GetObjectInfo': self._gen_replay_get_object_info,
                             'GetFormatInfo': self._gen_replay_get_format_info,
                             'GetImageSubresourceInfo': self._gen_replay_get_image_subresource_info,
@@ -2701,8 +2567,8 @@ class Subcommand(object):
             create_func = False
             transitions = False
             ds_attach = False
-            # TODO : How to handle VOID* return of GetProcAddr?
-            if ('VOID' not in proto.ret) and (proto.name not in custom_check_ret_val):
+            # TODO : How to handle void* return of GetProcAddr?
+            if ('void' not in proto.ret) and (proto.name not in custom_check_ret_val):
                 ret_value = True
             if proto.name in create_view_list:
                 create_view = True
@@ -2721,26 +2587,26 @@ class Subcommand(object):
                 if proto.name in custom_open_params:
                     rbody.append('            XGL_DEVICE handle;')
                     for pidx in custom_open_params[proto.name]:
-                        rbody.append('            %s local_%s;' % (proto.params[pidx].ty.strip('const ').strip('*'), proto.params[pidx].name))
+                        rbody.append('            %s local_%s;' % (proto.params[pidx].ty.replace('const ', '').strip('*'), proto.params[pidx].name))
                     rbody.append('            handle = remap(pPacket->device);')
                 elif create_view:
-                    rbody.append('            %s createInfo;' % (proto.params[1].ty.strip('*').strip('const ')))
-                    rbody.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(%s));' % (proto.params[1].ty.strip('*').strip('const ')))
+                    rbody.append('            %s createInfo;' % (proto.params[1].ty.strip('*').replace('const ', '')))
+                    rbody.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(%s));' % (proto.params[1].ty.strip('*').replace('const ', '')))
                     if 'CreateComputePipeline' == proto.name:
                         rbody.append('            createInfo.cs.shader = remap(pPacket->pCreateInfo->cs.shader);')
                     else:
                         rbody.append('            createInfo.image = remap(pPacket->pCreateInfo->image);')
-                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').strip('const '), proto.params[-1].name))
+                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif create_func: # Declare local var to store created handle into
-                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').strip('const '), proto.params[-1].name))
+                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif transitions:
-                    rbody.append('            %s pStateTransitions = (%s)pPacket->pStateTransitions;' % (proto.params[-1].ty.strip('const '), proto.params[-1].ty.strip('const ')))
+                    rbody.append('            %s pStateTransitions = (%s)pPacket->pStateTransitions;' % (proto.params[-1].ty.replace('const ', ''), proto.params[-1].ty.replace('const ', '')))
                     rbody.append('            bool allocatedMem = false;')
                     rbody.append('            if (pStateTransitions != NULL)')
                     rbody.append('            {')
                     rbody.append('                allocatedMem = true;')
-                    rbody.append('                pStateTransitions = GLV_NEW_ARRAY(%s, pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').strip('const ')))
-                    rbody.append('                memcpy(pStateTransitions, pPacket->pStateTransitions, sizeof(%s) * pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').strip('const ')))
+                    rbody.append('                pStateTransitions = GLV_NEW_ARRAY(%s, pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').replace('const ', '')))
+                    rbody.append('                memcpy(pStateTransitions, pPacket->pStateTransitions, sizeof(%s) * pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').replace('const ', '')))
                     rbody.append('                for (uint32_t i = 0; i < pPacket->transitionCount; i++)')
                     rbody.append('                {')
                     if 'Memory' in proto.name:
@@ -3082,7 +2948,6 @@ class GlaveReplayC(Subcommand):
                 self._generate_replay_display_window(),
                 self._generate_replay_structors(),
                 self._generate_replay_init(),
-                self._generate_replay_remap(),
                 self._generate_replay_errors(),
                 self._generate_replay_validation_funcs(),
                 self._generate_replay_init_funcs(),

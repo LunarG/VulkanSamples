@@ -52,6 +52,7 @@ QString glvdebug_xgl_QFileModel::get_packet_string(const glv_trace_packet_header
 
 bool glvdebug_xgl_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) const
 {
+    // TODO : Update this based on latest API updates
     bool isDraw = false;
     switch((GLV_TRACE_PACKET_ID_XGL)packetId)
     {
@@ -61,13 +62,13 @@ bool glvdebug_xgl_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) con
         case GLV_TPI_XGL_xglCmdDrawIndexedIndirect:
         case GLV_TPI_XGL_xglCmdDispatch:
         case GLV_TPI_XGL_xglCmdDispatchIndirect:
-        case GLV_TPI_XGL_xglCmdCopyMemory:
+        case GLV_TPI_XGL_xglCmdCopyBuffer:
         case GLV_TPI_XGL_xglCmdCopyImage:
-        case GLV_TPI_XGL_xglCmdCopyMemoryToImage:
-        case GLV_TPI_XGL_xglCmdCopyImageToMemory:
+        case GLV_TPI_XGL_xglCmdCopyBufferToImage:
+        case GLV_TPI_XGL_xglCmdCopyImageToBuffer:
         case GLV_TPI_XGL_xglCmdCloneImageData:
-        case GLV_TPI_XGL_xglCmdUpdateMemory:
-        case GLV_TPI_XGL_xglCmdFillMemory:
+        case GLV_TPI_XGL_xglCmdUpdateBuffer:
+        case GLV_TPI_XGL_xglCmdFillBuffer:
         case GLV_TPI_XGL_xglCmdClearColorImage:
         case GLV_TPI_XGL_xglCmdClearColorImageRaw:
         case GLV_TPI_XGL_xglCmdClearDepthStencil:
