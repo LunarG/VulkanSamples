@@ -172,52 +172,78 @@ protected slots:
             QCoreApplication::processEvents();
             if (m_bPauseReplay)
             {
-                emit ReplayPaused(m_currentReplayPacketIndex);
+                doReplayPaused(m_currentReplayPacketIndex);
                 return;
             }
 
             if (m_bStopReplay)
             {
-                emit ReplayStopped(m_currentReplayPacketIndex);
+                doReplayStopped(m_currentReplayPacketIndex);
                 m_currentReplayPacketIndex = 0;
                 return;
             }
         }
 
-        emit ReplayFinished();
+        doReplayFinished();
     }
 
 public slots:
+
     void StartReplay()
     {
+        // Starting the replay can happen immediately.
+        // Update the UI to reflect that the replay is started
+        m_pView->output_message(QString("Replay Started"));
+        m_pView->on_replay_state_changed(true);
+        emit ReplayStarted();
+
+        // Reset some flags and play the replay from the beginning
         m_bPauseReplay = false;
         m_bStopReplay = false;
-
-        emit ReplayStarted();
         playCurrentTraceFile(0);
     }
 
     void StepReplay()
     {
+        // Stepping the replay can happen immediately.
+        // Update the UI to repflect that it has been stepped
+        m_pView->output_message(QString("Replay Stepped"));
+        m_pView->on_replay_state_changed(true);
         emit ReplayContinued();
+
+        // Set the pause flag so that the replay will stop after replaying the next packet.
         m_bPauseReplay = true;
         playCurrentTraceFile(m_currentReplayPacketIndex+1);
     }
 
     void PauseReplay()
     {
+        // Pausing the replay happens asyncronously.
+        // So set the pause flag and the replay will
+        // react to it as soon as it can. It will call
+        // doReplayPaused() when it has paused.
         m_bPauseReplay = true;
     }
 
     void ContinueReplay()
     {
-        m_bPauseReplay = false;
+        // Continuing the replay can happen immediately.
+        // Update the UI to reflect being continued.
+        m_pView->output_message(QString("Replay Continued"));
+        m_pView->on_replay_state_changed(true);
         emit ReplayContinued();
+
+        // clear the pause flag and continue the replay from the next packet
+        m_bPauseReplay = false;
         playCurrentTraceFile(m_currentReplayPacketIndex+1);
     }
 
     void StopReplay()
     {
+        // Stopping the replay happens asycnronously.
+        // Set the stop flag and the replay will
+        // react to it as soon as it can. It will call
+        // doReplayStopped() when it has stopped.
         m_bStopReplay = true;
     }
 
@@ -254,6 +280,31 @@ protected:
     {
         m_pView = pView;
         s_pView = pView;
+    }
+
+    void doReplayPaused(uint64_t packetIndex)
+    {
+        m_pView->output_message(QString("Replay Paused at packet index %1").arg(packetIndex));
+        m_pView->on_replay_state_changed(false);
+        m_pView->select_call_at_packet_index(packetIndex);
+
+        emit ReplayPaused(packetIndex);
+    }
+
+    void doReplayStopped(uint64_t packetIndex)
+    {
+        m_pView->output_message(QString("Replay Stopped at packet index %1").arg(packetIndex));
+        m_pView->on_replay_state_changed(false);
+
+        emit ReplayStopped(packetIndex);
+    }
+
+    void doReplayFinished()
+    {
+        m_pView->output_message(QString("Replay Finished"));
+        m_pView->on_replay_state_changed(false);
+
+        emit ReplayFinished();
     }
 
     bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget)

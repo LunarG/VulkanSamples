@@ -90,7 +90,6 @@ public:
 
         // connect worker signals to widget actions
         connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(slotReplayStarted()));
-        connect(m_pWorker, SIGNAL(ReplayStepped()), this, SLOT(slotReplayStepped()));
         connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(slotReplayPaused(uint64_t)));
         connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(slotReplayContinued()));
         connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(slotReplayStopped(uint64_t)));
@@ -145,12 +144,6 @@ private slots:
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
-    }
-
-    void slotReplayStepped()
-    {
-        // treated the same as continue
-        slotReplayContinued();
     }
 
     void slotReplayPaused(uint64_t)

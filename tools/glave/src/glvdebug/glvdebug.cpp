@@ -205,6 +205,18 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
     }
 }
 
+void glvdebug::on_replay_state_changed(bool bReplayInProgress)
+{
+    bool bEnableUi = !bReplayInProgress;
+    ui->treeView->setEnabled(bEnableUi);
+    this->m_pGenerateTraceButton->setEnabled(bEnableUi);
+    ui->nextDrawcallButton->setEnabled(bEnableUi);
+    ui->prevDrawcallButton->setEnabled(bEnableUi);
+    ui->searchNextButton->setEnabled(bEnableUi);
+    ui->searchPrevButton->setEnabled(bEnableUi);
+    ui->searchTextBox->setEnabled(bEnableUi);
+}
+
 void glvdebug::reset_view()
 {
     while (ui->stateTabWidget->count() > 0)

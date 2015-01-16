@@ -103,15 +103,11 @@ void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 
 void glvdebug_xgl_QController::onReplayStarted()
 {
-    m_pView->output_message(QString("Replay Started"));
     setStateWidgetsEnabled(false);
 }
 
 void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
-    m_pView->output_message(QString("Replay Paused at packet index %1").arg(packetIndex));
-    m_pView->select_call_at_packet_index(packetIndex);
-
     // TODO: Get state data from XGL layers (if they are enabled) and use m_pView->add_custom_state_viewer(...) to add the necessary widgets to the UI.
     // The widgets should be allocated here and kept as members variable, so that they can be made more dynamic as features are added.
     // eg:
@@ -133,18 +129,15 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
 void glvdebug_xgl_QController::onReplayContinued()
 {
-    m_pView->output_message(QString("Replay Continued"));
     setStateWidgetsEnabled(false);
 }
 
 void glvdebug_xgl_QController::onReplayStopped(uint64_t packetIndex)
 {
-    m_pView->output_message(QString("Replay Stopped at packet index %1").arg(packetIndex));
 }
 
 void glvdebug_xgl_QController::onReplayFinished()
 {
-    m_pView->output_message(QString("Replay Finished"));
 }
 
 BOOL glvdebug_xgl_QController::PrintReplayInfoMsgs()

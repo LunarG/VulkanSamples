@@ -52,5 +52,6 @@ public:
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false) = 0;
 
     virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled) = 0;
-    //virtual void set_statetree_model(glvdebug_QStateTreeModel* pModel) = 0;
+
+    virtual void on_replay_state_changed(bool bReplayInProgress) = 0;
 };
