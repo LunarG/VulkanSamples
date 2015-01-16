@@ -863,14 +863,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     memset(&view_info, 0, sizeof(view_info));
     view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = demo->uniform_data.buf;
-    view_info.viewType = XGL_BUFFER_VIEW_TYPED;
-    view_info.stride = 16;
-    view_info.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    view_info.format.numericFormat = XGL_NUM_FMT_FLOAT;
-    view_info.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    view_info.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    view_info.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    view_info.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    view_info.viewType = XGL_BUFFER_VIEW_RAW;
     view_info.offset = 0;
     view_info.range = sizeof(data);
 
