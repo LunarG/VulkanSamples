@@ -1070,7 +1070,11 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
     const bool will_write = (buf->usage |
             (XGL_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
              XGL_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
+    XGL_FORMAT format;
+    XGL_GPU_SIZE stride;
+    uint32_t *cmd;
     struct intel_buf_view *view;
+    int i;
 
     view = (struct intel_buf_view *) intel_base_create(dev, sizeof(*view),
             dev->base.dbg, XGL_DBG_OBJECT_BUFFER_VIEW, info, 0);
@@ -1080,18 +1084,43 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
     view->obj.destroy = buf_view_destroy;
 
     view->buf = buf;
-    view->info = *info;
 
-    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
-        surface_state_buf_gen7(dev->gpu, info->offset,
-                info->range, info->stride, info->format,
-                will_write, will_write, view->cmd);
-        view->cmd_len = 8;
+    /*
+     * The compiler expects uniform buffers to have pitch of
+     * 4 for fragment shaders, but 16 for other stages.  The format
+     * must be XGL_FMT_R32G32B32A32_SFLOAT.
+     */
+    if (info->viewType == XGL_BUFFER_VIEW_RAW) {
+        format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        format.numericFormat = XGL_NUM_FMT_FLOAT;
+        stride = 16;
     } else {
-        surface_state_buf_gen6(dev->gpu, info->offset,
-                info->range, info->stride, info->format,
-                will_write, will_write, view->cmd);
-        view->cmd_len = 6;
+        format = info->format;
+        stride = info->stride;
+    }
+    cmd = view->cmd;
+
+    for (i = 0; i < 2; i++) {
+        if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
+            surface_state_buf_gen7(dev->gpu, info->offset,
+                    info->range, stride, format,
+                    will_write, will_write, cmd);
+            view->cmd_len = 8;
+        } else {
+            surface_state_buf_gen6(dev->gpu, info->offset,
+                    info->range, stride, format,
+                    will_write, will_write, cmd);
+            view->cmd_len = 6;
+        }
+
+        /* switch to view->fs_cmd */
+        if (info->viewType == XGL_BUFFER_VIEW_RAW) {
+            cmd = view->fs_cmd;
+            stride = 4;
+        } else {
+            memcpy(view->fs_cmd, view->cmd, sizeof(uint32_t) * view->cmd_len);
+            break;
+        }
     }
 
     *view_ret = view;

@@ -1605,39 +1605,20 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                     break;
                 case INTEL_DSET_SLOT_BUF_VIEW:
                     {
-                        XGL_BUFFER_VIEW_CREATE_INFO tmp_info =
-                            dset_slot->u.buf_view->info;
-                        struct intel_buf_view *tmp;
-                        XGL_RESULT res;
-
-                        /* The compiler expects uniform buffers to have pitch of
-                         * 4 for fragment shaders, but 16 for other stages.
-                         */
-                        tmp_info.format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-                        tmp_info.format.numericFormat = XGL_NUM_FMT_FLOAT;
-                        if (XGL_SHADER_STAGE_FRAGMENT == stage) {
-                            tmp_info.stride = 4;
-                        } else {
-                            tmp_info.stride = 16;
-                        }
-
-                        res = intel_buf_view_create(cmd->dev, &tmp_info, &tmp);
-                        if (res != XGL_SUCCESS) {
-                            cmd->result = res;
-                            break;
-                        }
+                        const uint32_t *cmd_data =
+                            (stage != XGL_SHADER_STAGE_FRAGMENT) ?
+                            dset_slot->u.buf_view->cmd :
+                            dset_slot->u.buf_view->fs_cmd;
 
                         offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                                 GEN6_ALIGNMENT_SURFACE_STATE,
-                                tmp->cmd_len,
-                                tmp->cmd);
+                                dset_slot->u.buf_view->cmd_len,
+                                cmd_data);
 
                         cmd_reserve_reloc(cmd, 1);
                         cmd_surface_reloc(cmd, offset, 1,
                                 dset_slot->u.buf_view->buf->obj.mem->bo,
-                                tmp->cmd[1], reloc_flags);
-
-                        intel_buf_view_destroy(tmp);
+                                cmd_data[1], reloc_flags);
                     }
                     break;
                 case INTEL_DSET_SLOT_SAMPLER:

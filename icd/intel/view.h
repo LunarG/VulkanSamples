@@ -46,10 +46,10 @@ struct intel_buf_view {
     struct intel_obj obj;
 
     struct intel_buf *buf;
-    XGL_BUFFER_VIEW_CREATE_INFO info;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
+    uint32_t fs_cmd[8];
     XGL_UINT cmd_len;
 };
 
