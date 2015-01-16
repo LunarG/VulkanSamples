@@ -435,8 +435,10 @@ static void layer_lib_scan(const char * libInPaths)
              if (!strncmp(dent->d_name, "libXGLLayer", strlen("libXGLLayer"))) {
                 void * handle;
                 snprintf(temp_str, sizeof(temp_str), "%s/%s",p,dent->d_name);
-                if ((handle = dlopen(temp_str, RTLD_LAZY)) == NULL)
+                if ((handle = dlopen(temp_str, RTLD_LAZY)) == NULL) {
+                    dent = readdir(curdir);
                     continue;
+                }
                 if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
                     loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
                     break;
