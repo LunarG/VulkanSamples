@@ -34,7 +34,7 @@ extern "C"
 
 typedef struct glvreplay_xgl_settings
 {
-    unsigned int debugLevel;
+    uint32_t debugLevel;
     const char* enableLayers;
 } glvreplay_xgl_settings;
 

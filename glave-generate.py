@@ -795,21 +795,8 @@ class Subcommand(object):
         hf_body.append('')
         hf_body.append('static size_t calculate_pipeline_shader_size(const XGL_PIPELINE_SHADER* shader)')
         hf_body.append('{')
-        hf_body.append('    // TODO : Figure this out for new binding mode')
         hf_body.append('    size_t size = 0;')
-        hf_body.append('    uint32_t i, j;')
-        hf_body.append('    ')
         hf_body.append('    size += sizeof(XGL_PIPELINE_SHADER);')
-        hf_body.append('    // descriptor sets')
-        hf_body.append('    /*for (j = 0; j < shader->descriptorSetMapping[i].descriptorCount; j++)')
-        hf_body.append('    {')
-        hf_body.append('        size += sizeof(XGL_DESCRIPTOR_SLOT_INFO);')
-        hf_body.append('        if (shader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        hf_body.append('        {')
-        hf_body.append('            size += sizeof(XGL_DESCRIPTOR_SET_MAPPING);')
-        hf_body.append('        }')
-        hf_body.append('    }')
-        hf_body.append('')
         hf_body.append('    // constant buffers')
         hf_body.append('    if (shader->linkConstBufferCount > 0 && shader->pLinkConstBufferInfo != NULL)')
         hf_body.append('    {')
@@ -819,25 +806,13 @@ class Subcommand(object):
         hf_body.append('            size += sizeof(XGL_LINK_CONST_BUFFER);')
         hf_body.append('            size += shader->pLinkConstBufferInfo[i].bufferSize;')
         hf_body.append('        }')
-        hf_body.append('    }*/')
+        hf_body.append('    }')
         hf_body.append('    return size;')
         hf_body.append('}')
         hf_body.append('')
         hf_body.append('static void add_pipeline_shader_to_trace_packet(glv_trace_packet_header* pHeader, XGL_PIPELINE_SHADER* packetShader, const XGL_PIPELINE_SHADER* paramShader)')
         hf_body.append('{')
-        hf_body.append('    // TODO : Figure this out for new binding mode')
-        hf_body.append('    uint32_t i, j;')
-        hf_body.append('    // descriptor sets')
-        hf_body.append('    /*glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo), sizeof(XGL_DESCRIPTOR_SLOT_INFO)* paramShader->descriptorSetMapping[i].descriptorCount, paramShader->descriptorSetMapping[i].pDescriptorInfo);')
-        hf_body.append('    for (j = 0; j < paramShader->descriptorSetMapping[i].descriptorCount; j++)')
-        hf_body.append('    {')
-        hf_body.append('        if (paramShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        hf_body.append('        {')
-        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet), sizeof(XGL_DESCRIPTOR_SET_MAPPING), paramShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
-        hf_body.append('        }')
-        hf_body.append('    }')
-        hf_body.append('    packetShader->descriptorSetMapping[i].descriptorCount = paramShader->descriptorSetMapping[i].descriptorCount;')
-        hf_body.append('*/')
+        hf_body.append('    uint32_t i;')
         hf_body.append('    // constant buffers')
         hf_body.append('    if (paramShader->linkConstBufferCount > 0 && paramShader->pLinkConstBufferInfo != NULL)')
         hf_body.append('    {')
@@ -851,18 +826,7 @@ class Subcommand(object):
         hf_body.append('')
         hf_body.append('static void finalize_pipeline_shader_address(glv_trace_packet_header* pHeader, const XGL_PIPELINE_SHADER* packetShader)')
         hf_body.append('{')
-        hf_body.append('    uint32_t i, j;')
-        hf_body.append('    // TODO : Figure this out for new binding mode')
-        hf_body.append('    // descriptor sets')
-        hf_body.append('    /*for (j = 0; j < packetShader->descriptorSetMapping[i].descriptorCount; j++)')
-        hf_body.append('    {')
-        hf_body.append('        if (packetShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        hf_body.append('        {')
-        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet));')
-        hf_body.append('        }')
-        hf_body.append('    }')
-        hf_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(packetShader->descriptorSetMapping[i].pDescriptorInfo));')
-        hf_body.append('*/')
+        hf_body.append('    uint32_t i;')
         hf_body.append('    // constant buffers')
         hf_body.append('    if (packetShader->linkConstBufferCount > 0 && packetShader->pLinkConstBufferInfo != NULL)')
         hf_body.append('    {')
@@ -1167,22 +1131,10 @@ class Subcommand(object):
         pid_enum.append('    }\n')
         pid_enum.append('    return pXGL_DEVICE_CREATE_INFO;')
         pid_enum.append('}\n')
-        pid_enum.append('#if 0 // Need to update this code for new resource binding method')
         pid_enum.append('static void interpret_pipeline_shader(glv_trace_packet_header*  pHeader, XGL_PIPELINE_SHADER* pShader)')
         pid_enum.append('{')
-        pid_enum.append('    uint32_t i, j;')
         pid_enum.append('    if (pShader != NULL)')
         pid_enum.append('    {')
-        pid_enum.append('        // descriptor sets')
-        pid_enum.append('        pShader->descriptorSetMapping[i].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo);')
-        pid_enum.append('        for (j = 0; j < pShader->descriptorSetMapping[i].descriptorCount; j++)')
-        pid_enum.append('        {')
-        pid_enum.append('            if (pShader->descriptorSetMapping[i].pDescriptorInfo[j].slotObjectType == XGL_SLOT_NEXT_DESCRIPTOR_SET)')
-        pid_enum.append('            {')
-        pid_enum.append('                XGL_DESCRIPTOR_SLOT_INFO* pInfo = (XGL_DESCRIPTOR_SLOT_INFO*)pShader->descriptorSetMapping[i].pDescriptorInfo;')
-        pid_enum.append('                pInfo[j].pNextLevelSet = (const XGL_DESCRIPTOR_SET_MAPPING*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->descriptorSetMapping[i].pDescriptorInfo[j].pNextLevelSet);')
-        pid_enum.append('            }')
-        pid_enum.append('        }\n')
         pid_enum.append('        // constant buffers')
         pid_enum.append('        if (pShader->linkConstBufferCount > 0)')
         pid_enum.append('        {')
@@ -1196,13 +1148,12 @@ class Subcommand(object):
         pid_enum.append('        }')
         pid_enum.append('    }')
         pid_enum.append('}\n')
-        pid_enum.append('#endif')
         pid_enum.append('//=============================================================================')
         return "\n".join(pid_enum)
 
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
-        custom_case_dict = { 'InitAndEnumerateGpus' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n',
+        custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n',
                                                        'pInfo->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
                                                        'pInfo->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
                              'CreateShader' : {'param': 'pCreateInfo', 'txt': ['XGL_SHADER_CREATE_INFO* pInfo = (XGL_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n',
@@ -1255,7 +1206,7 @@ class Subcommand(object):
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            // TODO : update interpret_pipeline_shader(pHeader, &pNext->shader);\n',
+                                                                                         '            interpret_pipeline_shader(pHeader, &pNext->shader);\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:\n',
@@ -1272,7 +1223,7 @@ class Subcommand(object):
                                                                                          '    }\n',
                                                                                          '    pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;\n',
                                                                                          '}']},
-                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['// TODO : Update interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
+                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
         if_body = []
         if_body.append('typedef struct struct_xglApiVersion {')
         if_body.append('    glv_trace_packet_header* header;')
@@ -1980,15 +1931,15 @@ class Subcommand(object):
             return 'remap(pPacket->%s)' % (n)
         return 'pPacket->%s' % (n)
 
-    def _gen_replay_init_and_enum_gpus(self):
+    def _gen_replay_enum_gpus(self):
         ieg_body = []
         ieg_body.append('            if (!m_display->m_initedXGL)')
         ieg_body.append('            {')
         ieg_body.append('                uint32_t gpuCount;')
         ieg_body.append('                XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];')
         ieg_body.append('                uint32_t maxGpus = (pPacket->maxGpus < XGL_MAX_PHYSICAL_GPUS) ? pPacket->maxGpus : XGL_MAX_PHYSICAL_GPUS;')
-        ieg_body.append('                replayResult = m_xglFuncs.real_xglInitAndEnumerateGpus(pPacket->pAppInfo, pPacket->pAllocCb, maxGpus, &gpuCount, &gpus[0]);')
-        ieg_body.append('                CHECK_RETURN_VALUE(xglInitAndEnumerateGpus);')
+        ieg_body.append('                replayResult = m_xglFuncs.real_xglEnumerateGpus(remap(pPacket->instance), maxGpus, &gpuCount, &gpus[0]);')
+        ieg_body.append('                CHECK_RETURN_VALUE(xglEnumerateGpus);')
         ieg_body.append('                //TODO handle different number of gpus in trace versus replay')
         ieg_body.append('                if (gpuCount != *(pPacket->pGpuCount))')
         ieg_body.append('                {')
@@ -1996,12 +1947,13 @@ class Subcommand(object):
         ieg_body.append('                }')
         ieg_body.append('                else if (gpuCount == 0)')
         ieg_body.append('                {')
-        ieg_body.append('                     glv_LogError("xglInitAndEnumerateGpus number of gpus is zero\\n");')
+        ieg_body.append('                     glv_LogError("xglEnumerateGpus number of gpus is zero\\n");')
         ieg_body.append('                }')
         ieg_body.append('                else')
         ieg_body.append('                {')
         ieg_body.append('                    glv_LogInfo("Enumerated %d GPUs in the system\\n", gpuCount);')
         ieg_body.append('                }')
+        ieg_body.append('                // Do we care about the instance handel? Need to keep from clearing it? Not sure it will be used again...')
         ieg_body.append('                clear_all_map_handles();')
         ieg_body.append('                // TODO handle enumeration results in a different order from trace to replay')
         ieg_body.append('                for (uint32_t i = 0; i < gpuCount; i++)')
@@ -2514,7 +2466,7 @@ class Subcommand(object):
 
     def _generate_replay(self):
         # map protos to custom functions if body is fully custom
-        custom_body_dict = {'InitAndEnumerateGpus': self._gen_replay_init_and_enum_gpus,
+        custom_body_dict = {'EnumerateGpus': self._gen_replay_enum_gpus,
                             'GetGpuInfo': self._gen_replay_get_gpu_info,
                             'CreateDevice': self._gen_replay_create_device,
                             'GetExtensionSupport': self._gen_replay_get_extension_support,

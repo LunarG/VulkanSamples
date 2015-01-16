@@ -1002,8 +1002,8 @@ class EnumCodeGen:
             body.append("static inline uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
-                    body.append('    case %s:' % (e))
-            body.append('        return 1;\n    default:\n        return 0;\n    }\n}\n\n')
+                    body.append('        case %s:' % (e))
+            body.append('            return 1;\n        default:\n            return 0;\n    }\n}\n\n')
         return "\n".join(body)
 
     def _generateSHBody(self):
@@ -1012,11 +1012,11 @@ class EnumCodeGen:
             # bet == base_enum_type, fet == final_enum_type
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {\n" % (fet, fet, fet))
+            body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
-                    body.append('    case %s:\n        return "%s";' % (e, e))
-            body.append('    default:\n        return "Unhandled %s";\n    }\n}\n\n' % (fet))
+                    body.append('        case %s:\n            return "%s";' % (e, e))
+            body.append('        default:\n            return "Unhandled %s";\n    }\n}\n\n' % (fet))
         return "\n".join(body)
     
     def _generateSHHeader(self):
