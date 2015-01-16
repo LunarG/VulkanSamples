@@ -335,35 +335,8 @@ static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
                                   XGL_UINT32 stencil_ref,
                                   struct intel_cmd_meta *meta)
 {
-    XGL_DEPTH_STENCIL_STATE_CREATE_INFO info;
-    struct intel_ds_state *state;
-    XGL_RESULT ret;
-
-    memset(&info, 0, sizeof(info));
-    info.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
-
-    if (aspect == XGL_IMAGE_ASPECT_DEPTH) {
-        info.depthWriteEnable = XGL_TRUE;
-    }
-    else if (aspect == XGL_IMAGE_ASPECT_STENCIL) {
-        info.stencilTestEnable = XGL_TRUE;
-        info.stencilReadMask = 0xff;
-        info.stencilWriteMask = 0xff;
-        info.front.stencilFailOp = XGL_STENCIL_OP_KEEP;
-        info.front.stencilPassOp = XGL_STENCIL_OP_REPLACE;
-        info.front.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
-        info.front.stencilFunc = XGL_COMPARE_ALWAYS;
-        info.front.stencilRef = stencil_ref;
-        info.back = info.front;
-    }
-
-    ret = intel_ds_state_create(cmd->dev, &info, &state);
-    if (ret != XGL_SUCCESS) {
-        cmd->result = ret;
-        return;
-    }
-
-    meta->ds.state = state;
+    meta->ds.stencil_ref = stencil_ref;
+    meta->ds.aspect = aspect;
 }
 
 static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
@@ -890,7 +863,6 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
                 cmd_draw_meta(cmd, meta);
 
                 intel_ds_view_destroy(meta->ds.view);
-                intel_ds_state_destroy(meta->ds.state);
             }
 
             meta->dst.layer++;

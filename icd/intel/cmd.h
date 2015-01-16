@@ -162,11 +162,10 @@ struct intel_cmd_bind {
     } pipeline;
 
     struct {
-        const struct intel_viewport_state *viewport;
-        const struct intel_raster_state *raster;
-        const struct intel_msaa_state *msaa;
-        const struct intel_blend_state *blend;
-        const struct intel_ds_state *ds;
+        const struct intel_dynamic_vp *viewport;
+        const struct intel_dynamic_rs *raster;
+        const struct intel_dynamic_cb *blend;
+        const struct intel_dynamic_ds *ds;
     } state;
 
     struct {
@@ -191,6 +190,7 @@ struct intel_cmd_bind {
         XGL_GPU_SIZE offset;
         XGL_INDEX_TYPE type;
     } index;
+
 
     struct intel_render_pass *render_pass;
 

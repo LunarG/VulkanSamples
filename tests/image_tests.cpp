@@ -201,13 +201,15 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
     //            XGL_GPU_MEMORY*                             pMem);
     XGL_MEMORY_ALLOC_INFO mem_info;
+    XGL_UINT heapInfo[mem_req.heapCount];
 
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
     mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.pHeaps = heapInfo;
+    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
     err = xglAllocMemory(device(), &mem_info, &m_image_mem);

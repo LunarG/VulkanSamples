@@ -33,11 +33,11 @@
 
 /* Should we add intel_state back, as the base class for dynamic states? */
 
-struct intel_viewport_state {
+struct intel_dynamic_vp {
     struct intel_obj obj;
 
     XGL_UINT viewport_count;
-    bool scissor_enable;
+    bool has_scissor_rects;
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
     uint32_t *cmd;
     XGL_UINT cmd_len;
@@ -46,118 +46,79 @@ struct intel_viewport_state {
     XGL_UINT cmd_scissor_rect_pos;
 };
 
-struct intel_raster_state {
+struct intel_dynamic_rs {
     struct intel_obj obj;
-
-    uint32_t cmd_clip_cull;
-    uint32_t cmd_sf_fill;
-    uint32_t cmd_sf_cull;
-    uint32_t cmd_depth_offset_const;
-    uint32_t cmd_depth_offset_scale;
-    uint32_t cmd_depth_offset_clamp;
+    XGL_DYNAMIC_RS_STATE_CREATE_INFO rs_info;
 };
 
-struct intel_msaa_state {
+struct intel_dynamic_cb {
     struct intel_obj obj;
-
-    XGL_UINT sample_count;
-
-    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
-    uint32_t cmd[6];
-    XGL_UINT cmd_len;
+    XGL_DYNAMIC_CB_STATE_CREATE_INFO cb_info;
 };
 
-struct intel_blend_state {
+struct intel_dynamic_ds {
     struct intel_obj obj;
-
-    /* a part of BLEND_STATE */
-    uint32_t cmd_blend[XGL_MAX_COLOR_ATTACHMENTS];
-    /* a part of COLOR_CALC_STATE */
-    uint32_t cmd_blend_color[4];
+    XGL_DYNAMIC_DS_STATE_CREATE_INFO ds_info;
 };
 
-struct intel_ds_state {
-    struct intel_obj obj;
-
-    /* DEPTH_STENCIL_STATE */
-    uint32_t cmd[3];
-    /* a part of COLOR_CALC_STATE */
-    uint32_t cmd_stencil_ref;
-};
-
-static inline struct intel_viewport_state *intel_viewport_state(XGL_VIEWPORT_STATE_OBJECT state)
+static inline struct intel_dynamic_vp *intel_dynamic_vp(XGL_DYNAMIC_VP_STATE_OBJECT state)
 {
-    return (struct intel_viewport_state *) state;
+    return (struct intel_dynamic_vp *) state;
 }
 
-static inline struct intel_viewport_state *intel_viewport_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_vp *intel_viewport_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_viewport_state *) obj;
+    return (struct intel_dynamic_vp *) obj;
 }
 
-static inline struct intel_raster_state *intel_raster_state(XGL_RASTER_STATE_OBJECT state)
+static inline struct intel_dynamic_rs *intel_dynamic_rs(XGL_DYNAMIC_RS_STATE_OBJECT state)
 {
-    return (struct intel_raster_state *) state;
+    return (struct intel_dynamic_rs *) state;
 }
 
-static inline struct intel_raster_state *intel_raster_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_rs *intel_raster_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_raster_state *) obj;
+    return (struct intel_dynamic_rs *) obj;
 }
 
-static inline struct intel_msaa_state *intel_msaa_state(XGL_VIEWPORT_STATE_OBJECT state)
+static inline struct intel_dynamic_cb *intel_dynamic_cb(XGL_DYNAMIC_CB_STATE_OBJECT state)
 {
-    return (struct intel_msaa_state *) state;
+    return (struct intel_dynamic_cb *) state;
 }
 
-static inline struct intel_msaa_state *intel_msaa_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_cb *intel_blend_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_msaa_state *) obj;
+    return (struct intel_dynamic_cb *) obj;
 }
 
-static inline struct intel_blend_state *intel_blend_state(XGL_VIEWPORT_STATE_OBJECT state)
+static inline struct intel_dynamic_ds *intel_dynamic_ds(XGL_DYNAMIC_DS_STATE_OBJECT state)
 {
-    return (struct intel_blend_state *) state;
+    return (struct intel_dynamic_ds *) state;
 }
 
-static inline struct intel_blend_state *intel_blend_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_ds *intel_ds_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_blend_state *) obj;
-}
-
-static inline struct intel_ds_state *intel_ds_state(XGL_VIEWPORT_STATE_OBJECT state)
-{
-    return (struct intel_ds_state *) state;
-}
-
-static inline struct intel_ds_state *intel_ds_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_ds_state *) obj;
+    return (struct intel_dynamic_ds *) obj;
 }
 
 XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
-                                       const XGL_VIEWPORT_STATE_CREATE_INFO *info,
-                                       struct intel_viewport_state **state_ret);
-void intel_viewport_state_destroy(struct intel_viewport_state *state);
+                                       const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info,
+                                       struct intel_dynamic_vp **state_ret);
+void intel_viewport_state_destroy(struct intel_dynamic_vp *state);
 
 XGL_RESULT intel_raster_state_create(struct intel_dev *dev,
-                                     const XGL_RASTER_STATE_CREATE_INFO *info,
-                                     struct intel_raster_state **state_ret);
-void intel_raster_state_destroy(struct intel_raster_state *state);
-
-XGL_RESULT intel_msaa_state_create(struct intel_dev *dev,
-                                   const XGL_MSAA_STATE_CREATE_INFO *info,
-                                   struct intel_msaa_state **state_ret);
-void intel_msaa_state_destroy(struct intel_msaa_state *state);
+                                     const XGL_DYNAMIC_RS_STATE_CREATE_INFO *info,
+                                     struct intel_dynamic_rs **state_ret);
+void intel_raster_state_destroy(struct intel_dynamic_rs *state);
 
 XGL_RESULT intel_blend_state_create(struct intel_dev *dev,
-                                    const XGL_COLOR_BLEND_STATE_CREATE_INFO *info,
-                                    struct intel_blend_state **state_ret);
-void intel_blend_state_destroy(struct intel_blend_state *state);
+                                    const XGL_DYNAMIC_CB_STATE_CREATE_INFO *info,
+                                    struct intel_dynamic_cb **state_ret);
+void intel_blend_state_destroy(struct intel_dynamic_cb *state);
 
 XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
-                                 const XGL_DEPTH_STENCIL_STATE_CREATE_INFO *info,
-                                 struct intel_ds_state **state_ret);
-void intel_ds_state_destroy(struct intel_ds_state *state);
+                                 const XGL_DYNAMIC_DS_STATE_CREATE_INFO *info,
+                                 struct intel_dynamic_ds **state_ret);
+void intel_ds_state_destroy(struct intel_dynamic_ds *state);
 
 #endif /* STATE_H */

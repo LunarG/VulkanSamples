@@ -1070,8 +1070,6 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
     const bool will_write = (buf->usage |
             (XGL_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
              XGL_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
-    XGL_FORMAT format;
-    XGL_GPU_SIZE stride;
     struct intel_buf_view *view;
 
     view = (struct intel_buf_view *) intel_base_create(dev, sizeof(*view),

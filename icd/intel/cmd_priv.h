@@ -117,7 +117,8 @@ struct intel_cmd_meta {
 
     struct {
         struct intel_ds_view *view;
-        struct intel_ds_state *state;
+        uint32_t stencil_ref;
+        XGL_IMAGE_ASPECT aspect;
     } ds;
 
     uint32_t clear_val[4];

@@ -33,14 +33,92 @@
 #include "shader.h"
 #include "pipeline.h"
 
+static int translate_blend_func(XGL_BLEND_FUNC func)
+{
+   switch (func) {
+   case XGL_BLEND_FUNC_ADD:                return GEN6_BLENDFUNCTION_ADD;
+   case XGL_BLEND_FUNC_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
+   case XGL_BLEND_FUNC_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
+   case XGL_BLEND_FUNC_MIN:                return GEN6_BLENDFUNCTION_MIN;
+   case XGL_BLEND_FUNC_MAX:                return GEN6_BLENDFUNCTION_MAX;
+   default:
+      assert(!"unknown blend func");
+      return GEN6_BLENDFUNCTION_ADD;
+   };
+}
+
+static int translate_blend(XGL_BLEND blend)
+{
+   switch (blend) {
+   case XGL_BLEND_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
+   case XGL_BLEND_ONE:                      return GEN6_BLENDFACTOR_ONE;
+   case XGL_BLEND_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
+   case XGL_BLEND_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
+   case XGL_BLEND_DEST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
+   case XGL_BLEND_ONE_MINUS_DEST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
+   case XGL_BLEND_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
+   case XGL_BLEND_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
+   case XGL_BLEND_DEST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
+   case XGL_BLEND_ONE_MINUS_DEST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
+   case XGL_BLEND_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
+   case XGL_BLEND_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
+   case XGL_BLEND_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
+   case XGL_BLEND_ONE_MINUS_CONSTANT_ALPHA: return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
+   case XGL_BLEND_SRC_ALPHA_SATURATE:       return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
+   case XGL_BLEND_SRC1_COLOR:               return GEN6_BLENDFACTOR_SRC1_COLOR;
+   case XGL_BLEND_ONE_MINUS_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
+   case XGL_BLEND_SRC1_ALPHA:               return GEN6_BLENDFACTOR_SRC1_ALPHA;
+   case XGL_BLEND_ONE_MINUS_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
+   default:
+      assert(!"unknown blend factor");
+      return GEN6_BLENDFACTOR_ONE;
+   };
+}
+
+static int translate_compare_func(XGL_COMPARE_FUNC func)
+{
+    switch (func) {
+    case XGL_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
+    case XGL_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
+    case XGL_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
+    case XGL_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case XGL_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
+    case XGL_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
+    case XGL_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case XGL_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
+    default:
+      assert(!"unknown compare_func");
+      return GEN6_COMPAREFUNCTION_NEVER;
+    }
+}
+
+static int translate_stencil_op(XGL_STENCIL_OP op)
+{
+    switch (op) {
+    case XGL_STENCIL_OP_KEEP:       return GEN6_STENCILOP_KEEP;
+    case XGL_STENCIL_OP_ZERO:       return GEN6_STENCILOP_ZERO;
+    case XGL_STENCIL_OP_REPLACE:    return GEN6_STENCILOP_REPLACE;
+    case XGL_STENCIL_OP_INC_CLAMP:  return GEN6_STENCILOP_INCRSAT;
+    case XGL_STENCIL_OP_DEC_CLAMP:  return GEN6_STENCILOP_DECRSAT;
+    case XGL_STENCIL_OP_INVERT:     return GEN6_STENCILOP_INVERT;
+    case XGL_STENCIL_OP_INC_WRAP:   return GEN6_STENCILOP_INCR;
+    case XGL_STENCIL_OP_DEC_WRAP:   return GEN6_STENCILOP_DECR;
+    default:
+      assert(!"unknown stencil op");
+      return GEN6_STENCILOP_KEEP;
+    }
+}
+
 struct intel_pipeline_create_info {
     XGL_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
     XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
     XGL_PIPELINE_IA_STATE_CREATE_INFO   ia;
-    XGL_PIPELINE_DB_STATE_CREATE_INFO   db;
-    XGL_PIPELINE_CB_STATE               cb;
+    XGL_PIPELINE_DS_STATE_CREATE_INFO   db;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO   cb;
     XGL_PIPELINE_RS_STATE_CREATE_INFO   rs;
     XGL_PIPELINE_TESS_STATE_CREATE_INFO tess;
+    XGL_PIPELINE_MS_STATE_CREATE_INFO   ms;
+    XGL_PIPELINE_VP_STATE_CREATE_INFO   vp;
     XGL_PIPELINE_SHADER                 vs;
     XGL_PIPELINE_SHADER                 tcs;
     XGL_PIPELINE_SHADER                 tes;
@@ -148,16 +226,6 @@ static XGL_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
     pipeline->topology = info->ia.topology;
     pipeline->disable_vs_cache = info->ia.disableVertexReuse;
 
-    if (info->ia.provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
-        pipeline->provoking_vertex_tri = 0;
-        pipeline->provoking_vertex_trifan = 1;
-        pipeline->provoking_vertex_line = 0;
-    } else {
-        pipeline->provoking_vertex_tri = 2;
-        pipeline->provoking_vertex_trifan = 2;
-        pipeline->provoking_vertex_line = 1;
-    }
-
     switch (info->ia.topology) {
     case XGL_TOPOLOGY_POINT_LIST:
         pipeline->prim_type = GEN6_3DPRIM_POINTLIST;
@@ -233,7 +301,62 @@ static XGL_RESULT pipeline_rs_state(struct intel_pipeline *pipeline,
 {
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
-    pipeline->pointSize = rs_state->pointSize;
+
+    if (rs_state->provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
+        pipeline->provoking_vertex_tri = 0;
+        pipeline->provoking_vertex_trifan = 1;
+        pipeline->provoking_vertex_line = 0;
+    } else {
+        pipeline->provoking_vertex_tri = 2;
+        pipeline->provoking_vertex_trifan = 2;
+        pipeline->provoking_vertex_line = 1;
+    }
+
+    switch (rs_state->fillMode) {
+    case XGL_FILL_POINTS:
+        pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
+                              GEN7_SF_DW1_BACKFACE_POINT;
+        break;
+    case XGL_FILL_WIREFRAME:
+        pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_WIREFRAME |
+                              GEN7_SF_DW1_BACKFACE_WIREFRAME;
+        break;
+    case XGL_FILL_SOLID:
+    default:
+        pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_SOLID |
+                              GEN7_SF_DW1_BACKFACE_SOLID;
+        break;
+    }
+
+    if (rs_state->frontFace == XGL_FRONT_FACE_CCW) {
+        pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTWINDING_CCW;
+        pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_FRONTWINDING_CCW;
+    }
+
+    switch (rs_state->cullMode) {
+    case XGL_CULL_NONE:
+    default:
+        pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_NONE;
+        pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_NONE;
+        break;
+    case XGL_CULL_FRONT:
+        pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_FRONT;
+        pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_FRONT;
+        break;
+    case XGL_CULL_BACK:
+        pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BACK;
+        pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BACK;
+        break;
+    case XGL_CULL_FRONT_AND_BACK:
+        pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BOTH;
+        pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BOTH;
+        break;
+    }
+
+    /* only GEN7+ needs cull mode in 3DSTATE_CLIP */
+    if (intel_gpu_gen(pipeline->dev->gpu) == INTEL_GEN(6))
+        pipeline->cmd_clip_cull = 0;
+
     return XGL_SUCCESS;
 }
 
@@ -271,6 +394,7 @@ static void pipeline_destroy(struct intel_obj *obj)
 static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
                                     XGL_SIZE *size, XGL_VOID *data)
 {
+    static XGL_UINT pipelineHeaps[1] = {0}; /* always heap 0 */
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
 
@@ -284,7 +408,7 @@ static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
                 mem_req->size = pipeline->scratch_size;
                 mem_req->alignment = 1024;
                 mem_req->heapCount = 1;
-                mem_req->heaps[0] = 0;
+                mem_req->pHeaps = pipelineHeaps;
             }
         }
         break;
@@ -840,6 +964,229 @@ static void pipeline_build_ds(struct intel_pipeline *pipeline,
     dw[5] = 0;
 }
 
+static void pipeline_build_depth_stencil(struct intel_pipeline *pipeline,
+                                         const struct intel_pipeline_create_info *info)
+{
+    pipeline->cmd_depth_stencil = 0;
+
+    if (info->db.stencilTestEnable) {
+        pipeline->cmd_depth_stencil = 1 << 31 |
+               translate_compare_func(info->db.front.stencilFunc) << 28 |
+               translate_stencil_op(info->db.front.stencilFailOp) << 25 |
+               translate_stencil_op(info->db.front.stencilDepthFailOp) << 22 |
+               translate_stencil_op(info->db.front.stencilPassOp) << 19 |
+               1 << 15 |
+               translate_compare_func(info->db.back.stencilFunc) << 12 |
+               translate_stencil_op(info->db.back.stencilFailOp) << 9 |
+               translate_stencil_op(info->db.back.stencilDepthFailOp) << 6 |
+               translate_stencil_op(info->db.back.stencilPassOp) << 3;
+     }
+
+    pipeline->stencilTestEnable = info->db.stencilTestEnable;
+
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 360:
+     *
+     *     "Enabling the Depth Test function without defining a Depth Buffer is
+     *      UNDEFINED."
+     *
+     * From the Sandy Bridge PRM, volume 2 part 1, page 375:
+     *
+     *     "A Depth Buffer must be defined before enabling writes to it, or
+     *      operation is UNDEFINED."
+     *
+     * TODO We do not check these yet.
+     */
+    if (info->db.depthTestEnable) {
+       pipeline->cmd_depth_test = GEN6_ZS_DW2_DEPTH_TEST_ENABLE |
+               translate_compare_func(info->db.depthFunc) << 27;
+    } else {
+       pipeline->cmd_depth_test = GEN6_COMPAREFUNCTION_ALWAYS << 27;
+    }
+
+    if (info->db.depthWriteEnable)
+       pipeline->cmd_depth_test |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
+}
+
+static void pipeline_init_sample_pattern(struct intel_pipeline *pipeline,
+                                         uint8_t *samples)
+{
+    struct sample {
+        int x, y;
+    };
+    static const struct sample default_pattern_2x[2] = {
+        { -4, -4 },
+        {  4,  4 },
+    };
+    static const struct sample default_pattern_4x[4] = {
+        { -2, -6 },
+        {  6, -2 },
+        { -6,  2 },
+        {  2,  6 },
+    };
+    static const struct sample default_pattern_8x[8] = {
+        {  1, -3 },
+        { -1,  3 },
+        {  5,  1 },
+        { -3, -5 },
+        { -5,  5 },
+        { -7, -1 },
+        {  3,  7 },
+        {  7, -7 },
+    };
+
+    const struct sample *pattern;
+    int i;
+
+    switch (pipeline->sample_count) {
+    case 2:
+        pattern = default_pattern_2x;
+        break;
+    case 4:
+        pattern = default_pattern_4x;
+        break;
+    case 8:
+        pattern = default_pattern_8x;
+        break;
+    default:
+        memset(samples, 0, pipeline->sample_count);
+        return;
+        break;
+    }
+
+    for (i = 0; i < pipeline->sample_count; i++)
+        samples[i] = (pattern[i].x + 8) << 4 | (pattern[i].y + 8);
+}
+
+static void pipeline_build_msaa(struct intel_pipeline *pipeline,
+                                const struct intel_pipeline_create_info *info)
+{
+    uint32_t cmd, cmd_len;
+    uint32_t *dw;
+
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
+
+
+    pipeline->sample_count = (info->ms.samples <= 1)?1:info->ms.samples;
+
+    /* 3DSTATE_MULTISAMPLE */
+    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE);
+    cmd_len = (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) ? 4 : 3;
+    dw = pipeline_cmd_ptr(pipeline, cmd_len + 2);
+    dw[0] = cmd | (cmd_len - 2);
+    if (pipeline->sample_count <= 1)
+        dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+    else if (pipeline->sample_count <= 4 || intel_gpu_gen(pipeline->dev->gpu) == INTEL_GEN(6))
+        dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
+    else
+        dw[1] = GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+
+    pipeline_init_sample_pattern(pipeline, (uint8_t *) &dw[2]);
+
+    dw += cmd_len;
+
+    /* 3DSTATE_SAMPLE_MASK */
+    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK);
+    cmd_len = 2;
+
+    dw[0] = cmd | (cmd_len - 2);
+    dw[1] = info->ms.sampleMask & ((1 << pipeline->sample_count) - 1);
+    pipeline->cmd_sample_mask = dw[1];
+}
+
+static void pipeline_build_cb(struct intel_pipeline *pipeline,
+                              const struct intel_pipeline_create_info *info)
+{
+    XGL_UINT i;
+
+    INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
+    STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_cb) >= INTEL_MAX_RENDER_TARGETS*2);
+    assert(info->cb.attachmentCount <= INTEL_MAX_RENDER_TARGETS);
+
+    uint32_t *dw = pipeline->cmd_cb;
+
+    for (i = 0; i < info->cb.attachmentCount; i++) {
+        const XGL_PIPELINE_CB_ATTACHMENT_STATE *att = &info->cb.pAttachments[i];
+        uint32_t dw0, dw1;
+
+
+        dw0 = 0;
+        dw1 = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
+              GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
+              GEN6_BLEND_DW1_POST_BLEND_CLAMP;
+
+        if (att->blendEnable) {
+            dw0 = 1 << 31 |
+                    translate_blend_func(att->blendFuncAlpha) << 26 |
+                    translate_blend(att->srcBlendAlpha) << 20 |
+                    translate_blend(att->destBlendAlpha) << 15 |
+                    translate_blend_func(att->blendFuncColor) << 11 |
+                    translate_blend(att->srcBlendColor) << 5 |
+                    translate_blend(att->destBlendColor);
+
+            if (att->blendFuncAlpha != att->blendFuncColor ||
+                att->srcBlendAlpha != att->srcBlendColor ||
+                att->destBlendAlpha != att->destBlendColor)
+                dw0 |= 1 << 30;
+        }
+
+        if (info->cb.logicOp != XGL_LOGIC_OP_COPY) {
+            int logicop;
+
+            switch (info->cb.logicOp) {
+            case XGL_LOGIC_OP_CLEAR:            logicop = GEN6_LOGICOP_CLEAR; break;
+            case XGL_LOGIC_OP_AND:              logicop = GEN6_LOGICOP_AND; break;
+            case XGL_LOGIC_OP_AND_REVERSE:      logicop = GEN6_LOGICOP_AND_REVERSE; break;
+            case XGL_LOGIC_OP_AND_INVERTED:     logicop = GEN6_LOGICOP_AND_INVERTED; break;
+            case XGL_LOGIC_OP_NOOP:             logicop = GEN6_LOGICOP_NOOP; break;
+            case XGL_LOGIC_OP_XOR:              logicop = GEN6_LOGICOP_XOR; break;
+            case XGL_LOGIC_OP_OR:               logicop = GEN6_LOGICOP_OR; break;
+            case XGL_LOGIC_OP_NOR:              logicop = GEN6_LOGICOP_NOR; break;
+            case XGL_LOGIC_OP_EQUIV:            logicop = GEN6_LOGICOP_EQUIV; break;
+            case XGL_LOGIC_OP_INVERT:           logicop = GEN6_LOGICOP_INVERT; break;
+            case XGL_LOGIC_OP_OR_REVERSE:       logicop = GEN6_LOGICOP_OR_REVERSE; break;
+            case XGL_LOGIC_OP_COPY_INVERTED:    logicop = GEN6_LOGICOP_COPY_INVERTED; break;
+            case XGL_LOGIC_OP_OR_INVERTED:      logicop = GEN6_LOGICOP_OR_INVERTED; break;
+            case XGL_LOGIC_OP_NAND:             logicop = GEN6_LOGICOP_NAND; break;
+            case XGL_LOGIC_OP_SET:              logicop = GEN6_LOGICOP_SET; break;
+            default:
+                assert(!"unknown logic op");
+                logicop = GEN6_LOGICOP_CLEAR;
+                break;
+            }
+
+            dw1 |= GEN6_BLEND_DW1_LOGICOP_ENABLE |
+                   logicop << GEN6_BLEND_DW1_LOGICOP_FUNC__SHIFT;
+        }
+
+        if (!(att->channelWriteMask & 0x1))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_R;
+        if (!(att->channelWriteMask & 0x2))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_G;
+        if (!(att->channelWriteMask & 0x4))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_B;
+        if (!(att->channelWriteMask & 0x8))
+            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_A;
+
+        dw[2 * i] = dw0;
+        dw[2 * i + 1] = dw1;
+    }
+
+    for (i=info->cb.attachmentCount; i < INTEL_MAX_RENDER_TARGETS; i++)
+    {
+        dw[2 * i] = 0;
+        dw[2 * i + 1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
+                GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
+                GEN6_BLEND_DW1_POST_BLEND_CLAMP |
+                GEN6_BLEND_DW1_WRITE_DISABLE_R |
+                GEN6_BLEND_DW1_WRITE_DISABLE_G |
+                GEN6_BLEND_DW1_WRITE_DISABLE_B |
+                GEN6_BLEND_DW1_WRITE_DISABLE_A;
+    }
+
+}
+
+
 static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
@@ -859,6 +1206,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 
     pipeline_build_vertex_elements(pipeline, info);
     pipeline_build_fragment_SBE(pipeline);
+    pipeline_build_msaa(pipeline, info);
 
     if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
         pipeline_build_urb_alloc_gen7(pipeline, info);
@@ -867,6 +1215,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
         pipeline_build_hs(pipeline, info);
         pipeline_build_te(pipeline, info);
         pipeline_build_ds(pipeline, info);
+        pipeline_build_depth_stencil(pipeline, info);
 
         pipeline->wa_flags = INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE |
                              INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL |
@@ -887,9 +1236,12 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 
     if (ret == XGL_SUCCESS) {
         pipeline->db_format = info->db.format;
+        pipeline_build_cb(pipeline, info);
         pipeline->cb_state = info->cb;
         pipeline->tess_state = info->tess;
     }
+
+    pipeline->scissor_enable = info->vp.scissorEnable;
 
     return ret;
 }
@@ -903,6 +1255,14 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
                                             const struct intel_pipeline_create_info_header *header)
 {
     memset(info, 0, sizeof(*info));
+
+
+    /*
+     * Do we need to set safe defaults in case the app doesn't provide all of
+     * the necessary create infos?
+     */
+    info->ms.samples = 1;
+    info->ms.sampleMask = 1;
 
     while (header) {
         const void *src = (const void *) header;
@@ -922,7 +1282,7 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
             size = sizeof(info->ia);
             dst = &info->ia;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO:
+        case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
             size = sizeof(info->db);
             dst = &info->db;
             break;
@@ -937,6 +1297,14 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
         case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
             size = sizeof(info->tess);
             dst = &info->tess;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
+            size = sizeof(info->ms);
+            dst = &info->ms;
+            break;
+        case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
+            size = sizeof(info->vp);
+            dst = &info->vp;
             break;
         case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
             {
@@ -978,7 +1346,6 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
         }
 
         memcpy(dst, src, size);
-
         header = header->next;
     }
 

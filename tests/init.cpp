@@ -159,12 +159,14 @@ TEST_F(XglTest, AllocMemory) {
     XGL_MEMORY_ALLOC_INFO alloc_info = {};
     XGL_GPU_MEMORY gpu_mem;
     XGL_UINT8 *pData;
+    XGL_UINT localHeap[1] = {0};
 
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
     alloc_info.alignment = 0;
     alloc_info.heapCount = 1;
-    alloc_info.heaps[0] = 0; // TODO: Reference other heaps
+    alloc_info.pHeaps = localHeap;
+
 
     // TODO: Pick heap properties indicated by heap info
     alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
@@ -220,12 +222,14 @@ TEST_F(XglTest, Event) {
 
     ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect events to require memory";
 
+    XGL_UINT heapInfo[mem_req.heapCount];
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
     mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.pHeaps = heapInfo;
+    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
     err = xglAllocMemory(device(), &mem_info, &event_mem);
@@ -352,13 +356,16 @@ TEST_F(XglTest, Query) {
     XGL_MEMORY_ALLOC_INFO mem_info;
     XGL_GPU_MEMORY query_mem;
 
+    XGL_UINT heapInfo[mem_req.heapCount];
+
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     // TODO: Is a simple multiple all that's needed here?
     mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
     mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.pHeaps = heapInfo;
+    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
     // TODO: are the flags right?
@@ -625,12 +632,14 @@ void XglTest::CreateImageTest()
     XGL_MEMORY_ALLOC_INFO mem_info;
     XGL_GPU_MEMORY image_mem;
 
+    XGL_UINT heapInfo[mem_req.heapCount];
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
     mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
-    memcpy(mem_info.heaps, mem_req.heaps, sizeof(XGL_UINT)*XGL_MAX_MEMORY_HEAPS);
+    mem_info.pHeaps = heapInfo;
+    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
     err = xglAllocMemory(device(), &mem_info, &image_mem);

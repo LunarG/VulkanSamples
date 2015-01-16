@@ -266,7 +266,6 @@ void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPi
     cmdBuffer->BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
     cmdBuffer->BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
     cmdBuffer->BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
-    cmdBuffer->BindStateObject(XGL_STATE_BIND_MSAA, m_stateMsaa);
     pipelineobj->CreateXGLPipeline(descriptorSet);
     cmdBuffer->BindPipeline(pipelineobj->GetPipelineHandle());
     descriptorSet->CreateXGLDescriptorSet();
@@ -372,11 +371,13 @@ void XglRenderTest::InitDepthStencil()
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(mem_reqs_size, sizeof(mem_reqs));
 
+    XGL_UINT heapInfo[mem_reqs.heapCount];
     mem_alloc.allocationSize = mem_reqs.size;
     mem_alloc.alignment = mem_reqs.alignment;
     mem_alloc.heapCount = mem_reqs.heapCount;
-    memcpy(mem_alloc.heaps, mem_reqs.heaps,
-           sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+    mem_alloc.pHeaps = heapInfo;
+    memcpy(heapInfo, mem_reqs.pHeaps,
+           sizeof(mem_reqs.pHeaps) * mem_reqs.heapCount);
 
     /* allocate memory */
     err = xglAllocMemory(device(), &mem_alloc, &m_depthStencilMem);
@@ -386,22 +387,17 @@ void XglRenderTest::InitDepthStencil()
     err = xglBindObjectMemory(m_depthStencilImage, m_depthStencilMem, 0);
     ASSERT_XGL_SUCCESS(err);
 
-    XGL_DEPTH_STENCIL_STATE_CREATE_INFO depthStencil = {};
-    depthStencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable        = XGL_TRUE;
-    depthStencil.depthWriteEnable       = XGL_TRUE;
-    depthStencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
-    depthStencil.depthBoundsEnable = XGL_FALSE;
+    XGL_DYNAMIC_DS_STATE_CREATE_INFO depthStencil = {};
+    depthStencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
+
     depthStencil.minDepth = 0.f;
     depthStencil.maxDepth = 1.f;
-    depthStencil.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilRef = 0x00;
-    depthStencil.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    depthStencil.front = depthStencil.back;
+    depthStencil.stencilBackRef = 0;
+    depthStencil.stencilFrontRef = 0;
+    depthStencil.stencilReadMask = 0xff;
+    depthStencil.stencilWriteMask = 0xff;
 
-    err = xglCreateDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
+    err = xglCreateDynamicDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
     ASSERT_XGL_SUCCESS( err );
 
     /* create image view */
@@ -858,7 +854,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     att.blendEnable = XGL_FALSE;
     att.format = m_render_target_fmt;
     att.channelWriteMask = 0xf;
-    pipelineobj.SetColorAttachment(1, &att);
+    pipelineobj.AddColorAttachment(1, &att);
 
     XglCommandBufferObj cmdBuffer(m_device);
 
@@ -1762,6 +1758,21 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
+    XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state;
+    ds_state.depthTestEnable = XGL_TRUE;
+    ds_state.depthWriteEnable = XGL_TRUE;
+    ds_state.depthFunc = XGL_COMPARE_LESS_EQUAL;
+    ds_state.depthBoundsEnable = XGL_FALSE;
+    ds_state.stencilTestEnable = XGL_FALSE;
+    ds_state.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
+    ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
+    ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
+    ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
+    ds_state.format.channelFormat = XGL_CH_FMT_R32;
+    ds_state.format.numericFormat = XGL_NUM_FMT_DS;
+    ds_state.front = ds_state.back;
+    pipelineobj.SetDepthStencil(&ds_state);
+
     XglDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AttachBufferView(&MVPBuffer);
 
@@ -2616,6 +2627,21 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+
+    XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state;
+    ds_state.depthTestEnable = XGL_TRUE;
+    ds_state.depthWriteEnable = XGL_TRUE;
+    ds_state.depthFunc = XGL_COMPARE_LESS_EQUAL;
+    ds_state.depthBoundsEnable = XGL_FALSE;
+    ds_state.stencilTestEnable = XGL_FALSE;
+    ds_state.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
+    ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
+    ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
+    ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
+    ds_state.format.channelFormat = XGL_CH_FMT_R32;
+    ds_state.format.numericFormat = XGL_NUM_FMT_DS;
+    ds_state.front = ds_state.back;
+    pipelineobj.SetDepthStencil(&ds_state);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);

@@ -64,24 +64,23 @@ public:
 
 
 protected:
-    XGL_APPLICATION_INFO            app_info;
-    XGL_PHYSICAL_GPU                objs[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT                        gpu_count;
-    XglDevice                      *m_device;
-    XGL_CMD_BUFFER                  m_cmdBuffer;
-    XGL_RENDER_PASS                 m_renderPass;
-    XGL_MEMORY_REF                  m_memRefs[5];
-    XGL_RASTER_STATE_OBJECT         m_stateRaster;
-    XGL_COLOR_BLEND_STATE_OBJECT    m_colorBlend;
-    XGL_VIEWPORT_STATE_OBJECT       m_stateViewport;
-    XGL_DEPTH_STENCIL_STATE_OBJECT  m_stateDepthStencil;
-    XGL_MSAA_STATE_OBJECT           m_stateMsaa;
-    XglImage                       *m_renderTargets[XGL_MAX_COLOR_ATTACHMENTS];
-    XGL_UINT                        m_renderTargetCount;
-    XGL_FLOAT                       m_width, m_height;
-    XGL_FORMAT                      m_render_target_fmt;
-    XGL_COLOR_ATTACHMENT_BIND_INFO  m_colorBindings[XGL_MAX_COLOR_ATTACHMENTS];
-    XGL_DEPTH_STENCIL_BIND_INFO     m_depthStencilBinding;
+    XGL_APPLICATION_INFO                    app_info;
+    XGL_PHYSICAL_GPU                        objs[XGL_MAX_PHYSICAL_GPUS];
+    XGL_UINT                                gpu_count;
+    XglDevice                              *m_device;
+    XGL_CMD_BUFFER                          m_cmdBuffer;
+    XGL_RENDER_PASS                         m_renderPass;
+    XGL_MEMORY_REF                          m_memRefs[5];
+    XGL_DYNAMIC_RS_STATE_OBJECT             m_stateRaster;
+    XGL_DYNAMIC_CB_STATE_OBJECT             m_colorBlend;
+    XGL_DYNAMIC_VP_STATE_OBJECT             m_stateViewport;
+    XGL_DYNAMIC_DS_STATE_OBJECT             m_stateDepthStencil;
+    vector<XglImage*>                       m_renderTargets;
+    XGL_UINT                                m_renderTargetCount;
+    XGL_FLOAT                               m_width, m_height;
+    XGL_FORMAT                              m_render_target_fmt;
+    XGL_COLOR_ATTACHMENT_BIND_INFO          m_colorBindings[8];
+    XGL_DEPTH_STENCIL_BIND_INFO             m_depthStencilBinding;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
@@ -126,7 +125,7 @@ public:
     void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
     void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding);
     void BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset);
-    void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT stateObject);
+    void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject);
     void Draw(XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
     void DrawIndexed(XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
@@ -316,7 +315,8 @@ public:
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
     void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
     void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
-    void SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
+    void AddColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
+    void SetDepthStencil(XGL_PIPELINE_DS_STATE_CREATE_INFO *);
     void CreateXGLPipeline(XglDescriptorSetObj *descriptorSet);
     XGL_PIPELINE GetPipelineHandle();
 
@@ -324,12 +324,14 @@ protected:
     XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO m_vi_state;
     XGL_PIPELINE_IA_STATE_CREATE_INFO m_ia_state;
     XGL_PIPELINE_RS_STATE_CREATE_INFO m_rs_state;
-    XGL_PIPELINE_CB_STATE m_cb_state;
-    XGL_PIPELINE_DB_STATE_CREATE_INFO m_db_state;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO m_cb_state;
+    XGL_PIPELINE_DS_STATE_CREATE_INFO m_ds_state;
+    XGL_PIPELINE_MS_STATE_CREATE_INFO m_ms_state;
     XglDevice *m_device;
     vector<XglShaderObj*> m_shaderObjs;
     vector<XglConstantBufferObj*> m_vertexBufferObjs;
     vector<int> m_vertexBufferBindings;
+    vector<XGL_PIPELINE_CB_ATTACHMENT_STATE> m_colorAttachments;
     int m_vertexBufferCount;
 
 };

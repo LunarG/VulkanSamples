@@ -375,9 +375,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
                                       uint32_t body[6])
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
-    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
-    const struct intel_raster_state *raster = cmd->bind.state.raster;
-    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
+    const struct intel_dynamic_rs *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
     int point_width;
 
@@ -388,7 +386,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
           GEN7_SF_DW1_DEPTH_OFFSET_WIREFRAME |
           GEN7_SF_DW1_DEPTH_OFFSET_POINT |
           GEN7_SF_DW1_VIEWPORT_ENABLE |
-          raster->cmd_sf_fill;
+          pipeline->cmd_sf_fill;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         int format;
@@ -410,9 +408,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
         dw1 |= format << GEN7_SF_DW1_DEPTH_FORMAT__SHIFT;
     }
 
-    dw2 = raster->cmd_sf_cull;
+    dw2 = pipeline->cmd_sf_cull;
 
-    if (msaa->sample_count > 1) {
+    if (pipeline->sample_count > 1) {
           dw2 |= 128 << GEN7_SF_DW2_LINE_WIDTH__SHIFT |
                  GEN7_SF_DW2_MSRASTMODE_ON_PATTERN;
     } else {
@@ -420,11 +418,11 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
                  GEN7_SF_DW2_MSRASTMODE_OFF_PIXEL;
     }
 
-    if (viewport->scissor_enable)
+    if (pipeline->scissor_enable)
         dw2 |= GEN7_SF_DW2_SCISSOR_ENABLE;
 
     /* in U8.3 */
-    point_width = (int) (pipeline->pointSize * 8.0f + 0.5f);
+    point_width = (int) (raster->rs_info.pointSize * 8.0f + 0.5f);
     point_width = U_CLAMP(point_width, 1, 2047);
 
     dw3 = pipeline->provoking_vertex_tri << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
@@ -437,9 +435,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     body[0] = dw1;
     body[1] = dw2;
     body[2] = dw3;
-    body[3] = raster->cmd_depth_offset_const;
-    body[4] = raster->cmd_depth_offset_scale;
-    body[5] = raster->cmd_depth_offset_clamp;
+    body[3] = u_fui((float) raster->rs_info.depthBias * 2.0f);
+    body[4] = u_fui(raster->rs_info.slopeScaledDepthBias);
+    body[5] = u_fui(raster->rs_info.depthBiasClamp);
 }
 
 static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
@@ -500,8 +498,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *vs = &pipeline->vs;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
-    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
-    const struct intel_raster_state *raster = cmd->bind.state.raster;
+    const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
     uint32_t dw1, dw2, dw3, *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -510,7 +507,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         dw1 |= GEN7_CLIP_DW1_SUBPIXEL_8BITS |
                GEN7_CLIP_DW1_EARLY_CULL_ENABLE |
-               raster->cmd_clip_cull;
+               pipeline->cmd_clip_cull;
     }
 
     dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
@@ -569,7 +566,6 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
-    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 9;
     XGL_UINT pos;
     uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
@@ -610,7 +606,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
           fs->barycentric_interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT |
           GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
 
-    if (msaa->sample_count > 1) {
+    if (pipeline->sample_count > 1) {
         dw6 |= GEN6_WM_DW6_MSRASTMODE_ON_PATTERN |
                GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
     } else {
@@ -637,7 +633,6 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
-    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 3;
     uint32_t dw0, dw1, dw2, *dw;
 
@@ -664,7 +659,7 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
 
     dw2 = 0;
 
-    if (msaa->sample_count > 1) {
+    if (pipeline->sample_count > 1) {
         dw1 |= GEN7_WM_DW1_MSRASTMODE_ON_PATTERN;
         dw2 |= GEN7_WM_DW2_MSDISPMODE_PERPIXEL;
     } else {
@@ -682,7 +677,6 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
-    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
     const uint8_t cmd_len = 8;
     uint32_t dw0, dw2, dw4, dw5, *dw;
     XGL_UINT pos;
@@ -699,7 +693,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
         dw4 |= (fs->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
-        dw4 |= msaa->cmd[msaa->cmd_len - 1] << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
+        dw4 |= pipeline->cmd_sample_mask << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
     } else {
         dw4 |= (fs->max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     }
@@ -964,82 +958,35 @@ static void gen7_3dstate_pointer(struct intel_cmd *cmd,
 static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd)
 {
     const uint8_t cmd_align = GEN6_ALIGNMENT_BLEND_STATE;
-    const uint8_t cmd_len = XGL_MAX_COLOR_ATTACHMENTS * 2;
-    const XGL_PIPELINE_CB_STATE *cb = &cmd->bind.pipeline.graphics->cb_state;
-    const struct intel_blend_state *blend = cmd->bind.state.blend;
-    uint32_t dw[XGL_MAX_COLOR_ATTACHMENTS * 2];
-    int i;
+    const uint8_t cmd_len = INTEL_MAX_RENDER_TARGETS * 2;
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
 
     CMD_ASSERT(cmd, 6, 7.5);
-    STATIC_ASSERT(ARRAY_SIZE(blend->cmd_blend) >= XGL_MAX_COLOR_ATTACHMENTS);
+    STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_cb) >= INTEL_MAX_RENDER_TARGETS);
 
-    for (i = 0; i < XGL_MAX_COLOR_ATTACHMENTS; i++) {
-        const XGL_PIPELINE_CB_ATTACHMENT_STATE *att = &cb->attachment[i];
-        uint32_t dw0, dw1;
-
-        dw0 = 0;
-        dw1 = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
-              GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
-              GEN6_BLEND_DW1_POST_BLEND_CLAMP;
-
-        if (cb->logicOp != XGL_LOGIC_OP_COPY) {
-            int logicop;
-
-            switch (cb->logicOp) {
-            case XGL_LOGIC_OP_CLEAR:            logicop = GEN6_LOGICOP_CLEAR; break;
-            case XGL_LOGIC_OP_AND:              logicop = GEN6_LOGICOP_AND; break;
-            case XGL_LOGIC_OP_AND_REVERSE:      logicop = GEN6_LOGICOP_AND_REVERSE; break;
-            case XGL_LOGIC_OP_AND_INVERTED:     logicop = GEN6_LOGICOP_AND_INVERTED; break;
-            case XGL_LOGIC_OP_NOOP:             logicop = GEN6_LOGICOP_NOOP; break;
-            case XGL_LOGIC_OP_XOR:              logicop = GEN6_LOGICOP_XOR; break;
-            case XGL_LOGIC_OP_OR:               logicop = GEN6_LOGICOP_OR; break;
-            case XGL_LOGIC_OP_NOR:              logicop = GEN6_LOGICOP_NOR; break;
-            case XGL_LOGIC_OP_EQUIV:            logicop = GEN6_LOGICOP_EQUIV; break;
-            case XGL_LOGIC_OP_INVERT:           logicop = GEN6_LOGICOP_INVERT; break;
-            case XGL_LOGIC_OP_OR_REVERSE:       logicop = GEN6_LOGICOP_OR_REVERSE; break;
-            case XGL_LOGIC_OP_COPY_INVERTED:    logicop = GEN6_LOGICOP_COPY_INVERTED; break;
-            case XGL_LOGIC_OP_OR_INVERTED:      logicop = GEN6_LOGICOP_OR_INVERTED; break;
-            case XGL_LOGIC_OP_NAND:             logicop = GEN6_LOGICOP_NAND; break;
-            case XGL_LOGIC_OP_SET:              logicop = GEN6_LOGICOP_SET; break;
-            default:
-                assert(!"unknown logic op");
-                logicop = GEN6_LOGICOP_CLEAR;
-                break;
-            }
-
-            dw1 |= GEN6_BLEND_DW1_LOGICOP_ENABLE |
-                   logicop << GEN6_BLEND_DW1_LOGICOP_FUNC__SHIFT;
-        } else if (att->blendEnable && blend) {
-            dw0 |= blend->cmd_blend[i];
-        }
-
-        if (!(att->channelWriteMask & 0x1))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_R;
-        if (!(att->channelWriteMask & 0x2))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_G;
-        if (!(att->channelWriteMask & 0x4))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_B;
-        if (!(att->channelWriteMask & 0x8))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_A;
-
-        dw[2 * i] = dw0;
-        dw[2 * i + 1] = dw1;
-    }
-
-    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLEND, cmd_align, cmd_len, dw);
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_BLEND, cmd_align, cmd_len, pipeline->cmd_cb);
 }
 
 static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
-                                         const struct intel_ds_state *state)
+                                         const struct intel_dynamic_ds *state)
 {
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
     const uint8_t cmd_len = 3;
+    uint32_t dw[3];
+
+    dw[0] = pipeline->cmd_depth_stencil;
+    dw[1] = (state->ds_info.stencilReadMask & 0xff) << 24 |
+            (state->ds_info.stencilWriteMask & 0xff) << 16;
+    dw[2] = pipeline->cmd_depth_test;
 
     CMD_ASSERT(cmd, 6, 7.5);
-    STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= cmd_len);
+
+    if (state->ds_info.stencilWriteMask && pipeline->stencilTestEnable)
+       dw[0] |= 1 << 18;
 
     return cmd_state_write(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
-            cmd_align, cmd_len, state->cmd);
+            cmd_align, cmd_len, dw);
 }
 
 static uint32_t gen6_COLOR_CALC_STATE(struct intel_cmd *cmd,
@@ -1297,8 +1244,8 @@ void cmd_batch_immediate(struct intel_cmd *cmd,
 
 static void gen6_cc_states(struct intel_cmd *cmd)
 {
-    const struct intel_blend_state *blend = cmd->bind.state.blend;
-    const struct intel_ds_state *ds = cmd->bind.state.ds;
+    const struct intel_dynamic_cb *blend = cmd->bind.state.blend;
+    const struct intel_dynamic_ds *ds = cmd->bind.state.ds;
     uint32_t blend_offset, ds_offset, cc_offset;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
@@ -1308,13 +1255,14 @@ static void gen6_cc_states(struct intel_cmd *cmd)
     blend_offset = gen6_BLEND_STATE(cmd);
 
     if (blend)
-        memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
+        memcpy(blend_color, blend->cb_info.blendConst, sizeof(blend_color));
     else
         memset(blend_color, 0, sizeof(blend_color));
 
     if (ds) {
         ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = ds->cmd_stencil_ref;
+        stencil_ref = (ds->ds_info.stencilFrontRef && 0xff) << 24 |
+                      (ds->ds_info.stencilBackRef && 0xff) << 16;
     } else {
         ds_offset = 0;
         stencil_ref = 0;
@@ -1327,14 +1275,15 @@ static void gen6_cc_states(struct intel_cmd *cmd)
 
 static void gen6_viewport_states(struct intel_cmd *cmd)
 {
-    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
+    const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
     uint32_t sf_offset, clip_offset, cc_offset, scissor_offset;
 
     if (!viewport)
         return;
 
-    assert(viewport->cmd_len == (8 + 4 + 2 + 2 * viewport->scissor_enable) *
-            viewport->viewport_count);
+    assert(viewport->cmd_len == (8 + 4 + 2) *
+            viewport->viewport_count + (viewport->has_scissor_rects) ?
+               (viewport->viewport_count * 2) : 0);
 
     sf_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
             GEN6_ALIGNMENT_SF_VIEWPORT, 8 * viewport->viewport_count,
@@ -1348,7 +1297,7 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
             GEN6_ALIGNMENT_SF_VIEWPORT, 2 * viewport->viewport_count,
             &viewport->cmd[viewport->cmd_cc_pos]);
 
-    if (viewport->scissor_enable) {
+    if (viewport->has_scissor_rects) {
         scissor_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
                 GEN6_ALIGNMENT_SCISSOR_RECT, 2 * viewport->viewport_count,
                 &viewport->cmd[viewport->cmd_scissor_rect_pos]);
@@ -1364,8 +1313,8 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
 
 static void gen7_cc_states(struct intel_cmd *cmd)
 {
-    const struct intel_blend_state *blend = cmd->bind.state.blend;
-    const struct intel_ds_state *ds = cmd->bind.state.ds;
+    const struct intel_dynamic_cb *blend = cmd->bind.state.blend;
+    const struct intel_dynamic_ds *ds = cmd->bind.state.ds;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
     uint32_t offset;
@@ -1380,13 +1329,14 @@ static void gen7_cc_states(struct intel_cmd *cmd)
             GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, offset);
 
     if (blend)
-        memcpy(blend_color, blend->cmd_blend_color, sizeof(blend_color));
+        memcpy(blend_color, blend->cb_info.blendConst, sizeof(blend_color));
     else
         memset(blend_color, 0, sizeof(blend_color));
 
     if (ds) {
         offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = ds->cmd_stencil_ref;
+        stencil_ref = (ds->ds_info.stencilFrontRef && 0xff) << 24 |
+                      (ds->ds_info.stencilBackRef && 0xff) << 16;
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
                 offset);
@@ -1403,13 +1353,14 @@ static void gen7_cc_states(struct intel_cmd *cmd)
 
 static void gen7_viewport_states(struct intel_cmd *cmd)
 {
-    const struct intel_viewport_state *viewport = cmd->bind.state.viewport;
+    const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     uint32_t offset;
 
     if (!viewport)
         return;
 
-    assert(viewport->cmd_len == (16 + 2 + 2 * viewport->scissor_enable) *
+    assert(viewport->cmd_len == (16 + 2 + 2 * pipeline->scissor_enable) *
             viewport->viewport_count);
 
     offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
@@ -1426,7 +1377,7 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
             GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
             offset);
 
-    if (viewport->scissor_enable) {
+    if (pipeline->scissor_enable) {
         offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
                 GEN6_ALIGNMENT_SCISSOR_RECT, 2 * viewport->viewport_count,
                 &viewport->cmd[viewport->cmd_scissor_rect_pos]);
@@ -2017,7 +1968,6 @@ static void emit_graphics_pipeline(struct intel_cmd *cmd)
 
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
-    const struct intel_msaa_state *msaa = cmd->bind.state.msaa;
 
     emit_graphics_pipeline(cmd);
 
@@ -2056,11 +2006,47 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
 
-    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
-    cmd_batch_write(cmd, msaa->cmd_len, msaa->cmd);
-
     gen6_3DSTATE_VERTEX_BUFFERS(cmd);
     gen6_3DSTATE_VS(cmd);
+}
+
+static uint32_t gen6_meta_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
+                                         const struct intel_cmd_meta *meta)
+{
+    const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
+    const uint8_t cmd_len = 3;
+    uint32_t dw[3];
+    uint32_t cmd_depth_stencil;
+    uint32_t cmd_depth_test;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    cmd_depth_stencil = 0;
+    cmd_depth_test = 0;
+    if (meta->ds.aspect == XGL_IMAGE_ASPECT_DEPTH) {
+        cmd_depth_test |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE |
+                          GEN6_COMPAREFUNCTION_ALWAYS << 27;
+    }
+    else if (meta->ds.aspect == XGL_IMAGE_ASPECT_STENCIL) {
+        cmd_depth_stencil = 1 << 31 |
+                (GEN6_COMPAREFUNCTION_ALWAYS) << 28 |
+                (GEN6_STENCILOP_KEEP) << 25 |
+                (GEN6_STENCILOP_KEEP) << 22 |
+                (GEN6_STENCILOP_REPLACE) << 19 |
+                1 << 15 |
+                (GEN6_COMPAREFUNCTION_ALWAYS) << 12 |
+                (GEN6_STENCILOP_KEEP) << 9 |
+                (GEN6_STENCILOP_KEEP) << 6 |
+                (GEN6_STENCILOP_REPLACE) << 3;
+    }
+
+    cmd_depth_test |= GEN6_COMPAREFUNCTION_ALWAYS << 27;
+    dw[0] = cmd_depth_stencil | 1 << 18;
+    dw[1] = (0xff) << 24 | (0xff) << 16;
+    dw[2] = cmd_depth_test;
+
+    return cmd_state_write(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
+            cmd_align, cmd_len, dw);
 }
 
 static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
@@ -2084,15 +2070,17 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
     }
 
     if (meta->mode != INTEL_CMD_META_VS_POINTS) {
-        if (meta->ds.state) {
+        if (meta->ds.aspect != XGL_IMAGE_ASPECT_COLOR) {
             const uint32_t blend_color[4] = { 0, 0, 0, 0 };
+            uint32_t stencil_ref = (meta->ds.stencil_ref && 0xff) << 24 |
+                                   (meta->ds.stencil_ref && 0xff) << 16;
 
             /* DEPTH_STENCIL_STATE */
-            ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, meta->ds.state);
+            ds_offset = gen6_meta_DEPTH_STENCIL_STATE(cmd, meta);
 
             /* COLOR_CALC_STATE */
             cc_offset = gen6_COLOR_CALC_STATE(cmd,
-                    meta->ds.state->cmd_stencil_ref, blend_color);
+                    stencil_ref, blend_color);
 
             /* CC_VIEWPORT */
             cc_vp_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_CC_VIEWPORT,
@@ -2974,33 +2962,27 @@ static void cmd_bind_index_data(struct intel_cmd *cmd,
 }
 
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
-                                    const struct intel_viewport_state *state)
+                                    const struct intel_dynamic_vp *state)
 {
     cmd->bind.state.viewport = state;
 }
 
 static void cmd_bind_raster_state(struct intel_cmd *cmd,
-                                  const struct intel_raster_state *state)
+                                  const struct intel_dynamic_rs *state)
 {
     cmd->bind.state.raster = state;
 }
 
 static void cmd_bind_ds_state(struct intel_cmd *cmd,
-                              const struct intel_ds_state *state)
+                              const struct intel_dynamic_ds *state)
 {
     cmd->bind.state.ds = state;
 }
 
 static void cmd_bind_blend_state(struct intel_cmd *cmd,
-                                 const struct intel_blend_state *state)
+                                 const struct intel_dynamic_cb *state)
 {
     cmd->bind.state.blend = state;
-}
-
-static void cmd_bind_msaa_state(struct intel_cmd *cmd,
-                                const struct intel_msaa_state *state)
-{
-    cmd->bind.state.msaa = state;
 }
 
 static void cmd_draw(struct intel_cmd *cmd,
@@ -3147,33 +3129,29 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindStateObject(
+ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicStateObject(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_STATE_BIND_POINT                        stateBindPoint,
-    XGL_STATE_OBJECT                            state)
+    XGL_DYNAMIC_STATE_OBJECT                    state)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     switch (stateBindPoint) {
     case XGL_STATE_BIND_VIEWPORT:
         cmd_bind_viewport_state(cmd,
-                intel_viewport_state((XGL_VIEWPORT_STATE_OBJECT) state));
+                intel_dynamic_vp((XGL_DYNAMIC_VP_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_RASTER:
         cmd_bind_raster_state(cmd,
-                intel_raster_state((XGL_RASTER_STATE_OBJECT) state));
+                intel_dynamic_rs((XGL_DYNAMIC_RS_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_DEPTH_STENCIL:
         cmd_bind_ds_state(cmd,
-                intel_ds_state((XGL_DEPTH_STENCIL_STATE_OBJECT) state));
+                intel_dynamic_ds((XGL_DYNAMIC_DS_STATE_OBJECT) state));
         break;
     case XGL_STATE_BIND_COLOR_BLEND:
         cmd_bind_blend_state(cmd,
-                intel_blend_state((XGL_COLOR_BLEND_STATE_OBJECT) state));
-        break;
-    case XGL_STATE_BIND_MSAA:
-        cmd_bind_msaa_state(cmd,
-                intel_msaa_state((XGL_MSAA_STATE_OBJECT) state));
+                intel_dynamic_cb((XGL_DYNAMIC_CB_STATE_OBJECT) state));
         break;
     default:
         cmd->result = XGL_ERROR_INVALID_VALUE;

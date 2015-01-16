@@ -144,15 +144,20 @@ struct intel_pipeline_shader {
  *
  *  - 3DSTATE_URB (3)
  *  - 3DSTATE_VERTEX_ELEMENTS (1+2*INTEL_MAX_VERTEX_ELEMENT_COUNT)
+ *  - 3DSTATE_MULTISAMPLE (3)
+ *  - 3DSTATE_SAMPLE_MASK (2)
  *
  * On GEN7, there are
  *
  *  - 3DSTATE_URB_x (2*4)
  *  - 3DSTATE_PUSH_CONSTANT_ALLOC_x (2*5)
  *  - 3DSTATE_VERTEX_ELEMENTS (1+2*INTEL_MAX_VERTEX_ELEMENT_COUNT)
+ *  - 3DSTATE_SBE (14)
  *  - 3DSTATE_HS (7)
  *  - 3DSTATE_TE (4)
  *  - 3DSTATE_DS (6)
+ *  - 3DSTATE_MULTISAMPLE (4)
+ *  - 3DSTATE_SAMPLE_MASK (2)
  */
 #define INTEL_PSO_CMD_ENTRIES   128
 
@@ -182,12 +187,12 @@ struct intel_pipeline {
     /* Depth Buffer format */
     XGL_FORMAT db_format;
 
-    XGL_PIPELINE_CB_STATE cb_state;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO cb_state;
 
     // XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
-    float pointSize;
+    bool scissor_enable;
 
     XGL_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
 
@@ -205,6 +210,21 @@ struct intel_pipeline {
     uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
     XGL_UINT cmd_len;
     XGL_UINT cmd_sbe_body_offset;
+
+    /* The following are only partial HW commands that will need
+     * more processing before sending to the HW
+     */
+    // XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state
+    bool stencilTestEnable;
+    uint32_t cmd_depth_stencil;
+    uint32_t cmd_depth_test;
+
+    uint32_t cmd_sf_fill;
+    uint32_t cmd_clip_cull;
+    uint32_t cmd_sf_cull;
+    uint32_t cmd_cb[2 * INTEL_MAX_RENDER_TARGETS];
+    uint32_t sample_count;
+    uint32_t cmd_sample_mask;
 };
 
 static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)

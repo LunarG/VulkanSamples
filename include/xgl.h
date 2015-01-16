@@ -92,12 +92,11 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE_DELTA, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_SAMPLER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET, XGL_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_STATE_OBJECT, XGL_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_VIEWPORT_STATE_OBJECT, XGL_STATE_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_RASTER_STATE_OBJECT, XGL_STATE_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_MSAA_STATE_OBJECT, XGL_STATE_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_COLOR_BLEND_STATE_OBJECT, XGL_STATE_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_DEPTH_STENCIL_STATE_OBJECT, XGL_STATE_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_STATE_OBJECT, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_VP_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_RS_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_CB_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_DS_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_CMD_BUFFER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_FENCE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_QUEUE_SEMAPHORE, XGL_OBJECT)
@@ -108,10 +107,6 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_RENDER_PASS, XGL_OBJECT)
 
 #define XGL_MAX_PHYSICAL_GPUS       16
 #define XGL_MAX_PHYSICAL_GPU_NAME   256
-#define XGL_MAX_MEMORY_HEAPS        8
-#define XGL_MAX_DESCRIPTOR_SETS     2
-#define XGL_MAX_VIEWPORTS           16
-#define XGL_MAX_COLOR_ATTACHMENTS   8
 
 #define XGL_LOD_CLAMP_NONE       MAX_FLOAT
 #define XGL_LAST_MIP_OR_SLICE    0xffffffff
@@ -343,12 +338,11 @@ typedef enum _XGL_STATE_BIND_POINT
 {
     XGL_STATE_BIND_VIEWPORT                                 = 0x00000000,
     XGL_STATE_BIND_RASTER                                   = 0x00000001,
-    XGL_STATE_BIND_DEPTH_STENCIL                            = 0x00000002,
-    XGL_STATE_BIND_COLOR_BLEND                              = 0x00000003,
-    XGL_STATE_BIND_MSAA                                     = 0x00000004,
+    XGL_STATE_BIND_COLOR_BLEND                              = 0x00000002,
+    XGL_STATE_BIND_DEPTH_STENCIL                            = 0x00000003,
 
     XGL_STATE_BIND_POINT_BEGIN_RANGE                        = XGL_STATE_BIND_VIEWPORT,
-    XGL_STATE_BIND_POINT_END_RANGE                          = XGL_STATE_BIND_MSAA,
+    XGL_STATE_BIND_POINT_END_RANGE                          = XGL_STATE_BIND_DEPTH_STENCIL,
     XGL_NUM_STATE_BIND_POINT                                = (XGL_STATE_BIND_POINT_END_RANGE - XGL_STATE_BIND_POINT_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_STATE_BIND_POINT)
 } XGL_STATE_BIND_POINT;
@@ -468,6 +462,39 @@ typedef enum _XGL_FACE_ORIENTATION
     XGL_NUM_FACE_ORIENTATION                                = (XGL_FACE_ORIENTATION_END_RANGE - XGL_FACE_ORIENTATION_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_FACE_ORIENTATION)
 } XGL_FACE_ORIENTATION;
+
+typedef enum _XGL_PROVOKING_VERTEX_CONVENTION
+{
+    XGL_PROVOKING_VERTEX_FIRST                              = 0x00000000,
+    XGL_PROVOKING_VERTEX_LAST                               = 0x00000001,
+
+    XGL_PROVOKING_VERTEX_BEGIN_RANGE                        = XGL_PROVOKING_VERTEX_FIRST,
+    XGL_PROVOKING_VERTEX_END_RANGE                          = XGL_PROVOKING_VERTEX_LAST,
+    XGL_NUM_PROVOKING_VERTEX_CONVENTION                     = (XGL_PROVOKING_VERTEX_END_RANGE - XGL_PROVOKING_VERTEX_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_PROVOKING_VERTEX_CONVENTION)
+} XGL_PROVOKING_VERTEX_CONVENTION;
+
+typedef enum _XGL_COORDINATE_ORIGIN
+{
+    XGL_COORDINATE_ORIGIN_UPPER_LEFT                        = 0x00000000,
+    XGL_COORDINATE_ORIGIN_LOWER_LEFT                        = 0x00000001,
+
+    XGL_COORDINATE_ORIGIN_BEGIN_RANGE                       = XGL_COORDINATE_ORIGIN_UPPER_LEFT,
+    XGL_COORDINATE_ORIGIN_END_RANGE                         = XGL_COORDINATE_ORIGIN_LOWER_LEFT,
+    XGL_NUM_COORDINATE_ORIGIN                               = (XGL_COORDINATE_ORIGIN_END_RANGE - XGL_COORDINATE_ORIGIN_END_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_COORDINATE_ORIGIN)
+} XGL_COORDINATE_ORIGIN;
+
+typedef enum _XGL_DEPTH_MODE
+{
+    XGL_DEPTH_MODE_ZERO_TO_ONE                              = 0x00000000,
+    XGL_DEPTH_MODE_NEGATIVE_ONE_TO_ONE                      = 0x00000001,
+
+    XGL_DEPTH_MODE_BEGIN_RANGE                              = XGL_DEPTH_MODE_ZERO_TO_ONE,
+    XGL_DEPTH_MODE_END_RANGE                                = XGL_DEPTH_MODE_NEGATIVE_ONE_TO_ONE,
+    XGL_NUM_DEPTH_MODE                                      = (XGL_DEPTH_MODE_END_RANGE - XGL_DEPTH_MODE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_DEPTH_MODE)
+} XGL_DEPTH_MODE;
 
 typedef enum _XGL_BLEND
 {
@@ -802,17 +829,6 @@ typedef enum _XGL_NUM_FORMAT
     XGL_MAX_ENUM(_XGL_NUM_FORMAT)
 } XGL_NUM_FORMAT;
 
-typedef enum _XGL_PROVOKING_VERTEX_CONVENTION
-{
-    XGL_PROVOKING_VERTEX_FIRST                              = 0,
-    XGL_PROVOKING_VERTEX_LAST                               = 1,
-
-    XGL_PROVOKING_VERTEX_BEGIN_RANGE                        = XGL_PROVOKING_VERTEX_FIRST,
-    XGL_PROVOKING_VERTEX_END_RANGE                          = XGL_PROVOKING_VERTEX_LAST,
-    XGL_NUM_PROVOKING_VERTEX_CONVENTIONS                    = (XGL_PROVOKING_VERTEX_END_RANGE - XGL_PROVOKING_VERTEX_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_PROVOKING_VERTEX_CONVENTION)
-} XGL_PROVOKING_VERTEX_CONVENTION;
-
 // IMG CHANGE BEGIN - support for vertex input description
 typedef enum _XGL_VERTEX_INPUT_STEP_RATE
 {
@@ -870,10 +886,10 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO         = 13,
     XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                  = 14,
     XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO           = 15,
-    XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO             = 16,
-    XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO               = 17,
-    XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO        = 18,
-    XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO      = 19,
+    XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO         = 16,
+    XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO         = 17,
+    XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO         = 18,
+    XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO         = 19,
     XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO               = 20,
     XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO                    = 21,
     XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO                    = 22,
@@ -882,12 +898,15 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO               = 25,
     XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO    = 26,
     XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO        = 27,
-    XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO        = 28,
-    XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO        = 29,
-    XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO        = 30,
-    XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO        = 31,
-    XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO      = 32,
-    XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO                    = 33,
+    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 28,
+    XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO        = 29,
+    XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO      = 30,
+    XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO        = 31,
+    XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO        = 32,
+    XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO        = 33,
+    XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO        = 34,
+    XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO        = 35,
+    XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO                    = 36,
     XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO                   = 37,
     XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO              = 38,
     XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO              = 39,
@@ -895,9 +914,6 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO       = 41,
     XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO              = 42,
     XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO                    = 43,
-// IMG CHANGE BEGIN - support for vertex input description
-    XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO    = 90,
-// IMG CHANGE END
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -1122,6 +1138,10 @@ typedef struct _XGL_PHYSICAL_GPU_PROPERTIES
     XGL_UINT                                maxThreadGroupSize;
     XGL_UINT64                              timestampFrequency;
     XGL_BOOL                                multiColorAttachmentClears;
+    XGL_UINT                                maxMemoryHeaps;                 // at least 8?
+    XGL_UINT                                maxDescriptorSets;              // at least 2?
+    XGL_UINT                                maxViewports;                   // at least 16?
+    XGL_UINT                                maxColorAttachments;            // at least 8?
 } XGL_PHYSICAL_GPU_PROPERTIES;
 
 typedef struct _XGL_PHYSICAL_GPU_PERFORMANCE
@@ -1229,7 +1249,7 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
     XGL_GPU_SIZE                            alignment;
     XGL_FLAGS                               flags;                      // XGL_MEMORY_ALLOC_FLAGS
     XGL_UINT                                heapCount;
-    XGL_UINT                                heaps[XGL_MAX_MEMORY_HEAPS];
+    const XGL_UINT*                         pHeaps;
     XGL_MEMORY_PRIORITY                     memPriority;
 } XGL_MEMORY_ALLOC_INFO;
 
@@ -1253,7 +1273,7 @@ typedef struct _XGL_MEMORY_REQUIREMENTS
     XGL_GPU_SIZE                            alignment;                  // Specified in bytes
     XGL_GPU_SIZE                            granularity;                // Granularity on which xglBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     XGL_UINT                                heapCount;
-    XGL_UINT                                heaps[XGL_MAX_MEMORY_HEAPS];
+    XGL_UINT*                               pHeaps;
 } XGL_MEMORY_REQUIREMENTS;
 
 typedef struct _XGL_FORMAT_PROPERTIES
@@ -1498,7 +1518,8 @@ typedef struct _XGL_PIPELINE_SHADER
 {
     XGL_PIPELINE_SHADER_STAGE               stage;
     XGL_SHADER                              shader;
-    XGL_DESCRIPTOR_SET_MAPPING              descriptorSetMapping[XGL_MAX_DESCRIPTOR_SETS];
+    XGL_UINT                                descriptorSetMappingCount;
+    XGL_DESCRIPTOR_SET_MAPPING*             pDescriptorSetMapping;
     XGL_UINT                                linkConstBufferCount;
     const XGL_LINK_CONST_BUFFER*            pLinkConstBufferInfo;
     XGL_DYNAMIC_BUFFER_VIEW_SLOT_INFO       dynamicBufferViewMapping;
@@ -1565,10 +1586,9 @@ typedef struct _XGL_PIPELINE_IA_STATE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_PRIMITIVE_TOPOLOGY                  topology;
-    XGL_BOOL                                disableVertexReuse;
-    XGL_PROVOKING_VERTEX_CONVENTION         provokingVertex;
+    XGL_BOOL                                disableVertexReuse;    //optional
     XGL_BOOL                                primitiveRestartEnable;
-    XGL_UINT32                              primitiveRestartIndex;
+    XGL_UINT32                              primitiveRestartIndex;  //optional (GL45)
 } XGL_PIPELINE_IA_STATE_CREATE_INFO;
 
 typedef struct _XGL_PIPELINE_TESS_STATE_CREATE_INFO
@@ -1580,19 +1600,51 @@ typedef struct _XGL_PIPELINE_TESS_STATE_CREATE_INFO
     XGL_FLOAT                               fixedTessFactor;
 } XGL_PIPELINE_TESS_STATE_CREATE_INFO;
 
+typedef struct _XGL_PIPELINE_VP_STATE_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
+    const void*                             pNext;      // Pointer to next structure
+    XGL_UINT                                numViewports;
+    XGL_UINT                                scissorEnable;
+    XGL_COORDINATE_ORIGIN                   clipOrigin;                 // optional (GL45)
+    XGL_DEPTH_MODE                          depthMode;                  // optional (GL45)
+} XGL_PIPELINE_VP_STATE_CREATE_INFO;
+
 typedef struct _XGL_PIPELINE_RS_STATE_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_BOOL                                depthClipEnable;
     XGL_BOOL                                rasterizerDiscardEnable;
-    XGL_FLOAT                               pointSize;  // Size of points
+    XGL_BOOL                                programPointSize;           // optional (GL45)
+    XGL_COORDINATE_ORIGIN                   pointOrigin;                // optional (GL45)
+    XGL_PROVOKING_VERTEX_CONVENTION         provokingVertex;            // optional (GL45)
+    XGL_FILL_MODE                           fillMode;                   // optional (GL45)
+    XGL_CULL_MODE                           cullMode;
+    XGL_FACE_ORIENTATION                    frontFace;
 } XGL_PIPELINE_RS_STATE_CREATE_INFO;
+
+typedef struct _XGL_PIPELINE_MS_STATE_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
+    const XGL_VOID*                             pNext;      // Pointer to next structure
+    XGL_UINT                                samples;
+    XGL_BOOL                                multisampleEnable;          // optional (GL45)
+    XGL_BOOL                                sampleShadingEnable;        // optional (GL45)
+    XGL_FLOAT                               minSampleShading;           // optional (GL45)
+    XGL_SAMPLE_MASK                         sampleMask;
+} XGL_PIPELINE_MS_STATE_CREATE_INFO;
 
 typedef struct _XGL_PIPELINE_CB_ATTACHMENT_STATE
 {
     XGL_BOOL                                blendEnable;
     XGL_FORMAT                              format;
+    XGL_BLEND                               srcBlendColor;
+    XGL_BLEND                               destBlendColor;
+    XGL_BLEND_FUNC                          blendFuncColor;
+    XGL_BLEND                               srcBlendAlpha;
+    XGL_BLEND                               destBlendAlpha;
+    XGL_BLEND_FUNC                          blendFuncAlpha;
     XGL_UINT8                               channelWriteMask;
 } XGL_PIPELINE_CB_ATTACHMENT_STATE;
 
@@ -1601,17 +1653,35 @@ typedef struct _XGL_PIPELINE_CB_STATE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_BOOL                                alphaToCoverageEnable;
-    XGL_BOOL                                dualSourceBlendEnable;
+    XGL_BOOL                                dualSourceBlendEnable;    // optional (GL45)
+    XGL_BOOL                                logicOpEnable;
     XGL_LOGIC_OP                            logicOp;
-    XGL_PIPELINE_CB_ATTACHMENT_STATE        attachment[XGL_MAX_COLOR_ATTACHMENTS];
-} XGL_PIPELINE_CB_STATE;
+    XGL_UINT                                attachmentCount;    // # of pAttachments
+    XGL_PIPELINE_CB_ATTACHMENT_STATE*       pAttachments;
+} XGL_PIPELINE_CB_STATE_CREATE_INFO;
 
-typedef struct _XGL_PIPELINE_DB_STATE_CREATE_INFO
+typedef struct _XGL_STENCIL_OP_STATE
 {
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO
-    const XGL_VOID*                         pNext;      // Pointer to next structure
-    XGL_FORMAT format;
-} XGL_PIPELINE_DB_STATE_CREATE_INFO;
+    XGL_STENCIL_OP                          stencilFailOp;
+    XGL_STENCIL_OP                          stencilPassOp;
+    XGL_STENCIL_OP                          stencilDepthFailOp;
+    XGL_COMPARE_FUNC                        stencilFunc;
+} XGL_STENCIL_OP_STATE;
+
+typedef struct _XGL_PIPELINE_DS_STATE_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
+    const void*                             pNext;      // Pointer to next structure
+    XGL_FORMAT                              format;
+    XGL_BOOL                                depthTestEnable;
+    XGL_BOOL                                depthWriteEnable;
+    XGL_COMPARE_FUNC                        depthFunc;
+    XGL_BOOL                                depthBoundsEnable;          // optional (depth_bounds_test)
+    XGL_BOOL                                stencilTestEnable;
+    XGL_STENCIL_OP_STATE                    front;
+    XGL_STENCIL_OP_STATE                    back;
+} XGL_PIPELINE_DS_STATE_CREATE_INFO;
+
 
 typedef struct _XGL_PIPELINE_SHADER_STAGE_CREATE_INFO
 {
@@ -1649,7 +1719,7 @@ typedef struct _XGL_DESCRIPTOR_SET_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
-    XGL_UINT slots;
+    XGL_UINT                                slots;
 } XGL_DESCRIPTOR_SET_CREATE_INFO;
 
 typedef struct _XGL_DESCRIPTOR_SET_ATTACH_INFO
@@ -1658,25 +1728,27 @@ typedef struct _XGL_DESCRIPTOR_SET_ATTACH_INFO
     XGL_UINT                                slotOffset;
 } XGL_DESCRIPTOR_SET_ATTACH_INFO;
 
-typedef struct _XGL_VIEWPORT_STATE_CREATE_INFO
+typedef struct _XGL_DYNAMIC_VP_STATE_CREATE_INFO
 {
-    XGL_UINT                                viewportCount;
-    XGL_BOOL                                scissorEnable;
-    XGL_VIEWPORT                            viewports[XGL_MAX_VIEWPORTS];
-    XGL_RECT                                scissors[XGL_MAX_VIEWPORTS];
-} XGL_VIEWPORT_STATE_CREATE_INFO;
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
+    const void*                             pNext;      // Pointer to next structure
+    XGL_UINT                                viewportCount;  // number of entries in pViewports
+    XGL_VIEWPORT*                           pViewports;
+    XGL_UINT                                scissorCount;   // number of entries in pScissors
+    XGL_RECT*                               pScissors;
+} XGL_DYNAMIC_VP_STATE_CREATE_INFO;
 
-typedef struct _XGL_RASTER_STATE_CREATE_INFO
+typedef struct _XGL_DYNAMIC_RS_STATE_CREATE_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
-    XGL_FILL_MODE                           fillMode;
-    XGL_CULL_MODE                           cullMode;
-    XGL_FACE_ORIENTATION                    frontFace;
-    XGL_INT                                 depthBias;
+    XGL_FLOAT                               depthBias;
     XGL_FLOAT                               depthBiasClamp;
     XGL_FLOAT                               slopeScaledDepthBias;
-} XGL_RASTER_STATE_CREATE_INFO;
+    XGL_FLOAT                               pointSize;           // optional (GL45) - Size of point
+    XGL_FLOAT                               pointFadeThreshold;  // optional (GL45) - Size of point fade threshold
+    XGL_FLOAT                               lineWidth;           // optional (GL45) - Width of lines
+} XGL_DYNAMIC_RS_STATE_CREATE_INFO;
 
 typedef struct _XGL_MSAA_STATE_CREATE_INFO
 {
@@ -1686,50 +1758,24 @@ typedef struct _XGL_MSAA_STATE_CREATE_INFO
     XGL_SAMPLE_MASK                         sampleMask;
 } XGL_MSAA_STATE_CREATE_INFO;
 
-typedef struct _XGL_COLOR_ATTACHMENT_BLEND_STATE
+typedef struct _XGL_DYNAMIC_CB_STATE_CREATE_INFO
 {
-    XGL_BOOL                                blendEnable;
-    XGL_BLEND                               srcBlendColor;
-    XGL_BLEND                               destBlendColor;
-    XGL_BLEND_FUNC                          blendFuncColor;
-    XGL_BLEND                               srcBlendAlpha;
-    XGL_BLEND                               destBlendAlpha;
-    XGL_BLEND_FUNC                          blendFuncAlpha;
-} XGL_COLOR_ATTACHMENT_BLEND_STATE;
-
-typedef struct _XGL_COLOR_BLEND_STATE_CREATE_INFO
-{
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
-    XGL_COLOR_ATTACHMENT_BLEND_STATE        attachment[XGL_MAX_COLOR_ATTACHMENTS];
     XGL_FLOAT                               blendConst[4];
-} XGL_COLOR_BLEND_STATE_CREATE_INFO;
+} XGL_DYNAMIC_CB_STATE_CREATE_INFO;
 
-typedef struct _XGL_STENCIL_OP_STATE
+typedef struct _XGL_DYNAMIC_DS_STATE_CREATE_INFO
 {
-    XGL_STENCIL_OP                          stencilFailOp;
-    XGL_STENCIL_OP                          stencilPassOp;
-    XGL_STENCIL_OP                          stencilDepthFailOp;
-    XGL_COMPARE_FUNC                        stencilFunc;
-    XGL_UINT32                              stencilRef;
-} XGL_STENCIL_OP_STATE;
-
-typedef struct _XGL_DEPTH_STENCIL_STATE_CREATE_INFO
-{
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
-    XGL_BOOL                                depthTestEnable;
-    XGL_BOOL                                depthWriteEnable;
-    XGL_COMPARE_FUNC                        depthFunc;
-    XGL_BOOL                                depthBoundsEnable;
-    XGL_FLOAT                               minDepth;
-    XGL_FLOAT                               maxDepth;
-    XGL_BOOL                                stencilTestEnable;
+    XGL_FLOAT                               minDepth;               // optional (depth_bounds_test)
+    XGL_FLOAT                               maxDepth;               // optional (depth_bounds_test)
     XGL_UINT32                              stencilReadMask;
     XGL_UINT32                              stencilWriteMask;
-    XGL_STENCIL_OP_STATE                    front;
-    XGL_STENCIL_OP_STATE                    back;
-} XGL_DEPTH_STENCIL_STATE_CREATE_INFO;
+    XGL_UINT32                              stencilFrontRef;
+    XGL_UINT32                              stencilBackRef;
+} XGL_DYNAMIC_DS_STATE_CREATE_INFO;
 
 typedef struct _XGL_CMD_BUFFER_CREATE_INFO
 {
@@ -1949,18 +1995,17 @@ typedef XGL_VOID (XGLAPI *xglAttachImageViewDescriptorsType)(XGL_DESCRIPTOR_SET 
 typedef XGL_VOID (XGLAPI *xglAttachBufferViewDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferViews);
 typedef XGL_VOID (XGLAPI *xglAttachNestedDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount, const XGL_DESCRIPTOR_SET_ATTACH_INFO* pNestedDescriptorSets);
 typedef XGL_VOID (XGLAPI *xglClearDescriptorSetSlotsType)(XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT startSlot, XGL_UINT slotCount);
-typedef XGL_RESULT (XGLAPI *xglCreateViewportStateType)(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState);
-typedef XGL_RESULT (XGLAPI *xglCreateRasterStateType)(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState);
-typedef XGL_RESULT (XGLAPI *xglCreateMsaaStateType)(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState);
-typedef XGL_RESULT (XGLAPI *xglCreateColorBlendStateType)(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState);
-typedef XGL_RESULT (XGLAPI *xglCreateDepthStencilStateType)(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState);
+typedef XGL_RESULT (XGLAPI *xglCreateDynamicViewportStateType)(XGL_DEVICE device, const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_VP_STATE_OBJECT* pState);
+typedef XGL_RESULT (XGLAPI *xglCreateDynamicRasterStateType)(XGL_DEVICE device, const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_RS_STATE_OBJECT* pState);
+typedef XGL_RESULT (XGLAPI *xglCreateDynamicColorBlendStateType)(XGL_DEVICE device, const XGL_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_CB_STATE_OBJECT* pState);
+typedef XGL_RESULT (XGLAPI *xglCreateDynamicDepthStencilStateType)(XGL_DEVICE device, const XGL_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_DS_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateCommandBufferType)(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer);
 typedef XGL_RESULT (XGLAPI *xglBeginCommandBufferType)(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo);
 typedef XGL_RESULT (XGLAPI *xglEndCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef XGL_RESULT (XGLAPI *xglResetCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef XGL_VOID (XGLAPI *xglCmdBindPipelineType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline);
 typedef XGL_VOID (XGLAPI *xglCmdBindPipelineDeltaType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta);
-typedef XGL_VOID (XGLAPI *xglCmdBindStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state);
+typedef XGL_VOID (XGLAPI *xglCmdBindDynamicStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state);
 typedef XGL_VOID (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_UINT index, XGL_DESCRIPTOR_SET descriptorSet, XGL_UINT slotOffset);
 typedef XGL_VOID (XGLAPI *xglCmdBindDynamicBufferViewType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_BUFFER_VIEW_ATTACH_INFO* pBufferView);
 typedef XGL_VOID (XGLAPI *xglCmdBindVertexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_UINT binding);
@@ -2369,30 +2414,25 @@ XGL_VOID XGLAPI xglClearDescriptorSetSlots(
 
 // State object functions
 
-XGL_RESULT XGLAPI xglCreateViewportState(
+XGL_RESULT XGLAPI xglCreateDynamicViewportState(
     XGL_DEVICE                                  device,
-    const XGL_VIEWPORT_STATE_CREATE_INFO*       pCreateInfo,
-    XGL_VIEWPORT_STATE_OBJECT*                  pState);
+    const XGL_DYNAMIC_VP_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_VP_STATE_OBJECT*                pState);
 
-XGL_RESULT XGLAPI xglCreateRasterState(
+XGL_RESULT XGLAPI xglCreateDynamicRasterState(
     XGL_DEVICE                                  device,
-    const XGL_RASTER_STATE_CREATE_INFO*         pCreateInfo,
-    XGL_RASTER_STATE_OBJECT*                    pState);
+    const XGL_DYNAMIC_RS_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_RS_STATE_OBJECT*                pState);
 
-XGL_RESULT XGLAPI xglCreateMsaaState(
+XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
     XGL_DEVICE                                  device,
-    const XGL_MSAA_STATE_CREATE_INFO*           pCreateInfo,
-    XGL_MSAA_STATE_OBJECT*                      pState);
+    const XGL_DYNAMIC_CB_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_CB_STATE_OBJECT*                pState);
 
-XGL_RESULT XGLAPI xglCreateColorBlendState(
+XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(
     XGL_DEVICE                                  device,
-    const XGL_COLOR_BLEND_STATE_CREATE_INFO*    pCreateInfo,
-    XGL_COLOR_BLEND_STATE_OBJECT*               pState);
-
-XGL_RESULT XGLAPI xglCreateDepthStencilState(
-    XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_STATE_CREATE_INFO*  pCreateInfo,
-    XGL_DEPTH_STENCIL_STATE_OBJECT*             pState);
+    const XGL_DYNAMIC_DS_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_DS_STATE_OBJECT*                pState);
 
 // Command buffer functions
 
@@ -2423,10 +2463,10 @@ XGL_VOID XGLAPI xglCmdBindPipelineDelta(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE_DELTA                          delta);
 
-XGL_VOID XGLAPI xglCmdBindStateObject(
+XGL_VOID XGLAPI xglCmdBindDynamicStateObject(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_STATE_BIND_POINT                        stateBindPoint,
-    XGL_STATE_OBJECT                            state);
+    XGL_DYNAMIC_STATE_OBJECT                    dynamicState);
 
 XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     XGL_CMD_BUFFER                              cmdBuffer,

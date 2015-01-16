@@ -30,138 +30,6 @@
 #include "dev.h"
 #include "state.h"
 
-static int translate_compare_func(XGL_COMPARE_FUNC func)
-{
-    switch (func) {
-    case XGL_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
-    case XGL_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
-    case XGL_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case XGL_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
-    case XGL_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
-    case XGL_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case XGL_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
-    case XGL_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
-    default:
-      assert(!"unknown compare_func");
-      return GEN6_COMPAREFUNCTION_NEVER;
-    }
-}
-
-static int translate_stencil_op(XGL_STENCIL_OP op)
-{
-    switch (op) {
-    case XGL_STENCIL_OP_KEEP:       return GEN6_STENCILOP_KEEP;
-    case XGL_STENCIL_OP_ZERO:       return GEN6_STENCILOP_ZERO;
-    case XGL_STENCIL_OP_REPLACE:    return GEN6_STENCILOP_REPLACE;
-    case XGL_STENCIL_OP_INC_CLAMP:  return GEN6_STENCILOP_INCRSAT;
-    case XGL_STENCIL_OP_DEC_CLAMP:  return GEN6_STENCILOP_DECRSAT;
-    case XGL_STENCIL_OP_INVERT:     return GEN6_STENCILOP_INVERT;
-    case XGL_STENCIL_OP_INC_WRAP:   return GEN6_STENCILOP_INCR;
-    case XGL_STENCIL_OP_DEC_WRAP:   return GEN6_STENCILOP_DECR;
-    default:
-      assert(!"unknown stencil op");
-      return GEN6_STENCILOP_KEEP;
-    }
-}
-
-static int translate_blend_func(XGL_BLEND_FUNC func)
-{
-   switch (func) {
-   case XGL_BLEND_FUNC_ADD:                return GEN6_BLENDFUNCTION_ADD;
-   case XGL_BLEND_FUNC_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
-   case XGL_BLEND_FUNC_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
-   case XGL_BLEND_FUNC_MIN:                return GEN6_BLENDFUNCTION_MIN;
-   case XGL_BLEND_FUNC_MAX:                return GEN6_BLENDFUNCTION_MAX;
-   default:
-      assert(!"unknown blend func");
-      return GEN6_BLENDFUNCTION_ADD;
-   };
-}
-
-static int translate_blend(XGL_BLEND blend)
-{
-   switch (blend) {
-   case XGL_BLEND_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
-   case XGL_BLEND_ONE:                      return GEN6_BLENDFACTOR_ONE;
-   case XGL_BLEND_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
-   case XGL_BLEND_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
-   case XGL_BLEND_DEST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
-   case XGL_BLEND_ONE_MINUS_DEST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
-   case XGL_BLEND_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
-   case XGL_BLEND_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
-   case XGL_BLEND_DEST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
-   case XGL_BLEND_ONE_MINUS_DEST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
-   case XGL_BLEND_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
-   case XGL_BLEND_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
-   case XGL_BLEND_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
-   case XGL_BLEND_ONE_MINUS_CONSTANT_ALPHA: return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
-   case XGL_BLEND_SRC_ALPHA_SATURATE:       return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
-   case XGL_BLEND_SRC1_COLOR:               return GEN6_BLENDFACTOR_SRC1_COLOR;
-   case XGL_BLEND_ONE_MINUS_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
-   case XGL_BLEND_SRC1_ALPHA:               return GEN6_BLENDFACTOR_SRC1_ALPHA;
-   case XGL_BLEND_ONE_MINUS_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
-   default:
-      assert(!"unknown blend factor");
-      return GEN6_BLENDFACTOR_ONE;
-   };
-}
-
-static void
-raster_state_init(struct intel_raster_state *state,
-                  const struct intel_gpu *gpu,
-                  const XGL_RASTER_STATE_CREATE_INFO *info)
-{
-    switch (info->fillMode) {
-    case XGL_FILL_POINTS:
-        state->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
-                              GEN7_SF_DW1_BACKFACE_POINT;
-        break;
-    case XGL_FILL_WIREFRAME:
-        state->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_WIREFRAME |
-                              GEN7_SF_DW1_BACKFACE_WIREFRAME;
-        break;
-    case XGL_FILL_SOLID:
-    default:
-        state->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_SOLID |
-                              GEN7_SF_DW1_BACKFACE_SOLID;
-        break;
-    }
-
-    if (info->frontFace == XGL_FRONT_FACE_CCW) {
-        state->cmd_sf_fill |= GEN7_SF_DW1_FRONTWINDING_CCW;
-        state->cmd_clip_cull |= GEN7_CLIP_DW1_FRONTWINDING_CCW;
-    }
-
-    switch (info->cullMode) {
-    case XGL_CULL_NONE:
-    default:
-        state->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_NONE;
-        state->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_NONE;
-        break;
-    case XGL_CULL_FRONT:
-        state->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_FRONT;
-        state->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_FRONT;
-        break;
-    case XGL_CULL_BACK:
-        state->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BACK;
-        state->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BACK;
-        break;
-    case XGL_CULL_FRONT_AND_BACK:
-        state->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BOTH;
-        state->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BOTH;
-        break;
-    }
-
-    /* only GEN7+ needs cull mode in 3DSTATE_CLIP */
-    if (intel_gpu_gen(gpu) == INTEL_GEN(6))
-        state->cmd_clip_cull = 0;
-
-    /* XXX scale info->depthBias back into NDC */
-    state->cmd_depth_offset_const = u_fui((float) info->depthBias * 2.0f);
-    state->cmd_depth_offset_clamp = u_fui(info->depthBiasClamp);
-    state->cmd_depth_offset_scale = u_fui(info->slopeScaledDepthBias);
-}
-
 static void
 viewport_get_guardband(const struct intel_gpu *gpu,
                        int center_x, int center_y,
@@ -222,14 +90,18 @@ viewport_get_guardband(const struct intel_gpu *gpu,
 }
 
 static XGL_RESULT
-viewport_state_alloc_cmd(struct intel_viewport_state *state,
+viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
                          const struct intel_gpu *gpu,
-                         const XGL_VIEWPORT_STATE_CREATE_INFO *info)
+                         const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info)
 {
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
     state->viewport_count = info->viewportCount;
-    state->scissor_enable = info->scissorEnable;
+    state->has_scissor_rects = (info->scissorCount > 0);
+
+    assert(info->viewportCount < INTEL_MAX_RENDER_TARGETS);
+    assert(info->scissorCount < INTEL_MAX_RENDER_TARGETS);
+    assert(!state->has_scissor_rects || info->scissorCount == info->viewportCount);
 
     if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
         state->cmd_len = 16 * info->viewportCount;
@@ -245,7 +117,7 @@ viewport_state_alloc_cmd(struct intel_viewport_state *state,
     state->cmd_cc_pos = state->cmd_len;
     state->cmd_len += 2 * info->viewportCount;
 
-    if (state->scissor_enable) {
+    if (state->has_scissor_rects) {
         state->cmd_scissor_rect_pos = state->cmd_len;
         state->cmd_len += 2 * info->viewportCount;
     }
@@ -259,9 +131,9 @@ viewport_state_alloc_cmd(struct intel_viewport_state *state,
 }
 
 static XGL_RESULT
-viewport_state_init(struct intel_viewport_state *state,
+viewport_state_init(struct intel_dynamic_vp *state,
                     const struct intel_gpu *gpu,
-                    const XGL_VIEWPORT_STATE_CREATE_INFO *info)
+                    const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info)
 {
     const XGL_UINT sf_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 8;
     const XGL_UINT clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
@@ -281,8 +153,7 @@ viewport_state_init(struct intel_viewport_state *state,
     scissor_rect = state->cmd + state->cmd_scissor_rect_pos;
 
     for (i = 0; i < info->viewportCount; i++) {
-        const XGL_VIEWPORT *viewport = &info->viewports[i];
-        const XGL_RECT *scissor = &info->scissors[i];
+        const XGL_VIEWPORT *viewport = &info->pViewports[i];
         uint32_t *dw = NULL;
         float translate[3], scale[3];
         int min_gbx, max_gbx, min_gby, max_gby;
@@ -322,246 +193,47 @@ viewport_state_init(struct intel_viewport_state *state,
         dw[0] = u_fui(viewport->minDepth);
         dw[1] = u_fui(viewport->maxDepth);
         cc_viewport += 2;
+    }
 
+    for (i = 0; i < info->scissorCount; i++) {
+        const XGL_RECT *scissor = &info->pScissors[i];
         /* SCISSOR_RECT */
-        if (state->scissor_enable) {
-            int16_t max_x, max_y;
+        int16_t max_x, max_y;
+        uint32_t *dw = NULL;
 
-            max_x = (scissor->offset.x + scissor->extent.width - 1) & 0xffff;
-            max_y = (scissor->offset.y + scissor->extent.height - 1) & 0xffff;
+        max_x = (scissor->offset.x + scissor->extent.width - 1) & 0xffff;
+        max_y = (scissor->offset.y + scissor->extent.height - 1) & 0xffff;
 
-            dw = scissor_rect;
-            if (scissor->extent.width && scissor->extent.height) {
-                dw[0] = (scissor->offset.y & 0xffff) << 16 |
-                        (scissor->offset.x & 0xffff);
-                dw[1] = max_y << 16 | max_x;
-            } else {
-                dw[0] = 1 << 16 | 1;
-                dw[1] = 0;
-            }
-            scissor_rect += 2;
+        dw = scissor_rect;
+        if (scissor->extent.width && scissor->extent.height) {
+            dw[0] = (scissor->offset.y & 0xffff) << 16 |
+                                                    (scissor->offset.x & 0xffff);
+            dw[1] = max_y << 16 | max_x;
+        } else {
+            dw[0] = 1 << 16 | 1;
+            dw[1] = 0;
         }
+        scissor_rect += 2;
     }
 
     return XGL_SUCCESS;
 }
 
-static void msaa_state_init_sample_pattern(const struct intel_msaa_state *state)
-{
-    struct sample {
-        int x, y;
-    };
-    static const struct sample default_pattern_2x[2] = {
-        { -4, -4 },
-        {  4,  4 },
-    };
-    static const struct sample default_pattern_4x[4] = {
-        { -2, -6 },
-        {  6, -2 },
-        { -6,  2 },
-        {  2,  6 },
-    };
-    static const struct sample default_pattern_8x[8] = {
-        {  1, -3 },
-        { -1,  3 },
-        {  5,  1 },
-        { -3, -5 },
-        { -5,  5 },
-        { -7, -1 },
-        {  3,  7 },
-        {  7, -7 },
-    };
-    uint8_t *samples = (uint8_t *) &state->cmd[2];
-    const struct sample *pattern;
-    int i;
-
-    switch (state->sample_count) {
-    case 2:
-        pattern = default_pattern_2x;
-        break;
-    case 4:
-        pattern = default_pattern_4x;
-        break;
-    case 8:
-        pattern = default_pattern_8x;
-        break;
-    default:
-        memset(samples, 0, state->sample_count);
-        return;
-        break;
-    }
-
-    for (i = 0; i < state->sample_count; i++)
-        samples[i] = (pattern[i].x + 8) << 4 | (pattern[i].y + 8);
-}
-
-static void
-msaa_state_init(struct intel_msaa_state *state,
-                const struct intel_gpu *gpu,
-                const XGL_MSAA_STATE_CREATE_INFO *info)
-{
-    uint32_t cmd, cmd_len;
-    uint32_t *dw = state->cmd;
-
-    INTEL_GPU_ASSERT(gpu, 6, 7.5);
-    STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= 6);
-
-    state->sample_count = info->samples;
-    if (!state->sample_count)
-        state->sample_count = 1;
-
-    /* 3DSTATE_MULTISAMPLE */
-    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE);
-    cmd_len = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 4 : 3;
-
-    dw[0] = cmd | (cmd_len - 2);
-    if (info->samples <= 1)
-        dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
-    else if (info->samples <= 4 || intel_gpu_gen(gpu) == INTEL_GEN(6))
-        dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
-    else
-        dw[1] = GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
-
-    msaa_state_init_sample_pattern(state);
-
-    dw += cmd_len;
-
-    state->cmd_len = cmd_len + 2;
-
-    /* 3DSTATE_SAMPLE_MASK */
-    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK);
-    cmd_len = 2;
-
-    dw[0] = cmd | (cmd_len - 2);
-    dw[1] = info->sampleMask & ((1 << info->samples) - 1);
-}
-
-static void
-blend_state_init(struct intel_blend_state *state,
-                 const struct intel_gpu *gpu,
-                 const XGL_COLOR_BLEND_STATE_CREATE_INFO *info)
-{
-   XGL_UINT i;
-
-   INTEL_GPU_ASSERT(gpu, 6, 7.5);
-
-   for (i = 0; i < ARRAY_SIZE(info->attachment); i++) {
-      const XGL_COLOR_ATTACHMENT_BLEND_STATE *att = &info->attachment[i];
-      uint32_t *dw = &state->cmd_blend[i];
-
-      if (att->blendEnable) {
-         dw[0] = 1 << 31 |
-                 translate_blend_func(att->blendFuncAlpha) << 26 |
-                 translate_blend(att->srcBlendAlpha) << 20 |
-                 translate_blend(att->destBlendAlpha) << 15 |
-                 translate_blend_func(att->blendFuncColor) << 11 |
-                 translate_blend(att->srcBlendColor) << 5 |
-                 translate_blend(att->destBlendColor);
-
-         if (att->blendFuncAlpha != att->blendFuncColor ||
-             att->srcBlendAlpha != att->srcBlendColor ||
-             att->destBlendAlpha != att->destBlendColor)
-             dw[0] |= 1 << 30;
-      }
-   }
-
-   memcpy(state->cmd_blend_color, info->blendConst, sizeof(info->blendConst));
-}
-
-static XGL_RESULT
-ds_state_init(struct intel_ds_state *state,
-              const struct intel_gpu *gpu,
-              const XGL_DEPTH_STENCIL_STATE_CREATE_INFO *info)
-{
-   uint32_t *dw = state->cmd;
-
-   INTEL_GPU_ASSERT(gpu, 6, 7.5);
-
-   STATIC_ASSERT(ARRAY_SIZE(state->cmd) >= 3);
-
-   if (info->depthBoundsEnable)
-       return XGL_ERROR_UNKNOWN;
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 359:
-    *
-    *     "If the Depth Buffer is either undefined or does not have a surface
-    *      format of D32_FLOAT_S8X24_UINT or D24_UNORM_S8_UINT and separate
-    *      stencil buffer is disabled, Stencil Test Enable must be DISABLED"
-    *
-    * From the Sandy Bridge PRM, volume 2 part 1, page 370:
-    *
-    *     "This field (Stencil Test Enable) cannot be enabled if
-    *      Surface Format in 3DSTATE_DEPTH_BUFFER is set to D16_UNORM."
-    *
-    * TODO We do not check these yet.
-    */
-   if (info->stencilTestEnable) {
-      dw[0] = 1 << 31 |
-              translate_compare_func(info->front.stencilFunc) << 28 |
-              translate_stencil_op(info->front.stencilFailOp) << 25 |
-              translate_stencil_op(info->front.stencilDepthFailOp) << 22 |
-              translate_stencil_op(info->front.stencilPassOp) << 19 |
-              1 << 15 |
-              translate_compare_func(info->back.stencilFunc) << 12 |
-              translate_stencil_op(info->back.stencilFailOp) << 9 |
-              translate_stencil_op(info->back.stencilDepthFailOp) << 6 |
-              translate_stencil_op(info->back.stencilPassOp) << 3;
-
-      if (info->stencilWriteMask)
-         dw[0] |= 1 << 18;
-
-      /* same read and write masks for both front and back faces */
-      dw[1] = (info->stencilReadMask & 0xff) << 24 |
-              (info->stencilWriteMask & 0xff) << 16 |
-              (info->stencilReadMask & 0xff) << 8 |
-              (info->stencilWriteMask & 0xff);
-
-      state->cmd_stencil_ref = (info->front.stencilRef & 0xff) << 24 |
-                               (info->back.stencilRef & 0xff) << 16;
-   }
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 360:
-    *
-    *     "Enabling the Depth Test function without defining a Depth Buffer is
-    *      UNDEFINED."
-    *
-    * From the Sandy Bridge PRM, volume 2 part 1, page 375:
-    *
-    *     "A Depth Buffer must be defined before enabling writes to it, or
-    *      operation is UNDEFINED."
-    *
-    * TODO We do not check these yet.
-    */
-   if (info->depthTestEnable) {
-      dw[2] = GEN6_ZS_DW2_DEPTH_TEST_ENABLE |
-              translate_compare_func(info->depthFunc) << 27;
-   } else {
-      dw[2] = GEN6_COMPAREFUNCTION_ALWAYS << 27;
-   }
-
-   if (info->depthWriteEnable)
-      dw[2] |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
-
-   return XGL_SUCCESS;
-}
-
 static void viewport_state_destroy(struct intel_obj *obj)
 {
-    struct intel_viewport_state *state = intel_viewport_state_from_obj(obj);
+    struct intel_dynamic_vp *state = intel_viewport_state_from_obj(obj);
 
     intel_viewport_state_destroy(state);
 }
 
 XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
-                                       const XGL_VIEWPORT_STATE_CREATE_INFO *info,
-                                       struct intel_viewport_state **state_ret)
+                                       const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info,
+                                       struct intel_dynamic_vp **state_ret)
 {
-    struct intel_viewport_state *state;
+    struct intel_dynamic_vp *state;
     XGL_RESULT ret;
 
-    state = (struct intel_viewport_state *) intel_base_create(dev,
+    state = (struct intel_dynamic_vp *) intel_base_create(dev,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_VIEWPORT_STATE,
             info, 0);
     if (!state)
@@ -580,7 +252,7 @@ XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
     return XGL_SUCCESS;
 }
 
-void intel_viewport_state_destroy(struct intel_viewport_state *state)
+void intel_viewport_state_destroy(struct intel_dynamic_vp *state)
 {
     icd_free(state->cmd);
     intel_base_destroy(&state->obj.base);
@@ -588,118 +260,82 @@ void intel_viewport_state_destroy(struct intel_viewport_state *state)
 
 static void raster_state_destroy(struct intel_obj *obj)
 {
-    struct intel_raster_state *state = intel_raster_state_from_obj(obj);
+    struct intel_dynamic_rs *state = intel_raster_state_from_obj(obj);
 
     intel_raster_state_destroy(state);
 }
 
 XGL_RESULT intel_raster_state_create(struct intel_dev *dev,
-                                     const XGL_RASTER_STATE_CREATE_INFO *info,
-                                     struct intel_raster_state **state_ret)
+                                     const XGL_DYNAMIC_RS_STATE_CREATE_INFO *info,
+                                     struct intel_dynamic_rs **state_ret)
 {
-    struct intel_raster_state *state;
+    struct intel_dynamic_rs *state;
 
-    state = (struct intel_raster_state *) intel_base_create(dev,
+    state = (struct intel_dynamic_rs *) intel_base_create(dev,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_RASTER_STATE,
             info, 0);
     if (!state)
         return XGL_ERROR_OUT_OF_MEMORY;
 
     state->obj.destroy = raster_state_destroy;
-
-    raster_state_init(state, dev->gpu, info);
-
-    *state_ret = state;
-
-    return XGL_SUCCESS;
-}
-
-void intel_raster_state_destroy(struct intel_raster_state *state)
-{
-    intel_base_destroy(&state->obj.base);
-}
-
-static void msaa_state_destroy(struct intel_obj *obj)
-{
-    struct intel_msaa_state *state = intel_msaa_state_from_obj(obj);
-
-    intel_msaa_state_destroy(state);
-}
-
-XGL_RESULT intel_msaa_state_create(struct intel_dev *dev,
-                                   const XGL_MSAA_STATE_CREATE_INFO *info,
-                                   struct intel_msaa_state **state_ret)
-{
-    struct intel_msaa_state *state;
-
-    state = (struct intel_msaa_state *) intel_base_create(dev,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_MSAA_STATE,
-            info, 0);
-    if (!state)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    state->obj.destroy = msaa_state_destroy;
-
-    msaa_state_init(state, dev->gpu, info);
+    state->rs_info = *info;
 
     *state_ret = state;
 
     return XGL_SUCCESS;
 }
 
-void intel_msaa_state_destroy(struct intel_msaa_state *state)
+void intel_raster_state_destroy(struct intel_dynamic_rs *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
 static void blend_state_destroy(struct intel_obj *obj)
 {
-    struct intel_blend_state *state = intel_blend_state_from_obj(obj);
+    struct intel_dynamic_cb *state = intel_blend_state_from_obj(obj);
 
     intel_blend_state_destroy(state);
 }
 
 XGL_RESULT intel_blend_state_create(struct intel_dev *dev,
-                                    const XGL_COLOR_BLEND_STATE_CREATE_INFO *info,
-                                    struct intel_blend_state **state_ret)
+                                    const XGL_DYNAMIC_CB_STATE_CREATE_INFO *info,
+                                    struct intel_dynamic_cb **state_ret)
 {
-    struct intel_blend_state *state;
+    struct intel_dynamic_cb *state;
 
-    state = (struct intel_blend_state *) intel_base_create(dev,
+    state = (struct intel_dynamic_cb *) intel_base_create(dev,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_COLOR_BLEND_STATE,
             info, 0);
     if (!state)
         return XGL_ERROR_OUT_OF_MEMORY;
 
     state->obj.destroy = blend_state_destroy;
-
-    blend_state_init(state, dev->gpu, info);
+    state->cb_info = *info;
 
     *state_ret = state;
 
     return XGL_SUCCESS;
 }
 
-void intel_blend_state_destroy(struct intel_blend_state *state)
+void intel_blend_state_destroy(struct intel_dynamic_cb *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
 static void ds_state_destroy(struct intel_obj *obj)
 {
-    struct intel_ds_state *state = intel_ds_state_from_obj(obj);
+    struct intel_dynamic_ds *state = intel_ds_state_from_obj(obj);
 
     intel_ds_state_destroy(state);
 }
 
 XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
-                                 const XGL_DEPTH_STENCIL_STATE_CREATE_INFO *info,
-                                 struct intel_ds_state **state_ret)
+                                 const XGL_DYNAMIC_DS_STATE_CREATE_INFO *info,
+                                 struct intel_dynamic_ds **state_ret)
 {
-    struct intel_ds_state *state;
-    XGL_RESULT ret;
+    struct intel_dynamic_ds *state;
 
-    state = (struct intel_ds_state *) intel_base_create(dev,
+    state = (struct intel_dynamic_ds *) intel_base_create(dev,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_STATE,
             info, 0);
     if (!state)
@@ -707,73 +343,73 @@ XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
 
     state->obj.destroy = ds_state_destroy;
 
-    ret = ds_state_init(state, dev->gpu, info);
-    if (ret != XGL_SUCCESS) {
-        intel_ds_state_destroy(state);
-        return ret;
-    }
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 359:
+     *
+     *     "If the Depth Buffer is either undefined or does not have a surface
+     *      format of D32_FLOAT_S8X24_UINT or D24_UNORM_S8_UINT and separate
+     *      stencil buffer is disabled, Stencil Test Enable must be DISABLED"
+     *
+     * From the Sandy Bridge PRM, volume 2 part 1, page 370:
+     *
+     *     "This field (Stencil Test Enable) cannot be enabled if
+     *      Surface Format in 3DSTATE_DEPTH_BUFFER is set to D16_UNORM."
+     *
+     * TODO We do not check these yet.
+     */
+
+    state->ds_info = *info;
 
     *state_ret = state;
 
     return XGL_SUCCESS;
 }
 
-void intel_ds_state_destroy(struct intel_ds_state *state)
+void intel_ds_state_destroy(struct intel_dynamic_ds *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(
     XGL_DEVICE                                  device,
-    const XGL_VIEWPORT_STATE_CREATE_INFO*       pCreateInfo,
-    XGL_VIEWPORT_STATE_OBJECT*                  pState)
+    const XGL_DYNAMIC_VP_STATE_CREATE_INFO*       pCreateInfo,
+    XGL_DYNAMIC_VP_STATE_OBJECT*                  pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_viewport_state_create(dev, pCreateInfo,
-            (struct intel_viewport_state **) pState);
+            (struct intel_dynamic_vp **) pState);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(
     XGL_DEVICE                                  device,
-    const XGL_RASTER_STATE_CREATE_INFO*         pCreateInfo,
-    XGL_RASTER_STATE_OBJECT*                    pState)
+    const XGL_DYNAMIC_RS_STATE_CREATE_INFO*         pCreateInfo,
+    XGL_DYNAMIC_RS_STATE_OBJECT*                    pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_raster_state_create(dev, pCreateInfo,
-            (struct intel_raster_state **) pState);
+            (struct intel_dynamic_rs **) pState);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
     XGL_DEVICE                                  device,
-    const XGL_MSAA_STATE_CREATE_INFO*           pCreateInfo,
-    XGL_MSAA_STATE_OBJECT*                      pState)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_msaa_state_create(dev, pCreateInfo,
-            (struct intel_msaa_state **) pState);
-}
-
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(
-    XGL_DEVICE                                  device,
-    const XGL_COLOR_BLEND_STATE_CREATE_INFO*    pCreateInfo,
-    XGL_COLOR_BLEND_STATE_OBJECT*               pState)
+    const XGL_DYNAMIC_CB_STATE_CREATE_INFO*    pCreateInfo,
+    XGL_DYNAMIC_CB_STATE_OBJECT*               pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_blend_state_create(dev, pCreateInfo,
-            (struct intel_blend_state **) pState);
+            (struct intel_dynamic_cb **) pState);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(
     XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_STATE_CREATE_INFO*  pCreateInfo,
-    XGL_DEPTH_STENCIL_STATE_OBJECT*             pState)
+    const XGL_DYNAMIC_DS_STATE_CREATE_INFO*  pCreateInfo,
+    XGL_DYNAMIC_DS_STATE_OBJECT*             pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_ds_state_create(dev, pCreateInfo,
-            (struct intel_ds_state **) pState);
+            (struct intel_dynamic_ds **) pState);
 }

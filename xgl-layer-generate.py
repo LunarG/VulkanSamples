@@ -558,11 +558,11 @@ class Subcommand(object):
                             "XGL_IMAGE_VIEW" : "XGL_OBJECT_TYPE_IMAGE_VIEW",
                             "XGL_COLOR_ATTACHMENT_VIEW" : "XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW",
                             "XGL_DEPTH_STENCIL_VIEW" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW",
-                            "XGL_VIEWPORT_STATE_OBJECT" : "XGL_OBJECT_TYPE_VIEWPORT_STATE",
-                            "XGL_RASTER_STATE_OBJECT" : "XGL_OBJECT_TYPE_RASTER_STATE",
+                            "XGL_DYNAMIC_VP_STATE_OBJECT" : "XGL_OBJECT_TYPE_VIEWPORT_STATE",
+                            "XGL_DYNAMIC_RS_STATE_OBJECT" : "XGL_OBJECT_TYPE_RASTER_STATE",
                             "XGL_MSAA_STATE_OBJECT" : "XGL_OBJECT_TYPE_MSAA_STATE",
-                            "XGL_COLOR_BLEND_STATE_OBJECT" : "XGL_OBJECT_TYPE_COLOR_BLEND_STATE",
-                            "XGL_DEPTH_STENCIL_STATE_OBJECT" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE",
+                            "XGL_DYNAMIC_CB_STATE_OBJECT" : "XGL_OBJECT_TYPE_COLOR_BLEND_STATE",
+                            "XGL_DYNAMIC_DS_STATE_OBJECT" : "XGL_OBJECT_TYPE_DEPTH_STENCIL_STATE",
                             "XGL_BASE_OBJECT" : "ll_get_obj_type(object)",
                             "XGL_OBJECT" : "ll_get_obj_type(object)"
                     }

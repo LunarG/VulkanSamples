@@ -260,21 +260,25 @@ void Object::alloc_memory(const Device &dev, bool for_linear_img)
     const std::vector<XGL_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
     for (int i = 0; i < mem_reqs.size(); i++) {
         XGL_MEMORY_ALLOC_INFO info = GpuMemory::alloc_info(mem_reqs[i]);
+        std::vector<uint32_t> heap_ids;
 
         // prefer CPU visible heaps
         std::vector<uint32_t> non_visible_heaps;
         info.heapCount = 0;
         for (uint32_t j = 0; j < mem_reqs[i].heapCount; j++) {
-            const uint32_t heap = mem_reqs[i].heaps[j];
+            const uint32_t heap = mem_reqs[i].pHeaps[j];
             const XGL_MEMORY_HEAP_PROPERTIES &props = dev.heap_properties()[heap];
 
             if (props.flags & XGL_MEMORY_HEAP_CPU_VISIBLE_BIT)
-                info.heaps[info.heapCount++] = heap;
+                heap_ids.push_back(heap);
             else
                 non_visible_heaps.push_back(heap);
         }
         for (std::vector<uint32_t>::const_iterator it = non_visible_heaps.begin(); it != non_visible_heaps.end(); it++)
-            info.heaps[info.heapCount++] = *it;
+            heap_ids.push_back(*it);
+
+        info.heapCount = heap_ids.size();
+        info.pHeaps = &heap_ids[0];
 
         primary_mem_ = &internal_mems_[i];
 
@@ -408,8 +412,6 @@ void Device::init_heap_props()
     uint32_t count;
     if (!EXPECT(xglGetMemoryHeapCount(obj(), &count) == XGL_SUCCESS && count))
         return;
-    if (count > XGL_MAX_MEMORY_HEAPS)
-        count = XGL_MAX_MEMORY_HEAPS;
 
     heap_props_.reserve(count);
     for (uint32_t i = 0; i < count; i++) {
@@ -789,33 +791,27 @@ void DescriptorSet::attach(uint32_t start_slot, const std::vector<XGL_DESCRIPTOR
     xglAttachNestedDescriptors(obj(), start_slot, sets.size(), &sets[0]);
 }
 
-void DynamicVpStateObject::init(const Device &dev, const XGL_VIEWPORT_STATE_CREATE_INFO &info)
+void DynamicVpStateObject::init(const Device &dev, const XGL_DYNAMIC_VP_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateViewportState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(xglCreateDynamicViewportState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicRsStateObject::init(const Device &dev, const XGL_RASTER_STATE_CREATE_INFO &info)
+void DynamicRsStateObject::init(const Device &dev, const XGL_DYNAMIC_RS_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateRasterState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(xglCreateDynamicRasterState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicMsaaStateObject::init(const Device &dev, const XGL_MSAA_STATE_CREATE_INFO &info)
+void DynamicCbStateObject::init(const Device &dev, const XGL_DYNAMIC_CB_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateMsaaState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(xglCreateDynamicColorBlendState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicCbStateObject::init(const Device &dev, const XGL_COLOR_BLEND_STATE_CREATE_INFO &info)
+void DynamicDsStateObject::init(const Device &dev, const XGL_DYNAMIC_DS_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateColorBlendState, dev.obj(), &info);
-    alloc_memory(dev);
-}
-
-void DynamicDsStateObject::init(const Device &dev, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO &info)
-{
-    DERIVED_OBJECT_INIT(xglCreateDepthStencilState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(xglCreateDynamicDepthStencilState, dev.obj(), &info);
     alloc_memory(dev);
 }
 

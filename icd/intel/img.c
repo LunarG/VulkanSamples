@@ -51,6 +51,7 @@ static void img_destroy(struct intel_obj *obj)
 static XGL_RESULT img_get_info(struct intel_base *base, int type,
                                XGL_SIZE *size, XGL_VOID *data)
 {
+    static XGL_UINT imageHeaps[1] = {0}; /* always heap 0 */
     struct intel_img *img = intel_img_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
 
@@ -65,8 +66,7 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
             mem_req->size = img->total_size;
             mem_req->alignment = 4096;
             mem_req->heapCount = 1;
-            mem_req->heaps[0] = 0;
-
+            mem_req->pHeaps = imageHeaps;
         }
         break;
     default:

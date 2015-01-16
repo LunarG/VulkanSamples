@@ -171,11 +171,11 @@ private:
 
 class DynamicStateObject : public Object {
 public:
-    const XGL_STATE_OBJECT &obj() const { return reinterpret_cast<const XGL_STATE_OBJECT &>(Object::obj()); }
+    const XGL_DYNAMIC_STATE_OBJECT &obj() const { return reinterpret_cast<const XGL_DYNAMIC_STATE_OBJECT &>(Object::obj()); }
 
 protected:
     explicit DynamicStateObject() {}
-    explicit DynamicStateObject(XGL_STATE_OBJECT obj) : Object(obj) {}
+    explicit DynamicStateObject(XGL_DYNAMIC_STATE_OBJECT obj) : Object(obj) {}
 };
 
 template<typename T, class C>
@@ -542,34 +542,28 @@ private:
     XGL_DESCRIPTOR_SET_CREATE_INFO info_;
 };
 
-class DynamicVpStateObject : public DerivedObject<XGL_VIEWPORT_STATE_OBJECT, DynamicStateObject> {
+class DynamicVpStateObject : public DerivedObject<XGL_DYNAMIC_VP_STATE_OBJECT, DynamicStateObject> {
 public:
-    // xglCreateViewportState()
-    void init(const Device &dev, const XGL_VIEWPORT_STATE_CREATE_INFO &info);
+    // xglCreateDynamicViewportState()
+    void init(const Device &dev, const XGL_DYNAMIC_VP_STATE_CREATE_INFO &info);
 };
 
-class DynamicRsStateObject : public DerivedObject<XGL_RASTER_STATE_OBJECT, DynamicStateObject> {
+class DynamicRsStateObject : public DerivedObject<XGL_DYNAMIC_RS_STATE_OBJECT, DynamicStateObject> {
 public:
-    // xglCreateRasterState()
-    void init(const Device &dev, const XGL_RASTER_STATE_CREATE_INFO &info);
+    // xglCreateDynamicRasterState()
+    void init(const Device &dev, const XGL_DYNAMIC_RS_STATE_CREATE_INFO &info);
 };
 
-class DynamicMsaaStateObject : public DerivedObject<XGL_MSAA_STATE_OBJECT, DynamicStateObject> {
+class DynamicCbStateObject : public DerivedObject<XGL_DYNAMIC_CB_STATE_OBJECT, DynamicStateObject> {
 public:
-    // xglCreateMsaaState()
-    void init(const Device &dev, const XGL_MSAA_STATE_CREATE_INFO &info);
+    // xglCreateDynamicColorBlendState()
+    void init(const Device &dev, const XGL_DYNAMIC_CB_STATE_CREATE_INFO &info);
 };
 
-class DynamicCbStateObject : public DerivedObject<XGL_COLOR_BLEND_STATE_OBJECT, DynamicStateObject> {
+class DynamicDsStateObject : public DerivedObject<XGL_DYNAMIC_DS_STATE_OBJECT, DynamicStateObject> {
 public:
-    // xglCreateColorBlendState()
-    void init(const Device &dev, const XGL_COLOR_BLEND_STATE_CREATE_INFO &info);
-};
-
-class DynamicDsStateObject : public DerivedObject<XGL_DEPTH_STENCIL_STATE_OBJECT, DynamicStateObject> {
-public:
-    // xglCreateDepthStencilState()
-    void init(const Device &dev, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO &info);
+    // xglCreateDynamicDepthStencilState()
+    void init(const Device &dev, const XGL_DYNAMIC_DS_STATE_CREATE_INFO &info);
 };
 
 class CmdBuffer : public DerivedObject<XGL_CMD_BUFFER, Object> {
@@ -616,8 +610,7 @@ inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS
     info.allocationSize = reqs.size;
     info.alignment = reqs.alignment;
     info.heapCount = reqs.heapCount;
-    for (int i = 0; i < reqs.heapCount; i++)
-        info.heaps[i] = reqs.heaps[i];
+    info.pHeaps = reqs.pHeaps;
     info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     return info;
 }

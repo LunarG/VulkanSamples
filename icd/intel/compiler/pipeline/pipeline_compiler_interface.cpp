@@ -722,8 +722,16 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
                       BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
         }
 
+        XGL_DESCRIPTOR_SET_MAPPING null_map;
+        XGL_DESCRIPTOR_SET_MAPPING *pMapping = info->pDescriptorSetMapping;
+        null_map.descriptorCount = 0;
+
+        if (! info->descriptorSetMappingCount) {
+            pMapping = &null_map;
+        }
+
         pipe_shader->rmap = rmap_create(gpu,
-                &info->descriptorSetMapping[0],
+                pMapping,
                 &info->dynamicBufferViewMapping,
                 rt_count, pipe_shader->ubo_start);
 

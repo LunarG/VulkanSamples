@@ -68,11 +68,10 @@ struct demo {
 
     XGL_PIPELINE pipeline;
 
-    XGL_VIEWPORT_STATE_OBJECT viewport;
-    XGL_RASTER_STATE_OBJECT raster;
-    XGL_MSAA_STATE_OBJECT msaa;
-    XGL_COLOR_BLEND_STATE_OBJECT color_blend;
-    XGL_DEPTH_STENCIL_STATE_OBJECT depth_stencil;
+    XGL_DYNAMIC_VP_STATE_OBJECT viewport;
+    XGL_DYNAMIC_RS_STATE_OBJECT raster;
+    XGL_DYNAMIC_CB_STATE_OBJECT color_blend;
+    XGL_DYNAMIC_DS_STATE_OBJECT depth_stencil;
 
     XGL_CMD_BUFFER cmd;
 
@@ -144,12 +143,11 @@ static void demo_draw_build_cmd(struct demo *demo)
     xglCmdBindDescriptorSet(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
             0, demo->dset, 0);
 
-    xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_VIEWPORT, demo->viewport);
-    xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_RASTER, demo->raster);
-    xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_MSAA, demo->msaa);
-    xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_COLOR_BLEND,
+    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_VIEWPORT, demo->viewport);
+    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_RASTER, demo->raster);
+    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_COLOR_BLEND,
                                      demo->color_blend);
-    xglCmdBindStateObject(demo->cmd, XGL_STATE_BIND_DEPTH_STENCIL,
+    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
 
@@ -308,8 +306,10 @@ static void demo_prepare_depth(struct demo *demo)
     mem_alloc.allocationSize = mem_reqs.size;
     mem_alloc.alignment = mem_reqs.alignment;
     mem_alloc.heapCount = mem_reqs.heapCount;
-    memcpy(mem_alloc.heaps, mem_reqs.heaps,
-            sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+    XGL_UINT heapInfo[1];
+    mem_alloc.pHeaps = (const XGL_UINT *)&heapInfo;
+    memcpy(&heapInfo, mem_reqs.pHeaps,
+            sizeof(mem_reqs.pHeaps[0]) * mem_reqs.heapCount);
 
     /* allocate memory */
     err = xglAllocMemory(demo->device, &mem_alloc,
@@ -412,8 +412,10 @@ static void demo_prepare_textures(struct demo *demo)
         mem_alloc.allocationSize = mem_reqs.size;
         mem_alloc.alignment = mem_reqs.alignment;
         mem_alloc.heapCount = mem_reqs.heapCount;
-        memcpy(mem_alloc.heaps, mem_reqs.heaps,
-                sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+        XGL_UINT heapInfo[0];
+        mem_alloc.pHeaps = (const XGL_UINT *)&heapInfo;
+        memcpy(&heapInfo, mem_reqs.pHeaps,
+                sizeof(mem_reqs.pHeaps[0]) * mem_reqs.heapCount);
 
         /* allocate memory */
         err = xglAllocMemory(demo->device, &mem_alloc,
@@ -483,7 +485,7 @@ static void demo_prepare_vertices(struct demo *demo)
         .alignment = 0,
         .flags = 0,
         .heapCount = 0,
-        .heaps[0] = 0,
+        .pHeaps = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
     XGL_MEMORY_REQUIREMENTS mem_reqs;
@@ -503,8 +505,9 @@ static void demo_prepare_vertices(struct demo *demo)
     mem_alloc.allocationSize = mem_reqs.size;
     mem_alloc.alignment = mem_reqs.alignment;
     mem_alloc.heapCount = mem_reqs.heapCount;
-    memcpy(mem_alloc.heaps, mem_reqs.heaps,
-            sizeof(mem_reqs.heaps[0]) * mem_reqs.heapCount);
+    mem_alloc.pHeaps = mem_reqs.pHeaps;
+    memcpy((XGL_UINT *)mem_alloc.pHeaps, mem_reqs.pHeaps,
+            sizeof(mem_reqs.pHeaps[0]) * mem_reqs.heapCount);
 
     err = xglAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem);
     assert(!err);
@@ -645,10 +648,12 @@ static void demo_prepare_pipeline(struct demo *demo)
     XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
     XGL_PIPELINE_IA_STATE_CREATE_INFO ia;
     XGL_PIPELINE_RS_STATE_CREATE_INFO rs;
-    XGL_PIPELINE_CB_STATE cb;
-    XGL_PIPELINE_DB_STATE_CREATE_INFO db;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO cb;
+    XGL_PIPELINE_DS_STATE_CREATE_INFO ds;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vs;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fs;
+    XGL_PIPELINE_VP_STATE_CREATE_INFO vp;
+    XGL_PIPELINE_MS_STATE_CREATE_INFO ms;
     XGL_DESCRIPTOR_SLOT_INFO fs_slots[DEMO_TEXTURE_COUNT * 2];
     XGL_RESULT err;
     XGL_UINT i;
@@ -664,15 +669,38 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&rs, 0, sizeof(rs));
     rs.sType = XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
+    rs.fillMode = XGL_FILL_SOLID;
+    rs.cullMode = XGL_CULL_NONE;
+    rs.frontFace = XGL_FRONT_FACE_CCW;
 
     memset(&cb, 0, sizeof(cb));
     cb.sType = XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
-    cb.attachment[0].format = demo->format;
-    cb.attachment[0].channelWriteMask = 0xf;
+    XGL_PIPELINE_CB_ATTACHMENT_STATE att_state[1];
+    memset(att_state, 0, sizeof(att_state));
+    att_state[0].format = demo->format;
+    att_state[0].channelWriteMask = 0xf;
+    att_state[0].blendEnable = XGL_FALSE;
+    cb.attachmentCount = 1;
+    cb.pAttachments = att_state;
 
-    memset(&db, 0, sizeof(db));
-    db.sType = XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO;
-    db.format = demo->depth.format;
+
+    memset(&vp, 0, sizeof(vp));
+    vp.sType = XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
+    vp.scissorEnable = XGL_FALSE;
+
+
+    memset(&ds, 0, sizeof(ds));
+    ds.sType = XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
+    ds.format = demo->depth.format;
+    ds.depthTestEnable = XGL_TRUE;
+    ds.depthWriteEnable = XGL_TRUE;
+    ds.depthFunc = XGL_COMPARE_LESS_EQUAL;
+    ds.depthBoundsEnable = XGL_FALSE;
+    ds.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
+    ds.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
+    ds.back.stencilFunc = XGL_COMPARE_ALWAYS;
+    ds.stencilTestEnable = XGL_FALSE;
+    ds.front = ds.back;
 
     memset(&fs_slots, 0, sizeof(fs_slots));
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
@@ -686,21 +714,33 @@ static void demo_prepare_pipeline(struct demo *demo)
     vs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs.shader.stage = XGL_SHADER_STAGE_VERTEX;
     vs.shader.shader = demo_prepare_vs(demo);
+    vs.shader.linkConstBufferCount = 0;
+    vs.shader.descriptorSetMappingCount = 0;
 
     memset(&fs, 0, sizeof(fs));
     fs.sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fs.shader.stage = XGL_SHADER_STAGE_FRAGMENT;
     fs.shader.shader = demo_prepare_fs(demo);
-    fs.shader.descriptorSetMapping[0].descriptorCount =
-        DEMO_TEXTURE_COUNT * 2;
-    fs.shader.descriptorSetMapping[0].pDescriptorInfo = fs_slots;
+    XGL_DESCRIPTOR_SET_MAPPING ds_mapping;
+    ds_mapping.descriptorCount = DEMO_TEXTURE_COUNT * 2;
+    ds_mapping.pDescriptorInfo = fs_slots;
+    fs.shader.descriptorSetMappingCount = 1;
+    fs.shader.pDescriptorSetMapping = &ds_mapping;
+
+    memset(&ms, 0, sizeof(ms));
+    ms.sType = XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
+    ms.sampleMask = 1;
+    ms.multisampleEnable = XGL_FALSE;
+    ms.samples = 1;
 
     pipeline.pNext = (const XGL_VOID *) &vi;
     vi.pNext = (XGL_VOID *) &ia;
     ia.pNext = (const XGL_VOID *) &rs;
     rs.pNext = (const XGL_VOID *) &cb;
-    cb.pNext = (const XGL_VOID *) &db;
-    db.pNext = (const XGL_VOID *) &vs;
+    cb.pNext = (const XGL_VOID *) &ms;
+    ms.pNext = (const XGL_VOID *) &vp;
+    vp.pNext = (const XGL_VOID *) &ds;
+    ds.pNext = (const XGL_VOID *) &vs;
     vs.pNext = (const XGL_VOID *) &fs;
 
     err = xglCreateGraphicsPipeline(demo->device, &pipeline, &demo->pipeline);
@@ -712,56 +752,47 @@ static void demo_prepare_pipeline(struct demo *demo)
 
 static void demo_prepare_dynamic_states(struct demo *demo)
 {
-    XGL_VIEWPORT_STATE_CREATE_INFO viewport;
-    XGL_RASTER_STATE_CREATE_INFO raster;
-    XGL_MSAA_STATE_CREATE_INFO msaa;
-    XGL_COLOR_BLEND_STATE_CREATE_INFO color_blend;
-    XGL_DEPTH_STENCIL_STATE_CREATE_INFO depth_stencil;
+    XGL_DYNAMIC_VP_STATE_CREATE_INFO viewport_create;
+    XGL_DYNAMIC_RS_STATE_CREATE_INFO raster;
+    XGL_DYNAMIC_CB_STATE_CREATE_INFO color_blend;
+    XGL_DYNAMIC_DS_STATE_CREATE_INFO depth_stencil;
     XGL_RESULT err;
 
+    memset(&viewport_create, 0, sizeof(viewport_create));
+    viewport_create.sType = XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
+    viewport_create.viewportCount = 1;
+    XGL_VIEWPORT viewport;
     memset(&viewport, 0, sizeof(viewport));
-    viewport.viewportCount = 1;
-    viewport.scissorEnable = XGL_FALSE;
-    viewport.viewports[0].width = (XGL_FLOAT) demo->width;
-    viewport.viewports[0].height = (XGL_FLOAT) demo->height;
-    viewport.viewports[0].minDepth = (XGL_FLOAT) 0.0f;
-    viewport.viewports[0].maxDepth = (XGL_FLOAT) 1.0f;
+    viewport.width = (XGL_FLOAT) demo->width;
+    viewport.height = (XGL_FLOAT) demo->height;
+    viewport.minDepth = (XGL_FLOAT) 0.0f;
+    viewport.maxDepth = (XGL_FLOAT) 1.0f;
+    viewport_create.pViewports = &viewport;
 
     memset(&raster, 0, sizeof(raster));
-    raster.sType = XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO;
-    raster.fillMode = XGL_FILL_SOLID;
-    raster.cullMode = XGL_CULL_NONE;
-    raster.frontFace = XGL_FRONT_FACE_CCW;
-
-    memset(&msaa, 0, sizeof(msaa));
-    msaa.sType = XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO;
-    msaa.samples = 1;
-    msaa.sampleMask = 0x1;
+    raster.sType = XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
 
     memset(&color_blend, 0, sizeof(color_blend));
-    color_blend.sType = XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend.sType = XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
 
     memset(&depth_stencil, 0, sizeof(depth_stencil));
-    depth_stencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil.depthTestEnable = XGL_TRUE;
-    depth_stencil.depthWriteEnable = XGL_TRUE;
-    depth_stencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
-    depth_stencil.depthBoundsEnable = XGL_FALSE;
+    depth_stencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
+    depth_stencil.stencilBackRef = 0;
+    depth_stencil.stencilFrontRef = 0;
+    depth_stencil.stencilReadMask = 0xff;
+    depth_stencil.stencilWriteMask = 0xff;
 
-    err = xglCreateViewportState(demo->device, &viewport, &demo->viewport);
+    err = xglCreateDynamicViewportState(demo->device, &viewport_create, &demo->viewport);
     assert(!err);
 
-    err = xglCreateRasterState(demo->device, &raster, &demo->raster);
+    err = xglCreateDynamicRasterState(demo->device, &raster, &demo->raster);
     assert(!err);
 
-    err = xglCreateMsaaState(demo->device, &msaa, &demo->msaa);
-    assert(!err);
-
-    err = xglCreateColorBlendState(demo->device,
+    err = xglCreateDynamicColorBlendState(demo->device,
             &color_blend, &demo->color_blend);
     assert(!err);
 
-    err = xglCreateDepthStencilState(demo->device,
+    err = xglCreateDynamicDepthStencilState(demo->device,
             &depth_stencil, &demo->depth_stencil);
     assert(!err);
 }
@@ -963,7 +994,6 @@ static void demo_cleanup(struct demo *demo)
 
     xglDestroyObject(demo->viewport);
     xglDestroyObject(demo->raster);
-    xglDestroyObject(demo->msaa);
     xglDestroyObject(demo->color_blend);
     xglDestroyObject(demo->depth_stencil);
 

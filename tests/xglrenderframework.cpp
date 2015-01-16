@@ -33,7 +33,6 @@ XglRenderFramework::XglRenderFramework() :
     m_colorBlend( XGL_NULL_HANDLE ),
     m_stateViewport( XGL_NULL_HANDLE ),
     m_stateDepthStencil( XGL_NULL_HANDLE ),
-    m_stateMsaa( XGL_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 )                   // default window height
 {
@@ -42,7 +41,6 @@ XglRenderFramework::XglRenderFramework() :
     m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
     m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
 
-    m_colorBindings[0].view = XGL_NULL_HANDLE;
     m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
 
@@ -67,21 +65,12 @@ void XglRenderFramework::InitFramework()
 void XglRenderFramework::ShutdownFramework()
 {
     if (m_colorBlend) xglDestroyObject(m_colorBlend);
-    if (m_stateMsaa) xglDestroyObject(m_stateMsaa);
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
     if (m_stateRaster) xglDestroyObject(m_stateRaster);
     if (m_cmdBuffer) xglDestroyObject(m_cmdBuffer);
 
     if (m_stateViewport) {
         xglDestroyObject(m_stateViewport);
-    }
-
-    for (XGL_UINT i = 0; i < m_renderTargetCount; i++) {
-        if (m_renderTargets[i]) {
-        // TODO: XglImage should be able to destroy itself
-//        m_renderTarget->
-//        xglDestroyObject(*m_renderTarget);
-        }
     }
 
     // reset the driver
@@ -97,43 +86,26 @@ void XglRenderFramework::InitState()
     m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
 
     // create a raster state (solid, back-face culling)
-    XGL_RASTER_STATE_CREATE_INFO raster = {};
-    raster.sType = XGL_STRUCTURE_TYPE_RASTER_STATE_CREATE_INFO;
-    raster.fillMode = XGL_FILL_SOLID;
-    raster.cullMode = XGL_CULL_NONE;
-    raster.frontFace = XGL_FRONT_FACE_CCW;
-    err = xglCreateRasterState( device(), &raster, &m_stateRaster );
+    XGL_DYNAMIC_RS_STATE_CREATE_INFO raster = {};
+    raster.sType = XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
+    raster.pointSize = 1.0;
+
+    err = xglCreateDynamicRasterState( device(), &raster, &m_stateRaster );
     ASSERT_XGL_SUCCESS(err);
 
-    XGL_COLOR_BLEND_STATE_CREATE_INFO blend = {};
-    blend.sType = XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO;
-    err = xglCreateColorBlendState(device(), &blend, &m_colorBlend);
+    XGL_DYNAMIC_CB_STATE_CREATE_INFO blend = {};
+    blend.sType = XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
+    err = xglCreateDynamicColorBlendState(device(), &blend, &m_colorBlend);
     ASSERT_XGL_SUCCESS( err );
 
-    XGL_DEPTH_STENCIL_STATE_CREATE_INFO depthStencil = {};
-    depthStencil.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable      = XGL_FALSE;
-    depthStencil.depthWriteEnable = XGL_FALSE;
-    depthStencil.depthFunc = XGL_COMPARE_LESS_EQUAL;
-    depthStencil.depthBoundsEnable = XGL_FALSE;
+    XGL_DYNAMIC_DS_STATE_CREATE_INFO depthStencil = {};
+    depthStencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
     depthStencil.minDepth = 0.f;
     depthStencil.maxDepth = 1.f;
-    depthStencil.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
-    depthStencil.back.stencilRef = 0x00;
-    depthStencil.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    depthStencil.front = depthStencil.back;
+    depthStencil.stencilFrontRef = 0;
+    depthStencil.stencilBackRef = 0;
 
-    err = xglCreateDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
-    ASSERT_XGL_SUCCESS( err );
-
-    XGL_MSAA_STATE_CREATE_INFO msaa = {};
-    msaa.sType = XGL_STRUCTURE_TYPE_MSAA_STATE_CREATE_INFO;
-    msaa.sampleMask = 1;
-    msaa.samples = 1;
-
-    err = xglCreateMsaaState( device(), &msaa, &m_stateMsaa );
+    err = xglCreateDynamicDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
     ASSERT_XGL_SUCCESS( err );
 
     XGL_CMD_BUFFER_CREATE_INFO cmdInfo = {};
@@ -148,17 +120,21 @@ void XglRenderFramework::InitViewport(float width, float height)
 {
     XGL_RESULT err;
 
-    XGL_VIEWPORT_STATE_CREATE_INFO viewport = {};
-    viewport.viewportCount         = 1;
-    viewport.scissorEnable         = XGL_FALSE;
-    viewport.viewports[0].originX  = 0;
-    viewport.viewports[0].originY  = 0;
-    viewport.viewports[0].width    = 1.f * width;
-    viewport.viewports[0].height   = 1.f * height;
-    viewport.viewports[0].minDepth = 0.f;
-    viewport.viewports[0].maxDepth = 1.f;
+    XGL_VIEWPORT viewport;
 
-    err = xglCreateViewportState( device(), &viewport, &m_stateViewport );
+    XGL_DYNAMIC_VP_STATE_CREATE_INFO viewportCreate = {};
+    viewportCreate.sType = XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
+    viewportCreate.viewportCount         = 1;
+    viewportCreate.scissorCount          = 0;
+    viewport.originX  = 0;
+    viewport.originY  = 0;
+    viewport.width    = 1.f * width;
+    viewport.height   = 1.f * height;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+    viewportCreate.pViewports = &viewport;
+
+    err = xglCreateDynamicViewportState( device(), &viewportCreate, &m_stateViewport );
     ASSERT_XGL_SUCCESS( err );
     m_width = width;
     m_height = height;
@@ -178,9 +154,9 @@ void XglRenderFramework::InitRenderTarget()
         img->init(m_width, m_height, m_render_target_fmt,
                 XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
                 XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-        m_renderTargets[i] = img;
-        m_colorBindings[i].view  = m_renderTargets[i]->targetView();
+        m_colorBindings[i].view  = img->targetView();
         m_colorBindings[i].colorAttachmentState = XGL_IMAGE_STATE_TARGET_RENDER_ACCESS_OPTIMAL;
+        m_renderTargets.push_back(img);
     }
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     XGL_ATTACHMENT_LOAD_OP load_op = XGL_ATTACHMENT_LOAD_OP_LOAD;
@@ -722,14 +698,16 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
     stageInfo->sType = XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stageInfo->shader.stage = m_stage;
     stageInfo->shader.shader = obj();
-    stageInfo->shader.descriptorSetMapping[0].descriptorCount = 0;
+    stageInfo->shader.descriptorSetMappingCount = 1;
+    stageInfo->shader.pDescriptorSetMapping = (XGL_DESCRIPTOR_SET_MAPPING *)malloc(sizeof(XGL_DESCRIPTOR_SET_MAPPING));
+    stageInfo->shader.pDescriptorSetMapping->descriptorCount = 0;
     stageInfo->shader.linkConstBufferCount = 0;
     stageInfo->shader.pLinkConstBufferInfo = XGL_NULL_HANDLE;
     stageInfo->shader.dynamicBufferViewMapping.slotObjectType = XGL_SLOT_UNUSED;
     stageInfo->shader.dynamicBufferViewMapping.shaderEntityIndex = 0;
 
-    stageInfo->shader.descriptorSetMapping[0].descriptorCount = descriptorSet->GetTotalSlots();
-    if (stageInfo->shader.descriptorSetMapping[0].descriptorCount)
+    stageInfo->shader.pDescriptorSetMapping->descriptorCount = descriptorSet->GetTotalSlots();
+    if (stageInfo->shader.pDescriptorSetMapping->descriptorCount)
     {
         vector<int> allSlots;
         vector<XGL_DESCRIPTOR_SET_SLOT_TYPE> allTypes;
@@ -759,7 +737,7 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo(XglDescr
         }
 
          slotInfo = descriptorSet->GetSlotInfo(allSlots, allTypes, allObjs);
-         stageInfo->shader.descriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
+         stageInfo->shader.pDescriptorSetMapping[0].pDescriptorInfo = (const XGL_DESCRIPTOR_SLOT_INFO*) slotInfo;
     }
     return stageInfo;
 }
@@ -841,7 +819,6 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_ia_state.pNext = XGL_NULL_HANDLE;
     m_ia_state.topology = XGL_TOPOLOGY_TRIANGLE_LIST;
     m_ia_state.disableVertexReuse = XGL_FALSE;
-    m_ia_state.provokingVertex = XGL_PROVOKING_VERTEX_LAST;
     m_ia_state.primitiveRestartEnable = XGL_FALSE;
     m_ia_state.primitiveRestartIndex = 0;
 
@@ -849,7 +826,10 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_rs_state.pNext = &m_ia_state;
     m_rs_state.depthClipEnable = XGL_FALSE;
     m_rs_state.rasterizerDiscardEnable = XGL_FALSE;
-    m_rs_state.pointSize = 1.0;
+    m_rs_state.provokingVertex = XGL_PROVOKING_VERTEX_LAST;
+    m_rs_state.fillMode = XGL_FILL_SOLID;
+    m_rs_state.cullMode = XGL_CULL_NONE;
+    m_rs_state.frontFace = XGL_FRONT_FACE_CCW;
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
@@ -858,16 +838,35 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_cb_state.dualSourceBlendEnable = XGL_FALSE;
     m_cb_state.logicOp = XGL_LOGIC_OP_COPY;
 
-    m_cb_state.attachment[0].blendEnable = XGL_FALSE;
-    m_cb_state.attachment[0].format.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    m_cb_state.attachment[0].format.numericFormat = XGL_NUM_FMT_UNORM;
-    m_cb_state.attachment[0].channelWriteMask = 0xF;
+    m_ms_state.pNext = &m_cb_state;
+    m_ms_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
+    m_ms_state.multisampleEnable = XGL_FALSE;
+    m_ms_state.sampleMask = 1;                // Do we have to specify MSAA even just to disable it?
+    m_ms_state.samples = 1;
+    m_ms_state.minSampleShading = 0;
+    m_ms_state.sampleShadingEnable = 0;
 
-    m_db_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_DB_STATE_CREATE_INFO,
-    m_db_state.pNext = &m_cb_state,
-    m_db_state.format.channelFormat = XGL_CH_FMT_R32;
-    m_db_state.format.numericFormat = XGL_NUM_FMT_DS;
+    m_ds_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
+    m_ds_state.pNext = &m_ms_state,
+    m_ds_state.format.channelFormat = XGL_CH_FMT_R32;
+    m_ds_state.format.numericFormat = XGL_NUM_FMT_DS;
+    m_ds_state.depthTestEnable      = XGL_FALSE;
+    m_ds_state.depthWriteEnable     = XGL_FALSE;
+    m_ds_state.depthBoundsEnable    = XGL_FALSE;
+    m_ds_state.depthFunc = XGL_COMPARE_LESS_EQUAL;
+    m_ds_state.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
+    m_ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
+    m_ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
+    m_ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
+    m_ds_state.stencilTestEnable = XGL_FALSE;
+    m_ds_state.front = m_ds_state.back;
 
+    XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
+    att.blendEnable = XGL_FALSE;
+    att.format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+    att.format.numericFormat = XGL_NUM_FMT_UNORM;
+    att.channelWriteMask = 0xf;
+    AddColorAttachment(0, &att);
 
 };
 
@@ -895,14 +894,30 @@ void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer,
     m_vertexBufferCount++;
 }
 
-void XglPipelineObj::SetColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att)
+void XglPipelineObj::AddColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att)
 {
-    m_cb_state.attachment[binding] = *att;
+    if (binding+1 > m_colorAttachments.size())
+    {
+        m_colorAttachments.resize(binding+1);
+    }
+    m_colorAttachments[binding] = *att;
+}
+
+void XglPipelineObj::SetDepthStencil(XGL_PIPELINE_DS_STATE_CREATE_INFO *ds_state)
+{
+    m_ds_state.format = ds_state->format;
+    m_ds_state.depthTestEnable = ds_state->depthTestEnable;
+    m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
+    m_ds_state.depthBoundsEnable = ds_state->depthBoundsEnable;
+    m_ds_state.depthFunc = ds_state->depthFunc;
+    m_ds_state.stencilTestEnable = ds_state->stencilTestEnable;
+    m_ds_state.back = ds_state->back;
+    m_ds_state.front = ds_state->front;
 }
 
 void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
 {
-    XGL_VOID* head_ptr = &m_db_state;
+    XGL_VOID* head_ptr = &m_ds_state;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
 
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shaderCreateInfo;
@@ -925,6 +940,9 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
     info.pNext = head_ptr;
     info.flags = 0;
 
+    m_cb_state.attachmentCount = m_colorAttachments.size();
+    m_cb_state.pAttachments = &m_colorAttachments[0];
+
     init(*m_device, info);
 }
 
@@ -935,7 +953,7 @@ XGL_PIPELINE XglPipelineObj::GetPipelineHandle()
 
 void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet)
 {
-    XGL_VOID* head_ptr = &m_db_state;
+    XGL_VOID* head_ptr = &m_ds_state;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
 
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shaderCreateInfo;
@@ -1125,9 +1143,9 @@ void XglCommandBufferObj::PrepareAttachments()
     }
 }
 
-void XglCommandBufferObj::BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT stateObject)
+void XglCommandBufferObj::BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject)
 {
-    xglCmdBindStateObject( obj(), stateBindPoint, stateObject);
+    xglCmdBindDynamicStateObject( obj(), stateBindPoint, stateObject);
 }
 
 void XglCommandBufferObj::AddRenderTarget(XglImage *renderTarget)
