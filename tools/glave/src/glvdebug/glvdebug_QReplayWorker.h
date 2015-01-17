@@ -25,6 +25,7 @@
 #ifndef GLVDEBUG_QREPLAYWORKER_H
 #define GLVDEBUG_QREPLAYWORKER_H
 
+#include <QAction>
 #include <QObject>
 #include <QWidget>
 #include <QCoreApplication>
@@ -47,7 +48,9 @@ public:
           m_bStopReplay(false),
           m_pView(NULL),
           m_pTraceFileInfo(NULL),
-          m_currentReplayPacketIndex(0)
+          m_currentReplayPacketIndex(0),
+          m_pActionRunToHere(NULL),
+          m_pauseAtPacketIndex((uint64_t)-1)
     {
         memset(m_pReplayers, 0, sizeof(glv_replay::glv_trace_packet_replay_library*) * GLV_MAX_TRACER_ID_ARRAY_SIZE);
         s_pWorker = this;
@@ -170,7 +173,7 @@ protected slots:
 
             // Process events and pause or stop if needed
             QCoreApplication::processEvents();
-            if (m_bPauseReplay)
+            if (m_bPauseReplay || m_pauseAtPacketIndex == m_currentReplayPacketIndex)
             {
                 doReplayPaused(m_currentReplayPacketIndex);
                 return;
@@ -185,6 +188,21 @@ protected slots:
         }
 
         doReplayFinished();
+    }
+
+    virtual void onPlayToHere()
+    {
+        m_pauseAtPacketIndex = m_pView->get_current_packet_index();
+        if (m_pauseAtPacketIndex <= m_currentReplayPacketIndex || m_currentReplayPacketIndex == 0)
+        {
+            // pause location is behind the current replay position, so restart the replay.
+            StartReplay();
+        }
+        else
+        {
+            // pause location is ahead of current replay position, so continue the replay.
+            ContinueReplay();
+        }
     }
 
 public slots:
@@ -275,6 +293,8 @@ protected:
     glvdebug_view* m_pView;
     glvdebug_trace_file_info* m_pTraceFileInfo;
     uint64_t m_currentReplayPacketIndex;
+    QAction* m_pActionRunToHere;
+    uint64_t m_pauseAtPacketIndex;
 
     void setView(glvdebug_view* pView)
     {
@@ -307,18 +327,19 @@ protected:
         emit ReplayFinished();
     }
 
-    bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWidget)
+    bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWindow)
     {
         // Get window handle of the widget to replay into.
-        assert(pReplayWidget != NULL);
+        assert(pReplayWindow != NULL);
         unsigned int windowWidth = 800;
         unsigned int windowHeight = 600;
-        WId hWindow = pReplayWidget->winId();
-        windowWidth = pReplayWidget->geometry().width();
-        windowHeight = pReplayWidget->geometry().height();
+        WId hWindow = pReplayWindow->winId();
+        windowWidth = pReplayWindow->geometry().width();
+        windowHeight = pReplayWindow->geometry().height();
 
         // load any API specific driver libraries and init replayer objects
         uint8_t tidApi = GLV_TID_RESERVED;
+        bool bReplayerLoaded = false;
 
         // uncomment this to display in a separate window (and then comment out the line below it)
     //    glv_replay::Display disp(windowWidth, windowHeight, 0, false);
@@ -369,6 +390,8 @@ protected:
                         glv_LogError("Couldn't Initialize replayer for TracerId %d.\n", tracerId);
                         return false;
                     }
+
+                    bReplayerLoaded = true;
                 }
             }
         }
@@ -377,6 +400,13 @@ protected:
         {
             glv_LogError("No API specified in tracefile for replaying.\n");
             return false;
+        }
+
+        if (bReplayerLoaded)
+        {
+            m_pActionRunToHere = new QAction("Play to here", NULL);
+            connect(m_pActionRunToHere, SIGNAL(triggered()), this, SLOT(onPlayToHere()));
+            m_pView->add_calltree_contextmenu_item(m_pActionRunToHere);
         }
 
         return true;

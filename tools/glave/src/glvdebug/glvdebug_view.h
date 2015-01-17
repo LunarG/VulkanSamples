@@ -29,6 +29,7 @@ struct glvdebug_trace_file_info;
 struct glv_SettingGroup;
 class QWidget;
 class QToolButton;
+class QAction;
 
 class glvdebug_view
 {
@@ -43,7 +44,7 @@ public:
     virtual unsigned int get_global_settings(glv_SettingGroup** ppGroups) = 0;
 
     virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel) = 0;
-
+    virtual void add_calltree_contextmenu_item(QAction* pAction) = 0;
     virtual void select_call_at_packet_index(unsigned long long packetIndex) = 0;
 
     //virtual void set_timeline_model(glvdebug_QTimelineModel* pModel) = 0;
@@ -54,4 +55,6 @@ public:
     virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled) = 0;
 
     virtual void on_replay_state_changed(bool bReplayInProgress) = 0;
+
+    virtual unsigned long long get_current_packet_index() = 0;
 };

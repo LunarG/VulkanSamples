@@ -85,6 +85,7 @@ glvdebug::glvdebug(QWidget *parent)
     ui->mainToolBar->addWidget(m_pGenerateTraceButton);
 
     ui->treeView->setModel(NULL);
+    ui->treeView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     // setup timeline
     m_pTimeline = new glvdebug_QTimelineView();
@@ -183,6 +184,11 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
     ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_CpuDuration,    width * 0.15);
 }
 
+void glvdebug::add_calltree_contextmenu_item(QAction* pAction)
+{
+    ui->treeView->addAction(pAction);
+}
+
 void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
 {
     if (m_pTraceFileModel != NULL)
@@ -216,6 +222,20 @@ void glvdebug::on_replay_state_changed(bool bReplayInProgress)
     ui->searchPrevButton->setEnabled(bEnableUi);
     ui->searchTextBox->setEnabled(bEnableUi);
 }
+
+unsigned long long glvdebug::get_current_packet_index()
+{
+    QModelIndex index = ui->treeView->currentIndex();
+    unsigned long long packetIndex = 0;
+    if (index.isValid())
+    {
+        glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+        assert(pHeader != NULL);
+        packetIndex = pHeader->global_packet_index;
+    }
+    return packetIndex;
+}
+
 
 void glvdebug::reset_view()
 {
