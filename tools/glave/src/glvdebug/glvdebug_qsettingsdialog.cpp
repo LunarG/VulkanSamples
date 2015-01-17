@@ -51,41 +51,6 @@ glvdebug_QSettingsDialog::glvdebug_QSettingsDialog(glv_SettingGroup* pSettingGro
     m_pTabWidget = new QTabWidget(this);
     pLayout->addWidget(m_pTabWidget);
 
-    //QWidget* pGeneralTab = new QWidget(m_pTabWidget);
-    //QGridLayout* pGeneralLayout = new QGridLayout(pGeneralTab);
-    //m_pTabWidget->addTab(pGeneralTab, "General");
-
-    //QCheckBox* pLoadLastTraceFileCheckBox = new QCheckBox(QString("Load last trace file"), pGeneralTab);
-    //pLoadLastTraceFileCheckBox->setChecked(true);
-    //pGeneralLayout->addWidget(pLoadLastTraceFileCheckBox, 0, 0, 1, 1, Qt::AlignLeft);
-
-    //QLineEdit* pLoadLastTraceFileName = new QLineEdit(pGeneralTab);
-    //pGeneralLayout->addWidget(pLoadLastTraceFileName, 0, 1, 1, 1, Qt::AlignLeft);
-
-    //QGroupBox* pPositionGroup = new QGroupBox("Window Position", pGeneralTab);
-    //pGeneralLayout->addWidget(pPositionGroup, 1, 0, 1, 2, Qt::AlignLeft);
-    //QGridLayout* pPositionGroupLayout = new QGridLayout(pPositionGroup);
-
-    //QLabel* pLeftLabel = new QLabel("Left", pPositionGroup);
-    //pPositionGroupLayout->addWidget(pLeftLabel, 1, 0, 1, 1, Qt::AlignLeft);
-    //QLineEdit* pLeftTextEdit = new QLineEdit(pPositionGroup);
-    //pPositionGroupLayout->addWidget(pLeftTextEdit, 1, 1, 1, 1, Qt::AlignLeft);
-
-    //QLabel* pTopLabel = new QLabel("Top", pPositionGroup);
-    //pPositionGroupLayout->addWidget(pTopLabel, 2, 0, 1, 1, Qt::AlignLeft);
-    //QLineEdit* pTopTextEdit = new QLineEdit(pPositionGroup);
-    //pPositionGroupLayout->addWidget(pTopTextEdit, 2, 1, 1, 1, Qt::AlignLeft);
-
-    //QLabel* pWidthLabel = new QLabel("Width", pPositionGroup);
-    //pPositionGroupLayout->addWidget(pWidthLabel, 3, 0, 1, 1, Qt::AlignLeft);
-    //QLineEdit* pWidthTextEdit = new QLineEdit(pPositionGroup);
-    //pPositionGroupLayout->addWidget(pWidthTextEdit, 3, 1, 1, 1, Qt::AlignLeft);
-
-    //QLabel* pHeightLabel = new QLabel("Height", pPositionGroup);
-    //pPositionGroupLayout->addWidget(pHeightLabel, 4, 0, 1, 1, Qt::AlignLeft);
-    //QLineEdit* pHeightTextEdit = new QLineEdit(pPositionGroup);
-    //pPositionGroupLayout->addWidget(pHeightTextEdit, 4, 1, 1, 1, Qt::AlignLeft);
-
     QDialogButtonBox* pButtonBox = new QDialogButtonBox(/*QDialogButtonBox::Save | QDialogButtonBox::Cancel*/);
     pButtonBox->addButton("OK", QDialogButtonBox::RejectRole);
     pButtonBox->addButton("Save && Apply", QDialogButtonBox::AcceptRole);
@@ -99,13 +64,7 @@ glvdebug_QSettingsDialog::glvdebug_QSettingsDialog(glv_SettingGroup* pSettingGro
         this->add_tab(&m_pSettingGroups[i]);
     }
 
-    // Set values based on current settings
-
-    //// window position
-    //pLeftTextEdit->setText(QString("%1").arg(g_settings.window_position_left));
-    //pTopTextEdit->setText(QString("%1").arg(g_settings.window_position_top));
-    //pWidthTextEdit->setText(QString("%1").arg(g_settings.window_size_width));
-    //pHeightTextEdit->setText(QString("%1").arg(g_settings.window_size_height));
+    this->setMinimumWidth(m_pTabWidget->width() * (m_numSettingGroups + 1));
 }
 
 glvdebug_QSettingsDialog::~glvdebug_QSettingsDialog()
@@ -145,7 +104,7 @@ void glvdebug_QSettingsDialog::add_tab(glv_SettingGroup* pGroup)
     QStringList headers;
     headers << "Name" << "Value";
     pTable->setHorizontalHeaderLabels(headers);
-    pTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    pTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     pTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
 
     connect(pTable, SIGNAL(itemChanged(QTableWidgetItem *)), this, SLOT(settingEdited(QTableWidgetItem *)));
