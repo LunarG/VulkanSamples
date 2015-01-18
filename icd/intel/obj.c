@@ -30,7 +30,7 @@
 #include "mem.h"
 #include "obj.h"
 
-static uint32_t intel_base_magic = 0x494e544c;
+static const uint32_t intel_base_magic = 0x494e544c;
 
 /**
  * Return true if an (not so) arbitrary pointer casted to intel_base points to
