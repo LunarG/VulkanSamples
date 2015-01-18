@@ -39,7 +39,7 @@
 
 static struct intel_gpu *intel_gpus;
 
-static const char *intel_gpu_exts[INTEL_EXT_COUNT] = {
+static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
 #ifdef ENABLE_WSI_X11
     [INTEL_EXT_WSI_X11] = "XGL_WSI_X11",
 #endif
