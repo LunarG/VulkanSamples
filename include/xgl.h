@@ -801,19 +801,14 @@ typedef enum _XGL_CHANNEL_FORMAT
     XGL_CH_FMT_BC6U                                         = 28,
     XGL_CH_FMT_BC6S                                         = 29,
     XGL_CH_FMT_BC7                                          = 30,
-// IMG CHANGE BEGIN - support for vertex input description
     XGL_CH_FMT_R8G8B8                                       = 31,
     XGL_CH_FMT_R16G16B16                                    = 32,
-
-    // optional? TBD'
     XGL_CH_FMT_B10G10R10A2                                  = 33,
-    XGL_CH_FMT_R64                                          = 34,
-    XGL_CH_FMT_R64G64                                       = 35,
-    XGL_CH_FMT_R64G64B64                                    = 36,
-    XGL_CH_FMT_R64G64B64A64                                 = 37,
-
+    XGL_CH_FMT_R64                                          = 34, // Optional
+    XGL_CH_FMT_R64G64                                       = 35, // Optional
+    XGL_CH_FMT_R64G64B64                                    = 36, // Optional
+    XGL_CH_FMT_R64G64B64A64                                 = 37, // Optional
     XGL_MAX_CH_FMT                                          = XGL_CH_FMT_R64G64B64A64,
-// IMG CHANGE END
     XGL_MAX_ENUM(_XGL_CHANNEL_FORMAT)
 } XGL_CHANNEL_FORMAT;
 
@@ -827,23 +822,19 @@ typedef enum _XGL_NUM_FORMAT
     XGL_NUM_FMT_FLOAT                                       = 5,
     XGL_NUM_FMT_SRGB                                        = 6,
     XGL_NUM_FMT_DS                                          = 7,
-// IMG CHANGE BEGIN - support for vertex input description
     XGL_NUM_FMT_USCALED                                     = 8,
     XGL_NUM_FMT_SSCALED                                     = 9,
     XGL_MAX_NUM_FMT                                         = XGL_NUM_FMT_SSCALED,
-// IMG CHANGE END
     XGL_MAX_ENUM(_XGL_NUM_FORMAT)
 } XGL_NUM_FORMAT;
 
-// IMG CHANGE BEGIN - support for vertex input description
 typedef enum _XGL_VERTEX_INPUT_STEP_RATE
 {
     XGL_VERTEX_INPUT_STEP_RATE_VERTEX     = 0x0,
     XGL_VERTEX_INPUT_STEP_RATE_INSTANCE   = 0x1,
-    XGL_VERTEX_INPUT_STEP_RATE_DRAW       = 0x2,
+    XGL_VERTEX_INPUT_STEP_RATE_DRAW       = 0x2,  //Optional
     XGL_MAX_ENUM(_XGL_VERTEX_INPUT_STEP_RATE)
 } XGL_VERTEX_INPUT_STEP_RATE;
-// IMG CHANGE END
 
 typedef struct _XGL_FORMAT
 {
@@ -1590,25 +1581,6 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
 } XGL_COMPUTE_PIPELINE_CREATE_INFO;
 
-// IMG CHANGE BEGIN - support for vertex input description
-
-//
-// The shader inputs are mapped to pVertexAttributeDescriptions using a decoration in the BIL.
-//
-// The binding parameter in xglCmdBindVertexBuffer describes the index into pVertexBindingDescriptions[]
-//
-//
-// Formats allowed for attributes (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION.format) will be detailed in
-// a table in the specification.
-//
-//
-// Queryable limits:
-//
-// XGL_VERTEX_INPUT_BINDING_DESCRIPTION.strideInBytes
-// XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION.offsetInBytes
-//
-//
-
 typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
 {
     XGL_UINT                                strideInBytes;  // Distance between vertices in bytes (0 = no advancement)
@@ -1620,7 +1592,7 @@ typedef struct _XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION
 {
     XGL_UINT                                binding;        // index into vertexBindingDescriptions
 
-    XGL_FORMAT                              format;	        // format of source data
+    XGL_FORMAT                              format;         // format of source data
 
     XGL_UINT                                offsetInBytes;  // Offset of first element in bytes from base of vertex
 } XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION;
@@ -1636,7 +1608,6 @@ typedef struct _XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO
     XGL_UINT                                attributeCount; // number of attributes
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
 } XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO;
-// IMG CHANGE END
 
 typedef struct _XGL_PIPELINE_IA_STATE_CREATE_INFO
 {
@@ -2537,13 +2508,11 @@ XGL_VOID XGLAPI xglCmdBindDynamicBufferView(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     const XGL_BUFFER_VIEW_ATTACH_INFO*          pBufferView);
 
-// IMG CHANGE BEGIN - support for vertex input description
 XGL_VOID XGLAPI xglCmdBindVertexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
     XGL_UINT                                    binding);
-// IMG CHANGE END
 
 XGL_VOID XGLAPI xglCmdBindIndexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,

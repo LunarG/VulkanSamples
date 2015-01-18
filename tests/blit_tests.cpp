@@ -421,6 +421,13 @@ XGL_SIZE get_format_size(XGL_FORMAT format)
         [XGL_CH_FMT_BC6U]           = { 16, 4 },
         [XGL_CH_FMT_BC6S]           = { 16, 4 },
         [XGL_CH_FMT_BC7]            = { 16, 4 },
+        [XGL_CH_FMT_R8G8B8]         = { 3,  3 },
+        [XGL_CH_FMT_R16G16B16]      = { 6,  3 },
+        [XGL_CH_FMT_B10G10R10A2]    = { 4,  4 },
+        [XGL_CH_FMT_R64]            = { 8,  1 },
+        [XGL_CH_FMT_R64G64]         = { 16, 2 },
+        [XGL_CH_FMT_R64G64B64]      = { 24, 3 },
+        [XGL_CH_FMT_R64G64B64A64]   = { 32, 4 },
     };
 
     return format_table[format.channelFormat].size;
@@ -1396,6 +1403,10 @@ TEST_F(XglCmdClearColorImageRawTest, Basic)
         // not sure what to do here
         if (it->format.channelFormat == XGL_CH_FMT_UNDEFINED ||
             it->format.channelFormat == XGL_CH_FMT_R32G32B32 ||
+            it->format.channelFormat == XGL_CH_FMT_R8G8B8 ||
+            it->format.channelFormat == XGL_CH_FMT_R16G16B16 ||
+            it->format.channelFormat == XGL_CH_FMT_R64G64B64 ||
+            it->format.channelFormat == XGL_CH_FMT_R64G64B64A64 ||
             it->format.numericFormat == XGL_NUM_FMT_DS)
             continue;
 

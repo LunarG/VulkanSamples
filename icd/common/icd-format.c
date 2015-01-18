@@ -64,6 +64,13 @@ static const struct icd_format_info {
     [XGL_CH_FMT_BC6U]           = { 16, 4 },
     [XGL_CH_FMT_BC6S]           = { 16, 4 },
     [XGL_CH_FMT_BC7]            = { 16, 4 },
+    [XGL_CH_FMT_R8G8B8]         = { 3,  3 },
+    [XGL_CH_FMT_R16G16B16]      = { 6,  3 },
+    [XGL_CH_FMT_B10G10R10A2]    = { 4,  4 },
+    [XGL_CH_FMT_R64]            = { 8,  1 },
+    [XGL_CH_FMT_R64G64]         = { 16, 2 },
+    [XGL_CH_FMT_R64G64B64]      = { 24, 3 },
+    [XGL_CH_FMT_R64G64B64A64]   = { 32, 4 },
 };
 
 size_t icd_format_get_size(XGL_FORMAT format)
@@ -205,6 +212,41 @@ void icd_format_get_raw_value(XGL_FORMAT format,
     case XGL_CH_FMT_BC6S:
     case XGL_CH_FMT_BC7:
         memcpy(value, color, 16);
+        break;
+    case XGL_CH_FMT_R8G8B8:
+        ((uint8_t *) value)[0]  = (uint8_t) color[0];
+        ((uint8_t *) value)[1]  = (uint8_t) color[1];
+        ((uint8_t *) value)[2]  = (uint8_t) color[2];
+        break;
+    case XGL_CH_FMT_R16G16B16:
+        ((uint16_t *) value)[0] = (uint16_t) color[0];
+        ((uint16_t *) value)[1] = (uint16_t) color[1];
+        ((uint16_t *) value)[2] = (uint16_t) color[2];
+        break;
+    case XGL_CH_FMT_B10G10R10A2:
+        ((uint32_t *) value)[0] = (color[2] & 0x3ff) << 0  |
+                                  (color[1] & 0x3ff) << 10 |
+                                  (color[0] & 0x3ff) << 20 |
+                                  (color[3] & 0x3)   << 30;
+        break;
+    case XGL_CH_FMT_R64:
+        /* higher 32 bits always 0 */
+        ((uint64_t *) value)[0] = color[0];
+        break;
+    case XGL_CH_FMT_R64G64:
+        ((uint64_t *) value)[0] = color[0];
+        ((uint64_t *) value)[1] = color[1];
+        break;
+    case XGL_CH_FMT_R64G64B64:
+        ((uint64_t *) value)[0] = color[0];
+        ((uint64_t *) value)[1] = color[1];
+        ((uint64_t *) value)[2] = color[2];
+        break;
+    case XGL_CH_FMT_R64G64B64A64:
+        ((uint64_t *) value)[0] = color[0];
+        ((uint64_t *) value)[1] = color[1];
+        ((uint64_t *) value)[2] = color[2];
+        ((uint64_t *) value)[3] = color[3];
         break;
     default:
         assert(!"unknown format");

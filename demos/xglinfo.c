@@ -182,6 +182,13 @@ static const char *xgl_channel_format_string(XGL_CHANNEL_FORMAT ch)
     STR(BC6U);
     STR(BC6S);
     STR(BC7);
+    STR(R8G8B8);
+    STR(R16G16B16);
+    STR(B10G10R10A2);
+    STR(R64);
+    STR(R64G64);
+    STR(R64G64B64);
+    STR(R64G64B64A64);
 #undef STR
     default: return "UNKNOWN_CH";
     }
@@ -199,6 +206,8 @@ static const char *xgl_numeric_format_string(XGL_NUM_FORMAT num)
     STR(FLOAT);
     STR(SRGB);
     STR(DS);
+    STR(USCALED);
+    STR(SSCALED);
 #undef STR
     default: return "UNKNOWN_NUM";
     }

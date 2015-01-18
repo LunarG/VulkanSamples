@@ -68,6 +68,12 @@ static inline bool icd_format_is_srgb(XGL_FORMAT format)
     return (format.numericFormat == XGL_NUM_FMT_SRGB);
 }
 
+static inline bool icd_format_is_scaled(XGL_FORMAT format)
+{
+    return (format.numericFormat == XGL_NUM_FMT_USCALED ||
+            format.numericFormat == XGL_NUM_FMT_SSCALED);
+}
+
 static inline bool icd_format_is_compressed(XGL_FORMAT format)
 {
     switch (format.channelFormat) {
