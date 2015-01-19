@@ -968,6 +968,23 @@ static void initMemTracker()
     nextTable.GetProcAddr = fpGetProcAddr;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
+{
+    XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(XGL_INSTANCE instance)
+{
+    XGL_RESULT result = nextTable.DestroyInstance(instance);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(XGL_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
+{
+    XGL_RESULT result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
+    return result;
+}
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData)
 {
@@ -1150,13 +1167,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(XGL_DEVICE device, const v
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device, uint32_t rangeCount, const XGL_VIRTUAL_MEMORY_REMAP_RANGE* pRanges, uint32_t preWaitSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPreWaitSemaphores, uint32_t postSignalSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPostSignalSemaphores)
-{
-    // TODO : Track this
-    XGL_RESULT result = nextTable.RemapVirtualMemoryPages(device, rangeCount, pRanges, preWaitSemaphoreCount, pPreWaitSemaphores, postSignalSemaphoreCount, pPostSignalSemaphores);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
@@ -1257,6 +1267,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, uint32
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(XGL_OBJECT object, uint32_t allocationIdx, XGL_GPU_SIZE rangeOffset, XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset)
+{
+    XGL_RESULT result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(XGL_IMAGE image, uint32_t allocationIdx, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset)
+{
+    XGL_RESULT result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence)
 {
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
@@ -1335,12 +1357,36 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_BUFFER_CREATE_INFO* pCreateInfo, XGL_BUFFER* pBuffer)
+{
+    XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo, XGL_BUFFER_VIEW* pView)
+{
+    XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
 {
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
     if (XGL_SUCCESS == result) {
         insertGlobalObjectNode(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_CREATE_INFO), "image");
     }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(XGL_IMAGE image, const float color[4])
+{
+    XGL_RESULT result = nextTable.SetFastClearColor(image, color);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(XGL_IMAGE image, float depth)
+{
+    XGL_RESULT result = nextTable.SetFastClearDepth(image, depth);
     return result;
 }
 
@@ -1428,48 +1474,54 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout)
 {
-    XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
+    XGL_RESULT result = nextTable.CreateDescriptorSetLayout(device, stageFlags, pSetBindPoints, priorSetLayout, pSetLayoutInfoList, pSetLayout);
+    // TODO : Need to do anything with the rest of the pSetLayoutInfoList elements?
     if (result == XGL_SUCCESS) {
-        insertGlobalObjectNode(*pDescriptorSet, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DESCRIPTOR_SET_CREATE_INFO), "descriptor_set");
+        insertGlobalObjectNode(*pSetLayout, pSetLayoutInfoList[0]->sType, pSetLayoutInfoList[0], sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), "descriptor_set_layout");
     }
     return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglBeginDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode)
 {
-    nextTable.BeginDescriptorSetUpdate(descriptorSet);
+    XGL_RESULT result = nextTable.BeginDescriptorRegionUpdate(device, updateMode);
+    return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglEndDescriptorSetUpdate(XGL_DESCRIPTOR_SET descriptorSet)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(XGL_DEVICE device, XGL_CMD_BUFFER cmd)
 {
-    nextTable.EndDescriptorSetUpdate(descriptorSet);
+    XGL_RESULT result = nextTable.EndDescriptorRegionUpdate(device, cmd);
+    return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglAttachSamplerDescriptors(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount, const XGL_SAMPLER* pSamplers)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, XGL_DESCRIPTOR_REGION_USAGE regionUsage, uint32_t maxSets, const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_REGION* pDescriptorRegion)
 {
-    nextTable.AttachSamplerDescriptors(descriptorSet, startSlot, slotCount, pSamplers);
+    XGL_RESULT result = nextTable.CreateDescriptorRegion(device, regionUsage, maxSets, pCreateInfo, pDescriptorRegion);
+    return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglAttachImageViewDescriptors(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount, const XGL_IMAGE_VIEW_ATTACH_INFO* pImageViews)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(XGL_DESCRIPTOR_REGION descriptorRegion)
 {
-    nextTable.AttachImageViewDescriptors(descriptorSet, startSlot, slotCount, pImageViews);
+    XGL_RESULT result = nextTable.ClearDescriptorRegion(descriptorRegion);
+    return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglAttachMemoryViewDescriptors(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemViews)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION descriptorRegion, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
 {
-    nextTable.AttachMemoryViewDescriptors(descriptorSet, startSlot, slotCount, pMemViews);
+    XGL_RESULT result = nextTable.AllocDescriptorSets(descriptorRegion, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglAttachNestedDescriptors(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount, const XGL_DESCRIPTOR_SET_ATTACH_INFO* pNestedDescriptorSets)
+XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSets(XGL_DESCRIPTOR_REGION descriptorRegion, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets)
 {
-    nextTable.AttachNestedDescriptors(descriptorSet, startSlot, slotCount, pNestedDescriptorSets);
+    nextTable.ClearDescriptorSets(descriptorRegion, count, pDescriptorSets);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET descriptorSet, uint32_t startSlot, uint32_t slotCount)
+XGL_LAYER_EXPORT void XGLAPI xglUpdateDescriptors(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain)
 {
-    nextTable.ClearDescriptorSetSlots(descriptorSet, startSlot, slotCount);
+    nextTable.UpdateDescriptors(descriptorSet, pUpdateChain);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
@@ -1531,8 +1583,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
     // This implicitly resets the Cmd Buffer so clear memory references
-    freeCBBindings(cmdBuffer);
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    freeCBBindings(cmdBuffer);
     return result;
 }
 
@@ -1580,7 +1632,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, X
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_STATE_OBJECT state)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
 {
     GLOBAL_OBJECT_NODE *pNode;
     GLOBAL_CB_NODE *pCmdBuf = getGlobalCBNode(cmdBuffer);
@@ -1596,32 +1648,27 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, MEMTRACK_INVALID_OBJECT, "DD", str);
     }
     pCmdBuf->pDynamicState[stateBindPoint] = pNode;
-    nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
+    nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t index, XGL_DESCRIPTOR_SET descriptorSet, uint32_t slotOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData)
 {
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
-    nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, index, descriptorSet, slotOffset);
+    nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, descriptorSet, pUserData);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicMemoryView(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_MEMORY_VIEW_ATTACH_INFO* pMemView)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t binding)
 {
-    nextTable.CmdBindDynamicMemoryView(cmdBuffer, pipelineBindPoint, pMemView);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t binding)
-{
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, buffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdBindVertexData() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+        sprintf(str, "In xglCmdBindVertexData() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     // Now update CB's vertex binding list
     GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
     if (!pCBTrav) {
         char str[1024];
-        sprintf(str, "Trying to BindVertexData mem obj %p to CB %p but no Node for that CB. Was CB incorrectly destroyed?", mem, cmdBuffer);
+        sprintf(str, "Trying to BindVertexData buffer obj %p to CB %p but no Node for that CB. Was CB incorrectly destroyed?", buffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, "MEM", str);
     } else {
         MEMORY_BINDING *pBindInfo;
@@ -1630,32 +1677,32 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_
         pBindInfo = malloc(sizeof(MEMORY_BINDING));
         pBindInfo->offset = offset;
         pBindInfo->binding = binding;
-        pBindInfo->mem = mem;
+        pBindInfo->buffer = buffer;
         result = insertMiniNode(&pCBTrav->pVertexBufList, pBindInfo, &dontCare);
         if (result) {
             char str[1024];
-            sprintf(str, "In xglCmdBindVertexData and ran out of memory to track binding. CmdBuffer: %p, memory %p", cmdBuffer, mem);
+            sprintf(str, "In xglCmdBindVertexData and ran out of memory to track binding. CmdBuffer: %p, buffer %p", cmdBuffer, buffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_OUT_OF_MEMORY_ERROR, "MEM", str);
         }
     }
     lastVtxBinding = binding;
-    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
+    nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
-    // Track this memory. What exactly is this call doing?
-    // TODO : verify state of memory is XGL_MEMORY_STATE_INDEX_DATA
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+    // Track this buffer. What exactly is this call doing?
+    // TODO : verify state of buffer is XGL_MEMORY_STATE_INDEX_DATA
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, buffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdBindIndexData() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+        sprintf(str, "In xglCmdBindIndexData() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     // Now update CB's index binding list
     GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
     if (!pCBTrav) {
         char str[1024];
-        sprintf(str, "Trying to BindIndexData mem obj %p to CB %p but no Node for that CB. Was CB incorrectly destroyed?", mem, cmdBuffer);
+        sprintf(str, "Trying to BindIndexData buffer obj %p to CB %p but no Node for that CB. Was CB incorrectly destroyed?", buffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_MEM_OBJ, (char *) "MEM", (char *) str);
     } else {
         MEMORY_BINDING *pBindInfo;
@@ -1663,75 +1710,21 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_G
         XGL_RESULT result;
         pBindInfo = malloc(sizeof(MEMORY_BINDING));
         pBindInfo->indexType = indexType;
-        pBindInfo->mem = mem;
+        pBindInfo->buffer = buffer;
         pBindInfo->offset = offset;
         pBindInfo->binding = 0;
         result = insertMiniNode(&pCBTrav->pIndexBufList, pBindInfo, &dontCare);
         if (result) {
             char str[1024];
-            sprintf(str, "In xglCmdBindIndexData and ran out of memory to track binding. CmdBuffer: %p, memory %p", cmdBuffer, mem);
+            sprintf(str, "In xglCmdBindIndexData and ran out of memory to track binding. CmdBuffer: %p, buffer %p", cmdBuffer, buffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_OUT_OF_MEMORY_ERROR, "MEM", str);
         }
     }
-    nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
+
+    nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindAttachments(XGL_CMD_BUFFER cmdBuffer, uint32_t colorAttachmentCount, const XGL_COLOR_ATTACHMENT_BIND_INFO* pColorAttachments, const XGL_DEPTH_STENCIL_BIND_INFO* pDepthStencilAttachment)
-{
-    // TODO : Verify that memory for attachments is in the correct state
-    nextTable.CmdBindAttachments(cmdBuffer, colorAttachmentCount, pColorAttachments, pDepthStencilAttachment);
-}
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBuffer, uint32_t transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions)
-{
-    for (int i=0; i < transitionCount; i++) {
-        XGL_GPU_MEMORY mem = pStateTransitions[i].mem;
-        if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
-            char str[1024];
-            sprintf(str, "In xglCmdPrepareMemoryRegions() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, (char *) "MEM", (char *) str);
-        } else {
-            // TODO : Need to intelligently set state so it's captured on per-region basis (not per mem obj)
-            setMemTransition(mem, &pStateTransitions[i]);
-            // Validate mem state in order
-/*          GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
-            if (pMem->transition.memory.newState != pStateTransitions[i].oldState) {
-                char str[1024];
-                sprintf(str, "In xglCmdPrepareMemoryRegions() call, mem %p actual oldState of %s doesn't match transition oldState of %s", mem, string_XGL_MEMORY_STATE(pMem->transition.memory.newState), string_XGL_MEMORY_STATE(pStateTransitions[i].oldState));
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_STATE, (char *) "MEM", (char *) str);
-            }
-            // Once state is validated, update to current state
-            memcpy(&pMem->transition, &pStateTransitions[i], sizeof(XGL_MEMORY_STATE_TRANSITION));
-*/
-        }
-    }
-    nextTable.CmdPrepareMemoryRegions(cmdBuffer, transitionCount, pStateTransitions);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, uint32_t transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions)
-{
-    for (int i=0; i < transitionCount; i++) {
-        XGL_GPU_MEMORY mem = getMemBindingFromObject(pStateTransitions[i].image);
-        if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
-            char str[1024];
-            sprintf(str, "In xglCmdPrepareImages() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, (char *) "MEM", (char *) str);
-        } else {
-            // TODO : Need to intelligently set state so it's captured on per-region basis (not per mem obj)
-            //GLOBAL_MEM_OBJ_NODE* pMem = getGlobalMemNode(mem);
-            // Validate mem state in order
-/*
-            if ((XGL_IMAGE_STATE)pMem->transition.image.newState != pStateTransitions[i].oldState) {
-                char str[1024];
-                sprintf(str, "In xglCmdPrepareImages() call, mem %p w/ image %p actual oldState of %s doesn't match transition oldState of %s", mem, pStateTransitions[i].image, string_XGL_IMAGE_STATE(pMem->transition.image.newState), string_XGL_IMAGE_STATE(pStateTransitions[i].oldState));
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_STATE, (char *) "MEM", (char *) str);
-            }
-            memcpy(&pMem->transition, &pStateTransitions[i], sizeof(XGL_IMAGE_STATE_TRANSITION));
-*/
-        }
-    }
-    nextTable.CmdPrepareImages(cmdBuffer, transitionCount, pStateTransitions);
-}
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
@@ -1743,24 +1736,24 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, uint32_
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
+XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, buffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdDrawIndirect() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+        sprintf(str, "In xglCmdDrawIndirect() call unable to update binding of mem %p to cmdBuffer %p", buffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdDrawIndirect(cmdBuffer, mem, offset, count, stride);
+    nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
+XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, buffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdDrawIndexedIndirect() call unable to update binding of mem %p to cmdBuffer %p", mem, cmdBuffer);
+        sprintf(str, "In xglCmdDrawIndexedIndirect() call unable to update binding of mem %p to cmdBuffer %p", buffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdDrawIndexedIndirect(cmdBuffer, mem, offset, count, stride);
+    nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
@@ -1780,17 +1773,17 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XG
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_GPU_MEMORY destMem, uint32_t regionCount, const XGL_MEMORY_COPY* pRegions)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, srcMem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, srcBuffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdCopyMemory() call unable to update binding of srcMem %p to cmdBuffer %p", srcMem, cmdBuffer);
+        sprintf(str, "In xglCmdCopyMemory() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, destBuffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdCopyMemory() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
+        sprintf(str, "In xglCmdCopyMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdCopyMemory(cmdBuffer, srcMem, destMem, regionCount, pRegions);
+    nextTable.CmdCopyMemory(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t regionCount, const XGL_IMAGE_COPY* pRegions)
@@ -1799,7 +1792,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdCopyMemoryToImage(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_IMAGE destImage, uint32_t regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
+XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
     // TODO : Track this
     XGL_GPU_MEMORY mem = getMemBindingFromObject(destImage);
@@ -1808,15 +1801,15 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyMemoryToImage(XGL_CMD_BUFFER cmdBuffer, X
         sprintf(str, "In xglCmdCopyMemoryToImage() call unable to update binding of destImage mem %p to cmdBuffer %p", mem, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, srcMem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, srcBuffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdCopyMemoryToImage() call unable to update binding of srcMem %p to cmdBuffer %p", srcMem, cmdBuffer);
+        sprintf(str, "In xglCmdCopyMemoryToImage() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdCopyMemoryToImage(cmdBuffer, srcMem, destImage, regionCount, pRegions);
+    nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, regionCount, pRegions);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToMemory(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_GPU_MEMORY destMem, uint32_t regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
+XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
     // TODO : Track this
     XGL_GPU_MEMORY mem = getMemBindingFromObject(srcImage);
@@ -1825,12 +1818,12 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToMemory(XGL_CMD_BUFFER cmdBuffer, X
         sprintf(str, "In xglCmdCopyImageToMemory() call unable to update binding of srcImage mem %p to cmdBuffer %p", mem, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, destBuffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdCopyImageToMemory() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
+        sprintf(str, "In xglCmdCopyImageToMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdCopyImageToMemory(cmdBuffer, srcImage, destMem, regionCount, pRegions);
+    nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, destBuffer, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout)
@@ -1851,24 +1844,24 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData)
+XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, destBuffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdUpdateMemory() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
+        sprintf(str, "In xglCmdUpdateMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdUpdateMemory(cmdBuffer, destMem, destOffset, dataSize, pData);
+    nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdFillMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data)
+XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
+    if (XGL_FALSE == updateCBBinding(cmdBuffer, destBuffer)) {
         char str[1024];
-        sprintf(str, "In xglCmdFillMemory() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
+        sprintf(str, "In xglCmdFillMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
-    nextTable.CmdFillMemory(cmdBuffer, destMem, destOffset, fillSize, data);
+    nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
@@ -1939,19 +1932,9 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdWaitEvents(XGL_CMD_BUFFER cmdBuffer, const XG
     nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier( XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier)
+XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier(XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier)
 {
     nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdMemoryAtomic(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, uint64_t srcData, XGL_ATOMIC_OP atomicOp)
-{
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdMemoryAtomic() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    nextTable.CmdMemoryAtomic(cmdBuffer, destMem, destOffset, srcData, atomicOp);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, uint32_t slot, XGL_FLAGS flags)
@@ -1987,14 +1970,9 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdWriteTimestamp() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destMem, destOffset);
+    nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
@@ -2002,24 +1980,36 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_GPU_MEMORY srcMem, XGL_GPU_SIZE srcOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER srcBuffer, XGL_GPU_SIZE srcOffset)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, srcMem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdLoadAtomicCounters() call unable to update binding of srcMem %p to cmdBuffer %p", srcMem, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcMem, srcOffset);
+    nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset)
 {
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, destMem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdSaveAtomicCounters() call unable to update binding of destMem %p to cmdBuffer %p", destMem, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destMem, destOffset);
+    nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer)
+{
+    XGL_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass)
+{
+    XGL_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    return result;
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
+{
+    nextTable.CmdBeginRenderPass(cmdBuffer, renderPass);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
+{
+    nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel)

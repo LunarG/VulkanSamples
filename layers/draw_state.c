@@ -226,20 +226,19 @@ static size_t sTypeStructSize(XGL_STRUCTURE_TYPE sType)
             return 0;
     }
 }
-// Return the size of the underlying struct based on Bind Point enum
-//  Have to do this b/c VIEWPORT doesn't have sType in its createinfo struct
-static size_t dynStateCreateInfoSize(XGL_STATE_BIND_POINT sType)
+// Return the size of the underlying struct based on sType
+static size_t dynStateCreateInfoSize(XGL_STRUCTURE_TYPE sType)
 {
     switch (sType)
     {
-        case XGL_STATE_BIND_VIEWPORT:
-            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
-        case XGL_STATE_BIND_RASTER:
-            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
-        case XGL_STATE_BIND_DEPTH_STENCIL:
-            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
-        case XGL_STATE_BIND_COLOR_BLEND:
-            return sizeof(XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO);
+        case XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO:
+            return sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO);
         default:
             return 0;
     }
@@ -251,43 +250,6 @@ static size_t dynStateCreateInfoSize(XGL_STATE_BIND_POINT sType)
 
 static uint64_t drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
 
-typedef struct _SHADER_DS_MAPPING {
-    uint32_t slotCount;
-    // TODO : Need to understand this with new binding model, changed to LAYOUT_CI for now
-    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
-} SHADER_DS_MAPPING;
-
-typedef struct _PIPELINE_LL_HEADER {
-    XGL_STRUCTURE_TYPE sType;
-    const void*    pNext;
-} PIPELINE_LL_HEADER;
-
-typedef struct _PIPELINE_NODE {
-    XGL_PIPELINE           pipeline;
-    struct _PIPELINE_NODE  *pNext;
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
-    // 1st dimension of array is shader type
-    SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS];
-    // Vtx input info (if any)
-    uint32_t                                vtxBindingCount;   // number of bindings
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
-    uint32_t                                vtxAttributeCount; // number of attributes
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
-} PIPELINE_NODE;
-
-typedef struct _SAMPLER_NODE {
-    XGL_SAMPLER              sampler;
-    XGL_SAMPLER_CREATE_INFO  createInfo;
-    struct _SAMPLER_NODE     *pNext;
-} SAMPLER_NODE;
-
-typedef struct _DYNAMIC_STATE_NODE {
-    XGL_DYNAMIC_STATE_OBJECT     stateObj;
-    XGL_STATE_BIND_POINT sType; // Extra data as VIEWPORT CreateInfo doesn't have sType
-    PIPELINE_LL_HEADER   *pCreateInfo;
-    struct _DYNAMIC_STATE_NODE *pNext;
-} DYNAMIC_STATE_NODE;
-
 // TODO : Should be tracking lastBound per cmdBuffer and when draws occur, report based on that cmd buffer lastBound
 //   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
 //   to that same cmd buffer by separate thread are not changing state from underneath us
@@ -296,22 +258,21 @@ static SAMPLER_NODE *pSamplerHead = NULL;
 static XGL_PIPELINE lastBoundPipeline = NULL;
 #define MAX_BINDING 0xFFFFFFFF
 static uint32_t lastVtxBinding = MAX_BINDING;
+static uint32_t lastIdxBinding = MAX_BINDING;
 
 static DYNAMIC_STATE_NODE* pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
 static DYNAMIC_STATE_NODE* pLastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {0};
 
-// Viewport state create info doesn't have sType so we have to pass in BIND_POINT
-static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const PIPELINE_LL_HEADER* pCreateInfo, const XGL_STATE_BIND_POINT sType)
+static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const PIPELINE_LL_HEADER* pCreateInfo, XGL_STATE_BIND_POINT bindPoint)
 {
     pthread_mutex_lock(&globalLock);
     // Insert new node at head of appropriate LL
     DYNAMIC_STATE_NODE* pStateNode = (DYNAMIC_STATE_NODE*)malloc(sizeof(DYNAMIC_STATE_NODE));
-    pStateNode->pNext = pDynamicStateHead[sType];
-    pDynamicStateHead[sType] = pStateNode;
+    pStateNode->pNext = pDynamicStateHead[bindPoint];
+    pDynamicStateHead[bindPoint] = pStateNode;
     pStateNode->stateObj = state;
-    pStateNode->sType = sType;
-    pStateNode->pCreateInfo = (PIPELINE_LL_HEADER*)malloc(dynStateCreateInfoSize(sType));
-    memcpy(pStateNode->pCreateInfo, pCreateInfo, dynStateCreateInfoSize(sType));
+    pStateNode->pCreateInfo = (PIPELINE_LL_HEADER*)malloc(dynStateCreateInfoSize(pCreateInfo->sType));
+    memcpy(pStateNode->pCreateInfo, pCreateInfo, dynStateCreateInfoSize(pCreateInfo->sType));
     pthread_mutex_unlock(&globalLock);
 }
 // Set the last bound dynamic state of given type
@@ -467,33 +428,43 @@ static char* stringSlotBinding(uint32_t binding)
     }
 }
 
-typedef struct _DS_SLOT {
-    uint32_t                     slot;
-    // TODO : Fix this for latest binding model
-    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     shaderSlotInfo[XGL_NUM_GRAPHICS_SHADERS];
-    // Only 1 of 4 possible slot mappings active
-    uint32_t                     activeMapping;
-    uint32_t                     mappingMask; // store record of different mappings used
-    XGL_BUFFER_VIEW_ATTACH_INFO  buffView;
-    XGL_IMAGE_VIEW_ATTACH_INFO   imageView;
-    XGL_SAMPLER                  sampler;            
-} DS_SLOT;
-
-// Top-level node that points to start of DS
-typedef struct _DS_LL_HEAD {
-    XGL_DESCRIPTOR_SET dsID;
-    uint32_t           numSlots;
-    struct _DS_LL_HEAD *pNextDS;
-    DS_SLOT            *dsSlot; // Dynamically allocated array of DS_SLOTs
-    bool32_t           updateActive; // Track if DS is in an update block
-} DS_LL_HEAD;
-
-// ptr to HEAD of LL of DSs
-static DS_LL_HEAD *pDSHead = NULL;
+// ptr to HEAD of LL of DS Regions
+static REGION_NODE* g_pRegionHead = NULL;
 // Last DS that was bound, and slotOffset for the binding
 static XGL_DESCRIPTOR_SET lastBoundDS = NULL;
 static uint32_t lastBoundSlotOffset = 0;
 
+// Return Region node ptr for specified region or else NULL
+static REGION_NODE* getRegionNode(XGL_DESCRIPTOR_REGION region)
+{
+    pthread_mutex_lock(&globalLock);
+    REGION_NODE* pTrav = g_pRegionHead;
+    while (pTrav) {
+        if (pTrav->region == region) {
+            pthread_mutex_unlock(&globalLock);
+            return pTrav;
+        }
+        pTrav = pTrav->pNext;
+    }
+    pthread_mutex_unlock(&globalLock);
+    return NULL;
+}
+
+// Return Set node ptr for specified set or else NULL
+static SET_NODE* getSetNode(XGL_DESCRIPTOR_REGION set)
+{
+    pthread_mutex_lock(&globalLock);
+    REGION_NODE* pTrav = g_pRegionHead;
+    while (pTrav) {
+        if (pTrav->region == region) {
+            pthread_mutex_unlock(&globalLock);
+            return pTrav;
+        }
+        pTrav = pTrav->pNext;
+    }
+    pthread_mutex_unlock(&globalLock);
+    return NULL;
+}
 
 // Return DS Head ptr for specified ds or else NULL
 static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
@@ -509,15 +480,6 @@ static DS_LL_HEAD* getDS(XGL_DESCRIPTOR_SET ds)
     }
     pthread_mutex_unlock(&globalLock);
     return NULL;
-}
-
-// Initialize a DS where all slots are UNUSED for all shaders
-static void initDS(DS_LL_HEAD *pDS)
-{
-    for (uint32_t i = 0; i < pDS->numSlots; i++) {
-        memset((void*)&pDS->dsSlot[i], 0, sizeof(DS_SLOT));
-        pDS->dsSlot[i].slot = i;
-    }
 }
 
 // Return XGL_TRUE if DS Exists and is within an xglBeginDescriptorSetUpdate() call sequence, otherwise XGL_FALSE
@@ -750,7 +712,7 @@ static void dumpDotFile(char *outFileName)
                 switch (pLastBoundDynamicState[i]->sType)
                 {
                     case XGL_STATE_BIND_VIEWPORT:
-                        fprintf(pOutFile, "%s", xgl_gv_print_xgl_viewport_state_create_info((XGL_VIEWPORT_STATE_CREATE_INFO*)pLastBoundDynamicState[i]->pCreateInfo, "VIEWPORT State"));
+                        fprintf(pOutFile, "%s", xgl_gv_print_xgl_viewport_state_create_info((XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pLastBoundDynamicState[i]->pCreateInfo, "VIEWPORT State"));
                         break;
                     default:
                         fprintf(pOutFile, "%s", dynamic_gv_display(pLastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(pLastBoundDynamicState[i]->sType)));
@@ -998,6 +960,23 @@ static void initDrawState()
     nextTable.GetProcAddr = fpGetProcAddr;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
+{
+    XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(XGL_INSTANCE instance)
+{
+    XGL_RESULT result = nextTable.DestroyInstance(instance);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(XGL_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
+{
+    XGL_RESULT result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
+    return result;
+}
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData)
 {
@@ -1118,12 +1097,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(XGL_DEVICE device, const v
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglRemapVirtualMemoryPages(XGL_DEVICE device, uint32_t rangeCount, const XGL_VIRTUAL_MEMORY_REMAP_RANGE* pRanges, uint32_t preWaitSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPreWaitSemaphores, uint32_t postSignalSemaphoreCount, const XGL_QUEUE_SEMAPHORE* pPostSignalSemaphores)
-{
-    XGL_RESULT result = nextTable.RemapVirtualMemoryPages(device, rangeCount, pRanges, preWaitSemaphoreCount, pPreWaitSemaphores, postSignalSemaphoreCount, pPostSignalSemaphores);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
@@ -1172,6 +1145,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(XGL_BASE_OBJECT object, XGL_
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, uint32_t allocationIdx, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
 {
     XGL_RESULT result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(XGL_OBJECT object, uint32_t allocationIdx, XGL_GPU_SIZE rangeOffset, XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset)
+{
+    XGL_RESULT result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(XGL_IMAGE image, uint32_t allocationIdx, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset)
+{
+    XGL_RESULT result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
     return result;
 }
 
@@ -1253,9 +1238,33 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_BUFFER_CREATE_INFO* pCreateInfo, XGL_BUFFER* pBuffer)
+{
+    XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo, XGL_BUFFER_VIEW* pView)
+{
+    XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
 {
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(XGL_IMAGE image, const float color[4])
+{
+    XGL_RESULT result = nextTable.SetFastClearColor(image, color);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(XGL_IMAGE image, float depth)
+{
+    XGL_RESULT result = nextTable.SetFastClearDepth(image, depth);
     return result;
 }
 
@@ -1352,6 +1361,179 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout)
+{
+    XGL_RESULT result = nextTable.CreateDescriptorSetLayout(device, stageFlags, pSetBindPoints, priorSetLayout, pSetLayoutInfoList, pSetLayout);
+    if (XGL_SUCCESS == result) {
+        if (NULL != priorSetLayout) {
+            // Create new layout node off of prior layout
+        }
+        LAYOUT_NODE* pNewNode = (LAYOUT_NODE*)malloc(sizeof(LAYOUT_NODE));
+        if (NULL == pNewNode) {
+            char str[1024];
+            sprintf(str, "Out of memory while attempting to allocate LAYOUT_NODE in xglCreateDescriptorSetLayout()");
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, *pSetLayout, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+        }
+        memset(pNewNode, 0, sizeof(LAYOUT_NODE));
+        pNewNode->pNext = ;
+        pNewNode->stageFlags = stageFlags;
+        memcpy(&pNewNode->createInfo, pCreateInfo, sizeof());
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode)
+{
+    XGL_RESULT result = nextTable.BeginDescriptorRegionUpdate(device, updateMode);
+    if (XGL_SUCCESS == result) {
+        if (!g_pRegionHead) {
+            char str[1024];
+            sprintf(str, "No descriptor region found! Global descriptor region is NULL!");
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_NO_DS_REGION, "DS", str);
+        }
+        else {
+            REGION_NODE* pRegionNode = getRegionNode(g_pRegionHead);
+            if (!pRegionNode) {
+                char str[1024];
+                sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
+            }
+            else {
+                pRegionNode->updateActive = 1;
+            }
+        }
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(XGL_DEVICE device, XGL_CMD_BUFFER cmd)
+{
+    XGL_RESULT result = nextTable.EndDescriptorRegionUpdate(device, cmd);
+    if (XGL_SUCCESS == result) {
+        if (!g_pRegionHead) {
+            char str[1024];
+            sprintf(str, "No descriptor region found! Global descriptor region is NULL!");
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_NO_DS_REGION, "DS", str);
+        }
+        else {
+            REGION_NODE* pRegionNode = getRegionNode(g_pRegionHead);
+            if (!pRegionNode) {
+                char str[1024];
+                sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
+            }
+            else {
+                if (!pRegionNode->updateActive) {
+                    char str[1024];
+                    sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglEndDescriptorRegionUpdate()!");
+                    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
+                }
+                else {
+                    pRegionNode->updateActive = 0;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, XGL_DESCRIPTOR_REGION_USAGE regionUsage, uint32_t maxSets, const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_REGION* pDescriptorRegion)
+{
+    XGL_RESULT result = nextTable.CreateDescriptorRegion(device, regionUsage, maxSets, pCreateInfo, pDescriptorRegion);
+    if (XGL_SUCCESS == result) {
+        // Insert this region into Global Region LL at head
+        char str[1024];
+        sprintf(str, "Created Descriptor Region %p", (void*)*pDescriptorRegion);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDescriptorRegion, 0, DRAWSTATE_NONE, "DS", str);
+        pthread_mutex_lock(&globalLock);
+        REGION_NODE *pTrav = g_pRegionHead;
+        REGION_NODE pNewNode = (REGION_NODE*)malloc(sizeof(REGION_NODE));
+        if (NULL == pNewNode) {
+            char str[1024];
+            sprintf(str, "Out of memory while attempting to allocate SET_NODE in xglAllocDescriptorSets()");
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, *pDescriptorRegion, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+        }
+        else {
+            memset(pNewNode, 0, sizeof(REGION_NODE));
+            pNewNode->pNext = g_pRegionHead;
+            g_pRegionHead = pNewNode;
+            memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO));
+            pNewNode->regionUsage  = regionUsage;
+            pNewNode->updateActive = 0;
+            pNewNode->maxSets      = maxSets;
+            pNewNode->region       = *pDescriptorRegion;
+        }
+        pthread_mutex_unlock(&globalLock);
+    }
+    else {
+        // Need to do anything if region create fails?
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(XGL_DESCRIPTOR_REGION descriptorRegion)
+{
+    // TODO : Handle clearing a region
+    XGL_RESULT result = nextTable.ClearDescriptorRegion(descriptorRegion);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION descriptorRegion, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
+{
+    XGL_RESULT result = nextTable.AllocDescriptorSets(descriptorRegion, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    if (XGL_SUCCESS == result) {
+        REGION_NODE *pRegion = getRegionNode(descriptorRegion);
+        // TODO : Handle Null Region
+        for (uint32_t i; i < *pCount; i++) {
+            char str[1024];
+            sprintf(str, "Created Descriptor Set %p", (void*)pDescriptorSets[i]);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDescriptorSet[i], 0, DRAWSTATE_NONE, "DS", str);
+            pthread_mutex_lock(&globalLock);
+            // Create new set node and add to head of region nodes
+            SET_NODE pNewNode = (SET_NODE*)malloc(sizeof(SET_NODE));
+            if (NULL == pNewNode) {
+                char str[1024];
+                sprintf(str, "Out of memory while attempting to allocate SET_NODE in xglAllocDescriptorSets()");
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pDescriptorSet[i], 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+            }
+            else {
+                memset(pNewNode, 0, sizeof(SET_NODE));
+                pNewNode->pNext = pRegion->pSets;
+                pRegion->pSets = pNewNode;
+                LAYOUT_NODE* pLayout = getLayoutNode(pSetLayouts[i]);
+                // TODO : Handle NULL layout
+                pNewNode->pLayouts = pLayout;
+                pNewNode->pNext = pRegion->pSets;
+                pRegion->pSets = pNewNode;
+                pNewNode->region = descriptorRegion;
+                pNewNode->set = pDescriptorSets[i];
+                pNewNode->setUsage = setUsage;
+                pNewNode->updateActive = 0;
+            }
+            pthread_mutex_unlock(&globalLock);
+        }
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSets(XGL_DESCRIPTOR_REGION descriptorRegion, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets)
+{
+    // TODO : For each descriptor set, clear it
+    nextTable.ClearDescriptorSets(descriptorRegion, count, pDescriptorSets);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglUpdateDescriptors(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain)
+{
+    REGION_NODE* pRegionNode = getRegionNode(g_pRegionHead);
+    if (!pRegionNode->updateActive) {
+        char str[1024];
+        sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglUpdateDescriptors()!");
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
+    }
+    // TODO : How does pUpdateChain work? Need to account for the actual updates
+    nextTable.UpdateDescriptors(descriptorSet, pUpdateChain);
+}
+/*
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSet(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET* pDescriptorSet)
 {
     XGL_RESULT result = nextTable.CreateDescriptorSet(device, pCreateInfo, pDescriptorSet);
@@ -1504,37 +1686,30 @@ XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSetSlots(XGL_DESCRIPTOR_SET descr
 }
 */
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateViewportState(XGL_DEVICE device, const XGL_VIEWPORT_STATE_CREATE_INFO* pCreateInfo, XGL_VIEWPORT_STATE_OBJECT* pState)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(XGL_DEVICE device, const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_VP_STATE_OBJECT* pState)
 {
-    XGL_RESULT result = nextTable.CreateViewportState(device, pCreateInfo, pState);
+    XGL_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_VIEWPORT);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRasterState(XGL_DEVICE device, const XGL_RASTER_STATE_CREATE_INFO* pCreateInfo, XGL_RASTER_STATE_OBJECT* pState)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(XGL_DEVICE device, const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_RS_STATE_OBJECT* pState)
 {
-    XGL_RESULT result = nextTable.CreateRasterState(device, pCreateInfo, pState);
+    XGL_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_RASTER);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateMsaaState(XGL_DEVICE device, const XGL_MSAA_STATE_CREATE_INFO* pCreateInfo, XGL_MSAA_STATE_OBJECT* pState)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(XGL_DEVICE device, const XGL_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_CB_STATE_OBJECT* pState)
 {
-    XGL_RESULT result = nextTable.CreateMsaaState(device, pCreateInfo, pState);
+    XGL_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_MSAA);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorBlendState(XGL_DEVICE device, const XGL_COLOR_BLEND_STATE_CREATE_INFO* pCreateInfo, XGL_COLOR_BLEND_STATE_OBJECT* pState)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE device, const XGL_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_DS_STATE_OBJECT* pState)
 {
-    XGL_RESULT result = nextTable.CreateColorBlendState(device, pCreateInfo, pState);
-    insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_COLOR_BLEND);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilState(XGL_DEVICE device, const XGL_DEPTH_STENCIL_STATE_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_STATE_OBJECT* pState)
-{
-    XGL_RESULT result = nextTable.CreateDepthStencilState(device, pCreateInfo, pState);
+    XGL_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (PIPELINE_LL_HEADER*)pCreateInfo, XGL_STATE_BIND_DEPTH_STENCIL);
     return result;
 }
@@ -1580,12 +1755,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, X
 {
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
-{
-    setLastBoundDynamicState(state, stateBindPoint);
-    nextTable.CmdBindStateObject(cmdBuffer, stateBindPoint, state);
-}
+/*
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t index, XGL_DESCRIPTOR_SET descriptorSet, uint32_t slotOffset)
 {
@@ -1611,26 +1781,30 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
     }
     nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, index, descriptorSet, slotOffset);
 }
+*/
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t binding)
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
+{
+    setLastBoundDynamicState(state, stateBindPoint);
+    nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData)
+{
+    nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, descriptorSet, pUserData);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
+{
+    lastIdxBinding = binding;
+    nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t binding)
 {
     lastVtxBinding = binding;
-    nextTable.CmdBindVertexData(cmdBuffer, mem, offset, binding);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexData(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
-{
-    nextTable.CmdBindIndexData(cmdBuffer, mem, offset, indexType);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdPrepareMemoryRegions(XGL_CMD_BUFFER cmdBuffer, uint32_t transitionCount, const XGL_MEMORY_STATE_TRANSITION* pStateTransitions)
-{
-    nextTable.CmdPrepareMemoryRegions(cmdBuffer, transitionCount, pStateTransitions);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdPrepareImages(XGL_CMD_BUFFER cmdBuffer, uint32_t transitionCount, const XGL_IMAGE_STATE_TRANSITION* pStateTransitions)
-{
-    nextTable.CmdPrepareImages(cmdBuffer, transitionCount, pStateTransitions);
+    nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
@@ -1651,22 +1825,22 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, uint32_
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
+XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
 {
     char str[1024];
     sprintf(str, "xglCmdDrawIndirect() call #%lu, reporting DS state:", drawCount[DRAW_INDIRECT]++);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
     synchAndPrintDSConfig();
-    nextTable.CmdDrawIndirect(cmdBuffer, mem, offset, count, stride);
+    nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
+XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
 {
     char str[1024];
     sprintf(str, "xglCmdDrawIndexedIndirect() call #%lu, reporting DS state:", drawCount[DRAW_INDEXED_INDIRECT]++);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
     synchAndPrintDSConfig();
-    nextTable.CmdDrawIndexedIndirect(cmdBuffer, mem, offset, count, stride);
+    nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
@@ -1674,14 +1848,14 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, uint32_t x
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset)
 {
-    nextTable.CmdDispatchIndirect(cmdBuffer, mem, offset);
+    nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdCopyMemory(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_GPU_MEMORY destMem, uint32_t regionCount, const XGL_MEMORY_COPY* pRegions)
+XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_COPY* pRegions)
 {
-    nextTable.CmdCopyMemory(cmdBuffer, srcMem, destMem, regionCount, pRegions);
+    nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t regionCount, const XGL_IMAGE_COPY* pRegions)
@@ -1689,19 +1863,29 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdCopyMemoryToImage(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY srcMem, XGL_IMAGE destImage, uint32_t regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
+XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
-    nextTable.CmdCopyMemoryToImage(cmdBuffer, srcMem, destImage, regionCount, pRegions);
+    nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, regionCount, pRegions);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToMemory(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_GPU_MEMORY destMem, uint32_t regionCount, const XGL_MEMORY_IMAGE_COPY* pRegions)
+XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
-    nextTable.CmdCopyImageToMemory(cmdBuffer, srcImage, destMem, regionCount, pRegions);
+    nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, destBuffer, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout)
 {
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData)
+{
+    nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data)
+{
+    nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
@@ -1739,14 +1923,9 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdWaitEvents(XGL_CMD_BUFFER cmdBuffer, const XG
     nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier( XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier)
+XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier(XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier)
 {
     nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdMemoryAtomic(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset, uint64_t srcData, XGL_ATOMIC_OP atomicOp)
-{
-    nextTable.CmdMemoryAtomic(cmdBuffer, destMem, destOffset, srcData, atomicOp);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, uint32_t slot, XGL_FLAGS flags)
@@ -1764,9 +1943,9 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset)
 {
-    nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destMem, destOffset);
+    nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
@@ -1774,14 +1953,36 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_GPU_MEMORY srcMem, XGL_GPU_SIZE srcOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER srcBuffer, XGL_GPU_SIZE srcOffset)
 {
-    nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcMem, srcOffset);
+    nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_GPU_MEMORY destMem, XGL_GPU_SIZE destOffset)
+XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset)
 {
-    nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destMem, destOffset);
+    nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer)
+{
+    XGL_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass)
+{
+    XGL_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    return result;
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
+{
+    nextTable.CmdBeginRenderPass(cmdBuffer, renderPass);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
+{
+    nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel)

@@ -25,27 +25,30 @@
 // Draw State ERROR codes
 typedef enum _DRAW_STATE_ERROR
 {
-    DRAWSTATE_NONE                          = 0, // Used for INFO & other non-error messages
-    DRAWSTATE_DESCRIPTOR_MAX_EXCEEDED       = 1, // Descriptor Count of DS Mapping exceeds MAX_SLOTS
-    DRAWSTATE_SLOT_REMAPPING                = 2, // DS Slot being mapped to a different type than previously
-    DRAWSTATE_NO_PIPELINE_BOUND             = 3, // Unable to identify a bound pipeline
-    DRAWSTATE_NO_DS_BOUND                   = 4, // Unable to identify a bound DS
-    DRAWSTATE_DS_SLOT_NUM_MISMATCH          = 5, // Number of slots in DS mapping exceeds actual DS slots
-    DRAWSTATE_UNKNOWN_DS_MAPPING            = 6, // Shader slot mapping is not recognized
-    DRAWSTATE_DS_MAPPING_MISMATCH           = 7, // DS Mapping mismatch
-    DRAWSTATE_INVALID_DS                    = 8, // Invalid DS referenced
-    DRAWSTATE_DS_END_WITHOUT_BEGIN          = 9, // EndDSUpdate called w/o corresponding BeginDSUpdate
-    DRAWSTATE_DS_ATTACH_WITHOUT_BEGIN       = 10, // Attempt to attach descriptors to DS w/ calling BeginDSUpdate
-    DRAWSTATE_DS_SAMPLE_ATTACH_FAILED       = 11, // Error while attempting to Attach Sampler mapping to DS Slot
-    DRAWSTATE_DS_IMAGE_ATTACH_FAILED        = 12, // Error while attempting to Attach Image mapping to DS Slot
-    DRAWSTATE_DS_MEMORY_ATTACH_FAILED       = 13, // Error while attempting to Attach Mem mapping to DS Slot
-    DRAWSTATE_DS_NESTED_DS_ATTACH_FAILED    = 14, // Error while attempting to Attach Nested DS mapping to DS Slot
-    DRAWSTATE_CLEAR_DS_FAILED               = 15, // Error while attempting ClearDS
-    DRAWSTATE_INVALID_PIPELINE              = 16, // Invalid DS referenced
-    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS       = 17, // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
-    DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT  = 18, // Invalid dyn state object
-    DRAWSTATE_MISSING_DOT_PROGRAM           = 19, // No "dot" program in order to generate png image
-    DRAWSTATE_BINDING_DS_NO_END_UPDATE      = 20, // DS bound to CmdBuffer w/o call to xglEndDescriptorSetUpdate())
+    DRAWSTATE_NONE,                             // Used for INFO & other non-error messages
+    DRAWSTATE_INTERNAL_ERROR,                    // Error with DrawState internal data structures
+    DRAWSTATE_DESCRIPTOR_MAX_EXCEEDED,          // Descriptor Count of DS Mapping exceeds MAX_SLOTS
+    DRAWSTATE_SLOT_REMAPPING,                   // DS Slot being mapped to a different type than previously
+    DRAWSTATE_NO_PIPELINE_BOUND,                // Unable to identify a bound pipeline
+    DRAWSTATE_NO_DS_BOUND,                      // Unable to identify a bound DS
+    DRAWSTATE_DS_SLOT_NUM_MISMATCH,             // Number of slots in DS mapping exceeds actual DS slots
+    DRAWSTATE_UNKNOWN_DS_MAPPING,               // Shader slot mapping is not recognized
+    DRAWSTATE_DS_MAPPING_MISMATCH,              // DS Mapping mismatch
+    DRAWSTATE_INVALID_DS,                       // Invalid DS referenced
+    DRAWSTATE_DS_END_WITHOUT_BEGIN,             // EndDSUpdate called w/o corresponding BeginDSUpdate
+    DRAWSTATE_UPDATE_WITHOUT_BEGIN,             // Attempt to update descriptors w/o calling BeginDescriptorRegionUpdate
+    DRAWSTATE_DS_SAMPLE_ATTACH_FAILED,          // Error while attempting to Attach Sampler mapping to DS Slot
+    DRAWSTATE_DS_IMAGE_ATTACH_FAILED,           // Error while attempting to Attach Image mapping to DS Slot
+    DRAWSTATE_DS_MEMORY_ATTACH_FAILED,          // Error while attempting to Attach Mem mapping to DS Slot
+    DRAWSTATE_DS_NESTED_DS_ATTACH_FAILED,       // Error while attempting to Attach Nested DS mapping to DS Slot
+    DRAWSTATE_CLEAR_DS_FAILED,                  // Error while attempting ClearDS
+    DRAWSTATE_INVALID_PIPELINE,                 // Invalid DS referenced
+    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
+    DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
+    DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
+    DRAWSTATE_BINDING_DS_NO_END_UPDATE,         // DS bound to CmdBuffer w/o call to xglEndDescriptorSetUpdate())
+    DRAWSTATE_NO_DS_REGION,                     // No DS Region is available
+    DRAWSTATE_OUT_OF_MEMORY                     // malloc failed
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -58,6 +61,93 @@ typedef enum _DRAW_TYPE
     DRAW_END_RANGE        = DRAW_INDEXED_INDIRECT,
     NUM_DRAW_TYPES        = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
 } DRAW_TYPE;
+
+typedef struct _SHADER_DS_MAPPING {
+    uint32_t slotCount;
+    // TODO : Need to understand this with new binding model, changed to LAYOUT_CI for now
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
+} SHADER_DS_MAPPING;
+
+typedef struct _PIPELINE_LL_HEADER {
+    XGL_STRUCTURE_TYPE sType;
+    const void*    pNext;
+} PIPELINE_LL_HEADER;
+
+typedef struct _PIPELINE_NODE {
+    XGL_PIPELINE           pipeline;
+    struct _PIPELINE_NODE  *pNext;
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
+    // 1st dimension of array is shader type
+    SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS];
+    // Vtx input info (if any)
+    uint32_t                                vtxBindingCount;   // number of bindings
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
+    uint32_t                                vtxAttributeCount; // number of attributes
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
+} PIPELINE_NODE;
+
+typedef struct _SAMPLER_NODE {
+    XGL_SAMPLER              sampler;
+    XGL_SAMPLER_CREATE_INFO  createInfo;
+    struct _SAMPLER_NODE     *pNext;
+} SAMPLER_NODE;
+
+typedef struct _DYNAMIC_STATE_NODE {
+    XGL_DYNAMIC_STATE_OBJECT     stateObj;
+    PIPELINE_LL_HEADER   *pCreateInfo;
+    struct _DYNAMIC_STATE_NODE *pNext;
+} DYNAMIC_STATE_NODE;
+
+typedef struct _DS_SLOT {
+    uint32_t                     slot;
+    // TODO : Fix this for latest binding model
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     shaderSlotInfo[XGL_NUM_GRAPHICS_SHADERS];
+    // Only 1 of 4 possible slot mappings active
+    uint32_t                     activeMapping;
+    uint32_t                     mappingMask; // store record of different mappings used
+    XGL_BUFFER_VIEW_ATTACH_INFO  buffView;
+    XGL_IMAGE_VIEW_ATTACH_INFO   imageView;
+    XGL_SAMPLER                  sampler;            
+} DS_SLOT;
+
+// Top-level node that points to start of DS
+typedef struct _DS_LL_HEAD {
+    XGL_DESCRIPTOR_SET dsID;
+    uint32_t           numSlots;
+    struct _DS_LL_HEAD *pNextDS;
+    DS_SLOT            *dsSlot; // Dynamically allocated array of DS_SLOTs
+    bool32_t           updateActive; // Track if DS is in an update block
+} DS_LL_HEAD;
+
+// Descriptor Data structures
+typedef struct _LAYOUT_NODE {
+    XGL_DESCRIPTOR_SET_LAYOUT                    layout;
+    XGL_FLAGS                                    stageFlags;
+    const uint32_t[XGL_NUM_SHADER_STAGE]         shaderStateBindPoints;
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO  createInfo;
+    //XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
+    struct _LAYOUT_NODE*                         pNext; // Points to node w/ priorSetLayout
+} LAYOUT_NODE;
+
+typedef struct _SET_NODE {
+    XGL_DESCRIPTOR_SET                           set;
+    XGL_DESCRIPTOR_REGION                        region;
+    XGL_DESCRIPTOR_SET_USAGE                     setUsage;
+    //uint32_t                                     count;
+    //const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts;
+    LAYOUT_NODE*                                 pLayouts;
+    struct _SET_NODE*                            pNext;
+} SET_NODE;
+
+typedef struct _REGION_NODE {
+    XGL_DESCRIPTOR_REGION                        region;
+    XGL_DESCRIPTOR_REGION_USAGE                  regionUsage;
+    uint32_t                                     maxSets;
+    const XGL_DESCRIPTOR_REGION_CREATE_INFO      createInfo;
+    bool32_t                                     updateActive; // Track if Region is in an update block
+    struct _REGION_NODE*                         pNext;
+    SET_NODE*                                    pSets; // Head of LL of sets for this Region
+} REGION_NODE;
 
 //prototypes for extension functions
 void drawStateDumpDotFile(char* outFileName);
