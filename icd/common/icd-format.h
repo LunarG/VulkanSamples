@@ -105,6 +105,8 @@ static inline int icd_format_get_block_width(XGL_FORMAT format)
 
 size_t icd_format_get_size(XGL_FORMAT format);
 
+XGL_IMAGE_FORMAT_CLASS icd_format_get_class(XGL_FORMAT format);
+
 unsigned int icd_format_get_channel_count(XGL_FORMAT format);
 
 void icd_format_get_raw_value(XGL_FORMAT format,

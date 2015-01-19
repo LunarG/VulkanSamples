@@ -229,7 +229,8 @@ struct demo {
 
     struct {
         XGL_BUFFER buf;
-        XGL_GPU_MEMORY mem;
+        XGL_UINT num_mem;
+        XGL_GPU_MEMORY *mem;
         XGL_BUFFER_VIEW view;
         XGL_BUFFER_VIEW_ATTACH_INFO attach;
     } uniform_data;
@@ -365,12 +366,13 @@ void demo_update_data_buffer(struct demo *demo)
     mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f, degreesToRadians(demo->spin_angle));
     mat4x4_mul(MVP, VP, demo->model_matrix);
 
-    err = xglMapMemory(demo->uniform_data.mem, 0, (XGL_VOID **) &pData);
+    assert(demo->uniform_data.num_mem == 1);
+    err = xglMapMemory(demo->uniform_data.mem[0], 0, (XGL_VOID **) &pData);
     assert(!err);
 
     memcpy(pData, (const void*) &MVP[0][0], matrixSize);
 
-    err = xglUnmapMemory(demo->uniform_data.mem);
+    err = xglUnmapMemory(demo->uniform_data.mem[0]);
     assert(!err);
 }
 
@@ -461,9 +463,13 @@ static void demo_prepare_depth(struct demo *demo)
         .usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT,
         .flags = 0,
     };
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+        .pNext = NULL,
+    };
     XGL_MEMORY_ALLOC_INFO mem_alloc = {
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = NULL,
+        .pNext = &img_alloc,
         .allocationSize = 0,
         .alignment = 0,
         .flags = 0,
@@ -481,6 +487,8 @@ static void demo_prepare_depth(struct demo *demo)
     };
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
     XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     XGL_RESULT err;
     XGL_UINT num_allocations = 0;
     XGL_SIZE num_alloc_size = sizeof(num_allocations);
@@ -502,7 +510,13 @@ static void demo_prepare_depth(struct demo *demo)
                     XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-
+    err = xglGetObjectInfo(demo->depth.image,
+                    XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+                    &img_reqs_size, &img_reqs);
+    assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+    img_alloc.usage = img_reqs.usage;
+    img_alloc.formatClass = img_reqs.formatClass;
+    img_alloc.samples = img_reqs.samples;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
         mem_alloc.alignment = mem_reqs[i].alignment;
@@ -719,9 +733,13 @@ static void demo_prepare_textures(struct demo *demo)
             .usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT,
             .flags = 0,
         };
+        XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+            .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+            .pNext = NULL,
+        };
         XGL_MEMORY_ALLOC_INFO mem_alloc = {
             .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-            .pNext = NULL,
+            .pNext = &img_alloc,
             .allocationSize = 0,
             .alignment = 0,
             .flags = 0,
@@ -745,6 +763,8 @@ static void demo_prepare_textures(struct demo *demo)
 
         XGL_MEMORY_REQUIREMENTS *mem_reqs;
         XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+        XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+        XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
         XGL_UINT num_allocations = 0;
         XGL_SIZE num_alloc_size = sizeof(num_allocations);
 
@@ -769,7 +789,13 @@ static void demo_prepare_textures(struct demo *demo)
                     XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_reqs);
         assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-
+        err = xglGetObjectInfo(demo->textures[i].image,
+                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+                        &img_reqs_size, &img_reqs);
+        assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+        img_alloc.usage = img_reqs.usage;
+        img_alloc.formatClass = img_reqs.formatClass;
+        img_alloc.samples = img_reqs.samples;
         for (XGL_UINT j = 0; j < num_allocations; j ++) {
             mem_alloc.allocationSize = mem_reqs[j].size;
             mem_alloc.alignment = mem_reqs[j].alignment;
@@ -826,9 +852,25 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
 {
     XGL_BUFFER_CREATE_INFO buf_info;
     XGL_BUFFER_VIEW_CREATE_INFO view_info;
-    XGL_MEMORY_ALLOC_INFO alloc_info;
-    XGL_MEMORY_REQUIREMENTS mem_reqs;
+    XGL_MEMORY_ALLOC_BUFFER_INFO buf_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO,
+        .pNext = NULL,
+    };
+    XGL_MEMORY_ALLOC_INFO alloc_info = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext = &buf_alloc,
+        .allocationSize = 0,
+        .alignment = 0,
+        .flags = 0,
+        .heapCount = 0,
+        .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
+    };
+    XGL_MEMORY_REQUIREMENTS *mem_reqs;
     XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_BUFFER_MEMORY_REQUIREMENTS buf_reqs;
+    XGL_SIZE buf_reqs_size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+    XGL_UINT num_allocations = 0;
+    XGL_SIZE num_alloc_size = sizeof(num_allocations);
     XGL_UINT8 *pData;
     int i;
     mat4x4 MVP, VP;
@@ -859,35 +901,45 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     assert(!err);
 
     err = xglGetObjectInfo(demo->uniform_data.buf,
+                           XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                           &num_alloc_size, &num_allocations);
+    assert(!err && num_alloc_size == sizeof(num_allocations));
+    mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+    demo->uniform_data.mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+    demo->uniform_data.num_mem = num_allocations;
+    err = xglGetObjectInfo(demo->uniform_data.buf,
             XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-            &mem_reqs_size, &mem_reqs);
-    assert(!err && mem_reqs_size == sizeof(mem_reqs));
+            &mem_reqs_size, mem_reqs);
+    assert(!err && mem_reqs_size == num_allocations * sizeof(*mem_reqs));
+    err = xglGetObjectInfo(demo->uniform_data.buf,
+                    XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS,
+                    &buf_reqs_size, &buf_reqs);
+    assert(!err && buf_reqs_size == sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS));
+    buf_alloc.usage = buf_reqs.usage;
+    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+        alloc_info.allocationSize = mem_reqs[i].size;
+        alloc_info.alignment = mem_reqs[i].alignment;
+        alloc_info.heapCount = mem_reqs[i].heapCount;
+        XGL_UINT heapInfo[mem_reqs[i].heapCount];
+        alloc_info.pHeaps = (const XGL_UINT *)heapInfo;
+        memcpy(heapInfo, mem_reqs[i].pHeaps,
+                sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
 
-    memset(&alloc_info, 0, sizeof(alloc_info));
-    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.allocationSize = mem_reqs.size;
-    alloc_info.alignment = mem_reqs.alignment;
-    alloc_info.heapCount = mem_reqs.heapCount;
-    XGL_UINT heapInfo[mem_reqs.heapCount];
-    alloc_info.pHeaps = (const XGL_UINT *)heapInfo;
-    memcpy(heapInfo, mem_reqs.pHeaps,
-            sizeof(mem_reqs.pHeaps[0]) * mem_reqs.heapCount);
-    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+        err = xglAllocMemory(demo->device, &alloc_info, &(demo->uniform_data.mem[i]));
+        assert(!err);
 
-    err = xglAllocMemory(demo->device, &alloc_info, &demo->uniform_data.mem);
-    assert(!err);
+        err = xglMapMemory(demo->uniform_data.mem[i], 0, (XGL_VOID **) &pData);
+        assert(!err);
 
-    err = xglMapMemory(demo->uniform_data.mem, 0, (XGL_VOID **) &pData);
-    assert(!err);
+        memcpy(pData, &data, alloc_info.allocationSize);
 
-    memcpy(pData, &data, alloc_info.allocationSize);
+        err = xglUnmapMemory(demo->uniform_data.mem[i]);
+        assert(!err);
 
-    err = xglUnmapMemory(demo->uniform_data.mem);
-    assert(!err);
-
-    err = xglBindObjectMemory(demo->uniform_data.buf, 0,
-            demo->uniform_data.mem, 0);
-    assert(!err);
+        err = xglBindObjectMemory(demo->uniform_data.buf, i,
+                    demo->uniform_data.mem[i], 0);
+        assert(!err);
+    }
 
     memset(&view_info, 0, sizeof(view_info));
     view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -1537,6 +1589,9 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->depth.image);
     for (j = 0; j < demo->depth.num_mem; j++)
         xglFreeMemory(demo->depth.mem[j]);
+    xglDestroyObject(demo->uniform_data.buf);
+    for (j = 0; j < demo->uniform_data.num_mem; j++)
+        xglFreeMemory(demo->uniform_data.mem[j]);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         xglDestroyObject(demo->buffers[i].fence);

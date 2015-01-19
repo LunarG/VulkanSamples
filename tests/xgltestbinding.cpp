@@ -257,7 +257,7 @@ void Object::unbind_memory()
         unbind_memory(i);
 }
 
-void Object::alloc_memory(const Device &dev, bool for_linear_img)
+void Object::alloc_memory(const Device &dev, bool for_linear_img, bool for_img)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
@@ -265,8 +265,25 @@ void Object::alloc_memory(const Device &dev, bool for_linear_img)
     internal_mems_ = new GpuMemory[mem_alloc_count_];
 
     const std::vector<XGL_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
+    std::vector<XGL_IMAGE_MEMORY_REQUIREMENTS> img_reqs;
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_info, *info_ptr = NULL;
+    XGL_MEMORY_ALLOC_INFO info;
+
+    if (for_img || for_linear_img) {
+        img_reqs = get_info<XGL_IMAGE_MEMORY_REQUIREMENTS>(obj(),
+                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
+        EXPECT(img_reqs.size() == 1);
+        info_ptr = &img_info;
+        img_info.pNext = NULL;
+        img_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
+        img_info.usage = img_reqs[0].usage;
+        img_info.formatClass = img_reqs[0].formatClass;
+        img_info.samples = img_reqs[0].samples;
+    }
+
+
     for (int i = 0; i < mem_reqs.size(); i++) {
-        XGL_MEMORY_ALLOC_INFO info = GpuMemory::alloc_info(mem_reqs[i]);
+        info = GpuMemory::alloc_info(mem_reqs[i], info_ptr);
         std::vector<uint32_t> heap_ids;
 
         info.heapCount = 0;
@@ -628,7 +645,7 @@ void BufferView::init(const Device &dev, const XGL_BUFFER_VIEW_CREATE_INFO &info
 void Image::init(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev, info.tiling == XGL_LINEAR_TILING);
+    alloc_memory(dev, info.tiling == XGL_LINEAR_TILING, true);
 }
 
 void Image::init_no_mem(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)

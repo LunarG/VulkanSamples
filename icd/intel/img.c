@@ -69,6 +69,28 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
             mem_req->pHeaps = imageHeaps;
         }
         break;
+    case XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
+        {
+            XGL_IMAGE_MEMORY_REQUIREMENTS *img_req = data;
+
+            *size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+            if (data == NULL)
+                return ret;
+            img_req->usage = img->usage;
+            img_req->formatClass = img->format_class;
+            img_req->samples = img->samples;
+        }
+        break;
+    case XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
+        {
+            XGL_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
+
+            *size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+            if (data == NULL)
+                return ret;
+            buf_req->usage = img->usage;
+        }
+        break;
     default:
         ret = intel_base_get_info(base, type, size, data);
         break;
@@ -96,6 +118,8 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     img->depth = info->extent.depth;
     img->mip_levels = info->mipLevels;
     img->array_size = info->arraySize;
+    img->usage = info->usage;
+    img->format_class = icd_format_get_class(info->format);
     img->samples = info->samples;
     intel_layout_init(layout, dev, info, scanout);
 

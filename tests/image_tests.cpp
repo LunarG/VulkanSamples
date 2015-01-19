@@ -191,9 +191,17 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
 
     XGL_MEMORY_REQUIREMENTS *mem_req;
     XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     XGL_UINT num_allocations = 0;
     XGL_SIZE num_alloc_size = sizeof(num_allocations);
-    XGL_MEMORY_ALLOC_INFO mem_info;
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+        .pNext = NULL,
+    };
+    XGL_MEMORY_ALLOC_INFO mem_info = {};
+    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.pNext = &img_alloc;
 
     err = xglGetObjectInfo(m_image, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                     &num_alloc_size, &num_allocations);
@@ -207,12 +215,17 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
                     &mem_reqs_size, mem_req);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-
+    err = xglGetObjectInfo(m_image,
+                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+                        &img_reqs_size, &img_reqs);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(img_reqs_size, sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+    img_alloc.usage = img_reqs.usage;
+    img_alloc.formatClass = img_reqs.formatClass;
+    img_alloc.samples = img_reqs.samples;
 
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         ASSERT_NE(0, mem_req[i].size) << "xglGetObjectInfo (Image): Failed - expect images to require memory";
-        memset(&mem_info, 0, sizeof(mem_info));
-        mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_info.allocationSize = mem_req[i].size;
         mem_info.alignment = mem_req[i].alignment;
         mem_info.heapCount = mem_req[i].heapCount;

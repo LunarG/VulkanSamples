@@ -952,6 +952,8 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_UPDATE_IMAGES                        = 51,
     XGL_STRUCTURE_TYPE_UPDATE_BUFFERS                       = 52,
     XGL_STRUCTURE_TYPE_UPDATE_AS_COPY                       = 53,
+    XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO             = 54,
+    XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO              = 55,
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -991,16 +993,24 @@ typedef enum _XGL_MEMORY_ALLOC_FLAGS
     XGL_MEMORY_ALLOC_SHAREABLE_BIT                          = 0x00000001,
 } XGL_MEMORY_ALLOC_FLAGS;
 
-// Buffer usage flags
+// Buffer and buffer allocation usage flags
 typedef enum _XGL_BUFFER_USAGE_FLAGS
 {
-    XGL_BUFFER_USAGE_SHADER_ACCESS_READ_BIT                 = 0x00000001,   // Shader read (e.g. TBO, image buffer, UBO, SBBO)
+    XGL_BUFFER_USAGE_GENERAL                                = 0x00000000,   // no special usage
+    XGL_BUFFER_USAGE_SHADER_ACCESS_READ_BIT                 = 0x00000001,   // Shader read (e.g. TBO, image buffer, UBO, SSBO)
     XGL_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT                = 0x00000002,   // Shader write (e.g. image buffer, SSBO)
     XGL_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT               = 0x00000004,   // Shader atomic operations (e.g. image buffer, SSBO)
-    XGL_BUFFER_USAGE_UNIFORM_READ_BIT                       = 0x00000008,   // Uniform read (UBO)
-    XGL_BUFFER_USAGE_INDEX_FETCH_BIT                        = 0x00000010,   // Fixed function index fetch (index buffer)
-    XGL_BUFFER_USAGE_VERTEX_FETCH_BIT                       = 0x00000020,   // Fixed function vertex fetch (VBO)
-    XGL_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT           = 0x00000040,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
+    XGL_BUFFER_USAGE_TRANSFER_SOURCE_BIT                    = 0x00000008,   // used as a source for copies
+    XGL_BUFFER_USAGE_TRANSFER_DESTINATION_BIT               = 0x00000010,   // used as a destination for copies
+    XGL_BUFFER_USAGE_UNIFORM_READ_BIT                       = 0x00000020,   // Uniform read (UBO)
+    XGL_BUFFER_USAGE_INDEX_FETCH_BIT                        = 0x00000040,   // Fixed function index fetch (index buffer)
+    XGL_BUFFER_USAGE_VERTEX_FETCH_BIT                       = 0x00000080,   // Fixed function vertex fetch (VBO)
+    XGL_BUFFER_USAGE_SHADER_STORAGE_BIT                     = 0x00000100,   // Shader storage buffer (SSBO)
+    XGL_BUFFER_USAGE_RAW_BUFFER_BIT                         = 0x00000200,   // used as a raw buffer
+    XGL_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT           = 0x00000400,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
+    XGL_BUFFER_USAGE_TEXTURE_BUFFER_BIT                     = 0x00000800,   // texture buffer (TBO)
+    XGL_BUFFER_USAGE_IMAGE_BUFFER_BIT                       = 0x00001000,   // image buffer (load/store)
+    XGL_MAX_ENUM(_XGL_BUFFER_USAGE_FLAGS)
 } XGL_BUFFER_USAGE_FLAGS;
 
 // Buffer flags
@@ -1022,14 +1032,44 @@ typedef enum _XGL_BUFFER_VIEW_TYPE
     XGL_MAX_ENUM(_XGL_BUFFER_VIEW_TYPE)
 } XGL_BUFFER_VIEW_TYPE;
 
-// Image usage flags
+// Images memory allocations can be used for resources of a given format class.
+typedef enum _XGL_IMAGE_FORMAT_CLASS
+{
+    XGL_IMAGE_FORMAT_CLASS_128_BITS                         = 1,  // color formats
+    XGL_IMAGE_FORMAT_CLASS_96_BITS                          = 2,
+    XGL_IMAGE_FORMAT_CLASS_64_BITS                          = 3,
+    XGL_IMAGE_FORMAT_CLASS_48_BITS                          = 4,
+    XGL_IMAGE_FORMAT_CLASS_32_BITS                          = 5,
+    XGL_IMAGE_FORMAT_CLASS_24_BITS                          = 6,
+    XGL_IMAGE_FORMAT_CLASS_16_BITS                          = 7,
+    XGL_IMAGE_FORMAT_CLASS_8_BITS                           = 8,
+    XGL_IMAGE_FORMAT_CLASS_128_BIT_BLOCK                    = 9,  // 128-bit block compressed formats
+    XGL_IMAGE_FORMAT_CLASS_64_BIT_BLOCK                     = 10, // 64-bit block compressed formats
+    XGL_IMAGE_FORMAT_CLASS_D32                              = 11, // D32_SFLOAT
+    XGL_IMAGE_FORMAT_CLASS_D24                              = 12, // D24_UNORM
+    XGL_IMAGE_FORMAT_CLASS_D16                              = 13, // D16_UNORM
+    XGL_IMAGE_FORMAT_CLASS_S8                               = 14, // S8_UINT
+    XGL_IMAGE_FORMAT_CLASS_D32S8                            = 15, // D32_SFLOAT_S8_UINT
+    XGL_IMAGE_FORMAT_CLASS_D24S8                            = 16, // D24_UNORM_S8_UINT
+    XGL_IMAGE_FORMAT_CLASS_D16S8                            = 17, // D16_UNORM_S8_UINT
+    XGL_IMAGE_FORMAT_CLASS_LINEAR                           = 18, // used for pitch-linear (transparent) textures
+    XGL_MAX_ENUM(_XGL_IMAGE_FORMAT_CLASS)
+} XGL_IMAGE_FORMAT_CLASS;
+
+// Image and image allocation usage flags
 typedef enum _XGL_IMAGE_USAGE_FLAGS
 {
-    XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
-    XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
-    XGL_IMAGE_USAGE_SHADER_ACCESS_ATOMIC_BIT                = 0x00000004,
-    XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000008,
-    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000010,
+    XGL_IMAGE_USAGE_GENERAL                                 = 0x00000000,   // no special usage
+    XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,   // shader read (e.g. texture, image)
+    XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,   // shader write (e.g. image)
+    XGL_IMAGE_USAGE_SHADER_ACCESS_ATOMIC_BIT                = 0x00000004,   // shader atomic operations (e.g. image)
+    XGL_IMAGE_USAGE_TRANSFER_SOURCE_BIT                     = 0x00000008,   // used as a source for copies
+    XGL_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                = 0x00000010,   // used as a destination for copies
+    XGL_IMAGE_USAGE_TEXTURE_BIT                             = 0x00000020,   // opaque texture (2d, 3d, etc.)
+    XGL_IMAGE_USAGE_IMAGE_BIT                               = 0x00000040,   // opaque image (2d, 3d, etc.)
+    XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000080,   // framebuffer color attachment
+    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000100,   // framebuffer depth/stencil
+    XGL_MAX_ENUM(_XGL_IMAGE_USAGE_FLAGS)
 } XGL_IMAGE_USAGE_FLAGS;
 
 // Image flags
@@ -1279,6 +1319,26 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
     XGL_MEMORY_PRIORITY                     memPriority;
 } XGL_MEMORY_ALLOC_INFO;
 
+// This structure is included in the XGL_MEMORY_ALLOC_INFO chain
+// for memory regions allocated for buffer usage.
+typedef struct _XGL_MEMORY_ALLOC_BUFFER_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
+    XGL_VOID*                               pNext;                      // Pointer to next structure
+    XGL_FLAGS                               usage;                      // XGL_BUFFER_USAGE_FLAGS
+} XGL_MEMORY_ALLOC_BUFFER_INFO;
+
+// This structure is included in the XGL_MEMORY_ALLOC_INFO chain
+// for memory regions allocated for buffer usage.
+typedef struct _XGL_MEMORY_ALLOC_IMAGE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
+    XGL_VOID*                               pNext;                      // Pointer to next structure
+    XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
+    XGL_IMAGE_FORMAT_CLASS                  formatClass;
+    XGL_UINT                                samples;
+} XGL_MEMORY_ALLOC_IMAGE_INFO;
+
 typedef struct _XGL_MEMORY_OPEN_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_OPEN_INFO
@@ -1301,6 +1361,18 @@ typedef struct _XGL_MEMORY_REQUIREMENTS
     XGL_UINT                                heapCount;
     XGL_UINT*                               pHeaps;
 } XGL_MEMORY_REQUIREMENTS;
+
+typedef struct _XGL_BUFFER_MEMORY_REQUIREMENTS
+{
+    XGL_FLAGS                               usage;                      // XGL_BUFFER_USAGE_FLAGS
+} XGL_BUFFER_MEMORY_REQUIREMENTS;
+
+typedef struct _XGL_IMAGE_MEMORY_REQUIREMENTS
+{
+    XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
+    XGL_IMAGE_FORMAT_CLASS                  formatClass;
+    XGL_UINT                                samples;
+} XGL_IMAGE_MEMORY_REQUIREMENTS;
 
 typedef struct _XGL_FORMAT_PROPERTIES
 {

@@ -78,6 +78,72 @@ size_t icd_format_get_size(XGL_FORMAT format)
     return icd_format_table[format.channelFormat].size;
 }
 
+XGL_IMAGE_FORMAT_CLASS icd_format_get_class(XGL_FORMAT format)
+{
+    if (icd_format_is_undef(format))
+        assert(!"undefined format");
+    if (icd_format_is_compressed(format)) {
+        switch (icd_format_get_size(format)) {
+        case 8:
+            return XGL_IMAGE_FORMAT_CLASS_64_BIT_BLOCK;
+        case 16:
+            return XGL_IMAGE_FORMAT_CLASS_128_BIT_BLOCK;
+        default:
+            assert(!"illegal compressed format");
+        }
+    } else if (icd_format_is_ds(format)) {
+        switch (icd_format_get_size(format)) {
+        case 1:
+            return XGL_IMAGE_FORMAT_CLASS_S8;
+        case 2:
+            return XGL_IMAGE_FORMAT_CLASS_D16;
+        case 3:
+            switch (icd_format_get_channel_count(format)) {
+            case 1:
+                return XGL_IMAGE_FORMAT_CLASS_D24;
+            case 2:
+                return XGL_IMAGE_FORMAT_CLASS_D16S8;
+            default:
+                assert(!"illegal depth stencil format channels");
+            }
+        case 4:
+            switch (icd_format_get_channel_count(format)) {
+            case 1:
+                return XGL_IMAGE_FORMAT_CLASS_D32;
+            case 2:
+                return XGL_IMAGE_FORMAT_CLASS_D24S8;
+            default:
+                assert(!"illegal depth stencil format channels");
+            }
+        case 5:
+            return XGL_IMAGE_FORMAT_CLASS_D32S8;
+        default:
+            assert(!"illegal depth stencil format");
+        }
+    } else { /* uncompressed color format */
+        switch (icd_format_get_size(format)) {
+        case 1:
+            return XGL_IMAGE_FORMAT_CLASS_8_BITS;
+        case 2:
+            return XGL_IMAGE_FORMAT_CLASS_16_BITS;
+        case 3:
+            return XGL_IMAGE_FORMAT_CLASS_24_BITS;
+        case 4:
+            return XGL_IMAGE_FORMAT_CLASS_32_BITS;
+        case 6:
+            return XGL_IMAGE_FORMAT_CLASS_48_BITS;
+        case 8:
+            return XGL_IMAGE_FORMAT_CLASS_64_BITS;
+        case 12:
+            return XGL_IMAGE_FORMAT_CLASS_96_BITS;
+        case 16:
+            return XGL_IMAGE_FORMAT_CLASS_128_BITS;
+        default:
+            assert(!"illegal uncompressed color format");
+        }
+    }
+}
+
 unsigned int icd_format_get_channel_count(XGL_FORMAT format)
 {
     return icd_format_table[format.channelFormat].channel_count;

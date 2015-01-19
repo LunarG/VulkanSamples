@@ -159,8 +159,8 @@ protected:
     void reinit(XGL_OBJECT obj) { init(obj, true); }
 
     // allocate and bind internal memories
-    void alloc_memory(const Device &dev, bool for_linear_img);
-    void alloc_memory(const Device &dev) { alloc_memory(dev, false); }
+    void alloc_memory(const Device &dev, bool for_linear_img, bool for_img);
+    void alloc_memory(const Device &dev) { alloc_memory(dev, false, false); }
     void alloc_memory(const std::vector<XGL_GPU_MEMORY> &mems);
 
 private:
@@ -297,7 +297,8 @@ public:
     // xglUnmapMemory()
     void unmap() const;
 
-    static XGL_MEMORY_ALLOC_INFO alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs);
+    static XGL_MEMORY_ALLOC_INFO alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs,
+                  const XGL_MEMORY_ALLOC_IMAGE_INFO *img_info);
 };
 
 class Fence : public DerivedObject<XGL_FENCE, Object> {
@@ -616,10 +617,14 @@ inline void Object::unmap() const
         primary_mem_->unmap();
 }
 
-inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs)
+inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs,
+                                const XGL_MEMORY_ALLOC_IMAGE_INFO *img_info)
 {
     XGL_MEMORY_ALLOC_INFO info = {};
     info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    if (img_info != NULL)
+        info.pNext = (XGL_VOID *) img_info;
+
     info.allocationSize = reqs.size;
     info.alignment = reqs.alignment;
     info.heapCount = reqs.heapCount;

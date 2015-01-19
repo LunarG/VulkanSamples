@@ -329,9 +329,12 @@ void XglRenderTest::InitDepthStencil()
     XGL_RESULT err;
     XGL_IMAGE_CREATE_INFO image;
     XGL_MEMORY_ALLOC_INFO mem_alloc;
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc;
     XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view;
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
     XGL_SIZE mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     XGL_UINT num_allocations = 0;
     XGL_SIZE num_alloc_size = sizeof(num_allocations);
 
@@ -355,8 +358,10 @@ void XglRenderTest::InitDepthStencil()
     image.usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT;
     image.flags = 0;
 
+    img_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
+    img_alloc.pNext = NULL;
     mem_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_alloc.pNext = NULL;
+    mem_alloc.pNext = &img_alloc;
     mem_alloc.allocationSize = 0;
     mem_alloc.alignment = 0;
     mem_alloc.flags = 0;
@@ -381,7 +386,14 @@ void XglRenderTest::InitDepthStencil()
                     &mem_reqs_size, mem_reqs);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(mem_reqs_size, sizeof(*mem_reqs));
-
+    err = xglGetObjectInfo(m_depthStencilImage,
+                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+                        &img_reqs_size, &img_reqs);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(img_reqs_size, sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+    img_alloc.usage = img_reqs.usage;
+    img_alloc.formatClass = img_reqs.formatClass;
+    img_alloc.samples = img_reqs.samples;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
         mem_alloc.alignment = mem_reqs[i].alignment;

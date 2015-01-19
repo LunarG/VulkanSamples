@@ -67,6 +67,20 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
         count = (XGL_UINT *) data;
         *count = 1;
         break;
+    case XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
+        s = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+        *size = s;
+        if (data == NULL)
+            return ret;
+        memset(data, 0, s);
+        break;
+    case XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
+        s = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+        *size = s;
+        if (data == NULL)
+            return ret;
+        memset(data, 0, s);
+        break;
     default:
         ret = XGL_ERROR_INVALID_VALUE;
         break;
@@ -96,7 +110,6 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         break;
     case XGL_DBG_OBJECT_GPU_MEMORY:
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
-        shallow_copy = sizeof(XGL_MEMORY_ALLOC_INFO);
         break;
     case XGL_DBG_OBJECT_EVENT:
         assert(info.header->struct_type == XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO);
@@ -201,6 +214,57 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
 
         memcpy(dbg->create_info, create_info, shallow_copy);
         dbg->create_info_size = shallow_copy;
+    } else if (info.header->struct_type ==
+            XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
+        XGL_SIZE size;
+        const XGL_MEMORY_ALLOC_INFO *ptr_next, *src = info.ptr;
+        XGL_MEMORY_ALLOC_INFO *dst;
+        uint8_t *d;
+        size = sizeof(*src);
+
+        ptr_next = src->pNext;
+        while (ptr_next != NULL) {
+            switch (ptr_next->sType) {
+                case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
+                    size += sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);
+                    break;
+                case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
+                    size += sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
+                    break;
+                default:
+                    intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
+                          XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                          "Invalid Memory Alloc Create Info type: 0x%x",
+                          ptr_next->sType);
+                    return false;
+            }
+            ptr_next = (XGL_MEMORY_ALLOC_INFO *) ptr_next->pNext;
+        }
+        dbg->create_info_size = size;
+        dst = icd_alloc(size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        if (!dst)
+            return false;
+        memcpy(dst, src, sizeof(*src));
+
+        ptr_next = src->pNext;
+        d = (uint8_t *) dst;
+        d += sizeof(*src);
+        while (ptr_next != NULL) {
+            switch (ptr_next->sType) {
+            case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
+                memcpy(d, ptr_next, sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO));
+                d += sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);
+                break;
+            case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
+                memcpy(d, ptr_next, sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO));
+                d += sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
+                break;
+            default:
+                return false;
+            }
+            ptr_next = (XGL_MEMORY_ALLOC_INFO *) ptr_next->pNext;
+        }
+        dbg->create_info = dst;
     } else if (info.header->struct_type ==
             XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO) {
         const XGL_DEVICE_CREATE_INFO *src = info.ptr;

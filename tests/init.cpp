@@ -617,24 +617,37 @@ void XglTest::CreateImageTest()
         subresource.mipLevel++;
     }
 
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+        .pNext = NULL,
+
+    };
     XGL_MEMORY_REQUIREMENTS mem_req;
+    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     data_size = sizeof(mem_req);
     err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
     ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
-
+    err = xglGetObjectInfo(image, XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+                           &img_reqs_size, &img_reqs);
+    ASSERT_XGL_SUCCESS(err);
+    ASSERT_EQ(img_reqs_size, sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+    img_alloc.usage = img_reqs.usage;
+    img_alloc.formatClass = img_reqs.formatClass;
+    img_alloc.samples = img_reqs.samples;
     //        XGL_RESULT XGLAPI xglAllocMemory(
     //            XGL_DEVICE                                  device,
     //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
     //            XGL_GPU_MEMORY*                             pMem);
-    XGL_MEMORY_ALLOC_INFO mem_info;
+    XGL_MEMORY_ALLOC_INFO mem_info = {};
     XGL_GPU_MEMORY image_mem;
 
     XGL_UINT heapInfo[mem_req.heapCount];
-    memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.pNext = &img_alloc;
     mem_info.allocationSize = mem_req.size;
     mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
