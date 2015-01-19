@@ -33,8 +33,7 @@
 struct intel_gpu;
 
 struct intel_instance {
-    /* the loader expects a "void *" at the beginning */
-    void *loader_data;
+    struct intel_handle handle;
 
     struct intel_gpu *gpus;
 };

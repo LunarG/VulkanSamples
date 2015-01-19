@@ -26,7 +26,6 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#include "xglIcd.h"
 #include "icd-enumerate-drm.h"
 #include "gpu.h"
 #include "instance.h"
@@ -117,7 +116,7 @@ static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *
         return NULL;
 
     memset(instance, 0, sizeof(*instance));
-    set_loader_magic_value(instance);
+    intel_handle_init(&instance->handle, XGL_DBG_OBJECT_INSTANCE);
 
     icd_allocator_init(alloc_cb);
 

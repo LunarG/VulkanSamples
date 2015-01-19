@@ -36,7 +36,6 @@
 #include "queue.h"
 #include "gpu.h"
 #include "wsi_x11.h"
-#include "xglIcd.h"
 
 static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
 #ifdef ENABLE_WSI_X11
@@ -165,7 +164,8 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
         return XGL_ERROR_OUT_OF_MEMORY;
 
     memset(gpu, 0, sizeof(*gpu));
-    set_loader_magic_value(gpu);
+    /* there is no XGL_DBG_OBJECT_GPU */
+    intel_handle_init(&gpu->handle, XGL_DBG_OBJECT_UNKNOWN);
 
     gpu->devid = devid;
 

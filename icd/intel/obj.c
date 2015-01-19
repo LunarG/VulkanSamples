@@ -29,21 +29,6 @@
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
-#include "xglIcd.h"
-
-static const uint32_t intel_base_magic = 0x494e544c;
-
-/**
- * Return true if an (not so) arbitrary pointer casted to intel_base points to
- * a valid intel_base.  This assumes at least the first
- * sizeof(void*)+sizeof(uint32_t) bytes of the address are accessible, and
- * they does not happen to be our magic values.
- */
-bool intel_base_is_valid(const struct intel_base *base,
-                         XGL_DBG_OBJECT_TYPE type)
-{
-    return (base->magic == intel_base_magic + type);
-}
 
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
@@ -386,8 +371,7 @@ struct intel_base *intel_base_create(struct intel_dev *dev,
         return NULL;
 
     memset(base, 0, obj_size);
-    set_loader_magic_value(base);
-    base->magic = intel_base_magic + type;
+    intel_handle_init(&base->handle, type);
 
     if (dev == NULL) {
         /*

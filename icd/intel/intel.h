@@ -37,6 +37,7 @@
 #include <xgl.h>
 #include <xglDbg.h>
 #include <xglWsiX11Ext.h>
+#include <xglIcd.h>
 
 #include "icd.h"
 #include "icd-alloc.h"
@@ -63,6 +64,50 @@ enum intel_debug_flags {
     INTEL_DEBUG_HANG        = 1 << 23,
 };
 
+struct intel_handle {
+    /* the loader expects a "void *" at the beginning */
+    void *loader_data;
+
+    uint32_t magic;
+};
+
 extern int intel_debug;
+
+static const uint32_t intel_handle_magic = 0x494e544c;
+
+static inline void intel_handle_init(struct intel_handle *handle,
+                                     XGL_DBG_OBJECT_TYPE type)
+{
+    set_loader_magic_value(handle);
+
+    handle->magic = intel_handle_magic + type;
+}
+
+/**
+ * Return true if \p handle is a valid intel_handle.  This assumes the first
+ * sizeof(intel_handle) bytes are readable, and they does not happen to have
+ * our magic values.
+ */
+static inline bool intel_handle_validate(const void *handle)
+{
+    const uint32_t handle_type =
+        ((const struct intel_handle *) handle)->magic - intel_handle_magic;
+
+    return (handle_type <= XGL_DBG_OBJECT_TYPE_END_RANGE);
+}
+
+/**
+ * Return true if \p handle is a valid intel_handle of \p type.
+ *
+ * \see intel_handle_validate().
+ */
+static inline bool intel_handle_validate_type(const void *handle,
+                                              XGL_DBG_OBJECT_TYPE type)
+{
+    const uint32_t handle_type =
+        ((const struct intel_handle *) handle)->magic - intel_handle_magic;
+
+    return (handle_type == (uint32_t) type);
+}
 
 #endif /* INTEL_H */
