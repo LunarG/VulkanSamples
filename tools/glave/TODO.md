@@ -18,6 +18,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 * API Call Tree Enhancements:
   * Draw call navigation buttons
   * Draw calls are shown in bold font
+  * "Run to here" context menu option to control where Replayer pauses
 * Export API Calls as Text file
 * Settings dialog
 
