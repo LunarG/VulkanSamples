@@ -35,6 +35,7 @@
 #include "kmd/winsys.h"
 #include "queue.h"
 #include "gpu.h"
+#include "instance.h"
 #include "wsi_x11.h"
 
 static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
@@ -165,7 +166,7 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
 
     memset(gpu, 0, sizeof(*gpu));
     /* there is no XGL_DBG_OBJECT_GPU */
-    intel_handle_init(&gpu->handle, XGL_DBG_OBJECT_UNKNOWN);
+    intel_handle_init(&gpu->handle, XGL_DBG_OBJECT_UNKNOWN, instance->icd);
 
     gpu->devid = devid;
 

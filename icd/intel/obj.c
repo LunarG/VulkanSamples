@@ -363,7 +363,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
         return NULL;
 
     memset(base, 0, obj_size);
-    intel_handle_init(&base->handle, type);
+    intel_handle_init(&base->handle, type, handle->icd);
 
     if (debug) {
         base->dbg = intel_base_dbg_create(handle,

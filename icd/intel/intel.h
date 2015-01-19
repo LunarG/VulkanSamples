@@ -29,6 +29,8 @@
 #define INTEL_H
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -70,6 +72,7 @@ struct intel_handle {
     void *loader_data;
 
     uint32_t magic;
+    const struct icd_instance *icd;
 };
 
 extern int intel_debug;
@@ -77,11 +80,13 @@ extern int intel_debug;
 static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
-                                     XGL_DBG_OBJECT_TYPE type)
+                                     XGL_DBG_OBJECT_TYPE type,
+                                     const struct icd_instance *icd)
 {
     set_loader_magic_value(handle);
 
     handle->magic = intel_handle_magic + type;
+    handle->icd = icd;
 }
 
 /**
@@ -109,6 +114,55 @@ static inline bool intel_handle_validate_type(const void *handle,
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
 
     return (handle_type == (uint32_t) type);
+}
+
+static inline void *intel_alloc(const void *handle,
+                                size_t size, size_t alignment,
+                                XGL_SYSTEM_ALLOC_TYPE type)
+{
+    assert(intel_handle_validate(handle));
+    return icd_instance_alloc(((const struct intel_handle *) handle)->icd,
+            size, alignment, type);
+}
+
+static inline void intel_free(const void *handle, void *ptr)
+{
+    assert(intel_handle_validate(handle));
+    icd_instance_free(((const struct intel_handle *) handle)->icd, ptr);
+}
+
+static inline void intel_logv(const void *handle,
+                              XGL_DBG_MSG_TYPE msg_type,
+                              XGL_VALIDATION_LEVEL validation_level,
+                              XGL_BASE_OBJECT src_object,
+                              size_t location, int32_t msg_code,
+                              const char *format, va_list ap)
+{
+    char msg[256];
+    int ret;
+
+    ret = vsnprintf(msg, sizeof(msg), format, ap);
+    if (ret >= sizeof(msg) || ret < 0)
+        msg[sizeof(msg) - 1] = '\0';
+
+    assert(intel_handle_validate(handle));
+    icd_instance_log(((const struct intel_handle *) handle)->icd,
+            msg_type, validation_level, src_object, location, msg_code, msg);
+}
+
+static inline void intel_log(const void *handle,
+                             XGL_DBG_MSG_TYPE msg_type,
+                             XGL_VALIDATION_LEVEL validation_level,
+                             XGL_BASE_OBJECT src_object,
+                             size_t location, int32_t msg_code,
+                             const char *format, ...)
+{
+    va_list ap;
+
+    va_start(ap, format);
+    intel_logv(handle, msg_type, validation_level, src_object,
+            location, msg_code, format, ap);
+    va_end(ap);
 }
 
 #endif /* INTEL_H */

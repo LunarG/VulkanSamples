@@ -128,7 +128,7 @@ static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *
     }
 
     memset(instance, 0, sizeof(*instance));
-    intel_handle_init(&instance->handle, XGL_DBG_OBJECT_INSTANCE);
+    intel_handle_init(&instance->handle, XGL_DBG_OBJECT_INSTANCE, icd);
 
     instance->icd = icd;
 
