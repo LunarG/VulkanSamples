@@ -415,7 +415,11 @@ class Subcommand(object):
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
                     func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;')
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(size_t));' % (proto.name))
-                elif proto.name in ['CreateShader', 'CreateGraphicsPipeline', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateComputePipeline']:
+                elif 'AllocDescriptorSets' == proto.name:
+                    func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                    func_body.append('    size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));')
+                    func_body.append('    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));')
+                elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
                         func_body.append('    customSize = (pCreateInfo != NULL) ? pCreateInfo->codeSize : 0;')
@@ -485,6 +489,8 @@ class Subcommand(object):
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
                         elif 'pDataSize' == proto.params[idx].name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(size_t), &dataSizeIn);' % (proto.params[idx].name))
+                        elif 'pDescriptorSets' == proto.params[idx].name and 'AllocDescriptorSets' == proto.name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets);')
                         elif 'pData' == proto.params[idx].name:
                             if 'dataSize' == proto.params[idx-1].name:
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
@@ -2500,7 +2506,7 @@ class Subcommand(object):
         # Functions that create views are unique from other create functions
         create_view_list = ['CreateImageView', 'CreateColorAttachmentView', 'CreateDepthStencilView', 'CreateComputePipeline']
         # Functions to treat as "Create' that don't have 'Create' in the name
-        special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory']
+        special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
         # A couple funcs use do while loops
         do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == XGL_SUCCESS', 'GetEventStatus': '(pPacket->result == XGL_EVENT_SET || pPacket->result == XGL_EVENT_RESET) && replayResult != pPacket->result'}
         rbody = []
@@ -2551,6 +2557,8 @@ class Subcommand(object):
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif create_func: # Declare local var to store created handle into
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
+                    if 'AllocDescriptorSets' == proto.name:
+                        rbody.append('            %s* local_%s = NULL;' % (proto.params[-2].ty.strip('*').replace('const ', ''), proto.params[-2].name))
                 elif transitions:
                     rbody.append('            %s pStateTransitions = (%s)pPacket->pStateTransitions;' % (proto.params[-1].ty.replace('const ', ''), proto.params[-1].ty.replace('const ', '')))
                     rbody.append('            bool allocatedMem = false;')
@@ -2589,8 +2597,13 @@ class Subcommand(object):
                 rr_string += 'm_xglFuncs.real_xgl%s(' % proto.name
                 for p in proto.params:
                     # For last param of Create funcs, pass address of param
-                    if create_func and p.name == proto.params[-1].name:
-                        rr_string += '&local_%s, ' % p.name
+                    if create_func:
+                        if p.name == proto.params[-1].name:
+                            rr_string += '&local_%s, ' % p.name
+                        elif proto.name == 'AllocDescriptorSets' and p.name == proto.params[-2].name:
+                            rr_string += 'local_%s, ' % p.name
+                        else:
+                            rr_string += '%s, ' % self._get_packet_param(p.ty, p.name)
                     else:
                         rr_string += '%s, ' % self._get_packet_param(p.ty, p.name)
                 rr_string = '%s);' % rr_string[:-2]
@@ -2620,6 +2633,13 @@ class Subcommand(object):
                     rbody.append('            {')
                     rbody.append('                rm_from_map(pPacket->device);')
                     rbody.append('                m_display->m_initedXGL = false;')
+                    rbody.append('            }')
+                elif 'AllocDescriptorSets' in proto.name:
+                    rbody.append('            if (replayResult == XGL_SUCCESS)')
+                    rbody.append('            {')
+                    rbody.append('                for (uint32_t i = 0; i < local_pCount; i++) {')
+                    rbody.append('                    add_to_map(pPacket->%s, &local_%s[i]);' % (proto.params[-2].name, proto.params[-2].name))
+                    rbody.append('                }')
                     rbody.append('            }')
                 elif create_func: # save handle mapping if create successful
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
