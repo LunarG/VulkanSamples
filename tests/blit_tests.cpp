@@ -745,7 +745,6 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);

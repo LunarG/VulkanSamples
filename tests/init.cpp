@@ -163,7 +163,6 @@ TEST_F(XglTest, AllocMemory) {
 
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
-    alloc_info.alignment = 0;
     alloc_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT |
                           XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
     alloc_info.memType = XGL_MEMORY_TYPE_OTHER,
@@ -226,7 +225,6 @@ TEST_F(XglTest, Event) {
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
     mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
@@ -363,7 +361,6 @@ TEST_F(XglTest, Query) {
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     // TODO: Is a simple multiple all that's needed here?
     mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
-    mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
@@ -649,7 +646,6 @@ void XglTest::CreateImageTest()
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = &img_alloc;
     mem_info.allocationSize = mem_req.size;
-    mem_info.alignment = mem_req.alignment;
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);

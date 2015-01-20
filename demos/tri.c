@@ -289,7 +289,6 @@ static void demo_prepare_depth(struct demo *demo)
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = &img_alloc,
         .allocationSize = 0,
-        .alignment = 0,
         .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
         .memType = XGL_MEMORY_TYPE_IMAGE,
         .heapCount = 0,
@@ -339,7 +338,6 @@ static void demo_prepare_depth(struct demo *demo)
     img_alloc.samples = img_reqs.samples;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
-        mem_alloc.alignment = mem_reqs[i].alignment;
         mem_alloc.heapCount = mem_reqs[i].heapCount;
         XGL_UINT heapInfo[mem_reqs[i].heapCount];
         mem_alloc.pHeaps = (const XGL_UINT *)heapInfo;
@@ -413,7 +411,6 @@ static void demo_prepare_textures(struct demo *demo)
             .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
             .pNext = &img_alloc,
             .allocationSize = 0,
-            .alignment = 0,
             .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
             .memType = XGL_MEMORY_TYPE_IMAGE,
             .heapCount = 0,
@@ -470,7 +467,6 @@ static void demo_prepare_textures(struct demo *demo)
         img_alloc.samples = img_reqs.samples;
         for (XGL_UINT j = 0; j < num_allocations; j ++) {
             mem_alloc.allocationSize = mem_reqs[j].size;
-            mem_alloc.alignment = mem_reqs[j].alignment;
             mem_alloc.heapCount = mem_reqs[j].heapCount;
             XGL_UINT heapInfo[mem_reqs[j].heapCount];
             mem_alloc.pHeaps = (const XGL_UINT *)heapInfo;
@@ -548,7 +544,6 @@ static void demo_prepare_vertices(struct demo *demo)
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = &buf_alloc,
         .allocationSize = 0,
-        .alignment = 0,
         .memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT,
         .memType = XGL_MEMORY_TYPE_BUFFER,
         .heapCount = 0,
@@ -587,7 +582,6 @@ static void demo_prepare_vertices(struct demo *demo)
     buf_alloc.usage = buf_reqs.usage;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
-        mem_alloc.alignment = mem_reqs[i].alignment;
         mem_alloc.heapCount = mem_reqs[i].heapCount;
         mem_alloc.pHeaps = mem_reqs[i].pHeaps;
         memcpy((void *) mem_alloc.pHeaps, mem_reqs[i].pHeaps,

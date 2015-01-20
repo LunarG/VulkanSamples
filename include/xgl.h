@@ -1318,7 +1318,6 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
     XGL_GPU_SIZE                            allocationSize;             // Size of memory allocation
-    XGL_GPU_SIZE                            alignment;
     XGL_UINT                                heapCount;
     const XGL_UINT*                         pHeaps;
     XGL_MEMORY_PRIORITY                     memPriority;

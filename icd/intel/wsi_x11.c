@@ -518,7 +518,6 @@ static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = img->total_size;
-    mem_info.alignment = 4096;
     mem_info.memProps =  0;
     mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
     mem_info.heapCount = 1;
