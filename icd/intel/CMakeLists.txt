@@ -61,6 +61,6 @@ target_compile_definitions(XGL_i965 PRIVATE ${definitions})
 target_include_directories(XGL_i965 PRIVATE ${include_dirs})
 target_link_libraries(XGL_i965 ${libraries})
 
-# set -Bsymbolic-functions for xglGetProcAddr()
+# set -Bsymbolic for xglGetProcAddr()
 set_target_properties(XGL_i965 PROPERTIES
-    LINK_FLAGS "-Wl,-Bsymbolic-functions -Wl,-no-undefined")
+    LINK_FLAGS "-Wl,-Bsymbolic -Wl,-no-undefined")

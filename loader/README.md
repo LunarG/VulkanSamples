@@ -33,5 +33,5 @@ LIBXGL\_LAYER\_NAMES   colon separate list of layer names to be activated. Examp
 - the ICD may or may not implement a dispatch table
 - ICD entrypoints can be named anything including the offcial xgl name such as xglCreateDevice().  However, beware of inter
 posing by dynamic OS library loaders if the offical names are used.  On Linux,
-if offical names are used, the ICD library must be linked with -Bsymbolic-functions
+if offical names are used, the ICD library must be linked with -Bsymbolic
 
