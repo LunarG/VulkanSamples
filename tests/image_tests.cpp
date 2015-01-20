@@ -234,7 +234,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
         memcpy(heapInfo, mem_req[i].pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
         mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
         mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-        mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+        mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
 
         /* allocate memory */
         err = xglAllocMemory(device(), &mem_info, &m_image_mem[i]);

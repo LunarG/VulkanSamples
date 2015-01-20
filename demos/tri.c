@@ -291,7 +291,7 @@ static void demo_prepare_depth(struct demo *demo)
         .allocationSize = 0,
         .alignment = 0,
         .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-        .flags = 0,
+        .memType = XGL_MEMORY_TYPE_IMAGE,
         .heapCount = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
@@ -415,7 +415,7 @@ static void demo_prepare_textures(struct demo *demo)
             .allocationSize = 0,
             .alignment = 0,
             .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-            .flags = 0,
+            .memType = XGL_MEMORY_TYPE_IMAGE,
             .heapCount = 0,
             .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
         };
@@ -550,7 +550,7 @@ static void demo_prepare_vertices(struct demo *demo)
         .allocationSize = 0,
         .alignment = 0,
         .memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT,
-        .flags = 0,
+        .memType = XGL_MEMORY_TYPE_BUFFER,
         .heapCount = 0,
         .pHeaps = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
@@ -590,7 +590,7 @@ static void demo_prepare_vertices(struct demo *demo)
         mem_alloc.alignment = mem_reqs[i].alignment;
         mem_alloc.heapCount = mem_reqs[i].heapCount;
         mem_alloc.pHeaps = mem_reqs[i].pHeaps;
-        memcpy(mem_alloc.pHeaps, mem_reqs[i].pHeaps,
+        memcpy((void *) mem_alloc.pHeaps, mem_reqs[i].pHeaps,
                 sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
 
         err = xglAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem[i]);

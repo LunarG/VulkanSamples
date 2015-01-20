@@ -365,7 +365,7 @@ void XglRenderTest::InitDepthStencil()
     mem_alloc.allocationSize = 0;
     mem_alloc.alignment = 0;
     mem_alloc.memProps = XGL_MEMORY_PROPERTY_GPU_ONLY;
-    mem_alloc.flags = 0;
+    mem_alloc.memType = XGL_MEMORY_TYPE_IMAGE;
     mem_alloc.heapCount = 0;
     mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 

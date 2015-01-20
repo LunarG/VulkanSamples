@@ -990,10 +990,14 @@ typedef enum _XGL_MEMORY_PROPERTY_FLAGS
 } XGL_MEMORY_PROPERTY_FLAGS;
 
 // Memory allocation flags
-typedef enum _XGL_MEMORY_ALLOC_FLAGS
+typedef enum _XGL_MEMORY_TYPE
 {
-    XGL_MEMORY_ALLOC_SHAREABLE_BIT                          = 0x00000001,
-} XGL_MEMORY_ALLOC_FLAGS;
+    XGL_MEMORY_TYPE_OTHER                                   = 0x00000000,   // device memory that is not any of the others
+    XGL_MEMORY_TYPE_BUFFER                                  = 0x00000001,   // memory for buffers and associated information
+    XGL_MEMORY_TYPE_IMAGE                                   = 0x00000002,   // memory for images and associated information
+    XGL_MEMORY_TYPE_PIPELINE                                = 0x00000003,   // memory for pipeline objects
+    XGL_MAX_ENUM(_XGL_MEMORY_TYPE)
+} XGL_MEMORY_TYPE;
 
 // Buffer and buffer allocation usage flags
 typedef enum _XGL_BUFFER_USAGE_FLAGS
@@ -1315,11 +1319,11 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
     XGL_GPU_SIZE                            allocationSize;             // Size of memory allocation
     XGL_GPU_SIZE                            alignment;
-    XGL_FLAGS                               flags;                      // XGL_MEMORY_ALLOC_FLAGS
     XGL_UINT                                heapCount;
     const XGL_UINT*                         pHeaps;
     XGL_MEMORY_PRIORITY                     memPriority;
     XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
+    XGL_MEMORY_TYPE                         memType;
 } XGL_MEMORY_ALLOC_INFO;
 
 // This structure is included in the XGL_MEMORY_ALLOC_INFO chain
@@ -1364,6 +1368,7 @@ typedef struct _XGL_MEMORY_REQUIREMENTS
     XGL_UINT                                heapCount;
     XGL_UINT*                               pHeaps;
     XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
+    XGL_MEMORY_TYPE                         memType;
 } XGL_MEMORY_REQUIREMENTS;
 
 typedef struct _XGL_BUFFER_MEMORY_REQUIREMENTS

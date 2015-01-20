@@ -473,7 +473,7 @@ static void demo_prepare_depth(struct demo *demo)
         .allocationSize = 0,
         .alignment = 0,
         .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-        .flags = 0,
+        .memType = XGL_MEMORY_TYPE_IMAGE,
         .heapCount = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
@@ -744,7 +744,7 @@ static void demo_prepare_textures(struct demo *demo)
             .allocationSize = 0,
             .alignment = 0,
             .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-            .flags = 0,
+            .memType = XGL_MEMORY_TYPE_IMAGE,
             .heapCount = 0,
             .pHeaps = 0,
             .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
@@ -864,7 +864,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         .allocationSize = 0,
         .alignment = 0,
         .memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT,
-        .flags = 0,
+        .memType = XGL_MEMORY_TYPE_BUFFER,
         .heapCount = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };

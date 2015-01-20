@@ -750,7 +750,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     err = xglAllocMemory(dev_.obj(), &mem_info, &event_mem);
     ASSERT_XGL_SUCCESS(err);
 

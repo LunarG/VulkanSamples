@@ -166,6 +166,7 @@ TEST_F(XglTest, AllocMemory) {
     alloc_info.alignment = 0;
     alloc_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT |
                           XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+    alloc_info.memType = XGL_MEMORY_TYPE_OTHER,
     alloc_info.heapCount = 1;
     alloc_info.pHeaps = localHeap;
 
@@ -231,7 +232,7 @@ TEST_F(XglTest, Event) {
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    mem_info.memType = XGL_MEMORY_TYPE_OTHER;
     err = xglAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_XGL_SUCCESS(err);
 
@@ -368,10 +369,8 @@ TEST_F(XglTest, Query) {
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    // TODO: are the flags right?
+    mem_info.memType = XGL_MEMORY_TYPE_OTHER;
     // TODO: Should this be pinned? Or maybe a separate test with pinned.
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
     err = xglAllocMemory(device(), &mem_info, &query_mem);
     ASSERT_XGL_SUCCESS(err);
 
@@ -656,7 +655,7 @@ void XglTest::CreateImageTest()
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
     mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
+    mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
     err = xglAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_XGL_SUCCESS(err);
 
