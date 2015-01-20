@@ -94,7 +94,6 @@ static XGL_RESULT event_get_info(struct intel_base *base, int type,
                                  XGL_SIZE *size, XGL_VOID *data)
 {
     XGL_RESULT ret = XGL_SUCCESS;
-    static XGL_UINT eventHeaps[1] =  {0}; /* always heap 0 */
 
     switch (type) {
     case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
@@ -107,9 +106,6 @@ static XGL_RESULT event_get_info(struct intel_base *base, int type,
             /* use dword aligned to 64-byte boundaries */
             mem_req->size = 4;
             mem_req->alignment = 64;
-            mem_req->heapCount = 1;
-            mem_req->pHeaps = eventHeaps;
-
         }
         break;
     default:

@@ -365,7 +365,6 @@ void XglRenderTest::InitDepthStencil()
     mem_alloc.allocationSize = 0;
     mem_alloc.memProps = XGL_MEMORY_PROPERTY_GPU_ONLY;
     mem_alloc.memType = XGL_MEMORY_TYPE_IMAGE;
-    mem_alloc.heapCount = 0;
     mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
     /* create image */
@@ -396,11 +395,6 @@ void XglRenderTest::InitDepthStencil()
     img_alloc.samples = img_reqs.samples;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
-        mem_alloc.heapCount = mem_reqs[i].heapCount;
-        XGL_UINT heapInfo[mem_reqs[i].heapCount];
-        mem_alloc.pHeaps = heapInfo;
-        memcpy(heapInfo, mem_reqs[i].pHeaps,
-            sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
 
         /* allocate memory */
         err = xglAllocMemory(device(), &mem_alloc, &m_depthStencilMem[i]);

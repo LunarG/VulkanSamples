@@ -473,7 +473,6 @@ static void demo_prepare_depth(struct demo *demo)
         .allocationSize = 0,
         .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
         .memType = XGL_MEMORY_TYPE_IMAGE,
-        .heapCount = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
     XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view = {
@@ -519,11 +518,6 @@ static void demo_prepare_depth(struct demo *demo)
     img_alloc.samples = img_reqs.samples;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
-        mem_alloc.heapCount = mem_reqs[i].heapCount;
-        XGL_UINT heapInfo[mem_reqs[i].heapCount];
-        mem_alloc.pHeaps = (const XGL_UINT *) heapInfo;
-        memcpy(heapInfo, mem_reqs[i].pHeaps,
-            sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
 
         /* allocate memory */
         err = xglAllocMemory(demo->device, &mem_alloc,
@@ -742,8 +736,6 @@ static void demo_prepare_textures(struct demo *demo)
             .allocationSize = 0,
             .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
             .memType = XGL_MEMORY_TYPE_IMAGE,
-            .heapCount = 0,
-            .pHeaps = 0,
             .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
         };
         XGL_IMAGE_VIEW_CREATE_INFO view = {
@@ -797,11 +789,6 @@ static void demo_prepare_textures(struct demo *demo)
         img_alloc.samples = img_reqs.samples;
         for (XGL_UINT j = 0; j < num_allocations; j ++) {
             mem_alloc.allocationSize = mem_reqs[j].size;
-            mem_alloc.heapCount = mem_reqs[j].heapCount;
-            XGL_UINT heapInfo[mem_reqs[j].heapCount];
-            mem_alloc.pHeaps = (const XGL_UINT *)heapInfo;
-            memcpy(heapInfo, mem_reqs[j].pHeaps,
-                sizeof(mem_reqs[j].pHeaps[0]) * mem_reqs[j].heapCount);
 
             /* allocate memory */
             err = xglAllocMemory(demo->device, &mem_alloc,
@@ -860,7 +847,6 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         .allocationSize = 0,
         .memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT,
         .memType = XGL_MEMORY_TYPE_BUFFER,
-        .heapCount = 0,
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
@@ -916,11 +902,6 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     buf_alloc.usage = buf_reqs.usage;
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         alloc_info.allocationSize = mem_reqs[i].size;
-        alloc_info.heapCount = mem_reqs[i].heapCount;
-        XGL_UINT heapInfo[mem_reqs[i].heapCount];
-        alloc_info.pHeaps = (const XGL_UINT *)heapInfo;
-        memcpy(heapInfo, mem_reqs[i].pHeaps,
-                sizeof(mem_reqs[i].pHeaps[0]) * mem_reqs[i].heapCount);
 
         err = xglAllocMemory(demo->device, &alloc_info, &(demo->uniform_data.mem[i]));
         assert(!err);

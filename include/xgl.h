@@ -995,7 +995,6 @@ typedef enum _XGL_MEMORY_TYPE
     XGL_MEMORY_TYPE_OTHER                                   = 0x00000000,   // device memory that is not any of the others
     XGL_MEMORY_TYPE_BUFFER                                  = 0x00000001,   // memory for buffers and associated information
     XGL_MEMORY_TYPE_IMAGE                                   = 0x00000002,   // memory for images and associated information
-    XGL_MEMORY_TYPE_PIPELINE                                = 0x00000003,   // memory for pipeline objects
     XGL_MAX_ENUM(_XGL_MEMORY_TYPE)
 } XGL_MEMORY_TYPE;
 
@@ -1032,9 +1031,9 @@ typedef enum _XGL_BUFFER_VIEW_TYPE
     XGL_BUFFER_VIEW_TYPED                                   = 0x00000001,   // Typed buffer, format and channels are used (TBO, image buffer)
     XGL_BUFFER_VIEW_STRUCTURED                              = 0x00000002,   // Structured buffer, stride is used (VBO, DX-style structured buffer)
 
-    XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE                         = XGL_BUFFER_VIEW_RAW,
-    XGL_BUFFER_VIEW_TYPE_END_RANGE                           = XGL_BUFFER_VIEW_STRUCTURED,
-    XGL_NUM_BUFFER_VIEW_TYPE                                 = (XGL_BUFFER_VIEW_TYPE_END_RANGE - XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
+    XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE                        = XGL_BUFFER_VIEW_RAW,
+    XGL_BUFFER_VIEW_TYPE_END_RANGE                          = XGL_BUFFER_VIEW_STRUCTURED,
+    XGL_NUM_BUFFER_VIEW_TYPE                                = (XGL_BUFFER_VIEW_TYPE_END_RANGE - XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_BUFFER_VIEW_TYPE)
 } XGL_BUFFER_VIEW_TYPE;
 
@@ -1318,11 +1317,9 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     XGL_VOID*                               pNext;                      // Pointer to next structure
     XGL_GPU_SIZE                            allocationSize;             // Size of memory allocation
-    XGL_UINT                                heapCount;
-    const XGL_UINT*                         pHeaps;
-    XGL_MEMORY_PRIORITY                     memPriority;
     XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
     XGL_MEMORY_TYPE                         memType;
+    XGL_MEMORY_PRIORITY                     memPriority;
 } XGL_MEMORY_ALLOC_INFO;
 
 // This structure is included in the XGL_MEMORY_ALLOC_INFO chain
@@ -1364,8 +1361,6 @@ typedef struct _XGL_MEMORY_REQUIREMENTS
     XGL_GPU_SIZE                            size;                       // Specified in bytes
     XGL_GPU_SIZE                            alignment;                  // Specified in bytes
     XGL_GPU_SIZE                            granularity;                // Granularity on which xglBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
-    XGL_UINT                                heapCount;
-    XGL_UINT*                               pHeaps;
     XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
     XGL_MEMORY_TYPE                         memType;
 } XGL_MEMORY_REQUIREMENTS;

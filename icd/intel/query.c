@@ -39,7 +39,6 @@ static void query_destroy(struct intel_obj *obj)
 static XGL_RESULT query_get_info(struct intel_base *base, int type,
                                  XGL_SIZE *size, XGL_VOID *data)
 {
-    static XGL_UINT queryHeaps[1] = {0}; /* always heap 0 */
     struct intel_query *query = intel_query_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
 
@@ -53,8 +52,6 @@ static XGL_RESULT query_get_info(struct intel_base *base, int type,
                 return ret;
             mem_req->size = query->slot_stride * query->slot_count;
             mem_req->alignment = 64;
-            mem_req->heapCount = 1;
-            mem_req->pHeaps = queryHeaps;
 
         }
         break;

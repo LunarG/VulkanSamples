@@ -35,8 +35,6 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
     struct intel_mem *mem;
 
     /* ignore any IMAGE_INFO and BUFFER_INFO usage: they don't alter allocations */
-    if (info->heapCount != 1 || info->pHeaps[0] != 0)
-        return XGL_ERROR_INVALID_POINTER;
 
     mem = (struct intel_mem *) intel_base_create(dev, sizeof(*mem),
             dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, info, 0);

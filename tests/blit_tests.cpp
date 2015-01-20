@@ -741,13 +741,10 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
 
     ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect events to require memory";
 
-    XGL_UINT heapInfo[mem_req.heapCount];
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
-    mem_info.heapCount = mem_req.heapCount;
-    mem_info.pHeaps = heapInfo;
-    memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
+    mem_info.memType = mem_req.memType;
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     err = xglAllocMemory(dev_.obj(), &mem_info, &event_mem);

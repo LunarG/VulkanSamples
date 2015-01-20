@@ -299,17 +299,6 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
 
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
-        std::vector<uint32_t> heap_ids;
-
-        info.heapCount = 0;
-        for (uint32_t j = 0; j < mem_reqs[i].heapCount; j++) {
-            const uint32_t heap = mem_reqs[i].pHeaps[j];
-
-            heap_ids.push_back(heap);
-        }
-
-        info.heapCount = heap_ids.size();
-        info.pHeaps = &heap_ids[0];
 
         primary_mem_ = &internal_mems_[i];
 

@@ -411,7 +411,6 @@ static void pipeline_destroy(struct intel_obj *obj)
 static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
                                     XGL_SIZE *size, XGL_VOID *data)
 {
-    static XGL_UINT pipelineHeaps[1] = {0}; /* always heap 0 */
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
 
@@ -424,8 +423,6 @@ static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
             if (data) {
                 mem_req->size = pipeline->scratch_size;
                 mem_req->alignment = 1024;
-                mem_req->heapCount = 1;
-                mem_req->pHeaps = pipelineHeaps;
             }
         }
         break;

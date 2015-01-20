@@ -227,10 +227,6 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     for (XGL_UINT i = 0; i < num_allocations; i ++) {
         ASSERT_NE(0, mem_req[i].size) << "xglGetObjectInfo (Image): Failed - expect images to require memory";
         mem_info.allocationSize = mem_req[i].size;
-        mem_info.heapCount = mem_req[i].heapCount;
-        XGL_UINT heapInfo[mem_req[i].heapCount];
-        mem_info.pHeaps = heapInfo;
-        memcpy(heapInfo, mem_req[i].pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
         mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
         mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
         mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;

@@ -46,7 +46,6 @@ static XGL_RESULT buf_get_info(struct intel_base *base, int type,
     case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             XGL_MEMORY_REQUIREMENTS *mem_req = data;
-            static XGL_UINT heapInfo[1];
 
             *size = sizeof(XGL_MEMORY_REQUIREMENTS);
             if (data == NULL)
@@ -65,8 +64,6 @@ static XGL_RESULT buf_get_info(struct intel_base *base, int type,
                 mem_req->size = u_align(mem_req->size, 256) + 16;
 
             mem_req->alignment = 4096;
-            mem_req->heapCount = 1;
-            mem_req->pHeaps = heapInfo;
 
         }
         break;
