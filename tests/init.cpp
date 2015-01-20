@@ -164,12 +164,11 @@ TEST_F(XglTest, AllocMemory) {
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
     alloc_info.alignment = 0;
+    alloc_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT |
+                          XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
     alloc_info.heapCount = 1;
     alloc_info.pHeaps = localHeap;
 
-
-    // TODO: Pick heap properties indicated by heap info
-    alloc_info.flags = XGL_MEMORY_HEAP_CPU_VISIBLE_BIT;
 
     // TODO: Try variety of memory priorities
     alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
@@ -227,6 +226,7 @@ TEST_F(XglTest, Event) {
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
     mem_info.alignment = mem_req.alignment;
+    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
@@ -366,6 +366,7 @@ TEST_F(XglTest, Query) {
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
+    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
 
     // TODO: are the flags right?
@@ -653,6 +654,7 @@ void XglTest::CreateImageTest()
     mem_info.heapCount = mem_req.heapCount;
     mem_info.pHeaps = heapInfo;
     memcpy(heapInfo, mem_req.pHeaps, sizeof(XGL_UINT)*mem_info.heapCount);
+    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     mem_info.flags = XGL_MEMORY_ALLOC_SHAREABLE_BIT;
     err = xglAllocMemory(device(), &mem_info, &image_mem);

@@ -976,16 +976,18 @@ typedef enum _XGL_QUEUE_FLAGS
     XGL_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
 } XGL_QUEUE_FLAGS;
 
-// Memory heap properties
-typedef enum _XGL_MEMORY_HEAP_FLAGS
+// memory properties passed into xglAllocMemory().
+typedef enum _XGL_MEMORY_PROPERTY_FLAGS
 {
-    XGL_MEMORY_HEAP_CPU_VISIBLE_BIT                         = 0x00000001,
-    XGL_MEMORY_HEAP_CPU_GPU_COHERENT_BIT                    = 0x00000002,
-    XGL_MEMORY_HEAP_CPU_UNCACHED_BIT                        = 0x00000004,
-    XGL_MEMORY_HEAP_CPU_WRITE_COMBINED_BIT                  = 0x00000008,
-    XGL_MEMORY_HEAP_HOLDS_PINNED_BIT                        = 0x00000010,
-    XGL_MEMORY_HEAP_SHAREABLE_BIT                           = 0x00000020,
-} XGL_MEMORY_HEAP_FLAGS;
+    XGL_MEMORY_PROPERTY_GPU_ONLY                            = 0x00000000,   // If not set, then allocate memory on device (GPU)
+    XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT                     = 0x00000001,
+    XGL_MEMORY_PROPERTY_CPU_GPU_COHERENT_BIT                = 0x00000002,
+    XGL_MEMORY_PROPERTY_CPU_UNCACHED_BIT                    = 0x00000004,
+    XGL_MEMORY_PROPERTY_CPU_WRITE_COMBINED_BIT              = 0x00000008,
+    XGL_MEMORY_PROPERTY_PREFER_CPU_LOCAL                    = 0x00000010,   // all else being equal, prefer CPU access
+    XGL_MEMORY_PROPERTY_SHAREABLE_BIT                       = 0x00000020,
+    XGL_MAX_ENUM(_XGL_MEMORY_PROPERTY_FLAGS)
+} XGL_MEMORY_PROPERTY_FLAGS;
 
 // Memory allocation flags
 typedef enum _XGL_MEMORY_ALLOC_FLAGS
@@ -1317,6 +1319,7 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
     XGL_UINT                                heapCount;
     const XGL_UINT*                         pHeaps;
     XGL_MEMORY_PRIORITY                     memPriority;
+    XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
 } XGL_MEMORY_ALLOC_INFO;
 
 // This structure is included in the XGL_MEMORY_ALLOC_INFO chain
@@ -1360,6 +1363,7 @@ typedef struct _XGL_MEMORY_REQUIREMENTS
     XGL_GPU_SIZE                            granularity;                // Granularity on which xglBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     XGL_UINT                                heapCount;
     XGL_UINT*                               pHeaps;
+    XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
 } XGL_MEMORY_REQUIREMENTS;
 
 typedef struct _XGL_BUFFER_MEMORY_REQUIREMENTS

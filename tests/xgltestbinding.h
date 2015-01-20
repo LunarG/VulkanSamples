@@ -629,6 +629,7 @@ inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS
     info.alignment = reqs.alignment;
     info.heapCount = reqs.heapCount;
     info.pHeaps = reqs.pHeaps;
+    info.memProps = reqs.memProps;
     info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
     return info;
 }

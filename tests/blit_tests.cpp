@@ -1162,6 +1162,8 @@ TEST_F(XglCmdCloneImageDataTest, Basic)
         if (it->format.channelFormat == XGL_CH_FMT_UNDEFINED ||
             (it->format.channelFormat >= XGL_CH_FMT_BC1 &&
              it->format.channelFormat <= XGL_CH_FMT_BC7) ||
+            it->format.channelFormat == XGL_CH_FMT_R64G64B64 ||
+            it->format.channelFormat == XGL_CH_FMT_R64G64B64A64 ||
             it->format.numericFormat == XGL_NUM_FMT_DS)
             continue;
 
