@@ -300,7 +300,6 @@ void XglTestFramework::Compare(const char *basename, XglImage *image )
     status=MagickReadImage(magick_wand_2,golden);
     ASSERT_TRUE(status) << "Unable to open file: " << golden;
 
-    compare_wand = NewMagickWand();
     compare_wand=MagickCompareImages(magick_wand_1,magick_wand_2, MeanAbsoluteErrorMetric, &differenz);
     if (differenz != 0.0)
     {
