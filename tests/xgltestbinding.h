@@ -298,7 +298,7 @@ public:
     void unmap() const;
 
     static XGL_MEMORY_ALLOC_INFO alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs,
-                  const XGL_MEMORY_ALLOC_IMAGE_INFO *img_info);
+                  const XGL_MEMORY_ALLOC_INFO *next_info);
 };
 
 class Fence : public DerivedObject<XGL_FENCE, Object> {
@@ -618,12 +618,12 @@ inline void Object::unmap() const
 }
 
 inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS &reqs,
-                                const XGL_MEMORY_ALLOC_IMAGE_INFO *img_info)
+                                const XGL_MEMORY_ALLOC_INFO *next_info)
 {
     XGL_MEMORY_ALLOC_INFO info = {};
     info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    if (img_info != NULL)
-        info.pNext = (XGL_VOID *) img_info;
+    if (next_info != NULL)
+        info.pNext = (XGL_VOID *) next_info;
 
     info.allocationSize = reqs.size;
     info.alignment = reqs.alignment;

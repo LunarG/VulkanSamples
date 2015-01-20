@@ -257,7 +257,7 @@ void Object::unbind_memory()
         unbind_memory(i);
 }
 
-void Object::alloc_memory(const Device &dev, bool for_linear_img, bool for_img)
+void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
@@ -266,14 +266,16 @@ void Object::alloc_memory(const Device &dev, bool for_linear_img, bool for_img)
 
     const std::vector<XGL_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
     std::vector<XGL_IMAGE_MEMORY_REQUIREMENTS> img_reqs;
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_info, *info_ptr = NULL;
-    XGL_MEMORY_ALLOC_INFO info;
+    std::vector<XGL_BUFFER_MEMORY_REQUIREMENTS> buf_reqs;
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_info;
+    XGL_MEMORY_ALLOC_BUFFER_INFO buf_info;
+    XGL_MEMORY_ALLOC_INFO info, *next_info = NULL;
 
-    if (for_img || for_linear_img) {
+    if (for_img) {
         img_reqs = get_info<XGL_IMAGE_MEMORY_REQUIREMENTS>(obj(),
                         XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
         EXPECT(img_reqs.size() == 1);
-        info_ptr = &img_info;
+        next_info = (XGL_MEMORY_ALLOC_INFO *) &img_info;
         img_info.pNext = NULL;
         img_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
         img_info.usage = img_reqs[0].usage;
@@ -282,8 +284,21 @@ void Object::alloc_memory(const Device &dev, bool for_linear_img, bool for_img)
     }
 
 
+    if (for_buf) {
+        buf_reqs = get_info<XGL_BUFFER_MEMORY_REQUIREMENTS>(obj(),
+                        XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS, 0);
+        if (for_img)
+            img_info.pNext = &buf_info;
+        else
+            next_info = (XGL_MEMORY_ALLOC_INFO *) &buf_info;
+        buf_info.pNext = NULL;
+        buf_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO;
+        buf_info.usage = buf_reqs[0].usage;
+    }
+
+
     for (int i = 0; i < mem_reqs.size(); i++) {
-        info = GpuMemory::alloc_info(mem_reqs[i], info_ptr);
+        info = GpuMemory::alloc_info(mem_reqs[i], next_info);
         std::vector<uint32_t> heap_ids;
 
         info.heapCount = 0;
@@ -627,7 +642,7 @@ XGL_RESULT QueryPool::results(uint32_t start, uint32_t count, size_t size, void 
 void Buffer::init(const Device &dev, const XGL_BUFFER_CREATE_INFO &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev);
+    alloc_memory(dev, true, false);
 }
 
 void Buffer::init_no_mem(const Device &dev, const XGL_BUFFER_CREATE_INFO &info)

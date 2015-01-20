@@ -70,6 +70,16 @@ static XGL_RESULT buf_get_info(struct intel_base *base, int type,
 
         }
         break;
+        case XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
+        {
+            XGL_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
+
+            *size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+            if (data == NULL)
+                return ret;
+            buf_req->usage = buf->usage;
+        }
+        break;
     default:
         ret = intel_base_get_info(base, type, size, data);
         break;
