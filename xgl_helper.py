@@ -525,7 +525,7 @@ class StructWrapperGen:
     def _generateStringHelperFunctions(self):
         sh_funcs = []
         # We do two passes, first pass just generates prototypes for all the functsions
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix);\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
         for s in self.struct_dict:
@@ -533,7 +533,7 @@ class StructWrapperGen:
             p_args = ""
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
             # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext
-            for m in self.struct_dict[s]:
+            for m in sorted(self.struct_dict[s]):
                 if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
                     stp_list.append(self.struct_dict[s][m])
             sh_funcs.append('char* %s(const %s* pStruct, const char* prefix)\n{\n    char* str;\n' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
@@ -643,21 +643,22 @@ class StructWrapperGen:
         # create and return final string
         sh_funcs = []
         # First generate prototypes for every struct
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             num_non_enum_elems = [is_type(self.struct_dict[s][elem]['type'], 'enum') for elem in self.struct_dict[s]].count(False)
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
             # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext
-            for m in self.struct_dict[s]:
+            for m in sorted(self.struct_dict[s]):
                 if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
                     stp_list.append(self.struct_dict[s][m])
             sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             sh_funcs.append('    string final_str;')
             sh_funcs.append('    string tmp_str;')
             sh_funcs.append('    string extra_indent = "  " + prefix;')
-            sh_funcs.append('    stringstream ss[%u];' % num_non_enum_elems)
+            if (0 != num_non_enum_elems):
+                sh_funcs.append('    stringstream ss[%u];' % num_non_enum_elems)
             num_stps = len(stp_list)
             # First generate code for any embedded structs
             if 0 < num_stps:
@@ -739,6 +740,13 @@ class StructWrapperGen:
                 final_str += " + %s" % " + ".join(['stp_strs[%u]' % n for n in reversed(range(num_stps))])
             sh_funcs.append('    final_str = %s;' % final_str)
             sh_funcs.append('    return final_str;\n}')
+        # Add function to return a string value for input void*
+        sh_funcs.append("string string_convert_helper(const void* toString, const string prefix)\n{")
+        sh_funcs.append("    stringstream ss;")
+        sh_funcs.append('    ss << toString;')
+        sh_funcs.append('    string final_str = prefix + ss.str();')
+        sh_funcs.append("    return final_str;")
+        sh_funcs.append("}")
         # Add function to dynamically print out unknown struct
         sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")

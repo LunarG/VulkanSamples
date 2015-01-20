@@ -288,9 +288,9 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    cis_param_index = [] # Store 'index' func has struct param to print, or an name of binding "Count" param for array to print
+                    sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
                     create_params = 0 # Num of params at end of function that are created and returned as output values
-                    if 'WsiX11CreatePresentableImage' in proto.name:
+                    if 'WsiX11CreatePresentableImage' in proto.name or 'AllocDescriptorSets' in proto.name:
                         create_params = -2
                     elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
                         create_params = -1
@@ -311,6 +311,7 @@ class Subcommand(object):
                         log_func = 'cout << "t{" << getTIDIndex() << "} xgl%s(' % proto.name
                         f_close = '\n    pthread_mutex_unlock( &print_lock );'
                     pindex = 0
+                    prev_count_name = ''
                     for p in proto.params:
                         # TODO : Need to handle xglWsiX11CreatePresentableImage for which the last 2 params are returned vals
                         cp = False
@@ -326,10 +327,21 @@ class Subcommand(object):
                         #print_vals += ', %s' % (pfi)
                         # TODO : Just want this to be simple check for params of STRUCT type
                         #if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['char', 'void', 'int', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER']]):
-                        if xgl_helper.is_type(p.ty.strip('const').strip('*'), 'struct'):
+                        if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
+                            sp_param_dict[pindex] = prev_count_name
+                        elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
+                            sp_param_dict[pindex] = '*pCount'
+                        elif xgl_helper.is_type(p.ty.strip('const').strip('*'), 'struct'):
                             if 'Wsi' not in proto.name:
-                                cis_param_index.append(pindex)
+                                sp_param_dict[pindex] = 'index'
                         pindex += 1
+                        if p.name.endswith('Count'):
+                            if '*' in p.ty:
+                                prev_count_name = "*%s" % p.name
+                            else:
+                                prev_count_name = p.name
+                        else:
+                            prev_count_name = ''
                     log_func = log_func.strip(', ')
                     if proto.ret != "void":
                         log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << "\\n"'
@@ -337,26 +349,63 @@ class Subcommand(object):
                     else:
                         log_func += ')\\n"'
                     log_func += ';'
-                    if len(cis_param_index) > 0:
+                    if len(sp_param_dict) > 0:
+                        i_decl = False
                         log_func += '\n    string tmp_str;'
-                        for sp_index in cis_param_index:
-                            cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                            log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                            log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
-                            if "File" in layer:
-                                if no_addr:
-                                    log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                        for sp_index in sp_param_dict:
+                            if 'index' == sp_param_dict[sp_index]:
+                                cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                                log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                                log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
+                                if "File" in layer:
+                                    if no_addr:
+                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                    else:
+                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                                 else:
-                                    log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                            else:
-                                if no_addr:
-                                    #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                                    log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
+                                    if no_addr:
+                                        #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                        log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
+                                    else:
+                                        #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                    #log_func += '\n        fflush(stdout);'
+                                log_func += '\n    }'
+                            else: # We have a count value stored to iterate over an array
+                                print_cast = ''
+                                print_func = ''
+                                if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                                    print_cast = '&'
+                                    print_func = 'xgl_print_%s' % proto.params[sp_index].ty.strip('const ').strip('*').lower()
+                                    #cis_print_func = 'tmp_str = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
+# TODO : Need to display this address as a string
                                 else:
-                                    #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                    log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                #log_func += '\n        fflush(stdout);'
-                            log_func += '\n    }'
+                                    print_cast = '(void*)'
+                                    print_func = 'string_convert_helper'
+                                    #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
+                                cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
+#                                else:
+#                                    cis_print_func = ''
+                                if not i_decl:
+                                    log_func += '\n    uint32_t i;'
+                                    i_decl = True
+                                log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
+                                log_func += '\n        %s' % (cis_print_func)
+                                if "File" in layer:
+                                    if no_addr:
+                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                    else:
+                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                else:
+                                    if no_addr:
+                                        #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                        log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
+                                    else:
+                                        #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        #log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (" << %s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        log_func += '\n        cout << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, print_cast, proto.params[sp_index].name)
+                                    #log_func += '\n        fflush(stdout);'
+                                log_func += '\n    }'
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
@@ -400,7 +449,7 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    sp_param_dict = {} # Store list of indices when func has struct params
+                    sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
                     create_params = 0 # Num of params at end of function that are created and returned as output values
                     if 'WsiX11CreatePresentableImage' in proto.name:
                         create_params = -2
@@ -440,6 +489,8 @@ class Subcommand(object):
                         # Catch array inputs that are bound by a "Count" param
                         if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
                             sp_param_dict[pindex] = prev_count_name
+                        elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
+                            sp_param_dict[pindex] = '*pCount'
                         elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
                             sp_param_dict[pindex] = 'index'
                         pindex += 1
