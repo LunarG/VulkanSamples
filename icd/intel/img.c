@@ -116,7 +116,10 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     img->mip_levels = info->mipLevels;
     img->array_size = info->arraySize;
     img->usage = info->usage;
-    img->format_class = icd_format_get_class(info->format);
+    if (info->tiling == XGL_LINEAR_TILING)
+        img->format_class = XGL_IMAGE_FORMAT_CLASS_LINEAR;
+    else
+        img->format_class = icd_format_get_class(info->format);
     img->samples = info->samples;
     intel_layout_init(layout, dev, info, scanout);
 
