@@ -741,13 +741,6 @@ core = Extension(
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("const XGL_PIPELINE_BARRIER*", "pBarrier")]),
 
-        Proto("XGL_VOID", "CmdBufferAtomic",
-            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_BUFFER", "destBuffer"),
-             Param("XGL_GPU_SIZE", "destOffset"),
-             Param("XGL_UINT64", "srcData"),
-             Param("XGL_ATOMIC_OP", "atomicOp")]),
-
         Proto("XGL_VOID", "CmdBeginQuery",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_QUERY_POOL", "queryPool"),

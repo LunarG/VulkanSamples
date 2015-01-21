@@ -123,7 +123,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdResetEventType CmdResetEvent;
     xglCmdWaitEventsType CmdWaitEvents;
     xglCmdPipelineBarrierType CmdPipelineBarrier;
-    xglCmdBufferAtomicType CmdBufferAtomic;
     xglCmdBeginQueryType CmdBeginQuery;
     xglCmdEndQueryType CmdEndQuery;
     xglCmdResetQueryPoolType CmdResetQueryPool;

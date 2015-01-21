@@ -480,15 +480,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBufferAtomic(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_BUFFER                                  destBuffer,
-    XGL_GPU_SIZE                                destOffset,
-    XGL_UINT64                                  srcData,
-    XGL_ATOMIC_OP                               atomicOp)
-{
-}
-
 ICD_EXPORT XGL_VOID XGLAPI xglCmdInitAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,

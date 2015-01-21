@@ -623,37 +623,6 @@ typedef enum _XGL_LOGIC_OP
     XGL_MAX_ENUM(_XGL_LOGIC_OP)
 } XGL_LOGIC_OP;
 
-typedef enum _XGL_ATOMIC_OP
-{
-    XGL_ATOMIC_ADD_INT32                                    = 0x00000000,
-    XGL_ATOMIC_SUB_INT32                                    = 0x00000001,
-    XGL_ATOMIC_MIN_UINT32                                   = 0x00000002,
-    XGL_ATOMIC_MAX_UINT32                                   = 0x00000003,
-    XGL_ATOMIC_MIN_SINT32                                   = 0x00000004,
-    XGL_ATOMIC_MAX_SINT32                                   = 0x00000005,
-    XGL_ATOMIC_AND_INT32                                    = 0x00000006,
-    XGL_ATOMIC_OR_INT32                                     = 0x00000007,
-    XGL_ATOMIC_XOR_INT32                                    = 0x00000008,
-    XGL_ATOMIC_INC_UINT32                                   = 0x00000009,
-    XGL_ATOMIC_DEC_UINT32                                   = 0x0000000a,
-    XGL_ATOMIC_ADD_INT64                                    = 0x0000000b,
-    XGL_ATOMIC_SUB_INT64                                    = 0x0000000c,
-    XGL_ATOMIC_MIN_UINT64                                   = 0x0000000d,
-    XGL_ATOMIC_MAX_UINT64                                   = 0x0000000e,
-    XGL_ATOMIC_MIN_SINT64                                   = 0x0000000f,
-    XGL_ATOMIC_MAX_SINT64                                   = 0x00000010,
-    XGL_ATOMIC_AND_INT64                                    = 0x00000011,
-    XGL_ATOMIC_OR_INT64                                     = 0x00000012,
-    XGL_ATOMIC_XOR_INT64                                    = 0x00000013,
-    XGL_ATOMIC_INC_UINT64                                   = 0x00000014,
-    XGL_ATOMIC_DEC_UINT64                                   = 0x00000015,
-
-    XGL_ATOMIC_OP_BEGIN_RANGE                               = XGL_ATOMIC_ADD_INT32,
-    XGL_ATOMIC_OP_END_RANGE                                 = XGL_ATOMIC_DEC_UINT64,
-    XGL_NUM_ATOMIC_OP                                       = (XGL_ATOMIC_OP_END_RANGE - XGL_ATOMIC_OP_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_ATOMIC_OP)
-} XGL_ATOMIC_OP;
-
 typedef enum _XGL_SYSTEM_ALLOC_TYPE
 {
     XGL_SYSTEM_ALLOC_API_OBJECT                             = 0x00000000,
@@ -2195,7 +2164,6 @@ typedef XGL_VOID (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVEN
 typedef XGL_VOID (XGLAPI *xglCmdResetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event);
 typedef XGL_VOID (XGLAPI *xglCmdWaitEventsType)(XGL_CMD_BUFFER cmdBuffer, const XGL_EVENT_WAIT_INFO* pWaitInfo);
 typedef XGL_VOID (XGLAPI *xglCmdPipelineBarrierType)(XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier);
-typedef XGL_VOID (XGLAPI *xglCmdBufferAtomicType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_UINT64 srcData, XGL_ATOMIC_OP atomicOp);
 typedef XGL_VOID (XGLAPI *xglCmdBeginQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot, XGL_FLAGS flags);
 typedef XGL_VOID (XGLAPI *xglCmdEndQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT slot);
 typedef XGL_VOID (XGLAPI *xglCmdResetQueryPoolType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, XGL_UINT startQuery, XGL_UINT queryCount);
@@ -2779,13 +2747,6 @@ XGL_VOID XGLAPI xglCmdWaitEvents(
 XGL_VOID XGLAPI xglCmdPipelineBarrier(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_PIPELINE_BARRIER*                 pBarrier);
-
-XGL_VOID XGLAPI xglCmdBufferAtomic(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_BUFFER                                  destBuffer,
-    XGL_GPU_SIZE                                destOffset,
-    XGL_UINT64                                  srcData,
-    XGL_ATOMIC_OP                               atomicOp);
 
 XGL_VOID XGLAPI xglCmdBeginQuery(
     XGL_CMD_BUFFER                              cmdBuffer,
