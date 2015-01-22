@@ -70,3 +70,4 @@ sudo tee /etc/udev/rules.d/drm.rules << EOF
 SUBSYSTEM=="drm", ACTION=="add", DEVPATH=="/devices/*/renderD*", MODE="020666"
 EOF
 ```
+ 
