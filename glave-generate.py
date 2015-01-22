@@ -344,6 +344,58 @@ class Subcommand(object):
 #on the safe side of CREATE_TRACE_PACKET with maxStringSize*maxLayerCount.
 #EL also needs a loop where add a trace buffer  for each layer, depending on how you CREATE_TRACE_PACKET.
 
+# TODO : Tracing needs special checks in CreateInstance now
+#   Need to call glv_platform_thread_once() and do (isHooked == FALSE) check
+#   See example code below from old InitAndEnumerateGpus
+#GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglInitAndEnumerateGpus(
+#    const XGL_APPLICATION_INFO* pAppInfo,
+#    const XGL_ALLOC_CALLBACKS* pAllocCb,
+#    XGL_UINT maxGpus,
+#    XGL_UINT* pGpuCount,
+#    XGL_PHYSICAL_GPU* pGpus)
+#{
+#    glv_trace_packet_header* pHeader;
+#    XGL_RESULT result;
+#    uint64_t startTime;
+#    struct_xglInitAndEnumerateGpus* pPacket;
+#
+#    glv_platform_thread_once(&gInitOnce, InitTracer);
+#    SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);
+#    if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)
+#    {
+#        glv_platform_get_next_lib_sym((void **) &real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");
+#    }
+#    startTime = glv_get_time();
+#    result = real_xglInitAndEnumerateGpus(pAppInfo, pAllocCb, maxGpus, pGpuCount, pGpus);
+#
+#    // since we do not know how many gpus will be found must create trace packet after calling xglInit
+#    CREATE_TRACE_PACKET(xglInitAndEnumerateGpus, calc_size_XGL_APPLICATION_INFO(pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS))
+#        + sizeof(XGL_UINT) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(XGL_PHYSICAL_GPU) : 0));
+#    pHeader->entrypoint_begin_time = startTime;
+#    if (isHooked == FALSE) {
+#        AttachHooks();
+#        AttachHooks_xgldbg();
+#        AttachHooks_xglwsix11ext();
+#    }
+#    pPacket = interpret_body_as_xglInitAndEnumerateGpus(pHeader);
+#    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);
+#    if (pAllocCb) {
+#        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pAllocCb);
+#        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocCb));
+#    }
+#    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpuCount), sizeof(XGL_UINT), pGpuCount);
+#    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpuCount));
+#    if (pGpuCount && pGpus)
+#    {
+#        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), sizeof(XGL_PHYSICAL_GPU) * *pGpuCount, pGpus);
+#        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpus));
+#    }
+#    pPacket->maxGpus = maxGpus;
+#    pPacket->result = result;
+#    FINISH_TRACE_PACKET();
+#    return result;
+#}
+
     def _generate_trace_funcs(self):
         func_body = []
         for proto in self.protos:
@@ -408,6 +460,8 @@ class Subcommand(object):
                     func_body.append('    size_t dataSizeIn = (pDataSize == NULL) ? 0 : *pDataSize;')
                 func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
                 func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                # TODO : DescriptorUpdates and CreateSetLayout need to handle saving chain of structs
+                # TODO : EnumGpus needs to call function first and then update the returned count of GPUs
                 if 'EnumerateLayers' == proto.name:
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                     func_body.append('    size_t totStringSize = 0;')
@@ -416,6 +470,7 @@ class Subcommand(object):
                     func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;')
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(size_t));' % (proto.name))
                 elif 'AllocDescriptorSets' == proto.name:
+                    # TODO : Anytime we call the function first, need to add custom code for correctly tracking API call time
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                     func_body.append('    size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));')
                     func_body.append('    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));')
@@ -604,6 +659,7 @@ class Subcommand(object):
         return "\n".join(func_body)
 
     def _generate_helper_funcs(self):
+        # TODO : Need helper funcs to calculate the size of DescriptorUpdate and CreateSetLayout struct chains
         hf_body = []
         hf_body.append('// Support for shadowing CPU mapped memory')
         hf_body.append('typedef struct _XGLAllocInfo {')
@@ -750,8 +806,66 @@ class Subcommand(object):
         hf_body.append('    }')
         hf_body.append('}')
         hf_body.append('')
-
-
+        hf_body.append('static size_t calculate_create_ds_layout_size(const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo)')
+        hf_body.append('{')
+        hf_body.append('    size_t update_size = 0;')
+        hf_body.append('    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pTrav = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pCreateInfo;')
+        hf_body.append('    while (pTrav)')
+        hf_body.append('    {')
+        hf_body.append('        update_size += sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);')
+        hf_body.append('        pTrav = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pTrav->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return update_size;')
+        hf_body.append('}')
+        hf_body.append('static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)')
+        hf_body.append('{')
+        hf_body.append('    // TODO : ADD THIS CODE;')
+        hf_body.append('}')
+        hf_body.append('static size_t calculate_ds_update_size(const void* pUpdateChain)')
+        hf_body.append('{')
+        hf_body.append('    size_t update_size = 0;')
+        hf_body.append('    XGL_UPDATE_SAMPLERS* pTrav = (XGL_UPDATE_SAMPLERS*)pUpdateChain;')
+        hf_body.append('    while (pTrav)')
+        hf_body.append('    {')
+        hf_body.append('        switch (pTrav->sType)')
+        hf_body.append('        {')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:')
+        hf_body.append('        {')
+        hf_body.append('            update_size += sizeof(XGL_UPDATE_SAMPLERS);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:')
+        hf_body.append('        {')
+        hf_body.append('            update_size += sizeof(XGL_UPDATE_SAMPLER_TEXTURES);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:')
+        hf_body.append('        {')
+        hf_body.append('            update_size += sizeof(XGL_UPDATE_IMAGES);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:')
+        hf_body.append('        {')
+        hf_body.append('            update_size += sizeof(XGL_UPDATE_BUFFERS);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:')
+        hf_body.append('        {')
+        hf_body.append('            update_size += sizeof(XGL_UPDATE_AS_COPY);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        default:')
+        hf_body.append('            glv_LogError("calculate_ds_update_size() bad internal state sType\\n");')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        pTrav = (XGL_UPDATE_SAMPLERS*)pTrav->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return update_size;')
+        hf_body.append('}')
+        hf_body.append('static void add_ds_update_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)')
+        hf_body.append('{')
+        hf_body.append('    // TODO : ADD THIS CODE;')
+        hf_body.append('}')
         hf_body.append('static void add_begin_cmdbuf_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)')
         hf_body.append('{')
         hf_body.append('    const XGL_CMD_BUFFER_BEGIN_INFO* pInNow = pIn;')
@@ -777,7 +891,7 @@ class Subcommand(object):
         hf_body.append('    }')
         hf_body.append('    return;')
         hf_body.append('}')
-
+        hf_body.append('')
         hf_body.append('static size_t calculate_begin_cmdbuf_size(const XGL_CMD_BUFFER_BEGIN_INFO* pNext)')
         hf_body.append('{')
         hf_body.append('    size_t siz = 0;')
@@ -1959,7 +2073,7 @@ class Subcommand(object):
         ieg_body.append('                {')
         ieg_body.append('                    glv_LogInfo("Enumerated %d GPUs in the system\\n", gpuCount);')
         ieg_body.append('                }')
-        ieg_body.append('                // Do we care about the instance handel? Need to keep from clearing it? Not sure it will be used again...')
+        ieg_body.append('                // Do we care about the instance handle? Need to keep from clearing it? Not sure it will be used again...')
         ieg_body.append('                clear_all_map_handles();')
         ieg_body.append('                // TODO handle enumeration results in a different order from trace to replay')
         ieg_body.append('                for (uint32_t i = 0; i < gpuCount; i++)')
@@ -2233,6 +2347,14 @@ class Subcommand(object):
         isi_body.append('            glv_free(pData);')
         return "\n".join(isi_body)
 
+    def _gen_replay_update_descriptors(self):
+        ud_body = []
+        # TODO : Add code here to read chain of update structs
+
+    def _gen_replay_create_descriptor_set_layout(self):
+        cdsl_body = []
+        # TODO : Add code here to read in chain of descriptor layout create infos from packet
+
     def _gen_replay_create_graphics_pipeline(self):
         cgp_body = []
         cgp_body.append('            XGL_GRAPHICS_PIPELINE_CREATE_INFO createInfo;')
@@ -2472,6 +2594,8 @@ class Subcommand(object):
 
     def _generate_replay(self):
         # map protos to custom functions if body is fully custom
+        # TODO : DescriptorUpdates and CreateSetLayout need to handle restoring chain of structs
+        #   Should have custom replay code similar to CreateGraphicsPipeline
         custom_body_dict = {'EnumerateGpus': self._gen_replay_enum_gpus,
                             'GetGpuInfo': self._gen_replay_get_gpu_info,
                             'CreateDevice': self._gen_replay_create_device,
@@ -2496,6 +2620,7 @@ class Subcommand(object):
                             'MapMemory': self._gen_replay_map_memory,
                             'UnmapMemory': self._gen_replay_unmap_memory,
                             'CmdBindDynamicMemoryView': self._gen_replay_bind_dynamic_memory_view}
+        # TODO : Need to guard CreateInstance with "if (!m_display->m_initedXGL)" check
         # Despite returning a value, don't check these funcs b/c custom code includes check already
         custom_check_ret_val = ['InitAndEnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport']
         # multi-gpu Open funcs w/ list of local params to create
@@ -2638,7 +2763,7 @@ class Subcommand(object):
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
                     rbody.append('            {')
                     rbody.append('                for (uint32_t i = 0; i < local_pCount; i++) {')
-                    rbody.append('                    add_to_map(pPacket->%s, &local_%s[i]);' % (proto.params[-2].name, proto.params[-2].name))
+                    rbody.append('                    add_to_map(&pPacket->%s[i], &local_%s[i]);' % (proto.params[-2].name, proto.params[-2].name))
                     rbody.append('                }')
                     rbody.append('            }')
                 elif create_func: # save handle mapping if create successful

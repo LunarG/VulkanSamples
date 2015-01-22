@@ -331,9 +331,8 @@ class Subcommand(object):
                             sp_param_dict[pindex] = prev_count_name
                         elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
                             sp_param_dict[pindex] = '*pCount'
-                        elif xgl_helper.is_type(p.ty.strip('const').strip('*'), 'struct'):
-                            if 'Wsi' not in proto.name:
-                                sp_param_dict[pindex] = 'index'
+                        elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+                            sp_param_dict[pindex] = 'index'
                         pindex += 1
                         if p.name.endswith('Count'):
                             if '*' in p.ty:
