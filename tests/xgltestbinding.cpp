@@ -64,7 +64,7 @@ template<typename T>
 std::vector<T> get_info(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE type, size_t min_elems)
 {
     std::vector<T> info;
-    size_t size;
+    size_t size = sizeof(T);
     if (EXPECT(xglGetGpuInfo(gpu, type, &size, NULL) == XGL_SUCCESS && size % sizeof(T) == 0)) {
         info.resize(size / sizeof(T));
         if (!EXPECT(xglGetGpuInfo(gpu, type, &size, &info[0]) == XGL_SUCCESS && size == info.size() * sizeof(T)))
@@ -81,7 +81,7 @@ template<typename T>
 std::vector<T> get_info(XGL_BASE_OBJECT obj, XGL_OBJECT_INFO_TYPE type, size_t min_elems)
 {
     std::vector<T> info;
-    size_t size;
+    size_t size = sizeof(T);
     if (EXPECT(xglGetObjectInfo(obj, type, &size, NULL) == XGL_SUCCESS && size % sizeof(T) == 0)) {
         info.resize(size / sizeof(T));
         if (!EXPECT(xglGetObjectInfo(obj, type, &size, &info[0]) == XGL_SUCCESS && size == info.size() * sizeof(T)))
@@ -336,7 +336,7 @@ void Device::init(bool enable_layers)
 
     XGL_DEVICE_CREATE_INFO dev_info = {};
     dev_info.sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    dev_info.pNext = static_cast<void *>(&layer_info);
+    dev_info.pNext = (enable_layers) ? static_cast<void *>(&layer_info) : NULL;
     dev_info.queueRecordCount = queue_info.size();
     dev_info.pRequestedQueues = &queue_info[0];
     dev_info.extensionCount = exts.size();
