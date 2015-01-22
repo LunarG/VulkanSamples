@@ -7,7 +7,7 @@ Support for Android is TBD.
 Ubuntu 14.04 LTS, (Ubuntu 14.10 needed for DRI 3 demos)
 
 ```
-sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev
+sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default
 sudo apt-get build-dep mesa
 ```
 
