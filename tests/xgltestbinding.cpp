@@ -300,7 +300,19 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
 
-        primary_mem_ = &internal_mems_[i];
+        switch (info.memType) {
+        case XGL_MEMORY_TYPE_BUFFER:
+            EXPECT(for_buf);
+            info.memProps |= XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+            primary_mem_ = &internal_mems_[i];
+            break;
+        case XGL_MEMORY_TYPE_IMAGE:
+            EXPECT(for_img);
+            primary_mem_ = &internal_mems_[i];
+            break;
+        default:
+            break;
+        }
 
         internal_mems_[i].init(dev, info);
         bind_memory(i, internal_mems_[i], 0);
