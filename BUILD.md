@@ -35,7 +35,7 @@ export LIBXGL_DRIVERS_PATH=$PWD/icd/intel
 ##Test
 
 The test executibles can be found in the dbuild/tests directory. The tests use the Google
-gtest infrastructure. Tests avilable so far:
+gtest infrastructure. Tests available so far:
 - xglinfo: Report GPU properties
 - xglbase: Test basic entry points
 - xgl_blit_tests: Test XGL Blits (copy, clear, and resolve)
