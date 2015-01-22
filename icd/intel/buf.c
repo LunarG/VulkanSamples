@@ -64,6 +64,7 @@ static XGL_RESULT buf_get_info(struct intel_base *base, int type,
                 mem_req->size = u_align(mem_req->size, 256) + 16;
 
             mem_req->alignment = 4096;
+            mem_req->memType = XGL_MEMORY_TYPE_BUFFER;
 
         }
         break;

@@ -52,7 +52,7 @@ static XGL_RESULT query_get_info(struct intel_base *base, int type,
                 return ret;
             mem_req->size = query->slot_stride * query->slot_count;
             mem_req->alignment = 64;
-
+            mem_req->memType =  XGL_MEMORY_TYPE_OTHER;
         }
         break;
     default:
