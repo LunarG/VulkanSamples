@@ -26,15 +26,16 @@
 typedef enum _DRAW_STATE_ERROR
 {
     DRAWSTATE_NONE,                             // Used for INFO & other non-error messages
-    DRAWSTATE_INTERNAL_ERROR,                    // Error with DrawState internal data structures
+    DRAWSTATE_INTERNAL_ERROR,                   // Error with DrawState internal data structures
     DRAWSTATE_DESCRIPTOR_MAX_EXCEEDED,          // Descriptor Count of DS Mapping exceeds MAX_SLOTS
     DRAWSTATE_SLOT_REMAPPING,                   // DS Slot being mapped to a different type than previously
     DRAWSTATE_NO_PIPELINE_BOUND,                // Unable to identify a bound pipeline
     DRAWSTATE_NO_DS_BOUND,                      // Unable to identify a bound DS
     DRAWSTATE_DS_SLOT_NUM_MISMATCH,             // Number of slots in DS mapping exceeds actual DS slots
-    DRAWSTATE_UNKNOWN_DS_MAPPING,               // Shader slot mapping is not recognized
+    DRAWSTATE_UNKNOWN_DS_TYPE,                  // Shader slot mapping is not recognized
     DRAWSTATE_DS_MAPPING_MISMATCH,              // DS Mapping mismatch
-    DRAWSTATE_INVALID_DS,                       // Invalid DS referenced
+    DRAWSTATE_INVALID_REGION,                   // Invalid DS region
+    DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
     DRAWSTATE_DS_END_WITHOUT_BEGIN,             // EndDSUpdate called w/o corresponding BeginDSUpdate
     DRAWSTATE_UPDATE_WITHOUT_BEGIN,             // Attempt to update descriptors w/o calling BeginDescriptorRegionUpdate
     DRAWSTATE_DS_SAMPLE_ATTACH_FAILED,          // Error while attempting to Attach Sampler mapping to DS Slot
@@ -48,7 +49,9 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
     DRAWSTATE_BINDING_DS_NO_END_UPDATE,         // DS bound to CmdBuffer w/o call to xglEndDescriptorSetUpdate())
     DRAWSTATE_NO_DS_REGION,                     // No DS Region is available
-    DRAWSTATE_OUT_OF_MEMORY                     // malloc failed
+    DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
+    DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
+    DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS   // Descriptors set for update out of bounds for corresponding layout section
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -68,17 +71,17 @@ typedef struct _SHADER_DS_MAPPING {
     XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
 } SHADER_DS_MAPPING;
 
-typedef struct _PIPELINE_LL_HEADER {
+typedef struct _GENERIC_HEADER {
     XGL_STRUCTURE_TYPE sType;
     const void*    pNext;
-} PIPELINE_LL_HEADER;
+} GENERIC_HEADER;
 
 typedef struct _PIPELINE_NODE {
     XGL_PIPELINE           pipeline;
     struct _PIPELINE_NODE  *pNext;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
     // 1st dimension of array is shader type
-    SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS];
+    //SHADER_DS_MAPPING      dsMapping[XGL_NUM_GRAPHICS_SHADERS];
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
@@ -89,15 +92,29 @@ typedef struct _PIPELINE_NODE {
 typedef struct _SAMPLER_NODE {
     XGL_SAMPLER              sampler;
     XGL_SAMPLER_CREATE_INFO  createInfo;
-    struct _SAMPLER_NODE     *pNext;
+    struct _SAMPLER_NODE*    pNext;
 } SAMPLER_NODE;
+
+typedef struct _IMAGE_NODE {
+    XGL_IMAGE_VIEW             image;
+    XGL_IMAGE_VIEW_CREATE_INFO createInfo;
+    XGL_IMAGE_VIEW_ATTACH_INFO attachInfo;
+    struct _IMAGE_NODE*        pNext;
+} IMAGE_NODE;
+
+typedef struct _BUFFER_NODE {
+    XGL_BUFFER_VIEW             buffer;
+    XGL_BUFFER_VIEW_CREATE_INFO createInfo;
+    XGL_BUFFER_VIEW_ATTACH_INFO attachInfo;
+    struct _BUFFER_NODE*        pNext;
+} BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
     XGL_DYNAMIC_STATE_OBJECT     stateObj;
-    PIPELINE_LL_HEADER   *pCreateInfo;
+    GENERIC_HEADER   *pCreateInfo;
     struct _DYNAMIC_STATE_NODE *pNext;
 } DYNAMIC_STATE_NODE;
-
+/*
 typedef struct _DS_SLOT {
     uint32_t                     slot;
     // TODO : Fix this for latest binding model
@@ -118,23 +135,26 @@ typedef struct _DS_LL_HEAD {
     DS_SLOT            *dsSlot; // Dynamically allocated array of DS_SLOTs
     bool32_t           updateActive; // Track if DS is in an update block
 } DS_LL_HEAD;
-
+*/
 // Descriptor Data structures
+// Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
     XGL_DESCRIPTOR_SET_LAYOUT                    layout;
     XGL_FLAGS                                    stageFlags;
-    const uint32_t[XGL_NUM_SHADER_STAGE]         shaderStateBindPoints;
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO  createInfo;
-    //XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
-    struct _LAYOUT_NODE*                         pNext; // Points to node w/ priorSetLayout
+    const uint32_t                               shaderStageBindPoints[XGL_NUM_SHADER_STAGE];
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfoList;
+    struct _LAYOUT_NODE*                         pPriorSetLayout; // Points to node w/ priorSetLayout
+    struct _LAYOUT_NODE*                         pNext; // Point to next layout in global LL chain of layouts
 } LAYOUT_NODE;
 
 typedef struct _SET_NODE {
     XGL_DESCRIPTOR_SET                           set;
     XGL_DESCRIPTOR_REGION                        region;
     XGL_DESCRIPTOR_SET_USAGE                     setUsage;
-    //uint32_t                                     count;
-    //const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts;
+    // Head of LL of Update structs for this set
+    GENERIC_HEADER*                              pUpdateStructs;
+    // Total num of descriptors in this set (count of its layout plus all prior layouts)
+    uint32_t                                     descriptorCount;
     LAYOUT_NODE*                                 pLayouts;
     struct _SET_NODE*                            pNext;
 } SET_NODE;
