@@ -86,6 +86,33 @@ SET(COMPILER_LIBS
    ${LLVM_LIBS_ALL}
 )
 
+# Ensure we re-link if our external libraries change
+# Every entry of COMPILER_LIBS should be included here
+string(REPLACE "-l" "" LLVM_LIBS ${LLVM_LIBS_ALL})
+separate_arguments(LLVM_LIBS)
+foreach(LIB ${LLVM_LIBS})
+    #message(STATUS "adding the following lib")
+    #message(STATUS ${LIB})
+    add_library(${LIB} STATIC IMPORTED)
+    #message(STATUS "adding the following path")
+    #message(STATUS ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/lib${LIB}.a)
+    set_target_properties(${LIB} PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/lib${LIB}.a)
+endforeach(LIB)
+add_library(glslangFrontend STATIC IMPORTED)
+add_library(BilFrontend     STATIC IMPORTED)
+add_library(core            STATIC IMPORTED)
+add_library(LLVMipo         STATIC IMPORTED)
+add_library(glslang         STATIC IMPORTED)
+add_library(BIL             STATIC IMPORTED)
+add_library(OGLCompiler     STATIC IMPORTED)
+set_target_properties(glslangFrontend PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/glslang/libglslangFrontend.a)
+set_target_properties(BilFrontend     PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/Bil/libBilFrontend.a)
+set_target_properties(core            PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Core/libcore.a)
+set_target_properties(LLVMipo         PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/libLLVMipo.a)
+set_target_properties(glslang         PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libglslang.a)
+set_target_properties(BIL             PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libBIL.a)
+set_target_properties(OGLCompiler     PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libOGLCompiler.a)
+
 SET(COMPILER_INCLUDE_DIRS
     ${GLSLANG_PREFIX}
     ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/include
