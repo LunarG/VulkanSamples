@@ -440,21 +440,18 @@ void Device::init_queues()
 
 void Device::init_formats()
 {
-    for (int ch = XGL_CH_FMT_UNDEFINED; ch <= XGL_MAX_CH_FMT; ch++) {
-        for (int num = XGL_NUM_FMT_UNDEFINED; num <= XGL_MAX_NUM_FMT; num++) {
-            const XGL_FORMAT fmt = { static_cast<XGL_CHANNEL_FORMAT>(ch),
-                                     static_cast<XGL_NUM_FORMAT>(num) };
-            const XGL_FORMAT_PROPERTIES props = format_properties(fmt);
+    for (int f = XGL_FMT_BEGIN_RANGE; f <= XGL_FMT_END_RANGE; f++) {
+        const XGL_FORMAT fmt = static_cast<XGL_FORMAT>(f);
+        const XGL_FORMAT_PROPERTIES props = format_properties(fmt);
 
-            if (props.linearTilingFeatures) {
-                const Format tmp = { fmt, XGL_LINEAR_TILING, props.linearTilingFeatures };
-                formats_.push_back(tmp);
-            }
+        if (props.linearTilingFeatures) {
+            const Format tmp = { fmt, XGL_LINEAR_TILING, props.linearTilingFeatures };
+            formats_.push_back(tmp);
+        }
 
-            if (props.optimalTilingFeatures) {
-                const Format tmp = { fmt, XGL_OPTIMAL_TILING, props.optimalTilingFeatures };
-                formats_.push_back(tmp);
-            }
+        if (props.optimalTilingFeatures) {
+            const Format tmp = { fmt, XGL_OPTIMAL_TILING, props.optimalTilingFeatures };
+            formats_.push_back(tmp);
         }
     }
 

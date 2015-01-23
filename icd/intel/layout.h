@@ -169,8 +169,7 @@ intel_layout_mem_to_raw(const struct intel_layout *layout,
 
    switch (layout->tiling) {
    case INTEL_TILING_NONE:
-      if (layout->format.numericFormat == XGL_NUM_FMT_DS &&
-          layout->format.channelFormat == XGL_CH_FMT_R8) {
+      if (layout->format == XGL_FMT_S8_UINT) {
          /* W-tile */
          tile_w = 64;
          tile_h = 64;

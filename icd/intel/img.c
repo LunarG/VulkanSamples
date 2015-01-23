@@ -150,8 +150,8 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
         }
 
         s8_info = *info;
-        s8_info.format.channelFormat = XGL_CH_FMT_R8;
-        assert(info->format.numericFormat == XGL_NUM_FMT_DS);
+        s8_info.format = XGL_FMT_S8_UINT;
+        assert(icd_format_is_ds(info->format));
 
         intel_layout_init(img->s8_layout, dev, &s8_info, scanout);
 

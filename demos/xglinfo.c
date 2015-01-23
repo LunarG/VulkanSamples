@@ -48,7 +48,7 @@ struct app_dev {
     XGL_DEVICE obj;
 
 
-    XGL_FORMAT_PROPERTIES format_props[XGL_MAX_CH_FMT][XGL_MAX_NUM_FMT];
+    XGL_FORMAT_PROPERTIES format_props[XGL_NUM_FMT];
 };
 
 struct app_gpu {
@@ -132,96 +132,200 @@ static const char *xgl_gpu_type_string(XGL_PHYSICAL_GPU_TYPE type)
     }
 }
 
-static const char *xgl_channel_format_string(XGL_CHANNEL_FORMAT ch)
+static const char *xgl_format_string(XGL_FORMAT fmt)
 {
-    switch (ch) {
-#define STR(r) case XGL_CH_FMT_ ##r: return #r
+    switch (fmt) {
+#define STR(r) case XGL_FMT_ ##r: return #r
     STR(UNDEFINED);
-    STR(R4G4);
-    STR(R4G4B4A4);
-    STR(R5G6B5);
-    STR(B5G6R5);
-    STR(R5G5B5A1);
-    STR(R8);
-    STR(R8G8);
-    STR(R8G8B8A8);
-    STR(B8G8R8A8);
-    STR(R10G11B11);
-    STR(R11G11B10);
-    STR(R10G10B10A2);
-    STR(R16);
-    STR(R16G16);
-    STR(R16G16B16A16);
-    STR(R32);
-    STR(R32G32);
-    STR(R32G32B32);
-    STR(R32G32B32A32);
-    STR(R16G8);
-    STR(R32G8);
-    STR(R9G9B9E5);
-    STR(BC1);
-    STR(BC2);
-    STR(BC3);
-    STR(BC4);
-    STR(BC5);
-    STR(BC6U);
-    STR(BC6S);
-    STR(BC7);
-    STR(R8G8B8);
-    STR(R16G16B16);
-    STR(B10G10R10A2);
-    STR(R64);
-    STR(R64G64);
-    STR(R64G64B64);
-    STR(R64G64B64A64);
+    STR(R4G4_UNORM);
+    STR(R4G4_USCALED);
+    STR(R4G4B4A4_UNORM);
+    STR(R4G4B4A4_USCALED);
+    STR(R5G6B5_UNORM);
+    STR(R5G6B5_USCALED);
+    STR(R5G5B5A1_UNORM);
+    STR(R5G5B5A1_USCALED);
+    STR(R8_UNORM);
+    STR(R8_SNORM);
+    STR(R8_USCALED);
+    STR(R8_SSCALED);
+    STR(R8_UINT);
+    STR(R8_SINT);
+    STR(R8_SRGB);
+    STR(R8G8_UNORM);
+    STR(R8G8_SNORM);
+    STR(R8G8_USCALED);
+    STR(R8G8_SSCALED);
+    STR(R8G8_UINT);
+    STR(R8G8_SINT);
+    STR(R8G8_SRGB);
+    STR(R8G8B8_UNORM);
+    STR(R8G8B8_SNORM);
+    STR(R8G8B8_USCALED);
+    STR(R8G8B8_SSCALED);
+    STR(R8G8B8_UINT);
+    STR(R8G8B8_SINT);
+    STR(R8G8B8_SRGB);
+    STR(R8G8B8A8_UNORM);
+    STR(R8G8B8A8_SNORM);
+    STR(R8G8B8A8_USCALED);
+    STR(R8G8B8A8_SSCALED);
+    STR(R8G8B8A8_UINT);
+    STR(R8G8B8A8_SINT);
+    STR(R8G8B8A8_SRGB);
+    STR(R10G10B10A2_UNORM);
+    STR(R10G10B10A2_SNORM);
+    STR(R10G10B10A2_USCALED);
+    STR(R10G10B10A2_SSCALED);
+    STR(R10G10B10A2_UINT);
+    STR(R10G10B10A2_SINT);
+    STR(R16_UNORM);
+    STR(R16_SNORM);
+    STR(R16_USCALED);
+    STR(R16_SSCALED);
+    STR(R16_UINT);
+    STR(R16_SINT);
+    STR(R16_SFLOAT);
+    STR(R16G16_UNORM);
+    STR(R16G16_SNORM);
+    STR(R16G16_USCALED);
+    STR(R16G16_SSCALED);
+    STR(R16G16_UINT);
+    STR(R16G16_SINT);
+    STR(R16G16_SFLOAT);
+    STR(R16G16B16_UNORM);
+    STR(R16G16B16_SNORM);
+    STR(R16G16B16_USCALED);
+    STR(R16G16B16_SSCALED);
+    STR(R16G16B16_UINT);
+    STR(R16G16B16_SINT);
+    STR(R16G16B16_SFLOAT);
+    STR(R16G16B16A16_UNORM);
+    STR(R16G16B16A16_SNORM);
+    STR(R16G16B16A16_USCALED);
+    STR(R16G16B16A16_SSCALED);
+    STR(R16G16B16A16_UINT);
+    STR(R16G16B16A16_SINT);
+    STR(R16G16B16A16_SFLOAT);
+    STR(R32_UINT);
+    STR(R32_SINT);
+    STR(R32_SFLOAT);
+    STR(R32G32_UINT);
+    STR(R32G32_SINT);
+    STR(R32G32_SFLOAT);
+    STR(R32G32B32_UINT);
+    STR(R32G32B32_SINT);
+    STR(R32G32B32_SFLOAT);
+    STR(R32G32B32A32_UINT);
+    STR(R32G32B32A32_SINT);
+    STR(R32G32B32A32_SFLOAT);
+    STR(R64_SFLOAT);
+    STR(R64G64_SFLOAT);
+    STR(R64G64B64_SFLOAT);
+    STR(R64G64B64A64_SFLOAT);
+    STR(R11G11B10_UFLOAT);
+    STR(R9G9B9E5_UFLOAT);
+    STR(D16_UNORM);
+    STR(D24_UNORM);
+    STR(D32_SFLOAT);
+    STR(S8_UINT);
+    STR(D16_UNORM_S8_UINT);
+    STR(D24_UNORM_S8_UINT);
+    STR(D32_SFLOAT_S8_UINT);
+    STR(BC1_UNORM);
+    STR(BC1_SRGB);
+    STR(BC2_UNORM);
+    STR(BC2_SRGB);
+    STR(BC3_UNORM);
+    STR(BC3_SRGB);
+    STR(BC4_UNORM);
+    STR(BC4_SNORM);
+    STR(BC5_UNORM);
+    STR(BC5_SNORM);
+    STR(BC6H_UFLOAT);
+    STR(BC6H_SFLOAT);
+    STR(BC7_UNORM);
+    STR(BC7_SRGB);
+    STR(ETC2_R8G8B8_UNORM);
+    STR(ETC2_R8G8B8A1_UNORM);
+    STR(ETC2_R8G8B8A8_UNORM);
+    STR(EAC_R11_UNORM);
+    STR(EAC_R11_SNORM);
+    STR(EAC_R11G11_UNORM);
+    STR(EAC_R11G11_SNORM);
+    STR(ASTC_4x4_UNORM);
+    STR(ASTC_4x4_SRGB);
+    STR(ASTC_4x5_UNORM);
+    STR(ASTC_4x5_SRGB);
+    STR(ASTC_5x5_UNORM);
+    STR(ASTC_5x5_SRGB);
+    STR(ASTC_6x5_UNORM);
+    STR(ASTC_6x5_SRGB);
+    STR(ASTC_6x6_UNORM);
+    STR(ASTC_6x6_SRGB);
+    STR(ASTC_8x5_UNORM);
+    STR(ASTC_8x5_SRGB);
+    STR(ASTC_8x6_UNORM);
+    STR(ASTC_8x6_SRGB);
+    STR(ASTC_8x8_UNORM);
+    STR(ASTC_8x8_SRGB);
+    STR(ASTC_10x5_UNORM);
+    STR(ASTC_10x5_SRGB);
+    STR(ASTC_10x6_UNORM);
+    STR(ASTC_10x6_SRGB);
+    STR(ASTC_10x8_UNORM);
+    STR(ASTC_10x8_SRGB);
+    STR(ASTC_10x10_UNORM);
+    STR(ASTC_10x10_SRGB);
+    STR(ASTC_12x10_UNORM);
+    STR(ASTC_12x10_SRGB);
+    STR(ASTC_12x12_UNORM);
+    STR(ASTC_12x12_SRGB);
+    STR(B5G6R5_UNORM);
+    STR(B5G6R5_USCALED);
+    STR(B8G8R8_UNORM);
+    STR(B8G8R8_SNORM);
+    STR(B8G8R8_USCALED);
+    STR(B8G8R8_SSCALED);
+    STR(B8G8R8_UINT);
+    STR(B8G8R8_SINT);
+    STR(B8G8R8_SRGB);
+    STR(B8G8R8A8_UNORM);
+    STR(B8G8R8A8_SNORM);
+    STR(B8G8R8A8_USCALED);
+    STR(B8G8R8A8_SSCALED);
+    STR(B8G8R8A8_UINT);
+    STR(B8G8R8A8_SINT);
+    STR(B8G8R8A8_SRGB);
+    STR(B10G10R10A2_UNORM);
+    STR(B10G10R10A2_SNORM);
+    STR(B10G10R10A2_USCALED);
+    STR(B10G10R10A2_SSCALED);
+    STR(B10G10R10A2_UINT);
+    STR(B10G10R10A2_SINT);
 #undef STR
-    default: return "UNKNOWN_CH";
-    }
-}
-
-static const char *xgl_numeric_format_string(XGL_NUM_FORMAT num)
-{
-    switch (num) {
-#define STR(r) case XGL_NUM_FMT_ ##r: return #r
-    STR(UNDEFINED);
-    STR(UNORM);
-    STR(SNORM);
-    STR(UINT);
-    STR(SINT);
-    STR(FLOAT);
-    STR(SRGB);
-    STR(DS);
-    STR(USCALED);
-    STR(SSCALED);
-#undef STR
-    default: return "UNKNOWN_NUM";
+    default: return "UNKNOWN_FORMAT";
     }
 }
 
 static void app_dev_init_formats(struct app_dev *dev)
 {
-    XGL_CHANNEL_FORMAT ch;
-    XGL_NUM_FORMAT num;
+    XGL_FORMAT f;
 
-    for (ch = 0; ch < XGL_MAX_CH_FMT; ch++) {
-        for (num = 0; num < XGL_MAX_NUM_FMT; num++) {
-            const XGL_FORMAT fmt = {
-                .channelFormat = ch,
-                .numericFormat = num,
-            };
-            XGL_RESULT err;
-            XGL_SIZE size = sizeof(dev->format_props[ch][num]);
+    for (f = 0; f < XGL_NUM_FMT; f++) {
+        const XGL_FORMAT fmt = f;
+        XGL_RESULT err;
+        XGL_SIZE size = sizeof(dev->format_props[f]);
 
-            err = xglGetFormatInfo(dev->obj, fmt,
-                                   XGL_INFO_TYPE_FORMAT_PROPERTIES,
-                                   &size, &dev->format_props[ch][num]);
-            if (err) {
-                memset(&dev->format_props[ch][num], 0,
-                       sizeof(dev->format_props[ch][num]));
-            }
-            else if (size != sizeof(dev->format_props[ch][num])) {
-                ERR_EXIT(XGL_ERROR_UNKNOWN);
-            }
+        err = xglGetFormatInfo(dev->obj, fmt,
+                               XGL_INFO_TYPE_FORMAT_PROPERTIES,
+                               &size, &dev->format_props[f]);
+        if (err) {
+            memset(&dev->format_props[f], 0,
+                   sizeof(dev->format_props[f]));
+        }
+        else if (size != sizeof(dev->format_props[f])) {
+            ERR_EXIT(XGL_ERROR_UNKNOWN);
         }
     }
 }
@@ -360,9 +464,9 @@ static void app_gpu_destroy(struct app_gpu *gpu)
     free(gpu->queue_props);
 }
 
-static void app_dev_dump_format_props(const struct app_dev *dev, XGL_CHANNEL_FORMAT ch, XGL_NUM_FORMAT num)
+static void app_dev_dump_format_props(const struct app_dev *dev, XGL_FORMAT fmt)
 {
-    const XGL_FORMAT_PROPERTIES *props = &dev->format_props[ch][num];
+    const XGL_FORMAT_PROPERTIES *props = &dev->format_props[fmt];
     struct {
         const char *name;
         XGL_FLAGS flags;
@@ -377,8 +481,7 @@ static void app_dev_dump_format_props(const struct app_dev *dev, XGL_CHANNEL_FOR
     tilings[1].name = "optimal";
     tilings[1].flags = props->optimalTilingFeatures;
 
-    printf("FORMAT_%s_%s\n", xgl_channel_format_string(ch),
-            xgl_numeric_format_string(num));
+    printf("FORMAT_%s\n", xgl_format_string(fmt));
     for (i = 0; i < ARRAY_SIZE(tilings); i++) {
         if (!tilings[i].flags)
             continue;
@@ -404,12 +507,10 @@ static void app_dev_dump_format_props(const struct app_dev *dev, XGL_CHANNEL_FOR
 static void
 app_dev_dump(const struct app_dev *dev)
 {
-    XGL_CHANNEL_FORMAT ch;
-    XGL_NUM_FORMAT num;
+    XGL_FORMAT fmt;
 
-    for (ch = 0; ch < XGL_MAX_CH_FMT; ch++) {
-        for (num = 0; num < XGL_MAX_NUM_FMT; num++)
-            app_dev_dump_format_props(dev, ch, num);
+    for (fmt = 0; fmt < XGL_NUM_FMT; fmt++) {
+        app_dev_dump_format_props(dev, fmt);
     }
 }
 

@@ -127,8 +127,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
         mipCount++;
     }
 
-    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    fmt.numericFormat = XGL_NUM_FMT_UINT;
+    fmt = XGL_FMT_R8G8B8A8_UINT;
     // TODO: Pick known good format rather than just expect common format
     /*
      * XXX: What should happen if given NULL HANDLE for the pData argument?
@@ -272,8 +271,7 @@ TEST_F(XglImageTest, CreateImageViewTest) {
     XGL_FORMAT fmt;
     XGL_IMAGE_VIEW imageView;
 
-    fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    fmt.numericFormat = XGL_NUM_FMT_UINT;
+    fmt = XGL_FMT_R8G8B8A8_UINT;
 
     CreateImage(512, 256);
 

@@ -33,69 +33,25 @@
 
 static inline bool icd_format_is_undef(XGL_FORMAT format)
 {
-    return (format.numericFormat == XGL_NUM_FMT_UNDEFINED);
+    return (format == XGL_FMT_UNDEFINED);
 }
 
-static inline bool icd_format_is_ds(XGL_FORMAT format)
-{
-    return (format.numericFormat == XGL_NUM_FMT_DS);
-}
+bool icd_format_is_ds(XGL_FORMAT format);
 
 static inline bool icd_format_is_color(XGL_FORMAT format)
 {
     return !(icd_format_is_undef(format) || icd_format_is_ds(format));
 }
 
-static inline bool icd_format_is_norm(XGL_FORMAT format)
-{
-    return (format.numericFormat == XGL_NUM_FMT_UNORM ||
-            format.numericFormat == XGL_NUM_FMT_SNORM);
-};
+bool icd_format_is_norm(XGL_FORMAT format);
 
-static inline bool icd_format_is_int(XGL_FORMAT format)
-{
-    return (format.numericFormat == XGL_NUM_FMT_UINT ||
-            format.numericFormat == XGL_NUM_FMT_SINT);
-}
+bool icd_format_is_int(XGL_FORMAT format);
 
-static inline bool icd_format_is_float(XGL_FORMAT format)
-{
-    return (format.numericFormat == XGL_NUM_FMT_FLOAT);
-}
+bool icd_format_is_float(XGL_FORMAT format);
 
-static inline bool icd_format_is_srgb(XGL_FORMAT format)
-{
-    return (format.numericFormat == XGL_NUM_FMT_SRGB);
-}
+bool icd_format_is_srgb(XGL_FORMAT format);
 
-static inline bool icd_format_is_scaled(XGL_FORMAT format)
-{
-    return (format.numericFormat == XGL_NUM_FMT_USCALED ||
-            format.numericFormat == XGL_NUM_FMT_SSCALED);
-}
-
-static inline bool icd_format_is_compressed(XGL_FORMAT format)
-{
-    switch (format.channelFormat) {
-    case XGL_CH_FMT_BC1:
-    case XGL_CH_FMT_BC2:
-    case XGL_CH_FMT_BC3:
-    case XGL_CH_FMT_BC4:
-    case XGL_CH_FMT_BC5:
-    case XGL_CH_FMT_BC6U:
-    case XGL_CH_FMT_BC6S:
-    case XGL_CH_FMT_BC7:
-        return true;
-    default:
-        return false;
-    }
-}
-
-static inline bool icd_format_is_equal(XGL_FORMAT a, XGL_FORMAT b)
-{
-    return (a.channelFormat == b.channelFormat &&
-            a.numericFormat == b.numericFormat);
-}
+bool icd_format_is_compressed(XGL_FORMAT format);
 
 static inline int icd_format_get_block_width(XGL_FORMAT format)
 {

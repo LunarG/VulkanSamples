@@ -449,7 +449,7 @@ static void demo_prepare_buffers(struct demo *demo)
 
 static void demo_prepare_depth(struct demo *demo)
 {
-    const XGL_FORMAT depth_format = { XGL_CH_FMT_R16, XGL_NUM_FMT_DS };
+    const XGL_FORMAT depth_format = XGL_FMT_D16_UNORM;
     const XGL_IMAGE_CREATE_INFO image = {
         .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
@@ -687,7 +687,7 @@ bool loadTexture(char *filename, XGL_UINT8 *rgba_data,
 
 static void demo_prepare_textures(struct demo *demo)
 {
-    const XGL_FORMAT tex_format = { XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM };
+    const XGL_FORMAT tex_format = XGL_FMT_R8G8B8A8_UNORM;
     XGL_INT tex_width;
     XGL_INT tex_height;
     XGL_RESULT err;
@@ -1523,8 +1523,7 @@ static void demo_init(struct demo *demo)
 
     demo->width = 500;
     demo->height = 500;
-    demo->format.channelFormat = XGL_CH_FMT_B8G8R8A8;
-    demo->format.numericFormat = XGL_NUM_FMT_UNORM;
+    demo->format = XGL_FMT_B8G8R8A8_UNORM;
 
     demo->spin_angle = 0.01f;
     demo->spin_increment = 0.01f;

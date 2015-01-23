@@ -458,21 +458,14 @@ static bool wsi_x11_is_format_presentable(struct intel_wsi_x11 *x11,
                                           XGL_FORMAT format)
 {
     /* this is what DDX expects */
-    switch (format.channelFormat) {
-    case XGL_CH_FMT_B5G6R5:
-        if (format.numericFormat == XGL_NUM_FMT_UNORM)
-            return true;
-        break;
-    case XGL_CH_FMT_B8G8R8A8:
-        if (format.numericFormat == XGL_NUM_FMT_UNORM ||
-            format.numericFormat == XGL_NUM_FMT_SRGB)
-            return true;
-        break;
+    switch (format) {
+    case XGL_FMT_B5G6R5_UNORM:
+    case XGL_FMT_B8G8R8A8_UNORM:
+    case XGL_FMT_B8G8R8A8_SRGB:
+        return true;
     default:
-        break;
+        return false;
     }
-
-    return false;
 }
 
 /**

@@ -156,7 +156,7 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
                 flush_flags |= cmd_get_flush_flags(cmd,
                         img_get_layout_caches(img, image_memory_barrier->oldLayout),
                         img_get_layout_caches(img, image_memory_barrier->newLayout),
-                        (img->layout.format.numericFormat == XGL_NUM_FMT_DS));
+                        icd_format_is_ds(img->layout.format));
             }
             break;
         default:

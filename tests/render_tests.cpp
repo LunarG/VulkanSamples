@@ -341,8 +341,7 @@ void XglRenderTest::InitDepthStencil()
     // Clean up default state created by framework
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
 
-    m_depth_stencil_fmt.channelFormat = XGL_CH_FMT_R16;
-    m_depth_stencil_fmt.numericFormat = XGL_NUM_FMT_DS;
+    m_depth_stencil_fmt = XGL_FMT_D16_UNORM;
 
     image.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image.pNext = NULL;
@@ -781,12 +780,10 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -854,8 +851,7 @@ TEST_F(XglRenderTest, TriangleMRT)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrib;
     vi_attrib.binding = 0;                       // index into vertexBindingDescriptions
-    vi_attrib.format.channelFormat = XGL_CH_FMT_R32G32;            // format of source data
-    vi_attrib.format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attrib.format = XGL_FMT_R32G32_SFLOAT;            // format of source data
     vi_attrib.offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
@@ -967,12 +963,10 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1062,12 +1056,10 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1156,12 +1148,10 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1260,12 +1250,10 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1354,12 +1342,10 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1592,12 +1578,10 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1685,12 +1669,10 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -1781,8 +1763,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
     ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
     ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    ds_state.format.channelFormat = XGL_CH_FMT_R32;
-    ds_state.format.numericFormat = XGL_NUM_FMT_DS;
+    ds_state.format = XGL_FMT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
@@ -1800,12 +1781,10 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     // this is the current description of g_vbData
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -2586,12 +2565,10 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     // this is the current description of g_vbData
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format.channelFormat = XGL_CH_FMT_R32G32B32A32;            // format of source data
-    vi_attribs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -2608,8 +2585,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
     ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
     ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    ds_state.format.channelFormat = XGL_CH_FMT_R32;
-    ds_state.format.numericFormat = XGL_NUM_FMT_DS;
+    ds_state.format = XGL_FMT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 

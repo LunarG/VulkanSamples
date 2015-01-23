@@ -35,16 +35,25 @@ struct intel_gpu;
 static inline bool intel_format_is_depth(const struct intel_gpu *gpu,
                                          XGL_FORMAT format)
 {
-    return (format.numericFormat == XGL_NUM_FMT_DS &&
-            (format.channelFormat == XGL_CH_FMT_R16 ||
-             format.channelFormat == XGL_CH_FMT_R32));
+    bool is_depth = false;
+
+    switch (format) {
+    case XGL_FMT_D16_UNORM:
+    case XGL_FMT_D24_UNORM:
+    case XGL_FMT_D32_SFLOAT:
+        is_depth = true;
+        break;
+    default:
+        break;
+    }
+
+    return is_depth;
 }
 
 static inline bool intel_format_is_stencil(const struct intel_gpu *gpu,
                                            XGL_FORMAT format)
 {
-   return (format.numericFormat == XGL_NUM_FMT_DS &&
-           format.channelFormat == XGL_CH_FMT_R8);
+   return format == XGL_FMT_S8_UINT;
 }
 
 int intel_format_translate_color(const struct intel_gpu *gpu,

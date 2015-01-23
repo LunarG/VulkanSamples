@@ -38,8 +38,7 @@ XglRenderFramework::XglRenderFramework() :
 {
     m_renderTargetCount = 1;
 
-    m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
+    m_render_target_fmt = XGL_FMT_R8G8B8A8_UNORM;
 
     m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
@@ -82,8 +81,7 @@ void XglRenderFramework::InitState()
 {
     XGL_RESULT err;
 
-    m_render_target_fmt.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    m_render_target_fmt.numericFormat = XGL_NUM_FMT_UNORM;
+    m_render_target_fmt = XGL_FMT_R8G8B8A8_UNORM;
 
     // create a raster state (solid, back-face culling)
     XGL_DYNAMIC_RS_STATE_CREATE_INFO raster = {};
@@ -372,7 +370,7 @@ void XglImage::init(XGL_UINT32 w, XGL_UINT32 h,
         XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
         XGL_NULL_HANDLE,
         obj(),
-        {XGL_CH_FMT_R8G8B8A8, XGL_NUM_FMT_UNORM},
+        XGL_FMT_R8G8B8A8_UNORM,
         0,
         0,
         1
@@ -396,7 +394,7 @@ XGL_RESULT XglImage::UnmapMemory()
 XglTextureObj::XglTextureObj(XglDevice *device)
 {
     m_device = device;
-    const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
+    const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
     const uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
 
     memset(&m_textureViewInfo,0,sizeof(m_textureViewInfo));
@@ -632,19 +630,18 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
 
     m_numVertices = numIndexes;
     m_indexType = indexType;
-    viewFormat.numericFormat = XGL_NUM_FMT_UINT;
     switch (indexType) {
     case XGL_INDEX_8:
         m_stride = 1;
-        viewFormat.channelFormat = XGL_CH_FMT_R8;
+        viewFormat = XGL_FMT_R8_UINT;
         break;
     case XGL_INDEX_16:
         m_stride = 2;
-        viewFormat.channelFormat = XGL_CH_FMT_R16;
+        viewFormat = XGL_FMT_R16_UINT;
         break;
     case XGL_INDEX_32:
         m_stride = 4;
-        viewFormat.channelFormat = XGL_CH_FMT_R32;
+        viewFormat = XGL_FMT_R32_UINT;
         break;
     default:
         assert(!"unknown index type");
@@ -664,8 +661,7 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
     view_info.buffer = obj();
     view_info.viewType = XGL_BUFFER_VIEW_TYPED;
     view_info.stride = m_stride;
-    view_info.format.channelFormat = viewFormat.channelFormat;
-    view_info.format.numericFormat = viewFormat.numericFormat;
+    view_info.format = viewFormat;
     view_info.channels.r = XGL_CHANNEL_SWIZZLE_R;
     view_info.channels.g = XGL_CHANNEL_SWIZZLE_G;
     view_info.channels.b = XGL_CHANNEL_SWIZZLE_B;
@@ -782,8 +778,7 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
 
     m_ds_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
     m_ds_state.pNext = &m_ms_state,
-    m_ds_state.format.channelFormat = XGL_CH_FMT_R32;
-    m_ds_state.format.numericFormat = XGL_NUM_FMT_DS;
+    m_ds_state.format = XGL_FMT_D32_SFLOAT;
     m_ds_state.depthTestEnable      = XGL_FALSE;
     m_ds_state.depthWriteEnable     = XGL_FALSE;
     m_ds_state.depthBoundsEnable    = XGL_FALSE;
@@ -797,8 +792,7 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
 
     XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
     att.blendEnable = XGL_FALSE;
-    att.format.channelFormat = XGL_CH_FMT_R8G8B8A8;
-    att.format.numericFormat = XGL_NUM_FMT_UNORM;
+    att.format = XGL_FMT_R8G8B8A8_UNORM;
     att.channelWriteMask = 0xf;
     AddColorAttachment(0, &att);
 

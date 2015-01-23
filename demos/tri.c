@@ -267,7 +267,7 @@ static void demo_prepare_buffers(struct demo *demo)
 
 static void demo_prepare_depth(struct demo *demo)
 {
-    const XGL_FORMAT depth_format = { XGL_CH_FMT_R16, XGL_NUM_FMT_DS };
+    const XGL_FORMAT depth_format = XGL_FMT_D16_UNORM;
     const XGL_IMAGE_CREATE_INFO image = {
         .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
@@ -358,7 +358,7 @@ static void demo_prepare_depth(struct demo *demo)
 
 static void demo_prepare_textures(struct demo *demo)
 {
-    const XGL_FORMAT tex_format = { XGL_CH_FMT_B8G8R8A8, XGL_NUM_FMT_UNORM };
+    const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
     const XGL_INT tex_width = 2;
     const XGL_INT tex_height = 2;
     const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
@@ -595,13 +595,11 @@ static void demo_prepare_vertices(struct demo *demo)
     demo->vertices.vi_bindings[0].stepRate = XGL_VERTEX_INPUT_STEP_RATE_VERTEX;
 
     demo->vertices.vi_attrs[0].binding = 0;
-    demo->vertices.vi_attrs[0].format.channelFormat = XGL_CH_FMT_R32G32B32;
-    demo->vertices.vi_attrs[0].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    demo->vertices.vi_attrs[0].format = XGL_FMT_R32G32B32_SFLOAT;
     demo->vertices.vi_attrs[0].offsetInBytes = 0;
 
     demo->vertices.vi_attrs[1].binding = 0;
-    demo->vertices.vi_attrs[1].format.channelFormat = XGL_CH_FMT_R32G32;
-    demo->vertices.vi_attrs[1].format.numericFormat = XGL_NUM_FMT_FLOAT;
+    demo->vertices.vi_attrs[1].format = XGL_FMT_R32G32_SFLOAT;
     demo->vertices.vi_attrs[1].offsetInBytes = sizeof(float) * 3;
 }
 
@@ -1076,8 +1074,7 @@ static void demo_init(struct demo *demo)
 
     demo->width = 300;
     demo->height = 300;
-    demo->format.channelFormat = XGL_CH_FMT_B8G8R8A8;
-    demo->format.numericFormat = XGL_NUM_FMT_UNORM;
+    demo->format = XGL_FMT_B8G8R8A8_UNORM;
 }
 
 static void demo_cleanup(struct demo *demo)

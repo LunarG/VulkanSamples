@@ -375,28 +375,25 @@ static bool cmd_meta_mem_dword_aligned(const struct intel_cmd *cmd,
 static XGL_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
                                           XGL_FORMAT format)
 {
-    format.numericFormat = XGL_NUM_FMT_UINT;
-
     switch (icd_format_get_size(format)) {
     case 1:
-        format.channelFormat = XGL_CH_FMT_R8;
+        format = XGL_FMT_R8_UINT;
         break;
     case 2:
-        format.channelFormat = XGL_CH_FMT_R16;
+        format = XGL_FMT_R16_UINT;
         break;
     case 4:
-        format.channelFormat = XGL_CH_FMT_R32;
+        format = XGL_FMT_R32_UINT;
         break;
     case 8:
-        format.channelFormat = XGL_CH_FMT_R32G32;
+        format = XGL_FMT_R32G32_UINT;
         break;
     case 16:
-        format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        format = XGL_FMT_R32G32B32A32_UINT;
         break;
     default:
         assert(!"unsupported image format for raw blit op");
-        format.channelFormat = XGL_CH_FMT_UNDEFINED;
-        format.numericFormat = XGL_NUM_FMT_UNDEFINED;
+        format = XGL_FMT_UNDEFINED;
         break;
     }
 
@@ -423,12 +420,11 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyBuffer(
     meta.height = 1;
     meta.samples = 1;
 
-    format.channelFormat = XGL_CH_FMT_UNDEFINED;
-    format.numericFormat = XGL_NUM_FMT_UINT;
+    format = XGL_FMT_UNDEFINED;
 
     for (i = 0; i < regionCount; i++) {
         const XGL_BUFFER_COPY *region = &pRegions[i];
-        XGL_CHANNEL_FORMAT ch;
+        XGL_FORMAT fmt;
 
         meta.src.x = region->srcOffset;
         meta.dst.x = region->destOffset;
@@ -445,7 +441,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyBuffer(
              * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to
              * be 16
              */
-            ch = XGL_CH_FMT_R32G32B32A32;
+            fmt = XGL_FMT_R32G32B32A32_UINT;
         } else {
             if (cmd_gen(cmd) == INTEL_GEN(6)) {
                 intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
@@ -461,11 +457,11 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyBuffer(
              * INTEL_DEV_META_VS_COPY_MEM_UNALIGNED is untyped but expects the
              * stride to be 4
              */
-            ch = XGL_CH_FMT_R8G8B8A8;
+            fmt = XGL_FMT_R8G8B8A8_UINT;
         }
 
-        if (format.channelFormat != ch) {
-            format.channelFormat = ch;
+        if (format != fmt) {
+            format = fmt;
 
             cmd_meta_set_src_for_buf(cmd, src, format, &meta);
             cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
@@ -495,7 +491,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImage(
         return;
     }
 
-    if (icd_format_is_equal(src->layout.format, dst->layout.format)) {
+    if (src->layout.format == dst->layout.format) {
         raw_copy = true;
         raw_format = cmd_meta_img_raw_format(cmd, src->layout.format);
     } else if (icd_format_is_compressed(src->layout.format) ||
@@ -616,35 +612,34 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdCopyImageToBuffer(
     meta.mode = INTEL_CMD_META_VS_POINTS;
 
     img_format = cmd_meta_img_raw_format(cmd, img->layout.format);
-    buf_format.numericFormat = XGL_NUM_FMT_UINT;
 
     /* buf_format is ignored by hw, but we derive stride from it */
-    switch (img_format.channelFormat) {
-    case XGL_CH_FMT_R8:
+    switch (img_format) {
+    case XGL_FMT_R8_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R8_TO_MEM;
-        buf_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+        buf_format = XGL_FMT_R8G8B8A8_UINT;
         break;
-    case XGL_CH_FMT_R16:
+    case XGL_FMT_R16_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R16_TO_MEM;
-        buf_format.channelFormat = XGL_CH_FMT_R8G8B8A8;
+        buf_format = XGL_FMT_R8G8B8A8_UINT;
         break;
-    case XGL_CH_FMT_R32:
+    case XGL_FMT_R32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32_TO_MEM;
-        buf_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        buf_format = XGL_FMT_R32G32B32A32_UINT;
         break;
-    case XGL_CH_FMT_R32G32:
+    case XGL_FMT_R32G32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32_TO_MEM;
-        buf_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        buf_format = XGL_FMT_R32G32B32A32_UINT;
         break;
-    case XGL_CH_FMT_R32G32B32A32:
+    case XGL_FMT_R32G32B32A32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM;
-        buf_format.channelFormat = XGL_CH_FMT_R32G32B32A32;
+        buf_format = XGL_FMT_R32G32B32A32_UINT;
         break;
     default:
         break;
     }
 
-    if (img_format.channelFormat == XGL_CH_FMT_UNDEFINED ||
+    if (img_format == XGL_FMT_UNDEFINED ||
         (cmd_gen(cmd) == INTEL_GEN(6) &&
          icd_format_get_size(img_format) < 4)) {
         intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
@@ -769,8 +764,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdUpdateBuffer(
     /*
      * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to be 16
      */
-    format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    format.numericFormat = XGL_NUM_FMT_UINT;
+    format = XGL_FMT_R32G32B32A32_UINT;
 
     cmd_meta_set_src_for_writer(cmd, INTEL_CMD_WRITER_STATE,
             offset + dataSize, format, &meta);
@@ -812,8 +806,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdFillBuffer(
     /*
      * INTEL_DEV_META_VS_FILL_MEM is untyped but expects the stride to be 16
      */
-    format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-    format.numericFormat = XGL_NUM_FMT_UINT;
+    format = XGL_FMT_R32G32B32A32_UINT;
 
     cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
 
@@ -970,7 +963,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdResolveImage(
     XGL_UINT i;
 
     if (src->samples <= 1 || dst->samples > 1 ||
-        !icd_format_is_equal(src->layout.format, dst->layout.format)) {
+        src->layout.format != dst->layout.format) {
         cmd->result = XGL_ERROR_UNKNOWN;
         return;
     }

@@ -823,19 +823,19 @@ ds_init_info(const struct intel_gpu *gpu,
     *
     * As for GEN7+, separate_stencil is always true.
     */
-   switch (format.channelFormat) {
-   case XGL_CH_FMT_R16:
+   switch (format) {
+   case XGL_FMT_D16_UNORM:
       info->format = GEN6_ZFORMAT_D16_UNORM;
       break;
-   case XGL_CH_FMT_R32:
+   case XGL_FMT_D32_SFLOAT:
       info->format = GEN6_ZFORMAT_D32_FLOAT;
       break;
-   case XGL_CH_FMT_R32G8:
+   case XGL_FMT_D32_SFLOAT_S8_UINT:
       info->format = (separate_stencil) ?
          GEN6_ZFORMAT_D32_FLOAT :
          GEN6_ZFORMAT_D32_FLOAT_S8X24_UINT;
       break;
-   case XGL_CH_FMT_R8:
+   case XGL_FMT_S8_UINT:
       if (separate_stencil) {
          info->format = GEN6_ZFORMAT_D32_FLOAT;
          break;
@@ -848,7 +848,7 @@ ds_init_info(const struct intel_gpu *gpu,
       break;
    }
 
-   if (format.channelFormat != XGL_CH_FMT_R8)
+   if (format != XGL_FMT_S8_UINT)
       info->zs.stride = img->layout.bo_stride;
 
    if (img->s8_layout) {
@@ -873,7 +873,7 @@ ds_init_info(const struct intel_gpu *gpu,
          intel_layout_pos_to_mem(img->s8_layout, x, y, &x, &y);
          info->stencil.offset = intel_layout_mem_to_raw(img->s8_layout, x, y);
       }
-   } else if (format.channelFormat == XGL_CH_FMT_R8) {
+   } else if (format == XGL_FMT_S8_UINT) {
       info->stencil.stride = img->layout.bo_stride * 2;
    }
 
@@ -1091,8 +1091,7 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
      * must be XGL_FMT_R32G32B32A32_SFLOAT.
      */
     if (info->viewType == XGL_BUFFER_VIEW_RAW) {
-        format.channelFormat = XGL_CH_FMT_R32G32B32A32;
-        format.numericFormat = XGL_NUM_FMT_FLOAT;
+        format = XGL_FMT_R32G32B32A32_SFLOAT;
         stride = 16;
     } else {
         format = info->format;

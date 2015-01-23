@@ -391,12 +391,12 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         int format;
 
-        switch (pipeline->db_format.channelFormat) {
-        case XGL_CH_FMT_R16:
+        switch (pipeline->db_format) {
+        case XGL_FMT_D16_UNORM:
             format = GEN6_ZFORMAT_D16_UNORM;
             break;
-        case XGL_CH_FMT_R32:
-        case XGL_CH_FMT_R32G8:
+        case XGL_FMT_D32_SFLOAT:
+        case XGL_FMT_D32_SFLOAT_S8_UINT:
             format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         default:

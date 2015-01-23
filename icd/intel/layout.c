@@ -402,12 +402,12 @@ layout_init_alignments(struct intel_layout *layout,
       layout->align_j = layout->block_height;
    } else if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
-         switch (layout->format.channelFormat) {
-         case XGL_CH_FMT_R16:
+         switch (layout->format) {
+         case XGL_FMT_D16_UNORM:
             layout->align_i = 8;
             layout->align_j = 4;
             break;
-         case XGL_CH_FMT_R8:
+         case XGL_FMT_S8_UINT:
             layout->align_i = 8;
             layout->align_j = 8;
             break;
@@ -417,8 +417,8 @@ layout_init_alignments(struct intel_layout *layout,
             break;
          }
       } else {
-         switch (layout->format.channelFormat) {
-         case XGL_CH_FMT_R8:
+         switch (layout->format) {
+         case XGL_FMT_S8_UINT:
             layout->align_i = 4;
             layout->align_j = 2;
             break;
@@ -490,8 +490,8 @@ layout_get_valid_tilings(const struct intel_layout *layout,
     *     "W-Major Tile Format is used for separate stencil."
     */
    if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
-      switch (format.channelFormat) {
-      case XGL_CH_FMT_R8:
+      switch (format) {
+      case XGL_FMT_S8_UINT:
          valid_tilings &= LAYOUT_TILING_W;
          break;
       default:
@@ -675,11 +675,11 @@ layout_init_size_and_format(struct intel_layout *layout,
          require_separate_stencil = (layout->aux == INTEL_LAYOUT_AUX_HIZ);
    }
 
-   if (format.numericFormat == XGL_NUM_FMT_DS) {
-      switch (format.channelFormat) {
-      case XGL_CH_FMT_R32G8:
+   if (icd_format_is_ds(format)) {
+      switch (format) {
+      case XGL_FMT_D32_SFLOAT_S8_UINT:
          if (require_separate_stencil) {
-            format.channelFormat = XGL_CH_FMT_R32;
+            format = XGL_FMT_D32_SFLOAT;
             layout->separate_stencil = true;
          }
          break;
@@ -776,7 +776,7 @@ layout_want_hiz(const struct intel_layout *layout,
     * can result in incompatible formats.
     */
    if (intel_gpu_gen(params->gpu) == INTEL_GEN(6) &&
-       info->format.channelFormat == XGL_CH_FMT_R32G8 &&
+       info->format == XGL_FMT_D32_SFLOAT_S8_UINT &&
        info->mipLevels > 1)
       return false;
 
@@ -1351,8 +1351,7 @@ intel_layout_get_slice_tile_offset(const struct intel_layout *layout,
    switch (layout->tiling) {
    case INTEL_TILING_NONE:
       /* W-tiled */
-      if (layout->format.numericFormat == XGL_NUM_FMT_DS &&
-          layout->format.channelFormat == XGL_CH_FMT_R8) {
+      if (layout->format == XGL_FMT_S8_UINT) {
          tile_w = 64;
          tile_h = 64;
       }

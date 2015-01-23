@@ -185,14 +185,14 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
         region.imageExtent = Image::extent(info_.extent, lv);
 
         if (info_.usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
-            if (info_.format.channelFormat != XGL_CH_FMT_R8) {
+            if (info_.format != XGL_FMT_S8_UINT) {
                 region.imageSubresource.aspect = XGL_IMAGE_ASPECT_DEPTH;
                 regions_.push_back(region);
             }
 
-            if (info_.format.channelFormat == XGL_CH_FMT_R16G8 ||
-                info_.format.channelFormat == XGL_CH_FMT_R32G8 ||
-                info_.format.channelFormat == XGL_CH_FMT_R8) {
+            if (info_.format == XGL_FMT_D16_UNORM_S8_UINT ||
+                info_.format == XGL_FMT_D32_SFLOAT_S8_UINT ||
+                info_.format == XGL_FMT_S8_UINT) {
                 region.imageSubresource.aspect = XGL_IMAGE_ASPECT_STENCIL;
                 regions_.push_back(region);
             }
@@ -389,48 +389,178 @@ XGL_SIZE get_format_size(XGL_FORMAT format)
     static const struct format_info {
         XGL_SIZE size;
         XGL_UINT channel_count;
-    } format_table[XGL_MAX_CH_FMT + 1] = {
-        [XGL_CH_FMT_UNDEFINED]      = { 0,  0 },
-        [XGL_CH_FMT_R4G4]           = { 1,  2 },
-        [XGL_CH_FMT_R4G4B4A4]       = { 2,  4 },
-        [XGL_CH_FMT_R5G6B5]         = { 2,  3 },
-        [XGL_CH_FMT_B5G6R5]         = { 2,  3 },
-        [XGL_CH_FMT_R5G5B5A1]       = { 2,  4 },
-        [XGL_CH_FMT_R8]             = { 1,  1 },
-        [XGL_CH_FMT_R8G8]           = { 2,  2 },
-        [XGL_CH_FMT_R8G8B8A8]       = { 4,  4 },
-        [XGL_CH_FMT_B8G8R8A8]       = { 4,  4 },
-        [XGL_CH_FMT_R10G11B11]      = { 4,  3 },
-        [XGL_CH_FMT_R11G11B10]      = { 4,  3 },
-        [XGL_CH_FMT_R10G10B10A2]    = { 4,  4 },
-        [XGL_CH_FMT_R16]            = { 2,  1 },
-        [XGL_CH_FMT_R16G16]         = { 4,  2 },
-        [XGL_CH_FMT_R16G16B16A16]   = { 8,  4 },
-        [XGL_CH_FMT_R32]            = { 4,  1 },
-        [XGL_CH_FMT_R32G32]         = { 8,  2 },
-        [XGL_CH_FMT_R32G32B32]      = { 12, 3 },
-        [XGL_CH_FMT_R32G32B32A32]   = { 16, 4 },
-        [XGL_CH_FMT_R16G8]          = { 3,  2 },
-        [XGL_CH_FMT_R32G8]          = { 5,  2 },
-        [XGL_CH_FMT_R9G9B9E5]       = { 4,  3 },
-        [XGL_CH_FMT_BC1]            = { 8,  4 },
-        [XGL_CH_FMT_BC2]            = { 16, 4 },
-        [XGL_CH_FMT_BC3]            = { 16, 4 },
-        [XGL_CH_FMT_BC4]            = { 8,  4 },
-        [XGL_CH_FMT_BC5]            = { 16, 4 },
-        [XGL_CH_FMT_BC6U]           = { 16, 4 },
-        [XGL_CH_FMT_BC6S]           = { 16, 4 },
-        [XGL_CH_FMT_BC7]            = { 16, 4 },
-        [XGL_CH_FMT_R8G8B8]         = { 3,  3 },
-        [XGL_CH_FMT_R16G16B16]      = { 6,  3 },
-        [XGL_CH_FMT_B10G10R10A2]    = { 4,  4 },
-        [XGL_CH_FMT_R64]            = { 8,  1 },
-        [XGL_CH_FMT_R64G64]         = { 16, 2 },
-        [XGL_CH_FMT_R64G64B64]      = { 24, 3 },
-        [XGL_CH_FMT_R64G64B64A64]   = { 32, 4 },
+    } format_table[XGL_NUM_FMT] = {
+        [XGL_FMT_UNDEFINED]            = { 0,  0 },
+        [XGL_FMT_R4G4_UNORM]           = { 1,  2 },
+        [XGL_FMT_R4G4_USCALED]         = { 1,  2 },
+        [XGL_FMT_R4G4B4A4_UNORM]       = { 2,  4 },
+        [XGL_FMT_R4G4B4A4_USCALED]     = { 2,  4 },
+        [XGL_FMT_R5G6B5_UNORM]         = { 2,  3 },
+        [XGL_FMT_R5G6B5_USCALED]       = { 2,  3 },
+        [XGL_FMT_R5G5B5A1_UNORM]       = { 2,  4 },
+        [XGL_FMT_R5G5B5A1_USCALED]     = { 2,  4 },
+        [XGL_FMT_R8_UNORM]             = { 1,  1 },
+        [XGL_FMT_R8_SNORM]             = { 1,  1 },
+        [XGL_FMT_R8_USCALED]           = { 1,  1 },
+        [XGL_FMT_R8_SSCALED]           = { 1,  1 },
+        [XGL_FMT_R8_UINT]              = { 1,  1 },
+        [XGL_FMT_R8_SINT]              = { 1,  1 },
+        [XGL_FMT_R8_SRGB]              = { 1,  1 },
+        [XGL_FMT_R8G8_UNORM]           = { 2,  2 },
+        [XGL_FMT_R8G8_SNORM]           = { 2,  2 },
+        [XGL_FMT_R8G8_USCALED]         = { 2,  2 },
+        [XGL_FMT_R8G8_SSCALED]         = { 2,  2 },
+        [XGL_FMT_R8G8_UINT]            = { 2,  2 },
+        [XGL_FMT_R8G8_SINT]            = { 2,  2 },
+        [XGL_FMT_R8G8_SRGB]            = { 2,  2 },
+        [XGL_FMT_R8G8B8_UNORM]         = { 3,  3 },
+        [XGL_FMT_R8G8B8_SNORM]         = { 3,  3 },
+        [XGL_FMT_R8G8B8_USCALED]       = { 3,  3 },
+        [XGL_FMT_R8G8B8_SSCALED]       = { 3,  3 },
+        [XGL_FMT_R8G8B8_UINT]          = { 3,  3 },
+        [XGL_FMT_R8G8B8_SINT]          = { 3,  3 },
+        [XGL_FMT_R8G8B8_SRGB]          = { 3,  3 },
+        [XGL_FMT_R8G8B8A8_UNORM]       = { 4,  4 },
+        [XGL_FMT_R8G8B8A8_SNORM]       = { 4,  4 },
+        [XGL_FMT_R8G8B8A8_USCALED]     = { 4,  4 },
+        [XGL_FMT_R8G8B8A8_SSCALED]     = { 4,  4 },
+        [XGL_FMT_R8G8B8A8_UINT]        = { 4,  4 },
+        [XGL_FMT_R8G8B8A8_SINT]        = { 4,  4 },
+        [XGL_FMT_R8G8B8A8_SRGB]        = { 4,  4 },
+        [XGL_FMT_R10G10B10A2_UNORM]    = { 4,  4 },
+        [XGL_FMT_R10G10B10A2_SNORM]    = { 4,  4 },
+        [XGL_FMT_R10G10B10A2_USCALED]  = { 4,  4 },
+        [XGL_FMT_R10G10B10A2_SSCALED]  = { 4,  4 },
+        [XGL_FMT_R10G10B10A2_UINT]     = { 4,  4 },
+        [XGL_FMT_R10G10B10A2_SINT]     = { 4,  4 },
+        [XGL_FMT_R16_UNORM]            = { 2,  1 },
+        [XGL_FMT_R16_SNORM]            = { 2,  1 },
+        [XGL_FMT_R16_USCALED]          = { 2,  1 },
+        [XGL_FMT_R16_SSCALED]          = { 2,  1 },
+        [XGL_FMT_R16_UINT]             = { 2,  1 },
+        [XGL_FMT_R16_SINT]             = { 2,  1 },
+        [XGL_FMT_R16_SFLOAT]           = { 2,  1 },
+        [XGL_FMT_R16G16_UNORM]         = { 4,  2 },
+        [XGL_FMT_R16G16_SNORM]         = { 4,  2 },
+        [XGL_FMT_R16G16_USCALED]       = { 4,  2 },
+        [XGL_FMT_R16G16_SSCALED]       = { 4,  2 },
+        [XGL_FMT_R16G16_UINT]          = { 4,  2 },
+        [XGL_FMT_R16G16_SINT]          = { 4,  2 },
+        [XGL_FMT_R16G16_SFLOAT]        = { 4,  2 },
+        [XGL_FMT_R16G16B16_UNORM]      = { 6,  3 },
+        [XGL_FMT_R16G16B16_SNORM]      = { 6,  3 },
+        [XGL_FMT_R16G16B16_USCALED]    = { 6,  3 },
+        [XGL_FMT_R16G16B16_SSCALED]    = { 6,  3 },
+        [XGL_FMT_R16G16B16_UINT]       = { 6,  3 },
+        [XGL_FMT_R16G16B16_SINT]       = { 6,  3 },
+        [XGL_FMT_R16G16B16_SFLOAT]     = { 6,  3 },
+        [XGL_FMT_R16G16B16A16_UNORM]   = { 8,  4 },
+        [XGL_FMT_R16G16B16A16_SNORM]   = { 8,  4 },
+        [XGL_FMT_R16G16B16A16_USCALED] = { 8,  4 },
+        [XGL_FMT_R16G16B16A16_SSCALED] = { 8,  4 },
+        [XGL_FMT_R16G16B16A16_UINT]    = { 8,  4 },
+        [XGL_FMT_R16G16B16A16_SINT]    = { 8,  4 },
+        [XGL_FMT_R16G16B16A16_SFLOAT]  = { 8,  4 },
+        [XGL_FMT_R32_UINT]             = { 4,  1 },
+        [XGL_FMT_R32_SINT]             = { 4,  1 },
+        [XGL_FMT_R32_SFLOAT]           = { 4,  1 },
+        [XGL_FMT_R32G32_UINT]          = { 8,  2 },
+        [XGL_FMT_R32G32_SINT]          = { 8,  2 },
+        [XGL_FMT_R32G32_SFLOAT]        = { 8,  2 },
+        [XGL_FMT_R32G32B32_UINT]       = { 12, 3 },
+        [XGL_FMT_R32G32B32_SINT]       = { 12, 3 },
+        [XGL_FMT_R32G32B32_SFLOAT]     = { 12, 3 },
+        [XGL_FMT_R32G32B32A32_UINT]    = { 16, 4 },
+        [XGL_FMT_R32G32B32A32_SINT]    = { 16, 4 },
+        [XGL_FMT_R32G32B32A32_SFLOAT]  = { 16, 4 },
+        [XGL_FMT_R64_SFLOAT]           = { 8,  1 },
+        [XGL_FMT_R64G64_SFLOAT]        = { 16, 2 },
+        [XGL_FMT_R64G64B64_SFLOAT]     = { 24, 3 },
+        [XGL_FMT_R64G64B64A64_SFLOAT]  = { 32, 4 },
+        [XGL_FMT_R11G11B10_UFLOAT]     = { 4,  3 },
+        [XGL_FMT_R9G9B9E5_UFLOAT]      = { 4,  3 },
+        [XGL_FMT_D16_UNORM]            = { 2,  1 },
+        [XGL_FMT_D24_UNORM]            = { 3,  1 },
+        [XGL_FMT_D32_SFLOAT]           = { 4,  1 },
+        [XGL_FMT_S8_UINT]              = { 1,  1 },
+        [XGL_FMT_D16_UNORM_S8_UINT]    = { 3,  2 },
+        [XGL_FMT_D24_UNORM_S8_UINT]    = { 4,  2 },
+        [XGL_FMT_D32_SFLOAT_S8_UINT]   = { 4,  2 },
+        [XGL_FMT_BC1_UNORM]            = { 8,  4 },
+        [XGL_FMT_BC1_SRGB]             = { 8,  4 },
+        [XGL_FMT_BC2_UNORM]            = { 16, 4 },
+        [XGL_FMT_BC2_SRGB]             = { 16, 4 },
+        [XGL_FMT_BC3_UNORM]            = { 16, 4 },
+        [XGL_FMT_BC3_SRGB]             = { 16, 4 },
+        [XGL_FMT_BC4_UNORM]            = { 8,  4 },
+        [XGL_FMT_BC4_SNORM]            = { 8,  4 },
+        [XGL_FMT_BC5_UNORM]            = { 16, 4 },
+        [XGL_FMT_BC5_SNORM]            = { 16, 4 },
+        [XGL_FMT_BC6H_UFLOAT]          = { 16, 4 },
+        [XGL_FMT_BC6H_SFLOAT]          = { 16, 4 },
+        [XGL_FMT_BC7_UNORM]            = { 16, 4 },
+        [XGL_FMT_BC7_SRGB]             = { 16, 4 },
+        // TODO: Initialize remaining compressed formats.
+        [XGL_FMT_ETC2_R8G8B8_UNORM]    = { 0, 0 },
+        [XGL_FMT_ETC2_R8G8B8A1_UNORM]  = { 0, 0 },
+        [XGL_FMT_ETC2_R8G8B8A8_UNORM]  = { 0, 0 },
+        [XGL_FMT_EAC_R11_UNORM]        = { 0, 0 },
+        [XGL_FMT_EAC_R11_SNORM]        = { 0, 0 },
+        [XGL_FMT_EAC_R11G11_UNORM]     = { 0, 0 },
+        [XGL_FMT_EAC_R11G11_SNORM]     = { 0, 0 },
+        [XGL_FMT_ASTC_4x4_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_4x4_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_4x5_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_4x5_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_5x5_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_5x5_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_6x5_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_6x5_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_6x6_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_6x6_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_8x5_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_8x5_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_8x6_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_8x6_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_8x8_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_8x8_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_10x5_UNORM]      = { 0, 0 },
+        [XGL_FMT_ASTC_10x5_SRGB]       = { 0, 0 },
+        [XGL_FMT_ASTC_10x6_UNORM]      = { 0, 0 },
+        [XGL_FMT_ASTC_10x6_SRGB]       = { 0, 0 },
+        [XGL_FMT_ASTC_10x8_UNORM]      = { 0, 0 },
+        [XGL_FMT_ASTC_10x8_SRGB]       = { 0, 0 },
+        [XGL_FMT_ASTC_10x10_UNORM]     = { 0, 0 },
+        [XGL_FMT_ASTC_10x10_SRGB]      = { 0, 0 },
+        [XGL_FMT_ASTC_12x10_UNORM]     = { 0, 0 },
+        [XGL_FMT_ASTC_12x10_SRGB]      = { 0, 0 },
+        [XGL_FMT_ASTC_12x12_UNORM]     = { 0, 0 },
+        [XGL_FMT_ASTC_12x12_SRGB]      = { 0, 0 },
+        [XGL_FMT_B5G6R5_UNORM]         = { 2, 3 },
+        [XGL_FMT_B5G6R5_USCALED]       = { 2, 3 },
+        [XGL_FMT_B8G8R8_UNORM]         = { 3, 3 },
+        [XGL_FMT_B8G8R8_SNORM]         = { 3, 3 },
+        [XGL_FMT_B8G8R8_USCALED]       = { 3, 3 },
+        [XGL_FMT_B8G8R8_SSCALED]       = { 3, 3 },
+        [XGL_FMT_B8G8R8_UINT]          = { 3, 3 },
+        [XGL_FMT_B8G8R8_SINT]          = { 3, 3 },
+        [XGL_FMT_B8G8R8_SRGB]          = { 3, 3 },
+        [XGL_FMT_B8G8R8A8_UNORM]       = { 4, 4 },
+        [XGL_FMT_B8G8R8A8_SNORM]       = { 4, 4 },
+        [XGL_FMT_B8G8R8A8_USCALED]     = { 4, 4 },
+        [XGL_FMT_B8G8R8A8_SSCALED]     = { 4, 4 },
+        [XGL_FMT_B8G8R8A8_UINT]        = { 4, 4 },
+        [XGL_FMT_B8G8R8A8_SINT]        = { 4, 4 },
+        [XGL_FMT_B8G8R8A8_SRGB]        = { 4, 4 },
+        [XGL_FMT_B10G10R10A2_UNORM]    = { 4, 4 },
+        [XGL_FMT_B10G10R10A2_SNORM]    = { 4, 4 },
+        [XGL_FMT_B10G10R10A2_USCALED]  = { 4, 4 },
+        [XGL_FMT_B10G10R10A2_SSCALED]  = { 4, 4 },
+        [XGL_FMT_B10G10R10A2_UINT]     = { 4, 4 },
+        [XGL_FMT_B10G10R10A2_SINT]     = { 4, 4 },
     };
 
-    return format_table[format.channelFormat].size;
+    return format_table[format].size;
 }
 
 XGL_EXTENT3D get_mip_level_extent(const XGL_EXTENT3D &extent, XGL_UINT mip_level)
@@ -836,10 +966,8 @@ class XglCmdBlitImageTest : public XglCmdBlitTest {
 protected:
     void init_test_formats(XGL_FLAGS features)
     {
-        first_linear_format_.channelFormat = XGL_CH_FMT_UNDEFINED;
-        first_linear_format_.numericFormat = XGL_NUM_FMT_UNDEFINED;
-        first_optimal_format_.channelFormat = XGL_CH_FMT_UNDEFINED;
-        first_optimal_format_.numericFormat = XGL_NUM_FMT_UNDEFINED;
+        first_linear_format_ = XGL_FMT_UNDEFINED;
+        first_optimal_format_ = XGL_FMT_UNDEFINED;
 
         for (std::vector<xgl_testing::Device::Format>::const_iterator it = dev_.formats().begin();
              it != dev_.formats().end(); it++) {
@@ -847,10 +975,10 @@ protected:
                 test_formats_.push_back(*it);
 
                 if (it->tiling == XGL_LINEAR_TILING &&
-                    first_linear_format_.channelFormat == XGL_CH_FMT_UNDEFINED)
+                    first_linear_format_ == XGL_FMT_UNDEFINED)
                     first_linear_format_ = it->format;
                 if (it->tiling == XGL_OPTIMAL_TILING &&
-                    first_optimal_format_.channelFormat == XGL_CH_FMT_UNDEFINED)
+                    first_optimal_format_ == XGL_FMT_UNDEFINED)
                     first_optimal_format_ = it->format;
             }
         }
@@ -965,6 +1093,13 @@ TEST_F(XglCmdCopyBufferToImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
+
+        // not sure what to do here
+        if (it->format == XGL_FMT_UNDEFINED ||
+            (it->format >= XGL_FMT_B8G8R8_UNORM &&
+             it->format <= XGL_FMT_B8G8R8_SRGB))
+            continue;
+
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
         img_info.imageType = XGL_IMAGE_2D;
         img_info.format = it->format;
@@ -1024,6 +1159,13 @@ TEST_F(XglCmdCopyImageToBufferTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
+
+        // not sure what to do here
+        if (it->format == XGL_FMT_UNDEFINED ||
+            (it->format >= XGL_FMT_B8G8R8_UNORM &&
+             it->format <= XGL_FMT_B8G8R8_SRGB))
+            continue;
+
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
         img_info.imageType = XGL_IMAGE_2D;
         img_info.format = it->format;
@@ -1096,6 +1238,13 @@ TEST_F(XglCmdCopyImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
+
+        // not sure what to do here
+        if (it->format == XGL_FMT_UNDEFINED ||
+            (it->format >= XGL_FMT_B8G8R8_UNORM &&
+             it->format <= XGL_FMT_B8G8R8_SRGB))
+            continue;
+
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
         img_info.imageType = XGL_IMAGE_2D;
         img_info.format = it->format;
@@ -1155,12 +1304,17 @@ TEST_F(XglCmdCloneImageDataTest, Basic)
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         // not sure what to do here
-        if (it->format.channelFormat == XGL_CH_FMT_UNDEFINED ||
-            (it->format.channelFormat >= XGL_CH_FMT_BC1 &&
-             it->format.channelFormat <= XGL_CH_FMT_BC7) ||
-            it->format.channelFormat == XGL_CH_FMT_R64G64B64 ||
-            it->format.channelFormat == XGL_CH_FMT_R64G64B64A64 ||
-            it->format.numericFormat == XGL_NUM_FMT_DS)
+        if (it->format == XGL_FMT_UNDEFINED ||
+            (it->format >= XGL_FMT_R32G32B32_UINT &&
+             it->format <= XGL_FMT_R32G32B32_SFLOAT) ||
+            (it->format >= XGL_FMT_B8G8R8_UNORM &&
+             it->format <= XGL_FMT_B8G8R8_SRGB) ||
+            (it->format >= XGL_FMT_BC1_UNORM &&
+             it->format <= XGL_FMT_ASTC_12x12_SRGB) ||
+            (it->format >= XGL_FMT_D16_UNORM &&
+             it->format <= XGL_FMT_D32_SFLOAT_S8_UINT) ||
+            it->format == XGL_FMT_R64G64B64_SFLOAT ||
+            it->format == XGL_FMT_R64G64B64A64_SFLOAT)
             continue;
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
@@ -1208,23 +1362,21 @@ protected:
         std::vector<uint8_t> raw;
 
         // TODO support all formats
-        if (format.numericFormat == XGL_NUM_FMT_UNORM) {
-            switch (format.channelFormat) {
-            case XGL_CH_FMT_R8G8B8A8:
-                raw.push_back(color[0] * 255.0f);
-                raw.push_back(color[1] * 255.0f);
-                raw.push_back(color[2] * 255.0f);
-                raw.push_back(color[3] * 255.0f);
-                break;
-            case XGL_CH_FMT_B8G8R8A8:
-                raw.push_back(color[2] * 255.0f);
-                raw.push_back(color[1] * 255.0f);
-                raw.push_back(color[0] * 255.0f);
-                raw.push_back(color[3] * 255.0f);
-                break;
-            default:
-                break;
-            }
+        switch (format) {
+        case XGL_FMT_R8G8B8A8_UNORM:
+            raw.push_back(color[0] * 255.0f);
+            raw.push_back(color[1] * 255.0f);
+            raw.push_back(color[2] * 255.0f);
+            raw.push_back(color[3] * 255.0f);
+            break;
+        case XGL_FMT_B8G8R8A8_UNORM:
+            raw.push_back(color[2] * 255.0f);
+            raw.push_back(color[1] * 255.0f);
+            raw.push_back(color[0] * 255.0f);
+            raw.push_back(color[3] * 255.0f);
+            break;
+        default:
+            break;
         }
 
         return raw;
@@ -1235,23 +1387,21 @@ protected:
         std::vector<uint8_t> raw;
 
         // TODO support all formats
-        if (format.numericFormat == XGL_NUM_FMT_UNORM) {
-            switch (format.channelFormat) {
-            case XGL_CH_FMT_R8G8B8A8:
-                raw.push_back(static_cast<uint8_t>(color[0]));
-                raw.push_back(static_cast<uint8_t>(color[1]));
-                raw.push_back(static_cast<uint8_t>(color[2]));
-                raw.push_back(static_cast<uint8_t>(color[3]));
-                break;
-            case XGL_CH_FMT_B8G8R8A8:
-                raw.push_back(static_cast<uint8_t>(color[2]));
-                raw.push_back(static_cast<uint8_t>(color[1]));
-                raw.push_back(static_cast<uint8_t>(color[0]));
-                raw.push_back(static_cast<uint8_t>(color[3]));
-                break;
-            default:
-                break;
-            }
+        switch (format) {
+        case XGL_FMT_R8G8B8A8_UNORM:
+            raw.push_back(static_cast<uint8_t>(color[0]));
+            raw.push_back(static_cast<uint8_t>(color[1]));
+            raw.push_back(static_cast<uint8_t>(color[2]));
+            raw.push_back(static_cast<uint8_t>(color[3]));
+            break;
+        case XGL_FMT_B8G8R8A8_UNORM:
+            raw.push_back(static_cast<uint8_t>(color[2]));
+            raw.push_back(static_cast<uint8_t>(color[1]));
+            raw.push_back(static_cast<uint8_t>(color[0]));
+            raw.push_back(static_cast<uint8_t>(color[3]));
+            break;
+        default:
+            break;
         }
 
         return raw;
@@ -1399,13 +1549,19 @@ TEST_F(XglCmdClearColorImageRawTest, Basic)
         const XGL_UINT32 color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
 
         // not sure what to do here
-        if (it->format.channelFormat == XGL_CH_FMT_UNDEFINED ||
-            it->format.channelFormat == XGL_CH_FMT_R32G32B32 ||
-            it->format.channelFormat == XGL_CH_FMT_R8G8B8 ||
-            it->format.channelFormat == XGL_CH_FMT_R16G16B16 ||
-            it->format.channelFormat == XGL_CH_FMT_R64G64B64 ||
-            it->format.channelFormat == XGL_CH_FMT_R64G64B64A64 ||
-            it->format.numericFormat == XGL_NUM_FMT_DS)
+        if (it->format == XGL_FMT_UNDEFINED ||
+            (it->format >= XGL_FMT_R8G8B8_UNORM &&
+             it->format <= XGL_FMT_R8G8B8_SRGB) ||
+            (it->format >= XGL_FMT_B8G8R8_UNORM &&
+             it->format <= XGL_FMT_B8G8R8_SRGB) ||
+            (it->format >= XGL_FMT_R16G16B16_UNORM &&
+             it->format <= XGL_FMT_R16G16B16_SFLOAT) ||
+            (it->format >= XGL_FMT_R32G32B32_UINT &&
+             it->format <= XGL_FMT_R32G32B32_SFLOAT) ||
+            it->format == XGL_FMT_R64G64B64_SFLOAT ||
+            it->format == XGL_FMT_R64G64B64A64_SFLOAT ||
+            (it->format >= XGL_FMT_D16_UNORM &&
+             it->format <= XGL_FMT_D32_SFLOAT_S8_UINT))
             continue;
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
@@ -1438,17 +1594,17 @@ protected:
         std::vector<uint8_t> raw;
 
         // depth
-        switch (format.channelFormat) {
-        case XGL_CH_FMT_R16:
-        case XGL_CH_FMT_R16G8:
+        switch (format) {
+        case XGL_FMT_D16_UNORM:
+        case XGL_FMT_D16_UNORM_S8_UINT:
             {
                 const uint16_t unorm = depth * 65535.0f;
                 raw.push_back(unorm & 0xff);
                 raw.push_back(unorm >> 8);
             }
             break;
-        case XGL_CH_FMT_R32:
-        case XGL_CH_FMT_R32G8:
+        case XGL_FMT_D32_SFLOAT:
+        case XGL_FMT_D32_SFLOAT_S8_UINT:
             {
                 const union {
                     XGL_FLOAT depth;
@@ -1466,15 +1622,15 @@ protected:
         }
 
         // stencil
-        switch (format.channelFormat) {
-        case XGL_CH_FMT_R8:
+        switch (format) {
+        case XGL_FMT_S8_UINT:
             raw.push_back(stencil);
             break;
-        case XGL_CH_FMT_R16G8:
+        case XGL_FMT_D16_UNORM_S8_UINT:
             raw.push_back(stencil);
             raw.push_back(0);
             break;
-        case XGL_CH_FMT_R32G8:
+        case XGL_FMT_D32_SFLOAT_S8_UINT:
             raw.push_back(stencil);
             raw.push_back(0);
             raw.push_back(0);
@@ -1567,7 +1723,10 @@ TEST_F(XglCmdClearDepthStencilTest, Basic)
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         // known driver issues
-        if (it->format.channelFormat == XGL_CH_FMT_R8)
+        if (it->format == XGL_FMT_S8_UINT ||
+            it->format == XGL_FMT_D24_UNORM ||
+            it->format == XGL_FMT_D16_UNORM_S8_UINT ||
+            it->format == XGL_FMT_D24_UNORM_S8_UINT)
             continue;
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
