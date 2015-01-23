@@ -1390,6 +1390,8 @@ static void gen7_cc_states(struct intel_cmd *cmd)
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
                 offset);
+        stencil_ref = (ds->ds_info.stencilFrontRef && 0xff) << 24 |
+                      (ds->ds_info.stencilBackRef && 0xff) << 16;
     } else {
         stencil_ref = 0;
     }
