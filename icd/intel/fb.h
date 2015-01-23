@@ -27,7 +27,7 @@
 struct intel_framebuffer {
     struct intel_obj obj;
 
-    const struct intel_rt_view *rt[XGL_MAX_COLOR_ATTACHMENTS];
+    const struct intel_rt_view *rt[INTEL_MAX_RENDER_TARGETS];
     XGL_UINT rt_count;
 
     const struct intel_ds_view *ds;
@@ -67,10 +67,10 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
                            struct intel_framebuffer ** ppFramebuffer);
 void intel_fb_destroy(struct intel_framebuffer *fb);
 
-XGL_RESULT intel_rp_create(struct intel_dev *dev,
+XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
                            const XGL_RENDER_PASS_CREATE_INFO* pInfo,
                            struct intel_render_pass** ppRenderPass);
-void intel_rp_destroy(struct intel_render_pass *rp);
+void intel_render_pass_destroy(struct intel_render_pass *rp);
 
 XGL_RESULT XGLAPI intelCreateFramebuffer(
     XGL_DEVICE                                  device,
