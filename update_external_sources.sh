@@ -59,12 +59,16 @@ function update_BIL () {
    cp $BASEDIR/BIL/glslangOverlay_into_BIL/*.cpp  $BASEDIR/glslang/BIL
    cp $BASEDIR/BIL/glslangOverlay_into_BIL/*.txt  $BASEDIR/glslang/BIL
    cp -r $BASEDIR/BIL/glslangOverlay_into_BIL/glslang/*  $BASEDIR/glslang/glslang/
-   cp $BASEDIR/BIL/Bil.h $BASEDIR/glslang/BIL
-   cp $BASEDIR/BIL/GLSL450Lib.h $BASEDIR/glslang/BIL
+   cp -uv $BASEDIR/BIL/Bil.h $BASEDIR/glslang/BIL
+   cp -uv $BASEDIR/BIL/GLSL450Lib.h $BASEDIR/glslang/BIL
+
    # copy of necessary BIL pieces into LLVM
-   cp $BASEDIR/BIL/ToLLVM/CMakeLists.txt $BASEDIR/LunarGLASS
+   cp -uv $BASEDIR/BIL/ToLLVM/CMakeLists.txt $BASEDIR/LunarGLASS
    cp -r $BASEDIR/BIL/ToLLVM/Standalone $BASEDIR/LunarGLASS
+
    cp -r $BASEDIR/BIL/ToLLVM/FrontEnds/* $BASEDIR/LunarGLASS/Frontends/
+   cp -uv $BASEDIR/BIL/ToLLVM/Backends/GLSL/BottomToGLSL.cpp $BASEDIR/LunarGLASS/Backends/GLSL
+
 }
 
 function build_glslang () {
