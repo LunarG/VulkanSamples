@@ -111,7 +111,7 @@ if [ ! -d "$BASEDIR/BIL" ]; then
    create_BIL
 fi
 
-if [ ! -d "$BASEDIR/BIL" -o ! -f "$BASEDIR/BIL/Bil.h"]; then
+if [ ! -d "$BASEDIR/BIL" -o ! -f "$BASEDIR/BIL/Bil.h" ]; then
       echo "Missing BIL, is your Khronos account correct?"
       exit 1
 fi
