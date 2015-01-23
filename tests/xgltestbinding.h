@@ -109,7 +109,7 @@ protected:
     void reinit(XGL_BASE_OBJECT obj, bool own);
     void reinit(XGL_BASE_OBJECT obj) { reinit(obj, true); }
 
-    bool own() const { return own_obj_; };
+    bool own() const { return own_obj_; }
 
 private:
     // base objects are non-copyable
