@@ -83,7 +83,7 @@ public:
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false);
     virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled);
     virtual void add_calltree_contextmenu_item(QAction* pAction);
-    virtual void set_calltree_model(glvdebug_QTraceFileModel* pModel);
+    virtual void set_calltree_model(glvdebug_QTraceFileModel* pTraceFileModel, QAbstractProxyModel *pModel);
     virtual void select_call_at_packet_index(unsigned long long packetIndex);
     virtual void on_replay_state_changed(bool bReplayInProgress);
     virtual unsigned long long get_current_packet_index();

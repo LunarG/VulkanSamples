@@ -36,6 +36,7 @@ typedef struct glvdebug_xgl_settings
     BOOL pauseOnReplayInfo;
     BOOL pauseOnReplayWarning;
     BOOL pauseOnReplayError;
+    BOOL groupByFrame;
 } glvdebug_xgl_settings;
 
 extern glvdebug_xgl_settings g_xglDebugSettings;

@@ -33,6 +33,7 @@
 #include <QMessageBox>
 #include <QCoreApplication>
 #include <QGraphicsBlurEffect>
+#include <QAbstractProxyModel>
 #include <qwindow.h>
 
 #include "ui_glvdebug.h"
@@ -162,26 +163,40 @@ QToolButton* glvdebug::add_toolbar_button(const QString& title, bool bEnabled)
     return pButton;
 }
 
-void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pModel)
+void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pTraceFileModel, QAbstractProxyModel* pModel)
 {
-    ui->treeView->setModel(pModel);
-    m_pTraceFileModel = pModel;
+    m_pTraceFileModel = pTraceFileModel;
 
-    // hide columns that are not very important right now
-    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_TracerId);
-    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_TracerId);
-    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_BeginTime);
-    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_BeginTime);
-    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
-    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_EndTime);
-    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
-    m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_PacketSize);
+    if (pModel == NULL)
+    {
+        ui->treeView->setModel(pTraceFileModel);
 
-    int width = ui->treeView->geometry().width();
-    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
-    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_PacketIndex,    width * 0.15);
-    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_ThreadId,       width * 0.15);
-    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_CpuDuration,    width * 0.15);
+        // hide columns that are not very important right now
+        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_TracerId);
+        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_TracerId);
+        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_BeginTime);
+        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_BeginTime);
+        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
+        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_EndTime);
+        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
+        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_PacketSize);
+
+        int width = ui->treeView->geometry().width();
+        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
+        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_PacketIndex,    width * 0.15);
+        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_ThreadId,       width * 0.15);
+        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_CpuDuration,    width * 0.15);
+    }
+    else
+    {
+        ui->treeView->setModel(pModel);
+
+        int columns = ui->treeView->header()->count();
+        for (int i = 0; i < columns; i++)
+        {
+            ui->treeView->showColumn(i);
+        }
+    }
 }
 
 void glvdebug::add_calltree_contextmenu_item(QAction* pAction)

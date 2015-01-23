@@ -91,8 +91,27 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     }
 
     m_pTraceFileModel = new glvdebug_xgl_QFileModel(NULL, pTraceFileInfo);
-    m_pView->set_calltree_model(m_pTraceFileModel);
+    updateCallTreeBasedOnSettings();
+
     return true;
+}
+
+void glvdebug_xgl_QController::updateCallTreeBasedOnSettings()
+{
+    if (m_pTraceFileModel == NULL)
+    {
+        return;
+    }
+
+    if (g_xglDebugSettings.groupByFrame)
+    {
+        m_groupByFramesProxy.setSourceModel(m_pTraceFileModel);
+        m_pView->set_calltree_model(m_pTraceFileModel, &m_groupByFramesProxy);
+    }
+    else
+    {
+        m_pView->set_calltree_model(m_pTraceFileModel, NULL);
+    }
 }
 
 void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
@@ -178,13 +197,15 @@ void glvdebug_xgl_QController::onSettingsUpdated(glv_SettingGroup *pGroups, unsi
     {
         m_pReplayWidget->OnSettingsUpdated(pGroups, numGroups);
     }
+
+    updateCallTreeBasedOnSettings();
 }
 
 void glvdebug_xgl_QController::UnloadTraceFile(void)
 {
     if (m_pView != NULL)
     {
-        m_pView->set_calltree_model(NULL);
+        m_pView->set_calltree_model(NULL, NULL);
         m_pView = NULL;
     }
 

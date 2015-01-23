@@ -25,6 +25,7 @@
 #define GLVDEBUG_XGL_QCONTROLLER_H
 
 #include "glv_trace_packet_identifiers.h"
+#include "glvdebug_xgl_qgroupframesproxymodel.h"
 #include "glvdebug_QReplayWidget.h"
 #include "glvdebug_QReplayWorker.h"
 #include "glvdebug_xgl_qfile_model.h"
@@ -62,8 +63,10 @@ protected slots:
 private:
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
+    glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;
 
     void setStateWidgetsEnabled(bool bEnabled);
+    void updateCallTreeBasedOnSettings();
 };
 
 #endif // GLVDEBUG_XGL_QCONTROLLER_H
