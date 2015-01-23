@@ -976,8 +976,11 @@ static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
     uint32_t dw[3];
 
     dw[0] = pipeline->cmd_depth_stencil;
+    /* same read and write masks for both front and back faces */
     dw[1] = (state->ds_info.stencilReadMask & 0xff) << 24 |
-            (state->ds_info.stencilWriteMask & 0xff) << 16;
+            (state->ds_info.stencilWriteMask & 0xff) << 16 |
+            (state->ds_info.stencilReadMask & 0xff) << 8 |
+            (state->ds_info.stencilWriteMask & 0xff);
     dw[2] = pipeline->cmd_depth_test;
 
     CMD_ASSERT(cmd, 6, 7.5);
