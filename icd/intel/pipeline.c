@@ -1207,6 +1207,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
     pipeline_build_vertex_elements(pipeline, info);
     pipeline_build_fragment_SBE(pipeline);
     pipeline_build_msaa(pipeline, info);
+    pipeline_build_depth_stencil(pipeline, info);
 
     if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
         pipeline_build_urb_alloc_gen7(pipeline, info);
@@ -1215,7 +1216,6 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
         pipeline_build_hs(pipeline, info);
         pipeline_build_te(pipeline, info);
         pipeline_build_ds(pipeline, info);
-        pipeline_build_depth_stencil(pipeline, info);
 
         pipeline->wa_flags = INTEL_CMD_WA_GEN6_PRE_DEPTH_STALL_WRITE |
                              INTEL_CMD_WA_GEN6_PRE_COMMAND_SCOREBOARD_STALL |
