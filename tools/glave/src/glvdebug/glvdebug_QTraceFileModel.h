@@ -185,6 +185,11 @@ public:
             return createIndex(row, column);
         }
 
+        if ((uint64_t)row >= m_pTraceFileInfo->packetCount)
+        {
+            return QModelIndex();
+        }
+
         glv_trace_packet_header* pHeader = m_pTraceFileInfo->pPacketOffsets[row].pHeader;
         void* pData = NULL;
         switch (column)

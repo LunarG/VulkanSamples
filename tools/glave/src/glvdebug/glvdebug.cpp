@@ -204,13 +204,27 @@ void glvdebug::add_calltree_contextmenu_item(QAction* pAction)
     ui->treeView->addAction(pAction);
 }
 
+int indexOfColumn(QAbstractItemModel* pModel, const QString &text)
+{
+    for (int i = 0; i < pModel->columnCount(); i++)
+    {
+        if (pModel->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString() == text)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
 {
     if (m_pTraceFileModel != NULL)
     {
         QApplication::setOverrideCursor(Qt::WaitCursor);
+
         QModelIndex start = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_PacketIndex);
-        QModelIndexList matches = m_pTraceFileModel->match(start, Qt::DisplayRole, QVariant(packetIndex), 1);
+
+        QModelIndexList matches = ui->treeView->model()->match(start, Qt::DisplayRole, QVariant(packetIndex), 1, Qt::MatchFixedString | Qt::MatchRecursive | Qt::MatchWrap);
         if (matches.count() > 0)
         {
             selectApicallModelIndex(matches[0], true, true);
@@ -245,12 +259,14 @@ unsigned long long glvdebug::get_current_packet_index()
     if (index.isValid())
     {
         glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
-        assert(pHeader != NULL);
-        packetIndex = pHeader->global_packet_index;
+        if (pHeader != NULL)
+        {
+            assert(pHeader != NULL);
+            packetIndex = pHeader->global_packet_index;
+        }
     }
     return packetIndex;
 }
-
 
 void glvdebug::reset_view()
 {
