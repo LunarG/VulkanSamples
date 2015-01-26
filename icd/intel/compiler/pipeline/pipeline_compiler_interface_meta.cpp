@@ -722,7 +722,7 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
         sh->uses |= INTEL_SHADER_USE_VID;
         break;
     case INTEL_DEV_META_FS_CLEAR_DEPTH:
-        sh->uses |= INTEL_SHADER_USE_COMPUTED_DEPTH;
+        sh->uses |= INTEL_COMPUTED_DEPTH_MODE_ON;
         break;
     default:
         break;

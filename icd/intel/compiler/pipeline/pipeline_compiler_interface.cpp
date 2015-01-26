@@ -646,6 +646,34 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             pipe_shader->urb_grf_start = data->first_curbe_grf;
             pipe_shader->in_count      = data->num_varying_inputs;
 
+            // These are programmed based on gen7_wm_state.c::upload_wm_state()
+            struct gl_fragment_program *fp = (struct gl_fragment_program *)
+               sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program;
+
+            if (fp->UsesKill)
+                pipe_shader->uses |= INTEL_SHADER_USE_KILL;
+
+            if (fp->Base.InputsRead & VARYING_BIT_POS)
+                pipe_shader->uses |= INTEL_SHADER_USE_DEPTH | INTEL_SHADER_USE_W;
+
+            if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
+
+                switch (fp->FragDepthLayout) {
+                   case FRAG_DEPTH_LAYOUT_NONE:
+                   case FRAG_DEPTH_LAYOUT_ANY:
+                      pipe_shader->computed_depth_mode = INTEL_COMPUTED_DEPTH_MODE_ON;
+                      break;
+                   case FRAG_DEPTH_LAYOUT_GREATER:
+                      pipe_shader->computed_depth_mode = INTEL_COMPUTED_DEPTH_MODE_ON_GE;
+                      break;
+                   case FRAG_DEPTH_LAYOUT_LESS:
+                      pipe_shader->computed_depth_mode = INTEL_COMPUTED_DEPTH_MODE_ON_LE;
+                      break;
+                   case FRAG_DEPTH_LAYOUT_UNCHANGED:
+                      break;
+                }
+            }
+
             // Ensure this is 1:1, or create a converter
             pipe_shader->barycentric_interps = data->barycentric_interp_modes;
 
@@ -654,7 +682,6 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             // TODO - Figure out multiple FS outputs
             pipe_shader->out_count = 1;
-            pipe_shader->uses = 0; // ??
 
             pipe_shader->per_thread_scratch_size = data->total_scratch;
 

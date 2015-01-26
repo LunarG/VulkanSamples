@@ -38,9 +38,16 @@ enum intel_pipeline_shader_use {
     INTEL_SHADER_USE_IID                = (1 << 1),
 
     INTEL_SHADER_USE_KILL               = (1 << 2),
-    INTEL_SHADER_USE_COMPUTED_DEPTH     = (1 << 3),
-    INTEL_SHADER_USE_DEPTH              = (1 << 4),
-    INTEL_SHADER_USE_W                  = (1 << 5),
+    INTEL_SHADER_USE_DEPTH              = (1 << 3),
+    INTEL_SHADER_USE_W                  = (1 << 4),
+};
+
+/* This order must match Pixel Shader Computed Depth Mode in 3DSTATE_WM */
+enum intel_computed_depth_mode {
+    INTEL_COMPUTED_DEPTH_MODE_NONE,
+    INTEL_COMPUTED_DEPTH_MODE_ON,
+    INTEL_COMPUTED_DEPTH_MODE_ON_GE,
+    INTEL_COMPUTED_DEPTH_MODE_ON_LE
 };
 
 #define INTEL_PIPELINE_RMAP_SLOT_RT ((XGL_UINT) -1)
@@ -122,6 +129,8 @@ struct intel_pipeline_shader {
     XGL_FLAGS barycentric_interps;
 
     XGL_GPU_SIZE per_thread_scratch_size;
+
+    enum intel_computed_depth_mode computed_depth_mode;
 
     struct intel_pipeline_rmap *rmap;
 

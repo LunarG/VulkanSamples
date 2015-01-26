@@ -592,7 +592,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
         pipeline->cb_state.alphaToCoverageEnable)
         dw5 |= GEN6_WM_DW5_PS_KILL;
 
-    if (fs->uses & INTEL_SHADER_USE_COMPUTED_DEPTH)
+    if (fs->computed_depth_mode)
         dw5 |= GEN6_WM_DW5_PS_COMPUTE_DEPTH;
     if (fs->uses & INTEL_SHADER_USE_DEPTH)
         dw5 |= GEN6_WM_DW5_PS_USE_DEPTH;
@@ -653,8 +653,8 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
         pipeline->cb_state.alphaToCoverageEnable)
         dw1 |= GEN7_WM_DW1_PS_KILL;
 
-    if (fs->uses & INTEL_SHADER_USE_COMPUTED_DEPTH)
-        dw1 |= GEN7_WM_DW1_PSCDEPTH_ON;
+    dw1 |= fs->computed_depth_mode << GEN7_WM_DW1_PSCDEPTH__SHIFT;
+
     if (fs->uses & INTEL_SHADER_USE_DEPTH)
         dw1 |= GEN7_WM_DW1_PS_USE_DEPTH;
     if (fs->uses & INTEL_SHADER_USE_W)
