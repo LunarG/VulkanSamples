@@ -176,7 +176,7 @@ typedef enum _XGL_SET_EVENT
 typedef enum _XGL_WAIT_EVENT
 {
     XGL_WAIT_EVENT_TOP_OF_PIPE                              = 0x00000001,   // Wait event before the GPU starts processing subsequent commands
-    XGL_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING               = 0x00000002,   // Wait event before subsequent fragment processing
+    XGL_WAIT_EVENT_BEFORE_RASTERIZATION                     = 0x00000002,   // Wait event before rasterizing subsequent primitives
 } XGL_WAIT_EVENT;
 
 typedef enum _XGL_MEMORY_OUTPUT_FLAGS
