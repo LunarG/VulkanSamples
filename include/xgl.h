@@ -133,6 +133,10 @@ typedef enum _XGL_QUEUE_TYPE
     XGL_QUEUE_TYPE_GRAPHICS                                 = 0x1,
     XGL_QUEUE_TYPE_COMPUTE                                  = 0x2,
     XGL_QUEUE_TYPE_DMA                                      = 0x3,
+
+    XGL_QUEUE_TYPE_BEGIN_RANGE                              = XGL_QUEUE_TYPE_GRAPHICS,
+    XGL_QUEUE_TYPE_END_RANGE                                = XGL_QUEUE_TYPE_DMA,
+    XGL_NUM_QUEUE_TYPE                                      = (XGL_QUEUE_TYPE_END_RANGE - XGL_QUEUE_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_QUEUE_TYPE)
 } XGL_QUEUE_TYPE;
 
@@ -160,6 +164,10 @@ typedef enum _XGL_IMAGE_LAYOUT
     XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL                          = 0x00000005,   // Optimal layout when image is used only for clear operations
     XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                = 0x00000006,   // Optimal layout when image is used only as source of transfer operations
     XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL           = 0x00000007,   // Optimal layout when image is used only as destination of transfer operations
+
+    XGL_IMAGE_LAYOUT_BEGIN_RANGE                            = XGL_IMAGE_LAYOUT_GENERAL,
+    XGL_IMAGE_LAYOUT_END_RANGE                              = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+    XGL_NUM_IMAGE_LAYOUT                                    = (XGL_IMAGE_LAYOUT_END_RANGE - XGL_IMAGE_LAYOUT_BEGIN_RANGE + 1),
 } XGL_IMAGE_LAYOUT;
 
 typedef enum _XGL_SET_EVENT
@@ -171,12 +179,20 @@ typedef enum _XGL_SET_EVENT
     XGL_SET_EVENT_COMPUTE_PIPELINE_COMPLETE                 = 0x00000005,   // Set event when all pending compute operations are complete
     XGL_SET_EVENT_TRANSFER_COMPLETE                         = 0x00000006,   // Set event when all pending transfer operations are complete
     XGL_SET_EVENT_GPU_COMMANDS_COMPLETE                     = 0x00000007,   // Set event when all pending GPU work is complete
+
+    XGL_SET_EVENT_BEGIN_RANGE                               = XGL_SET_EVENT_TOP_OF_PIPE,
+    XGL_SET_EVENT_END_RANGE                                 = XGL_SET_EVENT_GPU_COMMANDS_COMPLETE,
+    XGL_NUM_SET_EVENT                                       = (XGL_SET_EVENT_END_RANGE - XGL_SET_EVENT_BEGIN_RANGE + 1),
 } XGL_SET_EVENT;
 
 typedef enum _XGL_WAIT_EVENT
 {
     XGL_WAIT_EVENT_TOP_OF_PIPE                              = 0x00000001,   // Wait event before the GPU starts processing subsequent commands
     XGL_WAIT_EVENT_BEFORE_RASTERIZATION                     = 0x00000002,   // Wait event before rasterizing subsequent primitives
+
+    XGL_WAIT_EVENT_BEGIN_RANGE                              = XGL_WAIT_EVENT_TOP_OF_PIPE,
+    XGL_WAIT_EVENT_END_RANGE                                = XGL_WAIT_EVENT_BEFORE_RASTERIZATION,
+    XGL_NUM_WAIT_EVENT                                      = (XGL_WAIT_EVENT_END_RANGE - XGL_WAIT_EVENT_BEGIN_RANGE + 1),
 } XGL_WAIT_EVENT;
 
 typedef enum _XGL_MEMORY_OUTPUT_FLAGS
@@ -206,6 +222,10 @@ typedef enum _XGL_ATTACHMENT_LOAD_OP
     XGL_ATTACHMENT_LOAD_OP_LOAD                             = 0x00000000,
     XGL_ATTACHMENT_LOAD_OP_CLEAR                            = 0x00000001,
     XGL_ATTACHMENT_LOAD_OP_DONT_CARE                        = 0x00000002,
+
+    XGL_ATTACHMENT_LOAD_OP_BEGIN_RANGE                      = XGL_ATTACHMENT_LOAD_OP_LOAD,
+    XGL_ATTACHMENT_LOAD_OP_END_RANGE                        = XGL_ATTACHMENT_LOAD_OP_DONT_CARE,
+    XGL_NUM_ATTACHMENT_LOAD_OP                              = (XGL_ATTACHMENT_LOAD_OP_END_RANGE - XGL_ATTACHMENT_LOAD_OP_BEGIN_RANGE + 1),
 } XGL_ATTACHMENT_LOAD_OP;
 
 typedef enum _XGL_ATTACHMENT_STORE_OP
@@ -213,6 +233,10 @@ typedef enum _XGL_ATTACHMENT_STORE_OP
     XGL_ATTACHMENT_STORE_OP_STORE                           = 0x00000000,
     XGL_ATTACHMENT_STORE_OP_RESOLVE_MSAA                    = 0x00000001,
     XGL_ATTACHMENT_STORE_OP_DONT_CARE                       = 0x00000002,
+
+    XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE                     = XGL_ATTACHMENT_STORE_OP_STORE,
+    XGL_ATTACHMENT_STORE_OP_END_RANGE                       = XGL_ATTACHMENT_STORE_OP_DONT_CARE,
+    XGL_NUM_ATTACHMENT_STORE_OP                             = (XGL_ATTACHMENT_STORE_OP_END_RANGE - XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE + 1),
 } XGL_ATTACHMENT_STORE_OP;
 
 typedef enum _XGL_IMAGE_TYPE
@@ -428,6 +452,10 @@ typedef enum _XGL_TEX_FILTER
 {
     XGL_TEX_FILTER_NEAREST                                  = 0,
     XGL_TEX_FILTER_LINEAR                                   = 1,
+
+    XGL_TEX_FILTER_BEGIN_RANGE                              = XGL_TEX_FILTER_NEAREST,
+    XGL_TEX_FILTER_END_RANGE                                = XGL_TEX_FILTER_LINEAR,
+    XGL_NUM_TEX_FILTER                                      = (XGL_TEX_FILTER_END_RANGE - XGL_TEX_FILTER_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_TEX_FILTER)
 } XGL_TEX_FILTER;
 
@@ -436,6 +464,10 @@ typedef enum _XGL_TEX_MIPMAP_MODE
     XGL_TEX_MIPMAP_BASE                                     = 0,        // Always choose base level
     XGL_TEX_MIPMAP_NEAREST                                  = 1,        // Choose nearest mip level
     XGL_TEX_MIPMAP_LINEAR                                   = 2,        // Linear filter between mip levels
+
+    XGL_TEX_MIPMAP_BEGIN_RANGE                              = XGL_TEX_MIPMAP_BASE,
+    XGL_TEX_MIPMAP_END_RANGE                                = XGL_TEX_MIPMAP_LINEAR,
+    XGL_NUM_TEX_MIPMAP                                      = (XGL_TEX_MIPMAP_END_RANGE - XGL_TEX_MIPMAP_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_TEX_MIPMAP_MODE)
 } XGL_TEX_MIPMAP_MODE;
 
@@ -658,6 +690,9 @@ typedef enum _XGL_PHYSICAL_GPU_INFO_TYPE
     XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES             = 0x00000002,
     XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES            = 0x00000003,
 
+    XGL_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE                  = XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+    XGL_INFO_TYPE_PHYSICAL_GPU_END_RANGE                    = XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
+    XGL_NUM_INFO_TYPE_PHYSICAL_GPU                          = (XGL_INFO_TYPE_PHYSICAL_GPU_END_RANGE - XGL_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_PHYSICAL_GPU_INFO_TYPE)
 } XGL_PHYSICAL_GPU_INFO_TYPE;
 
@@ -666,6 +701,9 @@ typedef enum _XGL_FORMAT_INFO_TYPE
     // Info type for xlgGetFormatInfo()
     XGL_INFO_TYPE_FORMAT_PROPERTIES                         = 0x00000000,
 
+    XGL_INFO_TYPE_FORMAT_BEGIN_RANGE                        = XGL_INFO_TYPE_FORMAT_PROPERTIES,
+    XGL_INFO_TYPE_FORMAT_END_RANGE                          = XGL_INFO_TYPE_FORMAT_PROPERTIES,
+    XGL_NUM_INFO_TYPE_FORMAT                                 = (XGL_INFO_TYPE_FORMAT_END_RANGE - XGL_INFO_TYPE_FORMAT_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_FORMAT_INFO_TYPE)
 } XGL_FORMAT_INFO_TYPE;
 
@@ -674,6 +712,9 @@ typedef enum _XGL_SUBRESOURCE_INFO_TYPE
     // Info type for xglGetImageSubresourceInfo()
     XGL_INFO_TYPE_SUBRESOURCE_LAYOUT                        = 0x00000000,
 
+    XGL_INFO_TYPE_SUBRESOURCE_BEGIN_RANGE                   = XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+    XGL_INFO_TYPE_SUBRESOURCE_END_RANGE                     = XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+    XGL_NUM_INFO_TYPE_SUBRESOURCE                           = (XGL_INFO_TYPE_SUBRESOURCE_END_RANGE - XGL_INFO_TYPE_SUBRESOURCE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_SUBRESOURCE_INFO_TYPE)
 } XGL_SUBRESOURCE_INFO_TYPE;
 
@@ -684,6 +725,10 @@ typedef enum _XGL_OBJECT_INFO_TYPE
     XGL_INFO_TYPE_MEMORY_REQUIREMENTS                       = 0x00000001,
     XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS                = 0x00000002,
     XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS                 = 0x00000003,
+
+    XGL_INFO_TYPE_BEGIN_RANGE                               = XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+    XGL_INFO_TYPE_END_RANGE                                 = XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+    XGL_NUM_INFO_TYPE                                       = (XGL_INFO_TYPE_END_RANGE - XGL_INFO_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_OBJECT_INFO_TYPE)
 } XGL_OBJECT_INFO_TYPE;
 
@@ -817,9 +862,13 @@ typedef enum _XGL_NUM_FORMAT
 
 typedef enum _XGL_VERTEX_INPUT_STEP_RATE
 {
-    XGL_VERTEX_INPUT_STEP_RATE_VERTEX     = 0x0,
-    XGL_VERTEX_INPUT_STEP_RATE_INSTANCE   = 0x1,
-    XGL_VERTEX_INPUT_STEP_RATE_DRAW       = 0x2,  //Optional
+    XGL_VERTEX_INPUT_STEP_RATE_VERTEX                       = 0x0,
+    XGL_VERTEX_INPUT_STEP_RATE_INSTANCE                     = 0x1,
+    XGL_VERTEX_INPUT_STEP_RATE_DRAW                         = 0x2,  //Optional
+
+    XGL_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE                  = XGL_VERTEX_INPUT_STEP_RATE_VERTEX,
+    XGL_VERTEX_INPUT_STEP_RATE_END_RANGE                    = XGL_VERTEX_INPUT_STEP_RATE_DRAW,
+    XGL_NUM_VERTEX_INPUT_STEP_RATE                          = (XGL_VERTEX_INPUT_STEP_RATE_END_RANGE - XGL_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_VERTEX_INPUT_STEP_RATE)
 } XGL_VERTEX_INPUT_STEP_RATE;
 
@@ -827,6 +876,10 @@ typedef struct _XGL_FORMAT
 {
     XGL_CHANNEL_FORMAT  channelFormat;
     XGL_NUM_FORMAT      numericFormat;
+
+//    XGL_FMT_BEGIN_RANGE                                     = XGL_FMT_UNDEFINED,   ////LUGMAL
+//    XGL_FMT_END_RANGE                                       = XGL_FMT_ASTC_12x12_SRGB,
+//    XGL_NUM_FMT                                             = (XGL_FMT_END_RANGE - XGL_FMT_BEGIN_RANGE + 1),
 } XGL_FORMAT;
 
 // Shader stage enumerant
@@ -838,6 +891,10 @@ typedef enum _XGL_PIPELINE_SHADER_STAGE
     XGL_SHADER_STAGE_GEOMETRY                               = 3,
     XGL_SHADER_STAGE_FRAGMENT                               = 4,
     XGL_SHADER_STAGE_COMPUTE                                = 5,
+
+    XGL_SHADER_STAGE_BEGIN_RANGE                            = XGL_SHADER_STAGE_VERTEX,
+    XGL_SHADER_STAGE_END_RANGE                              = XGL_SHADER_STAGE_COMPUTE,
+    XGL_NUM_SHADER_STAGE                                    = (XGL_SHADER_STAGE_END_RANGE - XGL_SHADER_STAGE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_PIPELINE_SHADER_STAGE)
 } XGL_PIPELINE_SHADER_STAGE;
 
@@ -923,6 +980,10 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_UPDATE_AS_COPY                       = 53,
     XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO             = 54,
     XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO              = 55,
+
+    XGL_STRUCTURE_TYPE_BEGIN_RANGE                          = XGL_STRUCTURE_TYPE_APPLICATION_INFO,
+    XGL_STRUCTURE_TYPE_END_RANGE                            = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+    XGL_NUM_STRUCTURE_TYPE                                  = (XGL_STRUCTURE_TYPE_END_RANGE - XGL_STRUCTURE_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
 
@@ -958,12 +1019,15 @@ typedef enum _XGL_MEMORY_PROPERTY_FLAGS
     XGL_MAX_ENUM(_XGL_MEMORY_PROPERTY_FLAGS)
 } XGL_MEMORY_PROPERTY_FLAGS;
 
-// Memory allocation flags
 typedef enum _XGL_MEMORY_TYPE
 {
     XGL_MEMORY_TYPE_OTHER                                   = 0x00000000,   // device memory that is not any of the others
     XGL_MEMORY_TYPE_BUFFER                                  = 0x00000001,   // memory for buffers and associated information
     XGL_MEMORY_TYPE_IMAGE                                   = 0x00000002,   // memory for images and associated information
+
+    XGL_MEMORY_TYPE_BEGIN_RANGE                             = XGL_MEMORY_TYPE_OTHER,
+    XGL_MEMORY_TYPE_END_RANGE                               = XGL_MEMORY_TYPE_IMAGE,
+    XGL_NUM_MEMORY_TYPE                                     = (XGL_MEMORY_TYPE_END_RANGE - XGL_MEMORY_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_MEMORY_TYPE)
 } XGL_MEMORY_TYPE;
 
@@ -1027,6 +1091,10 @@ typedef enum _XGL_IMAGE_FORMAT_CLASS
     XGL_IMAGE_FORMAT_CLASS_D24S8                            = 16, // D24_UNORM_S8_UINT
     XGL_IMAGE_FORMAT_CLASS_D16S8                            = 17, // D16_UNORM_S8_UINT
     XGL_IMAGE_FORMAT_CLASS_LINEAR                           = 18, // used for pitch-linear (transparent) textures
+
+    XGL_IMAGE_FORMAT_CLASS_BEGIN_RANGE                      = XGL_IMAGE_FORMAT_CLASS_128_BITS,
+    XGL_IMAGE_FORMAT_CLASS_END_RANGE                        = XGL_IMAGE_FORMAT_CLASS_LINEAR,
+    XGL_NUM_IMAGE_FORMAT_CLASS                              = (XGL_IMAGE_FORMAT_CLASS_END_RANGE - XGL_IMAGE_FORMAT_CLASS_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_IMAGE_FORMAT_CLASS)
 } XGL_IMAGE_FORMAT_CLASS;
 
