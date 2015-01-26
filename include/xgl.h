@@ -921,8 +921,8 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO               = 20,
     XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO                    = 21,
     XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO                    = 22,
-    XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                = 23,
-    XGL_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO                  = 24,
+    XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO          = 23,
+    XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_OPEN_INFO            = 24,
     XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO               = 25,
     XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO    = 26,
     XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO        = 27,
@@ -2023,7 +2023,7 @@ typedef struct _XGL_FENCE_CREATE_INFO
 
 typedef struct _XGL_QUEUE_SEMAPHORE_CREATE_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_UINT                                initialCount;
     XGL_FLAGS                               flags;      // XGL_SEMAPHORE_CREATE_FLAGS
@@ -2031,7 +2031,7 @@ typedef struct _XGL_QUEUE_SEMAPHORE_CREATE_INFO
 
 typedef struct _XGL_QUEUE_SEMAPHORE_OPEN_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_OPEN_INFO
     const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_QUEUE_SEMAPHORE                     sharedSemaphore;
 } XGL_QUEUE_SEMAPHORE_OPEN_INFO;

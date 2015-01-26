@@ -652,7 +652,7 @@ inline XGL_FENCE_CREATE_INFO Fence::create_info(XGL_FLAGS flags)
 inline XGL_QUEUE_SEMAPHORE_CREATE_INFO QueueSemaphore::create_info(uint32_t init_count, XGL_FLAGS flags)
 {
     XGL_QUEUE_SEMAPHORE_CREATE_INFO info = {};
-    info.sType = XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    info.sType = XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO;
     info.initialCount = init_count;
     info.flags = flags;
     return info;
