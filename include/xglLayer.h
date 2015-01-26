@@ -27,6 +27,9 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
 {
     xglGetProcAddrType GetProcAddr;
     xglInitAndEnumerateGpusType InitAndEnumerateGpus;
+    xglCreateInstanceType CreateInstance;
+    xglDestroyInstanceType DestroyInstance;
+    xglEnumerateGpusType EnumerateGpus;
     xglGetGpuInfoType GetGpuInfo;
     xglCreateDeviceType CreateDevice;
     xglDestroyDeviceType DestroyDevice;

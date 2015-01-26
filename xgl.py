@@ -183,6 +183,7 @@ core = Extension(
     name="XGL_CORE",
     headers=["xgl.h", "xglDbg.h"],
     objects=[
+        "XGL_INSTANCE",
         "XGL_PHYSICAL_GPU",
         "XGL_BASE_OBJECT",
         "XGL_DEVICE",
@@ -219,6 +220,20 @@ core = Extension(
         Proto("XGL_RESULT", "InitAndEnumerateGpus",
             [Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
              Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),
+             Param("uint32_t", "maxGpus"),
+             Param("uint32_t*", "pGpuCount"),
+             Param("XGL_PHYSICAL_GPU*", "pGpus")]),
+
+        Proto("XGL_RESULT", "CreateInstance",
+            [Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
+             Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),
+             Param("XGL_INSTANCE*", "pInstance")]),
+
+        Proto("XGL_RESULT", "DestroyInstance",
+             [Param("XGL_INSTANCE", "pInstance")]),
+
+        Proto("XGL_RESULT", "EnumerateGpus",
+            [Param("XGL_INSTANCE", "instance"),
              Param("uint32_t", "maxGpus"),
              Param("uint32_t*", "pGpuCount"),
              Param("XGL_PHYSICAL_GPU*", "pGpus")]),

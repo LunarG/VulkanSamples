@@ -105,7 +105,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
         return out_objs and out_objs[-1] == proto.params[-1]
 
     def _is_dispatchable(self, proto):
-        if proto.name in ["GetProcAddr", "EnumerateLayers"]:
+        if proto.name in ["GetProcAddr", "DestroyInstance", "EnumerateGpus", "EnumerateLayers"]:
             return False
 
         in_objs = proto.object_in_params()

@@ -42,6 +42,14 @@
 #include "table_ops.h"
 #include "loader.h"
 
+struct loader_instance {
+    const XGL_APPLICATION_INFO *app_info;
+    const XGL_ALLOC_CALLBACKS *alloc_cb;
+
+    struct loader_icd *icds;
+    struct loader_instance *next;
+};
+
 struct loader_layers {
     void *lib_handle;
     char name[256];
@@ -77,9 +85,12 @@ struct loader_msg_callback {
 };
 
 
+// Note: Since the following is a static structure, all members are initialized
+// to zero.
 static struct {
+    struct loader_instance *instances;
+
     bool scanned;
-    struct loader_icd *icds;
     bool layer_scanned;
     char *layer_dirs;
     unsigned int scanned_layer_count;
@@ -290,8 +301,8 @@ static struct loader_icd *loader_icd_add(const char *filename)
         return NULL;
 
     /* prepend to the list */
-    icd->next = loader.icds;
-    loader.icds = icd;
+    icd->next = loader.instances->icds;
+    loader.instances->icds = icd;
 
     return icd;
 }
@@ -471,7 +482,7 @@ static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, xglGetProc
 
 static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, uint32_t *gpu_index)
 {
-    for (struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
+    for (struct loader_icd * icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++)
             if ((icd->gpus + i) == gpu || (icd->gpus +i)->baseObject == gpu->baseObject) {
                 *gpu_index = i;
@@ -657,7 +668,7 @@ static void loader_deactivate_layer()
     struct loader_icd *icd;
     struct loader_layers *libs;
 
-    for (icd = loader.icds; icd; icd = icd->next) {
+    for (icd = loader.instances->icds; icd; icd = icd->next) {
         if (icd->gpus)
             free(icd->gpus);
         icd->gpus = NULL;
@@ -750,8 +761,75 @@ extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
     return icd->layer_count[gpu_index];
 }
 
-LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pName) {
+LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
+        const XGL_APPLICATION_INFO*                 pAppInfo,
+        const XGL_ALLOC_CALLBACKS*                  pAllocCb,
+        XGL_INSTANCE*                               pInstance)
+{
+    struct loader_instance *ptr_instance = NULL;
 
+    //TODO does this XGL_INSTANCE really have to be a dispatchable object??
+    ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
+    if (ptr_instance == NULL) {
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
+    memset(ptr_instance, 0, sizeof(struct loader_instance));
+
+    ptr_instance->app_info = pAppInfo;
+    ptr_instance->alloc_cb = pAllocCb;
+    ptr_instance->next = loader.instances;
+    loader.instances = ptr_instance;
+
+    *pInstance = (XGL_INSTANCE) ptr_instance;
+    // FIXME/TODO/TBD: WHAT ELSE NEEDS TO BE DONE?
+
+    return XGL_SUCCESS;
+}
+
+LOADER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
+        XGL_INSTANCE                                instance)
+{
+    struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+
+    // Remove this instance from the list of instances:
+    struct loader_instance *prev = NULL;
+    struct loader_instance *next = loader.instances;
+    while (next != NULL) {
+        if (next == ptr_instance) {
+            // Remove this instance from the list:
+            if (prev)
+                prev->next = next->next;
+            break;
+        }
+        prev = next;
+        next = next->next;
+    }
+    if (next  == NULL) {
+        // This must be an invalid instance handle or empty list
+        return XGL_ERROR_INVALID_HANDLE;
+    }
+
+    // FIXME/TODO/TBD: WHAT ELSE NEEDS TO BE DONE HERE???
+
+    // Now, remove the instance:
+    free(ptr_instance);
+
+    return XGL_SUCCESS;
+}
+
+LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
+
+        XGL_INSTANCE                                instance,
+        uint32_t                                    maxGpus,
+        uint32_t*                                   pGpuCount,
+        XGL_PHYSICAL_GPU*                           pGpus)
+{
+    // FIXME/TODO/TBD: WHAT ELSE NEEDS TO BE DONE HERE???
+    return XGL_SUCCESS;
+}
+
+LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pName)
+{
     if (gpu == NULL)
         return NULL;
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
@@ -778,15 +856,24 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     uint32_t count = 0;
     XGL_RESULT res;
 
+    // for now only one instance
+    if (loader.instances == NULL) {
+        loader.instances = malloc(sizeof(struct loader_instance));
+        if (loader.instances == NULL)
+            return XGL_ERROR_UNAVAILABLE;
+        memset(loader.instances, 0, sizeof(struct loader_instance));
+    }
+    
+    
     // cleanup any prior layer initializations
     loader_deactivate_layer();
 
     pthread_once(&once, loader_icd_scan);
 
-    if (!loader.icds)
+    if (!loader.instances->icds)
         return XGL_ERROR_UNAVAILABLE;
 
-    icd = loader.icds;
+    icd = loader.instances->icds;
     while (icd) {
         XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
         XGL_BASE_LAYER_OBJECT * wrappedGpus;
@@ -921,7 +1008,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_F
         return loader_msg_callback_add(pfnMsgCallback, pUserData);
     }
 
-    for (icd = loader.icds; icd; icd = icd->next) {
+    for (icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
             if (res != XGL_SUCCESS) {
@@ -935,7 +1022,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_F
 
     /* roll back on errors */
     if (icd) {
-        for (const struct loader_icd * tmp = loader.icds; tmp != icd; tmp = tmp->next) {
+        for (const struct loader_icd * tmp = loader.instances->icds; tmp != icd; tmp = tmp->next) {
             for (uint32_t i = 0; i < icd->gpu_count; i++)
                 (tmp->loader_dispatch + i)->DbgUnregisterMsgCallback(pfnMsgCallback);
         }
@@ -957,7 +1044,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK
         return loader_msg_callback_remove(pfnMsgCallback);
     }
 
-    for (const struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
+    for (const struct loader_icd * icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             XGL_RESULT r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(pfnMsgCallback);
             if (r != XGL_SUCCESS) {
@@ -994,7 +1081,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgO
         return res;
     }
 
-    for (const struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
+    for (const struct loader_icd * icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             XGL_RESULT r = (icd->loader_dispatch + i)->DbgSetGlobalOption(dbgOption, dataSize, pData);
             /* unfortunately we cannot roll back */

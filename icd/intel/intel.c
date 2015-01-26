@@ -134,6 +134,29 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
 }
 
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
+    const XGL_APPLICATION_INFO*                 pAppInfo,
+    const XGL_ALLOC_CALLBACKS*                  pAllocCb,
+    XGL_INSTANCE*                               pInstance)
+{
+    return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
+    XGL_INSTANCE                                pInstance)
+{
+    return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
+    XGL_INSTANCE                                instance,
+    uint32_t                                    maxGpus,
+    uint32_t*                                   pGpuCount,
+    XGL_PHYSICAL_GPU*                           pGpus)
+{
+    return XGL_SUCCESS;
+}
+
 ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
     XGL_PHYSICAL_GPU                            gpu,
     size_t                                      maxLayerCount,
