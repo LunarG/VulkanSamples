@@ -2405,8 +2405,18 @@ void MesaGlassTranslator::beginForLoop(const llvm::PHINode* phi,
    beginLoop();
 
    // Add a conditional break
+   int break_pred;
+   switch(pred) {
+   default:
+       UnsupportedFunctionality("loop predicate");
+   case llvm::CmpInst::ICMP_NE:   break_pred = ir_binop_equal;   break;
+   case llvm::CmpInst::ICMP_SLE:  break_pred = ir_binop_greater; break;
+   case llvm::CmpInst::ICMP_ULT:
+   case llvm::CmpInst::ICMP_SLT:  break_pred = ir_binop_gequal;  break;
+   }
+
    bool genUnsigned = irCmpUnsigned(pred);
-   ir_rvalue* cmp = glass_to_ir_expression(irCmpOp(pred), glsl_type::bool_type,
+   ir_rvalue* cmp = glass_to_ir_expression(break_pred, glsl_type::bool_type,
                                      loopVar, bound, 0, genUnsigned, genUnsigned);
 
    addIRLoopExit(cmp);
