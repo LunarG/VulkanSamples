@@ -104,7 +104,6 @@ typedef void       XGL_VOID;
 typedef XGL_UINT32 XGL_SAMPLE_MASK;
 typedef XGL_UINT32 XGL_FLAGS;
 typedef XGL_INT32  XGL_ENUM;
-// typedef XGL_INT32  XGL_RESULT; // TODO: Resolve 13314.
 
 #ifdef __cplusplus
 }; // extern "C"

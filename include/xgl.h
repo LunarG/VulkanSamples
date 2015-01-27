@@ -750,7 +750,7 @@ typedef enum _XGL_VALIDATION_LEVEL
 // ------------------------------------------------------------------------------------------------
 // Error and return codes
 
-typedef enum _XGL_RESULT_CODE
+typedef enum _XGL_RESULT
 {
     // Return codes for successful operation execution (>= 0)
     XGL_SUCCESS                                             = 0x0000000,
