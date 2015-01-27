@@ -173,31 +173,46 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pTraceFileModel, QAb
     if (pModel == NULL)
     {
         ui->treeView->setModel(pTraceFileModel);
-
-        // hide columns that are not very important right now
-        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_TracerId);
-        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_TracerId);
-        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_BeginTime);
-        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_BeginTime);
-        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
-        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_EndTime);
-        ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
-        m_hiddenApicallColumns.append(glvdebug_QTraceFileModel::Column_PacketSize);
-
-        int width = ui->treeView->geometry().width();
-        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
-        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_PacketIndex,    width * 0.15);
-        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_ThreadId,       width * 0.15);
-        ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_CpuDuration,    width * 0.15);
     }
     else
     {
         ui->treeView->setModel(pModel);
+    }
 
-        int columns = ui->treeView->header()->count();
-        for (int i = 0; i < columns; i++)
+    // initially show all columns before hiding others
+    int columns = ui->treeView->header()->count();
+    for (int i = 0; i < columns; i++)
+    {
+        ui->treeView->showColumn(i);
+    }
+
+    // hide columns that are not very important right now
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_TracerId);
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_BeginTime);
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
+    ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
+
+    // entrypoint names get the most space
+    int width = ui->treeView->geometry().width();
+    ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
+
+    // the remaining space is divided among visible columns
+    int visibleColumns = 0;
+    for (int i = 1; i < columns; i++)
+    {
+        if (!ui->treeView->isColumnHidden(i))
         {
-            ui->treeView->showColumn(i);
+            visibleColumns++;
+        }
+    }
+
+    int columnWidths = width * (0.45 / visibleColumns);
+
+    for (int i = 1; i < columns; i++)
+    {
+        if (!ui->treeView->isColumnHidden(i))
+        {
+            ui->treeView->setColumnWidth(i, columnWidths);
         }
     }
 }
@@ -854,7 +869,7 @@ void glvdebug::on_searchNextButton_clicked()
         {
             for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
             {
-                if (m_hiddenApicallColumns.indexOf((enum glvdebug_QTraceFileModel::Columns) column) != -1)  // skip search of values in hidden columns
+                if (ui->treeView->isColumnHidden(column))
                     continue;
                 if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
                 {
@@ -880,7 +895,7 @@ void glvdebug::on_searchPrevButton_clicked()
         {
             for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
             {
-                if (m_hiddenApicallColumns.indexOf((enum glvdebug_QTraceFileModel::Columns) column) != -1)  // skip search of values in hidden columns
+                if (ui->treeView->isColumnHidden(column))
                     continue;
                 if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
                 {

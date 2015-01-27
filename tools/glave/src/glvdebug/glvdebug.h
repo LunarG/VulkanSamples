@@ -161,7 +161,6 @@ private:
 
     QColor m_searchTextboxBackgroundColor;
     bool m_bDelayUpdateUIForContext;
-    QVector<enum glvdebug_QTraceFileModel::Columns> m_hiddenApicallColumns;
 };
 
 #endif // GLVDEBUG_H
