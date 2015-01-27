@@ -1249,6 +1249,8 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
 
     view->img = img;
 
+    view->array_size = info->arraySize;
+
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_tex_gen7(dev->gpu, img,
                 img_type_to_view_type(img->type),
@@ -1297,6 +1299,8 @@ XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
     view->obj.destroy = ds_view_destroy;
 
     view->img = img;
+
+    view->array_size = info->arraySize;
 
     ds_view_init(view, dev->gpu, img, img->layout.format, info->mipLevel,
             info->baseArraySlice, info->arraySize);

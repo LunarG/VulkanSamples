@@ -535,6 +535,11 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
           0x7ff << GEN6_CLIP_DW3_MAX_POINT_WIDTH__SHIFT |
           (viewport->viewport_count - 1);
 
+    /* TODO: framebuffer requests layer_count > 1 */
+    if (cmd->bind.render_pass->fb->layer_count == 1) {
+        dw3 |= GEN6_CLIP_DW3_RTAINDEX_FORCED_ZERO;
+    }
+
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
     dw[1] = dw1;

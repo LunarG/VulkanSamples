@@ -171,6 +171,9 @@ void XglRenderFramework::InitRenderTarget()
          .pColorAttachments = m_colorBindings,
          .pDepthStencilAttachment = dsBinding,
          .sampleCount = 1,
+         .width = (XGL_UINT)m_width,
+         .height = (XGL_UINT)m_height,
+         .layers = 1,
     };
     XGL_RENDER_PASS_CREATE_INFO rp_info;
     memset(&rp_info, 0 , sizeof(rp_info));

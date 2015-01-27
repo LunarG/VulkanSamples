@@ -47,7 +47,9 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
     if (!fb)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    XGL_UINT width = 0, height = 0;
+    XGL_UINT width  = info->width;
+    XGL_UINT height = info->height;
+    XGL_UINT layers = info->layers;
     XGL_UINT i;
 
     for (i = 0; i < info->colorAttachmentCount; i++) {
@@ -55,38 +57,55 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
         const struct intel_rt_view *rt = intel_rt_view(att->view);
         const struct intel_layout *layout = &rt->img->layout;
 
-        if (i == 0) {
+        if (width > layout->width0)
             width = layout->width0;
+        if (height > layout->height0)
             height = layout->height0;
-        } else {
-            if (width > layout->width0)
-                width = layout->width0;
-            if (height > layout->height0)
-                height = layout->height0;
-        }
+        if (layers > rt->array_size)
+            layers = rt->array_size;
 
+        if (rt->img->samples != info->sampleCount) {
+            intel_fb_destroy(fb);
+            return XGL_ERROR_INVALID_VALUE;
+        }
         fb->rt[i] = rt;
     }
+
     fb->rt_count = info->colorAttachmentCount;
 
     if (info->pDepthStencilAttachment) {
         const struct intel_layout *layout;
 
         fb->ds = intel_ds_view(info->pDepthStencilAttachment->view);
+
         layout = &fb->ds->img->layout;
 
         if (width > layout->width0)
             width = layout->width0;
         if (height > layout->height0)
             height = layout->height0;
+        if (layers > fb->ds->array_size)
+            layers = fb->ds->array_size;
+
+        if (fb->ds->img->samples != info->sampleCount) {
+            intel_fb_destroy(fb);
+            return XGL_ERROR_INVALID_VALUE;
+        }
+
     } else {
         fb->ds = NULL;
     }
 
+    /* Behavior is undefined if width,height are larger
+       than an attachment in some direction, but Intel hardware
+       cannot handle this case */
+    fb->width        = width;
+    fb->height       = height;
+    fb->layer_count  = layers;
+    /* This information must match pipeline state */
     fb->sample_count = info->sampleCount;
-    fb->width = width;
-    fb->height = height;
-    fb->obj.destroy = fb_destroy;
+
+    fb->obj.destroy  = fb_destroy;
 
     *fb_ret = fb;
 

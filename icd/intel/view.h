@@ -71,6 +71,8 @@ struct intel_rt_view {
 
     struct intel_img *img;
 
+    XGL_UINT array_size;
+
     /* SURFACE_STATE */
     uint32_t cmd[8];
     XGL_UINT cmd_len;
@@ -80,6 +82,8 @@ struct intel_ds_view {
     struct intel_obj obj;
 
     struct intel_img *img;
+
+    XGL_UINT array_size;
 
     /*
      * 3DSTATE_DEPTH_BUFFER

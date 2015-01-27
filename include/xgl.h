@@ -2212,7 +2212,9 @@ typedef struct _XGL_FRAMEBUFFER_CREATE_INFO
     XGL_COLOR_ATTACHMENT_BIND_INFO*         pColorAttachments;
     XGL_DEPTH_STENCIL_BIND_INFO*            pDepthStencilAttachment;
     XGL_UINT                                sampleCount;
-
+    XGL_UINT                                width;
+    XGL_UINT                                height;
+    XGL_UINT                                layers;
 } XGL_FRAMEBUFFER_CREATE_INFO;
 
 typedef struct _XGL_DRAW_INDIRECT_CMD

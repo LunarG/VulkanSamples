@@ -33,7 +33,9 @@ struct intel_framebuffer {
     const struct intel_ds_view *ds;
 
     XGL_UINT sample_count;
-    XGL_UINT width, height;
+    XGL_UINT width;
+    XGL_UINT height;
+    XGL_UINT layer_count;
 };
 
 struct intel_render_pass {

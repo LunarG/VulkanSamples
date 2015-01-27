@@ -121,6 +121,9 @@ static void demo_draw_build_cmd(struct demo *demo)
          .pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*) &color_attachment,
          .pDepthStencilAttachment = (XGL_DEPTH_STENCIL_BIND_INFO*) &depth_stencil,
          .sampleCount = 1,
+         .width  = demo->width,
+         .height = demo->height,
+         .layers = 1,
     };
     XGL_RENDER_PASS_CREATE_INFO rp_info;
 
