@@ -1353,7 +1353,6 @@ typedef struct _XGL_CHANNEL_MAPPING
 
 typedef struct _XGL_PHYSICAL_GPU_PROPERTIES
 {
-    XGL_SIZE                                structSize;
     XGL_UINT32                              apiVersion;
     XGL_UINT32                              driverVersion;
     XGL_UINT32                              vendorId;
@@ -1442,7 +1441,6 @@ typedef struct _XGL_LAYER_CREATE_INFO
 
 typedef struct _XGL_PHYSICAL_GPU_QUEUE_PROPERTIES
 {
-    XGL_SIZE                                structSize;                 // Size of structure in bytes
     XGL_FLAGS                               queueFlags;                 // XGL_QUEUE_FLAGS
     XGL_UINT                                queueCount;
     XGL_UINT                                maxAtomicCounters;
@@ -1451,7 +1449,6 @@ typedef struct _XGL_PHYSICAL_GPU_QUEUE_PROPERTIES
 
 typedef struct _XGL_PHYSICAL_GPU_MEMORY_PROPERTIES
 {
-    XGL_SIZE                                structSize;                 // Size of structure in bytes
     XGL_BOOL                                supportsMigration;
     XGL_BOOL                                supportsPinning;
 } XGL_PHYSICAL_GPU_MEMORY_PROPERTIES;

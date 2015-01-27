@@ -557,7 +557,6 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     const XGL_PHYSICAL_GPU_PROPERTIES *props = &gpu->props;
 
     printf("XGL_PHYSICAL_GPU_PROPERTIES\n");
-    printf("\tstructSize = %zu\n",                  props->structSize);
     printf("\tapiVersion = %u\n",                   props->apiVersion);
     printf("\tdriverVersion = %u\n",                props->driverVersion);
     printf("\tvendorId = 0x%04x\n",                 props->vendorId);
@@ -603,7 +602,6 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, XGL_UINT id)
     const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
 
     printf("XGL_PHYSICAL_GPU_QUEUE_PROPERTIES[%d]\n", id);
-    printf("\tstructSize = %zu\n",          props->structSize);
     printf("\tqueueFlags = %c%c%c%c\n",
             (props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & XGL_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
@@ -619,7 +617,6 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
     const XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props = &gpu->memory_props;
 
     printf("XGL_PHYSICAL_GPU_MEMORY_PROPERTIES\n");
-    printf("\tstructSize = %zu\n",                      props->structSize);
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
     printf("\tsupportsPinning = %u\n",                  props->supportsPinning);
 }

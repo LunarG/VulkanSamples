@@ -271,8 +271,6 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     const char *name;
     size_t name_len;
 
-    props->structSize = sizeof(*props);
-
     props->apiVersion = INTEL_API_VERSION;
     props->driverVersion = INTEL_DRIVER_VERSION;
 
@@ -318,8 +316,6 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
                                XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props)
 {
-    props->structSize = sizeof(*props);
-
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
         props->queueFlags = XGL_QUEUE_GRAPHICS_BIT | XGL_QUEUE_COMPUTE_BIT;
@@ -336,8 +332,6 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props)
 {
-    props->structSize = sizeof(*props);
-
     props->supportsMigration = false;
 
     /* no winsys support for DRM_I915_GEM_USERPTR yet */
