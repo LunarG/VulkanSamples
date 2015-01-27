@@ -2,9 +2,9 @@
 # Update source for glslang and LLVM
 # Copy necessary BIL pieces into glslang and LLVM
 
-BIL_REVISION=29512
+BIL_REVISION=29595
 LUNARGLASS_REVISION=1060
-GLSLANG_REVISION=29512
+GLSLANG_REVISION=29595
 
 BUILDDIR=$PWD
 BASEDIR=$BUILDDIR/..
@@ -55,7 +55,10 @@ function update_BIL () {
    echo "Updating $BASEDIR/BIL"
    svn update -r "$BIL_REVISION"
    # copy of necessary BIL pieces into glslang
-   cp $BASEDIR/BIL/glslangOverlay_into_BIL/* $BASEDIR/glslang/BIL
+   cp $BASEDIR/BIL/glslangOverlay_into_BIL/*.h  $BASEDIR/glslang/BIL
+   cp $BASEDIR/BIL/glslangOverlay_into_BIL/*.cpp  $BASEDIR/glslang/BIL
+   cp $BASEDIR/BIL/glslangOverlay_into_BIL/*.txt  $BASEDIR/glslang/BIL
+   cp -r $BASEDIR/BIL/glslangOverlay_into_BIL/glslang/*  $BASEDIR/glslang/glslang/
    cp $BASEDIR/BIL/Bil.h $BASEDIR/glslang/BIL
    cp $BASEDIR/BIL/GLSL450Lib.h $BASEDIR/glslang/BIL
    # copy of necessary BIL pieces into LLVM
