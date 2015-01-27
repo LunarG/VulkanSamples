@@ -150,6 +150,7 @@ private:
 
     glvdebug_trace_file_info m_traceFileInfo;
     glvdebug_QTraceFileModel* m_pTraceFileModel;
+    QAbstractProxyModel* m_pProxyModel;
 
     glvdebug_controller* m_pController;
 

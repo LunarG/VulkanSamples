@@ -59,6 +59,7 @@ glvdebug::glvdebug(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::glvdebug),
       m_pTraceFileModel(NULL),
+      m_pProxyModel(NULL),
       m_pController(NULL),
       m_pGenerateTraceButton(NULL),
       m_pTimeline(NULL),
@@ -167,6 +168,7 @@ QToolButton* glvdebug::add_toolbar_button(const QString& title, bool bEnabled)
 void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pTraceFileModel, QAbstractProxyModel* pModel)
 {
     m_pTraceFileModel = pTraceFileModel;
+    m_pProxyModel = pModel;
 
     if (pModel == NULL)
     {
@@ -259,6 +261,12 @@ void glvdebug::on_replay_state_changed(bool bReplayInProgress)
 unsigned long long glvdebug::get_current_packet_index()
 {
     QModelIndex index = ui->treeView->currentIndex();
+
+    if (m_pProxyModel != NULL)
+    {
+        index = m_pProxyModel->mapToSource(index);
+    }
+
     unsigned long long packetIndex = 0;
     if (index.isValid())
     {

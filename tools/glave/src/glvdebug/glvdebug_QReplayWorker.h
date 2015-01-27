@@ -175,6 +175,12 @@ protected slots:
             QCoreApplication::processEvents();
             if (m_bPauseReplay || m_pauseAtPacketIndex == m_currentReplayPacketIndex)
             {
+                if (m_pauseAtPacketIndex == m_currentReplayPacketIndex)
+                {
+                    // reset
+                    m_pauseAtPacketIndex = -1;
+                }
+
                 doReplayPaused(m_currentReplayPacketIndex);
                 return;
             }
@@ -306,6 +312,9 @@ protected:
     {
         m_pView->output_message(QString("Replay Paused at packet index %1").arg(packetIndex));
         m_pView->on_replay_state_changed(false);
+
+        // When paused, the replay will 'continue' from the last packet,
+        // so select that call to indicate to the user where the pause occured.
         m_pView->select_call_at_packet_index(packetIndex);
 
         emit ReplayPaused(packetIndex);
@@ -316,6 +325,10 @@ protected:
         m_pView->output_message(QString("Replay Stopped at packet index %1").arg(packetIndex));
         m_pView->on_replay_state_changed(false);
 
+        // Stopping the replay means that it will 'play' or 'step' from the beginning,
+        // so select the first packet index to indicate to the user what stopping replay does.
+        m_pView->select_call_at_packet_index(0);
+
         emit ReplayStopped(packetIndex);
     }
 
@@ -323,6 +336,10 @@ protected:
     {
         m_pView->output_message(QString("Replay Finished"));
         m_pView->on_replay_state_changed(false);
+
+        // The replay has completed, so highlight the final packet index.
+        m_pView->select_call_at_packet_index(m_currentReplayPacketIndex);
+        m_currentReplayPacketIndex = 0;
 
         emit ReplayFinished();
     }
