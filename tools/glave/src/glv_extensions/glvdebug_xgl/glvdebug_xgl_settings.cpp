@@ -37,6 +37,7 @@ glv_SettingInfo g_settings_info[] =
     { "pw", "PauseOnReplayWarning", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayWarning, &s_defaultXglSettings.pauseOnReplayWarning, TRUE, "Pause replay if a warning message is reported."},
     { "pe", "PauseOnReplayError", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayError, &s_defaultXglSettings.pauseOnReplayError, TRUE, "Pause replay if an error message is reported."},
     { "gf", "GroupByFrame", GLV_SETTING_BOOL, &g_xglDebugSettings.groupByFrame, &s_defaultXglSettings.groupByFrame, TRUE, "Group API calls by frame."},
+    { "gt", "GroupByThread", GLV_SETTING_BOOL, &g_xglDebugSettings.groupByThread, &s_defaultXglSettings.groupByThread, TRUE, "Group API calls by the CPU thread Id on which they executed."},
 };
 
 glv_SettingGroup g_xglDebugSettingGroup =
@@ -55,4 +56,5 @@ void initialize_default_settings()
     s_defaultXglSettings.pauseOnReplayWarning = FALSE;
     s_defaultXglSettings.pauseOnReplayError = TRUE;
     s_defaultXglSettings.groupByFrame = FALSE;
+    s_defaultXglSettings.groupByThread = FALSE;
 };

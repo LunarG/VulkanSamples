@@ -26,6 +26,7 @@
 
 #include "glv_trace_packet_identifiers.h"
 #include "glvdebug_xgl_qgroupframesproxymodel.h"
+#include "glvdebug_qgroupthreadsproxymodel.h"
 #include "glvdebug_QReplayWidget.h"
 #include "glvdebug_QReplayWorker.h"
 #include "glvdebug_xgl_qfile_model.h"
@@ -64,6 +65,7 @@ private:
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
     glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;
+    glvdebug_QGroupThreadsProxyModel m_groupByThreadsProxy;
 
     void setStateWidgetsEnabled(bool bEnabled);
     void updateCallTreeBasedOnSettings();

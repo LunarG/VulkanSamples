@@ -54,6 +54,7 @@ set(UI_HEADER_LIST
     glvdebug_xgl_qcontroller.h
     glvdebug_xgl_qfile_model.h
     glvdebug_xgl_qgroupframesproxymodel.h
+    ${SRC_DIR}/glvdebug/glvdebug_qgroupthreadsproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_QTraceFileModel.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.h
@@ -66,6 +67,7 @@ set(HDR_LIST
     glvtrace_xgl_xgl_structs.h
     glvtrace_xgl_xglwsix11ext_structs.h
     glvtrace_xgl_xgldbg_structs.h
+    ${SRC_DIR}/glvdebug/glvdebug_qgroupthreadsproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_controller.h
     ${SRC_DIR}/glvreplay/glvreplay_factory.h
 )
