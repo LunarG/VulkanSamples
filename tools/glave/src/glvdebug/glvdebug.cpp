@@ -24,6 +24,7 @@
  **************************************************************************/
 
 #include <assert.h>
+#include <QDebug>
 #include <QFileDialog>
 #include <QMoveEvent>
 #include <QPalette>
@@ -227,7 +228,10 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
         QModelIndexList matches = ui->treeView->model()->match(start, Qt::DisplayRole, QVariant(packetIndex), 1, Qt::MatchFixedString | Qt::MatchRecursive | Qt::MatchWrap);
         if (matches.count() > 0)
         {
-            selectApicallModelIndex(matches[0], true, true);
+            // for some reason, we need to recreate the index such that the index and parent both are for column 0
+            QModelIndex updatedMatch = ui->treeView->model()->index(matches[0].row(), 0, ui->treeView->model()->index(matches[0].parent().row(), 0));
+
+            selectApicallModelIndex(updatedMatch, true, true);
             ui->treeView->setFocus();
         }
 

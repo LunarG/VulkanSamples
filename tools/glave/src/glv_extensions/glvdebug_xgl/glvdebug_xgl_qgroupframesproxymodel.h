@@ -263,6 +263,19 @@ public:
     }
 
     //---------------------------------------------------------------------------------------------
+    virtual QModelIndexList match(const QModelIndex &start, int role, const QVariant &value, int hits, Qt::MatchFlags flags) const
+    {
+        QModelIndexList results = sourceModel()->match(start, role, value, hits, flags);
+
+        for (int i = 0; i < results.count(); i++)
+        {
+            results[i] = mapFromSource(results[i]);
+        }
+
+        return results;
+    }
+
+    //---------------------------------------------------------------------------------------------
 private:
     QList<FrameInfo> m_frameList;
     QMap<QPersistentModelIndex, QPersistentModelIndex> m_mapping;
