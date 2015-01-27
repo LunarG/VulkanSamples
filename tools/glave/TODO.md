@@ -19,6 +19,8 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Draw call navigation buttons
   * Draw calls are shown in bold font
   * "Run to here" context menu option to control where Replayer pauses
+* Group API Calls by:
+  * Frame boundary
 * Export API Calls as Text file
 * Settings dialog
 
@@ -31,7 +33,6 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Pop-out replay window to be floating so it can replay at larger dimensions
 * State dependency graph at selected API Call
 * Group API Calls by:
-  * Frame boundary
   * API-specific debug groups
   * Command Buffer Submission
   * Render vs State calls
