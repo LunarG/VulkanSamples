@@ -625,7 +625,8 @@ static XGL_UINT loader_get_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index
         return loader_get_layer_env(icd, gpu_index, layerNames);
     }
 
-    XGL_LAYER_CREATE_INFO *pCi = (XGL_LAYER_CREATE_INFO *) pCreateInfo->pNext;
+    const XGL_LAYER_CREATE_INFO *pCi =
+        (const XGL_LAYER_CREATE_INFO *) pCreateInfo->pNext;
 
     while (pCi) {
         if (pCi->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) {

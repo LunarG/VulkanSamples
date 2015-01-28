@@ -1389,7 +1389,7 @@ typedef struct _XGL_GPU_COMPATIBILITY_INFO
 typedef struct _XGL_APPLICATION_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;              // Type of structure. Should be XGL_STRUCTURE_TYPE_APPLICATION_INFO
-    XGL_VOID*                               pNext;              // Next structure in chain
+    const XGL_VOID*                         pNext;              // Next structure in chain
     const XGL_CHAR*                         pAppName;
     XGL_UINT32                              appVersion;
     const XGL_CHAR*                         pEngineName;
@@ -1423,7 +1423,7 @@ typedef struct _XGL_DEVICE_QUEUE_CREATE_INFO
 typedef struct _XGL_DEVICE_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Should be XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_UINT                                queueRecordCount;
     const XGL_DEVICE_QUEUE_CREATE_INFO*     pRequestedQueues;
     XGL_UINT                                extensionCount;
@@ -1435,7 +1435,7 @@ typedef struct _XGL_DEVICE_CREATE_INFO
 typedef struct _XGL_LAYER_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Should be XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_UINT                                layerCount;
     const XGL_CHAR *const*                  ppActiveLayerNames;         // layer name from the layer's xglEnumerateLayers())
 } XGL_LAYER_CREATE_INFO;
@@ -1459,7 +1459,7 @@ typedef struct _XGL_PHYSICAL_GPU_MEMORY_PROPERTIES
 typedef struct _XGL_MEMORY_ALLOC_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_GPU_SIZE                            allocationSize;             // Size of memory allocation
     XGL_FLAGS                               memProps;                   // XGL_MEMORY_PROPERTY_FLAGS
     XGL_MEMORY_TYPE                         memType;
@@ -1471,7 +1471,7 @@ typedef struct _XGL_MEMORY_ALLOC_INFO
 typedef struct _XGL_MEMORY_ALLOC_BUFFER_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_FLAGS                               usage;                      // XGL_BUFFER_USAGE_FLAGS
 } XGL_MEMORY_ALLOC_BUFFER_INFO;
 
@@ -1480,7 +1480,7 @@ typedef struct _XGL_MEMORY_ALLOC_BUFFER_INFO
 typedef struct _XGL_MEMORY_ALLOC_IMAGE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
     XGL_IMAGE_FORMAT_CLASS                  formatClass;
     XGL_UINT                                samples;
@@ -1489,14 +1489,14 @@ typedef struct _XGL_MEMORY_ALLOC_IMAGE_INFO
 typedef struct _XGL_MEMORY_OPEN_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_MEMORY_OPEN_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_GPU_MEMORY                          sharedMem;
 } XGL_MEMORY_OPEN_INFO;
 
 typedef struct _XGL_PEER_MEMORY_OPEN_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_GPU_MEMORY                          originalMem;
 } XGL_PEER_MEMORY_OPEN_INFO;
 
@@ -1530,14 +1530,14 @@ typedef struct _XGL_FORMAT_PROPERTIES
 typedef struct _XGL_BUFFER_VIEW_ATTACH_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_BUFFER_VIEW                         view;
 } XGL_BUFFER_VIEW_ATTACH_INFO;
 
 typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
-    XGL_VOID*                               pNext;                      // Pointer to next structure
+    const XGL_VOID*                         pNext;                      // Pointer to next structure
     XGL_IMAGE_VIEW                          view;
     XGL_IMAGE_LAYOUT                        layout;
 } XGL_IMAGE_VIEW_ATTACH_INFO;
@@ -1545,7 +1545,7 @@ typedef struct _XGL_IMAGE_VIEW_ATTACH_INFO
 typedef struct _XGL_UPDATE_SAMPLERS
 {
     XGL_STRUCTURE_TYPE                      sType;
-    XGL_VOID*                               pNext;
+    const XGL_VOID*                         pNext;
     XGL_UINT                                index;
     XGL_UINT                                count;
     const XGL_SAMPLER*                      pSamplers;
@@ -1560,7 +1560,7 @@ typedef struct _XGL_SAMPLER_IMAGE_VIEW_INFO
 typedef struct _XGL_UPDATE_SAMPLER_TEXTURES
 {
     XGL_STRUCTURE_TYPE                       sType;
-    XGL_VOID*                                pNext;
+    const XGL_VOID*                          pNext;
     XGL_UINT                                 index;
     XGL_UINT                                 count;
     const XGL_SAMPLER_IMAGE_VIEW_INFO*       pSamplerImageViews;
@@ -1569,7 +1569,7 @@ typedef struct _XGL_UPDATE_SAMPLER_TEXTURES
 typedef struct _XGL_UPDATE_IMAGES
 {
     XGL_STRUCTURE_TYPE                       sType;
-    XGL_VOID*                                pNext;
+    const XGL_VOID*                          pNext;
     XGL_DESCRIPTOR_TYPE                      descriptorType;
     XGL_UINT                                 index;
     XGL_UINT                                 count;
@@ -1579,7 +1579,7 @@ typedef struct _XGL_UPDATE_IMAGES
 typedef struct _XGL_UPDATE_BUFFERS
 {
     XGL_STRUCTURE_TYPE                        sType;
-    XGL_VOID*                                 pNext;
+    const XGL_VOID*                           pNext;
     XGL_DESCRIPTOR_TYPE                       descriptorType;
     XGL_UINT                                  index;
     XGL_UINT                                  count;
@@ -1744,7 +1744,7 @@ typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
 typedef struct _XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
-    XGL_VOID*                               pNext;                  // Pointer to next structure
+    const XGL_VOID*                         pNext;                  // Pointer to next structure
     XGL_IMAGE                               image;
     XGL_FORMAT                              format;
     XGL_UINT                                mipLevel;
@@ -1894,14 +1894,14 @@ typedef struct _XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION
 
 typedef struct _XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;          // Should be XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
-    XGL_VOID*                               pNext;          // Pointer to next structure
+    XGL_STRUCTURE_TYPE                            sType;          // Should be XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
+    const XGL_VOID*                               pNext;          // Pointer to next structure
 
-    XGL_UINT                                bindingCount;   // number of bindings
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
+    XGL_UINT                                      bindingCount;   // number of bindings
+    const XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
 
-    XGL_UINT                                attributeCount; // number of attributes
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
+    XGL_UINT                                      attributeCount; // number of attributes
+    const XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
 } XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO;
 
 typedef struct _XGL_PIPELINE_IA_STATE_CREATE_INFO
@@ -1980,7 +1980,7 @@ typedef struct _XGL_PIPELINE_CB_STATE_CREATE_INFO
     XGL_BOOL                                logicOpEnable;
     XGL_LOGIC_OP                            logicOp;
     XGL_UINT                                attachmentCount;    // # of pAttachments
-    XGL_PIPELINE_CB_ATTACHMENT_STATE*       pAttachments;
+    const XGL_PIPELINE_CB_ATTACHMENT_STATE* pAttachments;
 } XGL_PIPELINE_CB_STATE_CREATE_INFO;
 
 typedef struct _XGL_STENCIL_OP_STATE
@@ -2044,9 +2044,9 @@ typedef struct _XGL_DYNAMIC_VP_STATE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     XGL_UINT                                viewportCount;  // number of entries in pViewports
-    XGL_VIEWPORT*                           pViewports;
+    const XGL_VIEWPORT*                     pViewports;
     XGL_UINT                                scissorCount;   // number of entries in pScissors
-    XGL_RECT*                               pScissors;
+    const XGL_RECT*                         pScissors;
 } XGL_DYNAMIC_VP_STATE_CREATE_INFO;
 
 typedef struct _XGL_DYNAMIC_RS_STATE_CREATE_INFO
@@ -2091,7 +2091,7 @@ typedef struct _XGL_DYNAMIC_DS_STATE_CREATE_INFO
 typedef struct _XGL_CMD_BUFFER_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
-    const XGL_VOID*                         pNext;
+    const XGL_VOID*                         pNext;      // Pointer to next structure
     XGL_QUEUE_TYPE                          queueType;
     XGL_FLAGS                               flags;
 } XGL_CMD_BUFFER_CREATE_INFO;
@@ -2099,7 +2099,7 @@ typedef struct _XGL_CMD_BUFFER_CREATE_INFO
 typedef struct _XGL_CMD_BUFFER_BEGIN_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO
-    const XGL_VOID*                         pNext;
+    const XGL_VOID*                         pNext;      // Pointer to next structure
 
     XGL_FLAGS                               flags;      // XGL_CMD_BUFFER_BUILD_FLAGS
 } XGL_CMD_BUFFER_BEGIN_INFO;
@@ -2134,9 +2134,9 @@ typedef struct _XGL_RENDER_PASS_CREATE_INFO
 
     XGL_RECT                                renderArea;
     XGL_FRAMEBUFFER                         framebuffer;
-    XGL_ATTACHMENT_LOAD_OP*                 pColorLoadOps;               // Array of size equivalent to the number of attachments in the framebuffer
-    XGL_ATTACHMENT_STORE_OP*                pColorStoreOps;              // Array of size equivalent to the number of attachments in the framebuffer
-    XGL_CLEAR_COLOR*                        pColorLoadClearValues;       // Array of size equivalent to the number of attachments in the framebuffer
+    const XGL_ATTACHMENT_LOAD_OP*           pColorLoadOps;               // Array of size equivalent to the number of attachments in the framebuffer
+    const XGL_ATTACHMENT_STORE_OP*          pColorStoreOps;              // Array of size equivalent to the number of attachments in the framebuffer
+    const XGL_CLEAR_COLOR*                  pColorLoadClearValues;       // Array of size equivalent to the number of attachments in the framebuffer
     XGL_ATTACHMENT_LOAD_OP                  depthLoadOp;
     XGL_FLOAT                               depthLoadClearValue;
     XGL_ATTACHMENT_STORE_OP                 depthStoreOp;
@@ -2209,8 +2209,8 @@ typedef struct _XGL_FRAMEBUFFER_CREATE_INFO
     const XGL_VOID*                         pNext;  // Pointer to next structure
 
     XGL_UINT                                colorAttachmentCount;
-    XGL_COLOR_ATTACHMENT_BIND_INFO*         pColorAttachments;
-    XGL_DEPTH_STENCIL_BIND_INFO*            pDepthStencilAttachment;
+    const XGL_COLOR_ATTACHMENT_BIND_INFO*   pColorAttachments;
+    const XGL_DEPTH_STENCIL_BIND_INFO*      pDepthStencilAttachment;
     XGL_UINT                                sampleCount;
     XGL_UINT                                width;
     XGL_UINT                                height;
