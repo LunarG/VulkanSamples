@@ -246,3 +246,25 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
 
     return ret;
 }
+
+ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(
+    XGL_IMAGE                                   image,
+    const float                                 color[4])
+{
+    struct intel_img *img = intel_img(image);
+
+    memcpy(img->clear_color, &color, sizeof(XGL_FLOAT) * 4);
+
+    return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(
+    XGL_IMAGE                                   image,
+    const float                                 depth)
+{
+    struct intel_img *img = intel_img(image);
+
+    img->clear_depth = depth;
+
+    return XGL_SUCCESS;
+}

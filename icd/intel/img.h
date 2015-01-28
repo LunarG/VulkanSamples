@@ -52,6 +52,9 @@ struct intel_img {
     XGL_SIZE aux_offset;
     XGL_SIZE s8_offset;
 
+    XGL_FLOAT clear_color[4];
+    XGL_FLOAT clear_depth;
+
 #ifdef ENABLE_WSI_X11
     int x11_prime_fd;
     uint32_t x11_pixmap;

@@ -2284,6 +2284,8 @@ typedef XGL_RESULT (XGLAPI *xglGetFormatInfoType)(XGL_DEVICE device, XGL_FORMAT 
 typedef XGL_RESULT (XGLAPI *xglCreateBufferType)(XGL_DEVICE device, const XGL_BUFFER_CREATE_INFO* pCreateInfo, XGL_BUFFER* pBuffer);
 typedef XGL_RESULT (XGLAPI *xglCreateBufferViewType)(XGL_DEVICE device, const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo, XGL_BUFFER_VIEW* pView);
 typedef XGL_RESULT (XGLAPI *xglCreateImageType)(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage);
+typedef XGL_RESULT (XGLAPI *xglSetFastClearColorType)(XGL_IMAGE image, const float color[4]);
+typedef XGL_RESULT (XGLAPI *xglSetFastClearDepthType)(XGL_IMAGE image, float depth);
 typedef XGL_RESULT (XGLAPI *xglGetImageSubresourceInfoType)(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData);
 typedef XGL_RESULT (XGLAPI *xglCreateImageViewType)(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView);
 typedef XGL_RESULT (XGLAPI *xglCreateColorAttachmentViewType)(XGL_DEVICE device, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, XGL_COLOR_ATTACHMENT_VIEW* pView);
@@ -2600,6 +2602,14 @@ XGL_RESULT XGLAPI xglCreateImage(
     XGL_DEVICE                                  device,
     const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
     XGL_IMAGE*                                  pImage);
+
+XGL_RESULT XGLAPI xglSetFastClearColor(
+    XGL_IMAGE                                   image,
+    const float                                 color[4]);
+
+XGL_RESULT XGLAPI xglSetFastClearDepth(
+    XGL_IMAGE                                   image,
+    float                                       depth);
 
 XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     XGL_IMAGE                                   image,
