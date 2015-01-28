@@ -131,33 +131,9 @@ public:
                     else if (index.column() >= sourceModel()->columnCount())
                     {
                         int threadIndex = index.column() - sourceModel()->columnCount();
-                        // looking for data for a Thread column
-                        for (QMap<uint32_t, int>::const_iterator iter = m_uniqueThreadIdMapToColumn.begin(); iter != m_uniqueThreadIdMapToColumn.end(); iter++)
-                        {
-                            if (iter.value() == threadIndex)
-                            {
-                                return QString("%1").arg(iter.key());
-                            }
-                        }
+                        return QString("%1").arg(m_uniqueThreadIdMapToColumn.key(threadIndex));
+
                     }
-                    //else
-                    //{
-                    //    // All of the below code is to figure out why the call above is not working correctly!
-                    //    qDebug() << QString("Searching for: %1 %2 %3").arg(index.row()).arg(index.column()).arg((qintptr)index.internalPointer());
-
-                    //    QMap<QPersistentModelIndex, QPersistentModelIndex> map = m_mapProxyToSrc[index.column()];
-                    //    QList<QPersistentModelIndex> keys = map.keys();
-                    //    for (int i = 0; i < keys.count() && i < 25; i++)
-                    //    {
-                    //        //if (keys[i].row() == 0 && keys[i].column() == 1)
-                    //        {
-                    //            qDebug() << QString("%1 %2 %3").arg(keys[i].row()).arg(keys[i].column()).arg((qintptr)keys[i].internalPointer());
-                    //        }
-                    //    }
-
-                    //    QModelIndex result = map.value(index);
-                    //    return QVariant(QString("%1 %2 %3").arg(result.row()).arg(result.column()).arg((qintptr)result.internalPointer()));
-                    //}
                 }
             }
 
@@ -169,6 +145,11 @@ public:
             if (index.column() == 0)
             {
                 return QVariant(QString("Thread %1").arg(m_groupList[index.row()].threadId));
+            }
+            else if (index.column() >= sourceModel()->columnCount())
+            {
+                int threadIndex = index.column() - sourceModel()->columnCount();
+                return QString("%1").arg(m_uniqueThreadIdMapToColumn.key(threadIndex));
             }
             else
             {
@@ -203,7 +184,7 @@ public:
             if (role == Qt::DisplayRole)
             {
                 int threadIndex = section - sourceModel()->columnCount();
-                return QString("Thread %1").arg(m_uniqueThreadIdMapToColumn[threadIndex]);
+                return QString("Thread %1").arg(threadIndex);
             }
         }
 
