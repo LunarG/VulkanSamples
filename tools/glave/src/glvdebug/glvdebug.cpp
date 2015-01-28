@@ -192,6 +192,14 @@ void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pTraceFileModel, QAb
     ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_EndTime);
     ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_PacketSize);
 
+    if (pModel != NULL)
+    {
+        if (pModel->inherits("glvdebug_QGroupThreadsProxyModel"))
+        {
+            ui->treeView->hideColumn(glvdebug_QTraceFileModel::Column_ThreadId);
+        }
+    }
+
     // entrypoint names get the most space
     int width = ui->treeView->geometry().width();
     ui->treeView->setColumnWidth(glvdebug_QTraceFileModel::Column_EntrypointName, width * 0.55);
