@@ -2590,9 +2590,15 @@ static void gen6_meta_wm(struct intel_cmd *cmd)
     /* 3DSTATE_DRAWING_RECTANGLE */
     cmd_batch_pointer(cmd, 4, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_DRAWING_RECTANGLE) | (4 - 2);
-    dw[1] = meta->dst.y << 16 | meta->dst.x;
-    dw[2] = (meta->dst.y + meta->height - 1) << 16 |
-            (meta->dst.x + meta->width - 1);
+    if (meta->mode == INTEL_CMD_META_VS_POINTS) {
+        /* unused */
+        dw[1] = 0;
+        dw[2] = 0;
+    } else {
+        dw[1] = meta->dst.y << 16 | meta->dst.x;
+        dw[2] = (meta->dst.y + meta->height - 1) << 16 |
+                (meta->dst.x + meta->width - 1);
+    }
     dw[3] = 0;
 }
 
