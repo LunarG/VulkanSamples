@@ -61,7 +61,7 @@ struct layer_name_pair {
 };
 
 struct loader_icd {
-    void *handle;
+    const struct loader_scanned_icds *scanned_icds;
 
     XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
     uint32_t layer_count[XGL_MAX_PHYSICAL_GPUS];
@@ -69,9 +69,6 @@ struct loader_icd {
     XGL_BASE_LAYER_OBJECT *wrappedGpus[XGL_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
     XGL_BASE_LAYER_OBJECT *gpus;
-
-    xglGetProcAddrType GetProcAddr;
-    xglInitAndEnumerateGpusType InitAndEnumerateGpus;
 
     struct loader_icd *next;
 };
@@ -84,13 +81,20 @@ struct loader_msg_callback {
     struct loader_msg_callback *next;
 };
 
+struct loader_scanned_icds {
+    void *handle;
+    xglGetProcAddrType GetProcAddr;
+    xglInitAndEnumerateGpusType InitAndEnumerateGpus;
+
+    struct loader_scanned_icds *next;
+};
 
 // Note: Since the following is a static structure, all members are initialized
 // to zero.
 static struct {
     struct loader_instance *instances;
-
-    bool scanned;
+    bool icds_scanned;
+    struct loader_scanned_icds *scanned_icd_list;
     bool layer_scanned;
     char *layer_dirs;
     unsigned int scanned_layer_count;
@@ -203,12 +207,12 @@ static void loader_log(XGL_DBG_MSG_TYPE msg_type, int32_t msg_code,
 static void
 loader_icd_destroy(struct loader_icd *icd)
 {
-    dlclose(icd->handle);
+    dlclose(icd->scanned_icds->handle);
     free(icd);
 }
 
 static struct loader_icd *
-loader_icd_create(const char *filename)
+loader_icd_create(const struct loader_scanned_icds *scanned)
 {
     struct loader_icd *icd;
 
@@ -218,24 +222,7 @@ loader_icd_create(const char *filename)
 
     memset(icd, 0, sizeof(*icd));
 
-    icd->handle = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
-    if (!icd->handle) {
-        loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());
-        free(icd);
-        return NULL;
-    }
-
-#define LOOKUP(icd, func) do {                              \
-    icd->func = (xgl ##func## Type) dlsym(icd->handle, "xgl" #func); \
-    if (!icd->func) {                                       \
-        loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());      \
-        loader_icd_destroy(icd);                            \
-        return NULL;                                        \
-    }                                                       \
-} while (0)
-    LOOKUP(icd, GetProcAddr);
-    LOOKUP(icd, InitAndEnumerateGpus);
-#undef LOOKUP
+    icd->scanned_icds = scanned;
 
     return icd;
 }
@@ -292,11 +279,11 @@ static XGL_RESULT loader_icd_set_global_options(const struct loader_icd *icd)
 return XGL_SUCCESS;
 }
 
-static struct loader_icd *loader_icd_add(const char *filename)
+static struct loader_icd *loader_icd_add(const struct loader_scanned_icds *scanned)
 {
     struct loader_icd *icd;
 
-    icd = loader_icd_create(filename);
+    icd = loader_icd_create(scanned);
     if (!icd)
         return NULL;
 
@@ -305,6 +292,43 @@ static struct loader_icd *loader_icd_add(const char *filename)
     loader.instances->icds = icd;
 
     return icd;
+}
+
+static void loader_scanned_icd_add(const char *filename)
+{
+    void *handle;
+    void *fp_gpa, *fp_init;
+    struct loader_scanned_icds *new_node;
+
+    handle = dlopen(filename, RTLD_LAZY);
+    if (!handle) {
+        loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());
+        return;
+    }
+
+#define LOOKUP(func_ptr, func) do {                            \
+    func_ptr = (xgl ##func## Type) dlsym(handle, "xgl" #func); \
+    if (!func_ptr) {                                           \
+        loader_log(XGL_DBG_MSG_WARNING, 0, dlerror());         \
+        return;                                                \
+    }                                                          \
+} while (0)
+
+    LOOKUP(fp_gpa, GetProcAddr);
+    LOOKUP(fp_init, InitAndEnumerateGpus);
+#undef LOOKUP
+
+    new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds));
+    if (!new_node) {
+        loader_log(XGL_DBG_MSG_WARNING, 0, "Out of memory can't add icd");
+        return;
+    }
+
+    new_node->handle = handle;
+    new_node->GetProcAddr = fp_gpa;
+    new_node->InitAndEnumerateGpus = fp_init;
+    new_node->next = loader.scanned_icd_list;
+    loader.scanned_icd_list = new_node;
 }
 
 #ifndef DEFAULT_XGL_DRIVERS_PATH
@@ -360,7 +384,8 @@ static void loader_icd_scan(void)
              /* look for ICDs starting with "libXGL_" */
              if (!strncmp(dent->d_name, "libXGL_", 7)) {
                 snprintf(icd_library, 1024, "%s/%s",p,dent->d_name);
-                loader_icd_add(icd_library);
+
+                loader_scanned_icd_add(icd_library);
              }
 
              dent = readdir(sysdir);
@@ -370,7 +395,7 @@ static void loader_icd_scan(void)
     }
 
 
-    loader.scanned = true;
+    loader.icds_scanned = true;
 }
 
 #ifndef DEFAULT_XGL_LAYERS_PATH
@@ -482,6 +507,10 @@ static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, xglGetProc
 
 static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, uint32_t *gpu_index)
 {
+    if (!loader.instances)
+        return NULL;
+
+    //TODO go through all instances
     for (struct loader_icd * icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++)
             if ((icd->gpus + i) == gpu || (icd->gpus +i)->baseObject == gpu->baseObject) {
@@ -663,12 +692,12 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
     return loader_get_layer_env(icd, gpu_index, layerNames);
 }
 
-static void loader_deactivate_layer()
+static void loader_deactivate_layer(const struct loader_instance *instance)
 {
     struct loader_icd *icd;
     struct loader_layers *libs;
 
-    for (icd = loader.instances->icds; icd; icd = icd->next) {
+    for (icd = instance->icds; icd; icd = icd->next) {
         if (icd->gpus)
             free(icd->gpus);
         icd->gpus = NULL;
@@ -740,7 +769,7 @@ extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
                 ((XGL_BASE_LAYER_OBJECT *) gpu)->pGPA = nextGPA;
                 gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
                 gpuObj->nextObject = baseObj;
-                gpuObj->pGPA = icd->GetProcAddr;
+                gpuObj->pGPA = icd->scanned_icds->GetProcAddr;
             }
 
         }
@@ -855,6 +884,9 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     struct loader_icd *icd;
     uint32_t count = 0;
     XGL_RESULT res;
+    struct loader_scanned_icds *scanned_icds;
+
+    pthread_once(&once, loader_icd_scan);
 
     // for now only one instance
     if (loader.instances == NULL) {
@@ -862,29 +894,33 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
         if (loader.instances == NULL)
             return XGL_ERROR_UNAVAILABLE;
         memset(loader.instances, 0, sizeof(struct loader_instance));
+
+        scanned_icds = loader.scanned_icd_list;
+        while (scanned_icds) {
+            loader_icd_add(scanned_icds);
+            scanned_icds = scanned_icds->next;
+        }
+
+        if (loader.instances->icds == NULL)
+            return XGL_ERROR_UNAVAILABLE;
     }
-    
-    
+
     // cleanup any prior layer initializations
-    loader_deactivate_layer();
+    loader_deactivate_layer(loader.instances);
 
-    pthread_once(&once, loader_icd_scan);
-
-    if (!loader.instances->icds)
-        return XGL_ERROR_UNAVAILABLE;
 
     icd = loader.instances->icds;
     while (icd) {
         XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
         XGL_BASE_LAYER_OBJECT * wrappedGpus;
-        xglGetProcAddrType getProcAddr = icd->GetProcAddr;
+        xglGetProcAddrType getProcAddr = icd->scanned_icds->GetProcAddr;
         uint32_t n, max = maxGpus - count;
 
         if (max > XGL_MAX_PHYSICAL_GPUS) {
             max = XGL_MAX_PHYSICAL_GPUS;
         }
 
-        res = icd->InitAndEnumerateGpus(pAppInfo, pAllocCb, max, &n, gpus);
+        res = icd->scanned_icds->InitAndEnumerateGpus(pAppInfo, pAllocCb, max, &n, gpus);
         if (res == XGL_SUCCESS && n) {
             wrappedGpus = (XGL_BASE_LAYER_OBJECT*) malloc(n * sizeof(XGL_BASE_LAYER_OBJECT));
             icd->gpus = wrappedGpus;
@@ -941,6 +977,9 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
 
     if (pOutLayerCount == NULL || pOutLayers == NULL)
         return XGL_ERROR_INVALID_POINTER;
+
+    if (!icd)
+        return XGL_ERROR_UNAVAILABLE;
 
     for (int i = 0; i < 16; i++)
          layers[i] = &layer_buf[i][0];
@@ -1004,10 +1043,12 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_F
     XGL_RESULT res;
     uint32_t gpu_idx;
 
-    if (!loader.scanned) {
+    //TODO fix for uncreated instances
+    if (!loader.icds_scanned) {
         return loader_msg_callback_add(pfnMsgCallback, pUserData);
     }
 
+    //TODO go through all  instances
     for (icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
@@ -1038,12 +1079,14 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_F
 
 LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    XGL_RESULT res = XGL_SUCCESS;
+    XGL_RESULT res = XGL_SUCCESS;\
 
-    if (!loader.scanned) {
+    //TODO fix for uncreated instances
+    if (!loader.icds_scanned) {
         return loader_msg_callback_remove(pfnMsgCallback);
     }
 
+    //TODO loop through all instances
     for (const struct loader_icd * icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             XGL_RESULT r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(pfnMsgCallback);
@@ -1059,7 +1102,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgO
 {
     XGL_RESULT res = XGL_SUCCESS;
 
-    if (!loader.scanned) {
+    if (!loader.icds_scanned) {
         if (dataSize == 0)
             return XGL_ERROR_INVALID_VALUE;
 
@@ -1081,6 +1124,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgO
         return res;
     }
 
+    //TODO loop through all instances
     for (const struct loader_icd * icd = loader.instances->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             XGL_RESULT r = (icd->loader_dispatch + i)->DbgSetGlobalOption(dbgOption, dataSize, pData);
