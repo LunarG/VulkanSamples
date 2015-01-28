@@ -128,9 +128,9 @@ public:
                     {
                         return firstResult.data(role);
                     }
-                    else if (index.column() >= sourceModel()->columnCount())
+                    else if (isThreadColumn(index.column()))
                     {
-                        int threadIndex = index.column() - sourceModel()->columnCount();
+                        int threadIndex = getThreadColumnIndex(index.column());
                         return QString("%1").arg(m_uniqueThreadIdMapToColumn.key(threadIndex));
 
                     }
@@ -146,9 +146,9 @@ public:
             {
                 return QVariant(QString("Thread %1").arg(m_groupList[index.row()].threadId));
             }
-            else if (index.column() >= sourceModel()->columnCount())
+            else if (isThreadColumn(index.column()))
             {
-                int threadIndex = index.column() - sourceModel()->columnCount();
+                int threadIndex = getThreadColumnIndex(index.column());
                 return QString("%1").arg(m_uniqueThreadIdMapToColumn.key(threadIndex));
             }
             else
@@ -175,7 +175,7 @@ public:
     //---------------------------------------------------------------------------------------------
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const
     {
-        if (section < sourceModel()->columnCount())
+        if (!isThreadColumn(section))
         {
             return sourceModel()->headerData(section, orientation, role);
         }
@@ -183,7 +183,7 @@ public:
         {
             if (role == Qt::DisplayRole)
             {
-                int threadIndex = section - sourceModel()->columnCount();
+                int threadIndex = getThreadColumnIndex(section);
                 return QString("Thread %1").arg(threadIndex);
             }
         }
@@ -235,26 +235,16 @@ public:
         {
             if (!isGroup(child))
             {
-//                if (child.column() >= sourceModel()->columnCount())
-//                {
-//                    // this is a Thread column
-//                    // TODO: Need to find the proper parent
-////                    QModelIndex sibling = m_groupList[child.row
-//                    return QModelIndex();
-//                }
-//                else
+                QModelIndex result = m_mapProxyToParent[child.column()].value(child);
+                if (result.isValid())
                 {
-                    QModelIndex result = m_mapProxyToParent[child.column()].value(child);
-                    if (result.isValid())
-                    {
-                        return result;
-                    }
-                    else
-                    {
-                        // parent is a frame
-                        int frameIndex = (int)child.internalId();
-                        return createIndex(frameIndex, 0, (void*)&m_groupList[frameIndex]);
-                    }
+                    return result;
+                }
+                else
+                {
+                    // parent is a frame
+                    int frameIndex = (int)child.internalId();
+                    return createIndex(frameIndex, 0, (void*)&m_groupList[frameIndex]);
                 }
             }
         }
@@ -269,7 +259,7 @@ public:
             return QModelIndex();
 
         QModelIndex result;
-        if (proxyIndex.column() < sourceModel()->columnCount())
+        if (!isThreadColumn(proxyIndex.column()))
         {
             // it is a column for the source model and not for one of our thread IDs (which isn't in the source, unless we map it to the same Thread Id column?)
             result = m_mapProxyToSrc[proxyIndex.column()].value(proxyIndex);
@@ -335,6 +325,18 @@ private:
         }
 
         return false;
+    }
+
+    //---------------------------------------------------------------------------------------------
+    bool isThreadColumn(int columnIndex) const
+    {
+        return (columnIndex >= sourceModel()->columnCount());
+    }
+
+    //---------------------------------------------------------------------------------------------
+    int getThreadColumnIndex(int proxyColumnIndex) const
+    {
+        return proxyColumnIndex - sourceModel()->columnCount();
     }
 
     //---------------------------------------------------------------------------------------------
