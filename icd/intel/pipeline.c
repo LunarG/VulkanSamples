@@ -826,8 +826,10 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
 
     cmd_len = 14;
 
-    body = pipeline_cmd_ptr(pipeline, cmd_len);
-    pipeline->cmd_sbe_body_offset = body - pipeline->cmds + 1;
+    if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7))
+        body = pipeline_cmd_ptr(pipeline, cmd_len);
+    else
+        body = pipeline->cmd_3dstate_sbe;
 
     /* VS outputs VUE header and position additionally */
     assert(vs->out_count >= fs->in_count + 2);

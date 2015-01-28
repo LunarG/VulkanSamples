@@ -440,41 +440,24 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     body[5] = u_fui(raster->rs_info.depthBiasClamp);
 }
 
-static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
-                                       uint32_t body[13])
-{
-    uint32_t sbe_offset;
-    int32_t i;
-
-    CMD_ASSERT(cmd, 6, 7.5);
-
-    sbe_offset = cmd->bind.pipeline.graphics->cmd_sbe_body_offset;
-
-    for (i = 0; i < 13; i++) {
-        uint32_t b = cmd->bind.pipeline.graphics->cmds[sbe_offset + i];
-        body[i] = b;
-    }
-}
-
 static void gen6_3DSTATE_SF(struct intel_cmd *cmd)
 {
     const uint8_t cmd_len = 20;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_SF) |
                          (cmd_len - 2);
+    const uint32_t *sbe = cmd->bind.pipeline.graphics->cmd_3dstate_sbe;
     uint32_t sf[6];
-    uint32_t sbe[13];
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
     gen7_fill_3DSTATE_SF_body(cmd, sf);
-    gen7_fill_3DSTATE_SBE_body(cmd, sbe);
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = sbe[0];
+    dw[1] = sbe[1];
     memcpy(&dw[2], sf, sizeof(sf));
-    memcpy(&dw[8], &sbe[1], sizeof(sbe) - sizeof(sbe[0]));
+    memcpy(&dw[8], &sbe[2], 12);
 }
 
 static void gen7_3DSTATE_SF(struct intel_cmd *cmd)

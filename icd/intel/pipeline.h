@@ -211,7 +211,6 @@ struct intel_pipeline {
 
     uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
     uint32_t cmd_len;
-    uint32_t cmd_sbe_body_offset;
 
     /* The following are only partial HW commands that will need
      * more processing before sending to the HW
@@ -227,6 +226,8 @@ struct intel_pipeline {
     uint32_t cmd_cb[2 * INTEL_MAX_RENDER_TARGETS];
     uint32_t sample_count;
     uint32_t cmd_sample_mask;
+
+    uint32_t cmd_3dstate_sbe[14];
 };
 
 static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)
