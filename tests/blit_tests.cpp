@@ -901,6 +901,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     // is this necessary?
     XGL_BUFFER_MEMORY_BARRIER memory_barrier = bufs[0].buffer_memory_barrier(
             XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_COPY_BIT, 0, 4);
+    XGL_BUFFER_MEMORY_BARRIER *pmemory_barrier = &memory_barrier;
 
     XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_TRANSFER_COMPLETE };
     XGL_PIPELINE_BARRIER pipeline_barrier = {};
@@ -909,7 +910,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = &memory_barrier;
+    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
     xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
     XGL_BUFFER_COPY region = {};
@@ -918,12 +919,13 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
 
     memory_barrier = bufs[1].buffer_memory_barrier(
             XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_COPY_BIT, 0, 4);
+    pmemory_barrier = &memory_barrier;
     pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
     pipeline_barrier.eventCount = 1;
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = &memory_barrier;
+    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
     xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
     xglCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
@@ -937,13 +939,14 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
 
     memory_barrier = bufs[1].buffer_memory_barrier(
             XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
+    pmemory_barrier = &memory_barrier;
     XGL_EVENT_WAIT_INFO wait_info = {};
     wait_info.sType = XGL_STRUCTURE_TYPE_EVENT_WAIT_INFO;
     wait_info.eventCount = 1;
     wait_info.pEvents = &event;
     wait_info.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     wait_info.memBarrierCount = 1;
-    wait_info.pMemBarriers = &memory_barrier;
+    wait_info.pMemBarriers = (const void **)&pmemory_barrier;
     xglCmdWaitEvents(cmd_.obj(), &wait_info);
 
     cmd_.end();
@@ -1440,7 +1443,9 @@ protected:
                 XGL_MEMORY_INPUT_COPY_BIT;
 
         std::vector<XGL_IMAGE_MEMORY_BARRIER> to_clear;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER *> p_to_clear;
         std::vector<XGL_IMAGE_MEMORY_BARRIER> to_xfer;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER *> p_to_xfer;
 
         for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
@@ -1448,9 +1453,11 @@ protected:
                     XGL_IMAGE_LAYOUT_GENERAL,
                     XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                     *it));
+            p_to_clear.push_back(&to_clear.back());
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                     XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
+            p_to_xfer.push_back(&to_xfer.back());
         }
 
         cmd_.begin();
@@ -1462,7 +1469,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_clear.size();
-        pipeline_barrier.pMemBarriers = &to_clear[0];
+        pipeline_barrier.pMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         if (test_raw_) {
@@ -1476,7 +1483,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_xfer.size();
-        pipeline_barrier.pMemBarriers = &to_xfer[0];
+        pipeline_barrier.pMemBarriers = (const void **)&p_to_xfer[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         cmd_.end();
@@ -1668,7 +1675,9 @@ protected:
                 XGL_MEMORY_INPUT_COPY_BIT;
 
         std::vector<XGL_IMAGE_MEMORY_BARRIER> to_clear;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER *> p_to_clear;
         std::vector<XGL_IMAGE_MEMORY_BARRIER> to_xfer;
+        std::vector<XGL_IMAGE_MEMORY_BARRIER *> p_to_xfer;
 
         for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
@@ -1676,9 +1685,11 @@ protected:
                     XGL_IMAGE_LAYOUT_GENERAL,
                     XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                     *it));
+            p_to_clear.push_back(&to_clear.back());
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                     XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
+            p_to_xfer.push_back(&to_xfer.back());
         }
 
         cmd_.begin();
@@ -1690,7 +1701,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_clear.size();
-        pipeline_barrier.pMemBarriers = &to_clear[0];
+        pipeline_barrier.pMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         xglCmdClearDepthStencil(cmd_.obj(), img.obj(), depth, stencil, ranges.size(), &ranges[0]);
@@ -1700,7 +1711,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_xfer.size();
-        pipeline_barrier.pMemBarriers = &to_xfer[0];
+        pipeline_barrier.pMemBarriers = (const void **)&p_to_xfer[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         cmd_.end();

@@ -1642,7 +1642,7 @@ typedef struct _XGL_EVENT_WAIT_INFO
     XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                memBarrierCount;            // Number of memory barriers
-    const void*                             pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
+    const void**                            pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
 } XGL_EVENT_WAIT_INFO;
 
 typedef struct _XGL_PIPELINE_BARRIER
@@ -1656,7 +1656,7 @@ typedef struct _XGL_PIPELINE_BARRIER
     XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                memBarrierCount;            // Number of memory barriers
-    const void*                             pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
+    const void**                            pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
 } XGL_PIPELINE_BARRIER;
 
 typedef struct _XGL_MEMORY_BARRIER

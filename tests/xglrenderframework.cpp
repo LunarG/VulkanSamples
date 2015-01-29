@@ -591,6 +591,7 @@ void XglConstantBufferObj::BufferMemoryBarrier(
 
     XGL_BUFFER_MEMORY_BARRIER memory_barrier =
         buffer_memory_barrier(outputMask, inputMask, 0, m_numVertices * m_stride);
+    XGL_BUFFER_MEMORY_BARRIER *pmemory_barrier = &memory_barrier;
 
     XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
     XGL_PIPELINE_BARRIER pipeline_barrier = {};
@@ -599,7 +600,7 @@ void XglConstantBufferObj::BufferMemoryBarrier(
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = &memory_barrier;
+    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
 
     // write barrier to the command buffer
     m_commandBuffer->PipelineBarrier(&pipeline_barrier);
@@ -1022,6 +1023,7 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     memory_barrier.inputMask = input_mask;
     memory_barrier.newLayout = XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL;
     memory_barrier.subresourceRange = srRange;
+    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &memory_barrier;
 
     XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
     XGL_PIPELINE_BARRIER pipeline_barrier = {};
@@ -1030,7 +1032,7 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = &memory_barrier;
+    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
 
     // clear the back buffer to dark grey
     uint32_t clearColor[4] = {64, 64, 64, 0};
@@ -1108,6 +1110,7 @@ void XglCommandBufferObj::PrepareAttachments()
     memory_barrier.inputMask = input_mask;
     memory_barrier.newLayout = XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     memory_barrier.subresourceRange = srRange;
+    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &memory_barrier;
 
     XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
     XGL_PIPELINE_BARRIER pipeline_barrier = {};
@@ -1116,7 +1119,7 @@ void XglCommandBufferObj::PrepareAttachments()
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = &memory_barrier;
+    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
 
     for(i=0; i<m_renderTargetCount; i++)
     {

@@ -123,39 +123,42 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
 }
 
 static void cmd_memory_barriers(struct intel_cmd *cmd,
-				uint32_t flush_flags,
+				                uint32_t flush_flags,
                                 uint32_t memory_barrier_count,
-                                const void* memory_barriers)
+                                const void** memory_barriers)
 {
     uint32_t i;
-    XGL_MEMORY_BARRIER *memory_barrier;
-    XGL_BUFFER_MEMORY_BARRIER *buffer_memory_barrier;
-    XGL_IMAGE_MEMORY_BARRIER *image_memory_barrier;
     XGL_FLAGS input_mask = 0;
     XGL_FLAGS output_mask = 0;
 
     for (i = 0; i < memory_barrier_count; i++) {
-        memory_barrier = &((XGL_MEMORY_BARRIER *) memory_barriers)[i];
-        switch(memory_barrier->sType)
+
+        const union {
+            XGL_STRUCTURE_TYPE type;
+
+            XGL_MEMORY_BARRIER mem;
+            XGL_BUFFER_MEMORY_BARRIER buf;
+            XGL_IMAGE_MEMORY_BARRIER img;
+        } *u = memory_barriers[i];
+
+        switch(u->type)
         {
         case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
-            output_mask |= memory_barrier->outputMask;
-            input_mask |= memory_barrier->inputMask;
+            output_mask |= u->mem.outputMask;
+            input_mask  |= u->mem.inputMask;
             break;
         case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-            buffer_memory_barrier = (XGL_BUFFER_MEMORY_BARRIER *) memory_barrier;
-            output_mask |= buffer_memory_barrier->outputMask;
-            input_mask |= buffer_memory_barrier->inputMask;
+            output_mask |= u->buf.outputMask;
+            input_mask  |= u->buf.inputMask;
             break;
         case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-            image_memory_barrier = (XGL_IMAGE_MEMORY_BARRIER *) memory_barrier;
-            output_mask |= image_memory_barrier->outputMask;
-            input_mask |= image_memory_barrier->inputMask;
+            output_mask |= u->img.outputMask;
+            input_mask  |= u->img.inputMask;
             {
-                struct intel_img *img = intel_img(image_memory_barrier->image);
+                struct intel_img *img = intel_img(u->img.image);
                 flush_flags |= cmd_get_flush_flags(cmd,
-                        img_get_layout_caches(img, image_memory_barrier->oldLayout),
-                        img_get_layout_caches(img, image_memory_barrier->newLayout),
+                        img_get_layout_caches(img, u->img.oldLayout),
+                        img_get_layout_caches(img, u->img.newLayout),
                         icd_format_is_ds(img->layout.format));
             }
             break;
