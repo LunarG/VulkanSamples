@@ -42,9 +42,9 @@ glv_SettingGroup g_xglReplaySettingGroup =
     &g_settings_info[0]
 };
 
-XGL_CHAR** get_enableLayers_list(unsigned int *pNumLayers)
+char** get_enableLayers_list(unsigned int *pNumLayers)
 {
-    XGL_CHAR** pList = NULL;
+    char** pList = NULL;
     size_t len = strlen(g_xglReplaySettings.enableLayers);
     assert(pNumLayers != NULL);
     *pNumLayers = 0;
@@ -66,11 +66,11 @@ XGL_CHAR** get_enableLayers_list(unsigned int *pNumLayers)
         }
 
         // allocate an array to contain pointers to the layer names
-        pList = GLV_NEW_ARRAY(XGL_CHAR*, (*pNumLayers));
+        pList = GLV_NEW_ARRAY(char*, (*pNumLayers));
 
         // copy the entire string to the first element in the list to keep
         // the layer names localized in memory.
-        pList[0] = (XGL_CHAR*)glv_allocate_and_copy(g_xglReplaySettings.enableLayers);
+        pList[0] = (char*)glv_allocate_and_copy(g_xglReplaySettings.enableLayers);
 
         // now walk the string and replace commas with NULL and record
         // the pointers in the pList array.
@@ -89,7 +89,7 @@ XGL_CHAR** get_enableLayers_list(unsigned int *pNumLayers)
     return pList;
 }
 
-void release_enableLayer_list(XGL_CHAR** pList)
+void release_enableLayer_list(char** pList)
 {
     if (pList != NULL)
     {

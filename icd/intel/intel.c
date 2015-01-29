@@ -76,13 +76,13 @@ static void intel_debug_init(void)
 ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     const XGL_APPLICATION_INFO*                 pAppInfo,
     const XGL_ALLOC_CALLBACKS*                  pAllocCb,
-    XGL_UINT                                    maxGpus,
-    XGL_UINT*                                   pGpuCount,
+    uint32_t                                    maxGpus,
+    uint32_t*                                   pGpuCount,
     XGL_PHYSICAL_GPU*                           pGpus)
 {
     struct icd_drm_device *devices, *dev;
     XGL_RESULT ret;
-    XGL_UINT count;
+    uint32_t count;
 
     intel_debug_init();
 
@@ -136,11 +136,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
     XGL_PHYSICAL_GPU                            gpu,
-    XGL_SIZE                                    maxLayerCount,
-    XGL_SIZE                                    maxStringSize,
-    XGL_SIZE*                                   pOutLayerCount,
-    XGL_CHAR* const*                            pOutLayers,
-    XGL_VOID*                                   pReserved)
+    size_t                                      maxLayerCount,
+    size_t                                      maxStringSize,
+    size_t*                                     pOutLayerCount,
+    char* const*                                pOutLayers,
+    void*                                       pReserved)
 {
     if (!pOutLayerCount)
         return XGL_ERROR_INVALID_POINTER;
@@ -152,7 +152,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
-    XGL_VOID*                                   pUserData)
+    void*                                       pUserData)
 {
     return icd_logger_add_callback(pfnMsgCallback, pUserData);
 }
@@ -165,8 +165,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
     XGL_DBG_GLOBAL_OPTION                       dbgOption,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData)
+    size_t                                      dataSize,
+    const void*                                 pData)
 {
     XGL_RESULT res = XGL_SUCCESS;
 

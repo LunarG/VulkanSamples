@@ -37,7 +37,7 @@ static void buf_destroy(struct intel_obj *obj)
 }
 
 static XGL_RESULT buf_get_info(struct intel_base *base, int type,
-                               XGL_SIZE *size, XGL_VOID *data)
+                               size_t *size, void *data)
 {
     struct intel_buf *buf = intel_buf_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;

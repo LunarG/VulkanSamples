@@ -45,11 +45,11 @@ bool intel_base_is_valid(const struct intel_base *base,
 }
 
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
-                               XGL_SIZE *size, XGL_VOID *data)
+                               size_t *size, void *data)
 {
     XGL_RESULT ret = XGL_SUCCESS;
-    XGL_SIZE s;
-    XGL_UINT *count;
+    size_t s;
+    uint32_t *count;
 
     switch (type) {
     case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
@@ -64,10 +64,10 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
             break;
         }
     case XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
-        *size = sizeof(XGL_UINT);
+        *size = sizeof(uint32_t);
         if (data == NULL)
             return ret;
-        count = (XGL_UINT *) data;
+        count = (uint32_t *) data;
         *count = 1;
         break;
     case XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
@@ -99,10 +99,10 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         const void *ptr;
         const struct {
             XGL_STRUCTURE_TYPE struct_type;
-            XGL_VOID *next;
+            void *next;
         } *header;
     } info = { .ptr = create_info };
-    XGL_SIZE shallow_copy = 0;
+    size_t shallow_copy = 0;
 
     if (!create_info)
         return true;
@@ -219,7 +219,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         dbg->create_info_size = shallow_copy;
     } else if (info.header->struct_type ==
             XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
-        XGL_SIZE size;
+        size_t size;
         const XGL_MEMORY_ALLOC_INFO *ptr_next, *src = info.ptr;
         XGL_MEMORY_ALLOC_INFO *dst;
         uint8_t *d;
@@ -273,8 +273,8 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         const XGL_DEVICE_CREATE_INFO *src = info.ptr;
         XGL_DEVICE_CREATE_INFO *dst;
         uint8_t *d;
-        XGL_SIZE size;
-        XGL_UINT i;
+        size_t size;
+        uint32_t i;
 
         size = sizeof(*src);
         dbg->create_info_size = size;
@@ -300,13 +300,13 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         d += size;
 
         size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
-        dst->ppEnabledExtensionNames = (const XGL_CHAR * const *) d;
+        dst->ppEnabledExtensionNames = (const char * const *) d;
 
         for (i = 0; i < src->extensionCount; i++) {
-            const XGL_SIZE len = strlen(src->ppEnabledExtensionNames[i]);
+            const size_t len = strlen(src->ppEnabledExtensionNames[i]);
 
             memcpy(d + size, src->ppEnabledExtensionNames[i], len + 1);
-            ((const XGL_CHAR **) d)[i] = (const XGL_CHAR *) (d + size);
+            ((const char **) d)[i] = (const char *) (d + size);
 
             size += len + 1;
         }
@@ -325,7 +325,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
 struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
                                              XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
-                                             XGL_SIZE dbg_size)
+                                             size_t dbg_size)
 {
     struct intel_base_dbg *dbg;
 
@@ -368,10 +368,10 @@ void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
  * object and the debug metadata.  Memories are zeroed.
  */
 struct intel_base *intel_base_create(struct intel_dev *dev,
-                                     XGL_SIZE obj_size, bool debug,
+                                     size_t obj_size, bool debug,
                                      XGL_DBG_OBJECT_TYPE type,
                                      const void *create_info,
-                                     XGL_SIZE dbg_size)
+                                     size_t dbg_size)
 {
     struct intel_base *base;
 
@@ -428,8 +428,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDestroyObject(
 ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
     XGL_BASE_OBJECT                             object,
     XGL_OBJECT_INFO_TYPE                        infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
+    size_t*                                     pDataSize,
+    void*                                       pData)
 {
     struct intel_base *base = intel_base(object);
 
@@ -438,7 +438,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_OBJECT                                  object,
-    XGL_UINT                                    allocationIdx,
+    uint32_t                                    allocationIdx,
     XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                memOffset)
 {
@@ -452,7 +452,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
     XGL_OBJECT                                  object,
-    XGL_UINT                                    allocationIdx,
+    uint32_t                                    allocationIdx,
     XGL_GPU_SIZE                                rangeOffset,
     XGL_GPU_SIZE                                rangeSize,
     XGL_GPU_MEMORY                              mem,
@@ -463,7 +463,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(
     XGL_IMAGE                                   image,
-    XGL_UINT                                    allocationIdx,
+    uint32_t                                    allocationIdx,
     const XGL_IMAGE_MEMORY_BIND_INFO*           bindInfo,
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                memOffset)
@@ -473,8 +473,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
     XGL_BASE_OBJECT                             object,
-    XGL_SIZE                                    tagSize,
-    const XGL_VOID*                             pTag)
+    size_t                                      tagSize,
+    const void*                                 pTag)
 {
     struct intel_base *base = intel_base(object);
     struct intel_base_dbg *dbg = base->dbg;

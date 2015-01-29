@@ -33,12 +33,12 @@
 class XglDevice : public xgl_testing::Device
 {
 public:
-    XglDevice(XGL_UINT id, XGL_PHYSICAL_GPU obj);
+    XglDevice(uint32_t id, XGL_PHYSICAL_GPU obj);
 
     XGL_DEVICE device() { return obj(); }
     void get_device_queue();
 
-    XGL_UINT id;
+    uint32_t id;
     XGL_PHYSICAL_GPU_PROPERTIES props;
     const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
 
@@ -66,7 +66,7 @@ public:
 protected:
     XGL_APPLICATION_INFO                    app_info;
     XGL_PHYSICAL_GPU                        objs[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT                                gpu_count;
+    uint32_t                                gpu_count;
     XglDevice                              *m_device;
     XGL_CMD_BUFFER                          m_cmdBuffer;
     XGL_RENDER_PASS                         m_renderPass;
@@ -76,8 +76,8 @@ protected:
     XGL_DYNAMIC_VP_STATE_OBJECT             m_stateViewport;
     XGL_DYNAMIC_DS_STATE_OBJECT             m_stateDepthStencil;
     vector<XglImage*>                       m_renderTargets;
-    XGL_UINT                                m_renderTargetCount;
-    XGL_FLOAT                               m_width, m_height;
+    uint32_t                                m_renderTargetCount;
+    float                                   m_width, m_height;
     XGL_FORMAT                              m_render_target_fmt;
     XGL_COLOR_ATTACHMENT_BIND_INFO          m_colorBindings[8];
     XGL_DEPTH_STENCIL_BIND_INFO             m_depthStencilBinding;
@@ -123,17 +123,17 @@ public:
     void PrepareAttachments();
     void BindPipeline(XGL_PIPELINE pipeline);
     void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
-    void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, XGL_UINT offset, XGL_UINT binding);
-    void BindIndexBuffer(XglIndexBufferObj *indexBuffer, XGL_UINT offset);
+    void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding);
+    void BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject);
-    void Draw(XGL_UINT firstVertex, XGL_UINT vertexCount, XGL_UINT firstInstance, XGL_UINT instanceCount);
-    void DrawIndexed(XGL_UINT firstIndex, XGL_UINT indexCount, XGL_INT vertexOffset, XGL_UINT firstInstance, XGL_UINT instanceCount);
-    void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, XGL_UINT32 numMemRefs);
+    void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
+    void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
+    void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, uint32_t numMemRefs);
 
 protected:
     XglDevice                      *m_device;
     vector<XglImage*>               m_renderTargets;
-    XGL_UINT                        m_renderTargetCount;
+    uint32_t                        m_renderTargetCount;
 
 };
 
@@ -160,7 +160,7 @@ public:
             XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             XGL_MEMORY_INPUT_COPY_BIT);
 
-    void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, XGL_UINT binding);
+    void Bind(XGL_CMD_BUFFER cmdBuffer, XGL_GPU_SIZE offset, uint32_t binding);
 
     XGL_BUFFER_VIEW_ATTACH_INFO     m_bufferViewInfo;
 
@@ -191,11 +191,11 @@ public:
     XglImage(XglDevice *dev);
 
 public:
-    void init( XGL_UINT32 w, XGL_UINT32 h,
+    void init( uint32_t w, uint32_t h,
                      XGL_FORMAT fmt, XGL_FLAGS usage,
                      XGL_IMAGE_TILING tiling=XGL_LINEAR_TILING);
 
-    //    void clear( CommandBuffer*, XGL_UINT[4] );
+    //    void clear( CommandBuffer*, uint32_t[4] );
     //    void prepare( CommandBuffer*, XGL_IMAGE_STATE );
 
     void layout( XGL_IMAGE_LAYOUT layout )
@@ -222,16 +222,16 @@ public:
     {
         return ( XGL_IMAGE_LAYOUT )m_imageInfo.layout;
     }
-    XGL_UINT32 width() const
+    uint32_t width() const
     {
         return extent().width;
     }
-    XGL_UINT32 height() const
+    uint32_t height() const
     {
         return extent().height;
     }
 
-    XGL_RESULT MapMemory(XGL_VOID** ptr);
+    XGL_RESULT MapMemory(void** ptr);
     XGL_RESULT UnmapMemory();
 
 protected:
@@ -316,7 +316,7 @@ public:
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
     void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
     void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
-    void AddColorAttachment(XGL_UINT binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
+    void AddColorAttachment(uint32_t binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
     void SetDepthStencil(XGL_PIPELINE_DS_STATE_CREATE_INFO *);
     void CreateXGLPipeline(XglDescriptorSetObj *descriptorSet);
     XGL_PIPELINE GetPipelineHandle();

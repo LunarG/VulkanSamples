@@ -124,8 +124,8 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
 
 static void cmd_memory_barriers(struct intel_cmd *cmd,
 				uint32_t flush_flags,
-                                XGL_UINT memory_barrier_count,
-                                const XGL_VOID* memory_barriers)
+                                uint32_t memory_barrier_count,
+                                const void* memory_barriers)
 {
     uint32_t i;
     XGL_MEMORY_BARRIER *memory_barrier;
@@ -201,7 +201,7 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
     cmd_batch_flush(cmd, flush_flags);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdWaitEvents(
+ICD_EXPORT void XGLAPI xglCmdWaitEvents(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_EVENT_WAIT_INFO*                  pWaitInfo)
 {
@@ -224,7 +224,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdWaitEvents(
             pWaitInfo->memBarrierCount, pWaitInfo->pMemBarriers);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdPipelineBarrier(
+ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_PIPELINE_BARRIER*                 pBarrier)
 {

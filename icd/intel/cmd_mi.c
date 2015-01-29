@@ -43,7 +43,7 @@ static void gen6_MI_STORE_REGISTER_MEM(struct intel_cmd *cmd,
                    (cmd_len - 2);
     uint32_t reloc_flags = INTEL_RELOC_WRITE;
     uint32_t *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     if (cmd_gen(cmd) == INTEL_GEN(6)) {
         dw0 |= GEN6_MI_STORE_REGISTER_MEM_DW0_USE_GGTT;
@@ -68,7 +68,7 @@ static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
                    (cmd_len - 2);
     uint32_t reloc_flags = INTEL_RELOC_WRITE;
     uint32_t *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     if (cmd_gen(cmd) == INTEL_GEN(6)) {
         dw0 |= GEN6_MI_STORE_DATA_IMM_DW0_USE_GGTT;
@@ -103,7 +103,7 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
         (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN7_REG_DS_INVOCATION_COUNT : 0,
         0,
     };
-    XGL_UINT i;
+    uint32_t i;
 
     cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_CS_STALL);
 
@@ -121,10 +121,10 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBeginQuery(
+ICD_EXPORT void XGLAPI xglCmdBeginQuery(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    slot,
+    uint32_t                                    slot,
     XGL_FLAGS                                   flags)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -145,10 +145,10 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBeginQuery(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdEndQuery(
+ICD_EXPORT void XGLAPI xglCmdEndQuery(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    slot)
+    uint32_t                                    slot)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
@@ -169,16 +169,16 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdEndQuery(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdResetQueryPool(
+ICD_EXPORT void XGLAPI xglCmdResetQueryPool(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    startQuery,
-    XGL_UINT                                    queryCount)
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount)
 {
     /* no-op */
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdSetEvent(
+ICD_EXPORT void XGLAPI xglCmdSetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event_,
     XGL_SET_EVENT                               pipeEvent)
@@ -212,7 +212,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdSetEvent(
     cmd_batch_immediate(cmd, pipe_control_flags, event->obj.mem->bo, 0, 1);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(
+ICD_EXPORT void XGLAPI xglCmdResetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event_)
 {
@@ -225,7 +225,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdResetEvent(
     cmd_batch_immediate(cmd, 0, event->obj.mem->bo, 0, 0);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdWriteTimestamp(
+ICD_EXPORT void XGLAPI xglCmdWriteTimestamp(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_TIMESTAMP_TYPE                          timestampType,
     XGL_BUFFER                                  destBuffer,

@@ -52,20 +52,20 @@ struct app_dev {
 };
 
 struct app_gpu {
-    XGL_UINT id;
+    uint32_t id;
     XGL_PHYSICAL_GPU obj;
 
     XGL_PHYSICAL_GPU_PROPERTIES props;
     XGL_PHYSICAL_GPU_PERFORMANCE perf;
 
-    XGL_UINT queue_count;
+    uint32_t queue_count;
     XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
     XGL_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
 
     XGL_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
 
-    XGL_UINT extension_count;
-    const XGL_CHAR **extensions;
+    uint32_t extension_count;
+    const char **extensions;
 
     struct app_dev dev;
 };
@@ -315,7 +315,7 @@ static void app_dev_init_formats(struct app_dev *dev)
     for (f = 0; f < XGL_NUM_FMT; f++) {
         const XGL_FORMAT fmt = f;
         XGL_RESULT err;
-        XGL_SIZE size = sizeof(dev->format_props[f]);
+        size_t size = sizeof(dev->format_props[f]);
 
         err = xglGetFormatInfo(dev->obj, fmt,
                                XGL_INFO_TYPE_FORMAT_PROPERTIES,
@@ -366,9 +366,9 @@ static void app_dev_destroy(struct app_dev *dev)
 static void app_gpu_init_extensions(struct app_gpu *gpu)
 {
     XGL_RESULT err;
-    XGL_UINT i;
+    uint32_t i;
 
-    static const XGL_CHAR *known_extensions[] = {
+    static const char *known_extensions[] = {
         "XGL_WSI_X11",
     };
 
@@ -391,9 +391,9 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     }
 }
 
-static void app_gpu_init(struct app_gpu *gpu, XGL_UINT id, XGL_PHYSICAL_GPU obj)
+static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
 {
-    XGL_SIZE size;
+    size_t size;
     XGL_RESULT err;
     int i;
 
@@ -471,7 +471,7 @@ static void app_dev_dump_format_props(const struct app_dev *dev, XGL_FORMAT fmt)
         const char *name;
         XGL_FLAGS flags;
     } tilings[2];
-    XGL_UINT i;
+    uint32_t i;
 
     if (!props->linearTilingFeatures && !props->optimalTilingFeatures)
         return;
@@ -530,10 +530,10 @@ static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct ap
 #undef TEST
 }
 
-static void app_gpu_multi_compat(struct app_gpu *gpus, XGL_UINT gpu_count)
+static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 {
         XGL_RESULT err;
-        XGL_UINT i, j;
+        uint32_t i, j;
 
         for (i = 0; i < gpu_count; i++) {
                 for (j = 0; j < gpu_count; j++) {
@@ -597,7 +597,7 @@ static void app_gpu_dump_extensions(const struct app_gpu *gpu)
     printf("\n");
 }
 
-static void app_gpu_dump_queue_props(const struct app_gpu *gpu, XGL_UINT id)
+static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 {
     const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
 
@@ -623,7 +623,7 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
 
 static void app_gpu_dump(const struct app_gpu *gpu)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     printf("GPU%u\n", gpu->id);
     app_gpu_dump_props(gpu);
@@ -654,7 +654,7 @@ int main(int argc, char **argv)
     };
     struct app_gpu gpus[MAX_GPUS];
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
-    XGL_UINT gpu_count, i;
+    uint32_t gpu_count, i;
     XGL_RESULT err;
 
     err = xglInitAndEnumerateGpus(&app_info, NULL,

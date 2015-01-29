@@ -425,7 +425,7 @@ class StructWrapperGen:
         
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
-        dp_funcs.append("\nvoid dynamic_display_full_txt(const XGL_VOID* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
+        dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
         dp_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
         dp_funcs.append("    switch (sType)\n    {")
         for e in enum_type_dict:
@@ -549,7 +549,7 @@ class StructWrapperGen:
                     if (stp_list[index]['ptr']):
                         sh_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
-                            sh_funcs.append('        tmpStr = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);\n')
+                            sh_funcs.append('        tmpStr = dynamic_display((void*)pStruct->pNext, prefix);\n')
                             sh_funcs.append('        len = 256+strlen(tmpStr);\n')
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);\n' % index)
                             if self.no_addr:
@@ -604,7 +604,7 @@ class StructWrapperGen:
                 sh_funcs.append('    }\n')
             sh_funcs.append("    return str;\n}\n")
         # Add function to dynamically print out unknown struct
-        sh_funcs.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix)\n{\n")
+        sh_funcs.append("char* dynamic_display(const void* pStruct, const char* prefix)\n{\n")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
         sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
         sh_funcs.append('    char indent[100];\n    strcpy(indent, "    ");\n    strcat(indent, prefix);\n')
@@ -669,7 +669,7 @@ class StructWrapperGen:
                     if (stp_list[index]['ptr']):
                         sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
-                            sh_funcs.append('        tmp_str = dynamic_display((XGL_VOID*)pStruct->pNext, prefix);')
+                            sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')
                         else:
                             sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('        ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
@@ -736,7 +736,7 @@ class StructWrapperGen:
             sh_funcs.append('    final_str = %s;' % final_str)
             sh_funcs.append('    return final_str;\n}')
         # Add function to dynamically print out unknown struct
-        sh_funcs.append("string dynamic_display(const XGL_VOID* pStruct, const string prefix)\n{")
+        sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")
         sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;")
         sh_funcs.append('    string indent = "    ";')
@@ -793,7 +793,7 @@ class StructWrapperGen:
         i_declared = False
         for member in sorted(self.struct_dict[s]):
             # TODO : Need to display each member based on its type
-            # TODO : Need to handle pNext which are structs, but of XGL_VOID* type
+            # TODO : Need to handle pNext which are structs, but of void* type
             #   Can grab struct type off of header of struct pointed to
             # TODO : Handle Arrays
             if self.struct_dict[s][member]['array']:
@@ -865,7 +865,7 @@ class StructWrapperGen:
             if 'xgl_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
         header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
-        header.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix);\n")
+        header.append("char* dynamic_display(const void* pStruct, const char* prefix);\n")
         return "".join(header)
 
     def _generateStringHelperHeaderCpp(self):
@@ -876,7 +876,7 @@ class StructWrapperGen:
                 header.append("#include <%s>\n" % f)
         header.append('#include "xgl_enum_string_helper.h"\n')
         header.append('using namespace std;\n\n// Function Prototypes\n')
-        header.append("string dynamic_display(const XGL_VOID* pStruct, const string prefix);\n")
+        header.append("string dynamic_display(const void* pStruct, const string prefix);\n")
         return "".join(header)
 
     def _generateValidateHelperFunctions(self):
@@ -907,7 +907,7 @@ class StructWrapperGen:
             if 'xgl_enum_validate_helper' not in f:
                 header.append("#include <%s>\n" % f)
         header.append('#include "xgl_enum_validate_helper.h"\n\n// Function Prototypes\n')
-        #header.append("char* dynamic_display(const XGL_VOID* pStruct, const char* prefix);\n")
+        #header.append("char* dynamic_display(const void* pStruct, const char* prefix);\n")
         return "".join(header)
 
     def _generateHeader(self):
@@ -1066,7 +1066,7 @@ class GraphVizGen:
             if 'xgl_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
         #header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
-        header.append("\nchar* dynamic_gv_display(const XGL_VOID* pStruct, const char* prefix);\n")
+        header.append("\nchar* dynamic_gv_display(const void* pStruct, const char* prefix);\n")
         return "".join(header)
 
     def _get_gv_func_name(self, struct):
@@ -1135,7 +1135,7 @@ class GraphVizGen:
         for s in self.struct_dict:
             gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
             if s.lower().strip("_") in array_func_list:
-                gv_funcs.append('char* %s_array(XGL_UINT count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
         gv_funcs.append('\n')
         for s in self.struct_dict:
             p_out = ""
@@ -1168,7 +1168,7 @@ class GraphVizGen:
                             gv_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
                             gv_funcs.append('        sprintf(nodeName, "pNext_%p", (void*)pStruct->pNext);\n')
-                            gv_funcs.append('        tmpStr = dynamic_gv_display((XGL_VOID*)pStruct->pNext, nodeName);\n')
+                            gv_funcs.append('        tmpStr = dynamic_gv_display((void*)pStruct->pNext, nodeName);\n')
                             gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % index)
                             gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":pNext -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % index)
                             gv_funcs.append('        free(tmpStr);\n')
@@ -1216,7 +1216,7 @@ class GraphVizGen:
                 gv_funcs.append('    }\n')
             gv_funcs.append("    return str;\n}\n")
             if s.lower().strip("_") in array_func_list:
-                gv_funcs.append('char* %s_array(XGL_UINT count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 gv_funcs.append('    str = (char*)malloc(sizeof(char)*1024*count);\n')
                 gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
                 gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
@@ -1250,7 +1250,7 @@ class GraphVizGen:
                 gv_funcs.append('    }\n')
                 gv_funcs.append('    return str;\n}\n')
         # Add function to dynamically print out unknown struct
-        gv_funcs.append("char* dynamic_gv_display(const XGL_VOID* pStruct, const char* nodeName)\n{\n")
+        gv_funcs.append("char* dynamic_gv_display(const void* pStruct, const char* nodeName)\n{\n")
         gv_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
         gv_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
         gv_funcs.append("    switch (sType)\n    {\n")

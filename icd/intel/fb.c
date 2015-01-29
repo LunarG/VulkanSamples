@@ -47,10 +47,10 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
     if (!fb)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    XGL_UINT width  = info->width;
-    XGL_UINT height = info->height;
-    XGL_UINT layers = info->layers;
-    XGL_UINT i;
+    uint32_t width  = info->width;
+    uint32_t height = info->height;
+    uint32_t layers = info->layers;
+    uint32_t i;
 
     for (i = 0; i < info->colorAttachmentCount; i++) {
         const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &(info->pColorAttachments[i]);

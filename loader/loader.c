@@ -56,10 +56,10 @@ struct loader_icd {
     void *handle;
 
     XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
-    XGL_UINT layer_count[XGL_MAX_PHYSICAL_GPUS];
+    uint32_t layer_count[XGL_MAX_PHYSICAL_GPUS];
     struct loader_layers layer_libs[XGL_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
     XGL_BASE_LAYER_OBJECT *wrappedGpus[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT gpu_count;
+    uint32_t gpu_count;
     XGL_BASE_LAYER_OBJECT *gpus;
 
     xglGetProcAddrType GetProcAddr;
@@ -71,7 +71,7 @@ struct loader_icd {
 
 struct loader_msg_callback {
     XGL_DBG_MSG_CALLBACK_FUNCTION func;
-    XGL_VOID *data;
+    void *data;
 
     struct loader_msg_callback *next;
 };
@@ -92,7 +92,7 @@ static struct {
 } loader;
 
 static XGL_RESULT loader_msg_callback_add(XGL_DBG_MSG_CALLBACK_FUNCTION func,
-                                          XGL_VOID *data)
+                                          void *data)
 {
     struct loader_msg_callback *cb;
 
@@ -147,7 +147,7 @@ static void loader_msg_callback_clear(void)
     loader.msg_callbacks = NULL;
 }
 
-static void loader_log(XGL_DBG_MSG_TYPE msg_type, XGL_INT msg_code,
+static void loader_log(XGL_DBG_MSG_TYPE msg_type, int32_t msg_code,
                        const char *format, ...)
 {
     const struct loader_msg_callback *cb = loader.msg_callbacks;
@@ -235,7 +235,7 @@ static XGL_RESULT loader_icd_register_msg_callbacks(const struct loader_icd *icd
     XGL_RESULT res;
 
     while (cb) {
-        for (XGL_UINT i = 0; i < icd->gpu_count; i++) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
             res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(cb->func, cb->data);
             if (res != XGL_SUCCESS) {
                 break;
@@ -249,7 +249,7 @@ static XGL_RESULT loader_icd_register_msg_callbacks(const struct loader_icd *icd
         const struct loader_msg_callback *tmp = loader.msg_callbacks;
 
         while (tmp != cb) {
-            for (XGL_UINT i = 0; i < icd->gpu_count; i++) {
+            for (uint32_t i = 0; i < icd->gpu_count; i++) {
                 (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(cb->func);
             }
             tmp = tmp->next;
@@ -265,7 +265,7 @@ static XGL_RESULT loader_icd_set_global_options(const struct loader_icd *icd)
 {
 #define SETB(icd, opt, val) do {                                \
     if (val) {                                                  \
-        for (XGL_UINT i = 0; i < icd->gpu_count; i++) {         \
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {         \
             const XGL_RESULT res =                              \
                 (icd->loader_dispatch + i)->DbgSetGlobalOption(opt, sizeof(val), &val); \
             if (res != XGL_SUCCESS)                             \
@@ -469,10 +469,10 @@ static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, xglGetProc
         tab->EnumerateLayers = xglEnumerateLayers;
 }
 
-static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, XGL_UINT *gpu_index)
+static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, uint32_t *gpu_index)
 {
     for (struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
-        for (XGL_UINT i = 0; i < icd->gpu_count; i++)
+        for (uint32_t i = 0; i < icd->gpu_count; i++)
             if ((icd->gpus + i) == gpu || (icd->gpus +i)->baseObject == gpu->baseObject) {
                 *gpu_index = i;
                 return icd;
@@ -481,7 +481,7 @@ static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, XGL_
     return NULL;
 }
 
-static bool loader_layers_activated(const struct loader_icd *icd, const XGL_UINT gpu_index)
+static bool loader_layers_activated(const struct loader_icd *icd, const uint32_t gpu_index)
 {
     if (icd->layer_count[gpu_index])
         return true;
@@ -489,16 +489,16 @@ static bool loader_layers_activated(const struct loader_icd *icd, const XGL_UINT
         return false;
 }
 
-static void loader_init_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index, struct layer_name_pair * pLayerNames, XGL_UINT count)
+static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair * pLayerNames, uint32_t count)
 {
     if (!icd)
         return;
 
     struct loader_layers *obj;
     bool foundLib;
-    for (XGL_UINT i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         foundLib = false;
-        for (XGL_UINT j = 0; j < icd->layer_count[gpu_index]; j++) {
+        for (uint32_t j = 0; j < icd->layer_count[gpu_index]; j++) {
             if (icd->layer_libs[gpu_index][j].lib_handle && !strcmp(icd->layer_libs[gpu_index][j].name, (char *) pLayerNames[i].layer_name)) {
                 foundLib = true;
                 break;
@@ -520,12 +520,12 @@ static void loader_init_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index, s
     }
 }
 
-static bool find_layer_name(struct loader_icd *icd, XGL_UINT gpu_index, const char * layer_name, const char **lib_name)
+static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const char * layer_name, const char **lib_name)
 {
     void *handle;
     xglEnumerateLayersType fpEnumerateLayers;
-    XGL_CHAR layer_buf[16][256];
-    XGL_CHAR * layers[16];
+    char layer_buf[16][256];
+    char * layers[16];
 
     for (int i = 0; i < 16; i++)
          layers[i] = &layer_buf[i][0];
@@ -549,8 +549,8 @@ static bool find_layer_name(struct loader_icd *icd, XGL_UINT gpu_index, const ch
             }
         }
         else {
-            XGL_SIZE cnt;
-            fpEnumerateLayers(NULL, 16, 256, &cnt, layers, (XGL_VOID *) icd->gpus + gpu_index);
+            size_t cnt;
+            fpEnumerateLayers(NULL, 16, 256, &cnt, layers, (void *) icd->gpus + gpu_index);
             for (unsigned int i = 0; i < cnt; i++) {
                 if (!strcmp((char *) layers[i], layer_name)) {
                     dlclose(handle);
@@ -565,10 +565,10 @@ static bool find_layer_name(struct loader_icd *icd, XGL_UINT gpu_index, const ch
     return false;
 }
 
-static XGL_UINT loader_get_layer_env(struct loader_icd *icd, XGL_UINT gpu_index, struct layer_name_pair *pLayerNames)
+static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
 {
     const char *layerEnv;
-    XGL_UINT len, count = 0;
+    uint32_t len, count = 0;
     char *p, *pOrig, *next, *name;
 
     layerEnv = getenv("LIBXGL_LAYER_NAMES");
@@ -616,7 +616,7 @@ static XGL_UINT loader_get_layer_env(struct loader_icd *icd, XGL_UINT gpu_index,
     return count;
 }
 
-static XGL_UINT loader_get_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index, const XGL_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
+static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const XGL_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
 
@@ -631,8 +631,8 @@ static XGL_UINT loader_get_layer_libs(struct loader_icd *icd, XGL_UINT gpu_index
     while (pCi) {
         if (pCi->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) {
             const char *name;
-            XGL_UINT len;
-            for (XGL_UINT i = 0; i < pCi->layerCount; i++) {
+            uint32_t len;
+            for (uint32_t i = 0; i < pCi->layerCount; i++) {
                 const char * lib_name = NULL;
                 name = *(pCi->ppActiveLayerNames + i);
                 if (!find_layer_name(icd, gpu_index, name, &lib_name))
@@ -664,9 +664,9 @@ static void loader_deactivate_layer()
         if (icd->loader_dispatch)
             free(icd->loader_dispatch);
         icd->loader_dispatch = NULL;
-        for (XGL_UINT j = 0; j < icd->gpu_count; j++) {
+        for (uint32_t j = 0; j < icd->gpu_count; j++) {
             if (icd->layer_count[j] > 0) {
-                for (XGL_UINT i = 0; i < icd->layer_count[j]; i++) {
+                for (uint32_t i = 0; i < icd->layer_count[j]; i++) {
                     libs = &(icd->layer_libs[j][i]);
                     if (libs->lib_handle)
                         dlclose(libs->lib_handle);
@@ -681,10 +681,10 @@ static void loader_deactivate_layer()
     }
 }
 
-extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
+extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
 {
-    XGL_UINT gpu_index;
-    XGL_UINT count;
+    uint32_t gpu_index;
+    uint32_t count;
     struct layer_name_pair *pLayerNames;
     struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
 
@@ -706,7 +706,7 @@ extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
         icd->wrappedGpus[gpu_index] = malloc(sizeof(XGL_BASE_LAYER_OBJECT) * icd->layer_count[gpu_index]);
         if (! icd->wrappedGpus[gpu_index])
                 loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to malloc Gpu objects for layer");
-        for (XGL_INT i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
+        for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
             nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
             nextGpuObj->baseObject = baseObj;
@@ -737,7 +737,7 @@ extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
     else {
         //make sure requested Layers matches currently activated Layers
         count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
-        for (XGL_UINT i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
             if (strcmp(icd->layer_libs[gpu_index][i].name, pLayerNames[i].layer_name)) {
                 loader_log(XGL_DBG_MSG_ERROR, 0, "Layers activated != Layers requested");
                 break;
@@ -750,7 +750,7 @@ extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
     return icd->layer_count[gpu_index];
 }
 
-LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR * pName) {
+LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pName) {
 
     if (gpu == NULL)
         return NULL;
@@ -771,11 +771,11 @@ LOADER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_C
     }
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_UINT maxGpus, XGL_UINT* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
+LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
 {
     static pthread_once_t once = PTHREAD_ONCE_INIT;
     struct loader_icd *icd;
-    XGL_UINT count = 0;
+    uint32_t count = 0;
     XGL_RESULT res;
 
     // cleanup any prior layer initializations
@@ -791,7 +791,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
         XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
         XGL_BASE_LAYER_OBJECT * wrappedGpus;
         xglGetProcAddrType getProcAddr = icd->GetProcAddr;
-        XGL_UINT n, max = maxGpus - count;
+        uint32_t n, max = maxGpus - count;
 
         if (max > XGL_MAX_PHYSICAL_GPUS) {
             max = XGL_MAX_PHYSICAL_GPUS;
@@ -841,16 +841,16 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_IN
     return (count > 0) ? XGL_SUCCESS : res;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers, XGL_VOID* pReserved)
+LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
-    XGL_UINT gpu_index;
-    XGL_UINT count = 0;
+    uint32_t gpu_index;
+    uint32_t count = 0;
     char *lib_name;
     struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
     void *handle;
     xglEnumerateLayersType fpEnumerateLayers;
-    XGL_CHAR layer_buf[16][256];
-    XGL_CHAR * layers[16];
+    char layer_buf[16][256];
+    char * layers[16];
 
     if (pOutLayerCount == NULL || pOutLayers == NULL)
         return XGL_ERROR_INVALID_POINTER;
@@ -887,11 +887,11 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZ
             free(cpyStr);
         }
         else {
-            XGL_SIZE cnt;
-            XGL_UINT n;
+            size_t cnt;
+            uint32_t n;
             XGL_RESULT res;
             n = (maxStringSize < 256) ? maxStringSize : 256;
-            res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (XGL_VOID *) icd->gpus + gpu_index);
+            res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (void *) icd->gpus + gpu_index);
             dlclose(handle);
             if (res != XGL_SUCCESS)
                 continue;
@@ -911,18 +911,18 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZ
     return XGL_SUCCESS;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)
+LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     const struct loader_icd *icd;
     XGL_RESULT res;
-    XGL_UINT gpu_idx;
+    uint32_t gpu_idx;
 
     if (!loader.scanned) {
         return loader_msg_callback_add(pfnMsgCallback, pUserData);
     }
 
     for (icd = loader.icds; icd; icd = icd->next) {
-        for (XGL_UINT i = 0; i < icd->gpu_count; i++) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
             res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
             if (res != XGL_SUCCESS) {
                 gpu_idx = i;
@@ -936,11 +936,11 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_F
     /* roll back on errors */
     if (icd) {
         for (const struct loader_icd * tmp = loader.icds; tmp != icd; tmp = tmp->next) {
-            for (XGL_UINT i = 0; i < icd->gpu_count; i++)
+            for (uint32_t i = 0; i < icd->gpu_count; i++)
                 (tmp->loader_dispatch + i)->DbgUnregisterMsgCallback(pfnMsgCallback);
         }
         /* and gpus on current icd */
-        for (XGL_UINT i = 0; i < gpu_idx; i++)
+        for (uint32_t i = 0; i < gpu_idx; i++)
             (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(pfnMsgCallback);
 
         return res;
@@ -958,7 +958,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK
     }
 
     for (const struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
-        for (XGL_UINT i = 0; i < icd->gpu_count; i++) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
             XGL_RESULT r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(pfnMsgCallback);
             if (r != XGL_SUCCESS) {
                 res = r;
@@ -968,7 +968,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK
     return res;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData)
+LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
     XGL_RESULT res = XGL_SUCCESS;
 
@@ -995,7 +995,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgO
     }
 
     for (const struct loader_icd * icd = loader.icds; icd; icd = icd->next) {
-        for (XGL_UINT i = 0; i < icd->gpu_count; i++) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
             XGL_RESULT r = (icd->loader_dispatch + i)->DbgSetGlobalOption(dbgOption, dataSize, pData);
             /* unfortunately we cannot roll back */
             if (r != XGL_SUCCESS) {

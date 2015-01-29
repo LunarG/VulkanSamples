@@ -134,8 +134,8 @@ struct intel_cmd_shader_cache {
         uint32_t kernel_offset;
     } *entries;
 
-    XGL_UINT count;
-    XGL_UINT used;
+    uint32_t count;
+    uint32_t used;
 };
 
 /*
@@ -191,21 +191,21 @@ struct intel_cmd_bind {
 
     struct intel_render_pass *render_pass;
 
-    XGL_UINT draw_count;
+    uint32_t draw_count;
     uint32_t wa_flags;
 };
 
 struct intel_cmd_writer {
-    XGL_SIZE size;
+    size_t size;
     struct intel_bo *bo;
     void *ptr;
 
-    XGL_SIZE used;
+    size_t used;
 
     /* for decoding */
     struct intel_cmd_item *items;
-    XGL_UINT item_alloc;
-    XGL_UINT item_used;
+    uint32_t item_alloc;
+    uint32_t item_used;
 };
 
 struct intel_cmd {
@@ -216,13 +216,13 @@ struct intel_cmd {
     int pipeline_select;
 
     struct intel_cmd_reloc *relocs;
-    XGL_UINT reloc_count;
+    uint32_t reloc_count;
 
     XGL_FLAGS flags;
 
     struct intel_cmd_writer writers[INTEL_CMD_WRITER_COUNT];
 
-    XGL_UINT reloc_used;
+    uint32_t reloc_used;
     XGL_RESULT result;
 
     struct intel_cmd_bind bind;

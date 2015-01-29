@@ -35,7 +35,7 @@
 
 static void dev_destroy_meta_shaders(struct intel_dev *dev)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < ARRAY_SIZE(dev->cmd_meta_shaders); i++) {
         if (!dev->cmd_meta_shaders[i])
@@ -48,7 +48,7 @@ static void dev_destroy_meta_shaders(struct intel_dev *dev)
 
 static bool dev_create_meta_shaders(struct intel_dev *dev)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < ARRAY_SIZE(dev->cmd_meta_shaders); i++) {
         struct intel_pipeline_shader *sh;
@@ -67,9 +67,9 @@ static bool dev_create_meta_shaders(struct intel_dev *dev)
 
 static XGL_RESULT dev_create_queues(struct intel_dev *dev,
                                     const XGL_DEVICE_QUEUE_CREATE_INFO *queues,
-                                    XGL_UINT count)
+                                    uint32_t count)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     if (!count)
         return XGL_ERROR_INVALID_POINTER;
@@ -88,7 +88,7 @@ static XGL_RESULT dev_create_queues(struct intel_dev *dev,
         }
 
         if (ret != XGL_SUCCESS) {
-            XGL_UINT j;
+            uint32_t j;
             for (j = 0; j < i; j++)
                 intel_queue_destroy(dev->queues[j]);
 
@@ -104,7 +104,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
                             struct intel_dev **dev_ret)
 {
     struct intel_dev *dev;
-    XGL_UINT i;
+    uint32_t i;
     XGL_RESULT ret;
 
     if (gpu->winsys)
@@ -184,7 +184,7 @@ static void dev_clear_msg_filters(struct intel_dev *dev)
 void intel_dev_destroy(struct intel_dev *dev)
 {
     struct intel_gpu *gpu = dev->gpu;
-    XGL_UINT i;
+    uint32_t i;
 
     if (dev->base.dbg)
         dev_clear_msg_filters(dev);
@@ -209,7 +209,7 @@ void intel_dev_destroy(struct intel_dev *dev)
 }
 
 XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
-                                    XGL_INT msg_code,
+                                    int32_t msg_code,
                                     XGL_DBG_MSG_FILTER filter)
 {
     struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
@@ -245,7 +245,7 @@ XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
 }
 
 void intel_dev_remove_msg_filter(struct intel_dev *dev,
-                                 XGL_INT msg_code)
+                                 int32_t msg_code)
 {
     struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
     struct intel_dev_dbg_msg_filter *f = dbg->filters, *prev = NULL;
@@ -267,7 +267,7 @@ void intel_dev_remove_msg_filter(struct intel_dev *dev,
 }
 
 static bool dev_filter_msg(struct intel_dev *dev,
-                           XGL_INT msg_code)
+                           int32_t msg_code)
 {
     struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
     struct intel_dev_dbg_msg_filter *filter;
@@ -300,8 +300,8 @@ void intel_dev_log(struct intel_dev *dev,
                    XGL_DBG_MSG_TYPE msg_type,
                    XGL_VALIDATION_LEVEL validation_level,
                    struct intel_base *src_object,
-                   XGL_SIZE location,
-                   XGL_INT msg_code,
+                   size_t location,
+                   int32_t msg_code,
                    const char *format, ...)
 {
     va_list ap;
@@ -338,7 +338,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(
 ICD_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
     XGL_QUEUE_TYPE                              queueType,
-    XGL_UINT                                    queueIndex,
+    uint32_t                                    queueIndex,
     XGL_QUEUE*                                  pQueue)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -361,7 +361,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(
 {
     struct intel_dev *dev = intel_dev(device);
     XGL_RESULT ret = XGL_SUCCESS;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
         if (dev->queues[i]) {
@@ -389,7 +389,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(
     XGL_DEVICE                                  device,
-    XGL_INT                                     msgCode,
+    int32_t                                     msgCode,
     XGL_DBG_MSG_FILTER                          filter)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -408,8 +408,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(
     XGL_DEVICE                                  device,
     XGL_DBG_DEVICE_OPTION                       dbgOption,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData)
+    size_t                                      dataSize,
+    const void*                                 pData)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_dev_dbg *dbg = intel_dev_dbg(dev);

@@ -50,7 +50,7 @@ static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
 static struct intel_bo *queue_create_bo(struct intel_queue *queue,
                                         XGL_GPU_SIZE size,
                                         const void *cmd,
-                                        XGL_SIZE cmd_len)
+                                        size_t cmd_len)
 {
     struct intel_bo *bo;
     void *ptr;
@@ -228,7 +228,7 @@ XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     XGL_QUEUE                                   queue,
-    XGL_UINT                                    memRefCount,
+    uint32_t                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs)
 {
     /*
@@ -248,15 +248,15 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     XGL_QUEUE                                   queue_,
-    XGL_UINT                                    cmdBufferCount,
+    uint32_t                                    cmdBufferCount,
     const XGL_CMD_BUFFER*                       pCmdBuffers,
-    XGL_UINT                                    memRefCount,
+    uint32_t                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
     XGL_RESULT ret = XGL_SUCCESS;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < cmdBufferCount; i++) {
         struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);

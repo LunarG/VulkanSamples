@@ -601,7 +601,7 @@ void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh)
 }
 
 void intel_disassemble_kernel(const struct intel_gpu *gpu,
-                              const void *kernel, XGL_SIZE size)
+                              const void *kernel, size_t size)
 {
     struct brw_compile c;
 

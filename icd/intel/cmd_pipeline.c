@@ -106,7 +106,7 @@ static void gen6_PIPE_CONTROL(struct intel_cmd *cmd, uint32_t dw1,
                         (cmd_len - 2);
    uint32_t reloc_flags = INTEL_RELOC_WRITE;
    uint32_t *dw;
-   XGL_UINT pos;
+   uint32_t pos;
 
    CMD_ASSERT(cmd, 6, 7.5);
 
@@ -244,7 +244,7 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
     const uint8_t cmd_len = 3;
     uint32_t dw0, end_offset, *dw;
     unsigned offset_align;
-    XGL_UINT pos;
+    uint32_t pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -347,7 +347,7 @@ static void gen7_3DSTATE_GS(struct intel_cmd *cmd)
 }
 
 static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
-                                           XGL_UINT width, XGL_UINT height)
+                                           uint32_t width, uint32_t height)
 {
     const uint8_t cmd_len = 4;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_DRAWING_RECTANGLE) |
@@ -443,8 +443,8 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
 static void gen7_fill_3DSTATE_SBE_body(const struct intel_cmd *cmd,
                                        uint32_t body[13])
 {
-    XGL_UINT sbe_offset;
-    XGL_INT i;
+    uint32_t sbe_offset;
+    int32_t i;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -548,7 +548,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
 }
 
 static void gen6_add_scratch_space(struct intel_cmd *cmd,
-                                   XGL_UINT batch_pos,
+                                   uint32_t batch_pos,
                                    const struct intel_pipeline *pipeline,
                                    const struct intel_pipeline_shader *sh)
 {
@@ -572,7 +572,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const uint8_t cmd_len = 9;
-    XGL_UINT pos;
+    uint32_t pos;
     uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
@@ -684,7 +684,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const uint8_t cmd_len = 8;
     uint32_t dw0, dw2, dw4, dw5, *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     CMD_ASSERT(cmd, 7, 7.5);
 
@@ -732,7 +732,7 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
 {
     const uint8_t cmd_len = 7;
     uint32_t dw0, *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -762,7 +762,7 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
 {
     const uint8_t cmd_len = 3;
     uint32_t dw0, *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -788,7 +788,7 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
 {
     const uint8_t cmd_len = 3;
     uint32_t dw0, *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -1437,12 +1437,12 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
 static uint32_t emit_samplers(struct intel_cmd *cmd,
                               const struct intel_pipeline_rmap *rmap)
 {
-    const XGL_UINT border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
-    const XGL_UINT border_stride =
+    const uint32_t border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
+    const uint32_t border_stride =
         u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR / 4);
     uint32_t border_offset, *border_dw, sampler_offset, *sampler_dw;
-    XGL_UINT surface_count;
-    XGL_UINT i;
+    uint32_t surface_count;
+    uint32_t i;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -1512,7 +1512,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                                    const XGL_PIPELINE_SHADER_STAGE stage)
 {
     uint32_t binding_table[256], offset;
-    XGL_UINT surface_count, i;
+    uint32_t surface_count, i;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -1609,7 +1609,7 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const uint8_t cmd_len = 1 + 4 * pipeline->vb_count;
     uint32_t *dw;
-    XGL_UINT pos, i;
+    uint32_t pos, i;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -1676,7 +1676,7 @@ static void gen6_3DSTATE_VS(struct intel_cmd *cmd)
     const uint8_t cmd_len = 6;
     const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
     uint32_t dw2, dw4, dw5, *dw;
-    XGL_UINT pos;
+    uint32_t pos;
     int vue_read_len;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -1828,7 +1828,7 @@ static uint32_t emit_shader(struct intel_cmd *cmd,
 {
     struct intel_cmd_shader_cache *cache = &cmd->bind.shader_cache;
     uint32_t offset;
-    XGL_UINT i;
+    uint32_t i;
 
     /* see if the shader is already in the cache */
     for (i = 0; i < cache->used; i++) {
@@ -1840,7 +1840,7 @@ static uint32_t emit_shader(struct intel_cmd *cmd,
 
     /* grow the cache if full */
     if (cache->used >= cache->count) {
-        const XGL_UINT count = cache->count + 16;
+        const uint32_t count = cache->count + 16;
         void *entries;
 
         entries = icd_alloc(sizeof(cache->entries[0]) * count, 0,
@@ -2211,7 +2211,7 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
     uint32_t vb_start, vb_end, vb_stride;
     int ve_format, ve_z_source;
     uint32_t *dw;
-    XGL_UINT pos;
+    uint32_t pos;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -2228,7 +2228,7 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
         break;
     case INTEL_CMD_META_FS_RECT:
         {
-            XGL_UINT vertices[3][2];
+            uint32_t vertices[3][2];
 
             vertices[0][0] = meta->dst.x + meta->width;
             vertices[0][1] = meta->dst.y + meta->height;
@@ -2248,16 +2248,16 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
         break;
     case INTEL_CMD_META_DEPTH_STENCIL_RECT:
         {
-            XGL_FLOAT vertices[3][3];
+            float vertices[3][3];
 
-            vertices[0][0] = (XGL_FLOAT) (meta->dst.x + meta->width);
-            vertices[0][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
+            vertices[0][0] = (float) (meta->dst.x + meta->width);
+            vertices[0][1] = (float) (meta->dst.y + meta->height);
             vertices[0][2] = u_uif(meta->clear_val[0]);
-            vertices[1][0] = (XGL_FLOAT) meta->dst.x;
-            vertices[1][1] = (XGL_FLOAT) (meta->dst.y + meta->height);
+            vertices[1][0] = (float) meta->dst.x;
+            vertices[1][1] = (float) (meta->dst.y + meta->height);
             vertices[1][2] = u_uif(meta->clear_val[0]);
-            vertices[2][0] = (XGL_FLOAT) meta->dst.x;
-            vertices[2][1] = (XGL_FLOAT) meta->dst.y;
+            vertices[2][0] = (float) meta->dst.x;
+            vertices[2][1] = (float) meta->dst.y;
             vertices[2][2] = u_uif(meta->clear_val[0]);
 
             vb_start = cmd_state_write(cmd, INTEL_CMD_ITEM_BLOB, 32,
@@ -2309,8 +2309,8 @@ static uint32_t gen6_meta_vs_constants(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
     /* one GPR */
-    XGL_UINT consts[8];
-    XGL_UINT const_count;
+    uint32_t consts[8];
+    uint32_t const_count;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -2359,7 +2359,7 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
     CMD_ASSERT(cmd, 6, 7.5);
 
     if (meta->mode != INTEL_CMD_META_VS_POINTS) {
-        XGL_UINT cmd_len;
+        uint32_t cmd_len;
 
         /* 3DSTATE_CONSTANT_VS */
         cmd_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 7 : 5;
@@ -2570,10 +2570,10 @@ static void gen6_meta_wm(struct intel_cmd *cmd)
 static uint32_t gen6_meta_ps_constants(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    XGL_UINT offset_x, offset_y;
+    uint32_t offset_x, offset_y;
     /* one GPR */
-    XGL_UINT consts[8];
-    XGL_UINT const_count;
+    uint32_t consts[8];
+    uint32_t const_count;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -2907,7 +2907,7 @@ static void cmd_bind_compute_dset(struct intel_cmd *cmd,
 
 static void cmd_bind_vertex_data(struct intel_cmd *cmd,
                                  const struct intel_buf *buf,
-                                 XGL_GPU_SIZE offset, XGL_UINT binding)
+                                 XGL_GPU_SIZE offset, uint32_t binding)
 {
     if (binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) {
         cmd->result = XGL_ERROR_UNKNOWN;
@@ -2952,12 +2952,12 @@ static void cmd_bind_blend_state(struct intel_cmd *cmd,
 }
 
 static void cmd_draw(struct intel_cmd *cmd,
-                     XGL_UINT vertex_start,
-                     XGL_UINT vertex_count,
-                     XGL_UINT instance_start,
-                     XGL_UINT instance_count,
+                     uint32_t vertex_start,
+                     uint32_t vertex_count,
+                     uint32_t instance_start,
+                     uint32_t instance_count,
                      bool indexed,
-                     XGL_UINT vertex_base)
+                     uint32_t vertex_base)
 {
     const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
 
@@ -3055,7 +3055,7 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
         cmd_batch_flush_all(cmd);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipeline(
+ICD_EXPORT void XGLAPI xglCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE                                pipeline)
@@ -3075,7 +3075,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipeline(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(
+ICD_EXPORT void XGLAPI xglCmdBindPipelineDelta(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE_DELTA                          delta)
@@ -3095,7 +3095,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindPipelineDelta(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicStateObject(
+ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_STATE_BIND_POINT                        stateBindPoint,
     XGL_DYNAMIC_STATE_OBJECT                    state)
@@ -3125,11 +3125,11 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDynamicStateObject(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(
+ICD_EXPORT void XGLAPI xglCmdBindDescriptorSet(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_DESCRIPTOR_SET                          descriptorSet,
-    const XGL_UINT*                             pUserData)
+    const uint32_t*                             pUserData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_desc_set *dset = intel_desc_set(descriptorSet);
@@ -3147,11 +3147,11 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindDescriptorSet(
     }
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindVertexBuffer(
+ICD_EXPORT void XGLAPI xglCmdBindVertexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
-    XGL_UINT                                    binding)
+    uint32_t                                    binding)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(buffer);
@@ -3159,7 +3159,7 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindVertexBuffer(
     cmd_bind_vertex_data(cmd, buf, offset, binding);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdBindIndexBuffer(
+ICD_EXPORT void XGLAPI xglCmdBindIndexBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
@@ -3171,12 +3171,12 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdBindIndexBuffer(
     cmd_bind_index_data(cmd, buf, offset, indexType);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDraw(
+ICD_EXPORT void XGLAPI xglCmdDraw(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    firstVertex,
-    XGL_UINT                                    vertexCount,
-    XGL_UINT                                    firstInstance,
-    XGL_UINT                                    instanceCount)
+    uint32_t                                    firstVertex,
+    uint32_t                                    vertexCount,
+    uint32_t                                    firstInstance,
+    uint32_t                                    instanceCount)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3184,13 +3184,13 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdDraw(
             firstInstance, instanceCount, false, 0);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(
+ICD_EXPORT void XGLAPI xglCmdDrawIndexed(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    firstIndex,
-    XGL_UINT                                    indexCount,
-    XGL_INT                                     vertexOffset,
-    XGL_UINT                                    firstInstance,
-    XGL_UINT                                    instanceCount)
+    uint32_t                                    firstIndex,
+    uint32_t                                    indexCount,
+    int32_t                                     vertexOffset,
+    uint32_t                                    firstInstance,
+    uint32_t                                    instanceCount)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3198,42 +3198,42 @@ ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexed(
             firstInstance, instanceCount, true, vertexOffset);
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndirect(
+ICD_EXPORT void XGLAPI xglCmdDrawIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
-    XGL_UINT32                                  count,
-    XGL_UINT32                                  stride)
+    uint32_t                                    count,
+    uint32_t                                    stride)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     cmd->result = XGL_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDrawIndexedIndirect(
+ICD_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset,
-    XGL_UINT32                                  count,
-    XGL_UINT32                                  stride)
+    uint32_t                                    count,
+    uint32_t                                    stride)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     cmd->result = XGL_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDispatch(
+ICD_EXPORT void XGLAPI xglCmdDispatch(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_UINT                                    x,
-    XGL_UINT                                    y,
-    XGL_UINT                                    z)
+    uint32_t                                    x,
+    uint32_t                                    y,
+    uint32_t                                    z)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     cmd->result = XGL_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDispatchIndirect(
+ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset)

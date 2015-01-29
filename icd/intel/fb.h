@@ -28,14 +28,14 @@ struct intel_framebuffer {
     struct intel_obj obj;
 
     const struct intel_rt_view *rt[INTEL_MAX_RENDER_TARGETS];
-    XGL_UINT rt_count;
+    uint32_t rt_count;
 
     const struct intel_ds_view *ds;
 
-    XGL_UINT sample_count;
-    XGL_UINT width;
-    XGL_UINT height;
-    XGL_UINT layer_count;
+    uint32_t sample_count;
+    uint32_t width;
+    uint32_t height;
+    uint32_t layer_count;
 };
 
 struct intel_render_pass {

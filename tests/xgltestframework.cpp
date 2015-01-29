@@ -227,7 +227,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
 
     const char *ptr;
 
-    err = xglMapMemory( image->memory(), 0, (XGL_VOID **) &ptr );
+    err = xglMapMemory( image->memory(), 0, (void **) &ptr );
     ASSERT_XGL_SUCCESS( err );
 
     ptr += sr_layout.offset;
@@ -346,7 +346,7 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
 
     const char *ptr;
 
-    err = image->MapMemory( (XGL_VOID **) &ptr );
+    err = image->MapMemory( (void **) &ptr );
     ASSERT_XGL_SUCCESS( err );
 
     ptr += sr_layout.offset;

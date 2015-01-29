@@ -65,7 +65,7 @@
 
 class XglImageTest : public ::testing::Test {
 public:
-    void CreateImage(XGL_UINT w, XGL_UINT h);
+    void CreateImage(uint32_t w, uint32_t h);
     void DestroyImage();
 
     void CreateImageView(XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
@@ -77,10 +77,10 @@ protected:
     xgl_testing::Device *m_device;
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT gpu_count;
+    uint32_t gpu_count;
     XGL_IMAGE m_image;
     XGL_GPU_MEMORY *m_image_mem;
-    XGL_UINT m_num_mem;
+    uint32_t m_num_mem;
 
     virtual void SetUp() {
         XGL_RESULT err;
@@ -108,18 +108,18 @@ protected:
 };
 
 
-void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
+void XglImageTest::CreateImage(uint32_t w, uint32_t h)
 {
     XGL_RESULT err;
-    XGL_UINT mipCount;
-    XGL_SIZE size;
+    uint32_t mipCount;
+    size_t size;
     XGL_FORMAT fmt;
     XGL_FORMAT_PROPERTIES image_fmt;
 
     mipCount = 0;
 
-    XGL_UINT _w = w;
-    XGL_UINT _h = h;
+    uint32_t _w = w;
+    uint32_t _h = h;
     while( ( _w > 0 ) || ( _h > 0 ) )
     {
         _w >>= 1;
@@ -146,13 +146,13 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     //    typedef struct _XGL_IMAGE_CREATE_INFO
     //    {
     //        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO
-    //        const XGL_VOID*                         pNext;                      // Pointer to next structure.
+    //        const void*                             pNext;                      // Pointer to next structure.
     //        XGL_IMAGE_TYPE                          imageType;
     //        XGL_FORMAT                              format;
     //        XGL_EXTENT3D                            extent;
-    //        XGL_UINT                                mipLevels;
-    //        XGL_UINT                                arraySize;
-    //        XGL_UINT                                samples;
+    //        uint32_t                                mipLevels;
+    //        uint32_t                                arraySize;
+    //        uint32_t                                samples;
     //        XGL_IMAGE_TILING                        tiling;
     //        XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
     //        XGL_FLAGS                               flags;                      // XGL_IMAGE_CREATE_FLAGS
@@ -189,11 +189,11 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     ASSERT_XGL_SUCCESS(err);
 
     XGL_MEMORY_REQUIREMENTS *mem_req;
-    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-    XGL_UINT num_allocations = 0;
-    XGL_SIZE num_alloc_size = sizeof(num_allocations);
+    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
     XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
         .pNext = NULL,
@@ -223,7 +223,7 @@ void XglImageTest::CreateImage(XGL_UINT w, XGL_UINT h)
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
 
-    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+    for (uint32_t i = 0; i < num_allocations; i ++) {
         ASSERT_NE(0, mem_req[i].size) << "xglGetObjectInfo (Image): Failed - expect images to require memory";
         mem_info.allocationSize = mem_req[i].size;
         mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
@@ -246,7 +246,7 @@ void XglImageTest::DestroyImage()
     // All done with image memory, clean up
     ASSERT_XGL_SUCCESS(xglBindObjectMemory(m_image, 0, XGL_NULL_HANDLE, 0));
 
-    for (XGL_UINT i = 0 ; i < m_num_mem; i++) {
+    for (uint32_t i = 0 ; i < m_num_mem; i++) {
         err = xglFreeMemory(m_image_mem[i]);
         ASSERT_XGL_SUCCESS(err);
     }
@@ -278,13 +278,13 @@ TEST_F(XglImageTest, CreateImageViewTest) {
     //    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
     //    {
     //        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-    //        const XGL_VOID*                         pNext;                  // Pointer to next structure
+    //        const void*                             pNext;                  // Pointer to next structure
     //        XGL_IMAGE                               image;
     //        XGL_IMAGE_VIEW_TYPE                     viewType;
     //        XGL_FORMAT                              format;
     //        XGL_CHANNEL_MAPPING                     channels;
     //        XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
-    //        XGL_FLOAT                               minLod;
+    //        float                                   minLod;
     //    } XGL_IMAGE_VIEW_CREATE_INFO;
     XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
     viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

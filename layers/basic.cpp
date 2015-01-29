@@ -28,7 +28,7 @@
 #include "xgl_dispatch_table_helper.h"
 #include "xglLayer.h"
 
-static std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
+static std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
 
 static XGL_LAYER_DISPATCH_TABLE * initLayerTable(const XGL_BASE_LAYER_OBJECT *gpuw)
 {
@@ -36,11 +36,11 @@ static XGL_LAYER_DISPATCH_TABLE * initLayerTable(const XGL_BASE_LAYER_OBJECT *gp
     XGL_LAYER_DISPATCH_TABLE *pTable;
 
     assert(gpuw);
-    std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap.find((XGL_VOID *) gpuw);
+    std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap.find((void *) gpuw);
     if (it == tableMap.end())
     {
         pTable =  new XGL_LAYER_DISPATCH_TABLE;
-        tableMap[(XGL_VOID *) gpuw] = pTable;
+        tableMap[(void *) gpuw] = pTable;
     } else
     {
         return it->second;
@@ -58,7 +58,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLayerExtension1(XGL_DEVICE device)
     return XGL_SUCCESS;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pExtName)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     XGL_RESULT result;
@@ -85,7 +85,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     printf("Completed wrapped xglCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, XGL_SIZE* pDataSize, XGL_VOID* pData)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
 {
     XGL_LAYER_DISPATCH_TABLE* pTable = tableMap[device];
 
@@ -95,7 +95,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize, XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers, XGL_VOID* pReserved)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
@@ -114,7 +114,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT*) pReserved;
         xglGetGpuInfoType fpGetGpuInfo;
         XGL_PHYSICAL_GPU_PROPERTIES gpuProps;
-        XGL_SIZE dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
+        size_t dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
         fpGetGpuInfo = (xglGetGpuInfoType) gpuw->pGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetGpuInfo");
         fpGetGpuInfo((XGL_PHYSICAL_GPU) gpuw->nextObject, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
         if (gpuProps.vendorId == 0x8086)
@@ -129,7 +129,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
     }
 }
 
-XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName)
+XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* pName)
 {
     if (gpu == NULL)
         return NULL;
@@ -137,17 +137,17 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XG
     initLayerTable((const XGL_BASE_LAYER_OBJECT *) gpu);
 
     if (!strncmp("xglGetProcAddr", pName, sizeof("xglGetProcAddr")))
-        return (XGL_VOID *) xglGetProcAddr;
+        return (void *) xglGetProcAddr;
     else if (!strncmp("xglCreateDevice", pName, sizeof ("xglCreateDevice")))
-        return (XGL_VOID *) xglCreateDevice;
+        return (void *) xglCreateDevice;
     else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
-        return (XGL_VOID *) xglGetExtensionSupport;
+        return (void *) xglGetExtensionSupport;
     else if (!strncmp("xglEnumerateLayers", pName, sizeof ("xglEnumerateLayers")))
-        return (XGL_VOID *) xglEnumerateLayers;
+        return (void *) xglEnumerateLayers;
     else if (!strncmp("xglGetFormatInfo", pName, sizeof ("xglGetFormatInfo")))
-        return (XGL_VOID *) xglGetFormatInfo;
+        return (void *) xglGetFormatInfo;
     else if (!strncmp("xglLayerExtension1", pName, sizeof("xglLayerExtension1")))
-        return (XGL_VOID *) xglLayerExtension1;
+        return (void *) xglLayerExtension1;
     else {
         XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
         if (gpuw->pGPA == NULL)

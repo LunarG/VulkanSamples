@@ -33,7 +33,7 @@
 static void initLayerTable(const XGL_BASE_LAYER_OBJECT *gpuw, XGL_LAYER_DISPATCH_TABLE *pTable, const unsigned int layerNum);
 
 /******************************** Layer multi1 functions **************************/
-static std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *> tableMap1;
+static std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *> tableMap1;
 static bool layer1_first_activated = false;
 
 static XGL_LAYER_DISPATCH_TABLE * getLayer1Table(const XGL_BASE_LAYER_OBJECT *gpuw)
@@ -41,11 +41,11 @@ static XGL_LAYER_DISPATCH_TABLE * getLayer1Table(const XGL_BASE_LAYER_OBJECT *gp
     XGL_LAYER_DISPATCH_TABLE *pTable;
 
     assert(gpuw);
-    std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap1.find((XGL_VOID *) gpuw);
+    std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap1.find((void *) gpuw);
     if (it == tableMap1.end())
     {
         pTable =  new XGL_LAYER_DISPATCH_TABLE;
-        tableMap1[(XGL_VOID *) gpuw] = pTable;
+        tableMap1[(void *) gpuw] = pTable;
         initLayerTable(gpuw, pTable, 1);
         return pTable;
     } else
@@ -85,7 +85,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1CreateGraphicsPipeline(XGL_DEVICE devic
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1StorePipeline(XGL_PIPELINE pipeline, XGL_SIZE* pDataSize, XGL_VOID* pData)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1StorePipeline(XGL_PIPELINE pipeline, size_t* pDataSize, void* pData)
 {
     XGL_LAYER_DISPATCH_TABLE* pTable = tableMap1[pipeline];
 
@@ -95,9 +95,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1StorePipeline(XGL_PIPELINE pipeline, XG
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1EnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize,
-                                                         XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers,
-                                                         XGL_VOID* pReserved)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1EnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize,
+                                                         size_t* pOutLayerCount, char* const* pOutLayers,
+                                                         void* pReserved)
 {
     if (gpu == NULL)
         return xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
@@ -111,7 +111,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi1EnumerateLayers(XGL_PHYSICAL_GPU gpu, X
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi1GetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName)
+XGL_LAYER_EXPORT void * XGLAPI multi1GetProcAddr(XGL_PHYSICAL_GPU gpu, const char* pName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
 
@@ -121,13 +121,13 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi1GetProcAddr(XGL_PHYSICAL_GPU gpu, const
     getLayer1Table(gpuw);
 
     if (!strncmp("xglCreateDevice", pName, sizeof ("xglCreateDevice")))
-        return (XGL_VOID *) multi1CreateDevice;
+        return (void *) multi1CreateDevice;
     else if (!strncmp("xglEnumerateLayers", pName, sizeof ("xglEnumerateLayers")))
-        return (XGL_VOID *) multi1EnumerateLayers;
+        return (void *) multi1EnumerateLayers;
     else if (!strncmp("xglCreateGraphicsPipeline", pName, sizeof ("xglCreateGraphicsPipeline")))
-        return (XGL_VOID *) multi1CreateGraphicsPipeline;
+        return (void *) multi1CreateGraphicsPipeline;
     else if (!strncmp("xglStorePipeline", pName, sizeof ("xglStorePipeline")))
-        return (XGL_VOID *) multi1StorePipeline;
+        return (void *) multi1StorePipeline;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
@@ -136,7 +136,7 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi1GetProcAddr(XGL_PHYSICAL_GPU gpu, const
 }
 
 /******************************** Layer multi2 functions **************************/
-static std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *> tableMap2;
+static std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *> tableMap2;
 static bool layer2_first_activated = false;
 
 static XGL_LAYER_DISPATCH_TABLE * getLayer2Table(const XGL_BASE_LAYER_OBJECT *gpuw)
@@ -144,11 +144,11 @@ static XGL_LAYER_DISPATCH_TABLE * getLayer2Table(const XGL_BASE_LAYER_OBJECT *gp
     XGL_LAYER_DISPATCH_TABLE *pTable;
 
     assert(gpuw);
-    std::unordered_map<XGL_VOID *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap2.find((XGL_VOID *) gpuw);
+    std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap2.find((void *) gpuw);
     if (it == tableMap2.end())
     {
         pTable =  new XGL_LAYER_DISPATCH_TABLE;
-        tableMap2[(XGL_VOID *) gpuw] = pTable;
+        tableMap2[(void *) gpuw] = pTable;
         initLayerTable(gpuw, pTable, 2);
         return pTable;
     } else
@@ -195,9 +195,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2BeginCommandBuffer( XGL_CMD_BUFFER cmdB
 
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2EnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize,
-                                                         XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers,
-                                                         XGL_VOID* pReserved)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2EnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize,
+                                                         size_t* pOutLayerCount, char* const* pOutLayers,
+                                                         void* pReserved)
 {
     if (gpu == NULL)
         return xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
@@ -211,7 +211,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI multi2EnumerateLayers(XGL_PHYSICAL_GPU gpu, X
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi2GetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName)
+XGL_LAYER_EXPORT void * XGLAPI multi2GetProcAddr(XGL_PHYSICAL_GPU gpu, const char* pName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
 
@@ -221,13 +221,13 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi2GetProcAddr(XGL_PHYSICAL_GPU gpu, const
     getLayer2Table(gpuw);
 
     if (!strncmp("xglCreateDevice", pName, sizeof ("xglCreateDevice")))
-        return (XGL_VOID *) multi2CreateDevice;
+        return (void *) multi2CreateDevice;
     else if (!strncmp("xglEnumerateLayers", pName, sizeof ("xglEnumerateLayers")))
-        return (XGL_VOID *) multi2EnumerateLayers;
+        return (void *) multi2EnumerateLayers;
     else if (!strncmp("xglCreateCommandBuffer", pName, sizeof ("xglCreateCommandBuffer")))
-        return (XGL_VOID *) multi2CreateCommandBuffer;
+        return (void *) multi2CreateCommandBuffer;
     else if (!strncmp("xglBeginCommandBuffer", pName, sizeof ("xglBeginCommandBuffer")))
-        return (XGL_VOID *) multi2BeginCommandBuffer;
+        return (void *) multi2BeginCommandBuffer;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
@@ -236,9 +236,9 @@ XGL_LAYER_EXPORT XGL_VOID * XGLAPI multi2GetProcAddr(XGL_PHYSICAL_GPU gpu, const
 }
 
 /********************************* Common functions ********************************/
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_SIZE maxLayerCount, XGL_SIZE maxStringSize,
-                                                      XGL_SIZE* pOutLayerCount, XGL_CHAR* const* pOutLayers,
-                                                      XGL_VOID* pReserved)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize,
+                                                      size_t* pOutLayerCount, char* const* pOutLayers,
+                                                      void* pReserved)
 {
     if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
         return XGL_ERROR_INVALID_POINTER;
@@ -251,15 +251,15 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, XGL_
     return XGL_SUCCESS;
 }
 
-XGL_LAYER_EXPORT XGL_VOID * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* pName)
+XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* pName)
 {
     // to find each layers GPA routine Loader will search via "<layerName>GetProcAddr"
     if (!strncmp("multi1GetProcAddr", pName, sizeof("multi1GetProcAddr")))
-        return (XGL_VOID *) multi1GetProcAddr;
+        return (void *) multi1GetProcAddr;
     else if (!strncmp("multi2GetProcAddr", pName, sizeof("multi2GetProcAddr")))
-        return (XGL_VOID *) multi2GetProcAddr;
+        return (void *) multi2GetProcAddr;
     else if (!strncmp("xglGetProcAddr", pName, sizeof("xglGetProcAddr")))
-        return (XGL_VOID *) xglGetProcAddr;
+        return (void *) xglGetProcAddr;
 
     // use first layer activated as GPA dispatch table activation happens in order
     else if (layer1_first_activated)

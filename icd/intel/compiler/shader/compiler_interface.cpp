@@ -343,7 +343,7 @@ extern "C" {
 // invoke front end compiler to generate an independently linked
 // program object that contains Mesa HIR
 struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
-                                  const void *code, XGL_SIZE size)
+                                  const void *code, size_t size)
 {
     struct icd_bil_header header;
     struct gl_context local_ctx;

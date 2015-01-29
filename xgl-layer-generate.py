@@ -99,7 +99,7 @@ class Subcommand(object):
         # TODO : Need ENUM and STRUCT checks here
         if "_TYPE" in xgl_type: # TODO : This should be generic ENUM check
             return ("%s", "string_%s(%s)" % (xgl_type.strip('const ').strip('*'), name))
-        if "XGL_CHAR*" == xgl_type:
+        if "char*" == xgl_type:
             return ("%s", name)
         if "UINT64" in xgl_type:
             if '*' in xgl_type:
@@ -139,13 +139,13 @@ class Subcommand(object):
         cbh_body.append('static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;')
         cbh_body.append('// Utility function to handle reporting')
         cbh_body.append('//  If callbacks are enabled, use them, otherwise use printf')
-        cbh_body.append('static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
+        cbh_body.append('static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
         cbh_body.append('    XGL_VALIDATION_LEVEL validationLevel,')
         cbh_body.append('    XGL_BASE_OBJECT      srcObject,')
-        cbh_body.append('    XGL_SIZE             location,')
-        cbh_body.append('    XGL_INT              msgCode,')
-        cbh_body.append('    const XGL_CHAR*      pLayerPrefix,')
-        cbh_body.append('    const XGL_CHAR*      pMsg)')
+        cbh_body.append('    size_t               location,')
+        cbh_body.append('    int32_t              msgCode,')
+        cbh_body.append('    const char*          pLayerPrefix,')
+        cbh_body.append('    const char*          pMsg)')
         cbh_body.append('{')
         cbh_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = pDbgFunctionHead;')
         cbh_body.append('    if (pTrav) {')
@@ -175,7 +175,7 @@ class Subcommand(object):
 
     def _gen_layer_dbg_callback_register(self):
         r_body = []
-        r_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData)')
+        r_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
         r_body.append('{')
         r_body.append('    // This layer intercepts callbacks')
         r_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));')
@@ -229,7 +229,7 @@ class Subcommand(object):
                     param0_name = proto.params[0].name
                     ret_val = ''
                     stmt = ''
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     if proto.name == "EnumerateLayers":
@@ -240,12 +240,12 @@ class Subcommand(object):
                                  '    if (gpu != NULL) {\n'
                                  '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
                                  '        sprintf(str, "At start of layered %s\\n");\n'
-                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (XGL_CHAR *) "GENERIC", (XGL_CHAR *) str);\n'
+                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                                  '        pCurObj = gpuw;\n'
                                  '        pthread_once(&tabOnce, initLayerTable);\n'
                                  '        %snextTable.%s;\n'
                                  '        sprintf(str, "Completed layered %s\\n");\n'
-                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (XGL_CHAR *) "GENERIC", (XGL_CHAR *) str);\n'
+                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                                  '        fflush(stdout);\n'
                                  '    %s'
                                  '    } else {\n'
@@ -274,12 +274,12 @@ class Subcommand(object):
                                  '    char str[1024];'
                                  '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
                                  '    sprintf(str, "At start of layered %s\\n");\n'
-                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (XGL_CHAR *) "GENERIC", (XGL_CHAR *) str);\n'
+                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
                                  '    pCurObj = gpuw;\n'
                                  '    pthread_once(&tabOnce, initLayerTable);\n'
                                  '    %snextTable.%s;\n'
                                  '    sprintf(str, "Completed layered %s\\n");\n'
-                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (XGL_CHAR *) "GENERIC", (XGL_CHAR *) str);\n'
+                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
                                  '    fflush(stdout);\n'
                                  '%s'
                                  '}' % (qual, decl, proto.params[0].name, proto.name, ret_val, c_call, proto.name, stmt))
@@ -294,7 +294,7 @@ class Subcommand(object):
                         create_params = -2
                     elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
                         create_params = -1
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     f_open = ''
@@ -325,12 +325,12 @@ class Subcommand(object):
                         log_func += '%s = " << %s << ", ' % (p.name, pfi)
                         #print_vals += ', %s' % (pfi)
                         # TODO : Just want this to be simple check for params of STRUCT type
-                        if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['XGL_CHAR', 'XGL_VOID', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'XGL_UINT32']]):
+                        if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['char', 'void', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER', 'uint32_t']]):
                             if 'Wsi' not in proto.name:
                                 cis_param_index.append(pindex)
                         pindex += 1
                     log_func = log_func.strip(', ')
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         log_func += ') = " << string_XGL_RESULT(result) << "\\n"'
                         #print_vals += ', string_XGL_RESULT(result)'
                     else:
@@ -405,7 +405,7 @@ class Subcommand(object):
                         create_params = -2
                     elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
                         create_params = -1
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     f_open = ''
@@ -451,7 +451,7 @@ class Subcommand(object):
                         else:
                             prev_count_name = ''
                     log_func = log_func.strip(', ')
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         log_func += ') = %s\\n"'
                         print_vals += ', string_XGL_RESULT(result)'
                     else:
@@ -598,15 +598,15 @@ class Subcommand(object):
                     elif 'GlobalOption' in proto.name:
                         using_line = ''
                     else:
-                        using_line = '    ll_increment_use_count((XGL_VOID*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                        using_line = '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
                     if 'Create' in proto.name or 'Alloc' in proto.name:
-                        create_line = '    ll_insert_obj((XGL_VOID*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*')])
+                        create_line = '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*')])
                     if 'DestroyObject' in proto.name:
-                        destroy_line = '    ll_destroy_obj((XGL_VOID*)%s);\n' % (param0_name)
+                        destroy_line = '    ll_destroy_obj((void*)%s);\n' % (param0_name)
                         using_line = ''
                     else:
                         if 'Destroy' in proto.name or 'Free' in proto.name:
-                            destroy_line = '    ll_remove_obj_type((XGL_VOID*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                            destroy_line = '    ll_remove_obj_type((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
                             using_line = ''
                         if 'DestroyDevice' in proto.name:
                             destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
@@ -616,7 +616,7 @@ class Subcommand(object):
                             destroy_line += '        pTrav = pTrav->pNextGlobal;\n    }\n'
                     ret_val = ''
                     stmt = ''
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     if proto.name == "EnumerateLayers":
@@ -713,7 +713,7 @@ class Subcommand(object):
                             prev_count_name = p.name
                         else:
                             prev_count_name = ''
-                    if proto.ret != "XGL_VOID":
+                    if proto.ret != "void":
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     if proto.name == "EnumerateLayers":
@@ -768,17 +768,17 @@ class Subcommand(object):
 
     def _generate_extensions(self):
         exts = []
-        exts.append('XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)')
+        exts.append('uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)')
         exts.append('{')
         exts.append('    return (type == XGL_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];')
         exts.append('}')
         exts.append('')
-        exts.append('XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray)')
+        exts.append('XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
         exts.append('{')
         exts.append("    // This bool flags if we're pulling all objs or just a single class of objs")
-        exts.append('    XGL_BOOL bAllObjs = (type == XGL_OBJECT_TYPE_ANY);')
+        exts.append('    bool32_t bAllObjs = (type == XGL_OBJECT_TYPE_ANY);')
         exts.append('    // Check the count first thing')
-        exts.append('    XGL_UINT64 maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];')
+        exts.append('    uint64_t maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];')
         exts.append('    if (objCount > maxObjCount) {')
         exts.append('        char str[1024];')
         exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_XGL_OBJECT_TYPE(type));')
@@ -786,7 +786,7 @@ class Subcommand(object):
         exts.append('        return XGL_ERROR_INVALID_VALUE;')
         exts.append('    }')
         exts.append('    objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];')
-        exts.append('    for (XGL_UINT64 i = 0; i < objCount; i++) {')
+        exts.append('    for (uint64_t i = 0; i < objCount; i++) {')
         exts.append('        if (!pTrav) {')
         exts.append('            char str[1024];')
         exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_XGL_OBJECT_TYPE(type), maxObjCount, i, objCount);')
@@ -803,7 +803,7 @@ class Subcommand(object):
 
     def _generate_layer_gpa_function(self, extensions=[]):
         func_body = ["#include \"xgl_generic_intercept_proc_helper.h\""]
-        func_body.append("XGL_LAYER_EXPORT XGL_VOID* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const XGL_CHAR* funcName)\n"
+        func_body.append("XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)\n"
                          "{\n"
                          "    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
                          "    void* addr;\n"
@@ -1025,11 +1025,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static XGL_LAYER_DBG_FUNCTION_NODE *pDbgFunctionHead = NULL;')
         header_txt.append('// Utility function to handle reporting')
         header_txt.append('//  If callbacks are enabled, use them, otherwise use printf')
-        header_txt.append('static XGL_VOID layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
+        header_txt.append('static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,')
         header_txt.append('    XGL_VALIDATION_LEVEL validationLevel,')
         header_txt.append('    XGL_BASE_OBJECT      srcObject,')
-        header_txt.append('    XGL_SIZE             location,')
-        header_txt.append('    XGL_INT              msgCode,')
+        header_txt.append('    size_t               location,')
+        header_txt.append('    int32_t              msgCode,')
         header_txt.append('    const char*          pLayerPrefix,')
         header_txt.append('    const char*          pMsg)')
         header_txt.append('{')
@@ -1089,7 +1089,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
-        header_txt.append('static void ll_insert_obj(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType) {')
         header_txt.append('    char str[1024];')
         header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);')
         header_txt.append('    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
@@ -1123,7 +1123,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    return XGL_OBJECT_TYPE_UNKNOWN;')
         header_txt.append('}')
         header_txt.append('#if 0')
-        header_txt.append('static uint64_t ll_get_obj_uses(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static uint64_t ll_get_obj_uses(void* pObj, XGL_OBJECT_TYPE objType) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
@@ -1134,7 +1134,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    return 0;')
         header_txt.append('}')
         header_txt.append('#endif')
-        header_txt.append('static void ll_increment_use_count(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
@@ -1157,7 +1157,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('// We usually do not know Obj type when we destroy it so have to fetch')
         header_txt.append('//  Type from global list w/ ll_destroy_obj()')
         header_txt.append('//   and then do the full removal from both lists w/ ll_remove_obj_type()')
-        header_txt.append('static void ll_remove_obj_type(XGL_VOID* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    objNode *pPrev = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
@@ -1182,7 +1182,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('// Parse global list to find obj type, then remove obj from obj type list, finally')
         header_txt.append('//   remove obj from global list')
-        header_txt.append('static void ll_destroy_obj(XGL_VOID* pObj) {')
+        header_txt.append('static void ll_destroy_obj(void* pObj) {')
         header_txt.append('    objNode *pTrav = pGlobalHead;')
         header_txt.append('    objNode *pPrev = pGlobalHead;')
         header_txt.append('    while (pTrav) {')

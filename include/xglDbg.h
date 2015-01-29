@@ -97,25 +97,25 @@ typedef enum _XGL_DBG_OBJECT_TYPE
     XGL_NUM_DBG_OBJECT_TYPE         = (XGL_DBG_OBJECT_TYPE_END_RANGE - XGL_DBG_OBJECT_TYPE_BEGIN_RANGE + 1),
 } XGL_DBG_OBJECT_TYPE;
 
-typedef XGL_VOID (XGLAPI *XGL_DBG_MSG_CALLBACK_FUNCTION)(
+typedef void (XGLAPI *XGL_DBG_MSG_CALLBACK_FUNCTION)(
     XGL_DBG_MSG_TYPE     msgType,
     XGL_VALIDATION_LEVEL validationLevel,
     XGL_BASE_OBJECT      srcObject,
-    XGL_SIZE             location,
-    XGL_INT              msgCode,
-    const XGL_CHAR*      pMsg,
-    XGL_VOID*            pUserData);
+    size_t               location,
+    int32_t              msgCode,
+    const char*          pMsg,
+    void*                pUserData);
 
 // Debug functions
 typedef XGL_RESULT (XGLAPI *xglDbgSetValidationLevelType)(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel);
-typedef XGL_RESULT (XGLAPI *xglDbgRegisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
+typedef XGL_RESULT (XGLAPI *xglDbgRegisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
 typedef XGL_RESULT (XGLAPI *xglDbgUnregisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
-typedef XGL_RESULT (XGLAPI *xglDbgSetMessageFilterType)(XGL_DEVICE device, XGL_INT msgCode, XGL_DBG_MSG_FILTER filter);
-typedef XGL_RESULT (XGLAPI *xglDbgSetObjectTagType)(XGL_BASE_OBJECT object, XGL_SIZE tagSize, const XGL_VOID* pTag);
-typedef XGL_RESULT (XGLAPI *xglDbgSetGlobalOptionType)(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData);
-typedef XGL_RESULT (XGLAPI *xglDbgSetDeviceOptionType)(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData);
-typedef XGL_VOID (XGLAPI *xglCmdDbgMarkerBeginType)(XGL_CMD_BUFFER cmdBuffer, const XGL_CHAR* pMarker);
-typedef XGL_VOID (XGLAPI *xglCmdDbgMarkerEndType)(XGL_CMD_BUFFER cmdBuffer);
+typedef XGL_RESULT (XGLAPI *xglDbgSetMessageFilterType)(XGL_DEVICE device, int32_t msgCode, XGL_DBG_MSG_FILTER filter);
+typedef XGL_RESULT (XGLAPI *xglDbgSetObjectTagType)(XGL_BASE_OBJECT object, size_t tagSize, const void* pTag);
+typedef XGL_RESULT (XGLAPI *xglDbgSetGlobalOptionType)(XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
+typedef XGL_RESULT (XGLAPI *xglDbgSetDeviceOptionType)(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData);
+typedef void (XGLAPI *xglCmdDbgMarkerBeginType)(XGL_CMD_BUFFER cmdBuffer, const char* pMarker);
+typedef void (XGLAPI *xglCmdDbgMarkerEndType)(XGL_CMD_BUFFER cmdBuffer);
 
 XGL_RESULT XGLAPI xglDbgSetValidationLevel(
     XGL_DEVICE           device,
@@ -123,37 +123,37 @@ XGL_RESULT XGLAPI xglDbgSetValidationLevel(
 
 XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback,
-    XGL_VOID*                     pUserData);
+    void*                         pUserData);
 
 XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
 
 XGL_RESULT XGLAPI xglDbgSetMessageFilter(
     XGL_DEVICE         device,
-    XGL_INT            msgCode,
+    int32_t            msgCode,
     XGL_DBG_MSG_FILTER filter);
 
 XGL_RESULT XGLAPI xglDbgSetObjectTag(
     XGL_BASE_OBJECT object,
-    XGL_SIZE        tagSize,
-    const XGL_VOID* pTag);
+    size_t          tagSize,
+    const void*     pTag);
 
 XGL_RESULT XGLAPI xglDbgSetGlobalOption(
     XGL_DBG_GLOBAL_OPTION dbgOption,
-    XGL_SIZE              dataSize,
-    const XGL_VOID*       pData);
+    size_t                dataSize,
+    const void*           pData);
 
 XGL_RESULT XGLAPI xglDbgSetDeviceOption(
     XGL_DEVICE            device,
     XGL_DBG_DEVICE_OPTION dbgOption,
-    XGL_SIZE              dataSize,
-    const XGL_VOID*       pData);
+    size_t                dataSize,
+    const void*           pData);
 
-XGL_VOID XGLAPI xglCmdDbgMarkerBegin(
+void XGLAPI xglCmdDbgMarkerBegin(
     XGL_CMD_BUFFER  cmdBuffer,
-    const XGL_CHAR* pMarker);
+    const char*     pMarker);
 
-XGL_VOID XGLAPI xglCmdDbgMarkerEnd(
+void XGLAPI xglCmdDbgMarkerEnd(
     XGL_CMD_BUFFER  cmdBuffer);
 
 #ifdef __cplusplus

@@ -67,7 +67,7 @@ private:
     void emit_compute_frag_coord();
     void emit_sampler_payload(const struct brw_reg &mrf,
                               const enum sampler_param *params,
-                              XGL_UINT param_count);
+                              uint32_t param_count);
 
     void emit_vs_fill_mem();
     void emit_vs_copy_mem();
@@ -262,10 +262,10 @@ void intel_meta_compiler::emit_compute_frag_coord()
 
 void intel_meta_compiler::emit_sampler_payload(const struct brw_reg &mrf,
                                                const enum sampler_param *params,
-                                               XGL_UINT param_count)
+                                               uint32_t param_count)
 {
     int mrf_offset = 0;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < param_count; i++) {
         switch (params[i]) {
@@ -496,7 +496,7 @@ void intel_meta_compiler::emit_copy_img()
     const struct brw_reg mrf =
         retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
     enum sampler_param params[8];
-    XGL_UINT param_count = 0;
+    uint32_t param_count = 0;
 
     if (brw->gen >= 7) {
         params[param_count++] = SAMPLER_PARAM_X;

@@ -176,7 +176,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
                                 proto.params[0].name, proto.params[1].name, stmt))
             elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
-                if proto.ret != "XGL_VOID":
+                if proto.ret != "void":
                     stmt = "return " + stmt
                 funcs.append("%s%s\n"
                          "{\n"
@@ -185,7 +185,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
                          "    %s;\n"
                          "}" % (qual, decl, proto.params[0].name, stmt))
             else:
-                if proto.ret != "XGL_VOID":
+                if proto.ret != "void":
                     stmt = "return " + stmt
                 funcs.append("%s%s\n"
                          "{\n"
@@ -290,7 +290,7 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
         stubs = []
         for proto in self.protos:
             decl = self._generate_stub_decl(proto)
-            if proto.ret != "XGL_VOID":
+            if proto.ret != "void":
                 stmt = "    return XGL_ERROR_UNKNOWN;\n"
             else:
                 stmt = ""

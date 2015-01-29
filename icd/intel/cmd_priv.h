@@ -60,14 +60,14 @@ enum intel_cmd_item_type {
 
 struct intel_cmd_item {
     enum intel_cmd_item_type type;
-    XGL_SIZE offset;
-    XGL_SIZE size;
+    size_t offset;
+    size_t size;
 };
 
 #define INTEL_CMD_RELOC_TARGET_IS_WRITER (1u << 31)
 struct intel_cmd_reloc {
     enum intel_cmd_writer_type which;
-    XGL_SIZE offset;
+    size_t offset;
 
     intptr_t target;
     uint32_t target_offset;
@@ -105,14 +105,14 @@ struct intel_cmd_meta {
         bool valid;
 
         uint32_t surface[8];
-        XGL_UINT surface_len;
+        uint32_t surface_len;
 
         intptr_t reloc_target;
         uint32_t reloc_offset;
         uint32_t reloc_flags;
 
-        XGL_UINT lod, layer;
-        XGL_UINT x, y;
+        uint32_t lod, layer;
+        uint32_t x, y;
     } src, dst;
 
     struct {
@@ -123,8 +123,8 @@ struct intel_cmd_meta {
 
     uint32_t clear_val[4];
 
-    XGL_UINT width, height;
-    XGL_UINT samples;
+    uint32_t width, height;
+    uint32_t samples;
 };
 
 static inline int cmd_gen(const struct intel_cmd *cmd)
@@ -133,7 +133,7 @@ static inline int cmd_gen(const struct intel_cmd *cmd)
 }
 
 static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
-                                     XGL_UINT reloc_len)
+                                     uint32_t reloc_len)
 {
     /* fail silently */
     if (cmd->reloc_used + reloc_len > cmd->reloc_count) {
@@ -145,23 +145,23 @@ static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
 
 void cmd_writer_grow(struct intel_cmd *cmd,
                      enum intel_cmd_writer_type which,
-                     XGL_SIZE new_size);
+                     size_t new_size);
 
 void cmd_writer_record(struct intel_cmd *cmd,
                        enum intel_cmd_writer_type which,
                        enum intel_cmd_item_type type,
-                       XGL_SIZE offset, XGL_SIZE size);
+                       size_t offset, size_t size);
 
 /**
  * Return an offset to a region that is aligned to \p alignment and has at
  * least \p size bytes.
  */
-static inline XGL_SIZE cmd_writer_reserve(struct intel_cmd *cmd,
-                                          enum intel_cmd_writer_type which,
-                                          XGL_SIZE alignment, XGL_SIZE size)
+static inline size_t cmd_writer_reserve(struct intel_cmd *cmd,
+                                        enum intel_cmd_writer_type which,
+                                        size_t alignment, size_t size)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
-    XGL_SIZE offset;
+    size_t offset;
 
     assert(alignment && u_is_pow2(alignment));
     offset = u_align(writer->used, alignment);
@@ -182,7 +182,7 @@ static inline XGL_SIZE cmd_writer_reserve(struct intel_cmd *cmd,
  */
 static inline void cmd_writer_reloc(struct intel_cmd *cmd,
                                     enum intel_cmd_writer_type which,
-                                    XGL_SIZE offset, intptr_t target,
+                                    size_t offset, intptr_t target,
                                     uint32_t target_offset, uint32_t flags)
 {
     struct intel_cmd_reloc *reloc = &cmd->relocs[cmd->reloc_used];
@@ -206,11 +206,11 @@ static inline void cmd_writer_reloc(struct intel_cmd *cmd,
  */
 static inline uint32_t cmd_state_reserve(struct intel_cmd *cmd,
                                          enum intel_cmd_item_type item,
-                                         XGL_SIZE alignment, XGL_UINT len)
+                                         size_t alignment, uint32_t len)
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
-    const XGL_SIZE size = len << 2;
-    const XGL_SIZE offset = cmd_writer_reserve(cmd, which, alignment, size);
+    const size_t size = len << 2;
+    const size_t offset = cmd_writer_reserve(cmd, which, alignment, size);
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
     /* all states are at least aligned to 32-bytes */
@@ -229,7 +229,7 @@ static inline uint32_t cmd_state_reserve(struct intel_cmd *cmd,
  * valid until the next reserve call.
  */
 static inline void cmd_state_update(struct intel_cmd *cmd,
-                                    uint32_t offset, XGL_UINT len,
+                                    uint32_t offset, uint32_t len,
                                     uint32_t **dw)
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
@@ -249,7 +249,7 @@ static inline void cmd_state_update(struct intel_cmd *cmd,
  */
 static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
                                          enum intel_cmd_item_type item,
-                                         XGL_SIZE alignment, XGL_UINT len,
+                                         size_t alignment, uint32_t len,
                                          uint32_t **dw)
 {
     const uint32_t offset = cmd_state_reserve(cmd, item, alignment, len);
@@ -264,7 +264,7 @@ static inline uint32_t cmd_state_pointer(struct intel_cmd *cmd,
  */
 static inline uint32_t cmd_state_write(struct intel_cmd *cmd,
                                        enum intel_cmd_item_type item,
-                                       XGL_SIZE alignment, XGL_UINT len,
+                                       size_t alignment, uint32_t len,
                                        const uint32_t *dw)
 {
     uint32_t offset, *dst;
@@ -283,7 +283,7 @@ static inline uint32_t cmd_state_write(struct intel_cmd *cmd,
  */
 static inline uint32_t cmd_surface_write(struct intel_cmd *cmd,
                                          enum intel_cmd_item_type item,
-                                         XGL_SIZE alignment, XGL_UINT len,
+                                         size_t alignment, uint32_t len,
                                          const uint32_t *dw)
 {
     assert(item == INTEL_CMD_ITEM_SURFACE ||
@@ -296,7 +296,7 @@ static inline uint32_t cmd_surface_write(struct intel_cmd *cmd,
  * Add a relocation entry for a DWord of a surface state.
  */
 static inline void cmd_surface_reloc(struct intel_cmd *cmd,
-                                     uint32_t offset, XGL_UINT dw_index,
+                                     uint32_t offset, uint32_t dw_index,
                                      struct intel_bo *bo,
                                      uint32_t bo_offset, uint32_t reloc_flags)
 {
@@ -307,7 +307,7 @@ static inline void cmd_surface_reloc(struct intel_cmd *cmd,
 }
 
 static inline void cmd_surface_reloc_writer(struct intel_cmd *cmd,
-                                            uint32_t offset, XGL_UINT dw_index,
+                                            uint32_t offset, uint32_t dw_index,
                                             enum intel_cmd_writer_type writer,
                                             uint32_t writer_offset)
 {
@@ -323,7 +323,7 @@ static inline void cmd_surface_reloc_writer(struct intel_cmd *cmd,
  * kernel is returned.
  */
 static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
-                                             XGL_SIZE size,
+                                             size_t size,
                                              const void *kernel)
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_INSTRUCTION;
@@ -336,10 +336,10 @@ static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
      *      these instructions will not be executed, software must account for
      *      the prefetch in order to avoid invalid page access faults."
      */
-    const XGL_SIZE reserved_size = size + 128;
+    const size_t reserved_size = size + 128;
     /* kernels are aligned to 64 bytes */
-    const XGL_SIZE alignment = 64;
-    const XGL_SIZE offset = cmd_writer_reserve(cmd,
+    const size_t alignment = 64;
+    const size_t offset = cmd_writer_reserve(cmd,
             which, alignment, reserved_size);
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
@@ -360,17 +360,17 @@ static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
  *
  * Note that \p len is in DWords.
  */
-static inline XGL_UINT cmd_batch_pointer(struct intel_cmd *cmd,
-                                         XGL_UINT len, uint32_t **dw)
+static inline uint32_t cmd_batch_pointer(struct intel_cmd *cmd,
+                                         uint32_t len, uint32_t **dw)
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_BATCH;
     /*
      * We know the batch bo is always aligned.  Using 1 here should allow the
      * compiler to optimize away aligning.
      */
-    const XGL_SIZE alignment = 1;
-    const XGL_SIZE size = len << 2;
-    const XGL_SIZE offset = cmd_writer_reserve(cmd, which, alignment, size);
+    const size_t alignment = 1;
+    const size_t size = len << 2;
+    const size_t offset = cmd_writer_reserve(cmd, which, alignment, size);
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
     assert(offset % 4 == 0);
@@ -384,10 +384,10 @@ static inline XGL_UINT cmd_batch_pointer(struct intel_cmd *cmd,
 /**
  * Write a command to the batch buffer.
  */
-static inline XGL_UINT cmd_batch_write(struct intel_cmd *cmd,
-                                       XGL_UINT len, const uint32_t *dw)
+static inline uint32_t cmd_batch_write(struct intel_cmd *cmd,
+                                       uint32_t len, const uint32_t *dw)
 {
-    XGL_UINT pos;
+    uint32_t pos;
     uint32_t *dst;
 
     pos = cmd_batch_pointer(cmd, len, &dst);
@@ -399,7 +399,7 @@ static inline XGL_UINT cmd_batch_write(struct intel_cmd *cmd,
 /**
  * Add a relocation entry for a DWord of a command.
  */
-static inline void cmd_batch_reloc(struct intel_cmd *cmd, XGL_UINT pos,
+static inline void cmd_batch_reloc(struct intel_cmd *cmd, uint32_t pos,
                                    struct intel_bo *bo,
                                    uint32_t bo_offset, uint32_t reloc_flags)
 {
@@ -408,7 +408,7 @@ static inline void cmd_batch_reloc(struct intel_cmd *cmd, XGL_UINT pos,
     cmd_writer_reloc(cmd, which, pos << 2, (intptr_t) bo, bo_offset, reloc_flags);
 }
 
-static inline void cmd_batch_reloc_writer(struct intel_cmd *cmd, XGL_UINT pos,
+static inline void cmd_batch_reloc_writer(struct intel_cmd *cmd, uint32_t pos,
                                           enum intel_cmd_writer_type writer,
                                           uint32_t writer_offset)
 {
@@ -427,7 +427,7 @@ static inline void cmd_batch_begin(struct intel_cmd *cmd)
     const uint8_t cmd_len = 10;
     const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
-    XGL_UINT pos;
+    uint32_t pos;
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);

@@ -78,9 +78,9 @@ public:
 protected:
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT gpu_count;
+    uint32_t gpu_count;
 
-    XGL_UINT m_device_id;
+    uint32_t m_device_id;
     xgl_testing::Device *m_device;
     XGL_PHYSICAL_GPU_PROPERTIES props;
     XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
@@ -118,12 +118,12 @@ protected:
 TEST(Initialization, xglInitAndEnumerateGpus) {
     XGL_APPLICATION_INFO app_info = {};
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT gpu_count;
+    uint32_t gpu_count;
     XGL_RESULT err;
     xgl_testing::PhysicalGpu *gpu;
-    XGL_CHAR *layers[16];
-    XGL_SIZE layer_count;
-    XGL_CHAR layer_buf[16][256];
+    char *layers[16];
+    size_t layer_count;
+    char layer_buf[16][256];
 
     app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
@@ -140,7 +140,7 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
 
     for (int i = 0; i < 16; i++)
         layers[i] = &layer_buf[i][0];
-    err = xglEnumerateLayers(objs[0], 16, 256, &layer_count, (XGL_CHAR * const *) layers, NULL);
+    err = xglEnumerateLayers(objs[0], 16, 256, &layer_count, (char * const *) layers, NULL);
     ASSERT_XGL_SUCCESS(err);
     for (int i = 0; i < layer_count; i++) {
         printf("Enumerated layers: %s ", layers[i]);
@@ -158,7 +158,7 @@ TEST_F(XglTest, AllocMemory) {
     XGL_RESULT err;
     XGL_MEMORY_ALLOC_INFO alloc_info = {};
     XGL_GPU_MEMORY gpu_mem;
-    XGL_UINT8 *pData;
+    uint8_t *pData;
 
     alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
@@ -173,7 +173,7 @@ TEST_F(XglTest, AllocMemory) {
     err = xglAllocMemory(device(), &alloc_info, &gpu_mem);
     ASSERT_XGL_SUCCESS(err);
 
-    err = xglMapMemory(gpu_mem, 0, (XGL_VOID **) &pData);
+    err = xglMapMemory(gpu_mem, 0, (void **) &pData);
     ASSERT_XGL_SUCCESS(err);
 
     memset(pData, 0x55, alloc_info.allocationSize);
@@ -196,7 +196,7 @@ TEST_F(XglTest, Event) {
     //        typedef struct _XGL_EVENT_CREATE_INFO
     //        {
     //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO
-    //            const XGL_VOID*                         pNext;      // Pointer to next structure
+    //            const void*                             pNext;      // Pointer to next structure
     //            XGL_FLAGS                               flags;      // Reserved
     //        } XGL_EVENT_CREATE_INFO;
     memset(&event_info, 0, sizeof(event_info));
@@ -262,7 +262,7 @@ TEST_F(XglTest, Fence) {
     //            typedef struct _XGL_FENCE_CREATE_INFO
     //            {
     //                XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO
-    //                const XGL_VOID*                         pNext;      // Pointer to next structure
+    //                const void*                             pNext;      // Pointer to next structure
     //                XGL_FLAGS                               flags;      // Reserved
     fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
@@ -277,10 +277,10 @@ TEST_F(XglTest, Fence) {
     // Test glxWaitForFences
     //        XGL_RESULT XGLAPI xglWaitForFences(
     //            XGL_DEVICE                                  device,
-    //            XGL_UINT                                    fenceCount,
+    //            uint32_t                                    fenceCount,
     //            const XGL_FENCE*                            pFences,
-    //            XGL_BOOL                                    waitAll,
-    //            XGL_UINT64                                  timeout);
+    //            bool32_t                                    waitAll,
+    //            uint64_t                                    timeout);
     err = xglWaitForFences(device(), 1, &fence, XGL_TRUE, 0);
     EXPECT_EQ(XGL_ERROR_UNAVAILABLE, err);
 
@@ -300,7 +300,7 @@ TEST_F(XglTest, Query) {
     size_t data_size;
     XGL_MEMORY_REQUIREMENTS mem_req;
     size_t query_result_size;
-    XGL_UINT *query_result_data;
+    uint32_t *query_result_data;
     XGL_RESULT err;
 
     //        typedef enum _XGL_QUERY_TYPE
@@ -317,9 +317,9 @@ TEST_F(XglTest, Query) {
     //        typedef struct _XGL_QUERY_POOL_CREATE_INFO
     //        {
     //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
-    //            const XGL_VOID*                         pNext;      // Pointer to next structure
+    //            const void*                             pNext;      // Pointer to next structure
     //            XGL_QUERY_TYPE                          queryType;
-    //            XGL_UINT                                slots;
+    //            uint32_t                                slots;
     //        } XGL_QUERY_POOL_CREATE_INFO;
 
     memset(&query_info, 0, sizeof(query_info));
@@ -374,7 +374,7 @@ TEST_F(XglTest, Query) {
     ASSERT_XGL_SUCCESS(err);
 
     if (query_result_size > 0) {
-        query_result_data = new XGL_UINT [query_result_size];
+        query_result_data = new uint32_t [query_result_size];
         err = xglGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
                                      &query_result_size, query_result_data);
         ASSERT_XGL_SUCCESS(err);
@@ -406,14 +406,14 @@ void getQueue(xgl_testing::Device *device, XGL_QUEUE_TYPE qtype, const char *qna
 
 TEST_F(XglTest, Queue)
 {
-    XGL_UINT que_idx;
+    uint32_t que_idx;
 
     ASSERT_NE(0, queue_props.queueCount) << "No heaps available for GPU #" << m_device_id << ": " << props.gpuName;
 
 //            XGL_RESULT XGLAPI xglGetDeviceQueue(
 //                XGL_DEVICE                                  device,
 //                XGL_QUEUE_TYPE                              queueType,
-//                XGL_UINT                                    queueIndex,
+//                uint32_t                                    queueIndex,
 //                XGL_QUEUE*                                  pQueue);
     /*
      * queue handles are retrieved from the device by calling
@@ -469,8 +469,8 @@ void XglTest::CreateImageTest()
 {
     XGL_RESULT err;
     XGL_IMAGE image;
-    XGL_UINT w, h, mipCount;
-    XGL_SIZE size;
+    uint32_t w, h, mipCount;
+    size_t size;
     XGL_FORMAT fmt;
     XGL_FORMAT_PROPERTIES image_fmt;
     size_t data_size;
@@ -479,8 +479,8 @@ void XglTest::CreateImageTest()
     h = 256;
     mipCount = 0;
 
-    XGL_UINT _w = w;
-    XGL_UINT _h = h;
+    uint32_t _w = w;
+    uint32_t _h = h;
     while( ( _w > 0 ) || ( _h > 0 ) )
     {
         _w >>= 1;
@@ -508,13 +508,13 @@ void XglTest::CreateImageTest()
 //    typedef struct _XGL_IMAGE_CREATE_INFO
 //    {
 //        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO
-//        const XGL_VOID*                         pNext;                      // Pointer to next structure.
+//        const void*                             pNext;                      // Pointer to next structure.
 //        XGL_IMAGE_TYPE                          imageType;
 //        XGL_FORMAT                              format;
 //        XGL_EXTENT3D                            extent;
-//        XGL_UINT                                mipLevels;
-//        XGL_UINT                                arraySize;
-//        XGL_UINT                                samples;
+//        uint32_t                                mipLevels;
+//        uint32_t                                arraySize;
+//        uint32_t                                samples;
 //        XGL_IMAGE_TILING                        tiling;
 //        XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
 //        XGL_FLAGS                               flags;                      // XGL_IMAGE_CREATE_FLAGS
@@ -555,8 +555,8 @@ void XglTest::CreateImageTest()
 //        XGL_IMAGE                                   image,
 //        const XGL_IMAGE_SUBRESOURCE*                pSubresource,
 //        XGL_SUBRESOURCE_INFO_TYPE                   infoType,
-//        XGL_SIZE*                                   pDataSize,
-//        XGL_VOID*                                   pData);
+//        size_t*                                     pDataSize,
+//        void*                                       pData);
 //    typedef struct _XGL_SUBRESOURCE_LAYOUT
 //    {
 //        XGL_GPU_SIZE                            offset;                 // Specified in bytes
@@ -568,8 +568,8 @@ void XglTest::CreateImageTest()
 //    typedef struct _XGL_IMAGE_SUBRESOURCE
 //    {
 //        XGL_IMAGE_ASPECT                        aspect;
-//        XGL_UINT                                mipLevel;
-//        XGL_UINT                                arraySlice;
+//        uint32_t                                mipLevel;
+//        uint32_t                                arraySlice;
 //    } XGL_IMAGE_SUBRESOURCE;
 //    typedef enum _XGL_SUBRESOURCE_INFO_TYPE
 //    {
@@ -608,7 +608,7 @@ void XglTest::CreateImageTest()
     };
     XGL_MEMORY_REQUIREMENTS mem_req;
     XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     data_size = sizeof(mem_req);
     err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
@@ -644,13 +644,13 @@ void XglTest::CreateImageTest()
 //    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
 //    {
 //        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-//        const XGL_VOID*                         pNext;                  // Pointer to next structure
+//        const void*                             pNext;                  // Pointer to next structure
 //        XGL_IMAGE                               image;
 //        XGL_IMAGE_VIEW_TYPE                     viewType;
 //        XGL_FORMAT                              format;
 //        XGL_CHANNEL_MAPPING                     channels;
 //        XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
-//        XGL_FLOAT                               minLod;
+//        float                                   minLod;
 //    } XGL_IMAGE_VIEW_CREATE_INFO;
     XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
     XGL_IMAGE_VIEW view;
@@ -701,7 +701,7 @@ void XglTest::CreateCommandBufferTest()
 //    typedef struct _XGL_CMD_BUFFER_CREATE_INFO
 //    {
 //        XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
-//        const XGL_VOID*                         pNext;
+//        const void*                             pNext;
 //        XGL_QUEUE_TYPE                          queueType;
 //        XGL_FLAGS                               flags;
 //    } XGL_CMD_BUFFER_CREATE_INFO;
@@ -739,9 +739,9 @@ void XglTest::CreateShader(XGL_SHADER *pshader)
 //    typedef struct _XGL_SHADER_CREATE_INFO
 //    {
 //        XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO
-//        const XGL_VOID*                         pNext;              // Pointer to next structure
-//        XGL_SIZE                                codeSize;           // Specified in bytes
-//        const XGL_VOID*                         pCode;
+//        const void*                             pNext;              // Pointer to next structure
+//        size_t                                  codeSize;           // Specified in bytes
+//        const void*                             pCode;
 //        XGL_FLAGS                               flags;              // Reserved
 //    } XGL_SHADER_CREATE_INFO;
 

@@ -54,7 +54,7 @@ struct intel_wsi_x11_window {
 
     struct {
         uint32_t serial;
-        XGL_UINT64 msc;
+        uint64_t msc;
     } remote;
 
     struct intel_wsi_x11_window *next;
@@ -577,7 +577,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(
     XGL_DEVICE                                  device,
     xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
-    XGL_UINT64*                                 pMsc)
+    uint64_t  *                                 pMsc)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_wsi_x11 *x11 = dev->gpu->x11;

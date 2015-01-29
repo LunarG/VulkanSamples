@@ -35,8 +35,8 @@ struct intel_query {
     struct intel_obj obj;
 
     XGL_QUERY_TYPE type;
-    XGL_UINT slot_stride;
-    XGL_UINT slot_count;
+    uint32_t slot_stride;
+    uint32_t slot_count;
 };
 
 static inline struct intel_query *intel_query(XGL_QUERY_POOL pool)
@@ -60,7 +60,7 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
 void intel_query_destroy(struct intel_query *query);
 
 XGL_RESULT intel_query_get_results(struct intel_query *query,
-                                   XGL_UINT slot_start, XGL_UINT slot_count,
+                                   uint32_t slot_start, uint32_t slot_count,
                                    void *results);
 
 #endif /* QUERY_H */

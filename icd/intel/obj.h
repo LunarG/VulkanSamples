@@ -38,10 +38,10 @@ struct intel_base_dbg {
     XGL_DBG_OBJECT_TYPE type;
 
     void *create_info;
-    XGL_SIZE create_info_size;
+    size_t create_info_size;
 
     void *tag;
-    XGL_SIZE tag_size;
+    size_t tag_size;
 
     /*
      * Need pointer to base object to be able to log debug
@@ -58,7 +58,7 @@ struct intel_base {
     struct intel_base_dbg *dbg;
 
     XGL_RESULT (*get_info)(struct intel_base *base, int type,
-                           XGL_SIZE *size, XGL_VOID *data);
+                           size_t *size, void *data);
 };
 
 struct intel_obj {
@@ -68,7 +68,7 @@ struct intel_obj {
 
     /* for memory binding */
     struct intel_mem *mem;
-    XGL_SIZE offset;
+    size_t offset;
 };
 
 static inline struct intel_base *intel_base(XGL_BASE_OBJECT base)
@@ -93,19 +93,19 @@ bool intel_base_is_valid(const struct intel_base *base,
                          XGL_DBG_OBJECT_TYPE type);
 
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
-                               XGL_SIZE *size, XGL_VOID *data);
+                               size_t *size, void *data);
 
 struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
                                              XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
-                                             XGL_SIZE dbg_size);
+                                             size_t dbg_size);
 void intel_base_dbg_destroy(struct intel_base_dbg *dbg);
 
 struct intel_base *intel_base_create(struct intel_dev *dev,
-                                     XGL_SIZE obj_size, bool debug,
+                                     size_t obj_size, bool debug,
                                      XGL_DBG_OBJECT_TYPE type,
                                      const void *create_info,
-                                     XGL_SIZE dbg_size);
+                                     size_t dbg_size);
 void intel_base_destroy(struct intel_base *base);
 
 #endif /* OBJ_H */

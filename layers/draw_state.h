@@ -60,8 +60,8 @@ typedef enum _DRAW_TYPE
 } DRAW_TYPE;
 
 //prototypes for extension functions
-XGL_VOID drawStateDumpDotFile(char* outFileName);
-XGL_VOID drawStateDumpPngFile(char* outFileName);
+void drawStateDumpDotFile(char* outFileName);
+void drawStateDumpPngFile(char* outFileName);
 // Func ptr typedefs
-typedef XGL_VOID (*DRAW_STATE_DUMP_DOT_FILE)(char*);
-typedef XGL_VOID (*DRAW_STATE_DUMP_PNG_FILE)(char*);
+typedef void (*DRAW_STATE_DUMP_DOT_FILE)(char*);
+typedef void (*DRAW_STATE_DUMP_PNG_FILE)(char*);

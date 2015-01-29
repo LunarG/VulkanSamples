@@ -39,7 +39,7 @@ struct intel_null_view {
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
-    XGL_UINT cmd_len;
+    uint32_t cmd_len;
 };
 
 struct intel_buf_view {
@@ -50,7 +50,7 @@ struct intel_buf_view {
     /* SURFACE_STATE */
     uint32_t cmd[8];
     uint32_t fs_cmd[8];
-    XGL_UINT cmd_len;
+    uint32_t cmd_len;
 };
 
 struct intel_img_view {
@@ -58,12 +58,12 @@ struct intel_img_view {
 
     struct intel_img *img;
 
-    XGL_FLOAT min_lod;
+    float min_lod;
     XGL_CHANNEL_MAPPING shader_swizzles;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
-    XGL_UINT cmd_len;
+    uint32_t cmd_len;
 };
 
 struct intel_rt_view {
@@ -71,11 +71,11 @@ struct intel_rt_view {
 
     struct intel_img *img;
 
-    XGL_UINT array_size;
+    uint32_t array_size;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
-    XGL_UINT cmd_len;
+    uint32_t cmd_len;
 };
 
 struct intel_ds_view {
@@ -83,7 +83,7 @@ struct intel_ds_view {
 
     struct intel_img *img;
 
-    XGL_UINT array_size;
+    uint32_t array_size;
 
     /*
      * 3DSTATE_DEPTH_BUFFER

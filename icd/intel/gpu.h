@@ -67,7 +67,7 @@ struct intel_gpu {
     int gt;
 
     XGL_GPU_SIZE max_batch_buffer_size;
-    XGL_UINT batch_buffer_reloc_count;
+    uint32_t batch_buffer_reloc_count;
 
     /*
      * The enabled hardware features could be limited by the kernel.  These

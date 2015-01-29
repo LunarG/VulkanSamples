@@ -673,8 +673,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(
     XGL_DEVICE                                  device,
     XGL_FORMAT                                  format,
     XGL_FORMAT_INFO_TYPE                        infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
+    size_t*                                     pDataSize,
+    void*                                       pData)
 {
     const struct intel_dev *dev = intel_dev(device);
     XGL_RESULT ret = XGL_SUCCESS;

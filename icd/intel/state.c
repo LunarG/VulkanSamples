@@ -135,10 +135,10 @@ viewport_state_init(struct intel_dynamic_vp *state,
                     const struct intel_gpu *gpu,
                     const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info)
 {
-    const XGL_UINT sf_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 8;
-    const XGL_UINT clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
+    const uint32_t sf_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 8;
+    const uint32_t clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
     uint32_t *sf_viewport, *clip_viewport, *cc_viewport, *scissor_rect;
-    XGL_UINT i;
+    uint32_t i;
     XGL_RESULT ret;
 
     INTEL_GPU_ASSERT(gpu, 6, 7.5);

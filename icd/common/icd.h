@@ -40,8 +40,8 @@
 #  define ICD_EXPORT
 #endif
 
-XGL_RESULT XGLAPI icdDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, XGL_VOID* pUserData);
+XGL_RESULT XGLAPI icdDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
 XGL_RESULT XGLAPI icdDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
-XGL_RESULT XGLAPI icdDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, XGL_SIZE dataSize, const XGL_VOID* pData);
+XGL_RESULT XGLAPI icdDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
 
 #endif /* ICD_H */

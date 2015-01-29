@@ -623,7 +623,7 @@ inline XGL_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const XGL_MEMORY_REQUIREMENTS
     XGL_MEMORY_ALLOC_INFO info = {};
     info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     if (next_info != NULL)
-        info.pNext = (XGL_VOID *) next_info;
+        info.pNext = (void *) next_info;
 
     info.allocationSize = reqs.size;
     info.memProps = reqs.memProps;

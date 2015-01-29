@@ -78,7 +78,7 @@ static void cmd_writer_discard(struct intel_cmd *cmd,
 
 static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
                                         enum intel_cmd_writer_type which,
-                                        XGL_SIZE size)
+                                        size_t size)
 {
     static const char *writer_names[INTEL_CMD_WRITER_COUNT] = {
         [INTEL_CMD_WRITER_BATCH] = "batch",
@@ -137,7 +137,7 @@ static void cmd_writer_unmap(struct intel_cmd *cmd,
  */
 void cmd_writer_grow(struct intel_cmd *cmd,
                      enum intel_cmd_writer_type which,
-                     XGL_SIZE new_size)
+                     size_t new_size)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
     struct intel_bo *new_bo;
@@ -180,7 +180,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
 void cmd_writer_record(struct intel_cmd *cmd,
                        enum intel_cmd_writer_type which,
                        enum intel_cmd_item_type type,
-                       XGL_SIZE offset, XGL_SIZE size)
+                       size_t offset, size_t size)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
     struct intel_cmd_item *item;
@@ -215,7 +215,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
 
 static void cmd_writer_patch(struct intel_cmd *cmd,
                              enum intel_cmd_writer_type which,
-                             XGL_SIZE offset, uint32_t val)
+                             size_t offset, uint32_t val)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
@@ -225,7 +225,7 @@ static void cmd_writer_patch(struct intel_cmd *cmd,
 
 static void cmd_reset(struct intel_cmd *cmd)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
         cmd_writer_reset(cmd, i);
@@ -313,7 +313,7 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
 XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INFO* info)
 {
     XGL_RESULT ret;
-    XGL_UINT i;
+    uint32_t i;
     XGL_FLAGS flags = 0;
     XGL_CMD_BUFFER_BEGIN_INFO* next= (XGL_CMD_BUFFER_BEGIN_INFO*) info;
     XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
@@ -343,8 +343,8 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
     }
 
     if (!cmd->writers[INTEL_CMD_WRITER_BATCH].size) {
-        const XGL_UINT size = cmd->dev->gpu->max_batch_buffer_size / 2;
-        XGL_UINT divider = 1;
+        const uint32_t size = cmd->dev->gpu->max_batch_buffer_size / 2;
+        uint32_t divider = 1;
 
         if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
             divider *= 4;
@@ -370,7 +370,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
 XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
 {
     struct intel_winsys *winsys = cmd->dev->winsys;
-    XGL_UINT i;
+    uint32_t i;
 
     /* no matching intel_cmd_begin() */
     if (!cmd->writers[INTEL_CMD_WRITER_BATCH].ptr)
@@ -480,42 +480,42 @@ ICD_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdInitAtomicCounters(
+ICD_EXPORT void XGLAPI xglCmdInitAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_UINT                                    startCounter,
-    XGL_UINT                                    counterCount,
-    const XGL_UINT32*                           pData)
+    uint32_t                                    startCounter,
+    uint32_t                                    counterCount,
+    const uint32_t*                             pData)
 {
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdLoadAtomicCounters(
+ICD_EXPORT void XGLAPI xglCmdLoadAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_UINT                                    startCounter,
-    XGL_UINT                                    counterCount,
+    uint32_t                                    startCounter,
+    uint32_t                                    counterCount,
     XGL_BUFFER                                  srcBuffer,
     XGL_GPU_SIZE                                srcOffset)
 {
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdSaveAtomicCounters(
+ICD_EXPORT void XGLAPI xglCmdSaveAtomicCounters(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_UINT                                    startCounter,
-    XGL_UINT                                    counterCount,
+    uint32_t                                    startCounter,
+    uint32_t                                    counterCount,
     XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset)
 {
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerBegin(
+ICD_EXPORT void XGLAPI xglCmdDbgMarkerBegin(
     XGL_CMD_BUFFER                              cmdBuffer,
-    const XGL_CHAR*                             pMarker)
+    const char*                                 pMarker)
 {
 }
 
-ICD_EXPORT XGL_VOID XGLAPI xglCmdDbgMarkerEnd(
+ICD_EXPORT void XGLAPI xglCmdDbgMarkerEnd(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
 }

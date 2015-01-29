@@ -36,14 +36,14 @@
 struct intel_dynamic_vp {
     struct intel_obj obj;
 
-    XGL_UINT viewport_count;
+    uint32_t viewport_count;
     bool has_scissor_rects;
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
     uint32_t *cmd;
-    XGL_UINT cmd_len;
-    XGL_UINT cmd_clip_pos;
-    XGL_UINT cmd_cc_pos;
-    XGL_UINT cmd_scissor_rect_pos;
+    uint32_t cmd_len;
+    uint32_t cmd_clip_pos;
+    uint32_t cmd_cc_pos;
+    uint32_t cmd_scissor_rect_pos;
 };
 
 struct intel_dynamic_rs {

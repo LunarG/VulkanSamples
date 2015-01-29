@@ -29,7 +29,7 @@
 
 namespace xgl_testing {
 
-XGL_SIZE get_format_size(XGL_FORMAT format);
+size_t get_format_size(XGL_FORMAT format);
 
 class Environment : public ::testing::Environment {
 public:
@@ -80,7 +80,7 @@ private:
         SOLID,
     };
 
-    XGL_SIZE buffer_cpp() const;
+    size_t buffer_cpp() const;
     XGL_SUBRESOURCE_LAYOUT buffer_layout(const XGL_BUFFER_IMAGE_COPY &region) const;
 
     bool walk(Action action, Buffer &buf) const;
@@ -141,7 +141,7 @@ bool Environment::parse_args(int argc, char **argv)
 void Environment::SetUp()
 {
     XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
-    XGL_UINT count;
+    uint32_t count;
     XGL_RESULT err;
 
     err = xglInitAndEnumerateGpus(&app_, NULL, ARRAY_SIZE(gpus), &count, gpus);
@@ -149,7 +149,7 @@ void Environment::SetUp()
     ASSERT_GT(count, default_dev_);
 
     devs_.reserve(count);
-    for (XGL_UINT i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         devs_.push_back(new Device(gpus[i]));
         if (i == default_dev_) {
             devs_[i]->init();
@@ -165,7 +165,7 @@ void Environment::TearDown()
         delete *it;
     devs_.clear();
 
-    XGL_UINT dummy_count;
+    uint32_t dummy_count;
     xglInitAndEnumerateGpus(&app_, NULL, 0, &dummy_count, NULL);
 }
 
@@ -176,7 +176,7 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
 {
     // create a region for every mip level in array slice 0
     XGL_GPU_SIZE offset = 0;
-    for (XGL_UINT lv = 0; lv < info_.mipLevels; lv++) {
+    for (uint32_t lv = 0; lv < info_.mipLevels; lv++) {
         XGL_BUFFER_IMAGE_COPY region = {};
 
         region.bufferOffset = offset;
@@ -208,12 +208,12 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info)
     // issue, we can store only the regions for array slice 0 and be smart.
     if (info_.arraySize > 1) {
         const XGL_GPU_SIZE slice_pitch = offset;
-        const XGL_UINT slice_region_count = regions_.size();
+        const uint32_t slice_region_count = regions_.size();
 
         regions_.reserve(slice_region_count * info_.arraySize);
 
-        for (XGL_UINT slice = 1; slice < info_.arraySize; slice++) {
-            for (XGL_UINT i = 0; i < slice_region_count; i++) {
+        for (uint32_t slice = 1; slice < info_.arraySize; slice++) {
+            for (uint32_t i = 0; i < slice_region_count; i++) {
                 XGL_BUFFER_IMAGE_COPY region = regions_[i];
 
                 region.bufferOffset += slice_pitch * slice;
@@ -230,8 +230,8 @@ ImageChecker::ImageChecker(const XGL_IMAGE_CREATE_INFO &info, const std::vector<
     XGL_GPU_SIZE offset = 0;
     for (std::vector<XGL_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
          it != ranges.end(); it++) {
-        for (XGL_UINT lv = 0; lv < it->mipLevels; lv++) {
-            for (XGL_UINT slice = 0; slice < it->arraySize; slice++) {
+        for (uint32_t lv = 0; lv < it->mipLevels; lv++) {
+            for (uint32_t slice = 0; slice < it->arraySize; slice++) {
                 XGL_BUFFER_IMAGE_COPY region = {};
                 region.bufferOffset = offset;
                 region.imageSubresource = Image::subresource(*it, lv, slice);
@@ -254,7 +254,7 @@ void ImageChecker::set_solid_pattern(const std::vector<uint8_t> &solid)
         pattern_solid_.push_back(solid[i % solid.size()]);
 }
 
-XGL_SIZE ImageChecker::buffer_cpp() const
+size_t ImageChecker::buffer_cpp() const
 {
     return get_format_size(info_.format);
 }
@@ -287,9 +287,9 @@ XGL_GPU_SIZE ImageChecker::buffer_size() const
 bool ImageChecker::walk_region(Action action, const XGL_BUFFER_IMAGE_COPY &region,
                                const XGL_SUBRESOURCE_LAYOUT &layout, void *data) const
 {
-    for (XGL_INT z = 0; z < region.imageExtent.depth; z++) {
-        for (XGL_INT y = 0; y < region.imageExtent.height; y++) {
-            for (XGL_INT x = 0; x < region.imageExtent.width; x++) {
+    for (int32_t z = 0; z < region.imageExtent.depth; z++) {
+        for (int32_t y = 0; y < region.imageExtent.height; y++) {
+            for (int32_t x = 0; x < region.imageExtent.width; x++) {
                 uint8_t *dst = static_cast<uint8_t *>(data);
                 dst += layout.offset + layout.depthPitch * z +
                     layout.rowPitch * y + buffer_cpp() * x;
@@ -369,7 +369,7 @@ std::vector<uint8_t> ImageChecker::pattern_hash(const XGL_IMAGE_SUBRESOURCE &sub
     };
     unsigned long hash = 5381;
 
-    for (XGL_INT i = 0; i < ARRAY_SIZE(input); i++)
+    for (int32_t i = 0; i < ARRAY_SIZE(input); i++)
         hash = ((hash << 5) + hash) + input[i];
 
     const uint8_t output[4] = { HASH_BYTES(hash) };
@@ -384,11 +384,11 @@ std::vector<uint8_t> ImageChecker::pattern_hash(const XGL_IMAGE_SUBRESOURCE &sub
     return val;
 }
 
-XGL_SIZE get_format_size(XGL_FORMAT format)
+size_t get_format_size(XGL_FORMAT format)
 {
     static const struct format_info {
-        XGL_SIZE size;
-        XGL_UINT channel_count;
+        size_t size;
+        uint32_t channel_count;
     } format_table[XGL_NUM_FMT] = {
         [XGL_FMT_UNDEFINED]            = { 0,  0 },
         [XGL_FMT_R4G4_UNORM]           = { 1,  2 },
@@ -563,7 +563,7 @@ XGL_SIZE get_format_size(XGL_FORMAT format)
     return format_table[format].size;
 }
 
-XGL_EXTENT3D get_mip_level_extent(const XGL_EXTENT3D &extent, XGL_UINT mip_level)
+XGL_EXTENT3D get_mip_level_extent(const XGL_EXTENT3D &extent, uint32_t mip_level)
 {
     const XGL_EXTENT3D ext = {
         (extent.width  >> mip_level) ? extent.width  >> mip_level : 1,
@@ -849,7 +849,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     //        typedef struct _XGL_EVENT_CREATE_INFO
     //        {
     //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO
-    //            const XGL_VOID*                         pNext;      // Pointer to next structure
+    //            const void*                             pNext;      // Pointer to next structure
     //            XGL_FLAGS                               flags;      // Reserved
     //        } XGL_EVENT_CREATE_INFO;
     memset(&event_info, 0, sizeof(event_info));
@@ -1351,13 +1351,13 @@ protected:
     }
 
     union Color {
-        XGL_FLOAT color[4];
-        XGL_UINT32 raw[4];
+        float color[4];
+        uint32_t raw[4];
     };
 
     bool test_raw_;
 
-    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const XGL_FLOAT color[4])
+    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const float color[4])
     {
         std::vector<uint8_t> raw;
 
@@ -1382,7 +1382,7 @@ protected:
         return raw;
     }
 
-    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const XGL_UINT32 color[4])
+    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const uint32_t color[4])
     {
         std::vector<uint8_t> raw;
 
@@ -1498,7 +1498,7 @@ protected:
     }
 
     void test_clear_color_image(const XGL_IMAGE_CREATE_INFO &img_info,
-                                const XGL_FLOAT color[4],
+                                const float color[4],
                                 const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
         Color c;
@@ -1511,7 +1511,7 @@ TEST_F(XglCmdClearColorImageTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
-        const XGL_FLOAT color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+        const float color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
 
         XGL_IMAGE_CREATE_INFO img_info = xgl_testing::Image::create_info();
         img_info.imageType = XGL_IMAGE_2D;
@@ -1533,7 +1533,7 @@ protected:
     XglCmdClearColorImageRawTest() : XglCmdClearColorImageTest(true) {}
 
     void test_clear_color_image_raw(const XGL_IMAGE_CREATE_INFO &img_info,
-                                    const XGL_UINT32 color[4],
+                                    const uint32_t color[4],
                                     const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
         Color c;
@@ -1546,7 +1546,7 @@ TEST_F(XglCmdClearColorImageRawTest, Basic)
 {
     for (std::vector<xgl_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
-        const XGL_UINT32 color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
+        const uint32_t color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
 
         // not sure what to do here
         if (it->format == XGL_FMT_UNDEFINED ||
@@ -1589,7 +1589,7 @@ protected:
         ASSERT_NE(true, test_formats_.empty());
     }
 
-    std::vector<uint8_t> ds_to_raw(XGL_FORMAT format, XGL_FLOAT depth, XGL_UINT32 stencil)
+    std::vector<uint8_t> ds_to_raw(XGL_FORMAT format, float depth, uint32_t stencil)
     {
         std::vector<uint8_t> raw;
 
@@ -1607,7 +1607,7 @@ protected:
         case XGL_FMT_D32_SFLOAT_S8_UINT:
             {
                 const union {
-                    XGL_FLOAT depth;
+                    float depth;
                     uint32_t u32;
                 } u = { depth };
 
@@ -1644,7 +1644,7 @@ protected:
     }
 
     void test_clear_depth_stencil(const XGL_IMAGE_CREATE_INFO &img_info,
-                                  XGL_FLOAT depth, XGL_UINT32 stencil,
+                                  float depth, uint32_t stencil,
                                   const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
         xgl_testing::Image img;

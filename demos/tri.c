@@ -43,7 +43,7 @@ struct demo {
         XGL_FORMAT format;
 
         XGL_IMAGE image;
-        XGL_UINT  num_mem;
+        uint32_t  num_mem;
         XGL_GPU_MEMORY *mem;
         XGL_DEPTH_STENCIL_VIEW view;
     } depth;
@@ -52,14 +52,14 @@ struct demo {
         XGL_SAMPLER sampler;
 
         XGL_IMAGE image;
-        XGL_UINT  num_mem;
+        uint32_t  num_mem;
         XGL_GPU_MEMORY *mem;
         XGL_IMAGE_VIEW view;
     } textures[DEMO_TEXTURE_COUNT];
 
     struct {
         XGL_BUFFER buf;
-        XGL_UINT  num_mem;
+        uint32_t  num_mem;
         XGL_GPU_MEMORY *mem;
 
         XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
@@ -84,7 +84,7 @@ struct demo {
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 
     bool quit;
-    XGL_UINT current_buffer;
+    uint32_t current_buffer;
 };
 
 static void demo_draw_build_cmd(struct demo *demo)
@@ -97,8 +97,8 @@ static void demo_draw_build_cmd(struct demo *demo)
         .view = demo->depth.view,
         .layout = XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
-    const XGL_FLOAT clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
-    const XGL_FLOAT clear_depth = 0.9f;
+    const float clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
+    const float clear_depth = 0.9f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
     XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
@@ -190,10 +190,10 @@ static void demo_draw(struct demo *demo)
 
     demo_draw_build_cmd(demo);
 
-    err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((XGL_UINT64) 0));
+    err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((uint64_t) 0));
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
-    XGL_UINT i, idx = 0;
+    uint32_t i, idx = 0;
     XGL_MEMORY_REF *memRefs;
     memRefs = malloc(sizeof(XGL_MEMORY_REF) * (2 + demo->depth.num_mem +
                      demo->textures[0].num_mem + demo->vertices.num_mem));
@@ -240,7 +240,7 @@ static void demo_prepare_buffers(struct demo *demo)
         .flags = 0,
     };
     XGL_RESULT err;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO color_attachment_view = {
@@ -307,12 +307,12 @@ static void demo_prepare_depth(struct demo *demo)
     };
 
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
-    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     XGL_RESULT err;
-    XGL_UINT num_allocations = 0;
-    XGL_SIZE num_alloc_size = sizeof(num_allocations);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
 
     demo->depth.format = depth_format;
 
@@ -338,7 +338,7 @@ static void demo_prepare_depth(struct demo *demo)
     img_alloc.usage = img_reqs.usage;
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
-    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+    for (uint32_t i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
 
         /* allocate memory */
@@ -362,13 +362,13 @@ static void demo_prepare_depth(struct demo *demo)
 static void demo_prepare_textures(struct demo *demo)
 {
     const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
-    const XGL_INT tex_width = 2;
-    const XGL_INT tex_height = 2;
+    const int32_t tex_width = 2;
+    const int32_t tex_height = 2;
     const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
         { 0xffff0000, 0xff00ff00 },
     };
     XGL_RESULT err;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         const XGL_SAMPLER_CREATE_INFO sampler = {
@@ -427,11 +427,11 @@ static void demo_prepare_textures(struct demo *demo)
         };
 
         XGL_MEMORY_REQUIREMENTS *mem_reqs;
-        XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+        size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
         XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-        XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-        XGL_UINT num_allocations = 0;
-        XGL_SIZE num_alloc_size = sizeof(num_allocations);
+        size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+        uint32_t num_allocations = 0;
+        size_t num_alloc_size = sizeof(num_allocations);
 
         /* create sampler */
         err = xglCreateSampler(demo->device, &sampler,
@@ -461,7 +461,7 @@ static void demo_prepare_textures(struct demo *demo)
         img_alloc.usage = img_reqs.usage;
         img_alloc.formatClass = img_reqs.formatClass;
         img_alloc.samples = img_reqs.samples;
-        for (XGL_UINT j = 0; j < num_allocations; j ++) {
+        for (uint32_t j = 0; j < num_allocations; j ++) {
             mem_alloc.allocationSize = mem_reqs[j].size;
 
             /* allocate memory */
@@ -489,9 +489,9 @@ static void demo_prepare_textures(struct demo *demo)
             .arraySlice = 0,
         };
         XGL_SUBRESOURCE_LAYOUT layout;
-        XGL_SIZE layout_size;
-        XGL_VOID *data;
-        XGL_INT x, y;
+        size_t layout_size;
+        void *data;
+        int32_t x, y;
 
         err = xglGetImageSubresourceInfo(demo->textures[i].image, &subres,
                 XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
@@ -540,11 +540,11 @@ static void demo_prepare_vertices(struct demo *demo)
         .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
-    XGL_SIZE mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_BUFFER_MEMORY_REQUIREMENTS buf_reqs;
-    XGL_SIZE buf_reqs_size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
-    XGL_UINT num_allocations = 0;
-    XGL_SIZE num_alloc_size = sizeof(num_allocations);
+    size_t buf_reqs_size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
     XGL_RESULT err;
     void *data;
 
@@ -569,7 +569,7 @@ static void demo_prepare_vertices(struct demo *demo)
                     &buf_reqs_size, &buf_reqs);
     assert(!err && buf_reqs_size == sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS));
     buf_alloc.usage = buf_reqs.usage;
-    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+    for (uint32_t i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
 
         err = xglAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem[i]);
@@ -629,7 +629,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
 static XGL_SHADER demo_prepare_shader(struct demo *demo,
                                       XGL_PIPELINE_SHADER_STAGE stage,
                                       const void *code,
-                                      XGL_SIZE size)
+                                      size_t size)
 {
     XGL_SHADER_CREATE_INFO createInfo;
     XGL_SHADER shader;
@@ -767,15 +767,15 @@ static void demo_prepare_pipeline(struct demo *demo)
     ms.multisampleEnable = XGL_FALSE;
     ms.samples = 1;
 
-    pipeline.pNext = (const XGL_VOID *) &vi;
-    vi.pNext = (XGL_VOID *) &ia;
-    ia.pNext = (const XGL_VOID *) &rs;
-    rs.pNext = (const XGL_VOID *) &cb;
-    cb.pNext = (const XGL_VOID *) &ms;
-    ms.pNext = (const XGL_VOID *) &vp;
-    vp.pNext = (const XGL_VOID *) &ds;
-    ds.pNext = (const XGL_VOID *) &vs;
-    vs.pNext = (const XGL_VOID *) &fs;
+    pipeline.pNext = (const void *) &vi;
+    vi.pNext = (void *) &ia;
+    ia.pNext = (const void *) &rs;
+    rs.pNext = (const void *) &cb;
+    cb.pNext = (const void *) &ms;
+    ms.pNext = (const void *) &vp;
+    vp.pNext = (const void *) &ds;
+    ds.pNext = (const void *) &vs;
+    vs.pNext = (const void *) &fs;
 
     err = xglCreateGraphicsPipeline(demo->device, &pipeline, &demo->pipeline);
     assert(!err);
@@ -797,10 +797,10 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     viewport_create.viewportCount = 1;
     XGL_VIEWPORT viewport;
     memset(&viewport, 0, sizeof(viewport));
-    viewport.width = (XGL_FLOAT) demo->width;
-    viewport.height = (XGL_FLOAT) demo->height;
-    viewport.minDepth = (XGL_FLOAT) 0.0f;
-    viewport.maxDepth = (XGL_FLOAT) 1.0f;
+    viewport.width = (float) demo->width;
+    viewport.height = (float) demo->height;
+    viewport.minDepth = (float) 0.0f;
+    viewport.maxDepth = (float) 1.0f;
     viewport_create.pViewports = &viewport;
 
     memset(&raster, 0, sizeof(raster));
@@ -858,7 +858,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     XGL_UPDATE_SAMPLER_TEXTURES update;
     XGL_RESULT err;
     uint32_t count;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         view_info[i].sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
@@ -1016,7 +1016,7 @@ static void demo_init_xgl(struct demo *demo)
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
-    const XGL_CHAR *ext_names[] = {
+    const char *ext_names[] = {
         "XGL_WSI_X11",
     };
     const XGL_DEVICE_CREATE_INFO device = {
@@ -1030,8 +1030,8 @@ static void demo_init_xgl(struct demo *demo)
         .flags = XGL_DEVICE_CREATE_VALIDATION_BIT,
     };
     XGL_RESULT err;
-    XGL_UINT gpu_count;
-    XGL_UINT i;
+    uint32_t gpu_count;
+    uint32_t i;
 
     err = xglInitAndEnumerateGpus(&app, NULL, 1, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
@@ -1082,7 +1082,7 @@ static void demo_init(struct demo *demo)
 
 static void demo_cleanup(struct demo *demo)
 {
-    XGL_UINT i, j;
+    uint32_t i, j;
 
     xglDestroyObject(demo->desc_set);
     xglDestroyObject(demo->desc_region);

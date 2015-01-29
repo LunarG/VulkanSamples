@@ -974,7 +974,7 @@ bool intel_desc_layout_advance_iter(const struct intel_desc_layout *layout,
 XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_DEVICE                                   device,
     XGL_FLAGS                                    stageFlags,
-    const XGL_UINT*                              pSetBindPoints,
+    const uint32_t*                              pSetBindPoints,
     XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
@@ -1011,7 +1011,7 @@ XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
 XGL_RESULT XGLAPI xglCreateDescriptorRegion(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_REGION_USAGE                  regionUsage,
-    XGL_UINT                                     maxSets,
+    uint32_t                                     maxSets,
     const XGL_DESCRIPTOR_REGION_CREATE_INFO*     pCreateInfo,
     XGL_DESCRIPTOR_REGION*                       pDescriptorRegion)
 {
@@ -1034,10 +1034,10 @@ XGL_RESULT XGLAPI xglClearDescriptorRegion(
 XGL_RESULT XGLAPI xglAllocDescriptorSets(
     XGL_DESCRIPTOR_REGION                        descriptorRegion,
     XGL_DESCRIPTOR_SET_USAGE                     setUsage,
-    XGL_UINT                                     count,
+    uint32_t                                     count,
     const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
     XGL_DESCRIPTOR_SET*                          pDescriptorSets,
-    XGL_UINT*                                    pCount)
+    uint32_t*                                    pCount)
 {
     struct intel_desc_region *region = intel_desc_region(descriptorRegion);
     struct intel_dev *dev = region->dev;
@@ -1060,9 +1060,9 @@ XGL_RESULT XGLAPI xglAllocDescriptorSets(
     return ret;
 }
 
-XGL_VOID XGLAPI xglClearDescriptorSets(
+void XGLAPI xglClearDescriptorSets(
     XGL_DESCRIPTOR_REGION                        descriptorRegion,
-    XGL_UINT                                     count,
+    uint32_t                                     count,
     const XGL_DESCRIPTOR_SET*                    pDescriptorSets)
 {
     uint32_t i;
@@ -1075,15 +1075,15 @@ XGL_VOID XGLAPI xglClearDescriptorSets(
     }
 }
 
-XGL_VOID XGLAPI xglUpdateDescriptors(
+void XGLAPI xglUpdateDescriptors(
     XGL_DESCRIPTOR_SET                           descriptorSet,
-    const XGL_VOID*                              pUpdateChain)
+    const void*                                  pUpdateChain)
 {
     struct intel_desc_set *set = intel_desc_set(descriptorSet);
     const union {
         struct {
             XGL_STRUCTURE_TYPE                      sType;
-            const XGL_VOID*                         pNext;
+            const void*                             pNext;
         } common;
 
         XGL_UPDATE_SAMPLERS samplers;

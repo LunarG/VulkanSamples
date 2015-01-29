@@ -37,7 +37,7 @@ static void query_destroy(struct intel_obj *obj)
 }
 
 static XGL_RESULT query_get_info(struct intel_base *base, int type,
-                                 XGL_SIZE *size, XGL_VOID *data)
+                                 size_t *size, void *data)
 {
     struct intel_query *query = intel_query_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
@@ -114,10 +114,10 @@ void intel_query_destroy(struct intel_query *query)
 
 static void
 query_process_occlusion(const struct intel_query *query,
-                        XGL_UINT count, const uint8_t *raw,
+                        uint32_t count, const uint8_t *raw,
                         uint64_t *results)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < count; i++) {
         const uint32_t *pair = (const uint32_t *) raw;
@@ -129,11 +129,11 @@ query_process_occlusion(const struct intel_query *query,
 
 static void
 query_process_pipeline_statistics(const struct intel_query *query,
-                                  XGL_UINT count, const uint8_t *raw,
+                                  uint32_t count, const uint8_t *raw,
                                   XGL_PIPELINE_STATISTICS_DATA *results)
 {
-    const XGL_UINT num_regs = sizeof(results[0]) / sizeof(uint64_t);
-    XGL_UINT i, j;
+    const uint32_t num_regs = sizeof(results[0]) / sizeof(uint64_t);
+    uint32_t i, j;
 
     for (i = 0; i < count; i++) {
         const uint64_t *before = (const uint64_t *) raw;
@@ -148,7 +148,7 @@ query_process_pipeline_statistics(const struct intel_query *query,
 }
 
 XGL_RESULT intel_query_get_results(struct intel_query *query,
-                                   XGL_UINT slot_start, XGL_UINT slot_count,
+                                   uint32_t slot_start, uint32_t slot_count,
                                    void *results)
 {
     const uint8_t *ptr;
@@ -195,10 +195,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(
     XGL_QUERY_POOL                              queryPool,
-    XGL_UINT                                    startQuery,
-    XGL_UINT                                    queryCount,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount,
+    size_t*                                     pDataSize,
+    void*                                       pData)
 {
     struct intel_query *query = intel_query(queryPool);
 

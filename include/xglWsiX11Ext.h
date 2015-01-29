@@ -57,9 +57,9 @@ typedef struct _XGL_WSI_X11_PRESENT_INFO
      * on \p destWindow.
      */
     xcb_randr_crtc_t crtc;
-    XGL_UINT64 target_msc;
-    XGL_UINT64 divisor;
-    XGL_UINT64 remainder;
+    uint64_t target_msc;
+    uint64_t divisor;
+    uint64_t remainder;
 
     /**
      * After waiting for the current and target MSCs to match, the
@@ -67,7 +67,7 @@ typedef struct _XGL_WSI_X11_PRESENT_INFO
      * next time current MSC is incremented.  When \p async is true, it will
      * occur as soon as possible.
      */
-    XGL_BOOL async;
+    bool32_t async;
 
     /**
      * When \p flip is false, the contents of \p srcImage are copied to
@@ -77,11 +77,11 @@ typedef struct _XGL_WSI_X11_PRESENT_INFO
      * An error may be returned if \p flip is true but \p destWindow can not
      * be flipped to.
      */
-    XGL_BOOL flip;
+    bool32_t flip;
 } XGL_WSI_X11_PRESENT_INFO;
 
 typedef XGL_RESULT (XGLAPI *xglWsiX11AssociateConnectionType)(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo);
-typedef XGL_RESULT (XGLAPI *xglWsiX11GetMSCType)(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, XGL_UINT64* pMsc);
+typedef XGL_RESULT (XGLAPI *xglWsiX11GetMSCType)(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc);
 typedef XGL_RESULT (XGLAPI *xglWsiX11CreatePresentableImageType)(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglWsiX11QueuePresentType)(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence);
 
@@ -110,7 +110,7 @@ XGL_RESULT XGLAPI xglWsiX11GetMSC(
     XGL_DEVICE                                  device,
     xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
-    XGL_UINT64*                                 pMsc);
+    uint64_t*                                   pMsc);
 
 /**
  * Create an XGL_IMAGE that can be presented.  An XGL_GPU_MEMORY is created

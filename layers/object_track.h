@@ -123,13 +123,13 @@ static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
 }
 
 typedef struct _OBJTRACK_NODE {
-    XGL_VOID        *pObj;
+    void            *pObj;
     XGL_OBJECT_TYPE objType;
-    XGL_UINT64      numUses;
+    uint64_t        numUses;
 } OBJTRACK_NODE;
 // prototype for extension functions
-XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type);
-XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, XGL_UINT64 objCount, OBJTRACK_NODE* pObjNodeArray);
+uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type);
+XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
 // Func ptr typedefs
-typedef XGL_UINT64 (*OBJ_TRACK_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
-typedef XGL_RESULT (*OBJ_TRACK_GET_OBJECTS)(XGL_OBJECT_TYPE, XGL_UINT64, OBJTRACK_NODE*);
+typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
+typedef XGL_RESULT (*OBJ_TRACK_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, OBJTRACK_NODE*);

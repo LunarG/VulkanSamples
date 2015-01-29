@@ -31,7 +31,7 @@
 
 struct icd_logger_callback {
     XGL_DBG_MSG_CALLBACK_FUNCTION func;
-    XGL_VOID *user_data;
+    void *user_data;
 
     struct icd_logger_callback *next;
 };

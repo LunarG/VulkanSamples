@@ -189,8 +189,8 @@ uint32_t BaseObject::memory_allocation_count() const
 std::vector<XGL_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
 {
     XGL_RESULT err;
-    XGL_UINT num_allocations = 0;
-    XGL_SIZE num_alloc_size = sizeof(num_allocations);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
     err = xglGetObjectInfo(obj_, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                            &num_alloc_size, &num_allocations);
     EXPECT(err == XGL_SUCCESS && num_alloc_size == sizeof(num_allocations));

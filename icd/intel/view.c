@@ -1145,7 +1145,7 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
-    XGL_UINT mip_levels, array_size;
+    uint32_t mip_levels, array_size;
     XGL_CHANNEL_MAPPING state_swizzles;
 
     if (info->subresourceRange.baseMipLevel >= img->mip_levels ||

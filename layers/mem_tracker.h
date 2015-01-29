@@ -106,7 +106,7 @@ typedef struct _GLOBAL_MEM_OBJ_NODE {
     struct _GLOBAL_MEM_OBJ_NODE* pNextGlobalNode; // Ptr to next mem obj in global list of all objs
     MINI_NODE* pObjBindings; // Ptr to list of objects bound to this memory
     MINI_NODE* pCmdBufferBindings; // Ptr to list of cmd buffers that this mem object references
-    XGL_UINT refCount; // Count of references (obj bindings or CB use)
+    uint32_t refCount; // Count of references (obj bindings or CB use)
     XGL_GPU_MEMORY mem;
     XGL_MEMORY_ALLOC_INFO allocInfo;
     uint32_t numRegions; // Allocation may be broken into various regions
@@ -147,7 +147,7 @@ typedef struct _GLOBAL_OBJECT_NODE {
 typedef struct _MEMORY_BINDING {
     XGL_OBJECT      mem;
     XGL_GPU_SIZE    offset;
-    XGL_UINT        binding;
+    uint32_t        binding;
     XGL_INDEX_TYPE  indexType;
 } MEMORY_BINDING;
 
@@ -157,7 +157,7 @@ typedef struct _MEMORY_BINDING {
 typedef struct _DS_BINDING {
     XGL_PIPELINE_BIND_POINT     pipelineBindPoint;
     XGL_DESCRIPTOR_SET          descriptorSet;
-    XGL_UINT                    slotOffset;
+    uint32_t                    slotOffset;
 } DS_BINDING;
 
 // Store a single LL of command buffers
@@ -170,7 +170,7 @@ typedef struct _GLOBAL_CB_NODE {
     GLOBAL_OBJECT_NODE*             pDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
     DS_BINDING                      descriptorSets[XGL_MAX_DESCRIPTOR_SETS];
-    XGL_UINT                        colorAttachmentCount;
+    uint32_t                        colorAttachmentCount;
     XGL_COLOR_ATTACHMENT_BIND_INFO  attachments[XGL_MAX_COLOR_ATTACHMENTS];
     XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
     XGL_CMD_BUFFER cmdBuffer;

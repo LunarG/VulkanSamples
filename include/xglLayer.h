@@ -153,7 +153,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
 typedef struct _XGL_LAYER_DBG_FUNCTION_NODE
 {
     XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback;
-    XGL_VOID *pUserData;
+    void *pUserData;
     struct _XGL_LAYER_DBG_FUNCTION_NODE *pNext;
 } XGL_LAYER_DBG_FUNCTION_NODE;
 

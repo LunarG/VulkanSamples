@@ -80,14 +80,14 @@ using namespace std;
 
 #include "xglrenderframework.h"
 #ifdef DEBUG_CALLBACK
-XGL_VOID XGLAPI myDbgFunc(
+void XGLAPI myDbgFunc(
     XGL_DBG_MSG_TYPE     msgType,
     XGL_VALIDATION_LEVEL validationLevel,
     XGL_BASE_OBJECT      srcObject,
-    XGL_SIZE             location,
-    XGL_INT              msgCode,
-    const XGL_CHAR*      pMsg,
-    XGL_VOID*            pUserData)
+    size_t               location,
+    int32_t              msgCode,
+    const char*          pMsg,
+    void*                pUserData)
 {
     switch (msgType)
     {
@@ -113,8 +113,8 @@ XGL_VOID XGLAPI myDbgFunc(
 //--------------------------------------------------------------------------------------
 struct Vertex
 {
-    XGL_FLOAT posX, posY, posZ, posW;    // Position data
-    XGL_FLOAT r, g, b, a;                // Color
+    float posX, posY, posZ, posW;    // Position data
+    float r, g, b, a;                // Color
 };
 
 #define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
@@ -230,7 +230,7 @@ protected:
 
     XGL_FORMAT                  m_depth_stencil_fmt;
     XGL_IMAGE                   m_depthStencilImage;
-    XGL_UINT                    m_num_mem;
+    uint32_t                    m_num_mem;
     XGL_GPU_MEMORY              *m_depthStencilMem;
     XGL_DEPTH_STENCIL_VIEW      m_depthStencilView;
     XglMemoryRefManager         m_memoryRefManager;
@@ -332,11 +332,11 @@ void XglRenderTest::InitDepthStencil()
     XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc;
     XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view;
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
-    XGL_SIZE mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
+    size_t mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
     XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    XGL_SIZE img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-    XGL_UINT num_allocations = 0;
-    XGL_SIZE num_alloc_size = sizeof(num_allocations);
+    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
 
     // Clean up default state created by framework
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
@@ -392,7 +392,7 @@ void XglRenderTest::InitDepthStencil()
     img_alloc.usage = img_reqs.usage;
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
-    for (XGL_UINT i = 0; i < num_allocations; i ++) {
+    for (uint32_t i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
 
         /* allocate memory */
@@ -436,9 +436,9 @@ void XglRenderTest::InitDepthStencil()
 
 struct xgltriangle_vs_uniform {
     // Must start with MVP
-    XGL_FLOAT   mvp[4][4];
-    XGL_FLOAT   position[3][4];
-    XGL_FLOAT   color[3][4];
+    float   mvp[4][4];
+    float   position[3][4];
+    float   color[3][4];
 };
 
 void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
@@ -455,7 +455,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     glm::mat4 Model      = glm::mat4(1.0f);
     glm::mat4 MVP = Projection * View * Model;
     const int matrixSize = sizeof(MVP);
-    const int bufSize = sizeof(xgltriangle_vs_uniform) / sizeof(XGL_FLOAT);
+    const int bufSize = sizeof(xgltriangle_vs_uniform) / sizeof(float);
     memcpy(&data.mvp, &MVP[0][0], matrixSize);
 
     static const Vertex tri_data[] =
@@ -479,7 +479,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(XGL_FLOAT), (const void*) &data);
+    XglConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(float), (const void*) &data);
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
@@ -502,7 +502,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
 
     cmdBuffer.BindVertexBuffer(&constantBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -519,12 +519,12 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
             RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
 
 #ifdef PRINT_OBJECTS
-    //XGL_UINT64 objTrackGetObjectCount(XGL_OBJECT_TYPE type)
-    OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjectCount");
-    XGL_UINT64 numObjects = pObjTrackGetObjectCount(XGL_OBJECT_TYPE_ANY);
-    //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjects");
+    //uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)
+    OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)xglGetProcAddr(gpu(), (char*)"objTrackGetObjectCount");
+    uint64_t numObjects = pObjTrackGetObjectCount(XGL_OBJECT_TYPE_ANY);
+    //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = xglGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     printf("DEBUG : Number of Objects : %lu\n", numObjects);
-    OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)xglGetProcAddr(gpu(), (XGL_CHAR*)"objTrackGetObjects");
+    OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)xglGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     OBJTRACK_NODE* pObjNodeArray = (OBJTRACK_NODE*)malloc(sizeof(OBJTRACK_NODE)*numObjects);
     pObjTrackGetObjs(XGL_OBJECT_TYPE_ANY, numObjects, pObjNodeArray);
     for (i=0; i < numObjects; i++) {
@@ -825,7 +825,7 @@ TEST_F(XglRenderTest, TriangleMRT)
             "   gl_FragData[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "   gl_FragData[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "}\n";
-    const XGL_FLOAT vb_data[][2] = {
+    const float vb_data[][2] = {
         { -1.0f, -1.0f },
         {  1.0f, -1.0f },
         { -1.0f,  1.0f }
@@ -880,7 +880,7 @@ TEST_F(XglRenderTest, TriangleMRT)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -980,7 +980,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1076,7 +1076,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1168,7 +1168,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1270,7 +1270,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1362,7 +1362,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1436,7 +1436,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
 
     // cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1511,7 +1511,7 @@ TEST_F(XglRenderTest, MixTriangle)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1598,7 +1598,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1689,7 +1689,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1743,7 +1743,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
 
-    const int buf_size = sizeof(MVP) / sizeof(XGL_FLOAT);
+    const int buf_size = sizeof(MVP) / sizeof(float);
 
     XglConstantBufferObj MVPBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
@@ -1800,7 +1800,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1869,7 +1869,7 @@ TEST_F(XglRenderTest, VSTexture)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -1941,7 +1941,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2024,7 +2024,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2096,7 +2096,7 @@ TEST_F(XglRenderTest, FSTriangle)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2189,7 +2189,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2272,7 +2272,7 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2374,7 +2374,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2471,7 +2471,7 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2537,7 +2537,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
     meshBuffer.BufferMemoryBarrier();
 
-    const int buf_size = sizeof(MVP) / sizeof(XGL_FLOAT);
+    const int buf_size = sizeof(MVP) / sizeof(float);
 
     XglConstantBufferObj mvpBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
@@ -2598,7 +2598,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2719,7 +2719,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2835,7 +2835,7 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -3087,7 +3087,7 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (XGL_CHAR*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle

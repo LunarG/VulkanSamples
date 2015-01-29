@@ -30,8 +30,8 @@
 #include "icd-format.h"
 
 static const struct icd_format_info {
-    XGL_SIZE size;
-    XGL_UINT channel_count;
+    size_t size;
+    uint32_t channel_count;
 } icd_format_table[XGL_NUM_FMT] = {
     [XGL_FMT_UNDEFINED]            = { 0,  0 },
     [XGL_FMT_R4G4_UNORM]           = { 1,  2 },
@@ -549,7 +549,7 @@ unsigned int icd_format_get_channel_count(XGL_FORMAT format)
  * icd_format_get_size(format) bytes.
  */
 void icd_format_get_raw_value(XGL_FORMAT format,
-                              const XGL_UINT32 color[4],
+                              const uint32_t color[4],
                               void *value)
 {
     /* assume little-endian */

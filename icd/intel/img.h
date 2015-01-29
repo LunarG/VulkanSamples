@@ -37,23 +37,23 @@ struct intel_img {
     struct intel_obj obj;
 
     XGL_IMAGE_TYPE type;
-    XGL_INT depth;
-    XGL_UINT mip_levels;
-    XGL_UINT array_size;
+    int32_t depth;
+    uint32_t mip_levels;
+    uint32_t array_size;
     XGL_FLAGS usage;
     XGL_IMAGE_FORMAT_CLASS format_class;  // should this be integrated into intel_layout?
-    XGL_UINT samples;
+    uint32_t samples;
     struct intel_layout layout;
 
     /* layout of separate stencil */
     struct intel_layout *s8_layout;
 
-    XGL_SIZE total_size;
-    XGL_SIZE aux_offset;
-    XGL_SIZE s8_offset;
+    size_t total_size;
+    size_t aux_offset;
+    size_t s8_offset;
 
-    XGL_FLOAT clear_color[4];
-    XGL_FLOAT clear_depth;
+    float clear_color[4];
+    float clear_depth;
 
 #ifdef ENABLE_WSI_X11
     int x11_prime_fd;

@@ -136,7 +136,7 @@ enum intel_dev_meta_shader {
 };
 
 struct intel_dev_dbg_msg_filter {
-    XGL_INT msg_code;
+    int32_t msg_code;
     XGL_DBG_MSG_FILTER filter;
     bool triggered;
 
@@ -186,18 +186,18 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
 void intel_dev_destroy(struct intel_dev *dev);
 
 XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
-                                    XGL_INT msg_code,
+                                    int32_t msg_code,
                                     XGL_DBG_MSG_FILTER filter);
 
 void intel_dev_remove_msg_filter(struct intel_dev *dev,
-                                 XGL_INT msg_code);
+                                 int32_t msg_code);
 
 void intel_dev_log(struct intel_dev *dev,
                    XGL_DBG_MSG_TYPE msg_type,
                    XGL_VALIDATION_LEVEL validation_level,
                    struct intel_base *src_object,
-                   XGL_SIZE location,
-                   XGL_INT msg_code,
+                   size_t location,
+                   int32_t msg_code,
                    const char *format, ...);
 
 static inline const struct intel_pipeline_shader *intel_dev_get_meta_shader(const struct intel_dev *dev,

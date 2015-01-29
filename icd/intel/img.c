@@ -49,7 +49,7 @@ static void img_destroy(struct intel_obj *obj)
 }
 
 static XGL_RESULT img_get_info(struct intel_base *base, int type,
-                               XGL_SIZE *size, XGL_VOID *data)
+                               size_t *size, void *data)
 {
     struct intel_img *img = intel_img_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
@@ -211,8 +211,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     XGL_IMAGE                                   image,
     const XGL_IMAGE_SUBRESOURCE*                pSubresource,
     XGL_SUBRESOURCE_INFO_TYPE                   infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
+    size_t*                                     pDataSize,
+    void*                                       pData)
 {
     const struct intel_img *img = intel_img(image);
     XGL_RESULT ret = XGL_SUCCESS;
@@ -253,7 +253,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(
 {
     struct intel_img *img = intel_img(image);
 
-    memcpy(img->clear_color, &color, sizeof(XGL_FLOAT) * 4);
+    memcpy(img->clear_color, &color, sizeof(float) * 4);
 
     return XGL_SUCCESS;
 }

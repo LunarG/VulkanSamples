@@ -77,11 +77,11 @@ struct intel_pipeline_rmap_slot {
 struct intel_pipeline_rmap {
     /* this is not an intel_obj */
 
-    XGL_UINT rt_count;
-    XGL_UINT texture_resource_count;
-    XGL_UINT resource_count;
-    XGL_UINT uav_count;
-    XGL_UINT sampler_count;
+    uint32_t rt_count;
+    uint32_t texture_resource_count;
+    uint32_t resource_count;
+    uint32_t uav_count;
+    uint32_t sampler_count;
 
     /*
      * rt_count slots +
@@ -90,7 +90,7 @@ struct intel_pipeline_rmap {
      * sampler_count slots
      */
     struct intel_pipeline_rmap_slot *slots;
-    XGL_UINT slot_count;
+    uint32_t slot_count;
 };
 
 #define SHADER_VERTEX_FLAG            (1 << XGL_SHADER_STAGE_VERTEX)
@@ -113,20 +113,20 @@ struct intel_pipeline_shader {
     XGL_FLAGS uses;
     uint64_t inputs_read;
     uint64_t outputs_written;
-    XGL_UINT outputs_offset;
-    XGL_UINT generic_input_start;
+    uint32_t outputs_offset;
+    uint32_t generic_input_start;
 
-    XGL_BOOL enable_user_clip;
-    XGL_BOOL reads_user_clip;
+    bool32_t enable_user_clip;
+    bool32_t reads_user_clip;
 
-    XGL_UINT in_count;
-    XGL_UINT out_count;
+    uint32_t in_count;
+    uint32_t out_count;
 
-    XGL_UINT sampler_count;
-    XGL_UINT surface_count;
+    uint32_t sampler_count;
+    uint32_t surface_count;
 
-    XGL_UINT ubo_start;
-    XGL_UINT urb_grf_start;
+    uint32_t ubo_start;
+    uint32_t urb_grf_start;
 
     XGL_FLAGS barycentric_interps;
 
@@ -137,7 +137,7 @@ struct intel_pipeline_shader {
     struct intel_pipeline_rmap *rmap;
 
     /* these are set up by the driver */
-    XGL_UINT max_threads;
+    uint32_t max_threads;
     XGL_GPU_SIZE scratch_offset;
 };
 
@@ -172,7 +172,7 @@ struct intel_pipeline {
     struct intel_dev *dev;
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vb[INTEL_MAX_VERTEX_BINDING_COUNT];
-    XGL_UINT vb_count;
+    uint32_t vb_count;
 
     /* XGL_PIPELINE_IA_STATE_CREATE_INFO */
     XGL_PRIMITIVE_TOPOLOGY topology;
@@ -210,8 +210,8 @@ struct intel_pipeline {
     uint32_t wa_flags;
 
     uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
-    XGL_UINT cmd_len;
-    XGL_UINT cmd_sbe_body_offset;
+    uint32_t cmd_len;
+    uint32_t cmd_sbe_body_offset;
 
     /* The following are only partial HW commands that will need
      * more processing before sending to the HW

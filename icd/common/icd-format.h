@@ -66,7 +66,7 @@ XGL_IMAGE_FORMAT_CLASS icd_format_get_class(XGL_FORMAT format);
 unsigned int icd_format_get_channel_count(XGL_FORMAT format);
 
 void icd_format_get_raw_value(XGL_FORMAT format,
-                              const XGL_UINT32 color[4],
+                              const uint32_t color[4],
                               void *value);
 
 #endif /* ICD_FORMAT_H */

@@ -102,7 +102,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(
 ICD_EXPORT XGL_RESULT XGLAPI xglMapMemory(
     XGL_GPU_MEMORY                              mem_,
     XGL_FLAGS                                   flags,
-    XGL_VOID**                                  ppData)
+    void**                                      ppData)
 {
     struct intel_mem *mem = intel_mem(mem_);
     void *ptr = intel_mem_map(mem, flags);
@@ -124,8 +124,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
     XGL_DEVICE                                  device,
-    const XGL_VOID*                             pSysMem,
-    XGL_SIZE                                    memSize,
+    const void*                                 pSysMem,
+    size_t                                      memSize,
     XGL_GPU_MEMORY*                             pMem)
 {
     /* add DRM_I915_GEM_USERPTR to wisys first */

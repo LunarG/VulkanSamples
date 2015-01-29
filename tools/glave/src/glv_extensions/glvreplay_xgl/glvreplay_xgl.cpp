@@ -35,14 +35,14 @@ GLV_CRITICAL_SECTION g_handlerLock;
 XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
 glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION g_fpGlvCallback = NULL;
 
-static XGL_VOID xglErrorHandler(
+static void xglErrorHandler(
                                             XGL_DBG_MSG_TYPE     msgType,
                                             XGL_VALIDATION_LEVEL validationLevel,
                                             XGL_BASE_OBJECT      srcObject,
-                                            XGL_SIZE             location,
-                                            XGL_INT              msgCode,
-                                            const XGL_CHAR*      pMsg,
-                                            XGL_VOID*            pUserData)
+                                            size_t               location,
+                                            int32_t              msgCode,
+                                            const char*          pMsg,
+                                            void*                pUserData)
 {
     glv_enter_critical_section(&g_handlerLock);
     switch (msgType) {

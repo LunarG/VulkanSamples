@@ -40,6 +40,6 @@
 #  define LOADER_EXPORT
 #endif
 
-extern XGL_UINT loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo);
+extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo);
 #define MAX_LAYER_LIBRARIES 64
 #endif /* LOADER_H */

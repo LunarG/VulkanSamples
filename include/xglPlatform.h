@@ -51,52 +51,14 @@ extern "C"
 #endif
 
 #include <stddef.h>
-
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__GNUC__) || defined(__SCO__) || defined(__USLC__)
-
-/*
- * Using <stdint.h>
- */
 #include <stdint.h>
-typedef int8_t           XGL_INT8;
-typedef uint8_t          XGL_UINT8;
-typedef int16_t          XGL_INT16;
-typedef uint16_t         XGL_UINT16;
-typedef int32_t          XGL_INT32;
-typedef uint32_t         XGL_UINT32;
-typedef int64_t          XGL_INT64;
-typedef uint64_t         XGL_UINT64;
 
-#elif defined(_WIN32) && !defined(__SCITECH_SNAP__)
+typedef uint64_t   XGL_GPU_SIZE;
+typedef uint32_t   bool32_t;
 
-/*
- * Win32
- */
-typedef signed   __int8  XGL_INT8;
-typedef unsigned __int8  XGL_UINT8;
-typedef signed   __int16 XGL_INT16;
-typedef unsigned __int16 XGL_UINT16;
-typedef signed   __int32 XGL_INT32;
-typedef unsigned __int32 XGL_UINT32;
-typedef signed   __int64 XGL_INT64;
-typedef unsigned __int64 XGL_UINT64;
-
-#endif
-
-typedef size_t     XGL_SIZE;
-typedef XGL_UINT64 XGL_GPU_SIZE;
-typedef XGL_UINT8  XGL_BYTE;
-typedef XGL_INT32  XGL_INT;
-typedef XGL_UINT32 XGL_UINT;
-typedef char       XGL_CHAR;
-typedef float      XGL_FLOAT;
-typedef double     XGL_DOUBLE;
-typedef XGL_UINT32 XGL_BOOL;
-typedef void       XGL_VOID;
-
-typedef XGL_UINT32 XGL_SAMPLE_MASK;
-typedef XGL_UINT32 XGL_FLAGS;
-typedef XGL_INT32  XGL_ENUM;
+typedef uint32_t   XGL_SAMPLE_MASK;
+typedef uint32_t   XGL_FLAGS;
+typedef int32_t    XGL_ENUM;
 
 #ifdef __cplusplus
 } // extern "C"

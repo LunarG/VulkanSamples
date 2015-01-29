@@ -355,7 +355,7 @@ class StructWrapperGen:
         
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
-        dp_funcs.append("\nvoid dynamic_display_full_txt(const XGL_VOID* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
+        dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
         dp_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;    switch (sType)\n    {")
         for e in enum_type_dict:
             class_num = 0
@@ -485,7 +485,7 @@ class StructWrapperGen:
         i_declared = False
         for member in sorted(self.struct_dict[s]):
             # TODO : Need to display each member based on its type
-            # TODO : Need to handle pNext which are structs, but of XGL_VOID* type
+            # TODO : Need to handle pNext which are structs, but of void* type
             #   Can grab struct type off of header of struct pointed to
             # TODO : Handle Arrays
             if self.struct_dict[s][member]['array']:

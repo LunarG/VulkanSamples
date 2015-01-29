@@ -452,8 +452,8 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
 ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
     XGL_PHYSICAL_GPU                            gpu_,
     XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
+    size_t*                                     pDataSize,
+    void*                                       pData)
 {
     const struct intel_gpu *gpu = intel_gpu(gpu_);
     XGL_RESULT ret = XGL_SUCCESS;
@@ -513,7 +513,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(
     XGL_PHYSICAL_GPU                            gpu_,
-    const XGL_CHAR*                             pExtName)
+    const char*                                 pExtName)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
     const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu, pExtName);

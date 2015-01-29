@@ -409,7 +409,7 @@ static void pipeline_destroy(struct intel_obj *obj)
 }
 
 static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
-                                    XGL_SIZE *size, XGL_VOID *data)
+                                    size_t *size, void *data)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
     XGL_RESULT ret = XGL_SUCCESS;
@@ -737,7 +737,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
     const struct intel_pipeline_shader *vs = &pipeline->vs;
     uint8_t cmd_len;
     uint32_t *dw;
-    XGL_UINT i;
+    uint32_t i;
     int comps[4];
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
@@ -818,9 +818,9 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
     const struct intel_pipeline_shader *vs = &pipeline->vs;
     uint8_t cmd_len;
     uint32_t *body;
-    XGL_UINT attr_skip, attr_count;
-    XGL_UINT vue_offset, vue_len;
-    XGL_UINT i;
+    uint32_t attr_skip, attr_count;
+    uint32_t vue_offset, vue_len;
+    uint32_t i;
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
@@ -865,8 +865,8 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
           vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
 
     uint16_t vs_slot[fs->in_count];
-    XGL_INT fs_in = 0;
-    XGL_INT vs_out = - (vue_offset * 2 - vs->outputs_offset);
+    int32_t fs_in = 0;
+    int32_t vs_out = - (vue_offset * 2 - vs->outputs_offset);
     for (i=0; i < 64; i++) {
         bool vsWrites = vs->outputs_written & (1L << i);
         bool fsReads  = fs->inputs_read     & (1L << i);
@@ -1112,7 +1112,7 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
 static void pipeline_build_cb(struct intel_pipeline *pipeline,
                               const struct intel_pipeline_create_info *info)
 {
-    XGL_UINT i;
+    uint32_t i;
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
     STATIC_ASSERT(ARRAY_SIZE(pipeline->cmd_cb) >= INTEL_MAX_RENDER_TARGETS*2);
@@ -1281,7 +1281,7 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
 
     while (header) {
         const void *src = (const void *) header;
-        XGL_SIZE size;
+        size_t size;
         void *dst;
 
         switch (header->struct_type) {
@@ -1424,16 +1424,16 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglStorePipeline(
     XGL_PIPELINE                                pipeline,
-    XGL_SIZE*                                   pDataSize,
-    XGL_VOID*                                   pData)
+    size_t*                                     pDataSize,
+    void*                                       pData)
 {
     return XGL_ERROR_UNAVAILABLE;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
     XGL_DEVICE                                  device,
-    XGL_SIZE                                    dataSize,
-    const XGL_VOID*                             pData,
+    size_t                                    dataSize,
+    const void*                                 pData,
     XGL_PIPELINE*                               pPipeline)
 {
     return XGL_ERROR_UNAVAILABLE;

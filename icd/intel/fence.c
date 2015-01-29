@@ -102,20 +102,20 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglWaitForFences(
     XGL_DEVICE                                  device,
-    XGL_UINT                                    fenceCount,
+    uint32_t                                    fenceCount,
     const XGL_FENCE*                            pFences,
-    XGL_BOOL                                    waitAll,
-    XGL_UINT64                                  timeout)
+    bool32_t                                    waitAll,
+    uint64_t                                    timeout)
 {
     XGL_RESULT ret = XGL_SUCCESS;
-    XGL_UINT i;
+    uint32_t i;
 
     for (i = 0; i < fenceCount; i++) {
         struct intel_fence *fence = intel_fence(pFences[i]);
         int64_t ns;
         XGL_RESULT r;
 
-        if (timeout <= (XGL_UINT64) (INT64_MAX / 1000 / 1000 / 1000))
+        if (timeout <= (uint64_t) (INT64_MAX / 1000 / 1000 / 1000))
             ns = timeout * 1000 * 1000 * 1000;
         else
             ns = -1;
