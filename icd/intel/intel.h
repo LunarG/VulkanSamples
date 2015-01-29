@@ -44,6 +44,7 @@
 #include "icd-format.h"
 #include "icd-log.h"
 #include "icd-utils.h"
+#include "obj.h"
 
 #define INTEL_API_VERSION XGL_MAKE_VERSION(0, 22, 0)
 #define INTEL_DRIVER_VERSION 0
@@ -54,6 +55,9 @@
 #define INTEL_MAX_VERTEX_ELEMENT_COUNT (INTEL_MAX_VERTEX_BINDING_COUNT + 1)
 #define INTEL_MAX_RENDER_TARGETS 8
 
+struct intel_instance {
+    struct intel_obj obj;
+};
 
 enum intel_debug_flags {
     INTEL_DEBUG_BATCH       = 1 << 0,
@@ -63,5 +67,15 @@ enum intel_debug_flags {
 };
 
 extern int intel_debug;
+
+static inline struct intel_instance *intel_instance_from_base(struct intel_base *base)
+{
+    return (struct intel_instance *) base;
+}
+
+static inline struct intel_instance *intel_instance_from_obj(struct intel_obj *obj)
+{
+    return intel_instance_from_base(&obj->base);
+}
 
 #endif /* INTEL_H */

@@ -134,18 +134,56 @@ ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
     return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
 }
 
+static XGL_RESULT intel_instance_destroy(struct intel_instance *inst)
+{
+    intel_base_destroy(&inst->obj.base);
+    intel_gpu_remove_all();
+    return XGL_SUCCESS;
+}
+
+static void inst_destroy(struct intel_obj *obj)
+{
+    struct intel_instance *inst = intel_instance_from_obj(obj);
+
+    intel_instance_destroy(inst);
+}
+
+static XGL_RESULT intel_instance_create(
+    const XGL_APPLICATION_INFO*                 info,
+    const XGL_ALLOC_CALLBACKS*                  cb,
+    struct intel_instance**                         inst_ret)
+{
+    struct intel_instance *inst;
+    XGL_RESULT ret;
+
+    inst = (struct intel_instance *) intel_base_create(NULL, sizeof(*inst), false,
+                XGL_DBG_OBJECT_INSTANCE, info, 0);
+    if (!inst)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    inst->obj.destroy = inst_destroy;
+    inst->obj.base.get_info = intel_base_get_info;
+
+    *inst_ret = inst;
+
+    intel_debug_init();
+
+    ret = icd_allocator_init(cb);
+    return ret;
+}
+
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
     const XGL_APPLICATION_INFO*                 pAppInfo,
     const XGL_ALLOC_CALLBACKS*                  pAllocCb,
     XGL_INSTANCE*                               pInstance)
 {
-    return XGL_SUCCESS;
+    return intel_instance_create(pAppInfo, pAllocCb, (struct intel_instance **) pInstance);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
     XGL_INSTANCE                                pInstance)
 {
-    return XGL_SUCCESS;
+    return intel_instance_destroy((struct intel_instance *) pInstance);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
