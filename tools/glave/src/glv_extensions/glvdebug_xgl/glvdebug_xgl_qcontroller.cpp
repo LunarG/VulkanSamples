@@ -30,6 +30,7 @@ extern "C" {
 #include "glvdebug_xgl_qcontroller.h"
 
 #include <assert.h>
+#include <QFileInfo>
 #include <QWidget>
 #include <QToolButton>
 #include <QCoreApplication>
@@ -38,7 +39,8 @@ extern "C" {
 #include "glvreplay_seq.h"
 
 glvdebug_xgl_QController::glvdebug_xgl_QController()
-    : m_pReplayWidget(NULL),
+    : m_pDrawStateDiagram(NULL),
+      m_pReplayWidget(NULL),
       m_pTraceFileModel(NULL)
 {
     initialize_default_settings();
@@ -121,8 +123,10 @@ void glvdebug_xgl_QController::updateCallTreeBasedOnSettings()
 
 void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 {
-    // TODO: enable or disable state widgets
-    // m_pWidget->setEnabled(bEnabled);
+    if(m_pDrawStateDiagram != NULL)
+    {
+        m_pDrawStateDiagram->setEnabled(bEnabled);
+    }
 }
 
 void glvdebug_xgl_QController::onReplayStarted()
@@ -132,23 +136,28 @@ void glvdebug_xgl_QController::onReplayStarted()
 
 void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
-    // TODO: Get state data from XGL layers (if they are enabled) and use m_pView->add_custom_state_viewer(...) to add the necessary widgets to the UI.
-    // The widgets should be allocated here and kept as members variable, so that they can be made more dynamic as features are added.
-    // eg:
-    // if (m_pWidget == NULL)
-    // {
-    //     bool bringToFront = false;
-    //     m_pWidget = new QSomeKindOfNewXGLWidget();
-    //     m_pView->add_custom_state_viewer(m_pWidget, QString("Cool State Feature"), bringToFront);
-    // }
-    //
-    // // update the widget with the current state information
-    // m_pWidget->SomeKindOfStateSettingFunction(somePieceOfCoolState);
-    //
-    // otherwise, if that particular "cool state feature" is not applicable to the current API call, using the member variable allows us to hide it:
-    // m_pWidget->setVisible(false);
+    if(m_pDrawStateDiagram == NULL)
+    {
+        m_pDrawStateDiagram = new glvdebug_qimageviewer;
+        if(m_pDrawStateDiagram != NULL)
+        {
+            m_pView->add_custom_state_viewer(m_pDrawStateDiagram, tr("Draw State Diagram"), false);
+            setStateWidgetsEnabled(false);
+        }
+    }
 
-    setStateWidgetsEnabled(true);
+    if(m_pDrawStateDiagram != NULL)
+    {
+        // Convert the DOT to a png.
+        if(access( "/usr/bin/dot", X_OK) != -1) {
+            system("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
+        }
+
+        if(m_pDrawStateDiagram->loadImage(tr("pipeline_dump.png")))
+        {
+            setStateWidgetsEnabled(true);
+        }
+    }
 }
 
 void glvdebug_xgl_QController::onReplayContinued()
@@ -224,6 +233,12 @@ void glvdebug_xgl_QController::UnloadTraceFile(void)
     {
         delete m_pReplayWidget;
         m_pReplayWidget = NULL;
+    }
+
+    if (m_pDrawStateDiagram != NULL)
+    {
+        delete m_pDrawStateDiagram;
+        m_pDrawStateDiagram = NULL;
     }
 
     // Clean up replayers

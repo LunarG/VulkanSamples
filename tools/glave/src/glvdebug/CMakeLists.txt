@@ -53,6 +53,7 @@ set(UI_HEADER_LIST
     glvdebug_qgeneratetracedialog.h
     glvdebug_qsettingsdialog.h
     glvdebug_qtimelineview.h
+    glvdebug_qimageviewer.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
@@ -68,6 +69,7 @@ set(HEADER_LIST
     glvdebug_qgeneratetracedialog.h
     glvdebug_qsettingsdialog.h
     glvdebug_qtimelineview.h
+    glvdebug_qimageviewer.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h

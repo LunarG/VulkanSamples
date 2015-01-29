@@ -913,6 +913,12 @@ static void printDSConfig()
     }
 }
 
+static void synchAndDumpDot()
+{
+    synchDSMapping();
+    dumpDotFile("pipeline_dump.dot");
+}
+
 static void synchAndPrintDSConfig()
 {
     synchDSMapping();
@@ -1664,6 +1670,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffe
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline)
 {
+    synchAndDumpDot();
+
     if (getPipeline(pipeline)) {
         lastBoundPipeline = pipeline;
     }
@@ -1677,17 +1685,23 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
 {
+    synchAndDumpDot();
+
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
 {
+    synchAndDumpDot();
+
     setLastBoundDynamicState(state, stateBindPoint);
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData)
 {
+    synchAndDumpDot();
+
     // TODO : Improve this. Can track per-cmd buffer and store bind point and pUserData
     if (getSetNode(descriptorSet)) {
         if (dsUpdateActive(descriptorSet)) {

@@ -55,6 +55,7 @@ set(UI_HEADER_LIST
     glvdebug_xgl_qfile_model.h
     glvdebug_xgl_qgroupframesproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_qgroupthreadsproxymodel.h
+    ${SRC_DIR}/glvdebug/glvdebug_qimageviewer.h
     ${SRC_DIR}/glvdebug/glvdebug_QTraceFileModel.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.h

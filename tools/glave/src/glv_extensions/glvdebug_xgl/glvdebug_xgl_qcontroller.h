@@ -27,10 +27,13 @@
 #include "glv_trace_packet_identifiers.h"
 #include "glvdebug_xgl_qgroupframesproxymodel.h"
 #include "glvdebug_qgroupthreadsproxymodel.h"
+#include "glvdebug_qimageviewer.h"
 #include "glvdebug_QReplayWidget.h"
 #include "glvdebug_QReplayWorker.h"
 #include "glvdebug_xgl_qfile_model.h"
 #include <QObject>
+#include <QLabel>
+#include <QScrollArea>
 
 class glvdebug_xgl_QController : public glvdebug_QReplayWorker
 {
@@ -62,6 +65,7 @@ protected slots:
     void onReplayFinished();
 
 private:
+    glvdebug_qimageviewer* m_pDrawStateDiagram;
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
     glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;
