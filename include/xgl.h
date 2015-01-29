@@ -1,49 +1,28 @@
 //
 // File: xgl.h
 //
-// Copyright 2014 ADVANCED MICRO DEVICES, INC.  All Rights Reserved.
-//
-// AMD is granting you permission to use this software and documentation (if
-// any) (collectively, the "Materials") pursuant to the terms and conditions
-// of the Software License Agreement included with the Materials.  If you do
-// not have a copy of the Software License Agreement, contact your AMD
-// representative for a copy.
-// You agree that you will not reverse engineer or decompile the Materials,
-// in whole or in part, except as allowed by applicable law.
-//
-// WARRANTY DISCLAIMER: THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-// ANY KIND.  AMD DISCLAIMS ALL WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY,
-// INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, THAT THE SOFTWARE
-// WILL RUN UNINTERRUPTED OR ERROR-FREE OR WARRANTIES ARISING FROM CUSTOM OF
-// TRADE OR COURSE OF USAGE.  THE ENTIRE RISK ASSOCIATED WITH THE USE OF THE
-// SOFTWARE IS ASSUMED BY YOU.
-// Some jurisdictions do not allow the exclusion of implied warranties, so
-// the above exclusion may not apply to You.
-//
-// LIMITATION OF LIABILITY AND INDEMNIFICATION:  AMD AND ITS LICENSORS WILL
-// NOT, UNDER ANY CIRCUMSTANCES BE LIABLE TO YOU FOR ANY PUNITIVE, DIRECT,
-// INCIDENTAL, INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES ARISING FROM USE OF
-// THE SOFTWARE OR THIS AGREEMENT EVEN IF AMD AND ITS LICENSORS HAVE BEEN
-// ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-// In no event shall AMD's total liability to You for all damages, losses,
-// and causes of action (whether in contract, tort (including negligence) or
-// otherwise) exceed the amount of $100 USD.  You agree to defend, indemnify
-// and hold harmless AMD and its licensors, and any of their directors,
-// officers, employees, affiliates or agents from and against any and all
-// loss, damage, liability and other expenses (including reasonable attorneys'
-// fees), resulting from Your use of the Software or violation of the terms and
-// conditions of this Agreement.
-//
-// U.S. GOVERNMENT RESTRICTED RIGHTS: The Materials are provided with "RESTRICTED
-// RIGHTS." Use, duplication, or disclosure by the Government is subject to the
-// restrictions as set forth in FAR 52.227-14 and DFAR252.227-7013, et seq., or
-// its successor.  Use of the Materials by the Government constitutes
-// acknowledgement of AMD's proprietary rights in them.
-//
-// EXPORT RESTRICTIONS: The Materials may be subject to export restrictions as
-// stated in the Software License Agreement.
-//
+/*
+** Copyright (c) 2014 The Khronos Group Inc.
+**
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and/or associated documentation files (the
+** "Materials"), to deal in the Materials without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, sublicense, and/or sell copies of the Materials, and to
+** permit persons to whom the Materials are furnished to do so, subject to
+** the following conditions:
+**
+** The above copyright notice and this permission notice shall be included
+** in all copies or substantial portions of the Materials.
+**
+** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+*/
 
 #ifndef __XGL_H__
 #define __XGL_H__
@@ -118,11 +97,11 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_RENDER_PASS, XGL_OBJECT)
 
 #define XGL_NULL_HANDLE 0
 
-// This macro defines MAX_UINT in enumerations to force compilers to use 32 bits
+// This macro defines INT_MAX in enumerations to force compilers to use 32 bits
 // to represent them. This may or may not be necessary on some compilers. The
 // option to compile it out may allow compilers that warn about missing enumerants
 // in switch statements to be silenced.
-#define XGL_MAX_ENUM(T) T##_MAX_ENUM = 0xFFFFFFFF
+#define XGL_MAX_ENUM(T) T##_MAX_ENUM = 0x7FFFFFFF
 
 // ------------------------------------------------------------------------------------------------
 // Enumerations
@@ -152,6 +131,7 @@ typedef enum _XGL_MEMORY_PRIORITY
     XGL_MEMORY_PRIORITY_BEGIN_RANGE                         = XGL_MEMORY_PRIORITY_UNUSED,
     XGL_MEMORY_PRIORITY_END_RANGE                           = XGL_MEMORY_PRIORITY_VERY_HIGH,
     XGL_NUM_MEMORY_PRIORITY                                 = (XGL_MEMORY_PRIORITY_END_RANGE - XGL_MEMORY_PRIORITY_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_MEMORY_PRIORITY)
 } XGL_MEMORY_PRIORITY;
 
 typedef enum _XGL_IMAGE_LAYOUT
@@ -168,6 +148,7 @@ typedef enum _XGL_IMAGE_LAYOUT
     XGL_IMAGE_LAYOUT_BEGIN_RANGE                            = XGL_IMAGE_LAYOUT_GENERAL,
     XGL_IMAGE_LAYOUT_END_RANGE                              = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
     XGL_NUM_IMAGE_LAYOUT                                    = (XGL_IMAGE_LAYOUT_END_RANGE - XGL_IMAGE_LAYOUT_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_IMAGE_LAYOUT)
 } XGL_IMAGE_LAYOUT;
 
 typedef enum _XGL_SET_EVENT
@@ -183,6 +164,7 @@ typedef enum _XGL_SET_EVENT
     XGL_SET_EVENT_BEGIN_RANGE                               = XGL_SET_EVENT_TOP_OF_PIPE,
     XGL_SET_EVENT_END_RANGE                                 = XGL_SET_EVENT_GPU_COMMANDS_COMPLETE,
     XGL_NUM_SET_EVENT                                       = (XGL_SET_EVENT_END_RANGE - XGL_SET_EVENT_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_SET_EVENT)
 } XGL_SET_EVENT;
 
 typedef enum _XGL_WAIT_EVENT
@@ -193,6 +175,7 @@ typedef enum _XGL_WAIT_EVENT
     XGL_WAIT_EVENT_BEGIN_RANGE                              = XGL_WAIT_EVENT_TOP_OF_PIPE,
     XGL_WAIT_EVENT_END_RANGE                                = XGL_WAIT_EVENT_BEFORE_RASTERIZATION,
     XGL_NUM_WAIT_EVENT                                      = (XGL_WAIT_EVENT_END_RANGE - XGL_WAIT_EVENT_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_WAIT_EVENT)
 } XGL_WAIT_EVENT;
 
 typedef enum _XGL_MEMORY_OUTPUT_FLAGS
@@ -202,6 +185,7 @@ typedef enum _XGL_MEMORY_OUTPUT_FLAGS
     XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                  = 0x00000004,   // Controls output coherency of color attachment writes
     XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT          = 0x00000008,   // Controls output coherency of depth/stencil attachment writes
     XGL_MEMORY_OUTPUT_COPY_BIT                              = 0x00000010,   // Controls output coherency of copy operations
+    XGL_MAX_ENUM(_XGL_MEMORY_OUTPUT_FLAGS)
 } XGL_MEMORY_OUTPUT_FLAGS;
 
 typedef enum _XGL_MEMORY_INPUT_FLAGS
@@ -215,6 +199,7 @@ typedef enum _XGL_MEMORY_INPUT_FLAGS
     XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                   = 0x00000040,   // Controls input coherency of color attachment reads
     XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = 0x00000080,   // Controls input coherency of depth/stencil attachment reads
     XGL_MEMORY_INPUT_COPY_BIT                               = 0x00000100,   // Controls input coherency of copy operations
+    XGL_MAX_ENUM(_XGL_MEMORY_INPUT_FLAGS)
 } XGL_MEMORY_INPUT_FLAGS;
 
 typedef enum _XGL_ATTACHMENT_LOAD_OP
@@ -226,6 +211,7 @@ typedef enum _XGL_ATTACHMENT_LOAD_OP
     XGL_ATTACHMENT_LOAD_OP_BEGIN_RANGE                      = XGL_ATTACHMENT_LOAD_OP_LOAD,
     XGL_ATTACHMENT_LOAD_OP_END_RANGE                        = XGL_ATTACHMENT_LOAD_OP_DONT_CARE,
     XGL_NUM_ATTACHMENT_LOAD_OP                              = (XGL_ATTACHMENT_LOAD_OP_END_RANGE - XGL_ATTACHMENT_LOAD_OP_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_ATTACHMENT_LOAD_OP)
 } XGL_ATTACHMENT_LOAD_OP;
 
 typedef enum _XGL_ATTACHMENT_STORE_OP
@@ -237,6 +223,7 @@ typedef enum _XGL_ATTACHMENT_STORE_OP
     XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE                     = XGL_ATTACHMENT_STORE_OP_STORE,
     XGL_ATTACHMENT_STORE_OP_END_RANGE                       = XGL_ATTACHMENT_STORE_OP_DONT_CARE,
     XGL_NUM_ATTACHMENT_STORE_OP                             = (XGL_ATTACHMENT_STORE_OP_END_RANGE - XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE + 1),
+   XGL_MAX_ENUM(_XGL_ATTACHMENT_STORE_OP)
 } XGL_ATTACHMENT_STORE_OP;
 
 typedef enum _XGL_IMAGE_TYPE
@@ -352,7 +339,7 @@ typedef enum _XGL_DESCRIPTOR_SET_USAGE
 
     XGL_DESCRIPTOR_SET_USAGE_BEGIN_RANGE                    = XGL_DESCRIPTOR_SET_USAGE_ONE_SHOT,
     XGL_DESCRIPTOR_SET_USAGE_END_RANGE                      = XGL_DESCRIPTOR_SET_USAGE_STATIC,
-    XGL_NUM_DESCRIPTOR_SET_USAGE                          = (XGL_DESCRIPTOR_SET_USAGE_END_RANGE - XGL_DESCRIPTOR_SET_USAGE_BEGIN_RANGE + 1),
+    XGL_NUM_DESCRIPTOR_SET_USAGE                            = (XGL_DESCRIPTOR_SET_USAGE_END_RANGE - XGL_DESCRIPTOR_SET_USAGE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_DESCRIPTOR_SET_USAGE)
 } XGL_DESCRIPTOR_SET_USAGE;
 
@@ -795,6 +782,7 @@ typedef enum _XGL_RESULT
     XGL_ERROR_MEMORY_NOT_BOUND                              = -(0x00000020),
     XGL_ERROR_INCOMPATIBLE_QUEUE                            = -(0x00000021),
     XGL_ERROR_NOT_SHAREABLE                                 = -(0x00000022),
+    XGL_MAX_ENUM(_XGL_RESULT_CODE)
 } XGL_RESULT;
 
 // ------------------------------------------------------------------------------------------------
@@ -1102,6 +1090,7 @@ typedef enum _XGL_DEVICE_CREATE_FLAGS
 {
     XGL_DEVICE_CREATE_VALIDATION_BIT                        = 0x00000001,
     XGL_DEVICE_CREATE_MGPU_IQ_MATCH_BIT                     = 0x00000002,
+    XGL_MAX_ENUM(_XGL_DEVICE_CREATE_FLAGS)
 } XGL_DEVICE_CREATE_FLAGS;
 
 // Queue capabilities
@@ -1110,7 +1099,8 @@ typedef enum _XGL_QUEUE_FLAGS
     XGL_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
     XGL_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
     XGL_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
-    XGL_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
+    XGL_QUEUE_EXTENDED_BIT                                  = 0x40000000,   // Extended queue
+    XGL_MAX_ENUM(_XGL_QUEUE_FLAGS)
 } XGL_QUEUE_FLAGS;
 
 // memory properties passed into xglAllocMemory().
@@ -1163,6 +1153,7 @@ typedef enum _XGL_BUFFER_CREATE_FLAGS
 {
     XGL_BUFFER_CREATE_SHAREABLE_BIT                         = 0x00000001,
     XGL_BUFFER_CREATE_SPARSE_BIT                            = 0x00000002,
+    XGL_MAX_ENUM(_XGL_BUFFER_CREATE_FLAGS)
 } XGL_BUFFER_CREATE_FLAGS;
 
 typedef enum _XGL_BUFFER_VIEW_TYPE
@@ -1229,6 +1220,7 @@ typedef enum _XGL_IMAGE_CREATE_FLAGS
     XGL_IMAGE_CREATE_SHAREABLE_BIT                          = 0x00000004,
     XGL_IMAGE_CREATE_SPARSE_BIT                             = 0x00000008,
     XGL_IMAGE_CREATE_MUTABLE_FORMAT_BIT                     = 0x00000010,   // Allows image views to have different format than the base image
+    XGL_MAX_ENUM(_XGL_IMAGE_CREATE_FLAGS)
 } XGL_IMAGE_CREATE_FLAGS;
 
 // Depth-stencil view creation flags
@@ -1236,24 +1228,28 @@ typedef enum _XGL_DEPTH_STENCIL_VIEW_CREATE_FLAGS
 {
     XGL_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT       = 0x00000001,
     XGL_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT     = 0x00000002,
+    XGL_MAX_ENUM(_XGL_DEPTH_STENCIL_VIEW_CREATE_FLAGS)
 } XGL_DEPTH_STENCIL_VIEW_CREATE_FLAGS;
 
 // Pipeline creation flags
 typedef enum _XGL_PIPELINE_CREATE_FLAGS
 {
     XGL_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT            = 0x00000001,
+    XGL_MAX_ENUM(_XGL_PIPELINE_CREATE_FLAGS)
 } XGL_PIPELINE_CREATE_FLAGS;
 
 // Semaphore creation flags
 typedef enum _XGL_SEMAPHORE_CREATE_FLAGS
 {
     XGL_SEMAPHORE_CREATE_SHAREABLE_BIT                      = 0x00000001,
+    XGL_MAX_ENUM(_XGL_SEMAPHORE_CREATE_FLAGS)
 } XGL_SEMAPHORE_CREATE_FLAGS;
 
 // Memory reference flags
 typedef enum _XGL_MEMORY_REF_FLAGS
 {
     XGL_MEMORY_REF_READ_ONLY_BIT                            = 0x00000001,
+    XGL_MAX_ENUM(_XGL_MEMORY_REF_FLAGS)
 } XGL_MEMORY_REF_FLAGS;
 
 // Format capability flags
@@ -1269,12 +1265,14 @@ typedef enum _XGL_FORMAT_FEATURE_FLAGS
     XGL_FORMAT_STENCIL_ATTACHMENT_BIT                       = 0x00000080,
     XGL_FORMAT_MSAA_ATTACHMENT_BIT                          = 0x00000100,
     XGL_FORMAT_CONVERSION_BIT                               = 0x00000200,
+    XGL_MAX_ENUM(_XGL_FORMAT_FEATURE_FLAGS)
 } XGL_FORMAT_FEATURE_FLAGS;
 
 // Query flags
 typedef enum _XGL_QUERY_CONTROL_FLAGS
 {
     XGL_QUERY_IMPRECISE_DATA_BIT                            = 0x00000001,
+    XGL_MAX_ENUM(_XGL_QUERY_CONTROL_FLAGS)
 } XGL_QUERY_CONTROL_FLAGS;
 
 // GPU compatibility flags
@@ -1287,6 +1285,7 @@ typedef enum _XGL_GPU_COMPATIBILITY_FLAGS
     XGL_GPU_COMPAT_SHARED_SYNC_BIT                          = 0x00000010,
     XGL_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT                  = 0x00000020,
     XGL_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT                  = 0x00000040,
+    XGL_MAX_ENUM(_XGL_GPU_COMPATIBILITY_FLAGS)
 } XGL_GPU_COMPATIBILITY_FLAGS;
 
 // Command buffer building flags
@@ -1296,6 +1295,7 @@ typedef enum _XGL_CMD_BUFFER_BUILD_FLAGS
     XGL_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT             = 0x00000002,
     XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT             = 0x00000004,
     XGL_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT       = 0x00000008,
+    XGL_MAX_ENUM(_XGL_CMD_BUFFER_BUILD_FLAGS)
 } XGL_CMD_BUFFER_BUILD_FLAGS;
 
 // ------------------------------------------------------------------------------------------------
