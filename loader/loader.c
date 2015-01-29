@@ -45,6 +45,7 @@
 struct loader_instance {
     const XGL_APPLICATION_INFO *app_info;
     const XGL_ALLOC_CALLBACKS *alloc_cb;
+    XGL_INSTANCE instance;
 
     struct loader_icd *icds;
     struct loader_instance *next;
@@ -85,7 +86,7 @@ struct loader_scanned_icds {
     void *handle;
     xglGetProcAddrType GetProcAddr;
     xglInitAndEnumerateGpusType InitAndEnumerateGpus;
-
+    xglEnumerateGpusType EnumerateGpus;
     struct loader_scanned_icds *next;
 };
 
@@ -297,7 +298,8 @@ static struct loader_icd *loader_icd_add(const struct loader_scanned_icds *scann
 static void loader_scanned_icd_add(const char *filename)
 {
     void *handle;
-    void *fp_gpa, *fp_init;
+    void *fp_gpa, *fp_enumerate;
+    void *fp_init;
     struct loader_scanned_icds *new_node;
 
     handle = dlopen(filename, RTLD_LAZY);
@@ -315,6 +317,7 @@ static void loader_scanned_icd_add(const char *filename)
 } while (0)
 
     LOOKUP(fp_gpa, GetProcAddr);
+    LOOKUP(fp_enumerate, EnumerateGpus);
     LOOKUP(fp_init, InitAndEnumerateGpus);
 #undef LOOKUP
 
@@ -326,6 +329,7 @@ static void loader_scanned_icd_add(const char *filename)
 
     new_node->handle = handle;
     new_node->GetProcAddr = fp_gpa;
+    new_node->EnumerateGpus = fp_enumerate;
     new_node->InitAndEnumerateGpus = fp_init;
     new_node->next = loader.scanned_icd_list;
     loader.scanned_icd_list = new_node;
@@ -853,8 +857,66 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
         uint32_t*                                   pGpuCount,
         XGL_PHYSICAL_GPU*                           pGpus)
 {
-    // FIXME/TODO/TBD: WHAT ELSE NEEDS TO BE DONE HERE???
-    return XGL_SUCCESS;
+    struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+    struct loader_icd *icd;
+    XGL_UINT count = 0;
+    XGL_RESULT res;
+
+    //in spirit of XGL don't error check on the instance parameter
+    icd = ptr_instance->icds;
+    while (icd) {
+        XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
+        XGL_BASE_LAYER_OBJECT * wrapped_gpus;
+        xglGetProcAddrType get_proc_addr = icd->scanned_icds->GetProcAddr;
+        XGL_UINT n, max = maxGpus - count;
+
+        if (max > XGL_MAX_PHYSICAL_GPUS) {
+            max = XGL_MAX_PHYSICAL_GPUS;
+        }
+
+        res = icd->scanned_icds->EnumerateGpus(ptr_instance->instance, max, &n,
+                                               gpus);
+        if (res == XGL_SUCCESS && n) {
+            wrapped_gpus = (XGL_BASE_LAYER_OBJECT*) malloc(n *
+                                        sizeof(XGL_BASE_LAYER_OBJECT));
+            icd->gpus = wrapped_gpus;
+            icd->gpu_count = n;
+            icd->loader_dispatch = (XGL_LAYER_DISPATCH_TABLE *) malloc(n *
+                                        sizeof(XGL_LAYER_DISPATCH_TABLE));
+            for (int i = 0; i < n; i++) {
+                (wrapped_gpus + i)->baseObject = gpus[i];
+                (wrapped_gpus + i)->pGPA = get_proc_addr;
+                (wrapped_gpus + i)->nextObject = gpus[i];
+                memcpy(pGpus + count, &wrapped_gpus, sizeof(*pGpus));
+                loader_init_dispatch_table(icd->loader_dispatch + i,
+                                           get_proc_addr, gpus[i]);
+                const XGL_LAYER_DISPATCH_TABLE **disp;
+                disp = (const XGL_LAYER_DISPATCH_TABLE **) gpus[i];
+                *disp = icd->loader_dispatch + i;
+            }
+
+            if (loader_icd_set_global_options(icd) != XGL_SUCCESS ||
+                loader_icd_register_msg_callbacks(icd) != XGL_SUCCESS) {
+                loader_log(XGL_DBG_MSG_WARNING, 0,
+                        "ICD ignored: failed to migrate settings");
+                loader_icd_destroy(icd);
+            }
+            count += n;
+
+            if (count >= maxGpus) {
+                break;
+            }
+        }
+
+        icd = icd->next;
+    }
+
+    /* we have nothing to log anymore */
+    loader_msg_callback_clear();
+
+    *pGpuCount = count;
+
+    return (count > 0) ? XGL_SUCCESS : res;
 }
 
 LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pName)
