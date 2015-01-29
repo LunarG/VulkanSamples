@@ -192,7 +192,46 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
     uint32_t*                                   pGpuCount,
     XGL_PHYSICAL_GPU*                           pGpus)
 {
-    return XGL_SUCCESS;
+    struct icd_drm_device *devices, *dev;
+    XGL_RESULT ret;
+    XGL_UINT count;
+
+    if (!maxGpus) {
+        *pGpuCount = 0;
+        return XGL_SUCCESS;
+    }
+
+    devices = icd_drm_enumerate(0x8086);
+
+    count = 0;
+    dev = devices;
+    while (dev) {
+        const char *primary_node, *render_node;
+        int devid;
+        struct intel_gpu *gpu;
+
+        primary_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_LEGACY);
+        if (!primary_node)
+            continue;
+
+        render_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_RENDER);
+
+        devid = (intel_devid_override) ? intel_devid_override : dev->devid;
+        ret = intel_gpu_add(devid, primary_node, render_node, &gpu);
+        if (ret == XGL_SUCCESS) {
+            pGpus[count++] = (XGL_PHYSICAL_GPU) gpu;
+            if (count >= maxGpus)
+                break;
+        }
+
+        dev = dev->next;
+    }
+
+    icd_drm_release(devices);
+
+    *pGpuCount = count;
+
+    return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
