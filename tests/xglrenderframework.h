@@ -65,6 +65,7 @@ public:
 
 protected:
     XGL_APPLICATION_INFO                    app_info;
+    XGL_INSTANCE                            inst;
     XGL_PHYSICAL_GPU                        objs[XGL_MAX_PHYSICAL_GPUS];
     uint32_t                                gpu_count;
     XglDevice                              *m_device;

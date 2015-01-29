@@ -77,6 +77,7 @@ public:
 
 protected:
     XGL_APPLICATION_INFO app_info;
+    XGL_INSTANCE inst;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
 
@@ -96,8 +97,10 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
-        err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                      XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
+        err = xglCreateInstance(&app_info, NULL, &inst);
+        ASSERT_XGL_SUCCESS(err);
+        err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &this->gpu_count,
+                               objs);
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
@@ -111,12 +114,13 @@ protected:
     }
 
     virtual void TearDown() {
-        xglInitAndEnumerateGpus(&this->app_info, NULL, 0, &gpu_count, NULL);
+        xglDestroyInstance(inst);
     }
 };
 
-TEST(Initialization, xglInitAndEnumerateGpus) {
+TEST(Initialization, xglEnumerateGpus) {
     XGL_APPLICATION_INFO app_info = {};
+    XGL_INSTANCE inst;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
     XGL_RESULT err;
@@ -133,8 +137,9 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
     app_info.engineVersion = 1;
     app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
-    err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                  XGL_MAX_PHYSICAL_GPUS, &gpu_count, objs);
+    err = xglCreateInstance(&app_info, NULL, &inst);
+    ASSERT_XGL_SUCCESS(err);
+    err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &gpu_count, objs);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_GE(gpu_count, 1) << "No GPU available";
 
@@ -152,6 +157,8 @@ TEST(Initialization, xglInitAndEnumerateGpus) {
     delete gpu;
 
     // TODO: Verify destroy functions
+    err = xglDestroyInstance(inst);
+    ASSERT_XGL_SUCCESS(err);
 }
 
 TEST_F(XglTest, AllocMemory) {

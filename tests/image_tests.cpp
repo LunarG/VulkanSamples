@@ -78,6 +78,7 @@ protected:
     XGL_APPLICATION_INFO app_info;
     XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
+    XGL_INSTANCE inst;
     XGL_IMAGE m_image;
     XGL_GPU_MEMORY *m_image_mem;
     uint32_t m_num_mem;
@@ -93,8 +94,10 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
 
-        err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                      XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
+        err = xglCreateInstance(&app_info, NULL, &this->inst);
+        ASSERT_XGL_SUCCESS(err);
+        err = xglEnumerateGpus(this->inst, XGL_MAX_PHYSICAL_GPUS,
+                               &this->gpu_count, objs);
         ASSERT_XGL_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
@@ -103,7 +106,7 @@ protected:
     }
 
     virtual void TearDown() {
-        xglInitAndEnumerateGpus(&this->app_info, NULL, 0, &gpu_count, NULL);
+        xglDestroyInstance(this->inst);
     }
 };
 

@@ -52,8 +52,10 @@ void XglRenderFramework::InitFramework()
 {
     XGL_RESULT err;
 
-    err = xglInitAndEnumerateGpus(&app_info, NULL,
-                                  XGL_MAX_PHYSICAL_GPUS, &this->gpu_count, objs);
+    err = xglCreateInstance(&app_info, NULL, &this->inst);
+    ASSERT_XGL_SUCCESS(err);
+    err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &this->gpu_count,
+                           objs);
     ASSERT_XGL_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
@@ -74,7 +76,7 @@ void XglRenderFramework::ShutdownFramework()
 
     // reset the driver
     delete m_device;
-    xglInitAndEnumerateGpus(&this->app_info, XGL_NULL_HANDLE, 0, &gpu_count, XGL_NULL_HANDLE);
+    xglDestroyInstance(this->inst);
 }
 
 void XglRenderFramework::InitState()

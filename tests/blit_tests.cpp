@@ -46,6 +46,7 @@ public:
 private:
     XGL_APPLICATION_INFO app_;
     int default_dev_;
+    XGL_INSTANCE inst;
 
     std::vector<Device *> devs_;
 };
@@ -144,7 +145,9 @@ void Environment::SetUp()
     uint32_t count;
     XGL_RESULT err;
 
-    err = xglInitAndEnumerateGpus(&app_, NULL, ARRAY_SIZE(gpus), &count, gpus);
+    err = xglCreateInstance(&app_, NULL, &inst);
+    ASSERT_EQ(XGL_SUCCESS, err);
+    err = xglEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
     ASSERT_EQ(XGL_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
@@ -165,8 +168,7 @@ void Environment::TearDown()
         delete *it;
     devs_.clear();
 
-    uint32_t dummy_count;
-    xglInitAndEnumerateGpus(&app_, NULL, 0, &dummy_count, NULL);
+    xglDestroyInstance(inst);
 }
 
 uint32_t ImageChecker::hash_salt_;
