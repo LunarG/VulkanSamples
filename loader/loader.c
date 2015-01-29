@@ -907,7 +907,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
-    XGL_UINT count = 0;
+    uint32_t count = 0;
     XGL_RESULT res;
 
     //in spirit of XGL don't error check on the instance parameter
@@ -916,7 +916,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
         XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
         XGL_BASE_LAYER_OBJECT * wrapped_gpus;
         xglGetProcAddrType get_proc_addr = icd->scanned_icds->GetProcAddr;
-        XGL_UINT n, max = maxGpus - count;
+        uint32_t n, max = maxGpus - count;
 
         if (max > XGL_MAX_PHYSICAL_GPUS) {
             max = XGL_MAX_PHYSICAL_GPUS;

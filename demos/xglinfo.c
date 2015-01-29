@@ -654,11 +654,14 @@ int main(int argc, char **argv)
     };
     struct app_gpu gpus[MAX_GPUS];
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
+    XGL_INSTANCE inst;
     uint32_t gpu_count, i;
     XGL_RESULT err;
 
-    err = xglInitAndEnumerateGpus(&app_info, NULL,
-            MAX_GPUS, &gpu_count, objs);
+    err = xglCreateInstance(&app_info, NULL, &inst);
+    if (err)
+        ERR_EXIT(err);
+    err = xglEnumerateGpus(inst, MAX_GPUS, &gpu_count, objs);
     if (err)
         ERR_EXIT(err);
 
@@ -673,7 +676,7 @@ int main(int argc, char **argv)
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);
 
-    xglInitAndEnumerateGpus(&app_info, NULL, 0, &gpu_count, NULL);
+    xglDestroyInstance(inst);
 
     return 0;
 }

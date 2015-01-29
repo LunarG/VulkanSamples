@@ -193,6 +193,7 @@ struct demo {
     xcb_connection_t *connection;
     xcb_screen_t *screen;
 
+    XGL_INSTANCE inst;
     XGL_PHYSICAL_GPU gpu;
     XGL_DEVICE device;
     XGL_QUEUE queue;
@@ -1478,7 +1479,9 @@ static void demo_init_xgl(struct demo *demo)
     uint32_t gpu_count;
     uint32_t i;
 
-    err = xglInitAndEnumerateGpus(&app, NULL, 1, &gpu_count, &demo->gpu);
+    err = xglCreateInstance(&app, NULL, &demo->inst);
+    assert(!err);
+    err = xglEnumerateGpus(demo->inst, 1, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 
     for (i = 0; i < device.extensionCount; i++) {
@@ -1580,6 +1583,7 @@ static void demo_cleanup(struct demo *demo)
     }
 
     xglDestroyDevice(demo->device);
+    xglDestroyInstance(demo->inst);
 
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);

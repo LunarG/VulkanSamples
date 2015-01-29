@@ -194,7 +194,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 {
     struct icd_drm_device *devices, *dev;
     XGL_RESULT ret;
-    XGL_UINT count;
+    uint32_t count;
 
     if (!maxGpus) {
         *pGpuCount = 0;
