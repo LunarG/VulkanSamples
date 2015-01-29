@@ -217,13 +217,6 @@ core = Extension(
         "XGL_RENDER_PASS",
     ],
     protos=[
-        Proto("XGL_RESULT", "InitAndEnumerateGpus",
-            [Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
-             Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),
-             Param("uint32_t", "maxGpus"),
-             Param("uint32_t*", "pGpuCount"),
-             Param("XGL_PHYSICAL_GPU*", "pGpus")]),
-
         Proto("XGL_RESULT", "CreateInstance",
             [Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
              Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),

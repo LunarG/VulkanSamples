@@ -79,11 +79,6 @@ XGL_RESULT icd_allocator_init(const XGL_ALLOC_CALLBACKS *alloc_cb)
         if (!alloc_cb)
             alloc_cb = &default_cb;
 
-        /*
-         * The spec says: Changing the callbacks on subsequent calls to
-         * xglInitAndEnumerateGpus() causes it to fail with
-         * XGL_ERROR_INVALID_POINTER error.
-         */
         return (memcmp(&icd_allocator.callbacks, alloc_cb, sizeof(*alloc_cb)))
             ? XGL_ERROR_INVALID_POINTER : XGL_SUCCESS;
     }

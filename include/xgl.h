@@ -2241,7 +2241,6 @@ typedef struct _XGL_DISPATCH_INDIRECT_CMD
 
 // ------------------------------------------------------------------------------------------------
 // API functions
-typedef XGL_RESULT (XGLAPI *xglInitAndEnumerateGpusType)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *xglCreateInstanceType)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance);
 typedef XGL_RESULT (XGLAPI *xglDestroyInstanceType)(XGL_INSTANCE instance);
 typedef XGL_RESULT (XGLAPI *xglEnumerateGpusType)(XGL_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
@@ -2357,13 +2356,6 @@ typedef XGL_RESULT (XGLAPI *xglCreateRenderPassType)(XGL_DEVICE device, const XG
 #ifdef XGL_PROTOTYPES
 
 // GPU initialization
-
-XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
-    const XGL_APPLICATION_INFO*                 pAppInfo,
-    const XGL_ALLOC_CALLBACKS*                  pAllocCb,
-    uint32_t                                    maxGpus,
-    uint32_t*                                   pGpuCount,
-    XGL_PHYSICAL_GPU*                           pGpus);
 
 XGL_RESULT XGLAPI xglCreateInstance(
     const XGL_APPLICATION_INFO*                 pAppInfo,

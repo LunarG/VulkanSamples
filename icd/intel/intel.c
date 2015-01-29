@@ -73,67 +73,6 @@ static void intel_debug_init(void)
     }
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(
-    const XGL_APPLICATION_INFO*                 pAppInfo,
-    const XGL_ALLOC_CALLBACKS*                  pAllocCb,
-    uint32_t                                    maxGpus,
-    uint32_t*                                   pGpuCount,
-    XGL_PHYSICAL_GPU*                           pGpus)
-{
-    struct icd_drm_device *devices, *dev;
-    XGL_RESULT ret;
-    uint32_t count;
-
-    intel_debug_init();
-
-    ret = icd_allocator_init(pAllocCb);
-    if (ret != XGL_SUCCESS)
-        return ret;
-
-    /*
-     * xglInitAndEnumerateGpus() can be called multiple times. Calling it more
-     * than once forces driver reinitialization.
-     */
-    intel_gpu_remove_all();
-
-    if (!maxGpus) {
-        *pGpuCount = 0;
-        return XGL_SUCCESS;
-    }
-
-    devices = icd_drm_enumerate(0x8086);
-
-    count = 0;
-    dev = devices;
-    while (dev) {
-        const char *primary_node, *render_node;
-        int devid;
-        struct intel_gpu *gpu;
-
-        primary_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_LEGACY);
-        if (!primary_node)
-            continue;
-
-        render_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_RENDER);
-
-        devid = (intel_devid_override) ? intel_devid_override : dev->devid;
-        ret = intel_gpu_add(devid, primary_node, render_node, &gpu);
-        if (ret == XGL_SUCCESS) {
-            pGpus[count++] = (XGL_PHYSICAL_GPU) gpu;
-            if (count >= maxGpus)
-                break;
-        }
-
-        dev = dev->next;
-    }
-
-    icd_drm_release(devices);
-
-    *pGpuCount = count;
-
-    return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
-}
-
 static XGL_RESULT intel_instance_destroy(struct intel_instance *inst)
 {
     intel_base_destroy(&inst->obj.base);

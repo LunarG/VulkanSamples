@@ -340,7 +340,7 @@ class LayerInterceptProcSubcommand(Subcommand):
 
         # we could get the list from argv if wanted
         self.intercepted = [proto.name for proto in self.protos
-                if proto.name not in ["InitAndEnumerateGpus"]]
+                if proto.name not in ["EnumerateGpus"]]
 
         for proto in self.protos:
             if proto.name == "GetProcAddr":

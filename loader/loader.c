@@ -81,7 +81,6 @@ struct loader_msg_callback {
 struct loader_scanned_icds {
     void *handle;
     xglGetProcAddrType GetProcAddr;
-    xglInitAndEnumerateGpusType InitAndEnumerateGpus;
     xglCreateInstanceType CreateInstance;
     xglDestroyInstanceType DestroyInstance;
     xglEnumerateGpusType EnumerateGpus;
@@ -299,7 +298,6 @@ static void loader_scanned_icd_add(const char *filename)
 {
     void *handle;
     void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst;
-    void *fp_init;
     struct loader_scanned_icds *new_node;
 
     handle = dlopen(filename, RTLD_LAZY);
@@ -320,7 +318,6 @@ static void loader_scanned_icd_add(const char *filename)
     LOOKUP(fp_create_inst, CreateInstance);
     LOOKUP(fp_destroy_inst, DestroyInstance);
     LOOKUP(fp_enumerate, EnumerateGpus);
-    LOOKUP(fp_init, InitAndEnumerateGpus);
 #undef LOOKUP
 
     new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds));
@@ -334,7 +331,6 @@ static void loader_scanned_icd_add(const char *filename)
     new_node->CreateInstance = fp_create_inst;
     new_node->DestroyInstance = fp_destroy_inst;
     new_node->EnumerateGpus = fp_enumerate;
-    new_node->InitAndEnumerateGpus = fp_init;
     new_node->next = loader.scanned_icd_list;
     loader.scanned_icd_list = new_node;
 }
@@ -986,92 +982,6 @@ LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pN
             return NULL;
         return disp_table->GetProcAddr(gpuw->nextObject, pName);
     }
-}
-
-LOADER_EXPORT XGL_RESULT XGLAPI xglInitAndEnumerateGpus(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
-{
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    struct loader_icd *icd;
-    uint32_t count = 0;
-    XGL_RESULT res;
-    struct loader_scanned_icds *scanned_icds;
-
-    pthread_once(&once, loader_icd_scan);
-
-    // for now only one instance
-    if (loader.instances == NULL) {
-        loader.instances = malloc(sizeof(struct loader_instance));
-        if (loader.instances == NULL)
-            return XGL_ERROR_UNAVAILABLE;
-        memset(loader.instances, 0, sizeof(struct loader_instance));
-
-        scanned_icds = loader.scanned_icd_list;
-        while (scanned_icds) {
-            loader_icd_add(loader.instances, scanned_icds);
-            scanned_icds = scanned_icds->next;
-        }
-
-        if (loader.instances->icds == NULL)
-            return XGL_ERROR_UNAVAILABLE;
-    }
-
-    // cleanup any prior layer initializations
-    loader_deactivate_layer(loader.instances);
-
-
-    icd = loader.instances->icds;
-    while (icd) {
-        XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
-        XGL_BASE_LAYER_OBJECT * wrappedGpus;
-        xglGetProcAddrType getProcAddr = icd->scanned_icds->GetProcAddr;
-        uint32_t n, max = maxGpus - count;
-
-        if (max > XGL_MAX_PHYSICAL_GPUS) {
-            max = XGL_MAX_PHYSICAL_GPUS;
-        }
-
-        res = icd->scanned_icds->InitAndEnumerateGpus(pAppInfo, pAllocCb, max, &n, gpus);
-        if (res == XGL_SUCCESS && n) {
-            wrappedGpus = (XGL_BASE_LAYER_OBJECT*) malloc(n * sizeof(XGL_BASE_LAYER_OBJECT));
-            icd->gpus = wrappedGpus;
-            icd->gpu_count = n;
-            icd->loader_dispatch = (XGL_LAYER_DISPATCH_TABLE *) malloc(n * sizeof(XGL_LAYER_DISPATCH_TABLE));
-            for (int i = 0; i < n; i++) {
-                (wrappedGpus + i)->baseObject = gpus[i];
-                (wrappedGpus + i)->pGPA = getProcAddr;
-                (wrappedGpus + i)->nextObject = gpus[i];
-                memcpy(pGpus + count, &wrappedGpus, sizeof(*pGpus));
-                loader_init_dispatch_table(icd->loader_dispatch + i, getProcAddr, gpus[i]);
-                const XGL_LAYER_DISPATCH_TABLE * *disp = (const XGL_LAYER_DISPATCH_TABLE *  *) gpus[i];
-                *disp = icd->loader_dispatch + i;
-            }
-
-            if (loader_icd_set_global_options(icd) != XGL_SUCCESS ||
-                loader_icd_register_msg_callbacks(icd) != XGL_SUCCESS) {
-                loader_log(XGL_DBG_MSG_WARNING, 0,
-                        "ICD ignored: failed to migrate settings");
-                loader_icd_destroy(icd);
-            }
-            count += n;
-
-            if (count >= maxGpus) {
-                break;
-            }
-        }
-
-        icd = icd->next;
-    }
-
-    /* we have nothing to log anymore */
-    loader_msg_callback_clear();
-
-    /* get layer libraries */
-    if (!loader.layer_scanned)
-        layer_lib_scan(NULL);
-
-    *pGpuCount = count;
-
-    return (count > 0) ? XGL_SUCCESS : res;
 }
 
 LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
