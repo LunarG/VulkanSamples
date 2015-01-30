@@ -345,13 +345,19 @@ extern "C" {
 struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
                                   const void *code, size_t size)
 {
+    // Wrap this path in a mutex until we can clean up initialization
+    static mtx_t mutex = _MTX_INITIALIZER_NP;
+    mtx_lock(&mutex);
+
     struct icd_bil_header header;
     struct gl_context local_ctx;
     struct gl_context *ctx = &local_ctx;
 
     memcpy(&header, code, sizeof(header));
-    if (header.magic != ICD_BIL_MAGIC)
+    if (header.magic != ICD_BIL_MAGIC) {
+        mtx_unlock(&mutex);
         return NULL;
+    }
 
     _mesa_create_shader_compiler();
     initialize_mesa_context_to_defaults(ctx);
@@ -437,6 +443,7 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     if (!shader->CompileStatus) {
         _mesa_destroy_shader_compiler();
+        mtx_unlock(&mutex);
         return NULL;
     }
 
@@ -455,11 +462,13 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     if (!shader_program->LinkStatus) {
         _mesa_destroy_shader_compiler();
+        mtx_unlock(&mutex);
         return NULL;
     }
 
     _mesa_destroy_shader_compiler();
 
+    mtx_unlock(&mutex);
     return (struct intel_ir *) shader_program;
 }
 
