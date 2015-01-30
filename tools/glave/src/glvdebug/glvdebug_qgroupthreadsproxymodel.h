@@ -130,10 +130,20 @@ public:
                     }
                     else if (isThreadColumn(index.column()))
                     {
+                        qintptr groupIndex = index.internalId();
                         int threadIndex = getThreadColumnIndex(index.column());
-                        return QString("%1").arg(m_uniqueThreadIdMapToColumn.key(threadIndex));
-
+                        uint32_t threadId = m_uniqueThreadIdMapToColumn.key(threadIndex);
+                        if (m_groupList[groupIndex].threadId == threadId)
+                        {
+                            return QString("%1").arg(threadId);
+                        }
+                        else
+                        {
+                            return QString("");
+                        }
                     }
+
+                    return firstResult;
                 }
             }
 
@@ -149,7 +159,12 @@ public:
             else if (isThreadColumn(index.column()))
             {
                 int threadIndex = getThreadColumnIndex(index.column());
-                return QString("%1").arg(m_uniqueThreadIdMapToColumn.key(threadIndex));
+                GroupInfo* pGroup = (GroupInfo*)index.internalPointer();
+                uint32_t threadId = m_uniqueThreadIdMapToColumn.key(threadIndex);
+                if (pGroup->threadId == threadId)
+                {
+                    return QString("%1").arg(threadId);
+                }
             }
             else
             {
@@ -199,7 +214,7 @@ public:
 
         if (!parent.isValid())
         {
-            // if parent is not valid, then this row and column is referencing Frame data
+            // if parent is not valid, then this row and column is referencing Thread data
             if (column == 0)
             {
                 return m_groupList[row].modelIndex;
@@ -212,7 +227,7 @@ public:
         }
         else if (isGroup(parent))
         {
-            // the parent is a frame, so this row and column reference a source cell
+            // the parent is a group, so this row and column reference a source cell
             if (column == 0)
             {
                 // the column containing the main API call
@@ -242,7 +257,7 @@ public:
                 }
                 else
                 {
-                    // parent is a frame
+                    // parent is a group
                     int frameIndex = (int)child.internalId();
                     return createIndex(frameIndex, 0, (void*)&m_groupList[frameIndex]);
                 }
@@ -366,7 +381,7 @@ private:
         m_groupList.clear();
         m_uniqueThreadIdMapToColumn.clear();
         m_curGroupCount = 0;
-
+        m_pCurGroup = NULL;
 
         if (pTFM != NULL)
         {
@@ -403,11 +418,6 @@ private:
             for (int row = 0; row < pTFM->rowCount(); row++)
             {
                 int proxyRow = 0;
-                if (m_pCurGroup != NULL)
-                {
-                    proxyRow = m_pCurGroup->children.count();
-                }
-
                 for (int column = 0; column < pTFM->columnCount(); column++)
                 {
                     int proxyColumn = column;
@@ -426,6 +436,8 @@ private:
                         int threadColumn = m_uniqueThreadIdMapToColumn[curThreadId] + sourceColumnCount;
                         QPersistentModelIndex threadIdProxy = createIndex(m_pCurGroup->children.count(), threadColumn, m_pCurGroup);
                         m_mapProxyToParent[threadColumn].insert(threadIdProxy, m_pCurGroup->modelIndex);
+
+                        proxyRow = m_pCurGroup->children.count();
                     }
 
                     // make a proxy for this source index
@@ -444,6 +456,8 @@ private:
                 } // end for each source column
 
             } // end for each source row
+
+            m_pCurGroup = NULL;
         }
     }
 };
