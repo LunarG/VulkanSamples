@@ -1210,6 +1210,9 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
 
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
 {
+    if (pipe_control_dw0 == 0)
+        return;
+
     if (!cmd->bind.draw_count)
         return;
 
