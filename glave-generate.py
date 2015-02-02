@@ -338,64 +338,6 @@ class Subcommand(object):
         um_body.append('}\n')
         return "\n".join(um_body)
 
-#EL == EnumerateLayers
-#I think this another case where you have to make the real call prior to CREATE_TRACE_PACKET(). SInce you
-#don't know how many layers will be returned  or how big the strings will be. Alternatively, could be
-#on the safe side of CREATE_TRACE_PACKET with maxStringSize*maxLayerCount.
-#EL also needs a loop where add a trace buffer  for each layer, depending on how you CREATE_TRACE_PACKET.
-
-# TODO : Tracing needs special checks in CreateInstance now
-#   Need to call glv_platform_thread_once() and do (isHooked == FALSE) check
-#   See example code below from old InitAndEnumerateGpus
-#GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglInitAndEnumerateGpus(
-#    const XGL_APPLICATION_INFO* pAppInfo,
-#    const XGL_ALLOC_CALLBACKS* pAllocCb,
-#    XGL_UINT maxGpus,
-#    XGL_UINT* pGpuCount,
-#    XGL_PHYSICAL_GPU* pGpus)
-#{
-#    glv_trace_packet_header* pHeader;
-#    XGL_RESULT result;
-#    uint64_t startTime;
-#    struct_xglInitAndEnumerateGpus* pPacket;
-#
-#    glv_platform_thread_once(&gInitOnce, InitTracer);
-#    SEND_ENTRYPOINT_ID(xglInitAndEnumerateGpus);
-#    if (real_xglInitAndEnumerateGpus == xglInitAndEnumerateGpus)
-#    {
-#        glv_platform_get_next_lib_sym((void **) &real_xglInitAndEnumerateGpus,"xglInitAndEnumerateGpus");
-#    }
-#    startTime = glv_get_time();
-#    result = real_xglInitAndEnumerateGpus(pAppInfo, pAllocCb, maxGpus, pGpuCount, pGpus);
-#
-#    // since we do not know how many gpus will be found must create trace packet after calling xglInit
-#    CREATE_TRACE_PACKET(xglInitAndEnumerateGpus, calc_size_XGL_APPLICATION_INFO(pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS))
-#        + sizeof(XGL_UINT) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(XGL_PHYSICAL_GPU) : 0));
-#    pHeader->entrypoint_begin_time = startTime;
-#    if (isHooked == FALSE) {
-#        AttachHooks();
-#        AttachHooks_xgldbg();
-#        AttachHooks_xglwsix11ext();
-#    }
-#    pPacket = interpret_body_as_xglInitAndEnumerateGpus(pHeader);
-#    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);
-#    if (pAllocCb) {
-#        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pAllocCb);
-#        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocCb));
-#    }
-#    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpuCount), sizeof(XGL_UINT), pGpuCount);
-#    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpuCount));
-#    if (pGpuCount && pGpus)
-#    {
-#        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), sizeof(XGL_PHYSICAL_GPU) * *pGpuCount, pGpus);
-#        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpus));
-#    }
-#    pPacket->maxGpus = maxGpus;
-#    pPacket->result = result;
-#    FINISH_TRACE_PACKET();
-#    return result;
-#}
-
     def _generate_trace_funcs(self):
         func_body = []
         for proto in self.protos:
@@ -459,22 +401,52 @@ class Subcommand(object):
                 if in_data_size:
                     func_body.append('    size_t dataSizeIn = (pDataSize == NULL) ? 0 : *pDataSize;')
                 func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
-                func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
                 # TODO : DescriptorUpdates and CreateSetLayout need to handle saving chain of structs
-                # TODO : EnumGpus needs to call function first and then update the returned count of GPUs
-                if 'EnumerateLayers' == proto.name:
+                # TODO: handle xglGetXXX where pDataSize is not a valid input
+                # functions that have non-standard sequence of  packet creation and calling real function
+                # NOTE: Anytime we call the function first, need to add custom code for correctly tracking API call time
+                if 'CreateInstance' == proto.name:
+                    func_body.append('    glv_platform_thread_once(&gInitOnce, InitTracer);')
+                    func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                    func_body.append('    if (real_xglCreateInstance == xglCreateInstance)')
+                    func_body.append('    {')
+                    func_body.append('        glv_platform_get_next_lib_sym((void **) &real_xglCreateInstance,"xglCreateInstance");')
+                    func_body.append('    }')
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, sizeof(XGL_INSTANCE) + calc_size_XGL_APPLICATION_INFO(pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS)));' % (proto.name))
+                    func_body.append('    if (isHooked == FALSE) {')
+                    func_body.append('        AttachHooks();')
+                    func_body.append('        AttachHooks_xgldbg();')
+                    func_body.append('        AttachHooks_xglwsix11ext();')
+                    func_body.append('    }')
+                    func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                elif 'EnumerateGpus' == proto.name:
+                    func_body.append('    uint64_t startTime;')
+                    func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                    func_body.append('    startTime = glv_get_time();')
+                    func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                    func_body.append('    CREATE_TRACE_PACKET(xglEnumerateGpus, sizeof(uint32_t) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(XGL_PHYSICAL_GPU) : 0));')
+                    func_body.append('    pHeader->entrypoint_begin_time = startTime;')
+                elif 'EnumerateLayers' == proto.name:
+                    func_body.append('    uint64_t startTime;')
+                    func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                    func_body.append('    startTime = glv_get_time();')
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                     func_body.append('    size_t totStringSize = 0;')
                     func_body.append('    uint32_t i = 0;')
                     func_body.append('    for (i = 0; i < *pOutLayerCount; i++)')
                     func_body.append('        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;')
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, totStringSize + sizeof(size_t));' % (proto.name))
+                    func_body.append('    pHeader->entrypoint_begin_time = startTime;')
                 elif 'AllocDescriptorSets' == proto.name:
-                    # TODO : Anytime we call the function first, need to add custom code for correctly tracking API call time
+                    func_body.append('    uint64_t startTime;')
+                    func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
+                    func_body.append('    startTime = glv_get_time();')
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                     func_body.append('    size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));')
                     func_body.append('    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));')
+                    func_body.append('    pHeader->entrypoint_begin_time = startTime;')
                 elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                    # these are regular case as far as sequence of tracing but custom sizes
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
                         func_body.append('    customSize = (pCreateInfo != NULL) ? pCreateInfo->codeSize : 0;')
