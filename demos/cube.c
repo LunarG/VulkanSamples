@@ -282,7 +282,6 @@ static void demo_draw_build_cmd(struct demo *demo)
     XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
         .pNext = NULL,
-        .operation = XGL_RENDER_PASS_OPERATION_BEGIN_AND_END,
     };
     XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,

@@ -327,8 +327,8 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
             break;
         case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
             ginfo = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) next;
-            cmd->bind.render_pass = (struct intel_render_pass *)
-                                        ginfo->renderPass;
+            intel_cmd_begin_render_pass(cmd,  (struct intel_render_pass *)
+                                        ginfo->renderPass);
             break;
         default:
             return XGL_ERROR_INVALID_VALUE;

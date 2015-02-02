@@ -813,6 +813,14 @@ core = Extension(
              Param("const XGL_RENDER_PASS_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_RENDER_PASS*", "pRenderPass")]),
 
+        Proto("void", "CmdBeginRenderPass",
+            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
+             Param("XGL_RENDER_PASS", "renderPass")]),
+
+        Proto("void", "CmdEndRenderPass",
+            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
+             Param("XGL_RENDER_PASS", "renderPass")]),
+
         Proto("XGL_RESULT", "DbgSetValidationLevel",
             [Param("XGL_DEVICE", "device"),
              Param("XGL_VALIDATION_LEVEL", "validationLevel")]),

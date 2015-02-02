@@ -901,7 +901,6 @@ void CmdBuffer::begin(XGL_RENDER_PASS renderpass_obj)
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
         .pNext = NULL,
         .renderPass = renderpass_obj,
-        .operation = XGL_RENDER_PASS_OPERATION_BEGIN_AND_END,
     };
     info.flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
           XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;

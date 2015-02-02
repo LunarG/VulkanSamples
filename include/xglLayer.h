@@ -136,6 +136,8 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdSaveAtomicCountersType CmdSaveAtomicCounters;
     xglCreateFramebufferType CreateFramebuffer;
     xglCreateRenderPassType CreateRenderPass;
+    xglCmdBeginRenderPassType CmdBeginRenderPass;
+    xglCmdEndRenderPassType CmdEndRenderPass;
     xglDbgSetValidationLevelType DbgSetValidationLevel;
     xglDbgRegisterMsgCallbackType DbgRegisterMsgCallback;
     xglDbgUnregisterMsgCallbackType DbgUnregisterMsgCallback;

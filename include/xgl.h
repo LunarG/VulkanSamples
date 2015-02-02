@@ -1007,17 +1007,6 @@ typedef enum _XGL_SHADER_STAGE_FLAGS
     XGL_MAX_ENUM(_XGL_SHADER_STAGE_FLAGS)
 } XGL_SHADER_STAGE_FLAGS;
 
-// Graphics workload submit type. Used for rendering workloads.
-typedef enum _XGL_RENDER_PASS_OPERATION
-{
-    XGL_RENDER_PASS_OPERATION_BEGIN,                                  // Start rendering
-    XGL_RENDER_PASS_OPERATION_CONTINUE,                               // Continue rendering
-    XGL_RENDER_PASS_OPERATION_END,                                    // End rendering
-    XGL_RENDER_PASS_OPERATION_BEGIN_AND_END,                          // Start and finish rendering in a single command buffer
-
-    XGL_MAX_ENUM(_XGL_RENDER_PASS_OPERATION)
-} XGL_RENDER_PASS_OPERATION;
-
 // Structure type enumerant
 typedef enum _XGL_STRUCTURE_TYPE
 {
@@ -2108,7 +2097,6 @@ typedef struct _XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO
     const void*                             pNext;      // Pointer to next structure
 
     XGL_RENDER_PASS                         renderPass;
-    XGL_RENDER_PASS_OPERATION               operation;
 
 } XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
 
@@ -2352,7 +2340,8 @@ typedef void (XGLAPI *xglCmdLoadAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XG
 typedef void (XGLAPI *xglCmdSaveAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset);
 typedef XGL_RESULT (XGLAPI *xglCreateFramebufferType)(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer);
 typedef XGL_RESULT (XGLAPI *xglCreateRenderPassType)(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass);
-
+typedef void       (XGLAPI *xglCmdBeginRenderPassType)(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass);
+typedef void       (XGLAPI *xglCmdEndRenderPassType)(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass);
 #ifdef XGL_PROTOTYPES
 
 // GPU initialization
@@ -2997,6 +2986,14 @@ XGL_RESULT XGLAPI xglCreateRenderPass(
     XGL_DEVICE                                  device,
     const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
     XGL_RENDER_PASS*                            pRenderPass);
+
+void XGLAPI xglCmdBeginRenderPass(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_RENDER_PASS                             renderPass);
+
+void XGLAPI xglCmdEndRenderPass(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_RENDER_PASS                             renderPass);
 
 #endif /* XGL_PROTOTYPES */
 
