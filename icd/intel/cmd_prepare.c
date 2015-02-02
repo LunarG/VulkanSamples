@@ -224,7 +224,7 @@ ICD_EXPORT void XGLAPI xglCmdWaitEvents(
      */
     cmd_memory_barriers(cmd,
             GEN6_PIPE_CONTROL_CS_STALL,
-            pWaitInfo->memBarrierCount, pWaitInfo->pMemBarriers);
+            pWaitInfo->memBarrierCount, pWaitInfo->ppMemBarriers);
 }
 
 ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
@@ -269,5 +269,5 @@ ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
      */
     cmd_memory_barriers(cmd,
             pipe_control_flags,
-            pBarrier->memBarrierCount, pBarrier->pMemBarriers);
+            pBarrier->memBarrierCount, pBarrier->ppMemBarriers);
 }

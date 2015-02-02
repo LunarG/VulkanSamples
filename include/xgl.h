@@ -47,7 +47,7 @@ extern "C"
 */
 
 #ifdef __cplusplus
-    #define XGL_DEFINE_HANDLE(_obj) struct _obj##_T {}; typedef _obj##_T* _obj;
+    #define XGL_DEFINE_HANDLE(_obj) struct _obj##_T {char _dummy;}; typedef _obj##_T* _obj;
     #define XGL_DEFINE_SUBCLASS_HANDLE(_obj, _base) struct _obj##_T : public _base##_T {}; typedef _obj##_T* _obj;
 #else // __cplusplus
     #define XGL_DEFINE_HANDLE(_obj) typedef void* _obj;
@@ -224,7 +224,7 @@ typedef enum _XGL_ATTACHMENT_STORE_OP
     XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE                     = XGL_ATTACHMENT_STORE_OP_STORE,
     XGL_ATTACHMENT_STORE_OP_END_RANGE                       = XGL_ATTACHMENT_STORE_OP_DONT_CARE,
     XGL_NUM_ATTACHMENT_STORE_OP                             = (XGL_ATTACHMENT_STORE_OP_END_RANGE - XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE + 1),
-   XGL_MAX_ENUM(_XGL_ATTACHMENT_STORE_OP)
+    XGL_MAX_ENUM(_XGL_ATTACHMENT_STORE_OP)
 } XGL_ATTACHMENT_STORE_OP;
 
 typedef enum _XGL_IMAGE_TYPE
@@ -1643,7 +1643,7 @@ typedef struct _XGL_EVENT_WAIT_INFO
     XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                memBarrierCount;            // Number of memory barriers
-    const void**                            pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
+    const void**                            ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
 } XGL_EVENT_WAIT_INFO;
 
 typedef struct _XGL_PIPELINE_BARRIER
@@ -1657,7 +1657,7 @@ typedef struct _XGL_PIPELINE_BARRIER
     XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                memBarrierCount;            // Number of memory barriers
-    const void**                            pMemBarriers;               // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
+    const void**                            ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either XGL_MEMORY_BARRIER, XGL_BUFFER_MEMORY_BARRIER, or XGL_IMAGE_MEMORY_BARRIER)
 } XGL_PIPELINE_BARRIER;
 
 typedef struct _XGL_MEMORY_BARRIER

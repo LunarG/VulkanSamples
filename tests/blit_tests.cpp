@@ -912,7 +912,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
     xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
     XGL_BUFFER_COPY region = {};
@@ -927,7 +927,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
     xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
     xglCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
@@ -948,7 +948,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     wait_info.pEvents = &event;
     wait_info.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     wait_info.memBarrierCount = 1;
-    wait_info.pMemBarriers = (const void **)&pmemory_barrier;
+    wait_info.ppMemBarriers = (const void **)&pmemory_barrier;
     xglCmdWaitEvents(cmd_.obj(), &wait_info);
 
     cmd_.end();
@@ -1471,7 +1471,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_clear.size();
-        pipeline_barrier.pMemBarriers = (const void **)&p_to_clear[0];
+        pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         if (test_raw_) {
@@ -1485,7 +1485,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_xfer.size();
-        pipeline_barrier.pMemBarriers = (const void **)&p_to_xfer[0];
+        pipeline_barrier.ppMemBarriers = (const void **)&p_to_xfer[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         cmd_.end();
@@ -1703,7 +1703,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_clear.size();
-        pipeline_barrier.pMemBarriers = (const void **)&p_to_clear[0];
+        pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         xglCmdClearDepthStencil(cmd_.obj(), img.obj(), depth, stencil, ranges.size(), &ranges[0]);
@@ -1713,7 +1713,7 @@ protected:
         pipeline_barrier.pEvents = set_events;
         pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
         pipeline_barrier.memBarrierCount = to_xfer.size();
-        pipeline_barrier.pMemBarriers = (const void **)&p_to_xfer[0];
+        pipeline_barrier.ppMemBarriers = (const void **)&p_to_xfer[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
         cmd_.end();

@@ -602,7 +602,7 @@ void XglConstantBufferObj::BufferMemoryBarrier(
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
 
     // write barrier to the command buffer
     m_commandBuffer->PipelineBarrier(&pipeline_barrier);
@@ -1034,7 +1034,7 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
 
     // clear the back buffer to dark grey
     uint32_t clearColor[4] = {64, 64, 64, 0};
@@ -1121,7 +1121,7 @@ void XglCommandBufferObj::PrepareAttachments()
     pipeline_barrier.pEvents = set_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.pMemBarriers = (const void **)&pmemory_barrier;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
 
     for(i=0; i<m_renderTargetCount; i++)
     {
