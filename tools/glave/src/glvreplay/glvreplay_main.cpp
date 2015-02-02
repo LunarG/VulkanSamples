@@ -24,26 +24,21 @@
  **************************************************************************/
 
 #include <stdio.h>
+#include <string>
 extern "C" {
 #include "glv_common.h"
 #include "glv_tracelog.h"
 #include "glv_filelike.h"
 #include "glv_trace_packet_utils.h"
 }
+#include "glvreplay_main.h"
 #include "glvreplay_factory.h"
 #include "glvreplay_seq.h"
 #include "glvreplay_window.h"
 #include "getopt/getopt.h"
 
-typedef struct glvreplay_settings
-{
-    char* pTraceFilePath;
-    BOOL benchmark;
-    unsigned int numLoops;
-} glvreplay_settings;
-
-// declared as extern in header
-glvreplay_settings g_defaultReplaySettings = { NULL, FALSE, 1 };
+glvreplay_settings g_defaultReplaySettings = { NULL, FALSE, 1, NULL };
+__attribute__ ((visibility("default")))
 glvreplay_settings g_replaySettings = g_defaultReplaySettings;
 
 glv_SettingInfo g_settings_info[] =
@@ -51,6 +46,7 @@ glv_SettingInfo g_settings_info[] =
     { "t", "trace_file", GLV_SETTING_STRING, &g_replaySettings.pTraceFilePath, &g_defaultReplaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
     { "l", "numLoops", GLV_SETTING_UINT, &g_replaySettings.numLoops, &g_defaultReplaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
     { "b", "benchmark", GLV_SETTING_BOOL, &g_replaySettings.benchmark, &g_defaultReplaySettings.benchmark, TRUE, "(unsupported) Disables some debug features so that replaying happens as fast as possible."},
+    { "s", "snapshotList", GLV_SETTING_STRING, &g_replaySettings.snapshotList, &g_defaultReplaySettings.snapshotList, TRUE, "Comma seperated list of frame numbers to take snapshots of"},
 };
 
 glv_SettingGroup g_replaySettingGroup =
