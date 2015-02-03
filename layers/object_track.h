@@ -34,13 +34,21 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
     OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
     OBJTRACK_INVALID_FENCE,                     // Requested status of unsubmitted fence object
+    OBJTRACK_VIEWPORT_NOT_BOUND,                // Draw submitted with no viewport state object bound
+    OBJTRACK_RASTER_NOT_BOUND,                  // Draw submitted with no raster state object bound
+    OBJTRACK_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
+    OBJTRACK_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
 } OBJECT_TRACK_ERROR;
 
 // Object Status -- used to track state of individual objects
 typedef enum _OBJECT_STATUS
 {
-    OBJSTATUS_NONE,                             // No status is set
-    OBJSTATUS_FENCE_IS_SUBMITTED,               // Fence has been submitted
+    OBJSTATUS_NONE                              = 0x00000000, // No status is set
+    OBJSTATUS_FENCE_IS_SUBMITTED                = 0x00000001, // Fence has been submitted
+    OBJSTATUS_VIEWPORT_BOUND                    = 0x00000002, // Viewport state object has been bound
+    OBJSTATUS_RASTER_BOUND                      = 0x00000004, // Viewport state object has been bound
+    OBJSTATUS_COLOR_BLEND_BOUND                 = 0x00000008, // Viewport state object has been bound
+    OBJSTATUS_DEPTH_STENCIL_BOUND               = 0x00000010, // Viewport state object has been bound
 } OBJECT_STATUS;
 // TODO : Make this code-generated
 // Object type enum

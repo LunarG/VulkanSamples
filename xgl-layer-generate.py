@@ -631,7 +631,16 @@ class Subcommand(object):
                         using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
                     elif 'GetFenceStatus' in proto.name:
                         using_line += '    // Warn if submitted_flag is not set\n'
-                        using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, "Status Requested for Unsubmitted Fence");\n'
+                        using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+                    elif 'EndCommandBuffer' in proto.name:
+                        using_line += '    reset_status((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
+                        using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
+                        using_line += '                                                                OBJSTATUS_COLOR_BLEND_BOUND |\n'
+                        using_line += '                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
+                    elif 'CmdBindDynamicStateObject' in proto.name:
+                        using_line += '    track_object_status((void*)cmdBuffer, stateBindPoint);\n'
+                    elif 'CmdDraw' in proto.name:
+                        using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
                     if 'AllocDescriptor' in proto.name: # Allocates array of DSs
                         create_line =  '    for (uint32_t i; i < *pCount; i++) {\n'
                         create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
@@ -1133,6 +1142,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));')
         header_txt.append('    pNewObjNode->obj.pObj = pObj;')
         header_txt.append('    pNewObjNode->obj.objType = objType;')
+        header_txt.append('    pNewObjNode->obj.status  = OBJSTATUS_NONE;')
         header_txt.append('    pNewObjNode->obj.numUses = 0;')
         header_txt.append('    // insert at front of global list')
         header_txt.append('    pNewObjNode->pNextGlobal = pGlobalHead;')
@@ -1260,15 +1270,56 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('// Check object status for selected flag state')
-        header_txt.append('static void validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag, char* fail_msg) {')
+        header_txt.append('// Track selected state for an object node')
+        header_txt.append('static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[XGL_OBJECT_TYPE_CMD_BUFFER];')
+        header_txt.append('')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            if (stateBindPoint == XGL_STATE_BIND_VIEWPORT) {')
+        header_txt.append('                pTrav->obj.status |= OBJSTATUS_VIEWPORT_BOUND;')
+        header_txt.append('            } else if (stateBindPoint == XGL_STATE_BIND_RASTER) {')
+        header_txt.append('                pTrav->obj.status |= OBJSTATUS_RASTER_BOUND;')
+        header_txt.append('            } else if (stateBindPoint == XGL_STATE_BIND_COLOR_BLEND) {')
+        header_txt.append('                pTrav->obj.status |= OBJSTATUS_COLOR_BLEND_BOUND;')
+        header_txt.append('            } else if (stateBindPoint == XGL_STATE_BIND_DEPTH_STENCIL) {')
+        header_txt.append('                pTrav->obj.status |= OBJSTATUS_DEPTH_STENCIL_BOUND;')
+        header_txt.append('            }')
+        header_txt.append('            return;')
+        header_txt.append('        }')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
+        header_txt.append('    }')
+        header_txt.append('    // If we do not find it print an error')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to track status for non-existent Command Buffer object %p", pObj);')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('// Reset selected flag state for an object node')
+        header_txt.append('static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
-        header_txt.append('            if ((pTrav->obj.status && status_flag) != status_flag) {')
+        header_txt.append('            pTrav->obj.status &= ~status_flag;')
+        header_txt.append('            return;')
+        header_txt.append('        }')
+        header_txt.append('        pTrav = pTrav->pNextObj;')
+        header_txt.append('    }')
+        header_txt.append('    // If we do not find it print an error')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to reset status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('// Check object status for selected flag state')
+        header_txt.append('static void validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('    while (pTrav) {')
+        header_txt.append('        if (pTrav->obj.pObj == pObj) {')
+        header_txt.append('            if ((pTrav->obj.status & status_flag) != status_flag) {')
         header_txt.append('                char str[1024];')
         header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_XGL_OBJECT_TYPE(objType), (void*)pObj, fail_msg);')
-        header_txt.append('                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_INVALID_FENCE, "OBJTRACK", str);')
+        header_txt.append('                layerCbMsg(error_level, XGL_VALIDATION_LEVEL_0, pObj, 0, error_code, "OBJTRACK", str);')
         header_txt.append('            }')
         header_txt.append('            return;')
         header_txt.append('        }')
@@ -1279,7 +1330,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
         header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
-
+        header_txt.append('')
+        header_txt.append('static void validate_draw_state_flags(void* pObj) {')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('}')
         return "\n".join(header_txt)
 
     def generate_body(self):
