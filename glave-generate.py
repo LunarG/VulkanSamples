@@ -2676,14 +2676,14 @@ class Subcommand(object):
                             'CmdBindDynamicMemoryView': self._gen_replay_bind_dynamic_memory_view}
         # TODO : Need to guard CreateInstance with "if (!m_display->m_initedXGL)" check
         # Despite returning a value, don't check these funcs b/c custom code includes check already
-        custom_check_ret_val = ['InitAndEnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport']
+        custom_check_ret_val = ['EnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport']
         # multi-gpu Open funcs w/ list of local params to create
         custom_open_params = {'OpenSharedMemory': (-1,),
                               'OpenSharedQueueSemaphore': (-1,),
                               'OpenPeerMemory': (-1,),
                               'OpenPeerImage': (-1, -2,)}
         # Functions that create views are unique from other create functions
-        create_view_list = ['CreateImageView', 'CreateColorAttachmentView', 'CreateDepthStencilView', 'CreateComputePipeline']
+        create_view_list = ['CreateBufferView', 'CreateImageView', 'CreateColorAttachmentView', 'CreateDepthStencilView', 'CreateComputePipeline']
         # Functions to treat as "Create' that don't have 'Create' in the name
         special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
         # A couple funcs use do while loops
@@ -2731,6 +2731,8 @@ class Subcommand(object):
                     rbody.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(%s));' % (proto.params[1].ty.strip('*').replace('const ', '')))
                     if 'CreateComputePipeline' == proto.name:
                         rbody.append('            createInfo.cs.shader = remap(pPacket->pCreateInfo->cs.shader);')
+                    elif 'CreateBufferView' == proto.name:
+                        rbody.append('            createInfo.buffer = remap(pPacket->pCreateInfo->buffer);')
                     else:
                         rbody.append('            createInfo.image = remap(pPacket->pCreateInfo->image);')
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
