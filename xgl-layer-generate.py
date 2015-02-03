@@ -641,9 +641,10 @@ class Subcommand(object):
                         using_line = '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
                     if 'QueueSubmit' in proto.name:
                         using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
+                        using_line += '    validate_memory_mapping_status(pMemRefs, memRefCount);\n'
                     elif 'GetFenceStatus' in proto.name:
                         using_line += '    // Warn if submitted_flag is not set\n'
-                        using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+                        using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
                     elif 'EndCommandBuffer' in proto.name:
                         using_line += '    reset_status((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
                         using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
@@ -653,6 +654,10 @@ class Subcommand(object):
                         using_line += '    track_object_status((void*)cmdBuffer, stateBindPoint);\n'
                     elif 'CmdDraw' in proto.name:
                         using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
+                    elif 'MapMemory' in proto.name:
+                        using_line += '    set_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+                    elif 'UnmapMemory' in proto.name:
+                        using_line += '    reset_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
                     if 'AllocDescriptor' in proto.name: # Allocates array of DSs
                         create_line =  '    for (uint32_t i; i < *pCount; i++) {\n'
                         create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
@@ -1387,11 +1392,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
-        header_txt.append('static void validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
+        header_txt.append('static void validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
-        header_txt.append('            if ((pTrav->obj.status & status_flag) != status_flag) {')
+        header_txt.append('            if ((pTrav->obj.status & status_mask) != status_flag) {')
         header_txt.append('                char str[1024];')
         header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_XGL_OBJECT_TYPE(objType), (void*)pObj, fail_msg);')
         header_txt.append('                layerCbMsg(error_level, XGL_VALIDATION_LEVEL_0, pObj, 0, error_code, "OBJTRACK", str);')
@@ -1407,10 +1412,17 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void validate_draw_state_flags(void* pObj) {')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint32_t numRefs) {')
+        header_txt.append('    int32_t i;')
+        header_txt.append('    for (i = 0; i < numRefs; i++) {')
+        header_txt.append('        validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
+        header_txt.append('    }')
         header_txt.append('}')
         return "\n".join(header_txt)
 
