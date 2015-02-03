@@ -864,6 +864,8 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
             // Remove this instance from the list:
             if (prev)
                 prev->next = next->next;
+            else
+                loader.instances = next->next;
             break;
         }
         prev = next;
