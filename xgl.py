@@ -351,7 +351,7 @@ core = Extension(
             [Param("XGL_OBJECT", "object"),
              Param("uint32_t", "allocationIdx"),
              Param("XGL_GPU_MEMORY", "mem"),
-             Param("XGL_GPU_SIZE", "memOffset")]),
+             Param("XGL_GPU_SIZE", "offset")]),
 
         Proto("XGL_RESULT", "BindObjectMemoryRange",
             [Param("XGL_OBJECT", "object"),
