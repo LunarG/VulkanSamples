@@ -508,6 +508,8 @@ class Subcommand(object):
                     for idx in buff_ptr_indices:
                         if 'DEVICE_CREATE_INFO' in proto.params[idx].ty:
                             func_body.append('    add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo);')
+                        elif 'APPLICATION_INFO' in proto.params[idx].ty:
+                            func_body.append('    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);')
                         elif 'char' in proto.params[idx].ty:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
                         elif 'Count' in proto.params[idx-1].name and 'queryCount' != proto.params[idx-1].name:
@@ -560,7 +562,7 @@ class Subcommand(object):
                     if 'void' not in proto.ret or '*' in proto.ret:
                         func_body.append('    pPacket->result = result;')
                     for idx in buff_ptr_indices:
-                        if 'DEVICE_CREATE_INFO' not in proto.params[idx].ty:
+                        if ('DEVICE_CREATE_INFO' not in proto.params[idx].ty) and ('APPLICATION_INFO' not in proto.params[idx].ty):
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s));' % (proto.params[idx].name))
                     func_body.append('    FINISH_TRACE_PACKET();')
                     if 'AllocMemory' in proto.name:
@@ -2696,8 +2698,8 @@ class Subcommand(object):
         rbody.append('    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;')
         rbody.append('    switch (packet->packet_id)')
         rbody.append('    {')
-        rbody.append('    case GLV_TPI_XGL_xglApiVersion:')
-        rbody.append('        break;  // nothing to replay on the version packet')
+        rbody.append('        case GLV_TPI_XGL_xglApiVersion:')
+        rbody.append('            break;  // nothing to replay on the version packet')
         for proto in self.protos:
             ret_value = False
             create_view = False
@@ -2812,6 +2814,11 @@ class Subcommand(object):
                     rbody.append('            {')
                     rbody.append('                rm_from_map(pPacket->device);')
                     rbody.append('                m_display->m_initedXGL = false;')
+                    rbody.append('            }')
+                if 'DestroyInstance' in proto.name:
+                    rbody.append('            if (replayResult == XGL_SUCCESS)')
+                    rbody.append('            {')
+                    rbody.append('                rm_from_map(pPacket->instance);')
                     rbody.append('            }')
                 elif 'AllocDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
