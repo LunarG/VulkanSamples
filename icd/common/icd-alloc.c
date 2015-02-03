@@ -42,7 +42,7 @@ static void *default_alloc(void *user_data, size_t size, size_t alignment,
 {
     if (alignment <= 1) {
         return malloc(size);
-    } else if (u_is_pow2(alignment)) {
+    } else if (u_is_pow2((uint32_t) alignment)) {
         if (alignment < sizeof(void *)) {
             assert(u_is_pow2(sizeof(void*)));
             alignment = sizeof(void *);
@@ -50,7 +50,11 @@ static void *default_alloc(void *user_data, size_t size, size_t alignment,
 
         size = (size + alignment - 1) & ~(alignment - 1);
 
+#if defined(PLATFORM_LINUX)
         return aligned_alloc(alignment, size);
+#else
+		return _aligned_malloc(size, alignment);
+#endif
     }
     else {
         return NULL;

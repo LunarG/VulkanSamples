@@ -31,7 +31,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
+#if defined(PLATFORM_LINUX)
 #include <strings.h> /* for ffs() */
+#endif
 #include "icd.h"
 
 #if defined(NDEBUG) && defined(__GNUC__)
@@ -63,28 +65,32 @@
 /**
  * Return true if val is power of two, or zero.
  */
-static inline bool u_is_pow2(unsigned int val)
+STATIC_INLINE bool u_is_pow2(unsigned int val)
 {
     return ((val & (val - 1)) == 0);
 }
 
-static inline int u_ffs(int val)
+STATIC_INLINE int u_ffs(int val)
 {
-    return ffs(val);
+#if defined(PLATFORM_LINUX)
+	return ffs(val);
+#else
+	return __lzcnt(val) + 1;
+#endif
 }
 
-static inline unsigned int u_align(unsigned int val, unsigned alignment)
+STATIC_INLINE unsigned int u_align(unsigned int val, unsigned alignment)
 {
     assert(alignment && u_is_pow2(alignment));
     return (val + alignment - 1) & ~(alignment - 1);
 }
 
-static inline unsigned int u_minify(unsigned int val, unsigned level)
+STATIC_INLINE unsigned int u_minify(unsigned int val, unsigned level)
 {
     return (val >> level) ? val >> level : 1;
 }
 
-static inline uint32_t u_fui(float f)
+STATIC_INLINE uint32_t u_fui(float f)
 {
     union {
         float f;
@@ -94,7 +100,7 @@ static inline uint32_t u_fui(float f)
     return u.ui;
 }
 
-static inline float u_uif(uint32_t ui)
+STATIC_INLINE float u_uif(uint32_t ui)
 {
     union {
         float f;
@@ -104,7 +110,7 @@ static inline float u_uif(uint32_t ui)
     return u.f;
 }
 
-static inline int u_iround(float f)
+STATIC_INLINE int u_iround(float f)
 {
     if (f >= 0.0f)
         return (int) (f + 0.5f);

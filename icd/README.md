@@ -1,6 +1,7 @@
 This sample driver implementation provide multiple subcomponents required to build and test an Installable Client Driver (ICD):
 - [Common Infrastructure](common)
 - [Implementation for Intel GPUs](intel)
+- [Null driver](nulldrv)
 - [*Sample Driver Tests*](../tests)
     - Now includes Golden images to verify xgl_render_tests rendering.
 

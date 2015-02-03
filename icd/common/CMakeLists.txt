@@ -1,3 +1,7 @@
+if (WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+endif()
+
 set(sources
     icd-alloc.c
     icd-format.c

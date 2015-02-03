@@ -31,14 +31,14 @@
 #include <stdbool.h>
 #include "icd.h"
 
-static inline bool icd_format_is_undef(XGL_FORMAT format)
+STATIC_INLINE bool icd_format_is_undef(XGL_FORMAT format)
 {
     return (format == XGL_FMT_UNDEFINED);
 }
 
 bool icd_format_is_ds(XGL_FORMAT format);
 
-static inline bool icd_format_is_color(XGL_FORMAT format)
+STATIC_INLINE bool icd_format_is_color(XGL_FORMAT format)
 {
     return !(icd_format_is_undef(format) || icd_format_is_ds(format));
 }
@@ -53,7 +53,7 @@ bool icd_format_is_srgb(XGL_FORMAT format);
 
 bool icd_format_is_compressed(XGL_FORMAT format);
 
-static inline int icd_format_get_block_width(XGL_FORMAT format)
+STATIC_INLINE int icd_format_get_block_width(XGL_FORMAT format)
 {
     /* all compressed formats use 4x4 blocks */
     return (icd_format_is_compressed(format)) ? 4 : 1;

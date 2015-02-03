@@ -29,8 +29,18 @@
 #define ICD_H
 
 #include <xgl.h>
+#include <xglPlatform.h>
 #include <xglDbg.h>
+
+#if defined(PLATFORM_LINUX)
+
 #include <xglWsiX11Ext.h>
+
+#else
+
+#include <xglWsiWinExt.h>
+
+#endif
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define ICD_EXPORT __attribute__((visibility("default")))
