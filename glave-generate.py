@@ -445,7 +445,7 @@ class Subcommand(object):
                     func_body.append('    size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));')
                     func_body.append('    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));')
                     func_body.append('    pHeader->entrypoint_begin_time = startTime;')
-                elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'AllocMemory', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                     # these are regular case as far as sequence of tracing but custom sizes
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
@@ -468,6 +468,9 @@ class Subcommand(object):
                     elif 'BeginCommandBuffer' == proto.name:
                         func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglBeginCommandBuffer, sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + customSize);')
+                    elif 'AllocMemory' == proto.name:
+                        func_body.append('    customSize = calculate_alloc_memory_size(pAllocInfo->pNext);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglAllocMemory,  sizeof(XGL_MEMORY_ALLOC_INFO) + sizeof(XGL_GPU_MEMORY) + customSize);')
                     else: #'CreateComputePipeline'
                         func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateComputePipeline, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize + calculate_pipeline_shader_size(&pCreateInfo->cs));')
@@ -528,7 +531,7 @@ class Subcommand(object):
                         else:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                     # Some custom add_* and finalize_* function calls for Create* API calls
-                    if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                    if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'AllocMemory', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
                         if 'CreateShader' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), customSize, pCreateInfo->pCode);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
@@ -545,9 +548,11 @@ class Subcommand(object):
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));')
                         elif 'BeginCommandBuffer' == proto.name:
-                            func_body.append('    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&pPacket->pBeginInfo->pNext, pBeginInfo->pNext);')
+                            func_body.append('    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext);')
+                        elif 'AllocMemory' == proto.name:
+                            func_body.append('    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext);')
                         elif 'CreateGraphicsPipeline' == proto.name:
-                            func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&pPacket->pCreateInfo->pNext, pCreateInfo->pNext);')
+                            func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
                         else:
                             func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
                             func_body.append('    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs);')
@@ -857,7 +862,7 @@ class Subcommand(object):
         hf_body.append('                break;')
         hf_body.append('            }')
         hf_body.append('            default:')
-        hf_body.append('                assert(!"Encountered an unexpected type in pipeline state list");')
+        hf_body.append('                assert(!"Encountered an unexpected type in cmdbuffer_begin_info list");')
         hf_body.append('        }')
         hf_body.append('        pInNow = (XGL_CMD_BUFFER_BEGIN_INFO*)pInNow->pNext;')
         hf_body.append('    }')
@@ -881,6 +886,65 @@ class Subcommand(object):
         hf_body.append('            break;')
         hf_body.append('        }')
         hf_body.append('        pNext = (XGL_CMD_BUFFER_BEGIN_INFO*)pNext->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return siz;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static void add_alloc_memory_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)')
+        hf_body.append('{')
+        hf_body.append('    const XGL_MEMORY_ALLOC_INFO* pInNow = pIn;')
+        hf_body.append('    XGL_MEMORY_ALLOC_INFO** ppOutNext = (XGL_MEMORY_ALLOC_INFO**)ppOut;')
+        hf_body.append('    while (pInNow != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        XGL_MEMORY_ALLOC_INFO** ppOutNow = ppOutNext;')
+        hf_body.append('        ppOutNext = NULL;')
+        hf_body.append('')
+        hf_body.append('        switch (pInNow->sType)')
+        hf_body.append('        {')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:')
+        hf_body.append('        {')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO), pInNow);')
+        hf_body.append('            ppOutNext = (XGL_MEMORY_ALLOC_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:')
+        hf_body.append('        {')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO), pInNow);')
+        hf_body.append('            ppOutNext = (XGL_MEMORY_ALLOC_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        default:')
+        hf_body.append('            assert(!"Encountered an unexpected type in memory_alloc_info list");')
+        hf_body.append('        }')
+        hf_body.append('        pInNow = (XGL_MEMORY_ALLOC_INFO*)pInNow->pNext;')
+        hf_body.append('    }')
+        hf_body.append('    return;')
+        hf_body.append('}')
+        hf_body.append('')
+        hf_body.append('static size_t calculate_alloc_memory_size(const XGL_MEMORY_ALLOC_INFO* pNext)')
+        hf_body.append('{')
+        hf_body.append('    size_t siz = 0;')
+        hf_body.append('    while (pNext != NULL)')
+        hf_body.append('    {')
+        hf_body.append('        switch (pNext->sType)')
+        hf_body.append('        {')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:')
+        hf_body.append('        {')
+        hf_body.append('            siz += sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:')
+        hf_body.append('        {')
+        hf_body.append('            siz += sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        default:')
+        hf_body.append('            glv_LogError("calculate_alloc_memory_size() bad internal state sType\\n");')
+        hf_body.append('            break;')
+        hf_body.append('        }')
+        hf_body.append('        pNext = (XGL_MEMORY_ALLOC_INFO*)pNext->pNext;')
         hf_body.append('    }')
         hf_body.append('    return siz;')
         hf_body.append('}')
@@ -1259,7 +1323,7 @@ class Subcommand(object):
                                                    'pInfo->pColorLoadClearValues = (XGL_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
                              'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['assert(pPacket->pBeginInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO);\n',
                                                                                          '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
-                                                                                         'void** ppNextVoidPtr = (void**)&pPacket->pBeginInfo->pNext;\n',
+                                                                                         'void** ppNextVoidPtr = (void**)&(pPacket->pBeginInfo->pNext);\n',
                                                                                          '*ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
                                                                                          'XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pNext = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pPacket->pBeginInfo->pNext;\n',
                                                                                          'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
@@ -1274,6 +1338,24 @@ class Subcommand(object):
                                                                                          '            assert(!"Encountered an unexpected type in begin command buffer list");\n',
                                                                                          '    }\n',
                                                                                          '    pNext = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pNext->pNext;\n',
+                                                                                         '}']},
+                             'AllocMemory' : {'param': 'pAllocInfo', 'txt': ['assert(pPacket->pAllocInfo->sType == XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);\n',
+                                                                                         'XGL_MEMORY_ALLOC_INFO* pNext = (XGL_MEMORY_ALLOC_INFO*) pPacket->pAllocInfo->pNext;\n',
+                                                                                         'XGL_MEMORY_ALLOC_INFO** ppNext = (XGL_MEMORY_ALLOC_INFO**) &(pPacket->pAllocInfo->pNext);\n',
+                                                                                         'while (NULL != pNext)\n', '{\n',
+                                                                                         '    *ppNext = (XGL_MEMORY_ALLOC_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
+                                                                                         '    pNext = *ppNext;\n',
+                                                                                         '    switch(pNext->sType)\n', '    {\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            ppNext = (XGL_MEMORY_ALLOC_INFO **) &(pNext->pNext);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        default:\n',
+                                                                                         '            assert(!"Encountered an unexpected type in alloc memory list");\n',
+                                                                                         '    }\n',
+                                                                                         '    pNext = (XGL_MEMORY_ALLOC_INFO*)pNext->pNext;\n',
                                                                                          '}']},
                              'CreateGraphicsPipeline' : {'param': 'pCreateInfo', 'txt': ['assert(pPacket->pCreateInfo->sType == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);\n',
                                                                                          '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
