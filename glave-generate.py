@@ -2967,6 +2967,11 @@ class Subcommand(object):
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody.append('            do {')
+                elif proto.name == 'EnumerateLayers':
+                    rbody.append('            char **bufptr = GLV_NEW_ARRAY(char *, pPacket->maxLayerCount);')
+                    rbody.append('            char **ptrLayers = (pPacket->pOutLayers == NULL) ? bufptr : (char **) pPacket->pOutLayers;')
+                    rbody.append('            for (unsigned int i = 0; i < pPacket->maxLayerCount; i++)')
+                    rbody.append('                bufptr[i] = GLV_NEW_ARRAY(char, pPacket->maxStringSize);')
                 rr_string = '            '
                 if ret_value:
                     rr_string = '            replayResult = '
@@ -3003,6 +3008,8 @@ class Subcommand(object):
                     rr_string = ', '.join(rr_list)
                     # this is a sneaky shortcut to use generic create code below to add_to_map
                     create_func = True
+                elif proto.name == 'EnumerateLayers':
+                    rr_string = rr_string.replace('pPacket->pOutLayers', 'ptrLayers')
                 rbody.append(rr_string)
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
@@ -3041,6 +3048,9 @@ class Subcommand(object):
                 elif proto.name in do_while_dict:
                     rbody[-1] = '    %s' % rbody[-1]
                     rbody.append('            } while (%s);' % do_while_dict[proto.name])
+                elif proto.name == 'EnumerateLayers':
+                    rbody.append('            for (unsigned int i = 0; i < pPacket->maxLayerCount; i++)')
+                    rbody.append('                GLV_DELETE(bufptr[i]);')
             if ret_value:
                 rbody.append('            CHECK_RETURN_VALUE(xgl%s);' % proto.name)
             if 'MsgCallback' in proto.name:
