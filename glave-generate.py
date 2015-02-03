@@ -2129,8 +2129,6 @@ class Subcommand(object):
         ieg_body.append('                {')
         ieg_body.append('                    glv_LogInfo("Enumerated %d GPUs in the system\\n", gpuCount);')
         ieg_body.append('                }')
-        ieg_body.append('                // Do we care about the instance handle? Need to keep from clearing it? Not sure it will be used again...')
-        ieg_body.append('                clear_all_map_handles();')
         ieg_body.append('                // TODO handle enumeration results in a different order from trace to replay')
         ieg_body.append('                for (uint32_t i = 0; i < gpuCount; i++)')
         ieg_body.append('                {')
@@ -2818,7 +2816,9 @@ class Subcommand(object):
                 if 'DestroyInstance' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                rm_from_map(pPacket->instance);')
+                    rbody.append('                // TODO need to handle multiple instances and only clearing maps within an instance.')
+                    rbody.append('                // TODO this only works with a single instance used at any given time.')
+                    rbody.append('                clear_all_map_handles();')
                     rbody.append('            }')
                 elif 'AllocDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
