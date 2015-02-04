@@ -551,7 +551,7 @@ class Subcommand(object):
                             else:
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, %s);' % (proto.params[idx].name, proto.params[idx].name))
                         elif 'pUpdateChain' == proto.params[idx].name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(char *), %s);' % (proto.params[idx].name, proto.params[idx].name))
+                            pass
                         else:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                     # Some custom add_* and finalize_* function calls for Create* API calls
@@ -598,7 +598,7 @@ class Subcommand(object):
                     if 'void' not in proto.ret or '*' in proto.ret:
                         func_body.append('    pPacket->result = result;')
                     for idx in buff_ptr_indices:
-                        if ('DEVICE_CREATE_INFO' not in proto.params[idx].ty) and ('APPLICATION_INFO' not in proto.params[idx].ty):
+                        if ('DEVICE_CREATE_INFO' not in proto.params[idx].ty) and ('APPLICATION_INFO' not in proto.params[idx].ty) and ('pUpdateChain' != proto.params[idx].name):
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s));' % (proto.params[idx].name))
                     func_body.append('    FINISH_TRACE_PACKET();')
                     if 'AllocMemory' in proto.name:
@@ -1069,7 +1069,7 @@ class Subcommand(object):
         # TODO : This is still broken. How to update the original XGL_SAMPLER_IMAGE_VIEW_INFO struct ptrs to have correct address for newly added XGL_IMAGE_VIEW_ATTACH_INFO blocks below?
         hf_body.append('            uint32_t i;')
         hf_body.append('            for (i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count; i++) {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), &((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[i].pImageView);')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[i].pImageView);')
         hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews[i].pImageView));')
         hf_body.append('            }')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews));')
@@ -2639,17 +2639,16 @@ class Subcommand(object):
         ud_body.append('                        break;')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:')
         ud_body.append('                        blockSize = sizeof(XGL_UPDATE_SAMPLER_TEXTURES) + ((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateChain)->count * (sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO) + sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
-        ud_body.append('                        pLocalUpdateChain = malloc(blockSize);')
-        ud_body.append('                        memcpy(pLocalUpdateChain, pUpdateChain, blockSize);')
-        ud_body.append('                        for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pLocalUpdateChain)->count; i++) {')
-        ud_body.append('                            XGL_SAMPLER localSampler = remap(((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateChain)->pSamplerImageViews[i].pSampler);')
-        ud_body.append('                            memcpy((void*)&((XGL_UPDATE_SAMPLER_TEXTURES*)pLocalUpdateChain)->pSamplerImageViews[i].pSampler, &localSampler, sizeof(XGL_SAMPLER));')
-        ud_body.append('                            XGL_IMAGE_VIEW_ATTACH_INFO* pLocalImageView = (XGL_IMAGE_VIEW_ATTACH_INFO*)malloc(sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
-        ud_body.append('                            memcpy((void*)&((XGL_UPDATE_SAMPLER_TEXTURES*)pLocalUpdateChain)->pSamplerImageViews[i].pImageView, &pLocalImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
-        ud_body.append('                            memcpy((void*)((XGL_UPDATE_SAMPLER_TEXTURES*)pLocalUpdateChain)->pSamplerImageViews[i].pImageView, (void*)((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateChain)->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
-        ud_body.append('                            XGL_IMAGE_VIEW localView = remap(((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateChain)->pSamplerImageViews[i].pImageView->view);')
-        ud_body.append('                            memcpy((void*)&((XGL_UPDATE_SAMPLER_TEXTURES*)pLocalUpdateChain)->pSamplerImageViews[i].pImageView->view, &localView, sizeof(XGL_IMAGE_VIEW));')
+        ud_body.append('                        XGL_UPDATE_SAMPLER_TEXTURES *pLocalUST;')
+        ud_body.append('                        pLocalUST = (XGL_UPDATE_SAMPLER_TEXTURES *)malloc(blockSize);')
+        ud_body.append('                        memcpy(pLocalUST, pUpdateChain, blockSize);')
+        ud_body.append('                        for (uint32_t i = 0; i < pLocalUST->count; i++) {')
+        ud_body.append('                            XGL_SAMPLER *plocalSampler = (XGL_SAMPLER *) &pLocalUST->pSamplerImageViews[i].pSampler; ')
+        ud_body.append('                            *plocalSampler = remap(((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateChain)->pSamplerImageViews[i].pSampler);')
+        ud_body.append('                            XGL_IMAGE_VIEW *pLocalView = (XGL_IMAGE_VIEW *)&pLocalUST->pSamplerImageViews[i].pImageView->view; ')
+        ud_body.append('                            *pLocalView = remap(((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateChain)->pSamplerImageViews[i].pImageView->view);')
         ud_body.append('                        }')
+        ud_body.append('                        pLocalUpdateChain = (void *) pLocalUST;')
         ud_body.append('                        break;')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:')
         ud_body.append('                        blockSize = sizeof(XGL_UPDATE_IMAGES) + (((XGL_UPDATE_IMAGES*)pUpdateChain)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
@@ -2695,23 +2694,16 @@ class Subcommand(object):
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:')
-        ud_body.append('                        pFreeMe = (XGL_UPDATE_SAMPLERS*)pLocalUpdateChain;')
-        ud_body.append('                        pLocalUpdateChain = (void*)((XGL_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;')
-        ud_body.append('                        free(pFreeMe);')
-        ud_body.append('                        break;')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:')
         ud_body.append('                        pFreeMe = (XGL_UPDATE_SAMPLERS*)pLocalUpdateChain;')
         ud_body.append('                        pLocalUpdateChain = (void*)((XGL_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;')
-        ud_body.append('                        for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pFreeMe)->count; i++) {')
-        ud_body.append('                            free((void*)((XGL_UPDATE_SAMPLER_TEXTURES*)pFreeMe)->pSamplerImageViews[i].pImageView);')
-        ud_body.append('                        }')
         ud_body.append('                        free(pFreeMe);')
         ud_body.append('                        break;')
         ud_body.append('                    default:')
         ud_body.append('                        // TODO : Flag error here')
+        ud_body.append('                        pLocalUpdateChain = (void*)((XGL_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;')
         ud_body.append('                        break;')
         ud_body.append('                }')
-        ud_body.append('                pLocalUpdateChain = (void*)((XGL_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;')
         ud_body.append('            }')
         return "\n".join(ud_body)
 
@@ -3021,8 +3013,6 @@ class Subcommand(object):
             ret_value = False
             create_view = False
             create_func = False
-            transitions = False
-            ds_attach = False
             # TODO : How to handle void* return of GetProcAddr?
             if ('void' not in proto.ret) and (proto.name not in custom_check_ret_val):
                 ret_value = True
@@ -3030,10 +3020,6 @@ class Subcommand(object):
                 create_view = True
             elif 'Create' in proto.name or proto.name in special_create_list:
                 create_func = True
-            elif 'pStateTransitions' in [p.name for p in proto.params]:
-                transitions = True
-            elif proto.name.startswith('Attach'):
-                ds_attach = True
             rbody.append('        case GLV_TPI_XGL_xgl%s:' % proto.name)
             rbody.append('        {')
             rbody.append('            struct_xgl%s* pPacket = (struct_xgl%s*)(packet->pBody);' % (proto.name, proto.name))
@@ -3058,36 +3044,19 @@ class Subcommand(object):
                 elif create_func: # Declare local var to store created handle into
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                     if 'AllocDescriptorSets' == proto.name:
-                        rbody.append('            %s* local_%s = NULL;' % (proto.params[-2].ty.strip('*').replace('const ', ''), proto.params[-2].name))
-                elif transitions:
-                    rbody.append('            %s pStateTransitions = (%s)pPacket->pStateTransitions;' % (proto.params[-1].ty.replace('const ', ''), proto.params[-1].ty.replace('const ', '')))
-                    rbody.append('            bool allocatedMem = false;')
-                    rbody.append('            if (pStateTransitions != NULL)')
+                        rbody.append('            %s local_%s[100];' % (proto.params[-2].ty.strip('*').replace('const ', ''), proto.params[-2].name))
+                        rbody.append('            XGL_DESCRIPTOR_SET_LAYOUT localDescSets[100];')
+                        rbody.append('            assert(pPacket->count <= 100);')
+                        rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
+                        rbody.append('            {')
+                        rbody.append('                localDescSets[i] = remap(pPacket->%s[i]);' % (proto.params[-3].name))
+                        rbody.append('            }')
+                elif proto.name == 'ClearDescriptorSets':
+                    rbody.append('            XGL_DESCRIPTOR_SET localDescSets[100];')
+                    rbody.append('            assert(pPacket->count <= 100);')
+                    rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
                     rbody.append('            {')
-                    rbody.append('                allocatedMem = true;')
-                    rbody.append('                pStateTransitions = GLV_NEW_ARRAY(%s, pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').replace('const ', '')))
-                    rbody.append('                memcpy(pStateTransitions, pPacket->pStateTransitions, sizeof(%s) * pPacket->transitionCount);' % (proto.params[-1].ty.strip('*').replace('const ', '')))
-                    rbody.append('                for (uint32_t i = 0; i < pPacket->transitionCount; i++)')
-                    rbody.append('                {')
-                    if 'Memory' in proto.name:
-                        rbody.append('                    pStateTransitions[i].mem = remap(pPacket->pStateTransitions[i].mem);')
-                    else:
-                        rbody.append('                    pStateTransitions[i].image = remap(pPacket->pStateTransitions[i].image);')
-                    rbody.append('                }')
-                    rbody.append('            }')
-                elif ds_attach:
-                    rbody.append('            %s %s = GLV_NEW_ARRAY(%s, pPacket->slotCount);' % (proto.params[-1].ty.strip('const '), proto.params[-1].name, proto.params[-1].ty.strip('const ').strip('*')))
-                    rbody.append('            memcpy(%s, pPacket->%s, pPacket->slotCount * sizeof(%s));' % (proto.params[-1].name, proto.params[-1].name, proto.params[-1].ty.strip('const ').strip('*')))
-                    rbody.append('            for (uint32_t i = 0; i < pPacket->slotCount; i++)')
-                    rbody.append('            {')
-                    if 'Sampler' in proto.name:
-                        rbody.append('                %s[i] = remap(pPacket->%s[i]);' % (proto.params[-1].name, proto.params[-1].name))
-                    elif 'Image' in proto.name:
-                        rbody.append('                %s[i].view = remap(pPacket->%s[i].view);' % (proto.params[-1].name, proto.params[-1].name))
-                    elif 'Memory' in proto.name:
-                        rbody.append('                %s[i].mem = remap(pPacket->%s[i].mem);' % (proto.params[-1].name, proto.params[-1].name))
-                    else:
-                        rbody.append('                %s[i].descriptorSet = remap(pPacket->%s[i].descriptorSet);' % (proto.params[-1].name, proto.params[-1].name))
+                    rbody.append('                localDescSets[i] = remap(pPacket->%s[i]);' % (proto.params[-1].name))
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody.append('            do {')
@@ -3112,13 +3081,7 @@ class Subcommand(object):
                     else:
                         rr_string += '%s, ' % self._get_packet_param(p.ty, p.name)
                 rr_string = '%s);' % rr_string[:-2]
-                if transitions:
-                    rr_string = rr_string.replace('pPacket->pState', 'pState')
-                elif ds_attach:
-                    rr_list = rr_string.split(', ')
-                    rr_list[-1] = '%s);' % proto.params[-1].name
-                    rr_string = ', '.join(rr_list)
-                elif proto.name in custom_open_params:
+                if proto.name in custom_open_params:
                     rr_list = rr_string.split(', ')
                     rr_list[0] = rr_list[0].replace('remap(pPacket->device)', 'handle')
                     for pidx in custom_open_params[proto.name]:
@@ -3134,6 +3097,10 @@ class Subcommand(object):
                     create_func = True
                 elif proto.name == 'EnumerateLayers':
                     rr_string = rr_string.replace('pPacket->pOutLayers', 'ptrLayers')
+                elif proto.name == 'ClearDescriptorSets':
+                    rr_string = rr_string.replace('pPacket->pDescriptorSets', 'localDescSets')
+                elif proto.name == 'AllocDescriptorSets':
+                    rr_string = rr_string.replace('pPacket->pSetLayouts', 'localDescSets')
                 rbody.append(rr_string)
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
@@ -3162,13 +3129,6 @@ class Subcommand(object):
                     if 'AllocMemory' == proto.name:
                         rbody.append('                add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
                     rbody.append('            }')
-                elif transitions:
-                    rbody.append('            if (allocatedMem)')
-                    rbody.append('            {')
-                    rbody.append('                GLV_DELETE((void*)pStateTransitions);')
-                    rbody.append('            }')
-                elif ds_attach:
-                    rbody.append('            GLV_DELETE(%s);' % proto.params[-1].name)
                 elif proto.name in do_while_dict:
                     rbody[-1] = '    %s' % rbody[-1]
                     rbody.append('            } while (%s);' % do_while_dict[proto.name])
