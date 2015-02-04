@@ -10,6 +10,8 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * Auto-pause on Validation Layer Messages (info, warnings, and/or errors), controlled by settings
   * Single-step the replay
 * Timeline shows CPU time of each API call
+  * A separate timeline is shown for each thread referenced in the trace file
+  * Tooltips display the API call index and entrypoint name and parameters
 * API entrypoints names & parameters displayed in UI
 * Tracing and replay standard output gets directed to Output window
 * Plugin-based UI allows for extensibility to other APIs
@@ -21,6 +23,7 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * "Run to here" context menu option to control where Replayer pauses
 * Group API Calls by:
   * Frame boundary
+  * Thread Id
 * Export API Calls as Text file
 * Settings dialog
 
@@ -36,7 +39,6 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
   * API-specific debug groups
   * Command Buffer Submission
   * Render vs State calls
-  * Trace Thread ID
 * Saving 'session' data:
   * Recently loaded traces
 * Capture state from replay
