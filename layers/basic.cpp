@@ -33,7 +33,6 @@ static std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
 
 static XGL_LAYER_DISPATCH_TABLE * initLayerTable(const XGL_BASE_LAYER_OBJECT *gpuw)
 {
-    xglGetProcAddrType fpGPA;
     XGL_LAYER_DISPATCH_TABLE *pTable;
 
     assert(gpuw);

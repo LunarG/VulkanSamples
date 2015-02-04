@@ -94,7 +94,7 @@ class Subcommand(object):
         pass
 
     def generate_body(self):
-        return "LIBRARY " + sys.argv[1]
+        return "LIBRARY XGLLayer" + sys.argv[1]
 
     def generate_footer(self):
         return "EXPORTS\n   xglGetProcAddr\n   xglEnumerateLayers"
