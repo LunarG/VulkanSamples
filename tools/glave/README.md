@@ -90,7 +90,7 @@ cd <xgl build directory>/tools/glave
 Example to trace spinning cube demo.
 export LIBXGL_DRIVERS_PATH=/home/jon/dbuild/icd/intel
 export LD_LIBRARY_PATH=/home/jon/dbuild/loader
-./glvtrace64 -p /home/jon/xgl/dbuild/demos/cube -l0 /home/jon/xgl/dbuild/tools/glave/libglvtrace_xgl64.so -o glvtrace_cube.glv
+./glvtrace64 -l0 /home/jon/xgl/dbuild/tools/glave/libglvtrace_xgl64.so -o glvtrace_cube.glv
 ```
 
 In a separate terminal run your app, the cube demo in this example:
