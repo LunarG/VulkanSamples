@@ -26,6 +26,9 @@
 #ifndef GLVDEBUG_QTIMELINEVIEW_H
 #define GLVDEBUG_QTIMELINEVIEW_H
 
+#include <stdint.h>
+#include "glv_trace_packet_identifiers.h"
+
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -33,39 +36,27 @@ class QPainter;
 class QPaintEvent;
 QT_END_NAMESPACE
 
+#include <QAbstractItemView>
 #include <QBrush>
 #include <QFont>
 #include <QPen>
+#include <QScrollBar>
 
-#include "glvdebug_timelinemodel.h"
-#include "glvdebug_timelineitem.h"
-
-class glvdebug_QTimelineView : public QWidget
+class glvdebug_QTimelineView : public QAbstractItemView
 {
     Q_OBJECT
 public:
     explicit glvdebug_QTimelineView(QWidget *parent = 0);
     virtual ~glvdebug_QTimelineView();
 
-    void paint(QPainter *painter, QPaintEvent *event);
+    virtual void setModel(QAbstractItemModel* pModel);
 
-    inline void setModel(glvdebug_timelineModel *pModel)
-    {
-        m_pModel = pModel;
-        if (m_pModel == NULL)
-        {
-            deletePixmap();
-        }
-        else
-        {
-            m_maxItemDuration = m_pModel->get_root_item()->getMaxChildDuration();
-        }
-    }
+    // Begin public virtual functions of QAbstractItemView
+    virtual QRect visualRect(const QModelIndex &index) const;
+    virtual void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible);
+    virtual QModelIndex indexAt(const QPoint &point) const;
+    // End public virtual functions of QAbstractItemView
 
-    inline glvdebug_timelineModel *model()
-    {
-        return m_pModel;
-    }
 
     inline void setCurrentFrame(unsigned long long frameNumber)
     {
@@ -98,25 +89,68 @@ private:
     QPen m_trianglePen;
     QPen m_textPen;
     QFont m_textFont;
-    float m_horizontalScale;
-    int m_lineLength;
     unsigned long long m_curFrame;
     unsigned long long m_curGroup;
     unsigned long long m_curApiCallNumber;
-    float m_maxItemDuration;
 
-    glvdebug_timelineModel *m_pModel;
+
+    // new members
+    QList<int> m_threadIdList;
+    QList<float> m_threadIdMinOffset;
+    float m_maxItemDuration;
+    uint64_t m_rawStartTime;
+    uint64_t m_rawEndTime;
+    float m_horizontalScale;
+    int m_lineLength;
+    int m_threadHeight;
+
     QPixmap *m_pPixmap;
 
-    void drawBaseTimeline(QPainter *painter, const QRect &rect, int gap);
-    void drawTimelineItem(QPainter *painter, glvdebug_timelineItem *pItem, int height, float &minimumOffset);
-    bool drawCurrentApiCallMarker(QPainter *painter, QPolygon &triangle, glvdebug_timelineItem *pItem);
+    QList<int> getModelThreadList() const;
+    void drawBaseTimelines(QPainter *painter, const QRect &rect, const QList<int> &threadList, int gap);
+    void drawTimelineItem(QPainter* painter, const QModelIndex &index, int height);
+    void drawCurrentApiCallMarker(QPainter *painter, QPolygon &triangle, uint64_t rawTime);
 
-    float scaleDurationHorizontally(float value);
-    float scalePositionHorizontally(float value);
+    float scaleDurationHorizontally(uint64_t value);
+    float scalePositionHorizontally(uint64_t value);
+
+    // Begin Private...
+//    virtual QRect itemRect(const QModelIndex &item) const;
+//    virtual QRegion itemRegion(const QModelIndex &index) const;
+//    virtual int rows(const QModelIndex &index = QModelIndex()) const;
+    // End private...
 
 protected:
     void paintEvent(QPaintEvent *event);
+    void paint(QPainter *painter, QPaintEvent *event);
+
+    // Begin protected virtual functions of QAbstractItemView
+    virtual QModelIndex moveCursor(CursorAction cursorAction,
+                                   Qt::KeyboardModifiers modifiers)
+    {
+        return QModelIndex();
+    }
+
+    virtual int horizontalOffset() const
+    {
+        return horizontalScrollBar()->value();
+    }
+    virtual int verticalOffset() const
+    {
+        return verticalScrollBar()->value();
+    }
+
+    virtual bool isIndexHidden(const QModelIndex &index) const
+    {
+        return false;
+    }
+
+    virtual void setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command) {}
+    virtual QRegion visualRegionForSelection(const QItemSelection &selection) const
+    {
+        return QRegion();
+    }
+    // End protected virtual functions of QAbstractItemView
 
 signals:
 

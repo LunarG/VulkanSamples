@@ -25,7 +25,6 @@
 #pragma once
 
 #include "glv_common.h"
-#include "glv_tracelog.h"
 
 #define GLV_TRACE_FILE_VERSION_2 0x0002
 #define GLV_TRACE_FILE_VERSION GLV_TRACE_FILE_VERSION_2

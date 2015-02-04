@@ -41,8 +41,6 @@ set(SRC_LIST
     glvdebug_qgeneratetracedialog.cpp
     glvdebug_qsettingsdialog.cpp
     glvdebug_qtimelineview.cpp
-    glvdebug_timelineitem.cpp
-    glvdebug_timelinemodel.cpp
     glvdebug_controller_factory.cpp
     ${SRC_DIR}/glvreplay/glvreplay_seq.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
@@ -74,8 +72,6 @@ set(HEADER_LIST
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
     glvdebug_trace_file_utils.h
-    glvdebug_timelineitem.h
-    glvdebug_timelinemodel.h
     glvdebug_view.h
    )
 

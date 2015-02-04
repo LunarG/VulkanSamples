@@ -48,8 +48,6 @@ public:
     virtual void add_calltree_contextmenu_item(QAction* pAction) = 0;
     virtual void select_call_at_packet_index(unsigned long long packetIndex) = 0;
 
-    //virtual void set_timeline_model(glvdebug_QTimelineModel* pModel) = 0;
-
     // \return tab index of state viewer
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false) = 0;
 

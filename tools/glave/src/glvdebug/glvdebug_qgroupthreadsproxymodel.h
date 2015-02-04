@@ -258,8 +258,18 @@ public:
                 else
                 {
                     // parent is a group
-                    int frameIndex = (int)child.internalId();
-                    return createIndex(frameIndex, 0, (void*)&m_groupList[frameIndex]);
+                    int groupIndex = (int)child.internalId();
+                    if (groupIndex < m_groupList.count())
+                    {
+                        return createIndex(groupIndex, 0, (void*)&m_groupList[groupIndex]);
+                    }
+                    else
+                    {
+                        // This happens particularly after closing one trace file and loading up a new one.
+                        // Not sure why the internalId is incorrect at that time.
+                        assert(!"This situation happens occasionally, and it's probably due to left over state.");
+                        // fall through and return an invalid index
+                    }
                 }
             }
         }

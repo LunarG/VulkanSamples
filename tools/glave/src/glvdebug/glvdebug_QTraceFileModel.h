@@ -30,10 +30,6 @@
 #include <qabstractitemmodel.h>
 #include "glvdebug_trace_file_utils.h"
 
-extern "C" {
-#include "glv_trace_packet_utils.h"
-}
-
 class glvdebug_QTraceFileModel : public QAbstractItemModel
 {
     Q_OBJECT
