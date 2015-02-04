@@ -123,6 +123,8 @@ class Subcommand(object):
                     return ("[%i, %i, %i, %i]", "%s[0] << %s[1] << %s[2] << %s[3]" % (name, name, name, name))
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             if '*' in xgl_type:
+                if 'pUserData' == name:
+                    return ("%i", "((pUserData == 0) ? 0 : *(pUserData))")
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
@@ -317,7 +319,6 @@ class Subcommand(object):
                     pindex = 0
                     prev_count_name = ''
                     for p in proto.params:
-                        # TODO : Need to handle xglWsiX11CreatePresentableImage for which the last 2 params are returned vals
                         cp = False
                         if 0 != create_params:
                             # If this is any of the N last params of the func, treat as output
@@ -329,8 +330,6 @@ class Subcommand(object):
                             (pft, pfi) = ("%s", '"addr"')
                         log_func += '%s = " << %s << ", ' % (p.name, pfi)
                         #print_vals += ', %s' % (pfi)
-                        # TODO : Just want this to be simple check for params of STRUCT type
-                        #if "pCreateInfo" in p.name or ('const' in p.ty and '*' in p.ty and False not in [tmp_ty not in p.ty for tmp_ty in ['char', 'void', 'int', 'XGL_CMD_BUFFER', 'XGL_QUEUE_SEMAPHORE', 'XGL_FENCE', 'XGL_SAMPLER']]):
                         if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
                             sp_param_dict[pindex] = prev_count_name
                         elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
