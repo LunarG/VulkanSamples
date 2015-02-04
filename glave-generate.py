@@ -448,7 +448,8 @@ class Subcommand(object):
                     func_body.append('    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));')
                     func_body.append('    pHeader->entrypoint_begin_time = startTime;')
                 elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateDynamicViewportState', 
-                                    'AllocMemory', 'CreateGraphicsPipeline', 'CreateComputePipeline', 'UpdateDescriptors', 'CreateDescriptorSetLayout']:
+                                    'AllocMemory', 'CreateGraphicsPipeline', 'CreateComputePipeline', 'UpdateDescriptors', 'CreateDescriptorSetLayout',
+                                    'CreateDescriptorRegion']:
                     # these are regular case as far as sequence of tracing but custom sizes
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
@@ -486,6 +487,10 @@ class Subcommand(object):
                     elif 'AllocMemory' == proto.name:
                         func_body.append('    customSize = calculate_alloc_memory_size(pAllocInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglAllocMemory,  sizeof(XGL_MEMORY_ALLOC_INFO) + sizeof(XGL_GPU_MEMORY) + customSize);')
+                    elif 'CreateDescriptorRegion' == proto.name:
+                        func_body.append('    int rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
+                        func_body.append('    customSize = rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorRegion,  sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO) + sizeof(XGL_DESCRIPTOR_REGION) + customSize);')
                     else: #'CreateComputePipeline'
                         func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateComputePipeline, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize + calculate_pipeline_shader_size(&pCreateInfo->cs));')
@@ -551,7 +556,8 @@ class Subcommand(object):
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                     # Some custom add_* and finalize_* function calls for Create* API calls
                     if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateDynamicViewportState',
-                                      'AllocMemory', 'UpdateDescriptors', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline', 'CreateComputePipeline']:
+                                      'AllocMemory', 'UpdateDescriptors', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline', 'CreateComputePipeline',
+                                      'CreateDescriptorRegion']:
                         if 'CreateShader' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), customSize, pCreateInfo->pCode);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
@@ -570,7 +576,7 @@ class Subcommand(object):
                         elif 'BeginCommandBuffer' == proto.name:
                             func_body.append('    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext);')
                         elif 'CreateDynamicViewportState' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports),  vpCount * sizeof(XGL_VIEWPORT), pCreateInfo->pViewports);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpCount * sizeof(XGL_VIEWPORT), pCreateInfo->pViewports);')
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), scCount * sizeof(XGL_RECT), pCreateInfo->pScissors);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));')
@@ -582,7 +588,10 @@ class Subcommand(object):
                             func_body.append('    add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain);')
                         elif 'CreateDescriptorSetLayout' == proto.name:
                             func_body.append('    add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext);')
-                        else:
+                        elif 'CreateDescriptorRegion' == proto.name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount);')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));')
+                        else:  #'CreateComputePipeline'
                             func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
                             func_body.append('    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs);')
                             func_body.append('    finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);')
@@ -1449,6 +1458,8 @@ class Subcommand(object):
                                                    'pInfo->pColorLoadOps = (XGL_ATTACHMENT_LOAD_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadOps);\n',
                                                    'pInfo->pColorStoreOps = (XGL_ATTACHMENT_STORE_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorStoreOps);\n',
                                                    'pInfo->pColorLoadClearValues = (XGL_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
+                             'CreateDescriptorRegion' : {'param': 'pCreateInfo', 'txt': ['XGL_DESCRIPTOR_REGION_CREATE_INFO* pInfo = (XGL_DESCRIPTOR_REGION_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                                                                                             'pInfo->pTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
                              'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['assert(pPacket->pBeginInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO);\n',
                                                                                          '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                                                                                          'void** ppNextVoidPtr = (void**)&(pPacket->pBeginInfo->pNext);\n',
