@@ -539,6 +539,8 @@ class Subcommand(object):
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSizeIn, %s);' % (proto.params[idx].name, proto.params[idx].name))
                             else:
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, %s);' % (proto.params[idx].name, proto.params[idx].name))
+                        elif 'pUpdateChain' == proto.params[idx].name:
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(char *), %s);' % (proto.params[idx].name, proto.params[idx].name))
                         else:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                     # Some custom add_* and finalize_* function calls for Create* API calls
@@ -1030,7 +1032,7 @@ class Subcommand(object):
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:')
         hf_body.append('        {')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_SAMPLERS), pInNow);')
-        hf_body.append('            XGL_UPDATE_SAMPLERS* pPacket = (XGL_UPDATE_SAMPLERS*)ppOutNow;')
+        hf_body.append('            XGL_UPDATE_SAMPLERS* pPacket = (XGL_UPDATE_SAMPLERS*)*ppOutNow;')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplers, ((XGL_UPDATE_SAMPLERS*)pInNow)->count * sizeof(XGL_SAMPLER), ((XGL_UPDATE_SAMPLERS*)pInNow)->pSamplers);')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplers));')
         hf_body.append('            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;')
@@ -1040,16 +1042,16 @@ class Subcommand(object):
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:')
         hf_body.append('        {')
         #hf_body.append('            totalUpdateSize += sizeof(XGL_UPDATE_SAMPLER_TEXTURES) + ((XGL_UPDATE_SAMPLER_TEXTURES*)pNext)->count * (sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO) + sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
-        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES), pInNow);')
-        hf_body.append('            XGL_UPDATE_SAMPLER_TEXTURES* pPacket = (XGL_UPDATE_SAMPLER_TEXTURES*)ppOutNow;')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_SAMPLER_TEXTURES), pInNow);')
+        hf_body.append('            XGL_UPDATE_SAMPLER_TEXTURES* pPacket = (XGL_UPDATE_SAMPLER_TEXTURES*)*ppOutNow;')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews, ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count * sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews);')
-        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews));')
         # TODO : This is still broken. How to update the original XGL_SAMPLER_IMAGE_VIEW_INFO struct ptrs to have correct address for newly added XGL_IMAGE_VIEW_ATTACH_INFO blocks below?
         hf_body.append('            uint32_t i;')
         hf_body.append('            for (i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count; i++) {')
-        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), &((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[i]);')
-        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews[i]));')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), &((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[i].pImageView);')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews[i].pImageView));')
         hf_body.append('            }')
+        hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews));')
         hf_body.append('            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
         hf_body.append('            break;')
@@ -1057,7 +1059,7 @@ class Subcommand(object):
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:')
         hf_body.append('        {')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_IMAGES), pInNow);')
-        hf_body.append('            XGL_UPDATE_IMAGES* pPacket = (XGL_UPDATE_IMAGES*)ppOutNow;')
+        hf_body.append('            XGL_UPDATE_IMAGES* pPacket = (XGL_UPDATE_IMAGES*)*ppOutNow;')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews, ((XGL_UPDATE_IMAGES*)pInNow)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews);')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews));')
         hf_body.append('            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;')
@@ -1067,7 +1069,7 @@ class Subcommand(object):
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:')
         hf_body.append('        {')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_BUFFERS), pInNow);')
-        hf_body.append('            XGL_UPDATE_BUFFERS* pPacket = (XGL_UPDATE_BUFFERS*)ppOutNow;')
+        hf_body.append('            XGL_UPDATE_BUFFERS* pPacket = (XGL_UPDATE_BUFFERS*)*ppOutNow;')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews, ((XGL_UPDATE_BUFFERS*)pInNow)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews);')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews));')
         hf_body.append('            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;')
@@ -1101,7 +1103,6 @@ class Subcommand(object):
                            'TESS_STATE_CREATE_INFO',
                            'RS_STATE_CREATE_INFO',
                            'DS_STATE_CREATE_INFO',
-                           'CB_STATE_CREATE_INFO',
                            'VP_STATE_CREATE_INFO',
                            'MS_STATE_CREATE_INFO'
                            ]
@@ -1109,6 +1110,11 @@ class Subcommand(object):
             hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_%s:' % pipe_state)
             hf_body.append('                totalStateSize += sizeof(XGL_PIPELINE_%s);' % pipe_state)
             hf_body.append('                break;')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                totalStateSize += (sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO) + ((XGL_PIPELINE_CB_STATE_CREATE_INFO *) pNext)->attachmentCount * sizeof(XGL_PIPELINE_CB_ATTACHMENT_STATE));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
         hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:')
         hf_body.append('            {')
         hf_body.append('                const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pShaderStage = (const XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext;')
@@ -1149,6 +1155,19 @@ class Subcommand(object):
             hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
             hf_body.append('                break;')
             hf_body.append('            }')
+        hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:')
+        hf_body.append('            {')
+        hf_body.append('                XGL_PIPELINE_CB_STATE_CREATE_INFO *pPacket = NULL;')
+        hf_body.append('                XGL_PIPELINE_CB_STATE_CREATE_INFO *pIn = NULL;')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO), pInNow);')
+        hf_body.append('                pPacket = (XGL_PIPELINE_CB_STATE_CREATE_INFO*) *ppOutNow;')
+        hf_body.append('                pIn = (XGL_PIPELINE_CB_STATE_CREATE_INFO*) pInNow;')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pAttachments, pIn->attachmentCount * sizeof(XGL_PIPELINE_CB_ATTACHMENT_STATE), pIn->pAttachments);')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAttachments));')
+        hf_body.append('                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
+        hf_body.append('                break;')
+        hf_body.append('            }')
         hf_body.append('            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:')
         hf_body.append('            {')
         hf_body.append('                XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacket = NULL;')
@@ -1461,13 +1480,20 @@ class Subcommand(object):
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:\n',
-                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:\n',
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
+                                                                                         '            XGL_PIPELINE_CB_STATE_CREATE_INFO *pCb = (XGL_PIPELINE_CB_STATE_CREATE_INFO *) pNext;\n',
+                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            pCb->pAttachments = (XGL_PIPELINE_CB_ATTACHMENT_STATE*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pCb->pAttachments);\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:\n',
@@ -2610,6 +2636,7 @@ class Subcommand(object):
         cgp_body.append('            struct shaderPair saveShader[10];')
         cgp_body.append('            unsigned int idx = 0;')
         cgp_body.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));')
+        cgp_body.append('            createInfo.lastSetLayout = remap(createInfo.lastSetLayout);')
         cgp_body.append('            // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext')
         cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;')
         cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;')
