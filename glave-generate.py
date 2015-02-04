@@ -464,7 +464,7 @@ class Subcommand(object):
                     elif 'CreateDescriptorSetLayout' == proto.name:
                         func_body.append('    customSize = calculate_create_ds_layout_size(pSetLayoutInfoList);')
                         # NOTE : Just allocating enough packet size to account for largest array of uints
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorSetLayout, sizeof(XGL_DEVICE) + sizeof(XGL_FLAGS) + XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t) + 2 * sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorSetLayout, XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t) + sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize);')
                     elif 'CreateFramebuffer' == proto.name:
                         func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(XGL_DEPTH_STENCIL_BIND_INFO) : 0;')
                         func_body.append('    int colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
@@ -1460,12 +1460,30 @@ class Subcommand(object):
                                                    'pInfo->pColorLoadClearValues = (XGL_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
                              'CreateDescriptorRegion' : {'param': 'pCreateInfo', 'txt': ['XGL_DESCRIPTOR_REGION_CREATE_INFO* pInfo = (XGL_DESCRIPTOR_REGION_CREATE_INFO*)pPacket->pCreateInfo;\n',
                                                                                              'pInfo->pTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
+                             'CreateDescriptorSetLayout' : {'param': 'pSetLayoutInfoList', 'txt': ['assert(pPacket->pSetLayoutInfoList->sType == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);\n',
+                                                                                         '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
+                                                                                         'void** ppNextVoidPtr = (void**)&(pPacket->pSetLayoutInfoList->pNext);\n',
+                                                                                         '*ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSetLayoutInfoList->pNext);\n',
+                                                                                         'XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pPacket->pSetLayoutInfoList->pNext;\n',
+                                                                                         'while (NULL != pNext)\n', '{\n',
+                                                                                         '    switch(pNext->sType)\n', '    {\n',
+                                                                                         '        case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO:\n',
+                                                                                         '        {\n',
+                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
+                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '            break;\n',
+                                                                                         '        }\n',
+                                                                                         '        default:\n',
+                                                                                         '            assert(!"Encountered an unexpected type in descriptor set layout create list");\n',
+                                                                                         '    }\n',
+                                                                                         '    pNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pNext->pNext;\n',
+                                                                                         '}']},
                              'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['assert(pPacket->pBeginInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO);\n',
                                                                                          '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                                                                                          'void** ppNextVoidPtr = (void**)&(pPacket->pBeginInfo->pNext);\n',
                                                                                          '*ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
                                                                                          'XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pNext = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pPacket->pBeginInfo->pNext;\n',
-                                                                                         'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
+                                                                                         'while (NULL != pNext)\n', '{\n',
                                                                                          '    switch(pNext->sType)\n', '    {\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:\n',
                                                                                          '        {\n',
