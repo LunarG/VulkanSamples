@@ -57,22 +57,6 @@ public:
     virtual QModelIndex indexAt(const QPoint &point) const;
     // End public virtual functions of QAbstractItemView
 
-
-    inline void setCurrentFrame(unsigned long long frameNumber)
-    {
-        m_curFrame = frameNumber;
-    }
-
-    inline void setCurrentGroup(unsigned long long groupNumber)
-    {
-        setCurrentApiCall(groupNumber);
-    }
-
-    inline void setCurrentApiCall(unsigned long long apiCallNumber)
-    {
-        m_curApiCallNumber = apiCallNumber;
-    }
-
     void deletePixmap()
     {
         if (m_pPixmap != NULL)
@@ -84,15 +68,9 @@ public:
 
 private:
     QBrush m_background;
-    QBrush m_triangleBrushWhite;
-    QBrush m_triangleBrushBlack;
     QPen m_trianglePen;
     QPen m_textPen;
     QFont m_textFont;
-    unsigned long long m_curFrame;
-    unsigned long long m_curGroup;
-    unsigned long long m_curApiCallNumber;
-
 
     // new members
     QList<int> m_threadIdList;
@@ -117,7 +95,6 @@ private:
     QRectF itemRect(const QModelIndex &item) const;
     // Begin Private...
     virtual QRegion itemRegion(const QModelIndex &index) const;
-//    virtual int rows(const QModelIndex &index = QModelIndex()) const;
     // End private...
 
 protected:

@@ -92,6 +92,7 @@ glvdebug::glvdebug(QWidget *parent)
     // setup timeline
     m_pTimeline = new glvdebug_QTimelineView();
     m_pTimeline->setMinimumHeight(100);
+    connect(m_pTimeline, SIGNAL(clicked(const QModelIndex &)), this, SLOT(slot_timeline_clicked(const QModelIndex &)));
     ui->timelineLayout->addWidget(m_pTimeline);
     ui->timelineLayout->removeWidget(ui->timelineViewPlaceholder);
     delete ui->timelineViewPlaceholder;
@@ -100,6 +101,7 @@ glvdebug::glvdebug(QWidget *parent)
     m_pGenerateTraceDialog = new glvdebug_QGenerateTraceDialog(this);
     connect(m_pGenerateTraceDialog, SIGNAL(output_message(QString)), this, SLOT(on_message(QString)));
     connect(m_pGenerateTraceDialog, SIGNAL(output_error(QString)), this, SLOT(on_error(QString)));
+
 
     reset_tracefile_ui();
 
@@ -259,13 +261,13 @@ void glvdebug::select_call_at_packet_index(unsigned long long packetIndex)
 
             selectApicallModelIndex(updatedMatch, true, true);
             ui->treeView->setFocus();
+
+            if (m_pTimeline != NULL)
+            {
+                m_pTimeline->setCurrentIndex(m_pTraceFileModel->index(matches[0].row(), glvdebug_QTraceFileModel::Column_EntrypointName, QModelIndex()));
+            }
         }
 
-        if (m_pTimeline != NULL)
-        {
-            m_pTimeline->setCurrentApiCall(packetIndex);
-            m_pTimeline->repaint();
-        }
         QApplication::restoreOverrideCursor();
     }
 }
@@ -621,8 +623,6 @@ bool glvdebug::open_trace_file(const std::string &filename)
             if (bOpened)
             {
                 bOpened = m_pController->LoadTraceFile(&m_traceFileInfo, this);
-
-//                build_timeline_model();
             }
         }
 
@@ -725,48 +725,58 @@ void glvdebug::reset_tracefile_ui()
     //GLVDEBUG_DISABLE_BOTTOM_TAB(ui->callStackTab);
 }
 
-void glvdebug::on_stateTreeView_clicked(const QModelIndex &index)
-{
-}
-
-void glvdebug::slot_treeView_currentChanged(const QModelIndex &current, const QModelIndex &previous)
-{
-    onApiCallSelected(current, false);
-}
-
 void glvdebug::on_treeView_clicked(const QModelIndex &index)
 {
-    onApiCallSelected(index, false);
+    selectApicallModelIndex(index, true, true);
 }
 
-void glvdebug::onApiCallSelected(const QModelIndex &index, bool bAllowStateSnapshot)
+void glvdebug::slot_timeline_clicked(const QModelIndex &index)
 {
+    selectApicallModelIndex(index, true, true);
 }
 
 void glvdebug::selectApicallModelIndex(QModelIndex index, bool scrollTo, bool select)
 {
-    // make sure the index is visible
-    QModelIndex parentIndex = index.parent();
-    while (parentIndex.isValid())
+    // make sure the index is visible in tree view
+    if (ui->treeView->currentIndex() != index)
     {
-        if (ui->treeView->isExpanded(parentIndex) == false)
+        QModelIndex parentIndex = index.parent();
+        while (parentIndex.isValid())
         {
-            ui->treeView->expand(parentIndex);
+            if (ui->treeView->isExpanded(parentIndex) == false)
+            {
+                ui->treeView->expand(parentIndex);
+            }
+            parentIndex = parentIndex.parent();
         }
-        parentIndex = parentIndex.parent();
+
+        // scroll to the index
+        if (scrollTo)
+        {
+            ui->treeView->scrollTo(index);
+        }
+
+        // select the index
+        if (select)
+        {
+            ui->treeView->setCurrentIndex(index);
+        }
     }
 
-    // scroll to the index
-    if (scrollTo)
+    if (m_pTimeline->currentIndex() != index)
     {
-        ui->treeView->scrollTo(index);
-    }
+        // scroll to the index
+        if (scrollTo)
+        {
+            m_pTimeline->scrollTo(index);
+        }
 
-    // select the index
-    if (select)
-    {
-        ui->treeView->setCurrentIndex(index);
-    }   
+        // select the index
+        if (select)
+        {
+            m_pTimeline->setCurrentIndex(index);
+        }
+    }
 }
 
 void glvdebug::on_searchTextBox_textChanged(const QString &searchText)
@@ -981,11 +991,6 @@ void glvdebug::on_searchTextBox_returnPressed()
 
 void glvdebug::on_contextComboBox_currentIndexChanged(int index)
 {
-}
-
-void glvdebug::on_treeView_activated(const QModelIndex &index)
-{
-    onApiCallSelected(index, true);
 }
 
 void glvdebug::prompt_generate_trace()

@@ -104,11 +104,8 @@ private slots:
 
     void on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int numGroups);
 
-    void slot_treeView_currentChanged(const QModelIndex &current, const QModelIndex &previous);
-
     void on_treeView_clicked(const QModelIndex &index);
-
-    void on_stateTreeView_clicked(const QModelIndex &index);
+    void slot_timeline_clicked(const QModelIndex &index);
 
     void on_searchTextBox_textChanged(const QString &searchText);
     void on_searchNextButton_clicked();
@@ -122,8 +119,6 @@ private slots:
 
     void on_contextComboBox_currentIndexChanged(int index);
 
-    void on_treeView_activated(const QModelIndex &index);
-
     void prompt_generate_trace();
 
     void on_message(QString message);
@@ -136,8 +131,6 @@ private:
     bool open_trace_file(const std::string& filename);
 
     bool load_controllers(glvdebug_trace_file_info* pTraceFileInfo);
-
-    void onApiCallSelected(const QModelIndex &index, bool bAllowStateSnapshot);
 
     Prompt_Result prompt_load_new_trace(const char *tracefile);
 

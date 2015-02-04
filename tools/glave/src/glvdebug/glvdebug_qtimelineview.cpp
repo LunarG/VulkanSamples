@@ -72,27 +72,15 @@ float u64ToFloat(uint64_t value)
     return static_cast<float>(value);
 }
 
+//-----------------------------------------------------------------------------
 glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     QAbstractItemView(parent),
-    m_curFrame(0),
-    m_curApiCallNumber(0),
     m_maxItemDuration(0),
     m_threadHeight(0),
     m_pPixmap(NULL)
 {
     horizontalScrollBar()->setRange(0,0);
     verticalScrollBar()->setRange(0,0);
-
-    QLinearGradient gradient(QPointF(0, 1), QPointF(0, 0));
-    gradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-
-    gradient.setColorAt(0.0, Qt::white);
-    gradient.setColorAt(1.0, QColor(0xa6, 0xce, 0x39));
-    m_triangleBrushWhite = QBrush(gradient);
-
-    gradient.setColorAt(0.0, Qt::black);
-    gradient.setColorAt(1.0, QColor(0xa6, 0xce, 0x39));
-    m_triangleBrushBlack = QBrush(gradient);
 
     m_background = QBrush(QColor(200,200,200));
     m_trianglePen = QPen(Qt::black);
@@ -104,11 +92,13 @@ glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     m_lineLength = 1;
 }
 
+//-----------------------------------------------------------------------------
 glvdebug_QTimelineView::~glvdebug_QTimelineView()
 {
     m_threadIdList.clear();
 }
 
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
 {
     QAbstractItemView::setModel(pModel);
@@ -168,6 +158,7 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     }
 }
 
+//-----------------------------------------------------------------------------
 QRectF glvdebug_QTimelineView::itemRect(const QModelIndex &item) const
 {
     QRectF rect;
@@ -211,6 +202,7 @@ QRectF glvdebug_QTimelineView::itemRect(const QModelIndex &item) const
     return rect;
 }
 
+//-----------------------------------------------------------------------------
 bool glvdebug_QTimelineView::event(QEvent * e)
 {
     if (e->type() == QEvent::ToolTip)
@@ -232,16 +224,19 @@ bool glvdebug_QTimelineView::event(QEvent * e)
     return QAbstractItemView::event(e);
 }
 
+//-----------------------------------------------------------------------------
 QRect glvdebug_QTimelineView::visualRect(const QModelIndex &index) const
 {
     QRectF rectf = itemRect(index);
     return rectf.toRect();
 }
 
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::scrollTo(const QModelIndex &index, ScrollHint hint/* = EnsureVisible*/)
 {
 }
 
+//-----------------------------------------------------------------------------
 QModelIndex glvdebug_QTimelineView::indexAt(const QPoint &point) const
 {
     if (model() == NULL)
@@ -266,6 +261,7 @@ QModelIndex glvdebug_QTimelineView::indexAt(const QPoint &point) const
     return QModelIndex();
 }
 
+//-----------------------------------------------------------------------------
 QRegion glvdebug_QTimelineView::itemRegion(const QModelIndex &index) const
 {
     if (!index.isValid())
@@ -274,29 +270,15 @@ QRegion glvdebug_QTimelineView::itemRegion(const QModelIndex &index) const
     return QRegion(itemRect(index).toRect());
 }
 
-//int glvdebug_QTimelineView::rows(const QModelIndex &index = QModelIndex()) const
-//{
-//    return model()->rowCount(index->parent());
-
-//}
-
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::paintEvent(QPaintEvent *event)
 {
-    // Don't bother drawing if the rect is too small.
-    // For some reason this is happening at unexpected times.
-    int rectHeight = event->rect().height();
-    int rectWidth = event->rect().width();
-    if (rectHeight < 100 || rectWidth < 100)
-    {
-        return;
-    }
-
     QPainter painter(viewport());
     paint(&painter, event);
     viewport()->update();
 }
 
-
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& rect, const QList<int> &threadList, int gap)
 {
     int numThreads = threadList.count();
@@ -315,13 +297,10 @@ void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& r
         // move painter to top corner for this thread
         painter->translate(0, threadTop);
 
-        painter->drawText(0, 20, QString("Thread %1").arg(threadList[i]));
+        painter->drawText(0, 15, QString("Thread %1").arg(threadList[i]));
 
         // translate drawing to vertical center of rect
         painter->translate(0, height/2);
-
-        painter->setBrush(m_triangleBrushWhite);
-        painter->setPen(m_trianglePen);
 
         // everything will have a small gap on the left and right sides
         painter->translate(gap, 0);
@@ -334,11 +313,13 @@ void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& r
     }
 }
 
+//-----------------------------------------------------------------------------
 QList<int> glvdebug_QTimelineView::getModelThreadList() const
 {
     return m_threadIdList;
 }
 
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
 {
     m_threadHeight = event->rect().height();
@@ -410,9 +391,6 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
             int numRows = model()->rowCount();
             int height = pixmapHeight/(2*m_threadIdList.count());
 
-            pixmapPainter.setBrush(m_triangleBrushWhite);
-            pixmapPainter.setPen(m_trianglePen);
-
             for (int r = 0; r < numRows; r++)
             {
                 QModelIndex index = model()->index(r, glvdebug_QTraceFileModel::Column_EntrypointName);
@@ -434,40 +412,54 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         // translate to leave a small gap on the left
         painter->translate(gap, 0);
 
-        painter->setBrush(m_triangleBrushWhite);
-        painter->setPen(m_trianglePen);
-
-        int numRows = model()->rowCount();
-        for (int r = 0; r < numRows; r++)
+        int currentIndexRow = currentIndex().row();
+        if (currentIndexRow >= 0)
         {
             // draw current api call marker
-            if ((unsigned long long)r == m_curApiCallNumber)
-            {
-                QModelIndex index = model()->index(r, glvdebug_QTraceFileModel::Column_EntrypointName);
-                glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+            QModelIndex index = model()->index(currentIndexRow, glvdebug_QTraceFileModel::Column_EntrypointName);
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
 
-                // translate down to the proper thread
-                int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
-                painter->translate(0, m_threadHeight * threadIndex);
+            // Overlay a black rectangle around the current item.
+            // For more information on how rects are drawn as outlines,
+            // see here: http://qt-project.org/doc/qt-4.8/qrectf.html#rendering
+            int penWidth = 2;
+            int penWidthHalf = 1;
+            QPen blackPen(Qt::black);
+            blackPen.setWidth(penWidth);
+            blackPen.setJoinStyle(Qt::MiterJoin);
+            painter->setPen(blackPen);
 
-                drawCurrentApiCallMarker(painter, triangle, pHeader->entrypoint_begin_time);
-                break;
-            }
+            // Don't fill the rectangle
+            painter->setBrush(Qt::NoBrush);
+
+            QRectF rect = itemRect(index);
+            rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf-1, penWidthHalf+1);
+            painter->drawRect(rect);
+
+            // translate down to the proper thread
+            int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
+            painter->translate(0, m_threadHeight * threadIndex);
+
+            // Draw marker at midpoint of call duration.
+            uint64_t halfDuration = (pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time) / 2;
+            drawCurrentApiCallMarker(painter, triangle, pHeader->entrypoint_begin_time + halfDuration);
         }
     }
     painter->restore();
 }
 
-void glvdebug_QTimelineView::drawCurrentApiCallMarker(QPainter* painter,
-                                                      QPolygon& triangle,
-                                                      uint64_t rawTime)
+//-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::drawCurrentApiCallMarker(QPainter* painter, QPolygon& triangle, uint64_t rawTime)
 {
     painter->save();
+    painter->setPen(m_trianglePen);
+    painter->setBrush(QColor(Qt::yellow));
     painter->translate(scalePositionHorizontally(rawTime), 0);
     painter->drawPolygon(triangle);
     painter->restore();
 }
 
+//-----------------------------------------------------------------------------
 float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value) const
 {
     float scaled = value * m_horizontalScale;
@@ -479,6 +471,7 @@ float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value) const
     return scaled;
 }
 
+//-----------------------------------------------------------------------------
 float glvdebug_QTimelineView::scalePositionHorizontally(uint64_t value) const
 {
     uint64_t shiftedValue = value - m_rawStartTime;
@@ -488,6 +481,7 @@ float glvdebug_QTimelineView::scalePositionHorizontally(uint64_t value) const
     return offset;
 }
 
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelIndex &index, int height)
 {
     glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
