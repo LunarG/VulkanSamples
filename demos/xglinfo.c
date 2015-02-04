@@ -65,7 +65,7 @@ struct app_gpu {
     XGL_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
 
     uint32_t extension_count;
-    const char **extensions;
+    char **extensions;
 
     struct app_dev dev;
 };
@@ -368,7 +368,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     XGL_RESULT err;
     uint32_t i;
 
-    static const char *known_extensions[] = {
+    static char *known_extensions[] = {
         "XGL_WSI_X11",
     };
 
@@ -395,7 +395,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
 {
     size_t size;
     XGL_RESULT err;
-    int i;
+    uint32_t i;
 
     memset(gpu, 0, sizeof(*gpu));
 
@@ -421,7 +421,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
                         &size, NULL);
     if (err || size % sizeof(gpu->queue_props[0]))
         ERR_EXIT(err);
-    gpu->queue_count = size / sizeof(gpu->queue_props[0]);
+    gpu->queue_count = (uint32_t) (size / sizeof(gpu->queue_props[0]));
 
     gpu->queue_props =
             malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
@@ -585,7 +585,7 @@ static void app_gpu_dump_perf(const struct app_gpu *gpu)
 
 static void app_gpu_dump_extensions(const struct app_gpu *gpu)
 {
-    int i;
+    uint32_t i;
     printf("Extensions");
     printf("\tcount = %d\n",            gpu->extension_count);
     printf("\t");
