@@ -34,6 +34,7 @@ extern "C" {
 #include <QWidget>
 #include <QToolButton>
 #include <QCoreApplication>
+#include <QProcess>
 
 #include "glvdebug_view.h"
 #include "glvreplay_seq.h"
@@ -148,9 +149,22 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
     if(m_pDrawStateDiagram != NULL)
     {
-        // Convert the DOT to a png.
-        if(access( "/usr/bin/dot", X_OK) != -1) {
-            system("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
+        // Check if DOT is available.
+#if defined(PLATFORM_LINUX)
+        QFileInfo fileInfo(tr("/usr/bin/dot"));
+#elif defined(WIN32)
+        // TODO: Windows path to DOT?
+        QFileInfo fileInfo(tr(""));
+#endif
+        if(!fileInfo.exists() || !fileInfo.isFile())
+        {
+            m_pView->output_error("DOT not found.");
+        }
+        else
+        {
+            QProcess process;
+            process.start("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
+            process.waitForFinished(-1);
         }
 
         if(m_pDrawStateDiagram->loadImage(tr("pipeline_dump.png")))
