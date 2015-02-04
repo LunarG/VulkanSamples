@@ -1081,7 +1081,12 @@ class Subcommand(object):
         hf_body.append('        {')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_IMAGES), pInNow);')
         hf_body.append('            XGL_UPDATE_IMAGES* pPacket = (XGL_UPDATE_IMAGES*)*ppOutNow;')
-        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews, ((XGL_UPDATE_IMAGES*)pInNow)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews);')
+        hf_body.append('            uint32_t i;')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews, ((XGL_UPDATE_IMAGES*)pInNow)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO *), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews);')
+        hf_body.append('            for (i = 0; i < ((XGL_UPDATE_IMAGES*)pInNow)->count; i++) {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews[i]);')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews[i]));')
+        hf_body.append('            }')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews));')
         hf_body.append('            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
@@ -1091,7 +1096,12 @@ class Subcommand(object):
         hf_body.append('        {')
         hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_BUFFERS), pInNow);')
         hf_body.append('            XGL_UPDATE_BUFFERS* pPacket = (XGL_UPDATE_BUFFERS*)*ppOutNow;')
-        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews, ((XGL_UPDATE_BUFFERS*)pInNow)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews);')
+        hf_body.append('            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews, ((XGL_UPDATE_BUFFERS*)pInNow)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO *), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews);')
+        hf_body.append('            uint32_t i;')
+        hf_body.append('            for (i = 0; i < ((XGL_UPDATE_BUFFERS*)pInNow)->count; i++) {')
+        hf_body.append('                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews[i]);')
+        hf_body.append('                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews[i]));')
+        hf_body.append('            }')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews));')
         hf_body.append('            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;')
         hf_body.append('            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));')
@@ -1549,8 +1559,13 @@ class Subcommand(object):
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
                                                                                          '            XGL_UPDATE_IMAGES* pUI = (XGL_UPDATE_IMAGES*)pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            XGL_IMAGE_VIEW_ATTACH_INFO** ppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews;\n',
-                                                                                         '            *ppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews);\n',
+                                                                                         '            XGL_IMAGE_VIEW_ATTACH_INFO** ppLocalImageView = (XGL_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews;\n',
+                                                                                         '            *ppLocalImageView = (XGL_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews);\n',
+                                                                                         '            uint32_t i;\n',
+                                                                                         '            for (i = 0; i < pUI->count; i++) {\n',
+                                                                                         '                XGL_IMAGE_VIEW_ATTACH_INFO** ppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews[i];\n',
+                                                                                         '                *ppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews[i]);\n',
+                                                                                         '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:\n',
@@ -1558,8 +1573,13 @@ class Subcommand(object):
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
                                                                                          '            XGL_UPDATE_BUFFERS* pUB = (XGL_UPDATE_BUFFERS*)pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            XGL_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews;\n',
-                                                                                         '            *ppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews);\n',
+                                                                                         '            XGL_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferView = (XGL_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews;\n',
+                                                                                         '            *ppLocalBufferView = (XGL_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews);\n',
+                                                                                         '            uint32_t i;\n',
+                                                                                         '            for (i = 0; i < pUB->count; i++) {\n',
+                                                                                         '                XGL_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews[i];\n',
+                                                                                         '                *ppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews[i]);\n',
+                                                                                         '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        default:\n',
@@ -2652,7 +2672,7 @@ class Subcommand(object):
         ud_body.append('                        pLocalUpdateChain = (void *) pLocalUST;')
         ud_body.append('                        break;')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:')
-        ud_body.append('                        blockSize = sizeof(XGL_UPDATE_IMAGES) + (((XGL_UPDATE_IMAGES*)pUpdateChain)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
+        ud_body.append('                        blockSize = sizeof(XGL_UPDATE_IMAGES) + (((XGL_UPDATE_IMAGES*)pUpdateChain)->count * (sizeof(XGL_IMAGE_VIEW_ATTACH_INFO*) + sizeof(XGL_IMAGE_VIEW_ATTACH_INFO)));')
         ud_body.append('                        pLocalUpdateChain = malloc(blockSize);')
         ud_body.append('                        memcpy(pLocalUpdateChain, pUpdateChain, blockSize);')
         ud_body.append('                        for (uint32_t i = 0; i < ((XGL_UPDATE_IMAGES*)pLocalUpdateChain)->count; i++) {')
@@ -2661,7 +2681,7 @@ class Subcommand(object):
         ud_body.append('                        }')
         ud_body.append('                        break;')
         ud_body.append('                    case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:')
-        ud_body.append('                        blockSize = sizeof(XGL_UPDATE_BUFFERS) + (((XGL_UPDATE_BUFFERS*)pUpdateChain)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));')
+        ud_body.append('                        blockSize = sizeof(XGL_UPDATE_BUFFERS) + (((XGL_UPDATE_BUFFERS*)pUpdateChain)->count * (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO*) + sizeof(XGL_BUFFER_VIEW_ATTACH_INFO)));')
         ud_body.append('                        pLocalUpdateChain = malloc(blockSize);')
         ud_body.append('                        memcpy(pLocalUpdateChain, pUpdateChain, blockSize);')
         ud_body.append('                        for (uint32_t i = 0; i < ((XGL_UPDATE_BUFFERS*)pLocalUpdateChain)->count; i++) {')
