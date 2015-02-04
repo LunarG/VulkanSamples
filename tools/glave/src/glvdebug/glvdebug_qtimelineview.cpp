@@ -25,6 +25,7 @@
 
 #include <QPainter>
 #include <QPaintEvent>
+#include <QToolTip>
 #include "glvdebug_qtimelineview.h"
 #include "glvdebug_QTraceFileModel.h"
 
@@ -167,10 +168,74 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     }
 }
 
+QRectF glvdebug_QTimelineView::itemRect(const QModelIndex &item) const
+{
+    QRectF rect;
+    if (!item.isValid())
+    {
+        return rect;
+    }
+
+    glv_trace_packet_header* pHeader = (glv_trace_packet_header*)item.internalPointer();
+
+    // make sure item is valid size
+    if (pHeader->entrypoint_end_time <= pHeader->entrypoint_begin_time)
+    {
+        return rect;
+    }
+
+    int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
+    int topOffset = (m_threadHeight * threadIndex) + (m_threadHeight * 0.5);
+
+    uint64_t duration = pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time;
+
+    float leftOffset = scalePositionHorizontally(pHeader->entrypoint_begin_time);
+    float scaledWidth = scaleDurationHorizontally(duration);
+
+    // Clamp the item so that it is 1 pixel wide.
+    // This is intentionally being done before updating the minimum offset
+    // so that small items after the current item will not be drawn
+    if (scaledWidth < 1)
+    {
+        scaledWidth = 2;
+    }
+
+    // draw the colored box that represents this item
+    int itemHeight = m_threadHeight/2;
+
+    rect.setLeft(leftOffset);
+    rect.setTop(topOffset - (itemHeight/2));
+    rect.setWidth(scaledWidth);
+    rect.setHeight(itemHeight);
+
+    return rect;
+}
+
+bool glvdebug_QTimelineView::event(QEvent * e)
+{
+    if (e->type() == QEvent::ToolTip)
+    {
+        QHelpEvent* pHelp = static_cast<QHelpEvent*>(e);
+        QModelIndex index = indexAt(pHelp->pos());
+        if (index.isValid())
+        {
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+            QToolTip::showText(pHelp->globalPos(), QString("Call %1:\n%2").arg(pHeader->global_packet_index).arg(index.data().toString()));
+            return true;
+        }
+        else
+        {
+            QToolTip::hideText();
+        }
+    }
+
+    return QAbstractItemView::event(e);
+}
 
 QRect glvdebug_QTimelineView::visualRect(const QModelIndex &index) const
 {
-    return QRect();
+    QRectF rectf = itemRect(index);
+    return rectf.toRect();
 }
 
 void glvdebug_QTimelineView::scrollTo(const QModelIndex &index, ScrollHint hint/* = EnsureVisible*/)
@@ -182,28 +247,32 @@ QModelIndex glvdebug_QTimelineView::indexAt(const QPoint &point) const
     if (model() == NULL)
         return QModelIndex();
 
-//    // Transform the view coordinates into contents widget coordinates.
-//    int wx = point.x() + horizontalScrollBar()->value();
-//    int wy = point.y() + verticalScrollBar()->value();
+    // Transform the view coordinates into contents widget coordinates.
+    int wx = point.x() + horizontalScrollBar()->value();
+    int wy = point.y() + verticalScrollBar()->value();
 
-    return model()->index(0, 0);
+    for (int r = 0; r < model()->rowCount(); r++)
+    {
+        QModelIndex index = model()->index(r, glvdebug_QTraceFileModel::Column_EntrypointName);
+        QRectF rectf = itemRect(index);
+        QRect rect = rectf.toRect();
+        int gap = 10;
+        if (rect.contains(wx-gap, wy))
+        {
+            return index;
+        }
+    }
+
+    return QModelIndex();
 }
 
-//QRect glvdebug_QTimelineView::itemRect(const QModelIndex &item) const
-//{
-//    if (!item.isValid())
-//        return QRect();
+QRegion glvdebug_QTimelineView::itemRegion(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return QRegion();
 
-//    return viewport()->rect();
-//}
-
-//QRegion glvdebug_QTimelineView::itemRegion(const QModelIndex &index) const
-//{
-//    if (!index.isValid())
-//        return QRegion();
-
-//    return QRegion();
-//}
+    return QRegion(itemRect(index).toRect());
+}
 
 //int glvdebug_QTimelineView::rows(const QModelIndex &index = QModelIndex()) const
 //{
@@ -399,7 +468,7 @@ void glvdebug_QTimelineView::drawCurrentApiCallMarker(QPainter* painter,
     painter->restore();
 }
 
-float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value)
+float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value) const
 {
     float scaled = value * m_horizontalScale;
     if (scaled <= m_horizontalScale)
@@ -410,7 +479,7 @@ float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value)
     return scaled;
 }
 
-float glvdebug_QTimelineView::scalePositionHorizontally(uint64_t value)
+float glvdebug_QTimelineView::scalePositionHorizontally(uint64_t value) const
 {
     uint64_t shiftedValue = value - m_rawStartTime;
     uint64_t duration = m_rawEndTime - m_rawStartTime;
@@ -423,9 +492,6 @@ void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelInd
 {
     glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
 
-    int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
-    int topOffset = (m_threadHeight * threadIndex) + (m_threadHeight * 0.5);
-
     float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
     if (duration < 0)
     {
@@ -434,35 +500,28 @@ void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelInd
 
     painter->save();
     {
+        int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
+
         // only draw if the item will extend beyond the minimum offset
-        float leftOffset = scalePositionHorizontally(pHeader->entrypoint_begin_time);
-        float scaledWidth = scaleDurationHorizontally(duration);
-        if (m_threadIdMinOffset[threadIndex] < leftOffset + scaledWidth)
+//        float leftOffset = scalePositionHorizontally(pHeader->entrypoint_begin_time);
+//        float scaledWidth = scaleDurationHorizontally(duration);
+//        if (m_threadIdMinOffset[threadIndex] < leftOffset + scaledWidth)
         {
-            float durationRatio = duration / m_maxItemDuration;
-            int intensity = std::min(255, (int)(durationRatio * 255.0f));
-            QColor color(intensity, 255-intensity, 0);
-            painter->setBrush(QBrush(color));
-            painter->setPen(color);
+            QRectF rect = itemRect(index);
 
-            // Clamp the item so that it is 1 pixel wide.
-            // This is intentionally being done before updating the minimum offset
-            // so that small items after the current item will not be drawn
-            if (scaledWidth < 1)
+            if (rect.isValid())
             {
-                scaledWidth = 1;
+                float durationRatio = duration / m_maxItemDuration;
+                int intensity = std::min(255, (int)(durationRatio * 255.0f));
+                QColor color(intensity, 255-intensity, 0);
+                painter->setBrush(QBrush(color));
+                painter->setPen(color);
+
+                // update minimum offset
+                m_threadIdMinOffset[threadIndex] = rect.left() + rect.width();
+
+                painter->drawRect(rect);
             }
-
-            // update minimum offset
-            m_threadIdMinOffset[threadIndex] = leftOffset + scaledWidth;
-
-            // draw the colored box that represents this item
-            QRectF rect;
-            rect.setLeft(leftOffset);
-            rect.setTop(topOffset - (height/2));
-            rect.setWidth(scaledWidth);
-            rect.setHeight(height);
-            painter->drawRect(rect);
         }
     }
 

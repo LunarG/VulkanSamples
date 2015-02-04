@@ -111,18 +111,20 @@ private:
     void drawTimelineItem(QPainter* painter, const QModelIndex &index, int height);
     void drawCurrentApiCallMarker(QPainter *painter, QPolygon &triangle, uint64_t rawTime);
 
-    float scaleDurationHorizontally(uint64_t value);
-    float scalePositionHorizontally(uint64_t value);
+    float scaleDurationHorizontally(uint64_t value) const;
+    float scalePositionHorizontally(uint64_t value) const;
 
+    QRectF itemRect(const QModelIndex &item) const;
     // Begin Private...
-//    virtual QRect itemRect(const QModelIndex &item) const;
-//    virtual QRegion itemRegion(const QModelIndex &index) const;
+    virtual QRegion itemRegion(const QModelIndex &index) const;
 //    virtual int rows(const QModelIndex &index = QModelIndex()) const;
     // End private...
 
 protected:
     void paintEvent(QPaintEvent *event);
     void paint(QPainter *painter, QPaintEvent *event);
+
+    virtual bool event(QEvent * e);
 
     // Begin protected virtual functions of QAbstractItemView
     virtual QModelIndex moveCursor(CursorAction cursorAction,
