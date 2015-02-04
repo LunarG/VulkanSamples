@@ -42,6 +42,25 @@
 #include <pthread.h>
 #include <assert.h>
 
+// XGL Library Filenames, Paths, etc.:
+#define PATH_SEPERATOR ':'
+#define DIRECTORY_SYMBOL "/"
+#ifndef DEFAULT_XGL_DRIVERS_PATH
+// TODO: Is this a good default location?
+// Need to search for both 32bit and 64bit ICDs
+#define DEFAULT_XGL_DRIVERS_PATH "/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
+#define XGL_DRIVER_LIBRARY_PREFIX "libXGL_"
+#define XGL_DRIVER_LIBRARY_PREFIX_LEN 7
+#define XGL_LAYER_LIBRARY_PREFIX "libXGLLayer"
+#define XGL_LAYER_LIBRARY_PREFIX_LEN 11
+#define XGL_LIBRARY_SUFFIX ".so"
+#define XGL_LIBRARY_SUFFIX_LEN 3
+#endif //  DEFAULT_XGL_DRIVERS_PATH
+#ifndef DEFAULT_XGL_LAYERS_PATH
+// TODO: Are these good default locations?
+#define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
+#endif
+
 // C99:
 #define STATIC_INLINE static inline
 
@@ -124,6 +143,27 @@ static inline void loader_platform_thread_delete_mutex(loader_platform_thread_mu
 using namespace std;
 #endif // __cplusplus
 
+// XGL Library Filenames, Paths, etc.:
+#define PATH_SEPERATOR ';'
+#define DIRECTORY_SYMBOL "\\"
+#ifndef DEFAULT_XGL_DRIVERS_PATH
+// TODO: Is this a good default location?
+// Need to search for both 32bit and 64bit ICDs
+#define DEFAULT_XGL_DRIVERS_PATH "C:\\Windows\\System32"
+// TODO/TBD: Is this an appropriate prefix for Windows?
+#define XGL_DRIVER_LIBRARY_PREFIX "XGL_"
+#define XGL_DRIVER_LIBRARY_PREFIX_LEN 4
+// TODO/TBD: Is this an appropriate suffix for Windows?
+#define XGL_LAYER_LIBRARY_PREFIX "XGLLayer"
+#define XGL_LAYER_LIBRARY_PREFIX_LEN 8
+#define XGL_LIBRARY_SUFFIX ".dll"
+#define XGL_LIBRARY_SUFFIX_LEN 4
+#endif //  DEFAULT_XGL_DRIVERS_PATH
+#ifndef DEFAULT_XGL_LAYERS_PATH
+// TODO: Is this a good default location?
+#define DEFAULT_XGL_LAYERS_PATH "C:\\Windows\\System32"
+#endif //  DEFAULT_XGL_LAYERS_PATH
+
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with
 // VS2013.  However, VS2013 still didn't have snprintf().  The following is a
@@ -139,17 +179,16 @@ static char *basename(char *pathname)
 {
     char *current, *next;
 
-#define DIRECTORY_SYMBOL '\\'
-
 // TODO/TBD: Do we need to deal with the Windows's ":" character?
 
+#define DIRECTORY_SYMBOL_CHAR '\\'
     for (current = pathname; *current != '\0'; current = next) {
-        next = strchr(current, DIRECTORY_SYMBOL);
+        next = strchr(current, DIRECTORY_SYMBOL_CHAR);
         if (next == NULL) {
-            // No more DIRECTORY_SYMBOL's so return p:
+            // No more DIRECTORY_SYMBOL_CHAR's so return p:
             return current;
         } else {
-            // Point one character past the DIRECTORY_SYMBOL:
+            // Point one character past the DIRECTORY_SYMBOL_CHAR:
             next++;
         }
     }

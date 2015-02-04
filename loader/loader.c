@@ -338,49 +338,6 @@ static void loader_scanned_icd_add(const char *filename)
     loader.scanned_icd_list = new_node;
 }
 
-#if defined(WIN32)
-
-#define PATH_SEPERATOR ';'
-#define DIRECTORY_SYMBOL "\\"
-#ifndef DEFAULT_XGL_DRIVERS_PATH
-// TODO: Is this a good default location?
-// Need to search for both 32bit and 64bit ICDs
-#define DEFAULT_XGL_DRIVERS_PATH "C:\\Windows\\System32"
-// TODO/TBD: Is this an appropriate prefix for Windows?
-#define XGL_DRIVER_LIBRARY_PREFIX "XGL_"
-#define XGL_DRIVER_LIBRARY_PREFIX_LEN 4
-// TODO/TBD: Is this an appropriate suffix for Windows?
-#define XGL_LAYER_LIBRARY_PREFIX "XGLLayer"
-#define XGL_LAYER_LIBRARY_PREFIX_LEN 8
-#define XGL_LIBRARY_SUFFIX ".dll"
-#define XGL_LIBRARY_SUFFIX_LEN 4
-#endif //  DEFAULT_XGL_DRIVERS_PATH
-#ifndef DEFAULT_XGL_LAYERS_PATH
-// TODO: Is this a good default location?
-#define DEFAULT_XGL_LAYERS_PATH "C:\\Windows\\System32"
-#endif //  DEFAULT_XGL_LAYERS_PATH
-
-#else // WIN32
-
-#define PATH_SEPERATOR ':'
-#define DIRECTORY_SYMBOL "/"
-#ifndef DEFAULT_XGL_DRIVERS_PATH
-// TODO: Is this a good default location?
-// Need to search for both 32bit and 64bit ICDs
-#define DEFAULT_XGL_DRIVERS_PATH "/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
-#define XGL_DRIVER_LIBRARY_PREFIX "libXGL_"
-#define XGL_DRIVER_LIBRARY_PREFIX_LEN 7
-#define XGL_LAYER_LIBRARY_PREFIX "libXGLLayer"
-#define XGL_LAYER_LIBRARY_PREFIX_LEN 11
-#define XGL_LIBRARY_SUFFIX ".so"
-#define XGL_LIBRARY_SUFFIX_LEN 3
-#endif //  DEFAULT_XGL_DRIVERS_PATH
-#ifndef DEFAULT_XGL_LAYERS_PATH
-// TODO: Are these good default locations?
-#define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
-#endif
-
-#endif // WIN32
 
 /**
  * Try to \c loader_icd_scan XGL driver(s).
