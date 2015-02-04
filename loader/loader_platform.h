@@ -167,7 +167,8 @@ using namespace std;
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with
 // VS2013.  However, VS2013 still didn't have snprintf().  The following is a
-// work-around.
+// work-around (Note: The _CRT_SECURE_NO_WARNINGS macro must be set in the
+// "CMakeLists.txt" file).
 #define snprintf _snprintf
 #define STATIC_INLINE static
 // Microsoft also doesn't have basename().  Paths are different on Windows, and
@@ -192,6 +193,8 @@ static char *basename(char *pathname)
             next++;
         }
     }
+    // We shouldn't get to here, but this makes the compiler happy:
+    return current;
 }
 
 // Dynamic Loading:

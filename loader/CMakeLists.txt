@@ -11,13 +11,17 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
 
 if (WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
+
     add_library(XGL SHARED loader.c dirent_on_windows.c dispatch.c table_ops.h)
 endif()
 if (NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+
     add_library(XGL SHARED loader.c dispatch.c table_ops.h)
 endif()
+
 set_target_properties(XGL PROPERTIES SOVERSION 0)
 target_link_libraries(XGL -ldl -lpthread)
