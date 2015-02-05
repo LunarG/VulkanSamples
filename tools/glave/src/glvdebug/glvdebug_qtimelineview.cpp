@@ -72,18 +72,79 @@ float u64ToFloat(uint64_t value)
     return static_cast<float>(value);
 }
 
-//-----------------------------------------------------------------------------
+//=============================================================================
+glvdebug_QTimelineItemDelegate::glvdebug_QTimelineItemDelegate(QObject *parent)
+    : QAbstractItemDelegate(parent)
+{
+    assert(parent != NULL);
+}
+
+glvdebug_QTimelineItemDelegate::~glvdebug_QTimelineItemDelegate()
+{
+
+}
+
+void glvdebug_QTimelineItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+
+    if (pHeader->entrypoint_end_time <= pHeader->entrypoint_begin_time)
+    {
+        return;
+    }
+
+    float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
+
+    painter->save();
+    {
+        glvdebug_QTimelineView* pTimeline = (glvdebug_QTimelineView*)parent();
+        if (pTimeline != NULL)
+        {
+            QRectF rect = pTimeline->itemRect(index);
+
+            if (rect.isValid())
+            {
+                float durationRatio = duration / pTimeline->getMaxItemDuration();
+                int intensity = std::min(255, (int)(durationRatio * 255.0f));
+                QColor color(intensity, 255-intensity, 0);
+                painter->setBrush(QBrush(color));
+                painter->setPen(color);
+
+                painter->drawRect(rect);
+            }
+        }
+    }
+
+    painter->restore();
+}
+
+QSize glvdebug_QTimelineItemDelegate::sizeHint( const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    QSize size;
+
+    glvdebug_QTimelineView* pTimeline = (glvdebug_QTimelineView*)parent();
+    if (pTimeline != NULL)
+    {
+        QRectF rect = pTimeline->itemRect(index);
+
+        size = rect.toRect().size();
+    }
+    return QSize();
+}
+
+//=============================================================================
 glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     QAbstractItemView(parent),
     m_maxItemDuration(0),
     m_threadHeight(0),
-    m_pPixmap(NULL)
+    m_pPixmap(NULL),
+    m_itemDelegate(this)
 {
     horizontalScrollBar()->setRange(0,0);
     verticalScrollBar()->setRange(0,0);
 
     m_background = QBrush(QColor(200,200,200));
-    m_trianglePen = QPen(Qt::black);
+    m_trianglePen = QPen(Qt::darkGray);
     m_trianglePen.setWidth(1);
     m_textPen = QPen(Qt::white);
     m_textFont.setPixelSize(50);
@@ -116,6 +177,8 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     {
         return;
     }
+
+    setItemDelegate(&m_itemDelegate);
 
     int numRows = model()->rowCount();
     for (int i = 0; i < numRows; i++)
@@ -181,6 +244,7 @@ QRectF glvdebug_QTimelineView::itemRect(const QModelIndex &item) const
     uint64_t duration = pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time;
 
     float leftOffset = scalePositionHorizontally(pHeader->entrypoint_begin_time);
+    leftOffset += 10; // leaves a small margin on the left side;
     float scaledWidth = scaleDurationHorizontally(duration);
 
     // Clamp the item so that it is 1 pixel wide.
@@ -251,8 +315,7 @@ QModelIndex glvdebug_QTimelineView::indexAt(const QPoint &point) const
         QModelIndex index = model()->index(r, glvdebug_QTraceFileModel::Column_EntrypointName);
         QRectF rectf = itemRect(index);
         QRect rect = rectf.toRect();
-        int gap = 10;
-        if (rect.contains(wx-gap, wy))
+        if (rect.contains(wx, wy))
         {
             return index;
         }
@@ -283,33 +346,19 @@ void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& r
 {
     int numThreads = threadList.count();
 
-    //int left = rect.x();
-    //int top = rect.y();
-    int width = rect.width();
     int height = (numThreads > 0) ? rect.height() / numThreads : rect.height();
 
     for (int i = 0; i < numThreads; i++)
     {
         int threadTop = (i*height);
 
-        painter->save();
+        painter->drawText(0, threadTop + 15, QString("Thread %1").arg(threadList[i]));
 
-        // move painter to top corner for this thread
-        painter->translate(0, threadTop);
-
-        painter->drawText(0, 15, QString("Thread %1").arg(threadList[i]));
-
-        // translate drawing to vertical center of rect
-        painter->translate(0, height/2);
-
-        // everything will have a small gap on the left and right sides
-        painter->translate(gap, 0);
-
-        // draw the actual timeline
-        int lineLength = width-2*gap;
-        painter->drawLine(0,0, lineLength, 0);
-
-        painter->restore();
+        // draw the timeline in the middle of this thread's area
+        int lineStart = gap;
+        int lineEnd = m_lineLength + lineStart;
+        int lineY = threadTop + height/2;
+        painter->drawLine(lineStart, lineY, lineEnd, lineY);
     }
 }
 
@@ -329,9 +378,9 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
     }
 
     int gap = 10;
-    int arrowHeight = 10;
-    int arrowTop = m_threadHeight-gap-arrowHeight;
-    int arrowHalfWidth = 3;
+    int arrowHeight = 12;
+    int arrowTop = 2;
+    int arrowHalfWidth = 4;
     m_lineLength = event->rect().width()-2*gap;
 
     QPolygon triangle(3);
@@ -381,9 +430,6 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         pixmapPainter.fillRect(event->rect(), m_background);
         drawBaseTimelines(&pixmapPainter, event->rect(), threadList, gap);
 
-        // translate sideways to insert a small gap on the left side
-        pixmapPainter.translate(gap, 0);
-
         m_horizontalScale = (float)m_lineLength / u64ToFloat(m_rawEndTime - m_rawStartTime);
 
         if (model() != NULL)
@@ -407,56 +453,39 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         return;
     }
 
-    painter->save();
+    // draw current api call marker
+    int currentIndexRow = currentIndex().row();
+    if (currentIndexRow >= 0)
     {
-        // translate to leave a small gap on the left
-        painter->translate(gap, 0);
+        // Overlay a black rectangle around the current item.
+        // For more information on how rects are drawn as outlines,
+        // see here: http://qt-project.org/doc/qt-4.8/qrectf.html#rendering
+        int penWidth = 2;
+        int penWidthHalf = 1;
+        QPen blackPen(Qt::black);
+        blackPen.setWidth(penWidth);
+        blackPen.setJoinStyle(Qt::MiterJoin);
+        painter->setPen(blackPen);
 
-        int currentIndexRow = currentIndex().row();
-        if (currentIndexRow >= 0)
-        {
-            // draw current api call marker
-            QModelIndex index = model()->index(currentIndexRow, glvdebug_QTraceFileModel::Column_EntrypointName);
-            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+        // Don't fill the rectangle
+        painter->setBrush(Qt::NoBrush);
 
-            // Overlay a black rectangle around the current item.
-            // For more information on how rects are drawn as outlines,
-            // see here: http://qt-project.org/doc/qt-4.8/qrectf.html#rendering
-            int penWidth = 2;
-            int penWidthHalf = 1;
-            QPen blackPen(Qt::black);
-            blackPen.setWidth(penWidth);
-            blackPen.setJoinStyle(Qt::MiterJoin);
-            painter->setPen(blackPen);
+        QModelIndex index = model()->index(currentIndexRow, glvdebug_QTraceFileModel::Column_EntrypointName);
+        QRectF rect = itemRect(index);
+        rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf-1, penWidthHalf+1);
+        painter->drawRect(rect);
 
-            // Don't fill the rectangle
-            painter->setBrush(Qt::NoBrush);
-
-            QRectF rect = itemRect(index);
-            rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf-1, penWidthHalf+1);
-            painter->drawRect(rect);
-
-            // translate down to the proper thread
-            int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
-            painter->translate(0, m_threadHeight * threadIndex);
-
-            // Draw marker at midpoint of call duration.
-            uint64_t halfDuration = (pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time) / 2;
-            drawCurrentApiCallMarker(painter, triangle, pHeader->entrypoint_begin_time + halfDuration);
-        }
+        // Draw marker underneath the current rect
+        painter->save();
+        QPainter::RenderHints hints = painter->renderHints();
+        painter->setRenderHints(QPainter::Antialiasing);
+        painter->setPen(m_trianglePen);
+        painter->setBrush(QColor(Qt::yellow));
+        painter->translate(rect.center().x(), rect.bottom());
+        painter->drawPolygon(triangle);
+        painter->setRenderHints(hints, false);
+        painter->restore();
     }
-    painter->restore();
-}
-
-//-----------------------------------------------------------------------------
-void glvdebug_QTimelineView::drawCurrentApiCallMarker(QPainter* painter, QPolygon& triangle, uint64_t rawTime)
-{
-    painter->save();
-    painter->setPen(m_trianglePen);
-    painter->setBrush(QColor(Qt::yellow));
-    painter->translate(scalePositionHorizontally(rawTime), 0);
-    painter->drawPolygon(triangle);
-    painter->restore();
 }
 
 //-----------------------------------------------------------------------------
@@ -485,39 +514,31 @@ float glvdebug_QTimelineView::scalePositionHorizontally(uint64_t value) const
 void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelIndex &index, int height)
 {
     glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
-
-    float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
-    if (duration < 0)
+    if (pHeader == NULL)
     {
         return;
     }
 
-    painter->save();
+    if (pHeader->entrypoint_end_time <= pHeader->entrypoint_begin_time)
     {
-        int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
-
-        // only draw if the item will extend beyond the minimum offset
-//        float leftOffset = scalePositionHorizontally(pHeader->entrypoint_begin_time);
-//        float scaledWidth = scaleDurationHorizontally(duration);
-//        if (m_threadIdMinOffset[threadIndex] < leftOffset + scaledWidth)
-        {
-            QRectF rect = itemRect(index);
-
-            if (rect.isValid())
-            {
-                float durationRatio = duration / m_maxItemDuration;
-                int intensity = std::min(255, (int)(durationRatio * 255.0f));
-                QColor color(intensity, 255-intensity, 0);
-                painter->setBrush(QBrush(color));
-                painter->setPen(color);
-
-                // update minimum offset
-                m_threadIdMinOffset[threadIndex] = rect.left() + rect.width();
-
-                painter->drawRect(rect);
-            }
-        }
+        return;
     }
 
-    painter->restore();
+
+    QRectF rect = itemRect(index);
+    if (!rect.isValid() || rect.bottom() < 0 ||
+        rect.y() > viewport()->height())
+    {
+        return;
+    }
+
+    QStyleOptionViewItem option = viewOptions();
+    option.rect = rect.toRect();
+    if (selectionModel()->isSelected(index))
+        option.state |= QStyle::State_Selected;
+    if (currentIndex() == index)
+        option.state |= QStyle::State_HasFocus;
+
+
+    itemDelegate()->paint(painter, option, index);
 }

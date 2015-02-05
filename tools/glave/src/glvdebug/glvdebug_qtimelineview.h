@@ -42,6 +42,17 @@ QT_END_NAMESPACE
 #include <QPen>
 #include <QScrollBar>
 
+class glvdebug_QTimelineItemDelegate : public QAbstractItemDelegate
+{
+    Q_OBJECT
+public:
+    glvdebug_QTimelineItemDelegate(QObject *parent = 0);
+    virtual ~glvdebug_QTimelineItemDelegate();
+
+    virtual void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+};
+
 class glvdebug_QTimelineView : public QAbstractItemView
 {
     Q_OBJECT
@@ -56,6 +67,13 @@ public:
     virtual void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible);
     virtual QModelIndex indexAt(const QPoint &point) const;
     // End public virtual functions of QAbstractItemView
+
+    QList<int> getModelThreadList() const;
+    QRectF itemRect(const QModelIndex &item) const;
+    float getMaxItemDuration() const
+    {
+        return m_maxItemDuration;
+    }
 
     void deletePixmap()
     {
@@ -83,16 +101,14 @@ private:
     int m_threadHeight;
 
     QPixmap *m_pPixmap;
+    glvdebug_QTimelineItemDelegate m_itemDelegate;
 
-    QList<int> getModelThreadList() const;
     void drawBaseTimelines(QPainter *painter, const QRect &rect, const QList<int> &threadList, int gap);
     void drawTimelineItem(QPainter* painter, const QModelIndex &index, int height);
-    void drawCurrentApiCallMarker(QPainter *painter, QPolygon &triangle, uint64_t rawTime);
 
     float scaleDurationHorizontally(uint64_t value) const;
     float scalePositionHorizontally(uint64_t value) const;
 
-    QRectF itemRect(const QModelIndex &item) const;
     // Begin Private...
     virtual QRegion itemRegion(const QModelIndex &index) const;
     // End private...
