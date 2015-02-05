@@ -31,52 +31,21 @@ Search the trace file for an entrypoint and parameter.  In this case we find all
 
 ![ScreenShot5](../../docs/images/Glave-SearchForMemory.png "Search For Memory")
 
-##Using Glave##
+##Glave Status for Tracing and Replay##
+Based on xgl.h Version 47.1
+
+* cube             -works
+* tri              -works but SEG FAULT  on closing window (XCB connection)
+* xgl\_image\_tests  -works, nothing rendered by this test
+* xglbase          -works, nothing rendered by this test
+* xglinfo          -works, nothing rendered by this test
+* xgl\_blit\_tests   -crashes due to improper handling of PipelineBarrier
+* xgl\_render\_tests -crashes
+
+##Using Glave###
 Glave builds three binaries with associated XGL libraries: a tracer with XGL
 tracing library; a replayer with XGL replayer library; and a debugger  with
 XGL debugger and replayer libraries.
-
-###External dependencies###
-* Python 3.4  (Ubuntu package python3.4-dev)
-* Qt 5        (Ubuntu package qt5-default) (only needed for glave debugger)
-
-###Building on Linux (make)###
-Glave is built as part of top level XGL Cmake for project. Follow the
-build directions for the top level XGL project build. Glave binaries and
-libraries will be place in <build_dir>/tools/glave.
-To build Glave project only:
-
-```
-cd tools/glave
-mkdir glv_build
-cd glv_build
-cmake -DCMAKE_BUILD_TYPE=Debug  ..
-make
-```
-
-###Building on Windows###
-
-```
-cd tools/glave
-mkdir Win64
-cd Win64
-cmake -G "Visual Studio 12 2013 Win64" ..
-```
-// then open the solution file with Visual Studio 2013
-
-
-
-###Building on Linux (QtCreator)###
-open tools/glave/CMakeLists.txt with QtCreator
-
-For Debug Builds:
-Cmake options: -DCMAKE_BUILD_TYPE=Debug -DBUILD_X64=On
-Change build directory from the suggested 'GL-Next/tools/glave-build/' to 'GL-Next/dbuild/tools/glave'
-
-For Release Builds:
-Cmake Options: -DCMAKE_BUILD_TYPE=Release -DBUILD_X64=On
-Change build directory from the suggested 'GL-Next/tools/glave-build/' to 'GL-Next/build/tools/glave'
-
 
 ###Running Glave tracer as standalone server###
 The Glave tracer program can run as a server.  Then the app/game to be traced
@@ -153,3 +122,46 @@ export LIBXGL_DRIVERS_PATH=/home/jon/dbuild/icd/intel
 export LD_LIBRARY_PATH=/home/jon/dbuild/loader
 ./glvdebug64
 ```
+
+##Building Glave##
+
+###External dependencies###
+* Python 3.4  (Ubuntu package python3.4-dev)
+* Qt 5        (Ubuntu package qt5-default) (only needed for glave debugger)
+
+###Building on Linux (make)###
+Glave is built as part of top level XGL Cmake for project. Follow the
+build directions for the top level XGL project build. Glave binaries and
+libraries will be place in <build_dir>/tools/glave.
+To build Glave project only:
+
+```
+cd tools/glave
+mkdir glv_build
+cd glv_build
+cmake -DCMAKE_BUILD_TYPE=Debug  ..
+make
+```
+
+###Building on Windows###
+
+```
+cd tools/glave
+mkdir Win64
+cd Win64
+cmake -G "Visual Studio 12 2013 Win64" ..
+```
+// then open the solution file with Visual Studio 2013
+
+
+
+###Building on Linux (QtCreator)###
+open tools/glave/CMakeLists.txt with QtCreator
+
+For Debug Builds:
+Cmake options: -DCMAKE_BUILD_TYPE=Debug -DBUILD_X64=On
+Change build directory from the suggested 'GL-Next/tools/glave-build/' to 'GL-Next/dbuild/tools/glave'
+
+For Release Builds:
+Cmake Options: -DCMAKE_BUILD_TYPE=Release -DBUILD_X64=On
+Change build directory from the suggested 'GL-Next/tools/glave-build/' to 'GL-Next/build/tools/glave'
