@@ -8,5 +8,5 @@ typedef struct glvreplay_settings
     char* pTraceFilePath;
     BOOL benchmark;
     unsigned int numLoops;
-    char* snapshotList;
+    char* screenshotList;
 } glvreplay_settings;

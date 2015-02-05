@@ -38,15 +38,14 @@ extern "C" {
 #include "getopt/getopt.h"
 
 glvreplay_settings g_defaultReplaySettings = { NULL, FALSE, 1, NULL };
-__attribute__ ((visibility("default")))
-glvreplay_settings g_replaySettings = g_defaultReplaySettings;
+GLVTRACER_EXPORT glvreplay_settings g_replaySettings = g_defaultReplaySettings;
 
 glv_SettingInfo g_settings_info[] =
 {
     { "t", "trace_file", GLV_SETTING_STRING, &g_replaySettings.pTraceFilePath, &g_defaultReplaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
     { "l", "numLoops", GLV_SETTING_UINT, &g_replaySettings.numLoops, &g_defaultReplaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
     { "b", "benchmark", GLV_SETTING_BOOL, &g_replaySettings.benchmark, &g_defaultReplaySettings.benchmark, TRUE, "(unsupported) Disables some debug features so that replaying happens as fast as possible."},
-    { "s", "snapshotList", GLV_SETTING_STRING, &g_replaySettings.snapshotList, &g_defaultReplaySettings.snapshotList, TRUE, "Comma seperated list of frame numbers to take snapshots of"},
+    { "s", "screenshotList", GLV_SETTING_STRING, &g_replaySettings.screenshotList, &g_defaultReplaySettings.screenshotList, TRUE, "Comma seperated list of frame numbers to take snapshots of"},
 };
 
 glv_SettingGroup g_replaySettingGroup =

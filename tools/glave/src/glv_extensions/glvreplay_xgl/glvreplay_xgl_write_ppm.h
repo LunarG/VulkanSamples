@@ -29,7 +29,7 @@ void glvWritePPM( const char *basename, uint32_t width, uint32_t height, XGL_IMA
 
     const char *ptr;
 
-    err = pXglFuncs->real_xglMapMemory( mem, 0, (XGL_VOID **) &ptr );
+    err = pXglFuncs->real_xglMapMemory( mem, 0, (void **) &ptr );
     assert(!err);
 
     ptr += sr_layout.offset;
