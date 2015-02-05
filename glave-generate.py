@@ -1510,7 +1510,7 @@ class Subcommand(object):
                                                                                          'XGL_MEMORY_ALLOC_INFO* pNext = (XGL_MEMORY_ALLOC_INFO*) pPacket->pAllocInfo->pNext;\n',
                                                                                          'XGL_MEMORY_ALLOC_INFO** ppNext = (XGL_MEMORY_ALLOC_INFO**) &(pPacket->pAllocInfo->pNext);\n',
                                                                                          'while (NULL != pNext)\n', '{\n',
-                                                                                         '    *ppNext = (XGL_MEMORY_ALLOC_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
+                                                                                         '    *ppNext = (XGL_MEMORY_ALLOC_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext);\n',
                                                                                          '    pNext = *ppNext;\n',
                                                                                          '    switch(pNext->sType)\n', '    {\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:\n',
