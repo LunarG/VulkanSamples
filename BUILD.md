@@ -1,9 +1,9 @@
 # Build Instructions
-This project supports Linux today.
-Support for Windows will start in Q1'15.
+This project fully supports Linux today.
+Support for Windows is for the loader and layers (additional info below).  Additional Windows support will be coming in Q1'15.
 Support for Android is TBD.
 
-##System Requirements
+##Linux System Requirements
 Ubuntu 14.04 LTS, (Ubuntu 14.10 needed for DRI 3 demos)
 
 ```
@@ -11,7 +11,7 @@ sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-d
 sudo apt-get build-dep mesa
 ```
 
-##Build
+##Linux Build
 
 The sample driver uses cmake and should work with the usual cmake options and utilities.
 The standard build process builds the icd, the icd loader and all the tests.
@@ -41,7 +41,7 @@ export LIBXGL_LAYERS_PATH=$PWD/layers
 export LIBXGL_LAYER_NAMES=APIDump:DrawState
 ```
 
-##Test
+##Linux Test
 
 The test executibles can be found in the dbuild/tests directory. The tests use the Google
 gtest infrastructure. Tests available so far:
@@ -52,14 +52,14 @@ gtest infrastructure. Tests available so far:
 - xgl_render_tests: Render a single triangle with XGL. Triangle will be in a .ppm in
 the current directory at the end of the test.
 
-##Demos
+##Linux Demos
 
 The demos executables can be found in the dbuild/demos directory. The demos use DRI 3
 to render directly onto window surfaces.
 - tri: a textured triangle
 - cube: a textured spinning cube
 
-##Render Nodes
+##Linux Render Nodes
 
 The render tests depend on access to DRM render nodes.
 To make that available, a couple of config files need to be created to set a module option
@@ -81,4 +81,52 @@ sudo tee /etc/udev/rules.d/drm.rules << EOF
 SUBSYSTEM=="drm", ACTION=="add", DEVPATH=="/devices/*/renderD*", MODE="020666"
 EOF
 ```
- 
+
+##Windows System Requirements
+
+Windows 7+ with additional, software:
+
+- Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
+- CMake (from https://www.python.org/downloads).  Note: Configure to add itself to the system PATH environment variable.
+- Python 3 (from https://www.python.org/downloads).  Note: Configure to add itself to the system PATH environment variable.
+- Cygwin (especially a BASH shell and git packages--from https://www.cygwin.com/).
+
+##Windows Build
+
+Cygwin is used in order to obtain a local copy of the Git repository, and to run the CMake command that creates Visual Studio files.  Visual Studio is used to build the software, and will re-run CMake as appropriate.
+
+Example debug build:
+```
+cd GL-Next  # cd to the root of the xgl git repository
+mkdir _out64
+cd _out64
+cmake -G "Visual Studio 12 Win64" ..
+```
+
+At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "XGL.sln" file in the _out64 folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "_out64" folder.
+
+To run XGL programs you must have an appropriate icd (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the
+environment variable LIBXGL_DRIVERS_PATH.  This environment variable cannot be set with Cygwin, but must be set via Windows, and may require a system restart in order for it to take effect.  Here is how to set this environment variable on a Windows 7 system:
+
+- Launch Control Panel (e.g. Start->Control Panel)
+- Within the search box, type "environment variable" and click on "Edit the system environment variables" (or navigate there via "System and Security->System->Advanced system settings").
+- This will launch a window with several tabs, one of which is "Advanced".  Click on the "Environment Variables..." button.
+- For either "User variables" or "System variables" click "New...".
+- Enter "LIBXGL_DRIVERS_PATH" as the variable name, and an appropriate Windows path to where your driver DLL is (e.g. C:\Users\username\GL-Next\_out64\icd\drivername\Debug).
+
+It is possible to specify multiple icd folders.  Simply use a semi-colon (i.e. ";") to separate folders in the environment variable.
+
+The icd loader searches in all of the folders for files that are named "XGL_*.dll" (e.g. "XGL_foo.dll").  It attempts to dynamically load these files, and look for appropriate functions.
+
+To enable debug and validation layers with your XGL programs you must tell the icd loader
+where to find the layer libraries, and which ones you desire to use.  The default folder for layers is C:\Windows\System32.  However, you can use the following environment variables to specify alternate locations, and to specify which layers to use:
+
+- LIBXGL_LAYERS_PATH (semi-colon-delimited set of folders to look for layers)
+- LIBXGL_LAYER_NAMES (color-delimited list of layer names)
+
+For example, to enable the APIDump and DrawState layers, set:
+
+- "LIBXGL_LAYERS_PATH" to "C:\Users\username\GL-Next\_out64\layers\Debug"
+- "LIBXGL_LAYER_NAMES to "APIDump:DrawState"
+
+The icd loader searches in all of the folders for files that are named "XGLLayer*.dll" (e.g. "XGLLayerParamChecker.dll").  It attempts to dynamically load these files, and look for appropriate functions.
