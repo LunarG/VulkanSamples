@@ -1,5 +1,5 @@
 # Explicit GL (XGL) Ecosystem Components
-*Version 0.7, 18 Dec 2014*
+*Version 0.8, 04 Feb 2015*
 
 This project provides *open source* tools for XGL Developers.
 
@@ -33,14 +33,20 @@ The following components are available:
 
 ## New
 
+- Updated loader, driver, demos, tests and many tools to use "alpha" xgl.h (~ version 47).
+  Supports new resource binding model, memory allocation, pixel FORMATs and
+  other updates.
+  APIDump layer is working with these new API elements.
+  Glave can trace and replay the cube and tri demos.
+  Other layers in progress.
+
+## Prior updates
+
 - XGL API trace and capture tools. See tools/glave/README.md for details.
 - Sample driver now supports multiple render targets. Added TriangleMRT to test that functionality.
 - Added XGL_SLOT_SHADER_TEXTURE_RESOURCE to xgl.h as a descriptor slot type to work around confusion in GLSL
   between textures and buffers as shader resources.
 - Misc. fixes for layers and Intel sample driver
-
-## Prior updates
-
 - Added mutex to APIDump, APIDumpFile and DrawState to prevent apparent threading issues using printf
 - Fix support for {Fill,Copy}Memory
 - MemTracker can report issues to application via debug callback
