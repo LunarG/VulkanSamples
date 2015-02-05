@@ -338,6 +338,7 @@ class Subcommand(object):
         um_body.append('}\n')
         return "\n".join(um_body)
 
+    # Generate functions used to trace API calls and store the input and result data into a packet
     def _generate_trace_funcs(self):
         func_body = []
         for proto in self.protos:
@@ -449,7 +450,7 @@ class Subcommand(object):
                     func_body.append('    pHeader->entrypoint_begin_time = startTime;')
                 elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateDynamicViewportState', 
                                     'AllocMemory', 'CreateGraphicsPipeline', 'CreateComputePipeline', 'UpdateDescriptors', 'CreateDescriptorSetLayout',
-                                    'CreateDescriptorRegion']:
+                                    'CreateDescriptorRegion', 'CmdWaitEvents', 'CmdPipelineBarrier']:
                     # these are regular case as far as sequence of tracing but custom sizes
                     func_body.append('    size_t customSize;')
                     if 'CreateShader' == proto.name:
@@ -467,30 +468,38 @@ class Subcommand(object):
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorSetLayout, XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t) + sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize);')
                     elif 'CreateFramebuffer' == proto.name:
                         func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(XGL_DEPTH_STENCIL_BIND_INFO) : 0;')
-                        func_body.append('    int colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
+                        func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
                         func_body.append('    customSize = colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) + dsSize;')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, sizeof(XGL_FRAMEBUFFER_CREATE_INFO) + sizeof(XGL_FRAMEBUFFER) + customSize);')
                     elif 'CreateRenderPass' == proto.name:
 # HACK ALERT, TODO this API currently has insufficient parameters to determine the count of the colorLoadOps, colorStoreOps, in the CREATE_INFO struct
 # assume number of colorAttachments  == 1  for now rather than tracing code keeping a list of framebuffer objects with colorAttachmentCounts
-                        func_body.append('    int colorCount = (pCreateInfo != NULL && pCreateInfo->pColorLoadOps != NULL && pCreateInfo->pColorStoreOps != NULL && pCreateInfo->pColorLoadClearValues != NULL) ? 1 : 0; //TODO fixme')
+                        func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorLoadOps != NULL && pCreateInfo->pColorStoreOps != NULL && pCreateInfo->pColorLoadClearValues != NULL) ? 1 : 0; //TODO fixme')
                         func_body.append('    customSize = colorCount * (sizeof(XGL_ATTACHMENT_LOAD_OP) + sizeof(XGL_ATTACHMENT_STORE_OP) + sizeof(XGL_CLEAR_COLOR));')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
                     elif 'BeginCommandBuffer' == proto.name:
                         func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglBeginCommandBuffer, sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + customSize);')
                     elif 'CreateDynamicViewportState' == proto.name:
-                        func_body.append('    int vpCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportCount : 0;')
-                        func_body.append('    int scCount = (pCreateInfo != NULL && pCreateInfo->pScissors != NULL) ? pCreateInfo->scissorCount : 0;')
+                        func_body.append('    uint32_t vpCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportCount : 0;')
+                        func_body.append('    uint32_t scCount = (pCreateInfo != NULL && pCreateInfo->pScissors != NULL) ? pCreateInfo->scissorCount : 0;')
                         func_body.append('    customSize = vpCount * sizeof(XGL_VIEWPORT) + scCount * sizeof(XGL_RECT);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDynamicViewportState,  sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO) + sizeof(XGL_DYNAMIC_VP_STATE_OBJECT) + customSize);')
                     elif 'AllocMemory' == proto.name:
                         func_body.append('    customSize = calculate_alloc_memory_size(pAllocInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglAllocMemory,  sizeof(XGL_MEMORY_ALLOC_INFO) + sizeof(XGL_GPU_MEMORY) + customSize);')
                     elif 'CreateDescriptorRegion' == proto.name:
-                        func_body.append('    int rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
+                        func_body.append('    uint32_t rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
                         func_body.append('    customSize = rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorRegion,  sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO) + sizeof(XGL_DESCRIPTOR_REGION) + customSize);')
+                    elif proto.name in ['CmdWaitEvents', 'CmdPipelineBarrier']:
+                        event_array_type = 'XGL_EVENT'
+                        if 'CmdPipelineBarrier' == proto.name:
+                            event_array_type = 'XGL_SET_EVENT'
+                        func_body.append('    uint32_t eventCount = (%s != NULL && %s->pEvents != NULL) ? %s->eventCount : 0;' % (proto.params[-1].name, proto.params[-1].name, proto.params[-1].name))
+                        func_body.append('    uint32_t mbCount = (%s != NULL && %s->ppMemBarriers != NULL) ? %s->memBarrierCount : 0;' % (proto.params[-1].name, proto.params[-1].name, proto.params[-1].name))
+                        func_body.append('    customSize = (eventCount * sizeof(%s)) + (mbCount * 2 * sizeof(void*));' % event_array_type)
+                        func_body.append('    CREATE_TRACE_PACKET(xgl%s, sizeof(%s) + customSize);' % (proto.name, proto.params[-1].ty.strip('*').replace('const ', '')))
                     else: #'CreateComputePipeline'
                         func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateComputePipeline, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize + calculate_pipeline_shader_size(&pCreateInfo->cs));')
@@ -557,7 +566,7 @@ class Subcommand(object):
                     # Some custom add_* and finalize_* function calls for Create* API calls
                     if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateDynamicViewportState',
                                       'AllocMemory', 'UpdateDescriptors', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline', 'CreateComputePipeline',
-                                      'CreateDescriptorRegion']:
+                                      'CreateDescriptorRegion', 'CmdWaitEvents', 'CmdPipelineBarrier']:
                         if 'CreateShader' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), customSize, pCreateInfo->pCode);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
@@ -591,6 +600,19 @@ class Subcommand(object):
                         elif 'CreateDescriptorRegion' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));')
+                        elif proto.name in ['CmdWaitEvents', 'CmdPipelineBarrier']:
+                            event_array_type = 'XGL_EVENT'
+                            if 'CmdPipelineBarrier' == proto.name:
+                                event_array_type = 'XGL_SET_EVENT'
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->pEvents), eventCount * sizeof(%s), %s->pEvents);' % (proto.params[-1].name, event_array_type, proto.params[-1].name))
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->pEvents));' % (proto.params[-1].name))
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->ppMemBarriers), mbCount * sizeof(void*), %s->ppMemBarriers);' % (proto.params[-1].name, proto.params[-1].name))
+                            func_body.append('    uint32_t i;')
+                            func_body.append('    for (i = 0; i < mbCount; i++) {')
+                            func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->ppMemBarriers[i]), sizeof(void*), %s->ppMemBarriers[i]);' % (proto.params[-1].name, proto.params[-1].name))
+                            func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->ppMemBarriers[i]));' % (proto.params[-1].name))
+                            func_body.append('    }')
+                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->ppMemBarriers));' % (proto.params[-1].name))
                         else:  #'CreateComputePipeline'
                             func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
                             func_body.append('    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs);')
@@ -1019,12 +1041,12 @@ class Subcommand(object):
         hf_body.append('        }')
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:')
         hf_body.append('        {')
-        hf_body.append('            totalUpdateSize += sizeof(XGL_UPDATE_IMAGES) + (((XGL_UPDATE_IMAGES*)pNext)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));')
+        hf_body.append('            totalUpdateSize += sizeof(XGL_UPDATE_IMAGES) + (((XGL_UPDATE_IMAGES*)pNext)->count * (sizeof(XGL_IMAGE_VIEW_ATTACH_INFO) + sizeof(XGL_IMAGE_VIEW_ATTACH_INFO*)));')
         hf_body.append('            break;')
         hf_body.append('        }')
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:')
         hf_body.append('        {')
-        hf_body.append('            totalUpdateSize += sizeof(XGL_UPDATE_BUFFERS) + (((XGL_UPDATE_BUFFERS*)pNext)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));')
+        hf_body.append('            totalUpdateSize += sizeof(XGL_UPDATE_BUFFERS) + (((XGL_UPDATE_BUFFERS*)pNext)->count * (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) + sizeof(XGL_BUFFER_VIEW_ATTACH_INFO*)));')
         hf_body.append('            break;')
         hf_body.append('        }')
         hf_body.append('        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:')
@@ -1451,8 +1473,10 @@ class Subcommand(object):
         pid_enum.append('//=============================================================================')
         return "\n".join(pid_enum)
 
+    # Interpret functions used on replay to read in packets and interpret their contents
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
+        # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
         custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n',
                                                        'pInfo->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
                                                        'pInfo->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
@@ -1470,6 +1494,22 @@ class Subcommand(object):
                                                    'pInfo->pColorLoadClearValues = (XGL_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
                              'CreateDescriptorRegion' : {'param': 'pCreateInfo', 'txt': ['XGL_DESCRIPTOR_REGION_CREATE_INFO* pInfo = (XGL_DESCRIPTOR_REGION_CREATE_INFO*)pPacket->pCreateInfo;\n',
                                                                                              'pInfo->pTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
+                             'CmdWaitEvents' : {'param': 'pWaitInfo', 'txt': ['XGL_EVENT_WAIT_INFO* pInfo = (XGL_EVENT_WAIT_INFO*)pPacket->pWaitInfo;\n',
+                                                                          'pInfo->pEvents = (XGL_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pWaitInfo->pEvents);\n',
+                                                                          'pInfo->ppMemBarriers = (const void**) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pWaitInfo->ppMemBarriers);\n',
+                                                                          'uint32_t i;\n',
+                                                                          'for (i = 0; i < pInfo->memBarrierCount; i++) {\n',
+                                                                          '    void** ppLocalMemBarriers = (void**)&pInfo->ppMemBarriers[i];\n',
+                                                                          '    *ppLocalMemBarriers = (void*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->ppMemBarriers[i]);\n',
+                                                                          '}']},
+                             'CmdPipelineBarrier' : {'param': 'pBarrier', 'txt': ['XGL_PIPELINE_BARRIER* pBarrier = (XGL_PIPELINE_BARRIER*)pPacket->pBarrier;\n',
+                                                                          'pBarrier->pEvents = (XGL_SET_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->pEvents);\n',
+                                                                          'pBarrier->ppMemBarriers = (const void**) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->ppMemBarriers);\n',
+                                                                          'uint32_t i;\n',
+                                                                          'for (i = 0; i < pBarrier->memBarrierCount; i++) {\n',
+                                                                          '    void** ppLocalMemBarriers = (void**)&pBarrier->ppMemBarriers[i];\n',
+                                                                          '    *ppLocalMemBarriers = (void*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pBarrier->ppMemBarriers[i]);\n',
+                                                                          '}']},
                              'CreateDescriptorSetLayout' : {'param': 'pSetLayoutInfoList', 'txt': ['assert(pPacket->pSetLayoutInfoList->sType == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);\n',
                                                                                          '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                                                                                          'void** ppNextVoidPtr = (void**)&(pPacket->pSetLayoutInfoList->pNext);\n',
@@ -1800,29 +1840,6 @@ class Subcommand(object):
         return txt
 
     def _generate_replay_class(self):
-#        obj_map_dict = {'m_gpus': 'XGL_PHYSICAL_GPU',
-#                        'm_devices': 'XGL_DEVICE',
-#                        'm_queues': 'XGL_QUEUE',
-#                        'm_memories': 'XGL_GPU_MEMORY',
-#                        'm_images': 'XGL_IMAGE',
-#                        'm_imageViews': 'XGL_IMAGE_VIEW',
-#                        'm_colorTargetViews': 'XGL_COLOR_ATTACHMENT_VIEW',
-#                        'm_depthStencilViews': 'XGL_DEPTH_STENCIL_VIEW',
-#                        'm_shader': 'XGL_SHADER',
-#                        'm_pipeline': 'XGL_PIPELINE',
-#                        'm_pipelineDelta': 'XGL_PIPELINE_DELTA',
-#                        'm_sampler': 'XGL_SAMPLER',
-#                        'm_descriptorSets': 'XGL_DESCRIPTOR_SET',
-#                        'm_viewportStates': 'XGL_DYNAMIC_VP_STATE_OBJECT',
-#                        'm_rasterStates': 'XGL_DYNAMIC_RS_STATE_OBJECT',
-#                        'm_colorBlendStates': 'XGL_DYNAMIC_CB_STATE_OBJECT',
-#                        'm_depthStencilStates': 'XGL_DYNAMIC_DS_STATE_OBJECT',
-#                        'm_cmdBuffers': 'XGL_CMD_BUFFER',
-#                        'm_fences': 'XGL_FENCE',
-#                        'm_queue_semaphores': 'XGL_QUEUE_SEMAPHORE',
-#                        'm_events': 'XGL_EVENT',
-#                        'm_queryPools': 'XGL_QUERY_POOL',
-#                        }
         # Create dict mapping member var names to XGL type (i.e. 'm_imageViews' : 'XGL_IMAGE_VIEW')
         obj_map_dict = {}
         for ty in xgl.object_type_list:
@@ -1830,7 +1847,6 @@ class Subcommand(object):
                 continue
             mem_var = ty.replace('XGL_', '').lower()
             mem_var_list = mem_var.split('_')
-#            mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([x.title() for x in mem_var_list[1:]])
             mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
             obj_map_dict[mem_var] = ty
         rc_body = []
@@ -1850,6 +1866,10 @@ class Subcommand(object):
         rc_body.append('    struct shaderPair {')
         rc_body.append('        XGL_SHADER *addr;')
         rc_body.append('        XGL_SHADER val;')
+        rc_body.append('    };')
+        rc_body.append('    struct eventPair {')
+        rc_body.append('        XGL_EVENT *addr;')
+        rc_body.append('        XGL_EVENT val;')
         rc_body.append('    };')
         rc_body.append('    struct validationMsg {')
         rc_body.append('        XGL_VALIDATION_LEVEL validationLevel;')
@@ -2329,34 +2349,6 @@ class Subcommand(object):
     def _get_packet_param(self, t, n):
         # list of types that require remapping
         remap_list = xgl.object_type_list
-#[
-#                'XGL_PHYSICAL_GPU',
-#                'XGL_DEVICE',
-#                'XGL_QUEUE',
-#                'XGL_GPU_MEMORY',
-#                'XGL_IMAGE',
-#                'XGL_IMAGE_VIEW',
-#                'XGL_COLOR_ATTACHMENT_VIEW',
-#                'XGL_DEPTH_STENCIL_VIEW',
-#                'XGL_SHADER',
-#                'XGL_PIPELINE',
-#                'XGL_PIPELINE_DELTA',
-#                'XGL_SAMPLER',
-#                'XGL_DESCRIPTOR_SET',
-#                'XGL_VIEWPORT_STATE_OBJECT',
-#                'XGL_RASTER_STATE_OBJECT',
-#                'XGL_MSAA_STATE_OBJECT',
-#                'XGL_COLOR_BLEND_STATE_OBJECT',
-#                'XGL_DEPTH_STENCIL_STATE_OBJECT',
-#                'XGL_CMD_BUFFER',
-#                'XGL_FENCE',
-#                'XGL_QUEUE_SEMAPHORE',
-#                'XGL_EVENT',
-#                'XGL_QUERY_POOL',
-#                'XGL_STATE_OBJECT',
-#                'XGL_BASE_OBJECT',
-#                'XGL_OBJECT',
-#        ]
         param_exclude_list = ['p1', 'p2', 'pGpus', 'pDescriptorSets']
         if t.strip('*').replace('const ', '') in remap_list and n not in param_exclude_list:
             if '*' in t:
@@ -2799,6 +2791,22 @@ class Subcommand(object):
         cgp_body.append('                *(saveShader[i].addr) = saveShader[i].val;')
         return "\n".join(cgp_body)
 
+    def _gen_replay_cmd_wait_events(self):
+        cwe_body = []
+        cwe_body.append('            struct eventPair saveEvent[100];')
+        cwe_body.append('            uint32_t idx = 0;')
+        cwe_body.append('            assert(pPacket->pWaitInfo && pPacket->pWaitInfo->eventCount <= 100);')
+        cwe_body.append('            for (idx = 0; idx < pPacket->pWaitInfo->eventCount; idx++)')
+        cwe_body.append('            {')
+        cwe_body.append('                saveEvent[idx].val = pPacket->pWaitInfo->pEvents[idx];')
+        cwe_body.append('                saveEvent[idx].addr = (XGL_EVENT*)&pPacket->pWaitInfo->pEvents[idx];')
+        cwe_body.append('                *(saveEvent[idx].addr) = remap(pPacket->pWaitInfo->pEvents[idx]);')
+        cwe_body.append('            }')
+        cwe_body.append('            m_xglFuncs.real_xglCmdWaitEvents(remap(pPacket->cmdBuffer), pPacket->pWaitInfo);')
+        cwe_body.append('            for (uint32_t i = 0; i < idx; i++)')
+        cwe_body.append('                *(saveEvent[i].addr) = saveEvent[i].val;')
+        return "\n".join(cwe_body)
+
     def _gen_replay_create_framebuffer(self):
         cf_body = []
         cf_body.append('            XGL_FRAMEBUFFER_CREATE_INFO *pInfo = (XGL_FRAMEBUFFER_CREATE_INFO *) pPacket->pCreateInfo;')
@@ -3027,6 +3035,7 @@ class Subcommand(object):
         bdmv_body.append('            m_xglFuncs.real_xglCmdBindDynamicMemoryView(remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, &memView);')
         return "\n".join(bdmv_body)
 
+    # Generate main replay case statements where actual replay API call is dispatched based on input packet data
     def _generate_replay(self):
         # map protos to custom functions if body is fully custom
         custom_body_dict = {'EnumerateGpus': self._gen_replay_enum_gpus,
@@ -3054,7 +3063,8 @@ class Subcommand(object):
                             'UnmapMemory': self._gen_replay_unmap_memory,
                             'CmdBindDynamicMemoryView': self._gen_replay_bind_dynamic_memory_view,
                             'UpdateDescriptors': self._gen_replay_update_descriptors,
-                            'CreateDescriptorSetLayout': self._gen_replay_create_descriptor_set_layout}
+                            'CreateDescriptorSetLayout': self._gen_replay_create_descriptor_set_layout,
+                            'CmdWaitEvents': self._gen_replay_cmd_wait_events}
         # TODO : Need to guard CreateInstance with "if (!m_display->m_initedXGL)" check
         # Despite returning a value, don't check these funcs b/c custom code includes check already
         custom_check_ret_val = ['EnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport']
