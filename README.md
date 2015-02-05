@@ -69,7 +69,7 @@ Information on how to enable the various Debug and Validation layers is in
 ## References
 This version of the components are written based on the following preliminary specs and proposals:
 - [**XGL Programers Reference**, 1 Jul 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/AMD/Explicit%20GL%20Programming%20Guide%20and%20API%20Reference.pdf)
-- [**BIL**, revision 27](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
+- [**BIL**, revision 29](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
 
 ## License
 This work is intended to be released as open source under a BSD-style
