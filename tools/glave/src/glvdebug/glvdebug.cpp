@@ -46,6 +46,8 @@
 #include "glvdebug_qgeneratetracedialog.h"
 #include "glvdebug_qsettingsdialog.h"
 
+#include "glvreplay_main.h"
+GLVTRACER_EXPORT glvreplay_settings *g_pReplaySettings = NULL;
 //----------------------------------------------------------------------------------------------------------------------
 // globals
 //----------------------------------------------------------------------------------------------------------------------
