@@ -2173,7 +2173,8 @@ static void gen6_meta_urb(struct intel_cmd *cmd)
 
 static void gen7_meta_urb(struct intel_cmd *cmd)
 {
-    const struct intel_cmd_meta *meta = cmd->bind.meta;
+    const int pcb_alloc = (cmd->dev->gpu->gt == 3) ? 16 : 8;
+    const int urb_offset = pcb_alloc / 8;
     int vs_entry_count;
     uint32_t *dw;
 
@@ -2183,7 +2184,12 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     cmd_batch_pointer(cmd, 10, &dw);
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (2 - 2);
-    dw[1] = (meta->mode == INTEL_CMD_META_VS_POINTS);
+    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw += 2;
+
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (2 - 2);
+    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+            pcb_alloc << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (2 - 2);
@@ -2196,10 +2202,8 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (2 - 2);
     dw[1] = 0;
-    dw += 2;
 
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (2 - 2);
-    dw[1] = (meta->mode == INTEL_CMD_META_FS_RECT);
+    cmd_wa_gen7_post_command_cs_stall(cmd);
 
     cmd_wa_gen7_pre_vs_depth_stall_write(cmd);
 
@@ -2217,20 +2221,20 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     cmd_batch_pointer(cmd, 8, &dw);
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (2 - 2);
-    dw[1] = 1 << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
+    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
             vs_entry_count;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (2 - 2);
-    dw[1] = 0;
+    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_DS) | (2 - 2);
-    dw[1] = 0;
+    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_GS) | (2 - 2);
-    dw[1] = 0;
+    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
     dw += 2;
 }
 
