@@ -714,7 +714,8 @@ static void demo_prepare_textures(struct demo *demo)
             .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
         };
 
-        assert(loadTexture(tex_files[i], NULL, NULL, &tex_width, &tex_height));
+        err = loadTexture(tex_files[i], NULL, NULL, &tex_width, &tex_height);
+        assert(err);
 
         const XGL_IMAGE_CREATE_INFO image = {
             .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
