@@ -1557,6 +1557,7 @@ class Subcommand(object):
                                                                                          '        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:\n',
                                                                                          '        {\n',
                                                                                          '            ppNext = (XGL_MEMORY_ALLOC_INFO **) &(pNext->pNext);\n',
+                                                                                         '            *ppNext = (XGL_MEMORY_ALLOC_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        default:\n',
