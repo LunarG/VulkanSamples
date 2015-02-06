@@ -81,6 +81,11 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
 
         layout = &fb->ds->img->layout;
 
+        if (info->colorAttachmentCount == 0) {
+            width = layout->width0;
+            height = layout->height0;
+        }
+
         if (width > layout->width0)
             width = layout->width0;
         if (height > layout->height0)

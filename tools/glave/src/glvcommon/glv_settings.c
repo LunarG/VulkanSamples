@@ -76,7 +76,7 @@ BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg)
 #if defined(PLATFORM_LINUX)
             bTrue = (strncasecmp(arg, "true", 4) == 0);
 #elif defined(PLATFORM_WINDOWS)
-            bTrue = (strnicmp(arg, "true", 4) == 0);
+            bTrue = (_strnicmp(arg, "true", 4) == 0);
 #endif
             *pSetting->Data.pBool = bTrue;
         }
@@ -398,7 +398,8 @@ int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGro
             {
                 // a group was found!
                 unsigned int i;
-                char* pGroupName = glv_allocate_and_copy_n(pOpenBracket + 1, pCloseBracket - pOpenBracket - 1);
+                char* pGroupName = glv_allocate_and_copy_n(pOpenBracket + 1,
+                                                           (int) (pCloseBracket - pOpenBracket - 1));
 
                 // Check to see if we already have this group
                 pCurGroup = NULL;

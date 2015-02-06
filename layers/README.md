@@ -31,20 +31,24 @@ layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers per 
 (build dir)/layer/generic_layer.c (name=Generic) - auto generated example wrapping all XGL entrypoints. Single global dispatch table. Can be LD\_PRELOADed.
 
 ### Print API Calls and Parameter Values
-(build dir)/layer/api_dump.c - print out API calls along with parameter values
+(build dir)/layer/api_dump.c (name=APIDump) - print out API calls along with parameter values
 
-(build dir)/layer/api\_dump\_file.c - Write API calls along with parameter values to xgl\_apidump.txt file.
+(build dir)/layer/api_dump.cpp (name=APIDumpCpp) - same as above but uses c++ strings and i/o streams
 
-(build dir)/layer/api\_dump\_no\_addr.c - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
+(build dir)/layer/api\_dump\_file.c (name=APIDumpFile) - Write API calls along with parameter values to xgl\_apidump.txt file.
+
+(build dir)/layer/api\_dump\_no\_addr.c (name=APIDumpNoAddr) - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
+
+(build dir)/layer/api\_dump\_no\_addr.cpp (name=APIDumpNoAddrCpp) - same as above but uses c++ strings and i/o streams
 
 ### Print Object Stats
-(build dir>/layer/object_track.c - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL\_OBJECT\_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL\_UINT64 objTrackGetObjectCount(XGL\_OBJECT\_TYPE type)" and a secondary call to return an array of those objects "XGL\_RESULT objTrackGetObjects(XGL\_OBJECT\_TYPE type, XGL\_UINT64 objCount, OBJTRACK\_NODE* pObjNodeArray)".
+(build dir>/layer/object_track.c (name=ObjectTracker) - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL\_OBJECT\_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL\_UINT64 objTrackGetObjectCount(XGL\_OBJECT\_TYPE type)" and a secondary call to return an array of those objects "XGL\_RESULT objTrackGetObjects(XGL\_OBJECT\_TYPE type, XGL\_UINT64 objCount, OBJTRACK\_NODE* pObjNodeArray)".
 
 ### Report Draw State
-layer/draw\_state.c - Report the Descriptor Set, Pipeline State, and dynamic state at each Draw call. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
+layer/draw\_state.c (name=DrawState) - NOTE: This layer is currently non-functional due to a number of changes in xgl.h. When updated, it will report the Descriptor Set, Pipeline State, and dynamic state at each Draw call. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
 
 ### Track GPU Memory
-layer/mem\_tracker.c - Track GPU Memory and any binding it has to objects and/or Cmd Buffers. Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layer/mem\_tracker.c (name=MemTracker) - NOTE: This layer is currently non-functional due to a number of changes in xgl.h. When updated, it will track GPU Memory and any binding it has to objects and/or Cmd Buffers. Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Check parameters
 <build dir>/layer/param_checker.c (name=ParamChecker) - Check the input parameters to API calls for validity. Currently this only checks ENUM params directly passed to API calls and ENUMs embedded in struct params. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
@@ -61,7 +65,7 @@ layer/mem\_tracker.c - Track GPU Memory and any binding it has to objects and/or
 3. Specify which Layers to activate by using 
 xglCreateDevice XGL\_LAYER\_CREATE\_INFO struct or environment variable LIBXGL\_LAYER\_NAMES
 
-    export LIBXGL\_LAYER\_NAMES=Basic:Generic;
+    export LIBXGL\_LAYER\_NAMES=Basic:Generic
     cd build/tests; ./xglinfo
 
 ## Tips for writing new layers
@@ -103,6 +107,8 @@ xglCreateDevice XGL\_LAYER\_CREATE\_INFO struct or environment variable LIBXGL\_
 
 ### Current known issues
 
+- DrawState and MemTracker layers are both non-functional due to updates to xgl.h. Work is ongoing to bring these layers up to latest header.
+- Layers with multiple threads are not well tested and some layers likely to have issues. APIDump family of layers should be thread-safe.
 - layer libraries (except Basic) don't support multiple dispatch tables for multi-gpus;
 - layer libraries not yet include loader init functionality for full LD\_PRELOAD of entire API including xglInitAndEnumerateGpus;
 - Since Layers aren't activated until xglCreateDevice, any calls to xglGetExtension() will not report layer extensions unless implemented in the layer;

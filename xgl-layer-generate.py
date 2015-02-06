@@ -658,7 +658,7 @@ class Subcommand(object):
                     elif 'UnmapMemory' in proto.name:
                         using_line += '    reset_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
                     if 'AllocDescriptor' in proto.name: # Allocates array of DSs
-                        create_line =  '    for (uint32_t i; i < *pCount; i++) {\n'
+                        create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
                         create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
                         create_line += '    }\n'
                     elif 'Create' in proto.name or 'Alloc' in proto.name:
@@ -899,7 +899,7 @@ class Subcommand(object):
 
     def _generate_layer_dispatch_table(self, prefix='xgl'):
         func_body = ["#include \"xgl_dispatch_table_helper.h\""]
-        func_body.append('static void initLayerTable()\n'
+        func_body.append('static void initLayerTable(void)\n'
                          '{\n'
                          '    xglGetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
@@ -911,7 +911,7 @@ class Subcommand(object):
 
     def _generate_layer_dispatch_table_with_lock(self, prefix='xgl'):
         func_body = ["#include \"xgl_dispatch_table_helper.h\""]
-        func_body.append('static void initLayerTable()\n'
+        func_body.append('static void initLayerTable(void)\n'
                          '{\n'
                          '    xglGetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
@@ -1418,7 +1418,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint32_t numRefs) {')
-        header_txt.append('    int32_t i;')
+        header_txt.append('    uint32_t i;')
         header_txt.append('    for (i = 0; i < numRefs; i++) {')
         header_txt.append('        validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
         header_txt.append('    }')

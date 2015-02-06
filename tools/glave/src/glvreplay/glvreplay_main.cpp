@@ -24,33 +24,28 @@
  **************************************************************************/
 
 #include <stdio.h>
+#include <string>
 extern "C" {
 #include "glv_common.h"
 #include "glv_tracelog.h"
 #include "glv_filelike.h"
 #include "glv_trace_packet_utils.h"
 }
+#include "glvreplay_main.h"
 #include "glvreplay_factory.h"
 #include "glvreplay_seq.h"
 #include "glvreplay_window.h"
 #include "getopt/getopt.h"
 
-typedef struct glvreplay_settings
-{
-    char* pTraceFilePath;
-    BOOL benchmark;
-    unsigned int numLoops;
-} glvreplay_settings;
-
-// declared as extern in header
-glvreplay_settings g_defaultReplaySettings = { NULL, FALSE, 1 };
-glvreplay_settings g_replaySettings = g_defaultReplaySettings;
+glvreplay_settings g_defaultReplaySettings = { NULL, FALSE, 1, NULL };
+GLVTRACER_EXPORT glvreplay_settings *g_pReplaySettings = &g_defaultReplaySettings;
 
 glv_SettingInfo g_settings_info[] =
 {
-    { "t", "trace_file", GLV_SETTING_STRING, &g_replaySettings.pTraceFilePath, &g_defaultReplaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
-    { "l", "numLoops", GLV_SETTING_UINT, &g_replaySettings.numLoops, &g_defaultReplaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
-    { "b", "benchmark", GLV_SETTING_BOOL, &g_replaySettings.benchmark, &g_defaultReplaySettings.benchmark, TRUE, "(unsupported) Disables some debug features so that replaying happens as fast as possible."},
+    { "t", "trace_file", GLV_SETTING_STRING, &g_pReplaySettings->pTraceFilePath, &g_defaultReplaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
+    { "l", "numLoops", GLV_SETTING_UINT, &g_pReplaySettings->numLoops, &g_defaultReplaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
+    { "b", "benchmark", GLV_SETTING_BOOL, &g_pReplaySettings->benchmark, &g_defaultReplaySettings.benchmark, TRUE, "(unsupported) Disables some debug features so that replaying happens as fast as possible."},
+    { "s", "screenshotList", GLV_SETTING_STRING, &g_pReplaySettings->screenshotList, &g_defaultReplaySettings.screenshotList, TRUE, "Comma seperated list of frame numbers to take snapshots of"},
 };
 
 glv_SettingGroup g_replaySettingGroup =
@@ -159,7 +154,7 @@ int main(int argc, char **argv)
     }
 
     // apply settings from cmd-line args
-    if (glv_SettingGroup_init_from_cmdline(&g_replaySettingGroup, argc, argv, &g_replaySettings.pTraceFilePath) != 0)
+    if (glv_SettingGroup_init_from_cmdline(&g_replaySettingGroup, argc, argv, &g_pReplaySettings->pTraceFilePath) != 0)
     {
         // invalid options specified
         if (pAllSettings != NULL)
@@ -182,7 +177,7 @@ int main(int argc, char **argv)
     }
 
     // open trace file and read in header
-    char* pTraceFile = g_replaySettings.pTraceFilePath;
+    char* pTraceFile = g_pReplaySettings->pTraceFilePath;
     glv_trace_file_header fileHeader;
     FILE *tracefp;
 
@@ -312,7 +307,7 @@ int main(int argc, char **argv)
 
     // main loop
     Sequencer sequencer(traceFile);
-    err = glv_replay::main_loop(sequencer, replayer, g_replaySettings.numLoops);
+    err = glv_replay::main_loop(sequencer, replayer, g_pReplaySettings->numLoops);
 
     for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {

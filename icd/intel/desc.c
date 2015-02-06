@@ -289,7 +289,7 @@ void intel_desc_pool_copy(struct intel_desc_pool *pool,
 
     surfaces = (const struct intel_desc_surface *)
         ((const char *) pool->surfaces + src->surface);
-    samplers = (const struct intel_desc_surface *)
+    samplers = (const struct intel_desc_sampler *)
         ((const char *) pool->samplers + src->sampler);
 
     intel_desc_pool_update(pool, begin, end, surfaces, samplers);

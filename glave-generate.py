@@ -1510,7 +1510,7 @@ class Subcommand(object):
                                                                                          'XGL_MEMORY_ALLOC_INFO* pNext = (XGL_MEMORY_ALLOC_INFO*) pPacket->pAllocInfo->pNext;\n',
                                                                                          'XGL_MEMORY_ALLOC_INFO** ppNext = (XGL_MEMORY_ALLOC_INFO**) &(pPacket->pAllocInfo->pNext);\n',
                                                                                          'while (NULL != pNext)\n', '{\n',
-                                                                                         '    *ppNext = (XGL_MEMORY_ALLOC_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
+                                                                                         '    *ppNext = (XGL_MEMORY_ALLOC_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext);\n',
                                                                                          '    pNext = *ppNext;\n',
                                                                                          '    switch(pNext->sType)\n', '    {\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:\n',
@@ -1741,6 +1741,11 @@ class Subcommand(object):
         cd_body.append('#endif')
         cd_body.append('    unsigned int m_windowWidth;')
         cd_body.append('    unsigned int m_windowHeight;')
+        cd_body.append('    unsigned int m_frameNumber;')
+        cd_body.append('    std::vector<uint32_t> imageWidth;')
+        cd_body.append('    std::vector<uint32_t> imageHeight;')
+        cd_body.append('    std::vector<XGL_IMAGE> imageHandles;')
+        cd_body.append('    std::vector<XGL_GPU_MEMORY> imageMemory;')
         cd_body.append('#if 0')
         cd_body.append('    XGL_DEVICE m_dev[XGL_MAX_PHYSICAL_GPUS];')
         cd_body.append('    uint32_t m_gpuCount;')
@@ -1854,6 +1859,7 @@ class Subcommand(object):
         rc_body.append('        char msg[256];')
         rc_body.append('    };')
         rc_body.append('    std::vector<struct validationMsg> m_validationMsgs;')
+        rc_body.append('    std::vector<int> m_screenshotFrames;')
         rc_body.append(self._map_decl('XGL_GPU_MEMORY', 'XGLAllocInfo', 'm_mapData'))
         # Custom code for 1-off memory mapping functions
         rc_body.append('    void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)')
@@ -1952,6 +1958,22 @@ class Subcommand(object):
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
         rc_body.append('        return XGL_NULL_HANDLE;\n    }')
+        rc_body.append('void process_screenshot_list(const char *list)')
+        rc_body.append('{')
+        rc_body.append('    std::string spec(list), word;')
+        rc_body.append('    size_t start = 0, comma = 0;\n')
+        rc_body.append('    while (start < spec.size()) {')
+        rc_body.append('        comma = spec.find(\',\', start);\n')
+        rc_body.append('        if (comma == std::string::npos)')
+        rc_body.append('            word = std::string(spec, start);')
+        rc_body.append('        else')
+        rc_body.append('            word = std::string(spec, start, comma - start);\n')
+        rc_body.append('        m_screenshotFrames.push_back(atoi(word.c_str()));')
+        rc_body.append('        if (comma == std::string::npos)')
+        rc_body.append('            break;\n')
+        rc_body.append('        start = comma + 1;\n')
+        rc_body.append('    }')
+        rc_body.append('}')
         rc_body.append('};')
         return "\n".join(rc_body)
 
@@ -2203,6 +2225,9 @@ class Subcommand(object):
         rs_body.append('xglReplay::xglReplay()')
         rs_body.append('{')
         rs_body.append('    m_display = new xglDisplay();')
+        rs_body.append('    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {')
+        rs_body.append('        process_screenshot_list(g_pReplaySettings->screenshotList);')
+        rs_body.append('    }')
         rs_body.append('}\n')
         rs_body.append('xglReplay::~xglReplay()')
         rs_body.append('{')
@@ -2925,6 +2950,8 @@ class Subcommand(object):
         cpi_body = []
         cpi_body.append('            XGL_IMAGE img;')
         cpi_body.append('            XGL_GPU_MEMORY mem;')
+        cpi_body.append('            m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);')
+        cpi_body.append('            m_display->imageWidth.push_back(pPacket->pCreateInfo->extent.width);')
         cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &img, &mem);')
         cpi_body.append('            if (replayResult == XGL_SUCCESS)')
         cpi_body.append('            {')
@@ -2932,17 +2959,36 @@ class Subcommand(object):
         cpi_body.append('                    add_to_map(pPacket->pImage, &img);')
         cpi_body.append('                if(pPacket->pMem != NULL)')
         cpi_body.append('                    add_to_map(pPacket->pMem, &mem);')
+        cpi_body.append('                m_display->imageHandles.push_back(img);')
+        cpi_body.append('                m_display->imageMemory.push_back(mem);')
         cpi_body.append('            }')
         return "\n".join(cpi_body)
 
     def _gen_replay_wsi_queue_present(self):
         wqp_body = []
         wqp_body.append('            XGL_WSI_X11_PRESENT_INFO pInfo;')
+        wqp_body.append('            std::vector<int>::iterator it;')
         wqp_body.append('            memcpy(&pInfo, pPacket->pPresentInfo, sizeof(XGL_WSI_X11_PRESENT_INFO));')
         wqp_body.append('            pInfo.srcImage = remap(pPacket->pPresentInfo->srcImage);')
         wqp_body.append('            // use replayers Xcb window')
         wqp_body.append('            pInfo.destWindow = m_display->m_XcbWindow;')
         wqp_body.append('            replayResult = m_xglFuncs.real_xglWsiX11QueuePresent(remap(pPacket->queue), &pInfo, remap(pPacket->fence));')
+        wqp_body.append('            it = std::find(m_screenshotFrames.begin(), m_screenshotFrames.end(), m_display->m_frameNumber);')
+        wqp_body.append('            if (it != m_screenshotFrames.end())')
+        wqp_body.append('            {')
+        wqp_body.append('                for(unsigned int i=0; i<m_display->imageHandles.size(); i++)')
+        wqp_body.append('                {')
+        wqp_body.append('                    if (m_display->imageHandles[i] == pInfo.srcImage)')
+        wqp_body.append('                    {')
+        wqp_body.append('                        char frameName[32];')
+        wqp_body.append('                        sprintf(frameName, "%d",m_display->m_frameNumber);')
+        wqp_body.append('                        glvWritePPM(frameName, m_display->imageWidth[i], m_display->imageHeight[i],')
+        wqp_body.append('                            m_display->imageHandles[i], m_display->imageMemory[i], &m_xglFuncs);')
+        wqp_body.append('                        break;')
+        wqp_body.append('                    }')
+        wqp_body.append('                }')
+        wqp_body.append('            }')
+        wqp_body.append('            m_display->m_frameNumber++;')
         return "\n".join(wqp_body)
 
     # I don't like making these 3 mem functions 'fully' custom, but just doing it for now to avoid being too cute
@@ -3372,6 +3418,7 @@ class GlaveReplayHeader(Subcommand):
         header_txt.append('#include <set>')
         header_txt.append('#include <map>')
         header_txt.append('#include <vector>')
+        header_txt.append('#include <string>')
         header_txt.append('#include <xcb/xcb.h>\n')
         header_txt.append('#include "glvreplay_window.h"')
         header_txt.append('#include "glvreplay_factory.h"')
@@ -3393,6 +3440,10 @@ class GlaveReplayC(Subcommand):
         header_txt = []
         header_txt.append('#include "glvreplay_xgl_replay.h"\n')
         header_txt.append('#include "glvreplay_xgl.h"\n')
+        header_txt.append('#include "glvreplay_xgl_write_ppm.h"\n')
+        header_txt.append('#include "glvreplay_main.h"\n')
+        header_txt.append('#include <algorithm>')
+        header_txt.append('extern glvreplay_settings *g_pReplaySettings;')
         header_txt.append('extern "C" {')
         header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
         header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')

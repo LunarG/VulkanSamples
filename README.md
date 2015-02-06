@@ -39,6 +39,8 @@ The following components are available:
   APIDump layer is working with these new API elements.
   Glave can trace and replay the cube and tri demos.
   Other layers in progress.
+- Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
+  Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.  
 
 ## Prior updates
 
@@ -69,9 +71,7 @@ Information on how to enable the various Debug and Validation layers is in
 ## References
 This version of the components are written based on the following preliminary specs and proposals:
 - [**XGL Programers Reference**, 1 Jul 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/AMD/Explicit%20GL%20Programming%20Guide%20and%20API%20Reference.pdf)
-- [**BIL**, version 1.0, revision 18](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
-- [**IMG's Fixed Function Proposal**, 13 Nov 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/XGL/accepted/xgl_fixed_function_vertex_fetch_proposal.txt)
-- [**Valve's Loader Proposal**, 7 Oct 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/Valve/xglLayers.pptx)
+- [**BIL**, revision 29](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
 
 ## License
 This work is intended to be released as open source under a BSD-style
