@@ -39,6 +39,8 @@ The following components are available:
   APIDump layer is working with these new API elements.
   Glave can trace and replay the cube and tri demos.
   Other layers in progress.
+- Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
+  Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.  
 
 ## Prior updates
 

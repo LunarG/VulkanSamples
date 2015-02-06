@@ -4,11 +4,17 @@ Support for Windows is for the loader and layers (additional info below).  Addit
 Support for Android is TBD.
 
 ##Linux System Requirements
-Ubuntu 14.04 LTS, (Ubuntu 14.10 needed for DRI 3 demos)
+Ubuntu 14.10 needed for DRI 3
 
 ```
 sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default
 sudo apt-get build-dep mesa
+```
+Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
+Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.  
+To see status of this package:
+```
+dpkg -s xserver-xorg-video-intel
 ```
 
 ##Linux Build
