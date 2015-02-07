@@ -17,6 +17,23 @@ To see status of this package:
 dpkg -s xserver-xorg-video-intel
 ```
 
+Note:  
+Version 2:2.99.914-1~exp1ubuntu4.2 does not work anymore.  
+To install the working driver from launchpadlibrarian.net:  
+- Remove the current driver:  
+```
+sudo apt-get purge xserver-xorg-video-intel
+```
+- Download the old driver:  
+```
+wget http://launchpadlibrarian.net/189418339/xserver-xorg-video-intel_2.99.914-1%7Eexp1ubuntu4.1_amd64.deb
+```
+- Install the driver:
+```
+sudo dpkg -i xserver-xorg-video-intel_2.99.914-1~exp1ubuntu4.1_amd64.deb
+```
+- Either restart Ubuntu or just X11.  
+  
 ##Linux Build
 
 The sample driver uses cmake and should work with the usual cmake options and utilities.
