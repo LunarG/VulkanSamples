@@ -872,8 +872,9 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
         scanned_icds = scanned_icds->next;
     }
 
-    if (ptr_instance->icds == NULL)
-        return res;
+    if (ptr_instance->icds == NULL) {
+        return XGL_ERROR_INCOMPATIBLE_DRIVER;
+    }
 
     *pInstance = (XGL_INSTANCE) ptr_instance;
     return XGL_SUCCESS;
