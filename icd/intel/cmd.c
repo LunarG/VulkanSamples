@@ -55,6 +55,8 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
 
     writer->used = 0;
 
+    writer->sba_offset = 0;
+
     if (writer->items) {
         icd_free(writer->items);
         writer->items = NULL;

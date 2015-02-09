@@ -1200,9 +1200,12 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
     dw[9] = 1;
 
     cmd_reserve_reloc(cmd, 3);
-    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_SURFACE, 1);
-    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE, 1);
-    cmd_batch_reloc_writer(cmd, pos + 5, INTEL_CMD_WRITER_INSTRUCTION, 1);
+    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_SURFACE,
+            cmd->writers[INTEL_CMD_WRITER_SURFACE].sba_offset + 1);
+    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE,
+            cmd->writers[INTEL_CMD_WRITER_STATE].sba_offset + 1);
+    cmd_batch_reloc_writer(cmd, pos + 5, INTEL_CMD_WRITER_INSTRUCTION,
+            cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].sba_offset + 1);
 }
 
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
@@ -1542,6 +1545,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                                    const struct intel_pipeline_rmap *rmap,
                                    const XGL_PIPELINE_SHADER_STAGE stage)
 {
+    const uint32_t sba_offset =
+        cmd->writers[INTEL_CMD_WRITER_SURFACE].sba_offset;
     uint32_t binding_table[256], offset;
     uint32_t surface_count, i;
 
@@ -1627,12 +1632,17 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                     null_view.cmd_len, null_view.cmd);
         }
 
-        binding_table[i] = offset;
+        binding_table[i] = offset - sba_offset;
     }
 
-    return cmd_surface_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
+    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
             GEN6_ALIGNMENT_BINDING_TABLE_STATE,
-            surface_count, binding_table);
+            surface_count, binding_table) - sba_offset;
+
+    /* there is a 64KB limit on BINIDNG_TABLE_STATEs */
+    assert(offset + sizeof(uint32_t) * surface_count <= 64 * 1024);
+
+    return offset;
 }
 
 static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
@@ -2982,6 +2992,68 @@ static void cmd_bind_blend_state(struct intel_cmd *cmd,
     cmd->bind.state.blend = state;
 }
 
+static uint32_t cmd_get_max_surface_write(const struct intel_cmd *cmd)
+{
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    struct intel_pipeline_rmap *rmaps[5] = {
+        pipeline->vs.rmap,
+        pipeline->tcs.rmap,
+        pipeline->tes.rmap,
+        pipeline->gs.rmap,
+        pipeline->fs.rmap,
+    };
+    uint32_t max_write;
+    int i;
+
+    STATIC_ASSERT(GEN6_ALIGNMENT_SURFACE_STATE >= GEN6_SURFACE_STATE__SIZE);
+    STATIC_ASSERT(GEN6_ALIGNMENT_SURFACE_STATE >=
+            GEN6_ALIGNMENT_BINDING_TABLE_STATE);
+
+    /* pad first */
+    max_write = GEN6_ALIGNMENT_SURFACE_STATE;
+
+    for (i = 0; i < ARRAY_SIZE(rmaps); i++) {
+        const struct intel_pipeline_rmap *rmap = rmaps[i];
+        const uint32_t surface_count = (rmap) ?
+            rmap->rt_count + rmap->texture_resource_count +
+            rmap->resource_count + rmap->uav_count : 0;
+
+        if (surface_count) {
+            /* SURFACE_STATEs */
+            max_write += GEN6_ALIGNMENT_SURFACE_STATE * surface_count;
+
+            /* BINDING_TABLE_STATE */
+            max_write += u_align(sizeof(uint32_t) * surface_count,
+                    GEN6_ALIGNMENT_SURFACE_STATE);
+        }
+    }
+
+    return max_write;
+}
+
+static void cmd_adjust_state_base_address(struct intel_cmd *cmd)
+{
+    struct intel_cmd_writer *writer = &cmd->writers[INTEL_CMD_WRITER_SURFACE];
+    const uint32_t cur_surface_offset = writer->used - writer->sba_offset;
+    uint32_t max_surface_write;
+
+    /* enough for src and dst SURFACE_STATEs plus BINDING_TABLE_STATE */
+    if (cmd->bind.meta)
+        max_surface_write = 64 * sizeof(uint32_t);
+    else
+        max_surface_write = cmd_get_max_surface_write(cmd);
+
+    /* there is a 64KB limit on BINDING_TABLE_STATEs */
+    if (cur_surface_offset + max_surface_write > 64 * 1024) {
+        /* SBA expects page-aligned addresses */
+        writer->sba_offset = writer->used & ~0xfff;
+
+        assert((writer->used & 0xfff) + max_surface_write <= 64 * 1024);
+
+        cmd_batch_state_base_address(cmd);
+    }
+}
+
 static void cmd_draw(struct intel_cmd *cmd,
                      uint32_t vertex_start,
                      uint32_t vertex_count,
@@ -2991,8 +3063,16 @@ static void cmd_draw(struct intel_cmd *cmd,
                      uint32_t vertex_base)
 {
     const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
+    const uint32_t surface_writer_used =
+        cmd->writers[INTEL_CMD_WRITER_SURFACE].used;
+
+    cmd_adjust_state_base_address(cmd);
 
     emit_bounded_states(cmd);
+
+    /* sanity check on cmd_get_max_surface_write() */
+    assert(cmd->writers[INTEL_CMD_WRITER_SURFACE].used -
+            surface_writer_used <= cmd_get_max_surface_write(cmd));
 
     if (indexed) {
         if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
@@ -3032,6 +3112,8 @@ static void cmd_draw(struct intel_cmd *cmd,
 void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
 {
     cmd->bind.meta = meta;
+
+    cmd_adjust_state_base_address(cmd);
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
     cmd_wa_gen6_pre_command_scoreboard_stall(cmd);

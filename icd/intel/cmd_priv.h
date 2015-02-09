@@ -287,7 +287,7 @@ static inline uint32_t cmd_surface_write(struct intel_cmd *cmd,
                                          const uint32_t *dw)
 {
     const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_SURFACE;
-    const XGL_SIZE size = len << 2;
+    const size_t size = len << 2;
     const uint32_t offset = cmd_writer_reserve(cmd, which, alignment, size);
     struct intel_cmd_writer *writer = &cmd->writers[which];
     uint32_t *dst;

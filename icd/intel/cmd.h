@@ -203,6 +203,8 @@ struct intel_cmd_writer {
 
     size_t used;
 
+    uint32_t sba_offset;
+
     /* for decoding */
     struct intel_cmd_item *items;
     uint32_t item_alloc;
