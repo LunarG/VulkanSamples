@@ -15,8 +15,9 @@ include_directories(
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
 
-    add_library(XGL STATIC loader.c dirent_on_windows.c dispatch.c table_ops.h)
-    set_target_properties(XGL PROPERTIES SOVERSION 0)
+    add_library(XGL SHARED loader.c dirent_on_windows.c dispatch.c table_ops.h)
+    add_library(XGLstatic STATIC loader.c dirent_on_windows.c dispatch.c table_ops.h)
+    set_target_properties(XGLstatic PROPERTIES OUTPUT_NAME XGL)
     target_link_libraries(XGL)
 endif()
 if (NOT WIN32)
