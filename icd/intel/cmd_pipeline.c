@@ -1174,6 +1174,37 @@ static void cmd_wa_gen6_pre_ds_flush(struct intel_cmd *cmd)
     gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_DEPTH_STALL, NULL, 0, 0);
 }
 
+void cmd_batch_state_base_address(struct intel_cmd *cmd)
+{
+    const uint8_t cmd_len = 10;
+    const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
+                         (cmd_len - 2);
+    uint32_t pos;
+    uint32_t *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+
+    dw[0] = dw0;
+    /* start offsets */
+    dw[1] = 1;
+    dw[2] = 1;
+    dw[3] = 1;
+    dw[4] = 1;
+    dw[5] = 1;
+    /* end offsets */
+    dw[6] = 1;
+    dw[7] = 1 + 0xfffff000;
+    dw[8] = 1 + 0xfffff000;
+    dw[9] = 1;
+
+    cmd_reserve_reloc(cmd, 3);
+    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, 1);
+    cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE, 1);
+    cmd_batch_reloc_writer(cmd, pos + 5, INTEL_CMD_WRITER_INSTRUCTION, 1);
+}
+
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
 {
     if (!cmd->bind.draw_count)
