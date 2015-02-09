@@ -82,6 +82,8 @@ static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
 {
     static const char *writer_names[INTEL_CMD_WRITER_COUNT] = {
         [INTEL_CMD_WRITER_BATCH] = "batch",
+        [INTEL_CMD_WRITER_SURFACE] = "surface",
+        [INTEL_CMD_WRITER_STATE] = "state",
         [INTEL_CMD_WRITER_INSTRUCTION] = "instruction",
     };
 
@@ -350,7 +352,8 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
             divider *= 4;
 
         cmd->writers[INTEL_CMD_WRITER_BATCH].size = size / divider;
-        cmd->writers[INTEL_CMD_WRITER_STATE].size = size / divider;
+        cmd->writers[INTEL_CMD_WRITER_SURFACE].size = size / divider / 2;
+        cmd->writers[INTEL_CMD_WRITER_STATE].size = size / divider / 2;
         cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].size = 16384 / divider;
     }
 

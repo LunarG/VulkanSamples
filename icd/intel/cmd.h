@@ -122,6 +122,7 @@ enum intel_cmd_wa_flags {
 
 enum intel_cmd_writer_type {
     INTEL_CMD_WRITER_BATCH,
+    INTEL_CMD_WRITER_SURFACE,
     INTEL_CMD_WRITER_STATE,
     INTEL_CMD_WRITER_INSTRUCTION,
 

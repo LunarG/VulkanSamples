@@ -286,10 +286,27 @@ static inline uint32_t cmd_surface_write(struct intel_cmd *cmd,
                                          size_t alignment, uint32_t len,
                                          const uint32_t *dw)
 {
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_SURFACE;
+    const XGL_SIZE size = len << 2;
+    const uint32_t offset = cmd_writer_reserve(cmd, which, alignment, size);
+    struct intel_cmd_writer *writer = &cmd->writers[which];
+    uint32_t *dst;
+
     assert(item == INTEL_CMD_ITEM_SURFACE ||
            item == INTEL_CMD_ITEM_BINDING_TABLE);
 
-    return cmd_state_write(cmd, item, alignment, len, dw);
+    /* all states are at least aligned to 32-bytes */
+    assert(alignment % 32 == 0);
+
+    writer->used = offset + size;
+
+    if (intel_debug & INTEL_DEBUG_BATCH)
+        cmd_writer_record(cmd, which, item, offset, size);
+
+    dst = (uint32_t *) ((char *) writer->ptr + offset);
+    memcpy(dst, dw, size);
+
+    return offset;
 }
 
 /**
@@ -300,7 +317,7 @@ static inline void cmd_surface_reloc(struct intel_cmd *cmd,
                                      struct intel_bo *bo,
                                      uint32_t bo_offset, uint32_t reloc_flags)
 {
-    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_SURFACE;
 
     cmd_writer_reloc(cmd, which, offset + (dw_index << 2),
             (intptr_t) bo, bo_offset, reloc_flags);
@@ -311,7 +328,7 @@ static inline void cmd_surface_reloc_writer(struct intel_cmd *cmd,
                                             enum intel_cmd_writer_type writer,
                                             uint32_t writer_offset)
 {
-    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_STATE;
+    const enum intel_cmd_writer_type which = INTEL_CMD_WRITER_SURFACE;
 
     cmd_writer_reloc(cmd, which, offset + (dw_index << 2),
             (intptr_t) writer, writer_offset,

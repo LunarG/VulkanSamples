@@ -1200,7 +1200,7 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
     dw[9] = 1;
 
     cmd_reserve_reloc(cmd, 3);
-    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, 1);
+    cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_SURFACE, 1);
     cmd_batch_reloc_writer(cmd, pos + 3, INTEL_CMD_WRITER_STATE, 1);
     cmd_batch_reloc_writer(cmd, pos + 5, INTEL_CMD_WRITER_INSTRUCTION, 1);
 }

@@ -569,8 +569,13 @@ static void cmd_writer_decode(struct intel_cmd *cmd,
                     writer->bo, writer->used);
         }
         break;
+    case INTEL_CMD_WRITER_SURFACE:
+        fprintf(stderr, "decoding surface state buffer: %d states\n",
+                writer->item_used);
+        cmd_writer_decode_items(cmd, which);
+        break;
     case INTEL_CMD_WRITER_STATE:
-        fprintf(stderr, "decoding state buffer: %d states\n",
+        fprintf(stderr, "decoding dynamic state buffer: %d states\n",
                 writer->item_used);
         cmd_writer_decode_items(cmd, which);
         break;
