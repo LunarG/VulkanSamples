@@ -596,7 +596,8 @@ class Subcommand(object):
                         elif 'UpdateDescriptors' == proto.name:
                             func_body.append('    add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain);')
                         elif 'CreateDescriptorSetLayout' == proto.name:
-                            func_body.append('    add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext);')
+                            func_body.append('    if (pSetLayoutInfoList)')
+                            func_body.append('        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext);')
                         elif 'CreateDescriptorRegion' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));')
