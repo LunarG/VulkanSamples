@@ -1630,7 +1630,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         binding_table[i] = offset;
     }
 
-    return cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
+    return cmd_surface_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
             GEN6_ALIGNMENT_BINDING_TABLE_STATE,
             surface_count, binding_table);
 }
@@ -2141,7 +2141,7 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
     }
 
     /* BINDING_TABLE */
-    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
+    offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_BINDING_TABLE,
             GEN6_ALIGNMENT_BINDING_TABLE_STATE,
             2, binding_table);
 
