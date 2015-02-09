@@ -159,8 +159,8 @@ static struct intel_gpu *gpu_create(int gen, int devid,
         break;
     }
 
-    /* 8192 dwords */
-    gpu->max_batch_buffer_size = sizeof(uint32_t) * 8192;
+    /* 150K dwords */
+    gpu->max_batch_buffer_size = sizeof(uint32_t) * 150*1024;
 
     /* the winsys is prepared for one reloc every two dwords, then minus 2 */
     gpu->batch_buffer_reloc_count =

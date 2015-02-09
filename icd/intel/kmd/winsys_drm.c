@@ -156,8 +156,8 @@ probe_winsys(struct intel_winsys *winsys)
 struct intel_winsys *
 intel_winsys_create_for_fd(int fd)
 {
-   /* so that we can have enough (up to 4094) relocs per bo */
-   const int batch_size = sizeof(uint32_t) * 8192;
+   /* so that we can have enough relocs per bo */
+   const int batch_size = sizeof(uint32_t) * 150 * 1024;
    struct intel_winsys *winsys;
 
    winsys = icd_alloc(sizeof(*winsys), 0, XGL_SYSTEM_ALLOC_INTERNAL);
