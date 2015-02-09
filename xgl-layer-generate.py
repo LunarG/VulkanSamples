@@ -641,6 +641,7 @@ class Subcommand(object):
                     if 'QueueSubmit' in proto.name:
                         using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
                         using_line += '    validate_memory_mapping_status(pMemRefs, memRefCount);\n'
+                        using_line += '    validate_mem_ref_count(memRefCount);\n'
                     elif 'GetFenceStatus' in proto.name:
                         using_line += '    // Warn if submitted_flag is not set\n'
                         using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
@@ -714,6 +715,13 @@ class Subcommand(object):
                                  '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
                     else:
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+                        gpu_state = ''
+                        if 'GetGpuInfo' in proto.name:
+                            gpu_state =  '    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES) {\n'
+                            gpu_state += '        if (pData != NULL) {\n'
+                            gpu_state += '            setGpuInfoState(pData);\n'
+                            gpu_state += '        }\n'
+                            gpu_state += '    }\n'
                         funcs.append('%s%s\n'
                                  '{\n'
                                  '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
@@ -723,7 +731,8 @@ class Subcommand(object):
                                  '    %snextTable.%s;\n'
                                  '%s%s'
                                  '%s'
-                                 '}' % (qual, decl, proto.params[0].name, using_line, ret_val, c_call, create_line, destroy_line, stmt))
+                                 '%s'
+                                 '}' % (qual, decl, proto.params[0].name, using_line, ret_val, c_call, create_line, destroy_line, gpu_state, stmt))
                     if 'WsiX11QueuePresent' == proto.name:
                         funcs.append("#endif")
                 elif "ParamChecker" == layer:
@@ -1194,6 +1203,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static objNode *pGlobalHead = NULL;')
         header_txt.append('static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};')
         header_txt.append('static uint64_t numTotalObjs = 0;')
+        header_txt.append('static uint32_t maxMemRefsPerSubmission = 0;')
         header_txt.append('// Debug function to print global list and each individual object list')
         header_txt.append('static void ll_print_lists()')
         header_txt.append('{')
@@ -1424,6 +1434,24 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    for (i = 0; i < numRefs; i++) {')
         header_txt.append('        validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
         header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('static void validate_mem_ref_count(uint32_t numRefs) {')
+        header_txt.append('    if (maxMemRefsPerSubmission == 0) {')
+        header_txt.append('        char str[1024];')
+        header_txt.append('        sprintf(str, "xglQueueSubmit called before calling xglGetGpuInfo");')
+        header_txt.append('        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_GETGPUINFO_NOT_CALLED, "OBJTRACK", str);')
+        header_txt.append('    } else {')
+        header_txt.append('        if (numRefs > maxMemRefsPerSubmission) {')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "xglQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemRefsPerSubmission);')
+        header_txt.append('            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
+        header_txt.append('        }')
+        header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('static void setGpuInfoState(void *pData) {')
+        header_txt.append('    maxMemRefsPerSubmission = ((XGL_PHYSICAL_GPU_PROPERTIES *)pData)->maxMemRefsPerSubmission;')
         header_txt.append('}')
         return "\n".join(header_txt)
 

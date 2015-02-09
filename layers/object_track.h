@@ -39,6 +39,8 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
     OBJTRACK_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
     OBJTRACK_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
+    OBJTRACK_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
+    OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
 } OBJECT_TRACK_ERROR;
 
 // Object Status -- used to track state of individual objects
@@ -163,9 +165,11 @@ typedef struct _OBJTRACK_NODE {
     uint64_t        numUses;
     OBJECT_STATUS   status;
 } OBJTRACK_NODE;
+
 // prototype for extension functions
 uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type);
 XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
+
 // Func ptr typedefs
 typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
 typedef XGL_RESULT (*OBJ_TRACK_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, OBJTRACK_NODE*);
