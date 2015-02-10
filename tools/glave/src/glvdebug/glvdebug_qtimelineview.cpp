@@ -186,6 +186,7 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     setItemDelegate(&m_itemDelegate);
 
     m_threadIdList.clear();
+    m_threadMask.clear();
     m_maxItemDuration = 0;
     m_rawStartTime = 0;
     m_rawEndTime = 0;
@@ -211,6 +212,8 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
             if (!m_threadIdList.contains(threadId))
             {
                 m_threadIdList.append(threadId);
+                m_threadMask.insert(threadId, QVector<int>());
+                m_threadArea.append(QRect());
             }
         }
 
@@ -250,7 +253,7 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
 
     verticalScrollBar()->setMaximum(1000);
     verticalScrollBar()->setValue(0);
-    verticalScrollBar()->setPageStep(10);
+    verticalScrollBar()->setPageStep(1);
     verticalScrollBar()->setSingleStep(1);
 }
 
@@ -265,6 +268,14 @@ void glvdebug_QTimelineView::calculateRectsIfNecessary()
     if (model() == NULL)
     {
         return;
+    }
+
+    int itemHeight = m_threadHeight/2;
+
+    for (int threadIndex = 0; threadIndex < m_threadIdList.size(); threadIndex++)
+    {
+        int top = (m_threadHeight * threadIndex) + (m_threadHeight * 0.5) - itemHeight/2;
+        this->m_threadArea[threadIndex] = QRect(0, top, viewport()->width(), itemHeight);
     }
 
     int numRows = model()->rowCount();
@@ -287,8 +298,6 @@ void glvdebug_QTimelineView::calculateRectsIfNecessary()
             float Width = u64ToFloat(duration);
 
             // draw the colored box that represents this item
-            int itemHeight = m_threadHeight/2;
-
             rect.setLeft(leftOffset);
             rect.setTop(topOffset - (itemHeight/2));
             rect.setWidth(Width);
@@ -398,7 +407,7 @@ void glvdebug_QTimelineView::mousePressEvent(QMouseEvent * event)
     QModelIndex index = indexAt(event->pos());
     if (index.isValid())
     {
-        setCurrentIndex(indexAt(event->pos()));
+        setCurrentIndex(index);
     }
 }
 
@@ -488,9 +497,26 @@ QModelIndex glvdebug_QTimelineView::indexAt(const QPoint &point) const
     if (model() == NULL)
         return QModelIndex();
 
-    // Transform the view coordinates into content widget coordinates.
-
     float wy = (float)point.y();
+
+    // Early out if the point is not in the areas covered by timeline items
+    bool inThreadArea = false;
+    for (int i = 0; i < m_threadArea.size(); i++)
+    {
+        if (wy >= m_threadArea[i].top() && wy <= m_threadArea[i].bottom())
+        {
+            inThreadArea = true;
+            break;
+        }
+    }
+
+    if (inThreadArea == false)
+    {
+        // point is outside the areas that timeline items are drawn to.
+        return QModelIndex();
+    }
+
+    // Transform the view coordinates into content widget coordinates.
     int x = point.x() - m_margin + horizontalScrollBar()->value();
     float wx = (float)x / m_zoomFactor;
 
@@ -580,6 +606,11 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         int pixmapWidth = event->rect().width();
 
         m_pPixmap = new QPixmap(pixmapWidth, pixmapHeight);
+
+        for (int t = 0; t < m_threadIdList.size(); t++)
+        {
+            m_threadMask[m_threadIdList[t]] = QVector<int>(pixmapWidth, 0);
+        }
 
         QPainter pixmapPainter(m_pPixmap);
 
@@ -673,17 +704,6 @@ void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelInd
         return;
     }
 
-    // If the rect is too narrow, dont draw it.
-    // TODO: This may cause a bunch of narrow calls to be not drawn,
-    // which (when combined) could account for a lot of time,
-    // so it would be better to batch these up and draw them
-    // as a single line per pixel width. With a color based on the
-    // most expensive of the batched calls.
-//    if (rect.width() < 0.1f)
-//    {
-//        return;
-//    }
-
     QStyleOptionViewItem option = viewOptions();
     option.rect = rect.toRect();
     if (selectionModel()->isSelected(index))
@@ -691,5 +711,24 @@ void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelInd
     if (currentIndex() == index)
         option.state |= QStyle::State_HasFocus;
 
-    itemDelegate()->paint(painter, option, index);
+    // check mask to determine if this item should be drawn, or if something has already covered it's pixels
+    glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+    QVector<int>& mask = m_threadMask[pHeader->thread_id];
+    bool drawItem = false;
+    int x = option.rect.x();
+    int right = qMin( qMax(x, option.rect.right()), viewport()->width()-1);
+    for (int pixel = qMax(0, x); pixel <= right; pixel++)
+    {
+        if (mask[pixel] == 0)
+        {
+            drawItem = true;
+            mask[pixel] = 1;
+        }
+    }
+
+    // draw item if it should be visible
+    if (drawItem)
+    {
+        itemDelegate()->paint(painter, option, index);
+    }
 }

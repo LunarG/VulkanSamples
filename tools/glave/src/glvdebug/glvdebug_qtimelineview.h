@@ -94,6 +94,8 @@ private:
 
     // new members
     QList<int> m_threadIdList;
+    QHash< int, QVector<int> > m_threadMask;
+    QList<QRect> m_threadArea;
     float m_maxItemDuration;
     uint64_t m_rawStartTime;
     uint64_t m_rawEndTime;
