@@ -483,7 +483,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
     struct intel_img *dst = intel_img(destImage);
     struct intel_cmd_meta meta;
     XGL_FORMAT raw_format;
-    bool raw_copy;
+    bool raw_copy = false;
     uint32_t i;
 
     if (src->type != dst->type) {
