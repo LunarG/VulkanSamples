@@ -66,6 +66,7 @@ protected slots:
 
 private:
     glvdebug_qimageviewer* m_pDrawStateDiagram;
+    int m_pDrawStateDiagramTabIndex;
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
     glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;
