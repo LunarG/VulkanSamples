@@ -24,14 +24,24 @@
  */
 
 #include "nulldrv.h"
+#include <stdio.h>
 
+#if 0
+#define NULLDRV_LOG_FUNC \
+    do { \
+        fflush(stdout); \
+        fflush(stderr); \
+        printf("null driver: %s\n", __FUNCTION__); \
+        fflush(stdout); \
+    } while (0)
+#else
+    #define NULLDRV_LOG_FUNC do { } while (0)
+#endif
+
+// The null driver supports all WSI extenstions ... for now ...
 static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
-#ifdef ENABLE_WSI_X11
 	[NULLDRV_EXT_WSI_X11] = "XGL_WSI_X11",
-#endif
-#ifdef ENABLE_WSI_WINDOWS
-	[NULLDRV_EXT_WSI_WINDOWS] = "XGL_WSI_WINDOWS",
-#endif
+	[NULLDRV_EXT_WSI_WINDOWS] = "XGL_WSI_WINDOWS"
 };
 
 static struct nulldrv_base *nulldrv_base(XGL_BASE_OBJECT base)
@@ -781,6 +791,30 @@ static XGL_RESULT nulldrv_render_pass_create(struct nulldrv_dev *dev,
     return XGL_SUCCESS;
 }
 
+static struct nulldrv_buf *nulldrv_buf(XGL_BUFFER buf)
+{
+    return (struct nulldrv_buf *) buf;
+}
+
+static XGL_RESULT nulldrv_buf_view_create(struct nulldrv_dev *dev,
+                                 const XGL_BUFFER_VIEW_CREATE_INFO *info,
+                                 struct nulldrv_buf_view **view_ret)
+{
+    struct nulldrv_buf *buf = nulldrv_buf(info->buffer);
+    struct nulldrv_buf_view *view;
+
+    view = (struct nulldrv_buf_view *) nulldrv_base_create(dev, sizeof(*view),
+            XGL_DBG_OBJECT_BUFFER_VIEW);
+    if (!view)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    view->buf = buf;
+
+    *view_ret = view;
+
+    return XGL_SUCCESS;
+}
+
 
 //*********************************************
 // Driver entry points
@@ -791,6 +825,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(
     const XGL_BUFFER_CREATE_INFO*               pCreateInfo,
     XGL_BUFFER*                                 pBuffer)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_buf_create(dev, pCreateInfo, (struct nulldrv_buf **) pBuffer);
@@ -801,6 +836,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(
     const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
     XGL_CMD_BUFFER*                             pCmdBuffer)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_cmd_create(dev, pCreateInfo,
@@ -811,18 +847,21 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_CMD_BUFFER_BEGIN_INFO            *info)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -833,6 +872,7 @@ ICD_EXPORT void XGLAPI xglCmdInitAtomicCounters(
     uint32_t                                    counterCount,
     const uint32_t*                             pData)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdLoadAtomicCounters(
@@ -843,6 +883,7 @@ ICD_EXPORT void XGLAPI xglCmdLoadAtomicCounters(
     XGL_BUFFER                                  srcBuffer,
     XGL_GPU_SIZE                                srcOffset)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdSaveAtomicCounters(
@@ -853,17 +894,20 @@ ICD_EXPORT void XGLAPI xglCmdSaveAtomicCounters(
     XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDbgMarkerBegin(
     XGL_CMD_BUFFER                              cmdBuffer,
     const char*                                 pMarker)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDbgMarkerEnd(
     XGL_CMD_BUFFER                              cmdBuffer)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
@@ -873,6 +917,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
     uint32_t                                    regionCount,
     const XGL_BUFFER_COPY*                      pRegions)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdCopyImage(
@@ -882,6 +927,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
     uint32_t                                    regionCount,
     const XGL_IMAGE_COPY*                       pRegions)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
@@ -891,6 +937,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     uint32_t                                    regionCount,
     const XGL_BUFFER_IMAGE_COPY*                pRegions)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
@@ -900,6 +947,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
     uint32_t                                    regionCount,
     const XGL_BUFFER_IMAGE_COPY*                pRegions)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdCloneImageData(
@@ -909,6 +957,7 @@ ICD_EXPORT void XGLAPI xglCmdCloneImageData(
     XGL_IMAGE                                   destImage,
     XGL_IMAGE_LAYOUT                            destImageLayout)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdUpdateBuffer(
@@ -918,6 +967,7 @@ ICD_EXPORT void XGLAPI xglCmdUpdateBuffer(
     XGL_GPU_SIZE                                dataSize,
     const uint32_t*                             pData)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdFillBuffer(
@@ -927,6 +977,7 @@ ICD_EXPORT void XGLAPI xglCmdFillBuffer(
     XGL_GPU_SIZE                                fillSize,
     uint32_t                                    data)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdClearColorImage(
@@ -936,6 +987,7 @@ ICD_EXPORT void XGLAPI xglCmdClearColorImage(
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdClearColorImageRaw(
@@ -945,6 +997,7 @@ ICD_EXPORT void XGLAPI xglCmdClearColorImageRaw(
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
@@ -955,6 +1008,7 @@ ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdResolveImage(
@@ -964,6 +1018,7 @@ ICD_EXPORT void XGLAPI xglCmdResolveImage(
     uint32_t                                    rectCount,
     const XGL_IMAGE_RESOLVE*                    pRects)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBeginQuery(
@@ -972,6 +1027,7 @@ ICD_EXPORT void XGLAPI xglCmdBeginQuery(
     uint32_t                                    slot,
     XGL_FLAGS                                   flags)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdEndQuery(
@@ -979,6 +1035,7 @@ ICD_EXPORT void XGLAPI xglCmdEndQuery(
     XGL_QUERY_POOL                              queryPool,
     uint32_t                                    slot)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdResetQueryPool(
@@ -987,6 +1044,7 @@ ICD_EXPORT void XGLAPI xglCmdResetQueryPool(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdSetEvent(
@@ -994,12 +1052,14 @@ ICD_EXPORT void XGLAPI xglCmdSetEvent(
     XGL_EVENT                                   event_,
     XGL_SET_EVENT                               pipeEvent)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdResetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event_)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdWriteTimestamp(
@@ -1008,6 +1068,7 @@ ICD_EXPORT void XGLAPI xglCmdWriteTimestamp(
     XGL_BUFFER                                  destBuffer,
     XGL_GPU_SIZE                                destOffset)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBindPipeline(
@@ -1015,6 +1076,7 @@ ICD_EXPORT void XGLAPI xglCmdBindPipeline(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE                                pipeline)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBindPipelineDelta(
@@ -1022,6 +1084,7 @@ ICD_EXPORT void XGLAPI xglCmdBindPipelineDelta(
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE_DELTA                          delta)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
@@ -1029,6 +1092,7 @@ ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
     XGL_STATE_BIND_POINT                        stateBindPoint,
     XGL_DYNAMIC_STATE_OBJECT                    state)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBindDescriptorSet(
@@ -1037,6 +1101,7 @@ ICD_EXPORT void XGLAPI xglCmdBindDescriptorSet(
     XGL_DESCRIPTOR_SET                          descriptorSet,
     const uint32_t*                             pUserData)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBindVertexBuffer(
@@ -1045,6 +1110,7 @@ ICD_EXPORT void XGLAPI xglCmdBindVertexBuffer(
     XGL_GPU_SIZE                                offset,
     uint32_t                                    binding)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdBindIndexBuffer(
@@ -1053,6 +1119,7 @@ ICD_EXPORT void XGLAPI xglCmdBindIndexBuffer(
     XGL_GPU_SIZE                                offset,
     XGL_INDEX_TYPE                              indexType)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDraw(
@@ -1062,6 +1129,7 @@ ICD_EXPORT void XGLAPI xglCmdDraw(
     uint32_t                                    firstInstance,
     uint32_t                                    instanceCount)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDrawIndexed(
@@ -1072,6 +1140,7 @@ ICD_EXPORT void XGLAPI xglCmdDrawIndexed(
     uint32_t                                    firstInstance,
     uint32_t                                    instanceCount)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDrawIndirect(
@@ -1081,6 +1150,7 @@ ICD_EXPORT void XGLAPI xglCmdDrawIndirect(
     uint32_t                                    count,
     uint32_t                                    stride)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(
@@ -1090,6 +1160,7 @@ ICD_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(
     uint32_t                                    count,
     uint32_t                                    stride)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDispatch(
@@ -1098,6 +1169,7 @@ ICD_EXPORT void XGLAPI xglCmdDispatch(
     uint32_t                                    y,
     uint32_t                                    z)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
@@ -1105,18 +1177,21 @@ ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
     XGL_BUFFER                                  buffer,
     XGL_GPU_SIZE                                offset)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdWaitEvents(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_EVENT_WAIT_INFO*                  pWaitInfo)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
     XGL_CMD_BUFFER                              cmdBuffer,
     const XGL_PIPELINE_BARRIER*                 pBarrier)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDevice(
@@ -1124,6 +1199,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDevice(
     const XGL_DEVICE_CREATE_INFO*               pCreateInfo,
     XGL_DEVICE*                                 pDevice)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_gpu *gpu = nulldrv_gpu(gpu_);
     return nulldrv_dev_create(gpu, pCreateInfo, (struct nulldrv_dev**)pDevice);
 }
@@ -1131,6 +1207,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDevice(
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(
     XGL_DEVICE                                  device)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1140,6 +1217,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
     uint32_t                                    queueIndex,
     XGL_QUEUE*                                  pQueue)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
     *pQueue = dev->queues[0];
     return XGL_SUCCESS;
@@ -1148,6 +1226,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
 ICD_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(
     XGL_DEVICE                                  device)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1155,6 +1234,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(
     XGL_DEVICE                                  device,
     XGL_VALIDATION_LEVEL                        validationLevel)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1163,6 +1243,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(
     int32_t                                     msgCode,
     XGL_DBG_MSG_FILTER                          filter)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1172,6 +1253,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(
     size_t                                      dataSize,
     const void*                                 pData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1180,24 +1262,28 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateEvent(
     const XGL_EVENT_CREATE_INFO*                pCreateInfo,
     XGL_EVENT*                                  pEvent)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(
     XGL_EVENT                                   event_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglSetEvent(
     XGL_EVENT                                   event_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglResetEvent(
     XGL_EVENT                                   event_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1206,6 +1292,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateFence(
     const XGL_FENCE_CREATE_INFO*                pCreateInfo,
     XGL_FENCE*                                  pFence)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_fence_create(dev, pCreateInfo,
@@ -1215,6 +1302,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateFence(
 ICD_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(
     XGL_FENCE                                   fence_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1225,6 +1313,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWaitForFences(
     bool32_t                                    waitAll,
     uint64_t                                    timeout)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1235,6 +1324,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1244,6 +1334,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1251,6 +1342,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(
     XGL_PHYSICAL_GPU                            gpu_,
     const char*                                 pExtName)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1259,6 +1351,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(
     XGL_PHYSICAL_GPU                            gpu1_,
     XGL_GPU_COMPATIBILITY_INFO*                 pInfo)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1268,6 +1361,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(
     XGL_IMAGE*                                  pImage,
     XGL_GPU_MEMORY*                             pMem)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1276,6 +1370,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateImage(
     const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
     XGL_IMAGE*                                  pImage)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_img_create(dev, pCreateInfo, false,
@@ -1289,6 +1384,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+    NULLDRV_LOG_FUNC;
     const struct nulldrv_img *img = nulldrv_img(image);
     XGL_RESULT ret = XGL_SUCCESS;
 
@@ -1319,6 +1415,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(
     XGL_IMAGE                                   image,
     const float                                 color[4])
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1326,6 +1423,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(
     XGL_IMAGE                                   image,
     float                                       depth)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1334,6 +1432,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocMemory(
     const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
     XGL_GPU_MEMORY*                             pMem)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_mem_alloc(dev, pAllocInfo, (struct nulldrv_mem **) pMem);
@@ -1342,6 +1441,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocMemory(
 ICD_EXPORT XGL_RESULT XGLAPI xglFreeMemory(
     XGL_GPU_MEMORY                              mem_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1349,6 +1449,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(
     XGL_GPU_MEMORY                              mem_,
     XGL_MEMORY_PRIORITY                         priority)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1357,6 +1458,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglMapMemory(
     XGL_FLAGS                                   flags,
     void**                                      ppData)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_mem *mem = nulldrv_mem(mem_);
     void *ptr = nulldrv_mem_map(mem, flags);
 
@@ -1368,6 +1470,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglMapMemory(
 ICD_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(
     XGL_GPU_MEMORY                              mem_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1377,6 +1480,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
     size_t                                      memSize,
     XGL_GPU_MEMORY*                             pMem)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1385,6 +1489,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(
     const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
     XGL_GPU_MEMORY*                             pMem)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1393,6 +1498,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(
     const XGL_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
     XGL_GPU_MEMORY*                             pMem)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1401,6 +1507,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
     const XGL_ALLOC_CALLBACKS*                  pAllocCb,
     XGL_INSTANCE*                               pInstance)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_instance *inst;
 
     inst = (struct nulldrv_instance *) nulldrv_base_create(NULL, sizeof(*inst),
@@ -1418,6 +1525,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
     XGL_INSTANCE                                pInstance)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1427,6 +1535,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
     uint32_t*                                   pGpuCount,
     XGL_PHYSICAL_GPU*                           pGpus)
 {
+    NULLDRV_LOG_FUNC;
     XGL_RESULT ret;
     struct nulldrv_gpu *gpu;
     *pGpuCount = 1;
@@ -1444,6 +1553,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
     char* const*                                pOutLayers,
     void*                                       pReserved)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1451,12 +1561,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1465,12 +1577,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
     size_t                                      dataSize,
     const void*                                 pData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyObject(
     XGL_OBJECT                                  object)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1480,6 +1594,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_base *base = nulldrv_base(object);
 
     return base->get_info(base, infoType, pDataSize, pData);
@@ -1491,6 +1606,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
     XGL_GPU_MEMORY                              mem_,
     XGL_GPU_SIZE                                memOffset)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1502,6 +1618,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                memOffset)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1512,6 +1629,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(
     XGL_GPU_MEMORY                              mem,
     XGL_GPU_SIZE                                memOffset)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1520,6 +1638,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
     size_t                                      tagSize,
     const void*                                 pTag)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1528,6 +1647,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
     XGL_PIPELINE*                               pPipeline)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return graphics_pipeline_create(dev, pCreateInfo,
@@ -1539,6 +1659,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(
     const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
     XGL_PIPELINE*                               pPipeline)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1547,6 +1668,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglStorePipeline(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1556,6 +1678,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
     const void*                                 pData,
     XGL_PIPELINE*                               pPipeline)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1565,6 +1688,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(
     XGL_PIPELINE                                p2,
     XGL_PIPELINE_DELTA*                         delta)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1573,6 +1697,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(
     const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
     XGL_QUERY_POOL*                             pQueryPool)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1583,6 +1708,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1591,12 +1717,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     uint32_t                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(
     XGL_QUEUE                                   queue_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1608,6 +1736,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence_)
 {
+    NULLDRV_LOG_FUNC;
    return XGL_SUCCESS;
 }
 
@@ -1616,6 +1745,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(
     const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1624,6 +1754,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(
     const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
     XGL_QUEUE_SEMAPHORE*                        pSemaphore)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1631,6 +1762,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1638,6 +1770,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(
     XGL_QUEUE                                   queue,
     XGL_QUEUE_SEMAPHORE                         semaphore)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1646,6 +1779,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateSampler(
     const XGL_SAMPLER_CREATE_INFO*              pCreateInfo,
     XGL_SAMPLER*                                pSampler)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_sampler_create(dev, pCreateInfo,
@@ -1657,6 +1791,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateShader(
         const XGL_SHADER_CREATE_INFO*               pCreateInfo,
         XGL_SHADER*                                 pShader)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return shader_create(dev, pCreateInfo, (struct nulldrv_shader **) pShader);
@@ -1667,6 +1802,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(
     const XGL_DYNAMIC_VP_STATE_CREATE_INFO*       pCreateInfo,
     XGL_DYNAMIC_VP_STATE_OBJECT*                  pState)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_viewport_state_create(dev, pCreateInfo,
@@ -1678,6 +1814,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(
     const XGL_DYNAMIC_RS_STATE_CREATE_INFO*         pCreateInfo,
     XGL_DYNAMIC_RS_STATE_OBJECT*                    pState)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_raster_state_create(dev, pCreateInfo,
@@ -1689,6 +1826,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
     const XGL_DYNAMIC_CB_STATE_CREATE_INFO*    pCreateInfo,
     XGL_DYNAMIC_CB_STATE_OBJECT*               pState)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_blend_state_create(dev, pCreateInfo,
@@ -1700,6 +1838,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(
     const XGL_DYNAMIC_DS_STATE_CREATE_INFO*  pCreateInfo,
     XGL_DYNAMIC_DS_STATE_OBJECT*             pState)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_ds_state_create(dev, pCreateInfo,
@@ -1711,7 +1850,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(
     const XGL_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
     XGL_BUFFER_VIEW*                            pView)
 {
-    return XGL_SUCCESS;
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+
+    return nulldrv_buf_view_create(dev, pCreateInfo,
+            (struct nulldrv_buf_view **) pView);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateImageView(
@@ -1719,6 +1862,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateImageView(
     const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
     XGL_IMAGE_VIEW*                             pView)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_img_view_create(dev, pCreateInfo,
@@ -1730,6 +1874,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(
     const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
     XGL_COLOR_ATTACHMENT_VIEW*                  pView)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_rt_view_create(dev, pCreateInfo,
@@ -1741,6 +1886,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(
     const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
     XGL_DEPTH_STENCIL_VIEW*                     pView)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_ds_view_create(dev, pCreateInfo,
@@ -1756,6 +1902,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
     struct nulldrv_desc_layout *prior_layout = nulldrv_desc_layout(priorSetLayout);
 
@@ -1768,6 +1915,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_UPDATE_MODE                   updateMode)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1775,6 +1923,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
     XGL_DEVICE                                   device,
     XGL_CMD_BUFFER                               cmd_)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1785,6 +1934,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(
     const XGL_DESCRIPTOR_REGION_CREATE_INFO*     pCreateInfo,
     XGL_DESCRIPTOR_REGION*                       pDescriptorRegion)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_desc_region_create(dev, regionUsage, maxSets, pCreateInfo,
@@ -1794,6 +1944,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(
 ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(
     XGL_DESCRIPTOR_REGION                        descriptorRegion)
 {
+    NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
@@ -1805,6 +1956,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
     XGL_DESCRIPTOR_SET*                          pDescriptorSets,
     uint32_t*                                    pCount)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_desc_region *region = nulldrv_desc_region(descriptorRegion);
     struct nulldrv_dev *dev = region->dev;
     XGL_RESULT ret = XGL_SUCCESS;
@@ -1831,12 +1983,14 @@ ICD_EXPORT void XGLAPI xglClearDescriptorSets(
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET*                    pDescriptorSets)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglUpdateDescriptors(
     XGL_DESCRIPTOR_SET                           descriptorSet,
     const void*                                  pUpdateChain)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(
@@ -1844,6 +1998,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(
     const XGL_FRAMEBUFFER_CREATE_INFO*          info,
     XGL_FRAMEBUFFER*                            fb_ret)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_fb_create(dev, info, (struct nulldrv_framebuffer **) fb_ret);
@@ -1855,6 +2010,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(
     const XGL_RENDER_PASS_CREATE_INFO*          info,
     XGL_RENDER_PASS*                            rp_ret)
 {
+    NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_render_pass_create(dev, info, (struct nulldrv_render_pass **) rp_ret);
@@ -1864,10 +2020,12 @@ ICD_EXPORT void XGLAPI xglCmdBeginRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_RENDER_PASS                             renderPass)
 {
+    NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdEndRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_RENDER_PASS                             renderPass)
 {
+    NULLDRV_LOG_FUNC;
 }

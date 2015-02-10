@@ -6,6 +6,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 project(glvtrace_gl_fps)
 
 include("${SRC_DIR}/build_options.cmake")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../..)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 

@@ -2294,12 +2294,10 @@ class Subcommand(object):
         ri_body.append('int xglReplay::init(glv_replay::Display & disp)')
         ri_body.append('{')
         ri_body.append('    int err;')
-        ri_body.append('#if defined _WIN64')
-        ri_body.append('    HMODULE handle = LoadLibrary("xgl64.dll" );')
-        ri_body.append('#elif defined _WIN32')
-        ri_body.append('    HMODULE handle = LoadLibrary("xgl32.dll" );')
-        ri_body.append('#elif defined PLATFORM_LINUX')
+        ri_body.append('#if defined PLATFORM_LINUX')
         ri_body.append('    void * handle = dlopen("libXGL.so", RTLD_LAZY);')
+        ri_body.append('#else')
+        ri_body.append('    HMODULE handle = LoadLibrary("xgl.dll" );')
         ri_body.append('#endif\n')
         ri_body.append('    if (handle == NULL) {')
         ri_body.append('        glv_LogError("Failed to open xgl library.\\n");')
@@ -3078,18 +3076,32 @@ class Subcommand(object):
 
     def _gen_replay_wsi_associate_connection(self):
         wac_body = []
+        wac_body.append('#ifdef WIN32')
+        wac_body.append('            //TBD')
+        wac_body.append('            replayResult = XGL_SUCCESS;')
+        wac_body.append('#else')
         wac_body.append('            //associate with the replayers Wsi connection rather than tracers')
         wac_body.append('            replayResult = m_xglFuncs.real_xglWsiX11AssociateConnection(remap(pPacket->gpu), &(m_display->m_WsiConnection));')
+        wac_body.append('#endif')
         return "\n".join(wac_body)
 
     def _gen_replay_wsi_get_msc(self):
         wgm_body = []
+        wgm_body.append('#ifdef WIN32')
+        wgm_body.append('            //TBD')
+        wgm_body.append('            replayResult = XGL_SUCCESS;')
+        wgm_body.append('#else')
         wgm_body.append('            xcb_window_t window = m_display->m_XcbWindow;')
         wgm_body.append('            replayResult = m_xglFuncs.real_xglWsiX11GetMSC(remap(pPacket->device), window, pPacket->crtc, pPacket->pMsc);')
+        wgm_body.append('#endif')
         return "\n".join(wgm_body)
 
     def _gen_replay_wsi_create_presentable_image(self):
         cpi_body = []
+        cpi_body.append('#ifdef WIN32')
+        cpi_body.append('            //TBD')
+        cpi_body.append('            replayResult = XGL_SUCCESS;')
+        cpi_body.append('#else')
         cpi_body.append('            XGL_IMAGE img;')
         cpi_body.append('            XGL_GPU_MEMORY mem;')
         cpi_body.append('            m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);')
@@ -3104,10 +3116,15 @@ class Subcommand(object):
         cpi_body.append('                m_display->imageHandles.push_back(img);')
         cpi_body.append('                m_display->imageMemory.push_back(mem);')
         cpi_body.append('            }')
+        cpi_body.append('#endif')
         return "\n".join(cpi_body)
 
     def _gen_replay_wsi_queue_present(self):
         wqp_body = []
+        wqp_body.append('#ifdef WIN32')
+        wqp_body.append('            //TBD')
+        wqp_body.append('            replayResult = XGL_SUCCESS;')
+        wqp_body.append('#else')
         wqp_body.append('            XGL_WSI_X11_PRESENT_INFO pInfo;')
         wqp_body.append('            std::vector<int>::iterator it;')
         wqp_body.append('            memcpy(&pInfo, pPacket->pPresentInfo, sizeof(XGL_WSI_X11_PRESENT_INFO));')
@@ -3130,6 +3147,7 @@ class Subcommand(object):
         wqp_body.append('                    }')
         wqp_body.append('                }')
         wqp_body.append('            }')
+        wqp_body.append('#endif')
         wqp_body.append('            m_display->m_frameNumber++;')
         return "\n".join(wqp_body)
 
@@ -3462,7 +3480,11 @@ class GlaveWsiHeader(Subcommand):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "xgl.h"')
+        header_txt.append('#if defined(PLATFORM_LINUX)')
         header_txt.append('#include "xglWsiX11Ext.h"\n')
+        header_txt.append('#else')
+        header_txt.append('#include "xglWsiWinExt.h"')
+        header_txt.append('#endif')
         header_txt.append('void AttachHooks_xglwsix11ext();')
         header_txt.append('void DetachHooks_xglwsix11ext();')
         return "\n".join(header_txt)
@@ -3498,7 +3520,11 @@ class GlaveWsiStructs(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#pragma once\n')
+        header_txt.append('#if defined(PLATFORM_LINUX)')
         header_txt.append('#include "xglWsiX11Ext.h"')
+        header_txt.append('#else')
+        header_txt.append('#include "xglWsiWinExt.h"')
+        header_txt.append('#endif')
         header_txt.append('#include "glv_trace_packet_utils.h"\n')
         return "\n".join(header_txt)
 
@@ -3566,13 +3592,19 @@ class GlaveReplayHeader(Subcommand):
         header_txt.append('#include <map>')
         header_txt.append('#include <vector>')
         header_txt.append('#include <string>')
+        header_txt.append('#if defined(PLATFORM_LINUX)')
         header_txt.append('#include <xcb/xcb.h>\n')
+        header_txt.append('#endif')
         header_txt.append('#include "glvreplay_window.h"')
         header_txt.append('#include "glvreplay_factory.h"')
         header_txt.append('#include "glv_trace_packet_identifiers.h"\n')
         header_txt.append('#include "xgl.h"')
         header_txt.append('#include "xglDbg.h"')
+        header_txt.append('#if defined(PLATFORM_LINUX)')
         header_txt.append('#include "xglWsiX11Ext.h"')
+        header_txt.append('#else')
+        header_txt.append('#include "xglWsiWinExt.h"')
+        header_txt.append('#endif')
         return "\n".join(header_txt)
 
     def generate_body(self):

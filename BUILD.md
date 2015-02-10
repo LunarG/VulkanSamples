@@ -145,10 +145,12 @@ Example debug build:
 cd GL-Next  # cd to the root of the xgl git repository
 mkdir _out64
 cd _out64
-cmake -G "Visual Studio 12 Win64" ..
+cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
 At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "XGL.sln" file in the _out64 folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "_out64" folder.
+
+XGL programs must be able to find and use the XGL.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
 
 To run XGL programs you must have an appropriate icd (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the
 environment variable LIBXGL_DRIVERS_PATH.  This environment variable cannot be set with Cygwin, but must be set via Windows, and may require a system restart in order for it to take effect.  Here is how to set this environment variable on a Windows 7 system:

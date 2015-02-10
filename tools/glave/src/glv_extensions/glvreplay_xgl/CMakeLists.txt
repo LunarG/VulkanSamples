@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 
-# this project is currently only available on Linux
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-
 project(glvreplay_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../..)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include ${SRC_DIR}/../../../layers ${SRC_DIR}/glv_extensions/glvreplay_xgl)
 
@@ -23,7 +21,7 @@ add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvt
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 set(OS_REPLAYER_LIBS
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.dll
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_BUILD_TYPE}/XGL.lib
 )
 endif()
 
@@ -69,5 +67,3 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 build_options_finalize()
-
-endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")

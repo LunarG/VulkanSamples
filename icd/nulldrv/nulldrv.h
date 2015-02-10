@@ -210,4 +210,15 @@ struct nulldrv_render_pass {
     struct nulldrv_obj obj;
 };
 
+struct nulldrv_buf_view {
+    struct nulldrv_obj obj;
+
+    struct nulldrv_buf *buf;
+
+    /* SURFACE_STATE */
+    uint32_t cmd[8];
+    uint32_t fs_cmd[8];
+    uint32_t cmd_len;
+};
+
 #endif /* NULLDRV_H */

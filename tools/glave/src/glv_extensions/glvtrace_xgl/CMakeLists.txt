@@ -6,6 +6,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 project(glvtrace_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../..)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
 
