@@ -23,6 +23,7 @@
  *
  **************************************************************************/
 
+#include <QApplication>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QToolTip>
@@ -93,22 +94,31 @@ void glvdebug_QTimelineItemDelegate::paint(QPainter *painter, const QStyleOption
         return;
     }
 
-    float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
-
     painter->save();
     {
         glvdebug_QTimelineView* pTimeline = (glvdebug_QTimelineView*)parent();
         if (pTimeline != NULL)
         {
-            QRectF rect = pTimeline->itemRect(index);
+            QRectF rect = option.rect;
 
-            if (rect.isValid())
+            if (rect.width() == 0)
             {
+                rect.setWidth(1);
+            }
+//            if (rect.isValid())
+            {
+                float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
                 float durationRatio = duration / pTimeline->getMaxItemDuration();
                 int intensity = std::min(255, (int)(durationRatio * 255.0f));
                 QColor color(intensity, 255-intensity, 0);
-                painter->setBrush(QBrush(color));
-                painter->setPen(color);
+
+                // add gradient to the items better distinguish between the end of one and beginning of the next
+                QLinearGradient linearGrad(rect.center(), rect.bottomRight());
+                linearGrad.setColorAt(0, color);
+                linearGrad.setColorAt(1, color.darker());
+
+                painter->setBrush(linearGrad);
+                painter->setPen(Qt::NoPen);
 
                 painter->drawRect(rect);
             }
@@ -125,7 +135,7 @@ QSize glvdebug_QTimelineItemDelegate::sizeHint( const QStyleOptionViewItem &opti
     glvdebug_QTimelineView* pTimeline = (glvdebug_QTimelineView*)parent();
     if (pTimeline != NULL)
     {
-        QRectF rect = pTimeline->itemRect(index);
+        QRectF rect = pTimeline->visualRect(index);
 
         size = rect.toRect().size();
     }
@@ -136,7 +146,10 @@ QSize glvdebug_QTimelineItemDelegate::sizeHint( const QStyleOptionViewItem &opti
 glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     QAbstractItemView(parent),
     m_maxItemDuration(0),
+    m_maxZoom(.001),
     m_threadHeight(0),
+    m_hashIsDirty(true),
+    m_margin(10),
     m_pPixmap(NULL),
     m_itemDelegate(this)
 {
@@ -149,8 +162,10 @@ glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     m_textPen = QPen(Qt::white);
     m_textFont.setPixelSize(50);
 
-    m_horizontalScale = 1;
+    m_durationToViewportScale = 1;
+    m_zoomFactor = 1;
     m_lineLength = 1;
+    m_scrollBarWidth = QApplication::style()->pixelMetric(QStyle::PM_ScrollBarExtent);
 }
 
 //-----------------------------------------------------------------------------
@@ -163,6 +178,8 @@ glvdebug_QTimelineView::~glvdebug_QTimelineView()
 void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
 {
     QAbstractItemView::setModel(pModel);
+    m_hashIsDirty = true;
+    setItemDelegate(&m_itemDelegate);
 
     m_threadIdList.clear();
     m_threadIdMinOffset.clear();
@@ -175,10 +192,10 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     // Gather some stats from the model
     if (model() == NULL)
     {
+        horizontalScrollBar()->setRange(0,0);
+        verticalScrollBar()->setRange(0,0);
         return;
     }
-
-    setItemDelegate(&m_itemDelegate);
 
     int numRows = model()->rowCount();
     for (int i = 0; i < numRows; i++)
@@ -219,50 +236,76 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     {
         m_rawEndTime = end.data().toULongLong();
     }
+
+    // the duration to viewport scale should allow us to map the entire timeline into the current window width.
+    m_lineLength = m_rawEndTime - m_rawStartTime;
+
+    int initialTimelineWidth = viewport()->width() - 2*m_margin - m_scrollBarWidth;
+    m_durationToViewportScale = (float)initialTimelineWidth / u64ToFloat(m_lineLength);
+
+    m_zoomFactor = m_durationToViewportScale;
+
+    verticalScrollBar()->setMaximum(100);
+    verticalScrollBar()->setValue(0);
+    verticalScrollBar()->setPageStep(10);
+}
+
+//-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::calculateRectsIfNecessary()
+{
+    if (!m_hashIsDirty)
+    {
+        return;
+    }
+
+    if (model() == NULL)
+    {
+        return;
+    }
+
+    int numRows = model()->rowCount();
+    for (int row = 0; row < numRows; row++)
+    {
+        QRectF rect;
+        QModelIndex item = model()->index(row, glvdebug_QTraceFileModel::Column_EntrypointName);
+
+        glv_trace_packet_header* pHeader = (glv_trace_packet_header*)item.internalPointer();
+
+        // make sure item is valid size
+        if (pHeader->entrypoint_end_time > pHeader->entrypoint_begin_time)
+        {
+            int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
+            int topOffset = (m_threadHeight * threadIndex) + (m_threadHeight * 0.5);
+
+            uint64_t duration = pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time;
+
+            float leftOffset = u64ToFloat(pHeader->entrypoint_begin_time - m_rawStartTime);
+            float Width = u64ToFloat(duration);
+
+            // draw the colored box that represents this item
+            int itemHeight = m_threadHeight/2;
+
+            rect.setLeft(leftOffset);
+            rect.setTop(topOffset - (itemHeight/2));
+            rect.setWidth(Width);
+            rect.setHeight(itemHeight);
+        }
+
+        m_rowToRectMap[row] = rect;
+    }
+
+    m_hashIsDirty = false;
+    viewport()->update();
 }
 
 //-----------------------------------------------------------------------------
 QRectF glvdebug_QTimelineView::itemRect(const QModelIndex &item) const
 {
     QRectF rect;
-    if (!item.isValid())
+    if (item.isValid())
     {
-        return rect;
+        rect = m_rowToRectMap.value(item.row());
     }
-
-    glv_trace_packet_header* pHeader = (glv_trace_packet_header*)item.internalPointer();
-
-    // make sure item is valid size
-    if (pHeader->entrypoint_end_time <= pHeader->entrypoint_begin_time)
-    {
-        return rect;
-    }
-
-    int threadIndex = m_threadIdList.indexOf(pHeader->thread_id);
-    int topOffset = (m_threadHeight * threadIndex) + (m_threadHeight * 0.5);
-
-    uint64_t duration = pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time;
-
-    float leftOffset = scalePositionHorizontally(pHeader->entrypoint_begin_time);
-    leftOffset += 10; // leaves a small margin on the left side;
-    float scaledWidth = scaleDurationHorizontally(duration);
-
-    // Clamp the item so that it is 1 pixel wide.
-    // This is intentionally being done before updating the minimum offset
-    // so that small items after the current item will not be drawn
-    if (scaledWidth < 1)
-    {
-        scaledWidth = 2;
-    }
-
-    // draw the colored box that represents this item
-    int itemHeight = m_threadHeight/2;
-
-    rect.setLeft(leftOffset);
-    rect.setTop(topOffset - (itemHeight/2));
-    rect.setWidth(scaledWidth);
-    rect.setHeight(itemHeight);
-
     return rect;
 }
 
@@ -289,15 +332,111 @@ bool glvdebug_QTimelineView::event(QEvent * e)
 }
 
 //-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::resizeEvent(QResizeEvent *event)
+{
+    deletePixmap();
+
+    uint64_t rawDuration = m_rawEndTime - m_rawStartTime;
+
+    // the duration to viewport scale should allow us to map the entire timeline into the current window width.
+    if (rawDuration > 0)
+    {
+        int initialTimelineWidth = viewport()->width() - 2*m_margin - m_scrollBarWidth;
+        m_durationToViewportScale = (float)initialTimelineWidth / u64ToFloat(rawDuration);
+    }
+
+    updateGeometries();
+}
+
+//-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::scrollContentsBy(int dx, int dy)
+{
+    deletePixmap();
+
+    if (dy != 0)
+    {
+        // The zoom factor is a linear interpolation (based on the vertical scroll bar value and max)
+        // between the m_durationToViewportScale (which fits the entire timeline into the viewport width)
+        // and m_maxZoom (which is initialized to 1/1000)
+        float zoomRatio = (float)verticalScrollBar()->value() / (float)verticalScrollBar()->maximum();
+        float diff = m_maxZoom - m_durationToViewportScale;
+        m_zoomFactor = m_durationToViewportScale + zoomRatio * diff;
+        updateGeometries();
+    }
+
+    viewport()->update();
+//    scrollDirtyRegion(dx, 0);
+//    viewport()->scroll(dx, 0);
+}
+
+//-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::mousePressEvent(QMouseEvent * event)
+{
+    QAbstractItemView::mousePressEvent(event);
+    QModelIndex index = indexAt(event->pos());
+    if (index.isValid())
+    {
+        setCurrentIndex(indexAt(event->pos()));
+    }
+}
+
+//-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::updateGeometries()
+{
+    uint64_t duration = m_rawEndTime - m_rawStartTime;
+    int hMax = scaleDurationHorizontally(duration) + 2*m_margin - viewport()->width();
+    horizontalScrollBar()->setRange(0, qMax(0, hMax));
+    horizontalScrollBar()->setPageStep(viewport()->width());
+    horizontalScrollBar()->setSingleStep(viewport()->width() / 10);
+}
+
+//-----------------------------------------------------------------------------
 QRect glvdebug_QTimelineView::visualRect(const QModelIndex &index) const
 {
-    QRectF rectf = itemRect(index);
+    QRectF rectf = viewportRect(index);
     return rectf.toRect();
+}
+
+//-----------------------------------------------------------------------------
+QRectF glvdebug_QTimelineView::viewportRect(const QModelIndex &index) const
+{
+    QRectF rectf = itemRect(index);
+    if (rectf.isValid())
+    {
+        rectf.moveLeft( rectf.left() * m_zoomFactor);
+        rectf.setWidth( rectf.width() * m_zoomFactor);
+
+        rectf.adjust(-horizontalScrollBar()->value(), 0,
+                     -horizontalScrollBar()->value(), 0);
+
+        // the margin is added last so that it is NOT scaled
+        rectf.adjust(m_margin, 0,
+                     m_margin, 0);
+    }
+
+    return rectf;
 }
 
 //-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::scrollTo(const QModelIndex &index, ScrollHint hint/* = EnsureVisible*/)
 {
+    QRect viewRect = viewport()->rect();
+    QRect itemRect = visualRect(index);
+
+    if (itemRect.left() < viewRect.left())
+    {
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() + itemRect.center().x() - viewport()->width()/2);
+    }
+    else if (itemRect.right() > viewRect.right())
+    {
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() + itemRect.center().x() - viewport()->width()/2);
+    }
+
+    if (!viewRect.contains(itemRect))
+    {
+        deletePixmap();
+    }
+    viewport()->update();
 }
 
 //-----------------------------------------------------------------------------
@@ -306,18 +445,20 @@ QModelIndex glvdebug_QTimelineView::indexAt(const QPoint &point) const
     if (model() == NULL)
         return QModelIndex();
 
-    // Transform the view coordinates into contents widget coordinates.
-    int wx = point.x() + horizontalScrollBar()->value();
-    int wy = point.y() + verticalScrollBar()->value();
+    // Transform the view coordinates into content widget coordinates.
 
-    for (int r = 0; r < model()->rowCount(); r++)
+    float wy = (float)point.y();
+    int x = point.x() - m_margin + horizontalScrollBar()->value();
+    float wx = (float)x / m_zoomFactor;
+
+    QHashIterator<int, QRectF> iter(m_rowToRectMap);
+    while (iter.hasNext())
     {
-        QModelIndex index = model()->index(r, glvdebug_QTraceFileModel::Column_EntrypointName);
-        QRectF rectf = itemRect(index);
-        QRect rect = rectf.toRect();
-        if (rect.contains(wx, wy))
+        iter.next();
+        QRectF value = iter.value();
+        if (value.contains(wx, wy))
         {
-            return index;
+            return model()->index(iter.key(), glvdebug_QTraceFileModel::Column_EntrypointName);
         }
     }
 
@@ -330,7 +471,7 @@ QRegion glvdebug_QTimelineView::itemRegion(const QModelIndex &index) const
     if (!index.isValid())
         return QRegion();
 
-    return QRegion(itemRect(index).toRect());
+    return QRegion(viewportRect(index).toRect());
 }
 
 //-----------------------------------------------------------------------------
@@ -342,7 +483,7 @@ void glvdebug_QTimelineView::paintEvent(QPaintEvent *event)
 }
 
 //-----------------------------------------------------------------------------
-void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& rect, const QList<int> &threadList, int gap)
+void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& rect, const QList<int> &threadList)
 {
     int numThreads = threadList.count();
 
@@ -355,8 +496,8 @@ void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& r
         painter->drawText(0, threadTop + 15, QString("Thread %1").arg(threadList[i]));
 
         // draw the timeline in the middle of this thread's area
-        int lineStart = gap;
-        int lineEnd = m_lineLength + lineStart;
+        int lineStart = m_margin - horizontalOffset();
+        int lineEnd = lineStart + scaleDurationHorizontally(m_lineLength);
         int lineY = threadTop + height/2;
         painter->drawLine(lineStart, lineY, lineEnd, lineY);
     }
@@ -377,11 +518,9 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         m_threadHeight /= m_threadIdList.count();
     }
 
-    int gap = 10;
     int arrowHeight = 12;
     int arrowTop = 2;
     int arrowHalfWidth = 4;
-    m_lineLength = event->rect().width()-2*gap;
 
     QPolygon triangle(3);
     triangle.setPoint(0, 0, arrowTop);
@@ -390,26 +529,7 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
 
     QList<int> threadList = getModelThreadList();
 
-    if (m_pPixmap != NULL)
-    {
-        // see if we need to delete the pixmap due to a large window resize
-        int rectHeight = event->rect().height();
-        int rectWidth = event->rect().width();
-        int pmHeight = m_pPixmap->height();
-        int pmWidth = m_pPixmap->width();
-
-        float widthPctDelta = (float)(rectWidth - pmWidth) / (float)pmWidth;
-        float heightPctDelta = (float)(rectHeight - pmHeight) / (float)pmHeight;
-
-        // If the resize is of a 'signficant' amount, then delete the pixmap so that it will be regenerated at the new size.
-        if (widthPctDelta < -0.2 ||
-            widthPctDelta > 0.2 ||
-            heightPctDelta < -0.2 ||
-            heightPctDelta > 0.2)
-        {
-            deletePixmap();
-        }
-    }
+    calculateRectsIfNecessary();
 
     if (m_pPixmap == NULL)
     {
@@ -420,32 +540,22 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
 
         QPainter pixmapPainter(m_pPixmap);
 
-        m_threadIdMinOffset.clear();
-        for (int i = 0; i < m_threadIdList.count(); i++)
-        {
-            m_threadIdMinOffset.append(0);
-        }
-
         // fill entire background with background color
         pixmapPainter.fillRect(event->rect(), m_background);
-        drawBaseTimelines(&pixmapPainter, event->rect(), threadList, gap);
-
-        m_horizontalScale = (float)m_lineLength / u64ToFloat(m_rawEndTime - m_rawStartTime);
+        drawBaseTimelines(&pixmapPainter, event->rect(), threadList);
 
         if (model() != NULL)
         {
             int numRows = model()->rowCount();
-            int height = pixmapHeight/(2*m_threadIdList.count());
 
             for (int r = 0; r < numRows; r++)
             {
                 QModelIndex index = model()->index(r, glvdebug_QTraceFileModel::Column_EntrypointName);
 
-                drawTimelineItem(&pixmapPainter, index, height);
+                drawTimelineItem(&pixmapPainter, index);
             }
         }
     }
-
     painter->drawPixmap(event->rect(), *m_pPixmap, m_pPixmap->rect());
 
     if (model() == NULL)
@@ -471,8 +581,8 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
         painter->setBrush(Qt::NoBrush);
 
         QModelIndex index = model()->index(currentIndexRow, glvdebug_QTraceFileModel::Column_EntrypointName);
-        QRectF rect = itemRect(index);
-        rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf-1, penWidthHalf+1);
+        QRectF rect = visualRect(index);
+        rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf-1, penWidthHalf);
         painter->drawRect(rect);
 
         // Draw marker underneath the current rect
@@ -491,11 +601,7 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
 //-----------------------------------------------------------------------------
 float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value) const
 {
-    float scaled = value * m_horizontalScale;
-    if (scaled <= m_horizontalScale)
-    {
-        scaled = m_horizontalScale;
-    }
+    float scaled = u64ToFloat(value) * m_zoomFactor;
 
     return scaled;
 }
@@ -504,33 +610,36 @@ float glvdebug_QTimelineView::scaleDurationHorizontally(uint64_t value) const
 float glvdebug_QTimelineView::scalePositionHorizontally(uint64_t value) const
 {
     uint64_t shiftedValue = value - m_rawStartTime;
-    uint64_t duration = m_rawEndTime - m_rawStartTime;
-    float offset = (u64ToFloat(shiftedValue) / u64ToFloat(duration)) * m_lineLength;
+    float offset = scaleDurationHorizontally(shiftedValue);
 
     return offset;
 }
 
 //-----------------------------------------------------------------------------
-void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelIndex &index, int height)
+void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelIndex &index)
 {
-    glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
-    if (pHeader == NULL)
+    QRectF rect = viewportRect(index);
+
+    // don't draw if the rect is outside the viewport
+    if (!rect.isValid() ||
+        rect.bottom() < 0 ||
+        rect.y() > viewport()->height() ||
+        rect.x() > viewport()->width() ||
+        rect.right() < 0)
     {
         return;
     }
 
-    if (pHeader->entrypoint_end_time <= pHeader->entrypoint_begin_time)
-    {
-        return;
-    }
-
-
-    QRectF rect = itemRect(index);
-    if (!rect.isValid() || rect.bottom() < 0 ||
-        rect.y() > viewport()->height())
-    {
-        return;
-    }
+    // If the rect is too narrow, dont draw it.
+    // TODO: This may cause a bunch of narrow calls to be not drawn,
+    // which (when combined) could account for a lot of time,
+    // so it would be better to batch these up and draw them
+    // as a single line per pixel width. With a color based on the
+    // most expensive of the batched calls.
+//    if (rect.width() < 0.1f)
+//    {
+//        return;
+//    }
 
     QStyleOptionViewItem option = viewOptions();
     option.rect = rect.toRect();
@@ -538,7 +647,6 @@ void glvdebug_QTimelineView::drawTimelineItem(QPainter* painter, const QModelInd
         option.state |= QStyle::State_Selected;
     if (currentIndex() == index)
         option.state |= QStyle::State_HasFocus;
-
 
     itemDelegate()->paint(painter, option, index);
 }

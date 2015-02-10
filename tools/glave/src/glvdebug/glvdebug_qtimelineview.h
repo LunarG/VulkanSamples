@@ -53,6 +53,8 @@ public:
     virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
 };
 
+// Implementation of the QTimelineView has benefited greatly from the following site:
+// http://www.informit.com/articles/article.aspx?p=1613548
 class glvdebug_QTimelineView : public QAbstractItemView
 {
     Q_OBJECT
@@ -96,16 +98,24 @@ private:
     float m_maxItemDuration;
     uint64_t m_rawStartTime;
     uint64_t m_rawEndTime;
-    float m_horizontalScale;
-    int m_lineLength;
+    uint64_t m_lineLength;
+    float m_durationToViewportScale;
+    float m_zoomFactor;
+    float m_maxZoom;
     int m_threadHeight;
+    QHash<int, QRectF> m_rowToRectMap;
+    bool m_hashIsDirty;
+    int m_margin;
+    int m_scrollBarWidth;
 
     QPixmap *m_pPixmap;
     glvdebug_QTimelineItemDelegate m_itemDelegate;
 
-    void drawBaseTimelines(QPainter *painter, const QRect &rect, const QList<int> &threadList, int gap);
-    void drawTimelineItem(QPainter* painter, const QModelIndex &index, int height);
+    void calculateRectsIfNecessary();
+    void drawBaseTimelines(QPainter *painter, const QRect &rect, const QList<int> &threadList);
+    void drawTimelineItem(QPainter* painter, const QModelIndex &index);
 
+    QRectF viewportRect(const QModelIndex &index) const;
     float scaleDurationHorizontally(uint64_t value) const;
     float scalePositionHorizontally(uint64_t value) const;
 
@@ -118,6 +128,9 @@ protected:
     void paint(QPainter *painter, QPaintEvent *event);
 
     virtual bool event(QEvent * e);
+    virtual void resizeEvent(QResizeEvent *event);
+    virtual void mousePressEvent(QMouseEvent * event);
+    virtual void scrollContentsBy(int dx, int dy);
 
     // Begin protected virtual functions of QAbstractItemView
     virtual QModelIndex moveCursor(CursorAction cursorAction,
@@ -146,6 +159,9 @@ protected:
         return QRegion();
     }
     // End protected virtual functions of QAbstractItemView
+
+protected slots:
+    virtual void updateGeometries();
 
 signals:
 
