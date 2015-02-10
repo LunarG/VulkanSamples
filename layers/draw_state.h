@@ -35,6 +35,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_UNKNOWN_DS_TYPE,                  // Shader slot mapping is not recognized
     DRAWSTATE_DS_MAPPING_MISMATCH,              // DS Mapping mismatch
     DRAWSTATE_INVALID_REGION,                   // Invalid DS region
+    DRAWSTATE_INVALID_SET,                      // Invalid DS
     DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
     DRAWSTATE_DS_END_WITHOUT_BEGIN,             // EndDSUpdate called w/o corresponding BeginDSUpdate
     DRAWSTATE_UPDATE_WITHOUT_BEGIN,             // Attempt to update descriptors w/o calling BeginDescriptorRegionUpdate
@@ -43,7 +44,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DS_MEMORY_ATTACH_FAILED,          // Error while attempting to Attach Mem mapping to DS Slot
     DRAWSTATE_DS_NESTED_DS_ATTACH_FAILED,       // Error while attempting to Attach Nested DS mapping to DS Slot
     DRAWSTATE_CLEAR_DS_FAILED,                  // Error while attempting ClearDS
-    DRAWSTATE_INVALID_PIPELINE,                 // Invalid DS referenced
+    DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
     DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
@@ -51,7 +52,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_NO_DS_REGION,                     // No DS Region is available
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
-    DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS   // Descriptors set for update out of bounds for corresponding layout section
+    DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
+    DRAWSTATE_INVALID_UPDATE_INDEX              // Index of requested update is invalid for specified descriptors set
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -87,6 +89,8 @@ typedef struct _PIPELINE_NODE {
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
     uint32_t                                vtxAttributeCount; // number of attributes
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
+    uint32_t                                attachmentCount;   // number of CB attachments
+    XGL_PIPELINE_CB_ATTACHMENT_STATE*       pAttachments;
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {
@@ -143,6 +147,8 @@ typedef struct _LAYOUT_NODE {
     XGL_FLAGS                                    stageFlags;
     const uint32_t                               shaderStageBindPoints[XGL_NUM_SHADER_STAGE];
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfoList;
+    uint32_t                                     startIndex; // 1st index of this layout
+    uint32_t                                     endIndex; // last index of this layout
     struct _LAYOUT_NODE*                         pPriorSetLayout; // Points to node w/ priorSetLayout
     struct _LAYOUT_NODE*                         pNext; // Point to next layout in global LL chain of layouts
 } LAYOUT_NODE;
