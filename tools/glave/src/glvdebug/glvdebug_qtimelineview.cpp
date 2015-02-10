@@ -106,22 +106,32 @@ void glvdebug_QTimelineItemDelegate::paint(QPainter *painter, const QStyleOption
             {
                 rect.setWidth(1);
             }
-//            if (rect.isValid())
+
+            float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
+            float durationRatio = duration / pTimeline->getMaxItemDuration();
+            int intensity = std::min(255, (int)(durationRatio * 255.0f));
+            QColor color(intensity, 255-intensity, 0);
+
+            // add gradient to the items better distinguish between the end of one and beginning of the next
+            QLinearGradient linearGrad(rect.center(), rect.bottomRight());
+            linearGrad.setColorAt(0, color);
+            linearGrad.setColorAt(1, color.darker(150));
+
+            painter->setBrush(linearGrad);
+            painter->setPen(Qt::NoPen);
+
+            painter->drawRect(rect);
+
+            if (rect.width() >= 2)
             {
-                float duration = u64ToFloat(pHeader->entrypoint_end_time - pHeader->entrypoint_begin_time);
-                float durationRatio = duration / pTimeline->getMaxItemDuration();
-                int intensity = std::min(255, (int)(durationRatio * 255.0f));
-                QColor color(intensity, 255-intensity, 0);
+                // draw shadow and highlight around the item
+                painter->setPen(color.darker(175));
+                painter->drawLine(rect.right()-1, rect.top(), rect.right()-1, rect.bottom()-1);
+                painter->drawLine(rect.right()-1, rect.bottom()-1, rect.left(), rect.bottom()-1);
 
-                // add gradient to the items better distinguish between the end of one and beginning of the next
-                QLinearGradient linearGrad(rect.center(), rect.bottomRight());
-                linearGrad.setColorAt(0, color);
-                linearGrad.setColorAt(1, color.darker());
-
-                painter->setBrush(linearGrad);
-                painter->setPen(Qt::NoPen);
-
-                painter->drawRect(rect);
+                painter->setPen(color.lighter());
+                painter->drawLine(rect.left(), rect.bottom()-1, rect.left(), rect.top());
+                painter->drawLine(rect.left(), rect.top(), rect.right()-1, rect.top());
             }
         }
     }
@@ -297,7 +307,7 @@ void glvdebug_QTimelineView::calculateRectsIfNecessary()
             float leftOffset = u64ToFloat(pHeader->entrypoint_begin_time - m_rawStartTime);
             float Width = u64ToFloat(duration);
 
-            // draw the colored box that represents this item
+            // create the rect that represents this item
             rect.setLeft(leftOffset);
             rect.setTop(topOffset - (itemHeight/2));
             rect.setWidth(Width);
@@ -656,7 +666,7 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
 
         QModelIndex index = model()->index(currentIndexRow, glvdebug_QTraceFileModel::Column_EntrypointName);
         QRectF rect = visualRect(index);
-        rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf-1, penWidthHalf);
+        rect.adjust(-penWidthHalf, -penWidthHalf, penWidthHalf, penWidthHalf);
         painter->drawRect(rect);
 
         // Draw marker underneath the current rect
