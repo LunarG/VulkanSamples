@@ -270,13 +270,13 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
         offset_align = 4;
         break;
     default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         return;
         break;
     }
 
     if (offset % offset_align) {
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         return;
     }
 
@@ -2902,7 +2902,7 @@ static void cmd_bind_graphics_dset(struct intel_cmd *cmd,
         cmd->bind.dset.graphics_dynamic_offsets = icd_alloc(size,
                 4, XGL_SYSTEM_ALLOC_INTERNAL);
         if (!cmd->bind.dset.graphics_dynamic_offsets) {
-            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
             return;
         }
 
@@ -2927,7 +2927,7 @@ static void cmd_bind_compute_dset(struct intel_cmd *cmd,
         cmd->bind.dset.compute_dynamic_offsets = icd_alloc(size,
                 4, XGL_SYSTEM_ALLOC_INTERNAL);
         if (!cmd->bind.dset.compute_dynamic_offsets) {
-            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
             return;
         }
 
@@ -2943,7 +2943,7 @@ static void cmd_bind_vertex_data(struct intel_cmd *cmd,
                                  XGL_GPU_SIZE offset, uint32_t binding)
 {
     if (binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) {
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -3068,7 +3068,7 @@ static void cmd_draw(struct intel_cmd *cmd,
 
     if (indexed) {
         if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
-            cmd->result = XGL_ERROR_UNKNOWN;
+            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 
         if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
             gen75_3DSTATE_VF(cmd, p->primitive_restart,
@@ -3175,7 +3175,7 @@ ICD_EXPORT void XGLAPI xglCmdBindPipeline(
         cmd_bind_graphics_pipeline(cmd, intel_pipeline(pipeline));
         break;
     default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         break;
     }
 }
@@ -3195,7 +3195,7 @@ ICD_EXPORT void XGLAPI xglCmdBindPipelineDelta(
         cmd_bind_graphics_delta(cmd, delta);
         break;
     default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         break;
     }
 }
@@ -3225,7 +3225,7 @@ ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
                 intel_dynamic_cb((XGL_DYNAMIC_CB_STATE_OBJECT) state));
         break;
     default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         break;
     }
 }
@@ -3247,7 +3247,7 @@ ICD_EXPORT void XGLAPI xglCmdBindDescriptorSet(
         cmd_bind_graphics_dset(cmd, dset, pUserData);
         break;
     default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         break;
     }
 }
@@ -3312,7 +3312,7 @@ ICD_EXPORT void XGLAPI xglCmdDrawIndirect(
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd->result = XGL_ERROR_UNKNOWN;
+    cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 }
 
 ICD_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(
@@ -3324,7 +3324,7 @@ ICD_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd->result = XGL_ERROR_UNKNOWN;
+    cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 }
 
 ICD_EXPORT void XGLAPI xglCmdDispatch(
@@ -3335,7 +3335,7 @@ ICD_EXPORT void XGLAPI xglCmdDispatch(
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd->result = XGL_ERROR_UNKNOWN;
+    cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 }
 
 ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
@@ -3345,5 +3345,5 @@ ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd->result = XGL_ERROR_UNKNOWN;
+    cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 }

@@ -72,7 +72,7 @@ static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
     res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) buf,
             buf->size, format, &view);
     if (res != XGL_SUCCESS) {
-        cmd->result = res;
+        cmd_fail(cmd, res);
         return;
     }
 
@@ -100,7 +100,7 @@ static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
     res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) buf,
             buf->size, format, &view);
     if (res != XGL_SUCCESS) {
-        cmd->result = res;
+        cmd_fail(cmd, res);
         return;
     }
 
@@ -158,7 +158,7 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
 
     ret = intel_img_view_create(cmd->dev, &info, &view);
     if (ret != XGL_SUCCESS) {
-        cmd->result = ret;
+        cmd_fail(cmd, ret);
         return;
     }
 
@@ -257,7 +257,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
     ret = intel_rt_view_create(cmd->dev, &info, &rt);
     if (ret != XGL_SUCCESS) {
-        cmd->result = ret;
+        cmd_fail(cmd, ret);
         return;
     }
 
@@ -288,7 +288,7 @@ static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
     res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) XGL_NULL_HANDLE,
             size, format, &view);
     if (res != XGL_SUCCESS) {
-        cmd->result = res;
+        cmd_fail(cmd, res);
         return;
     }
 
@@ -323,7 +323,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
 
     ret = intel_ds_view_create(cmd->dev, &info, &ds);
     if (ret != XGL_SUCCESS) {
-        cmd->result = ret;
+        cmd_fail(cmd, ret);
         return;
     }
 
@@ -447,7 +447,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
                 intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
                         XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
                         "unaligned xglCmdCopyBuffer unsupported");
-                cmd->result = XGL_ERROR_UNKNOWN;
+                cmd_fail(cmd, XGL_ERROR_UNKNOWN);
                 continue;
             }
 
@@ -487,7 +487,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
     uint32_t i;
 
     if (src->type != dst->type) {
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -496,7 +496,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
         raw_format = cmd_meta_img_raw_format(cmd, src->layout.format);
     } else if (icd_format_is_compressed(src->layout.format) ||
                icd_format_is_compressed(dst->layout.format)) {
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -646,7 +646,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
                 XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
                 "xglCmdCopyImageToBuffer with bpp %d unsupported",
                 icd_format_get_size(img->layout.format));
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -703,14 +703,14 @@ ICD_EXPORT void XGLAPI xglCmdCloneImageData(
 
     res = intel_buf_create(cmd->dev, &buf_info, &src_buf);
     if (res != XGL_SUCCESS) {
-        cmd->result = res;
+        cmd_fail(cmd, res);
         return;
     }
 
     res = intel_buf_create(cmd->dev, &buf_info, &dst_buf);
     if (res != XGL_SUCCESS) {
         intel_buf_destroy(src_buf);
-        cmd->result = res;
+        cmd_fail(cmd, res);
         return;
     }
 
@@ -741,7 +741,7 @@ ICD_EXPORT void XGLAPI xglCmdUpdateBuffer(
 
     /* must be 4-byte aligned */
     if ((destOffset | dataSize) & 3) {
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -787,7 +787,7 @@ ICD_EXPORT void XGLAPI xglCmdFillBuffer(
 
     /* must be 4-byte aligned */
     if ((destOffset | fillSize) & 3) {
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -964,7 +964,7 @@ ICD_EXPORT void XGLAPI xglCmdResolveImage(
 
     if (src->samples <= 1 || dst->samples > 1 ||
         src->layout.format != dst->layout.format) {
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 

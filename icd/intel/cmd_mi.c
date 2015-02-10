@@ -140,7 +140,7 @@ ICD_EXPORT void XGLAPI xglCmdBeginQuery(
         cmd_query_pipeline_statistics(cmd, bo, offset);
         break;
     default:
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         break;
     }
 }
@@ -164,7 +164,7 @@ ICD_EXPORT void XGLAPI xglCmdEndQuery(
                 offset + sizeof(XGL_PIPELINE_STATISTICS_DATA));
         break;
     default:
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         break;
     }
 }
@@ -205,7 +205,7 @@ ICD_EXPORT void XGLAPI xglCmdSetEvent(
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
         break;
     default:
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
         break;
     }
@@ -246,7 +246,7 @@ ICD_EXPORT void XGLAPI xglCmdWriteTimestamp(
         cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
         break;
     default:
-        cmd->result = XGL_ERROR_INVALID_VALUE;
+        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
         break;
     }
 }

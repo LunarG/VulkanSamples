@@ -155,7 +155,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     new_bo = alloc_writer_bo(cmd->dev->winsys, which, new_size);
     if (!new_bo) {
         cmd_writer_discard(cmd, which);
-        cmd->result = XGL_ERROR_OUT_OF_GPU_MEMORY;
+        cmd_fail(cmd, XGL_ERROR_OUT_OF_GPU_MEMORY);
         return;
     }
 
@@ -164,7 +164,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     if (!new_ptr) {
         intel_bo_unreference(new_bo);
         cmd_writer_discard(cmd, which);
-        cmd->result = XGL_ERROR_UNKNOWN;
+        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
     }
 
@@ -198,7 +198,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
                 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!items) {
             writer->item_used = 0;
-            cmd->result = XGL_ERROR_OUT_OF_MEMORY;
+            cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
             return;
         }
 
@@ -403,7 +403,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
                 (struct intel_bo *) reloc->target, reloc->target_offset,
                 reloc->flags, &presumed_offset);
         if (err) {
-            cmd->result = XGL_ERROR_UNKNOWN;
+            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
             break;
         }
 
@@ -425,7 +425,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
                 reloc->flags & ~INTEL_CMD_RELOC_TARGET_IS_WRITER,
                 &presumed_offset);
         if (err) {
-            cmd->result = XGL_ERROR_UNKNOWN;
+            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
             break;
         }
 

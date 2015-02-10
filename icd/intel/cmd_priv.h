@@ -132,13 +132,22 @@ static inline int cmd_gen(const struct intel_cmd *cmd)
     return intel_gpu_gen(cmd->dev->gpu);
 }
 
+static inline void cmd_fail(struct intel_cmd *cmd, XGL_RESULT result)
+{
+    intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+            XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+            "command building error");
+
+    cmd->result = result;
+}
+
 static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
                                      uint32_t reloc_len)
 {
     /* fail silently */
     if (cmd->reloc_used + reloc_len > cmd->reloc_count) {
         cmd->reloc_used = 0;
-        cmd->result = XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;
+        cmd_fail(cmd, XGL_ERROR_TOO_MANY_MEMORY_REFERENCES);
     }
     assert(cmd->reloc_used + reloc_len <= cmd->reloc_count);
 }

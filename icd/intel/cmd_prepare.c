@@ -258,7 +258,7 @@ ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
             pipe_control_flags |= GEN6_PIPE_CONTROL_CS_STALL;
             break;
         default:
-            cmd->result = XGL_ERROR_UNKNOWN;
+            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
             return;
             break;
         }
