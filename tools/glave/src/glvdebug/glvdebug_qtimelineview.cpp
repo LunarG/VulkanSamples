@@ -27,6 +27,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QToolTip>
+#include <math.h>
 #include "glvdebug_qtimelineview.h"
 #include "glvdebug_QTraceFileModel.h"
 
@@ -162,6 +163,9 @@ glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     m_textPen = QPen(Qt::white);
     m_textFont.setPixelSize(50);
 
+    // Allows tracking the mouse position when it is over the timeline
+    setMouseTracking(true);
+
     m_durationToViewportScale = 1;
     m_zoomFactor = 1;
     m_lineLength = 1;
@@ -182,7 +186,6 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
     setItemDelegate(&m_itemDelegate);
 
     m_threadIdList.clear();
-    m_threadIdMinOffset.clear();
     m_maxItemDuration = 0;
     m_rawStartTime = 0;
     m_rawEndTime = 0;
@@ -245,9 +248,10 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
 
     m_zoomFactor = m_durationToViewportScale;
 
-    verticalScrollBar()->setMaximum(100);
+    verticalScrollBar()->setMaximum(1000);
     verticalScrollBar()->setValue(0);
     verticalScrollBar()->setPageStep(10);
+    verticalScrollBar()->setSingleStep(1);
 }
 
 //-----------------------------------------------------------------------------
@@ -334,6 +338,7 @@ bool glvdebug_QTimelineView::event(QEvent * e)
 //-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::resizeEvent(QResizeEvent *event)
 {
+    m_hashIsDirty = true;
     deletePixmap();
 
     uint64_t rawDuration = m_rawEndTime - m_rawStartTime;
@@ -355,13 +360,30 @@ void glvdebug_QTimelineView::scrollContentsBy(int dx, int dy)
 
     if (dy != 0)
     {
-        // The zoom factor is a linear interpolation (based on the vertical scroll bar value and max)
+        QPoint pos = m_mousePosition;
+        int focusX = pos.x();
+        if (pos.isNull())
+        {
+            // If the mouse position is NULL (ie, the mouse is not in the viewport)
+            // zooming will happen around the center of the timeline
+            focusX = (viewport()->width() - m_scrollBarWidth) / 2;
+        }
+
+        int x = focusX + horizontalScrollBar()->value();
+        float wx = (float)x / m_zoomFactor;
+
+        // The zoom factor is a smoothed interpolation (based on the vertical scroll bar value and max)
         // between the m_durationToViewportScale (which fits the entire timeline into the viewport width)
         // and m_maxZoom (which is initialized to 1/1000)
         float zoomRatio = (float)verticalScrollBar()->value() / (float)verticalScrollBar()->maximum();
+        zoomRatio = 1-cos(zoomRatio*M_PI_2);
         float diff = m_maxZoom - m_durationToViewportScale;
         m_zoomFactor = m_durationToViewportScale + zoomRatio * diff;
         updateGeometries();
+
+        int newValue = (wx * m_zoomFactor) - focusX;
+
+        horizontalScrollBar()->setValue(newValue);
     }
 
     viewport()->update();
@@ -381,13 +403,34 @@ void glvdebug_QTimelineView::mousePressEvent(QMouseEvent * event)
 }
 
 //-----------------------------------------------------------------------------
+void glvdebug_QTimelineView::mouseMoveEvent(QMouseEvent * event)
+{
+    // Since we are tracking the mouse position, we really should pass the event
+    // to our base class, Unfortunately it really sucks up performance, so don't do it for now.
+    //QAbstractItemView::mouseMoveEvent(event);
+
+    if (event->pos().x() > viewport()->width() - m_margin)
+    {
+        // The mouse position was within m_margin of the vertical scroll bar (used for zooming)
+        // Make this a null point so that zooming will happen on the center of the timeline
+        // rather than the very edge where the mouse cursor was last seen.
+        m_mousePosition = QPoint();
+    }
+    else
+    {
+        m_mousePosition = event->pos();
+    }
+    event->accept();
+}
+
+//-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::updateGeometries()
 {
     uint64_t duration = m_rawEndTime - m_rawStartTime;
     int hMax = scaleDurationHorizontally(duration) + 2*m_margin - viewport()->width();
     horizontalScrollBar()->setRange(0, qMax(0, hMax));
     horizontalScrollBar()->setPageStep(viewport()->width());
-    horizontalScrollBar()->setSingleStep(viewport()->width() / 10);
+    horizontalScrollBar()->setSingleStep(1);
 }
 
 //-----------------------------------------------------------------------------

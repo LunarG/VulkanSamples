@@ -94,7 +94,6 @@ private:
 
     // new members
     QList<int> m_threadIdList;
-    QList<float> m_threadIdMinOffset;
     float m_maxItemDuration;
     uint64_t m_rawStartTime;
     uint64_t m_rawEndTime;
@@ -107,6 +106,7 @@ private:
     bool m_hashIsDirty;
     int m_margin;
     int m_scrollBarWidth;
+    QPoint m_mousePosition;
 
     QPixmap *m_pPixmap;
     glvdebug_QTimelineItemDelegate m_itemDelegate;
@@ -130,6 +130,7 @@ protected:
     virtual bool event(QEvent * e);
     virtual void resizeEvent(QResizeEvent *event);
     virtual void mousePressEvent(QMouseEvent * event);
+    virtual void mouseMoveEvent(QMouseEvent * event);
     virtual void scrollContentsBy(int dx, int dy);
 
     // Begin protected virtual functions of QAbstractItemView
