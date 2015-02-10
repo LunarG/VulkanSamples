@@ -2113,6 +2113,8 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
     const struct intel_cmd_meta *meta = cmd->bind.meta;
     uint32_t binding_table[2] = { 0, 0 };
     uint32_t offset;
+    const uint32_t sba_offset =
+        cmd->writers[INTEL_CMD_WRITER_SURFACE].sba_offset;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -2135,7 +2137,7 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
                     meta->src.reloc_offset, meta->src.reloc_flags);
         }
 
-        binding_table[0] = offset;
+        binding_table[0] = offset - sba_offset;
     }
     if (meta->dst.valid) {
         offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
@@ -2147,7 +2149,7 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
                 (struct intel_bo *) meta->dst.reloc_target,
                 meta->dst.reloc_offset, meta->dst.reloc_flags);
 
-        binding_table[1] = offset;
+        binding_table[1] = offset - sba_offset;
     }
 
     /* BINDING_TABLE */
@@ -2159,13 +2161,13 @@ static void gen6_meta_surface_states(struct intel_cmd *cmd)
         const int subop = (meta->mode == INTEL_CMD_META_VS_POINTS) ?
             GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_VS :
             GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS;
-        gen7_3dstate_pointer(cmd, subop, offset);
+        gen7_3dstate_pointer(cmd, subop, offset - sba_offset);
     } else {
         /* 3DSTATE_BINDING_TABLE_POINTERS */
         if (meta->mode == INTEL_CMD_META_VS_POINTS)
-            gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, offset, 0, 0);
+            gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, offset - sba_offset, 0, 0);
         else
-            gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset);
+            gen6_3DSTATE_BINDING_TABLE_POINTERS(cmd, 0, 0, offset - sba_offset);
     }
 }
 
