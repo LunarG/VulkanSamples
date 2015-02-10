@@ -2785,13 +2785,21 @@ class Subcommand(object):
 
     def _gen_replay_create_descriptor_set_layout(self):
         cdsl_body = []
-        cdsl_body.append('            XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO createInfo;')
-        cdsl_body.append('            memcpy(&createInfo, pPacket->pSetLayoutInfoList, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));')
+        cdsl_body.append('            XGL_SAMPLER saveSampler;')
+        cdsl_body.append('            if (pPacket->pSetLayoutInfoList != NULL) {')
+        cdsl_body.append('                XGL_SAMPLER *pSampler = (XGL_SAMPLER *) &pPacket->pSetLayoutInfoList->immutableSampler;')
+        cdsl_body.append('                saveSampler = pPacket->pSetLayoutInfoList->immutableSampler;')
+        cdsl_body.append('                *pSampler = remap(saveSampler);')
+        cdsl_body.append('            }')
         cdsl_body.append('            XGL_DESCRIPTOR_SET_LAYOUT setLayout;')
-        cdsl_body.append('            replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayout(remap(pPacket->device), pPacket->stageFlags, pPacket->pSetBindPoints, remap(pPacket->priorSetLayout), &createInfo, &setLayout);')
+        cdsl_body.append('            replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayout(remap(pPacket->device), pPacket->stageFlags, pPacket->pSetBindPoints, remap(pPacket->priorSetLayout), pPacket->pSetLayoutInfoList, &setLayout);')
         cdsl_body.append('            if (replayResult == XGL_SUCCESS)')
         cdsl_body.append('            {')
         cdsl_body.append('                add_to_map(pPacket->pSetLayout, &setLayout);')
+        cdsl_body.append('            }')
+        cdsl_body.append('            if (pPacket->pSetLayoutInfoList != NULL) {')
+        cdsl_body.append('                XGL_SAMPLER *pSampler = (XGL_SAMPLER *) &pPacket->pSetLayoutInfoList->immutableSampler;')
+        cdsl_body.append('                *pSampler = saveSampler;')
         cdsl_body.append('            }')
         return "\n".join(cdsl_body)
 
