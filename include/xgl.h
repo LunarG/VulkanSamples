@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 48, 2)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 50, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -2111,6 +2111,7 @@ typedef struct _XGL_RENDER_PASS_CREATE_INFO
 
     XGL_RECT                                renderArea;
     XGL_FRAMEBUFFER                         framebuffer;
+    uint32_t                                colorAttachmentCount;
     const XGL_ATTACHMENT_LOAD_OP*           pColorLoadOps;               // Array of size equivalent to the number of attachments in the framebuffer
     const XGL_ATTACHMENT_STORE_OP*          pColorStoreOps;              // Array of size equivalent to the number of attachments in the framebuffer
     const XGL_CLEAR_COLOR*                  pColorLoadClearValues;       // Array of size equivalent to the number of attachments in the framebuffer

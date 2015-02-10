@@ -188,6 +188,7 @@ void XglRenderFramework::InitRenderTarget()
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = m_width;
     rp_info.renderArea.extent.height = m_height;
+    rp_info.colorAttachmentCount = m_renderTargetCount;
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;

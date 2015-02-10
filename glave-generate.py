@@ -470,9 +470,7 @@ class Subcommand(object):
                         func_body.append('    customSize = colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) + dsSize;')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, sizeof(XGL_FRAMEBUFFER_CREATE_INFO) + sizeof(XGL_FRAMEBUFFER) + customSize);')
                     elif 'CreateRenderPass' == proto.name:
-# HACK ALERT, TODO this API currently has insufficient parameters to determine the count of the colorLoadOps, colorStoreOps, in the CREATE_INFO struct
-# assume number of colorAttachments  == 1  for now rather than tracing code keeping a list of framebuffer objects with colorAttachmentCounts
-                        func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorLoadOps != NULL && pCreateInfo->pColorStoreOps != NULL && pCreateInfo->pColorLoadClearValues != NULL) ? 1 : 0; //TODO fixme')
+                        func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorLoadOps != NULL && pCreateInfo->pColorStoreOps != NULL && pCreateInfo->pColorLoadClearValues != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
                         func_body.append('    customSize = colorCount * (sizeof(XGL_ATTACHMENT_LOAD_OP) + sizeof(XGL_ATTACHMENT_STORE_OP) + sizeof(XGL_CLEAR_COLOR));')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
                     elif 'BeginCommandBuffer' == proto.name:

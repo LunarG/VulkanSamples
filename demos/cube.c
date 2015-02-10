@@ -311,6 +311,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = demo->width;
     rp_info.renderArea.extent.height = demo->height;
+    rp_info.colorAttachmentCount = 1;
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
