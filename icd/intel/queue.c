@@ -268,6 +268,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
         if (ret != XGL_SUCCESS)
             break;
 
+        if (cmd->result != XGL_SUCCESS) {
+            intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                    XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                    "invalid command buffer submitted");
+            ret = cmd->result;
+            break;
+        }
+
         bo = intel_cmd_get_batch(cmd, &used);
         ret = queue_submit_bo(queue, bo, used);
         queue->last_submitted_cmd = cmd;
