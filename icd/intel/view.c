@@ -353,7 +353,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
     */
    if (img->layout.tiling == INTEL_TILING_NONE) {
       if (is_rt) {
-         const int elem_size = icd_format_get_size(format);
+         const int elem_size U_ASSERT_ONLY = icd_format_get_size(format);
          assert(pitch % elem_size == 0);
       }
    }
@@ -689,7 +689,7 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
     */
    if (img->layout.tiling == INTEL_TILING_NONE) {
       if (is_rt) {
-         const int elem_size = icd_format_get_size(format);
+         const int elem_size U_ASSERT_ONLY = icd_format_get_size(format);
          assert(pitch % elem_size == 0);
       }
    }
@@ -902,8 +902,10 @@ static void ds_view_init(struct intel_ds_view *view,
                          XGL_FORMAT format, unsigned level,
                          unsigned first_layer, unsigned num_layers)
 {
-   const int max_2d_size = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16384 : 8192;
-   const int max_array_size = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 2048 : 512;
+   const int max_2d_size U_ASSERT_ONLY =
+       (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16384 : 8192;
+   const int max_array_size U_ASSERT_ONLY =
+       (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 2048 : 512;
    struct ds_surface_info info;
    uint32_t dw1, dw2, dw3, dw4, dw5, dw6;
    uint32_t *dw;

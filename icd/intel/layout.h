@@ -165,7 +165,8 @@ static inline unsigned
 intel_layout_mem_to_raw(const struct intel_layout *layout,
                         unsigned mem_x, unsigned mem_y)
 {
-   unsigned tile_w, tile_h;
+   unsigned tile_w U_ASSERT_ONLY;
+   unsigned tile_h;
 
    switch (layout->tiling) {
    case INTEL_TILING_NONE:

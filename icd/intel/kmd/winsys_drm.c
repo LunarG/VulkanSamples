@@ -39,6 +39,7 @@
 #include <intel_bufmgr.h>
 
 #include "icd-alloc.h"
+#include "icd-utils.h"
 #include "winsys.h"
 
 struct intel_winsys {
@@ -489,7 +490,7 @@ intel_bo_map_gtt_async(struct intel_bo *bo)
 void
 intel_bo_unmap(struct intel_bo *bo)
 {
-   int err;
+   int err U_ASSERT_ONLY;
 
    err = drm_intel_bo_unmap(gem_bo(bo));
    assert(!err);

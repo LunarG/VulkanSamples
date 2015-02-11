@@ -3055,7 +3055,7 @@ static void cmd_draw(struct intel_cmd *cmd,
                      uint32_t vertex_base)
 {
     const struct intel_pipeline *p = cmd->bind.pipeline.graphics;
-    const uint32_t surface_writer_used =
+    const uint32_t surface_writer_used U_ASSERT_ONLY =
         cmd->writers[INTEL_CMD_WRITER_SURFACE].used;
 
     cmd_adjust_state_base_address(cmd);
