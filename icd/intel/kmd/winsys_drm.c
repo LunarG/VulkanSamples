@@ -131,6 +131,11 @@ probe_winsys(struct intel_winsys *winsys)
 
    info->devid = drm_intel_bufmgr_gem_get_devid(winsys->bufmgr);
 
+   if (drm_intel_get_aperture_sizes(winsys->fd,
+               &info->aperture_mappable, &info->aperture_total)) {
+       return false;
+   }
+
    get_param(winsys, I915_PARAM_HAS_LLC, &val);
    info->has_llc = val;
    info->has_address_swizzling = test_address_swizzling(winsys);
