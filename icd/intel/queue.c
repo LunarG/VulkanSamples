@@ -32,6 +32,19 @@
 #include "fence.h"
 #include "queue.h"
 
+static void queue_submit_hang(struct intel_queue *queue,
+                              struct intel_cmd *cmd,
+                              uint32_t active_lost,
+                              uint32_t pending_lost)
+{
+    intel_cmd_decode(cmd, true);
+
+    intel_dev_log(queue->dev, XGL_DBG_MSG_ERROR,
+            XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+            "GPU hanged with %d/%d active/pending command buffers lost",
+            active_lost, pending_lost);
+}
+
 static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
                                   struct intel_bo *bo,
                                   XGL_GPU_SIZE used)
@@ -260,6 +273,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
 
     for (i = 0; i < cmdBufferCount; i++) {
         struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
+        uint32_t active[2], pending[2];
         struct intel_bo *bo;
         XGL_GPU_SIZE used;
         XGL_RESULT ret;
@@ -276,12 +290,28 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
             break;
         }
 
+        if (intel_debug & INTEL_DEBUG_HANG) {
+            intel_winsys_read_reset_stats(queue->dev->winsys,
+                    &active[0], &pending[0]);
+        }
+
         bo = intel_cmd_get_batch(cmd, &used);
         ret = queue_submit_bo(queue, bo, used);
         queue->last_submitted_cmd = cmd;
 
+        if ((intel_debug & INTEL_DEBUG_HANG) && ret == XGL_SUCCESS) {
+            intel_bo_wait(bo, -1);
+            intel_winsys_read_reset_stats(queue->dev->winsys,
+                    &active[1], &pending[1]);
+
+            if (active[0] != active[1] || pending[0] != pending[1]) {
+                queue_submit_hang(queue, cmd, active[1] - active[0],
+                        pending[1] - pending[0]);
+            }
+        }
+
         if (intel_debug & INTEL_DEBUG_BATCH)
-            intel_cmd_decode(cmd);
+            intel_cmd_decode(cmd, false);
 
         if (ret != XGL_SUCCESS)
             break;

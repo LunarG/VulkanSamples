@@ -555,7 +555,8 @@ static void cmd_writer_decode_items(struct intel_cmd *cmd,
 }
 
 static void cmd_writer_decode(struct intel_cmd *cmd,
-                              enum intel_cmd_writer_type which)
+                              enum intel_cmd_writer_type which,
+                              bool decode_inst_writer)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
 
@@ -580,14 +581,14 @@ static void cmd_writer_decode(struct intel_cmd *cmd,
         cmd_writer_decode_items(cmd, which);
         break;
     case INTEL_CMD_WRITER_INSTRUCTION:
-        if (true) {
-            fprintf(stderr, "skipping instruction buffer: %d kernels\n",
-                    writer->item_used);
-        } else {
+        if (decode_inst_writer) {
             fprintf(stderr, "decoding instruction buffer: %d kernels\n",
                     writer->item_used);
 
             cmd_writer_decode_items(cmd, which);
+        } else {
+            fprintf(stderr, "skipping instruction buffer: %d kernels\n",
+                    writer->item_used);
         }
         break;
     default:
@@ -599,12 +600,12 @@ static void cmd_writer_decode(struct intel_cmd *cmd,
  * Decode according to the recorded items.  This can be called only after a
  * successful intel_cmd_end().
  */
-void intel_cmd_decode(struct intel_cmd *cmd)
+void intel_cmd_decode(struct intel_cmd *cmd, bool decode_inst_writer)
 {
     int i;
 
     assert(cmd->result == XGL_SUCCESS);
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
-        cmd_writer_decode(cmd, i);
+        cmd_writer_decode(cmd, i, decode_inst_writer);
 }

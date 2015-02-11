@@ -60,6 +60,8 @@ static void intel_debug_init(void)
                 intel_debug |= INTEL_DEBUG_NOHW;
             } else if (strncmp(env, "nocache", len) == 0) {
                 intel_debug |= INTEL_DEBUG_NOCACHE;
+            } else if (strncmp(env, "hang", len) == 0) {
+                intel_debug |= INTEL_DEBUG_HANG;
             } else if (strncmp(env, "0x", 2) == 0) {
                 intel_debug |= INTEL_DEBUG_NOHW;
                 intel_devid_override = strtol(env, NULL, 16);

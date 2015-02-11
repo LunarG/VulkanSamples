@@ -227,7 +227,7 @@ static inline uint32_t cmd_state_reserve(struct intel_cmd *cmd,
 
     writer->used = offset + size;
 
-    if (intel_debug & INTEL_DEBUG_BATCH)
+    if (intel_debug & (INTEL_DEBUG_BATCH | INTEL_DEBUG_HANG))
         cmd_writer_record(cmd, which, item, offset, size);
 
     return offset;
@@ -373,7 +373,7 @@ static inline uint32_t cmd_instruction_write(struct intel_cmd *cmd,
 
     writer->used = offset + size;
 
-    if (intel_debug & INTEL_DEBUG_BATCH)
+    if (intel_debug & (INTEL_DEBUG_BATCH | INTEL_DEBUG_HANG))
         cmd_writer_record(cmd, which, INTEL_CMD_ITEM_KERNEL, offset, size);
 
     return offset;
