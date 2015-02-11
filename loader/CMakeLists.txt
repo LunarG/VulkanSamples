@@ -1,6 +1,7 @@
 add_custom_command(OUTPUT dispatch.c
 	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py loader-entrypoints > dispatch.c
-	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py
+                ${PROJECT_SOURCE_DIR}/include/xglIcd.h)
 
 add_custom_command(OUTPUT table_ops.h
 	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops loader > table_ops.h
@@ -11,6 +12,9 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
+# DEBUG enables runtime loader ICD verification
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")

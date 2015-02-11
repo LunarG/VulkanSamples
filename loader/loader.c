@@ -42,6 +42,7 @@
 #include "loader_platform.h"
 #include "table_ops.h"
 #include "loader.h"
+#include "xglIcd.h"
 
 struct loader_instance {
     struct loader_icd *icds;
@@ -967,6 +968,14 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
                 memcpy(pGpus + count, &wrapped_gpus, sizeof(*pGpus));
                 loader_init_dispatch_table(icd->loader_dispatch + i,
                                            get_proc_addr, gpus[i]);
+
+                /* Verify ICD compatibility */
+                if (!valid_loader_magic_value(gpus[i])) {
+                    loader_log(XGL_DBG_MSG_WARNING, 0,
+                            "Loader: Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.\n");
+                    assert(0);
+                }
+
                 const XGL_LAYER_DISPATCH_TABLE **disp;
                 disp = (const XGL_LAYER_DISPATCH_TABLE **) gpus[i];
                 *disp = icd->loader_dispatch + i;

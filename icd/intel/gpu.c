@@ -36,6 +36,7 @@
 #include "queue.h"
 #include "gpu.h"
 #include "wsi_x11.h"
+#include "xglIcd.h"
 
 static struct intel_gpu *intel_gpus;
 
@@ -125,6 +126,7 @@ static struct intel_gpu *gpu_create(int gen, int devid,
         return NULL;
 
     memset(gpu, 0, sizeof(*gpu));
+    set_loader_magic_value(gpu);
 
     gpu->devid = devid;
 
