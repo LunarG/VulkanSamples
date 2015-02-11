@@ -121,18 +121,23 @@ void XglRenderFramework::InitViewport(float width, float height)
     XGL_RESULT err;
 
     XGL_VIEWPORT viewport;
+    XGL_RECT scissor;
 
     XGL_DYNAMIC_VP_STATE_CREATE_INFO viewportCreate = {};
     viewportCreate.sType = XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
-    viewportCreate.viewportCount         = 1;
-    viewportCreate.scissorCount          = 0;
+    viewportCreate.viewportAndScissorCount         = 1;
     viewport.originX  = 0;
     viewport.originY  = 0;
     viewport.width    = 1.f * width;
     viewport.height   = 1.f * height;
     viewport.minDepth = 0.f;
     viewport.maxDepth = 1.f;
+    scissor.extent.width = width;
+    scissor.extent.height = height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
     viewportCreate.pViewports = &viewport;
+    viewportCreate.pScissors = &scissor;
 
     err = xglCreateDynamicViewportState( device(), &viewportCreate, &m_stateViewport );
     ASSERT_XGL_SUCCESS( err );

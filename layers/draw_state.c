@@ -293,13 +293,13 @@ static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENER
     if (XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == pCreateInfo->sType) {
         XGL_DYNAMIC_VP_STATE_CREATE_INFO* pVPCI = (XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pStateNode->pCreateInfo;
         XGL_VIEWPORT** ppViewports = (XGL_VIEWPORT**)&pVPCI->pViewports;
-        size_t vpSize = sizeof(XGL_VIEWPORT) * pVPCI->viewportCount;
+        size_t vpSize = sizeof(XGL_VIEWPORT) * pVPCI->viewportAndScissorCount;
         if (vpSize) {
             *ppViewports = (XGL_VIEWPORT*)malloc(vpSize);
             memcpy(*ppViewports, ((XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pCreateInfo)->pViewports, vpSize);
         }
         XGL_RECT** ppScissors = (XGL_RECT**)&pVPCI->pScissors;
-        size_t scSize = sizeof(XGL_RECT) * pVPCI->scissorCount;
+        size_t scSize = sizeof(XGL_RECT) * pVPCI->viewportAndScissorCount;
         if (scSize) {
             *ppScissors = (XGL_RECT*)malloc(scSize);
             memcpy(*ppScissors, ((XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pCreateInfo)->pScissors, scSize);

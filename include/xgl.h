@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 47, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 48, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -1919,7 +1919,6 @@ typedef struct _XGL_PIPELINE_VP_STATE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     uint32_t                                numViewports;
-    uint32_t                                scissorEnable;
     XGL_COORDINATE_ORIGIN                   clipOrigin;                 // optional (GL45)
     XGL_DEPTH_MODE                          depthMode;                  // optional (GL45)
 } XGL_PIPELINE_VP_STATE_CREATE_INFO;
@@ -2033,9 +2032,8 @@ typedef struct _XGL_DYNAMIC_VP_STATE_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
-    uint32_t                                viewportCount;  // number of entries in pViewports
+    uint32_t                                viewportAndScissorCount;  // number of entries in pViewports and pScissors
     const XGL_VIEWPORT*                     pViewports;
-    uint32_t                                scissorCount;   // number of entries in pScissors
     const XGL_RECT*                         pScissors;
 } XGL_DYNAMIC_VP_STATE_CREATE_INFO;
 

@@ -757,7 +757,6 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&vp, 0, sizeof(vp));
     vp.sType = XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
-    vp.scissorEnable = XGL_FALSE;
 
 
     memset(&ds, 0, sizeof(ds));
@@ -817,14 +816,20 @@ static void demo_prepare_dynamic_states(struct demo *demo)
 
     memset(&viewport_create, 0, sizeof(viewport_create));
     viewport_create.sType = XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
-    viewport_create.viewportCount = 1;
+    viewport_create.viewportAndScissorCount = 1;
     XGL_VIEWPORT viewport;
+    XGL_RECT scissor;
     memset(&viewport, 0, sizeof(viewport));
-    viewport.width = (float) demo->width;
     viewport.height = (float) demo->height;
+    viewport.width = (float) demo->width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
+    scissor.extent.width = demo->width;
+    scissor.extent.height = demo->height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
     viewport_create.pViewports = &viewport;
+    viewport_create.pScissors = &scissor;
 
     memset(&raster, 0, sizeof(raster));
     raster.sType = XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;

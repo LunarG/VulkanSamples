@@ -410,6 +410,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
 
     dw2 = pipeline->cmd_sf_cull;
 
+    /* Scissor is always enabled */
+    dw2 |= GEN7_SF_DW2_SCISSOR_ENABLE;
+
     if (pipeline->sample_count > 1) {
           dw2 |= 128 << GEN7_SF_DW2_LINE_WIDTH__SHIFT |
                  GEN7_SF_DW2_MSRASTMODE_ON_PATTERN;
@@ -417,9 +420,6 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
           dw2 |= 0 << GEN7_SF_DW2_LINE_WIDTH__SHIFT |
                  GEN7_SF_DW2_MSRASTMODE_OFF_PIXEL;
     }
-
-    if (pipeline->scissor_enable)
-        dw2 |= GEN7_SF_DW2_SCISSOR_ENABLE;
 
     /* in U8.3 */
     point_width = (int) (raster->rs_info.pointSize * 8.0f + 0.5f);
@@ -1307,8 +1307,7 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
         return;
 
     assert(viewport->cmd_len == (8 + 4 + 2) *
-            viewport->viewport_count + (viewport->has_scissor_rects) ?
-               (viewport->viewport_count * 2) : 0);
+            /* viewports */ viewport->viewport_count + (/* scissor */ viewport->viewport_count * 2));
 
     sf_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
             GEN6_ALIGNMENT_SF_VIEWPORT, 8 * viewport->viewport_count,
@@ -1322,13 +1321,9 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
             GEN6_ALIGNMENT_SF_VIEWPORT, 2 * viewport->viewport_count,
             &viewport->cmd[viewport->cmd_cc_pos]);
 
-    if (viewport->has_scissor_rects) {
-        scissor_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
-                GEN6_ALIGNMENT_SCISSOR_RECT, 2 * viewport->viewport_count,
-                &viewport->cmd[viewport->cmd_scissor_rect_pos]);
-    } else {
-        scissor_offset = 0;
-    }
+    scissor_offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
+            GEN6_ALIGNMENT_SCISSOR_RECT, 2 * viewport->viewport_count,
+            &viewport->cmd[viewport->cmd_scissor_rect_pos]);
 
     gen6_3DSTATE_VIEWPORT_STATE_POINTERS(cmd,
             clip_offset, sf_offset, cc_offset);
@@ -1379,14 +1374,12 @@ static void gen7_cc_states(struct intel_cmd *cmd)
 static void gen7_viewport_states(struct intel_cmd *cmd)
 {
     const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
-    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     uint32_t offset;
 
     if (!viewport)
         return;
 
-    assert(viewport->cmd_len == (16 + 2 + 2 * pipeline->scissor_enable) *
-            viewport->viewport_count);
+    assert(viewport->cmd_len == (16 + 2 + 2) * viewport->viewport_count);
 
     offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SF_VIEWPORT,
             GEN7_ALIGNMENT_SF_CLIP_VIEWPORT, 16 * viewport->viewport_count,
@@ -1402,14 +1395,12 @@ static void gen7_viewport_states(struct intel_cmd *cmd)
             GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
             offset);
 
-    if (pipeline->scissor_enable) {
-        offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
-                GEN6_ALIGNMENT_SCISSOR_RECT, 2 * viewport->viewport_count,
-                &viewport->cmd[viewport->cmd_scissor_rect_pos]);
-        gen7_3dstate_pointer(cmd,
-                GEN6_RENDER_OPCODE_3DSTATE_SCISSOR_STATE_POINTERS,
-                offset);
-    }
+    offset = cmd_state_write(cmd, INTEL_CMD_ITEM_SCISSOR_RECT,
+                             GEN6_ALIGNMENT_SCISSOR_RECT, 2 * viewport->viewport_count,
+                             &viewport->cmd[viewport->cmd_scissor_rect_pos]);
+    gen7_3dstate_pointer(cmd,
+                         GEN6_RENDER_OPCODE_3DSTATE_SCISSOR_STATE_POINTERS,
+                         offset);
 }
 
 static void gen6_pcb(struct intel_cmd *cmd, int subop,

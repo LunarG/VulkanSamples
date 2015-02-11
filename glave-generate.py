@@ -479,9 +479,8 @@ class Subcommand(object):
                         func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
                         func_body.append('    CREATE_TRACE_PACKET(xglBeginCommandBuffer, sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + customSize);')
                     elif 'CreateDynamicViewportState' == proto.name:
-                        func_body.append('    uint32_t vpCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportCount : 0;')
-                        func_body.append('    uint32_t scCount = (pCreateInfo != NULL && pCreateInfo->pScissors != NULL) ? pCreateInfo->scissorCount : 0;')
-                        func_body.append('    customSize = vpCount * sizeof(XGL_VIEWPORT) + scCount * sizeof(XGL_RECT);')
+                        func_body.append('    uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;')
+                        func_body.append('    customSize = vpsCount * sizeof(XGL_VIEWPORT) + vpsCount * sizeof(XGL_RECT);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDynamicViewportState,  sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO) + sizeof(XGL_DYNAMIC_VP_STATE_OBJECT) + customSize);')
                     elif 'AllocMemory' == proto.name:
                         func_body.append('    customSize = calculate_alloc_memory_size(pAllocInfo->pNext);')
@@ -585,8 +584,8 @@ class Subcommand(object):
                         elif 'BeginCommandBuffer' == proto.name:
                             func_body.append('    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext);')
                         elif 'CreateDynamicViewportState' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpCount * sizeof(XGL_VIEWPORT), pCreateInfo->pViewports);')
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), scCount * sizeof(XGL_RECT), pCreateInfo->pScissors);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(XGL_VIEWPORT), pCreateInfo->pViewports);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(XGL_RECT), pCreateInfo->pScissors);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));')
                         elif 'AllocMemory' == proto.name:

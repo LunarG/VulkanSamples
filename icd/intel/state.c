@@ -96,31 +96,26 @@ viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
 {
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
-    state->viewport_count = info->viewportCount;
-    state->has_scissor_rects = (info->scissorCount > 0);
+    state->viewport_count = info->viewportAndScissorCount;
 
-    assert(info->viewportCount < INTEL_MAX_RENDER_TARGETS);
-    assert(info->scissorCount < INTEL_MAX_RENDER_TARGETS);
-    assert(!state->has_scissor_rects || info->scissorCount == info->viewportCount);
+    assert(info->viewportAndScissorCount < INTEL_MAX_RENDER_TARGETS);
 
     if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
-        state->cmd_len = 16 * info->viewportCount;
+        state->cmd_len = 16 * info->viewportAndScissorCount;
 
         state->cmd_clip_pos = 8;
     } else {
-        state->cmd_len = 8 * info->viewportCount;
+        state->cmd_len = 8 * info->viewportAndScissorCount;
 
         state->cmd_clip_pos = state->cmd_len;
-        state->cmd_len += 4 * info->viewportCount;
+        state->cmd_len += 4 * info->viewportAndScissorCount;
     }
 
     state->cmd_cc_pos = state->cmd_len;
-    state->cmd_len += 2 * info->viewportCount;
+    state->cmd_len += 2 * info->viewportAndScissorCount;
 
-    if (state->has_scissor_rects) {
-        state->cmd_scissor_rect_pos = state->cmd_len;
-        state->cmd_len += 2 * info->viewportCount;
-    }
+    state->cmd_scissor_rect_pos = state->cmd_len;
+    state->cmd_len += 2 * info->viewportAndScissorCount;
 
     state->cmd = icd_alloc(sizeof(uint32_t) * state->cmd_len,
             0, XGL_SYSTEM_ALLOC_INTERNAL);
@@ -152,7 +147,7 @@ viewport_state_init(struct intel_dynamic_vp *state,
     cc_viewport = state->cmd + state->cmd_cc_pos;
     scissor_rect = state->cmd + state->cmd_scissor_rect_pos;
 
-    for (i = 0; i < info->viewportCount; i++) {
+    for (i = 0; i < info->viewportAndScissorCount; i++) {
         const XGL_VIEWPORT *viewport = &info->pViewports[i];
         uint32_t *dw = NULL;
         float translate[3], scale[3];
@@ -195,7 +190,7 @@ viewport_state_init(struct intel_dynamic_vp *state,
         cc_viewport += 2;
     }
 
-    for (i = 0; i < info->scissorCount; i++) {
+    for (i = 0; i < info->viewportAndScissorCount; i++) {
         const XGL_RECT *scissor = &info->pScissors[i];
         /* SCISSOR_RECT */
         int16_t max_x, max_y;

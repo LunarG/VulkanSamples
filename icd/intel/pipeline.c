@@ -1262,8 +1262,6 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
         pipeline->tess_state = info->tess;
     }
 
-    pipeline->scissor_enable = info->vp.scissorEnable;
-
     return ret;
 }
 

@@ -194,7 +194,6 @@ struct intel_pipeline {
     // XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
-    bool scissor_enable;
 
     XGL_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
 
