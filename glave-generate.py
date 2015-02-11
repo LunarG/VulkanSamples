@@ -400,9 +400,8 @@ class Subcommand(object):
                     func_body.append('    %s result;' % proto.ret)
                     return_txt = 'result = '
                 if in_data_size:
-                    func_body.append('    size_t dataSizeIn = (pDataSize == NULL) ? 0 : *pDataSize;')
+                    func_body.append('    size_t _dataSize;')
                 func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
-                # TODO: handle xglGetXXX where pDataSize is not a valid input
                 # functions that have non-standard sequence of  packet creation and calling real function
                 # NOTE: Anytime we call the function first, need to add custom code for correctly tracking API call time
                 if 'CreateInstance' == proto.name:
@@ -507,6 +506,8 @@ class Subcommand(object):
                 else:
                     func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, packet_size))
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
+                if in_data_size:
+                    func_body.append('    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;')
                 func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
                 func_body.append(packet_update_txt.strip('\n'))
                 if 'MapMemory' == proto.name: # Custom code for MapMem case
@@ -549,14 +550,14 @@ class Subcommand(object):
                         elif 'dataSize' == proto.params[idx].name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
                         elif 'pDataSize' == proto.params[idx].name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(size_t), &dataSizeIn);' % (proto.params[idx].name))
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(size_t), &_dataSize);' % (proto.params[idx].name))
                         elif 'pDescriptorSets' == proto.params[idx].name and 'AllocDescriptorSets' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets);')
                         elif 'pData' == proto.params[idx].name:
                             if 'dataSize' == proto.params[idx-1].name:
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
                             elif in_data_size:
-                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSizeIn, %s);' % (proto.params[idx].name, proto.params[idx].name))
+                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), _dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
                             else:
                                 func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, %s);' % (proto.params[idx].name, proto.params[idx].name))
                         elif 'pUpdateChain' == proto.params[idx].name:
@@ -2497,7 +2498,7 @@ class Subcommand(object):
         ggi_body.append('                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &size, pData);')
         ggi_body.append('                    if (replayResult == XGL_SUCCESS)')
         ggi_body.append('                    {')
-        ggi_body.append('                        if (size != *pPacket->pDataSize && pData == NULL)')
+        ggi_body.append('                        if (size != *pPacket->pDataSize && pData != NULL)')
         ggi_body.append('                        {')
         ggi_body.append('                            glv_LogWarn("xglGetGpuInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
         ggi_body.append('                        }')
@@ -2628,7 +2629,7 @@ class Subcommand(object):
         goi_body.append('            replayResult = m_xglFuncs.real_xglGetObjectInfo(remap(pPacket->object), pPacket->infoType, &size, pData);')
         goi_body.append('            if (replayResult == XGL_SUCCESS)')
         goi_body.append('            {')
-        goi_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        goi_body.append('                if (size != *pPacket->pDataSize && pData != NULL)')
         goi_body.append('                {')
         goi_body.append('                    glv_LogWarn("xglGetObjectInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
         goi_body.append('                }')
@@ -2652,7 +2653,7 @@ class Subcommand(object):
         gfi_body.append('            replayResult = m_xglFuncs.real_xglGetFormatInfo(remap(pPacket->device), pPacket->format, pPacket->infoType, &size, pData);')
         gfi_body.append('            if (replayResult == XGL_SUCCESS)')
         gfi_body.append('            {')
-        gfi_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        gfi_body.append('                if (size != *pPacket->pDataSize && pData != NULL)')
         gfi_body.append('                {')
         gfi_body.append('                    glv_LogWarn("xglGetFormatInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
         gfi_body.append('                }')
@@ -2676,7 +2677,7 @@ class Subcommand(object):
         isi_body.append('            replayResult = m_xglFuncs.real_xglGetImageSubresourceInfo(remap(pPacket->image), pPacket->pSubresource, pPacket->infoType, &size, pData);')
         isi_body.append('            if (replayResult == XGL_SUCCESS)')
         isi_body.append('            {')
-        isi_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        isi_body.append('                if (size != *pPacket->pDataSize && pData != NULL)')
         isi_body.append('                {')
         isi_body.append('                    glv_LogWarn("xglGetImageSubresourceInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
         isi_body.append('                }')
@@ -3009,7 +3010,7 @@ class Subcommand(object):
         sp_body.append('            replayResult = m_xglFuncs.real_xglStorePipeline(remap(pPacket->pipeline), &size, pData);')
         sp_body.append('            if (replayResult == XGL_SUCCESS)')
         sp_body.append('            {')
-        sp_body.append('                if (size != *pPacket->pDataSize && pData == NULL)')
+        sp_body.append('                if (size != *pPacket->pDataSize && pData != NULL)')
         sp_body.append('                {')
         sp_body.append('                    glv_LogWarn("xglStorePipeline returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
         sp_body.append('                }')
