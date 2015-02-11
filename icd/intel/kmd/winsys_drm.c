@@ -428,6 +428,13 @@ intel_winsys_decode_bo(struct intel_winsys *winsys,
    intel_bo_unmap(bo);
 }
 
+int
+intel_winsys_read_reset_stats(struct intel_winsys *winsys,
+                              uint32_t *active, uint32_t *pending)
+{
+    return drm_intel_get_reset_stats(winsys->ctx, NULL, active, pending);
+}
+
 void
 intel_bo_reference(struct intel_bo *bo)
 {

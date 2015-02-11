@@ -197,6 +197,10 @@ void
 intel_winsys_decode_bo(struct intel_winsys *winsys,
                        struct intel_bo *bo, int used);
 
+int
+intel_winsys_read_reset_stats(struct intel_winsys *winsys,
+                              uint32_t *active, uint32_t *pending);
+
 /**
  * Increase the reference count of \p bo.
  */
