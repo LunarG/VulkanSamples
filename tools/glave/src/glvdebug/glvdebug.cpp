@@ -66,6 +66,9 @@ glvdebug::glvdebug(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Hide unused, default tab
+    ui->stateTabWidget->removeTab(0);
+
     memset(&m_traceFileInfo, 0, sizeof(glvdebug_trace_file_info));
 
     this->move(g_settings.window_position_left, g_settings.window_position_top);
@@ -101,7 +104,6 @@ glvdebug::glvdebug(QWidget *parent)
     m_pGenerateTraceDialog = new glvdebug_QGenerateTraceDialog(this);
     connect(m_pGenerateTraceDialog, SIGNAL(output_message(QString)), this, SLOT(on_message(QString)));
     connect(m_pGenerateTraceDialog, SIGNAL(output_error(QString)), this, SLOT(on_error(QString)));
-
 
     reset_tracefile_ui();
 
