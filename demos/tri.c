@@ -512,7 +512,7 @@ static void demo_prepare_textures(struct demo *demo)
             .arraySlice = 0,
         };
         XGL_SUBRESOURCE_LAYOUT layout;
-        size_t layout_size;
+        size_t layout_size = sizeof(XGL_SUBRESOURCE_LAYOUT);
         void *data;
         int32_t x, y;
 

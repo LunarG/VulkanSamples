@@ -64,7 +64,7 @@ template<typename T>
 std::vector<T> get_info(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE type, size_t min_elems)
 {
     std::vector<T> info;
-    size_t size = sizeof(T);
+    size_t size;
     if (EXPECT(xglGetGpuInfo(gpu, type, &size, NULL) == XGL_SUCCESS && size % sizeof(T) == 0)) {
         info.resize(size / sizeof(T));
         if (!EXPECT(xglGetGpuInfo(gpu, type, &size, &info[0]) == XGL_SUCCESS && size == info.size() * sizeof(T)))
@@ -81,7 +81,7 @@ template<typename T>
 std::vector<T> get_info(XGL_BASE_OBJECT obj, XGL_OBJECT_INFO_TYPE type, size_t min_elems)
 {
     std::vector<T> info;
-    size_t size = sizeof(T);
+    size_t size;
     if (EXPECT(xglGetObjectInfo(obj, type, &size, NULL) == XGL_SUCCESS && size % sizeof(T) == 0)) {
         info.resize(size / sizeof(T));
         if (!EXPECT(xglGetObjectInfo(obj, type, &size, &info[0]) == XGL_SUCCESS && size == info.size() * sizeof(T)))
