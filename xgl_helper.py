@@ -476,6 +476,7 @@ class StructWrapperGen:
         member_post = ""
         array_index = ""
         member_print_post = ""
+        print_delimiter = "%"
         if struct_member['array'] and 'CHAR' in struct_member['type']: # just print char array as string
             print_type = "s"
             print_array = False
@@ -501,7 +502,8 @@ class StructWrapperGen:
         elif 'uint8' in struct_member['type']:
             print_type = "hu"
         elif '_size' in struct_member['type']:
-            print_type = "zu"
+            print_type = '" PRINTF_SIZE_T_SPECIFIER "'
+            print_delimiter = ""
         elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', '_FLAGS', '_SAMPLE_MASK']]:
             print_type = "u"
         elif 'int' in struct_member['type']:
@@ -515,7 +517,7 @@ class StructWrapperGen:
             member_print_post = "[%u]"
             array_index = " i,"
             member_post = "[i]"
-        print_out = "%%s%s%s = %%%s%s" % (member_name, member_print_post, print_type, postfix) # section of print that goes inside of quotes
+        print_out = "%%s%s%s = %s%s%s" % (member_name, member_print_post, print_delimiter, print_type, postfix) # section of print that goes inside of quotes
         print_arg = ", %s,%s %s(%s%s%s)%s" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
         if self.no_addr and "p" == print_type:
             print_out = "%%s%s%s = addr\\n" % (member_name, member_print_post) # section of print that goes inside of quotes
@@ -1111,6 +1113,7 @@ class GraphVizGen:
         member_post = ""
         array_index = ""
         member_print_post = ""
+        print_delimiter = "%"
         if struct_member['array'] and 'CHAR' in struct_member['type']: # just print char array as string
             print_type = "s"
             print_array = False
@@ -1136,7 +1139,8 @@ class GraphVizGen:
         elif 'uint8' in struct_member['type']:
             print_type = "hu"
         elif '_SIZE' in struct_member['type']:
-            print_type = "zu"
+            print_type = '" PRINTF_SIZE_T_SPECIFIER "'
+            print_delimiter = ""
         elif True in [ui_str in struct_member['type'] for ui_str in ['uint', '_FLAGS', '_SAMPLE_MASK']]:
             print_type = "u"
         elif 'int' in struct_member['type']:
@@ -1150,7 +1154,7 @@ class GraphVizGen:
             member_print_post = "[%u]"
             array_index = " i,"
             member_post = "[i]"
-        print_out = "<TR><TD>%%s%s%s</TD><TD%s>%%%s%s</TD></TR>" % (member_name, member_print_post, port_label, print_type, postfix) # section of print that goes inside of quotes
+        print_out = "<TR><TD>%%s%s%s</TD><TD%s>%s%s%s</TD></TR>" % (member_name, member_print_post, port_label, print_delimiter, print_type, postfix) # section of print that goes inside of quotes
         print_arg = ", %s,%s %s(%s%s%s)%s" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
         return (print_out, print_arg)
 

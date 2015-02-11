@@ -421,36 +421,36 @@ static XGL_DESCRIPTOR_SET g_lastBoundDS = NULL;
 // Return Region node ptr for specified region or else NULL
 static REGION_NODE* getRegionNode(XGL_DESCRIPTOR_REGION region)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     REGION_NODE* pTrav = g_pRegionHead;
     while (pTrav) {
         if (pTrav->region == region) {
-            pthread_mutex_unlock(&globalLock);
+            loader_platform_thread_unlock_mutex(&globalLock);
             return pTrav;
         }
         pTrav = pTrav->pNext;
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
 
 // Return Set node ptr for specified set or else NULL
 static SET_NODE* getSetNode(XGL_DESCRIPTOR_SET set)
 {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     REGION_NODE* pTrav = g_pRegionHead;
     while (pTrav) {
         SET_NODE* pSet = pTrav->pSets;
         while (pSet) {
             if (pSet->set == set) {
-                pthread_mutex_unlock(&globalLock);
+                loader_platform_thread_unlock_mutex(&globalLock);
                 return pSet;
             }
             pSet = pSet->pNext;
         }
         pTrav = pTrav->pNext;
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
 
@@ -469,16 +469,16 @@ static bool32_t dsUpdateActive(XGL_DESCRIPTOR_SET ds)
 }
 
 static LAYOUT_NODE* getLayoutNode(XGL_DESCRIPTOR_SET_LAYOUT layout) {
-    pthread_mutex_lock(&globalLock);
+    loader_platform_thread_lock_mutex(&globalLock);
     LAYOUT_NODE* pTrav = g_pLayoutHead;
     while (pTrav) {
         if (pTrav->layout == layout) {
-            pthread_mutex_unlock(&globalLock);
+            loader_platform_thread_unlock_mutex(&globalLock);
             return pTrav;
         }
         pTrav = pTrav->pNext;
     }
-    pthread_mutex_unlock(&globalLock);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
 
@@ -934,7 +934,7 @@ static void synchAndPrintDSConfig()
     }
 }
 
-static void initDrawState()
+static void initDrawState(void)
 {
     const char *strOpt;
     // initialize DrawState options
@@ -1262,13 +1262,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_
 {
     XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     if (XGL_SUCCESS == result) {
-        pthread_mutex_lock(&globalLock);
+        loader_platform_thread_lock_mutex(&globalLock);
         BUFFER_NODE *pNewNode = (BUFFER_NODE*)malloc(sizeof(BUFFER_NODE));
         pNewNode->buffer = *pBuffer;
         memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_BUFFER_CREATE_INFO));
         pNewNode->pNext = g_pBufferHead;
         g_pBufferHead = pNewNode;
-        pthread_mutex_unlock(&globalLock);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -1307,13 +1307,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
 {
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
     if (XGL_SUCCESS == result) {
-        pthread_mutex_lock(&globalLock);
+        loader_platform_thread_lock_mutex(&globalLock);
         IMAGE_NODE *pNewNode = (IMAGE_NODE*)malloc(sizeof(IMAGE_NODE));
         pNewNode->image = *pView;
         memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO));
         pNewNode->pNext = g_pImageHead;
         g_pImageHead = pNewNode;
-        pthread_mutex_unlock(&globalLock);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -1502,7 +1502,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, 
         char str[1024];
         sprintf(str, "Created Descriptor Region %p", (void*)*pDescriptorRegion);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDescriptorRegion, 0, DRAWSTATE_NONE, "DS", str);
-        pthread_mutex_lock(&globalLock);
+        loader_platform_thread_lock_mutex(&globalLock);
         REGION_NODE* pNewNode = (REGION_NODE*)malloc(sizeof(REGION_NODE));
         if (NULL == pNewNode) {
             char str[1024];
@@ -1524,7 +1524,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, 
             pNewNode->maxSets      = maxSets;
             pNewNode->region       = *pDescriptorRegion;
         }
-        pthread_mutex_unlock(&globalLock);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     else {
         // Need to do anything if region create fails?

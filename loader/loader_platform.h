@@ -64,6 +64,8 @@
 // C99:
 #define STATIC_INLINE static inline
 
+#define PRINTF_SIZE_T_SPECIFIER    "%zu"
+
 // Dynamic Loading:
 typedef void * loader_platform_dl_handle;
 static inline loader_platform_dl_handle loader_platform_open_library(const char* libPath)
@@ -171,6 +173,7 @@ using namespace std;
 // "CMakeLists.txt" file).
 #define snprintf _snprintf
 #define STATIC_INLINE static
+#define PRINTF_SIZE_T_SPECIFIER    "%Iu"
 // Microsoft also doesn't have basename().  Paths are different on Windows, and
 // so this is just a temporary solution in order to get us compiling, so that we
 // can test some scenarios, and develop the correct solution for Windows.
