@@ -343,6 +343,9 @@ static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 }
 
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
+// TODO : Use this function to display sampler info
+//   commenting out for now to avoid warning about not being used
+/*
 static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 {
     loader_platform_thread_lock_mutex(&globalLock);
@@ -357,6 +360,7 @@ static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
     loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
+*/
 
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
@@ -564,6 +568,9 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pNewNode = NULL;
     size_t array_size = 0;
+    size_t base_array_size = 0;
+    size_t total_array_size = 0;
+    XGL_UPDATE_BUFFERS* pUBCI;
     switch (pUpdate->sType)
     {
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -587,24 +594,28 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
         case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
             pNewNode = (GENERIC_HEADER*)malloc(sizeof(XGL_UPDATE_IMAGES));
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_IMAGES));
-            size_t base_array_size = sizeof(XGL_IMAGE_VIEW_ATTACH_INFO*) * ((XGL_UPDATE_IMAGES*)pNewNode)->count;
-            size_t total_array_size = (sizeof(XGL_IMAGE_VIEW_ATTACH_INFO) * ((XGL_UPDATE_IMAGES*)pNewNode)->count) + base_array_size;
-            // TODO : Need to validate if this data structure is being copied correctly
+            base_array_size = sizeof(XGL_IMAGE_VIEW_ATTACH_INFO*) * ((XGL_UPDATE_IMAGES*)pNewNode)->count;
+            total_array_size = (sizeof(XGL_IMAGE_VIEW_ATTACH_INFO) * ((XGL_UPDATE_IMAGES*)pNewNode)->count) + base_array_size;
             XGL_IMAGE_VIEW_ATTACH_INFO*** pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO***)&((XGL_UPDATE_IMAGES*)pNewNode)->pImageViews;
             *pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)malloc(total_array_size);
             for (uint32_t i = 0; i < ((XGL_UPDATE_IMAGES*)pNewNode)->count; i++) {
-                //((XGL_UPDATE_IMAGES*)pNewNode)->pImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)malloc(total_array_size);
-                *pppLocalImageViews[i] = *pppLocalImageViews + base_array_size + (i * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
+                *pppLocalImageViews[i] = (XGL_IMAGE_VIEW_ATTACH_INFO*)(*pppLocalImageViews + base_array_size + (i * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO)));
                 memcpy(*pppLocalImageViews[i], ((XGL_UPDATE_IMAGES*)pUpdate)->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
             }
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
+            pUBCI = (XGL_UPDATE_BUFFERS*)pUpdate;
             pNewNode = (GENERIC_HEADER*)malloc(sizeof(XGL_UPDATE_BUFFERS));
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_BUFFERS));
-            array_size = (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) + sizeof(XGL_BUFFER_VIEW_ATTACH_INFO*)) * ((XGL_UPDATE_BUFFERS*)pNewNode)->count;
-            // TODO : Dual-level copy required here. This is an array of pointers.
-            ((XGL_UPDATE_BUFFERS*)pNewNode)->pBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO*)malloc(array_size);
-            memcpy((XGL_BUFFER_VIEW_ATTACH_INFO*)((XGL_UPDATE_BUFFERS*)pNewNode)->pBufferViews, ((XGL_UPDATE_BUFFERS*)pUpdate)->pBufferViews, array_size);
+            base_array_size = sizeof(XGL_BUFFER_VIEW_ATTACH_INFO*) * pUBCI->count;
+            total_array_size = (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) * pUBCI->count) + base_array_size;
+            XGL_BUFFER_VIEW_ATTACH_INFO*** pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO***)&((XGL_UPDATE_BUFFERS*)pNewNode)->pBufferViews;
+            *pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO**)malloc(total_array_size);
+            for (uint32_t i = 0; i < pUBCI->count; i++) {
+                // Set ptr and then copy data into that ptr
+                *pppLocalBufferViews[i] = (XGL_BUFFER_VIEW_ATTACH_INFO*)(*pppLocalBufferViews + base_array_size + (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) * i));
+                memcpy(*pppLocalBufferViews[i], pUBCI->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));
+            }
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
             pNewNode = (GENERIC_HEADER*)malloc(sizeof(XGL_UPDATE_AS_COPY));
@@ -769,53 +780,42 @@ static void printPipeline()
     }
 }
 // Dump subgraph w/ DS info
-/*
 static void dsDumpDot(FILE* pOutFile)
 {
-    const int i = 0; // hard-coding to just the first DS index for now
-    uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
-    DS_LL_HEAD *pDS = getDS(lastBoundDS);
-    if (pDS) {
-        fprintf(pOutFile, "subgraph DS_SLOTS\n{\nlabel=\"DS0 Slots\"\n");
-        // First create simple array node as central DS reference point
-        fprintf(pOutFile, "\"DS0_MEMORY\" [\nlabel = <<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD PORT=\"ds2\">DS0 Memory</TD></TR>");
-        uint32_t j;
-        char label[1024];
-        for (j = 0; j < pDS->numSlots; j++) {
-            // Don't draw unused slots
-            if (0 != pDS->dsSlot[j].activeMapping)
-                fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", j, j);
-        }
-        fprintf(pOutFile, "</TABLE>>\n];\n");
-        // Now tie each slot to its info
-        for (j = 0; j < pDS->numSlots; j++) {
-            switch (pDS->dsSlot[j].activeMapping)
-            {
-                case MAPPING_MEMORY:
-                    sprintf(label, "MemAttachInfo Slot%u", j);
-                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_memory_view_attach_info(&pDS->dsSlot[j].buffView, label));
-                    fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
-                    break;
-                case MAPPING_IMAGE:
-                    sprintf(label, "ImageAttachInfo Slot%u", j);
-                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_attach_info(&pDS->dsSlot[j].imageView, label));
-                    fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
-                    break;
-                case MAPPING_SAMPLER:
-                    sprintf(label, "SamplerAttachInfo Slot%u", j);
-                    fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(getSamplerCreateInfo(pDS->dsSlot[j].sampler), label));
-                    fprintf(pOutFile, "\"DS0_MEMORY\":slot%u -> \"%s\" [];\n", j, label);
-                    break;
-                default:
-                    skipUnusedCount++;
-                    break;
+    REGION_NODE* pRegion = g_pRegionHead;
+    char tmp_str[1024];
+    while (pRegion) {
+        fprintf(pOutFile, "subgraph cluster_DescriptorRegion\n{\nlabel=\"Descriptor Region\"\n");
+        sprintf(tmp_str, "Region (%p)", pRegion->region);
+        fprintf(pOutFile, "%s", xgl_gv_print_xgl_descriptor_region_create_info(&pRegion->createInfo, tmp_str));
+        SET_NODE* pSet = pRegion->pSets;
+        uint32_t set_index = 0;
+        while (pSet) {
+            ++set_index;
+            fprintf(pOutFile, "subgraph cluster_DescriptorSet%u\n{\nlabel=\"Descriptor Set #%u (%p)\"\n", set_index, set_index, pSet->set);
+            sprintf(tmp_str, "Descriptor Set #%u (%p)", set_index, pSet->set);
+            LAYOUT_NODE* pLayout = pSet->pLayouts;
+            uint32_t layout_index = 0;
+            while (pLayout) {
+                ++layout_index;
+                sprintf(tmp_str, "SET%u_LAYOUT%u", set_index, layout_index);
+                fprintf(pOutFile, "%s", xgl_gv_print_xgl_descriptor_set_layout_create_info(pLayout->pCreateInfoList, tmp_str));
+                pLayout = pLayout->pNext;
+                if (pLayout) {
+                    fprintf(pOutFile, "\"%s\" -> \"SET%u_LAYOUT%u\" [];\n", tmp_str, set_index, layout_index+1);
+                }
             }
-
+            if (pSet->pUpdateStructs) {
+                fprintf(pOutFile, "%s", dynamic_gv_display(pSet->pUpdateStructs, "Descriptor Updates"));
+            }
+            fprintf(pOutFile, "}\n");
+            pSet = pSet->pNext;
         }
         fprintf(pOutFile, "}\n");
+        pRegion = pRegion->pNext;
     }
 }
-*/
+
 // Dump a GraphViz dot file showing the pipeline
 static void dumpDotFile(char *outFileName)
 {
@@ -824,17 +824,17 @@ static void dumpDotFile(char *outFileName)
         FILE* pOutFile;
         pOutFile = fopen(outFileName, "w");
         fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
-        fprintf(pOutFile, "subgraph PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
-        fprintf(pOutFile, "%s", xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD"));
-        fprintf(pOutFile, "}\n");
-        fprintf(pOutFile, "subgraph dynamicState\n{\nlabel=\"Non-Orthogonal XGL State\"\n");
+        fprintf(pOutFile, "subgraph cluster_dynamicState\n{\nlabel=\"Dynamic State\"\n");
         for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
             if (g_pLastBoundDynamicState[i]) {
                 fprintf(pOutFile, "%s", dynamic_gv_display(g_pLastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i)));
             }
         }
         fprintf(pOutFile, "}\n"); // close dynamicState subgraph
-        //dsDumpDot(pOutFile);
+        fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
+        fprintf(pOutFile, "%s", xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD"));
+        fprintf(pOutFile, "}\n");
+        dsDumpDot(pOutFile);
         fprintf(pOutFile, "}\n"); // close main graph "g"
         fclose(pOutFile);
     }
@@ -899,8 +899,6 @@ static void printDSConfig()
             }
             index = 0;
             GENERIC_HEADER* pUpdate = pSet->pUpdateStructs;
-            //while (pUpdate) {
-            // Print update details
             sprintf(tmp_str, "Update Chain [UC] for descriptor set %p:", (void*)pSet->set);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             sprintf(prefix, "  [UC] ");
@@ -909,7 +907,6 @@ static void printDSConfig()
             // TODO : If there is a "view" associated with this update, print CI for that view
             pUpdate = (GENERIC_HEADER*)pUpdate->pNext;
             index++;
-            //}
             pSet = pSet->pNext;
         }
         pRegion = pRegion->pNext;
@@ -1582,7 +1579,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
                     pNewNode->set = pDescriptorSets[i];
                     pNewNode->setUsage = setUsage;
                     // TODO : Make sure to set this correctly
-                    pNewNode->descriptorCount = 0;
+                    pNewNode->descriptorCount = pLayout->endIndex + 1;
                 }
             }
         }
