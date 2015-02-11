@@ -1060,9 +1060,6 @@ static void cmd_wa_gen7_post_command_cs_stall(struct intel_cmd *cmd)
 {
     CMD_ASSERT(cmd, 7, 7.5);
 
-    if (!cmd->bind.draw_count)
-        return;
-
     /*
      * From the Ivy Bridge PRM, volume 2 part 1, page 61:
      *
@@ -1083,9 +1080,6 @@ static void cmd_wa_gen7_post_command_cs_stall(struct intel_cmd *cmd)
 static void cmd_wa_gen7_post_command_depth_stall(struct intel_cmd *cmd)
 {
     CMD_ASSERT(cmd, 7, 7.5);
-
-    if (!cmd->bind.draw_count)
-        return;
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
 
