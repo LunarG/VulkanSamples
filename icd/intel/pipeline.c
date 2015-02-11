@@ -655,6 +655,7 @@ static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
 static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline,
                                                  const struct intel_pipeline_create_info *info)
 {
+    const struct intel_gpu *gpu = pipeline->dev->gpu;
     const uint8_t cmd_len = 2;
     uint32_t offset = 0;
     uint32_t size = 8192;
@@ -700,6 +701,9 @@ static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline
         assert(!"invalid constant buffer size");
         size = 15;
     }
+
+    if (gpu->gt == 3)
+        size *= 2;
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len * 5);
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (cmd_len - 2);
