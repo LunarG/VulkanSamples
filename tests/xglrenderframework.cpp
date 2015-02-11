@@ -776,7 +776,6 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_cb_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
     m_cb_state.pNext = &m_rs_state;
     m_cb_state.alphaToCoverageEnable = XGL_FALSE;
-    m_cb_state.dualSourceBlendEnable = XGL_FALSE;
     m_cb_state.logicOp = XGL_LOGIC_OP_COPY;
 
     m_ms_state.pNext = &m_cb_state;

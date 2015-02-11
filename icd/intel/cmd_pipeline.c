@@ -585,7 +585,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     if (fs->uses & INTEL_SHADER_USE_W)
         dw5 |= GEN6_WM_DW5_PS_USE_W;
 
-    if (pipeline->cb_state.dualSourceBlendEnable)
+    if (pipeline->dual_source_blend_enable)
         dw5 |= GEN6_WM_DW5_DUAL_SOURCE_BLEND;
 
     dw6 = fs->in_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
@@ -689,7 +689,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     if (fs->in_count)
         dw4 |= GEN7_PS_DW4_ATTR_ENABLE;
 
-    if (pipeline->cb_state.dualSourceBlendEnable)
+    if (pipeline->dual_source_blend_enable)
         dw4 |= GEN7_PS_DW4_DUAL_SOURCE_BLEND;
 
     dw5 = fs->urb_grf_start << GEN7_PS_DW5_URB_GRF_START0__SHIFT |

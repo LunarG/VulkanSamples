@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 48, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 48, 2)
 
 #ifdef __cplusplus
 extern "C"
@@ -1966,7 +1966,6 @@ typedef struct _XGL_PIPELINE_CB_STATE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     bool32_t                                alphaToCoverageEnable;
-    bool32_t                                dualSourceBlendEnable;      // optional (GL45)
     bool32_t                                logicOpEnable;
     XGL_LOGIC_OP                            logicOp;
     uint32_t                                attachmentCount;    // # of pAttachments

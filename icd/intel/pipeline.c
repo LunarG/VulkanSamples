@@ -1149,6 +1149,8 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
                 att->srcBlendAlpha != att->srcBlendColor ||
                 att->destBlendAlpha != att->destBlendColor)
                 dw0 |= 1 << 30;
+
+            pipeline->dual_source_blend_enable = icd_pipeline_cb_att_needs_dual_source_blending(att);
         }
 
         if (info->cb.logicOp != XGL_LOGIC_OP_COPY) {

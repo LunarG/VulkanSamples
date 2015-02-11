@@ -211,6 +211,8 @@ struct intel_pipeline {
     uint32_t cmds[INTEL_PSO_CMD_ENTRIES];
     uint32_t cmd_len;
 
+    bool dual_source_blend_enable;
+
     /* The following are only partial HW commands that will need
      * more processing before sending to the HW
      */

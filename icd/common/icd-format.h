@@ -59,6 +59,25 @@ static inline int icd_format_get_block_width(XGL_FORMAT format)
     return (icd_format_is_compressed(format)) ? 4 : 1;
 }
 
+static inline bool icd_blend_mode_is_dual_src(XGL_BLEND mode)
+{
+    return (mode == XGL_BLEND_SRC1_COLOR) ||
+           (mode == XGL_BLEND_SRC1_ALPHA) ||
+           (mode == XGL_BLEND_ONE_MINUS_SRC1_COLOR) ||
+           (mode == XGL_BLEND_ONE_MINUS_SRC1_ALPHA);
+}
+
+static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const XGL_PIPELINE_CB_ATTACHMENT_STATE *att)
+{
+    if (icd_blend_mode_is_dual_src(att->srcBlendColor) ||
+        icd_blend_mode_is_dual_src(att->srcBlendAlpha) ||
+        icd_blend_mode_is_dual_src(att->destBlendColor) ||
+        icd_blend_mode_is_dual_src(att->destBlendAlpha)) {
+        return true;
+    }
+    return false;
+}
+
 size_t icd_format_get_size(XGL_FORMAT format);
 
 XGL_IMAGE_FORMAT_CLASS icd_format_get_class(XGL_FORMAT format);
