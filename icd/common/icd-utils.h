@@ -34,6 +34,12 @@
 #include <strings.h> /* for ffs() */
 #include "icd.h"
 
+#if defined(NDEBUG) && defined(__GNUC__)
+#define U_ASSERT_ONLY __attribute__((unused))
+#else
+#define U_ASSERT_ONLY
+#endif
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define u_popcount(u) __builtin_popcount(u)
