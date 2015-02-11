@@ -655,7 +655,7 @@ layout_init_size_and_format(struct intel_layout *layout,
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
    XGL_FORMAT format = info->format;
-   bool require_separate_stencil;
+   bool require_separate_stencil = false;
 
    layout->width0 = info->extent.width;
    layout->height0 = info->extent.height;
@@ -1093,6 +1093,11 @@ layout_calculate_hiz_size(struct intel_layout *layout,
          hz_height += h * u_minify(info->extent.depth, lv);
       }
       hz_height /= 2;
+      break;
+   default:
+      assert(!"unknown layout walk");
+      hz_width = 0;
+      hz_height = 0;
       break;
    }
 
