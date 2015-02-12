@@ -61,6 +61,7 @@
 #define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
 #endif
 
+// C99:
 #define PRINTF_SIZE_T_SPECIFIER    "%zu"
 
 // Dynamic Loading:
