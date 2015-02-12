@@ -22,8 +22,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-# Authors:
-#   Chia-I Wu <olv@lunarg.com>
 
 import sys
 
@@ -92,36 +90,37 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-    # Return set of printf '%' qualifier and input to that qualifier
+    # Return set of printf '%' qualifier, input to that qualifier, and any dereference
     def _get_printf_params(self, xgl_type, name, output_param):
+        deref = ""
         # TODO : Need ENUM and STRUCT checks here
         if "_TYPE" in xgl_type: # TODO : This should be generic ENUM check
-            return ("%s", "string_%s(%s)" % (xgl_type.replace('const ', '').strip('*'), name))
+            return ("%s", "string_%s(%s)" % (xgl_type.replace('const ', '').strip('*'), name), deref)
         if "char*" == xgl_type:
-            return ("%s", name)
+            return ("%s", name, "*")
         if "uint64_t" in xgl_type:
             if '*' in xgl_type:
-                return ("%lu", "*%s" % name)
-            return ("%lu", name)
+                return ("%lu",  "(%s == NULL) ? 0 : *(%s)" % (name, name), "*")
+            return ("%lu", name, deref)
         if "size_t" in xgl_type:
             if '*' in xgl_type:
-                return ("%zu", "*%s" % name)
-            return ("%zu", name)
+                return ("%zu", "(%s == NULL) ? 0 : *(%s)" % (name, name), "*")
+            return ("%zu", name, deref)
         if "float" in xgl_type:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
-                return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
-            return ("%f", name)
+                return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name), deref)
+            return ("%f", name, deref)
         if "bool" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
-            return ("%u", name)
+            return ("%u", name, deref)
         if True in [t in xgl_type for t in ["int", "FLAGS", "MASK", "xcb_window_t"]]:
             if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
-                return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
+                return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name), deref)
             if '*' in xgl_type:
-                return ("%i", "*(%s)" % name)
-            return ("%i", name)
+                return ("%i", "(%s == NULL) ? 0 : *(%s)" % (name, name), "*")
+            return ("%i", name, deref)
         if output_param:
-            return ("%p", "(void*)*%s" % name)
-        return ("%p", "(void*)(%s)" % name)
+            return ("%p", "(void*)%s" % name, deref)
+        return ("%p", "(void*)(%s)" % name, deref)
 
     def _generate_trace_func_ptrs(self):
         func_ptrs = []
@@ -1338,14 +1337,14 @@ class Subcommand(object):
                 if (p.name == proto.params[-1].name):
                     last_param = True
                 if last_param and create_func: # last param of create func
-                    (pft, pfi) = self._get_printf_params(p.ty,'pPacket->%s' % p.name, True)
+                    (pft, pfi, ptr) = self._get_printf_params(p.ty,'pPacket->%s' % p.name, True)
                 else:
-                    (pft, pfi) = self._get_printf_params(p.ty, 'pPacket->%s' % p.name, False)
+                    (pft, pfi, ptr) = self._get_printf_params(p.ty, 'pPacket->%s' % p.name, False)
                 if last_param == True:
-                    func_str += '%s = %s)' % (p.name, pft)
+                    func_str += '%s%s = %s)' % (ptr, p.name, pft)
                     print_vals += ', %s' % (pfi)
                 else:
-                    func_str += '%s = %s, ' % (p.name, pft)
+                    func_str += '%s%s = %s, ' % (ptr, p.name, pft)
                     print_vals += ', %s' % (pfi)
             func_body.append('        struct_xgl%s* pPacket = (struct_xgl%s*)(pHeader->pBody);' % (proto.name, proto.name))
             func_body.append('        snprintf(str, 1024, "%s"%s);' % (func_str, print_vals))
