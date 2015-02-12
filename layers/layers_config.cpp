@@ -27,6 +27,7 @@
 #include <map>
 #include <string.h>
 #include <xglLayer.h>
+#include "loader_platform.h"
 #include "layers_config.h"
 
 #define MAX_CHARS_PER_LINE 4096
