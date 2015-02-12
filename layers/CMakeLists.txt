@@ -92,6 +92,11 @@ run_xgl_layer_generate(ObjectTracker object_track.c)
 run_xgl_layer_generate(ParamChecker param_checker.c)
 
 add_library(layer_utils SHARED layers_config.cpp)
+if (WIN32)
+    add_library(layer_utils_static STATIC layers_config.cpp)
+    set_target_properties(layer_utils_static PROPERTIES OUTPUT_NAME layer_utils)
+    target_link_libraries(layer_utils)
+endif()
 
 add_xgl_layer(Basic basic.cpp)
 add_xgl_layer(Multi multi.cpp)
