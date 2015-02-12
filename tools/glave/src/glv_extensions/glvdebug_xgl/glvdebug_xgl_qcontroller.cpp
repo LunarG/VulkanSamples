@@ -129,7 +129,7 @@ void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
     {
         if(bEnabled)
         {
-            m_pSvgDiagramTabIndex = m_pView->add_custom_state_viewer(m_pSvgDiagram, tr("SVG Diagram"), false);
+            m_pSvgDiagramTabIndex = m_pView->add_custom_state_viewer(m_pSvgDiagram, tr("Draw State Diagram"), false);
         }
         else
         {
