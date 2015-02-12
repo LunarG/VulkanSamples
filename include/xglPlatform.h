@@ -42,9 +42,15 @@ extern "C"
 #if defined(_WIN32)
     // On Windows, XGLAPI should equate to the __stdcall convention
     #define XGLAPI   __stdcall
+
+    // C99:
+    #define STATIC_INLINE static
 #elif defined(__GNUC__)
     // On other platforms using GCC, XGLAPI stays undefined
     #define XGLAPI
+
+    // C99:
+    #define STATIC_INLINE static inline
 #else
     // Unsupported Platform!
     #error "Unsupported OS Platform detected!"

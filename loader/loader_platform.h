@@ -61,9 +61,6 @@
 #define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
 #endif
 
-// C99:
-#define STATIC_INLINE static inline
-
 #define PRINTF_SIZE_T_SPECIFIER    "%zu"
 
 // Dynamic Loading:
@@ -172,7 +169,6 @@ using namespace std;
 // work-around (Note: The _CRT_SECURE_NO_WARNINGS macro must be set in the
 // "CMakeLists.txt" file).
 #define snprintf _snprintf
-#define STATIC_INLINE static
 #define PRINTF_SIZE_T_SPECIFIER    "%Iu"
 // Microsoft also doesn't have basename().  Paths are different on Windows, and
 // so this is just a temporary solution in order to get us compiling, so that we
