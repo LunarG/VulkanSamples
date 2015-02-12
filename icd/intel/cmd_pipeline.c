@@ -1454,6 +1454,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
     const uint32_t border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
     const uint32_t border_stride =
         u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR / 4);
+    const struct intel_desc_set *set = cmd->bind.dset.graphics;
     uint32_t border_offset, *border_dw, sampler_offset, *sampler_dw;
     uint32_t surface_count;
     uint32_t i;
@@ -1487,8 +1488,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 
         switch (slot->type) {
         case INTEL_PIPELINE_RMAP_SAMPLER:
-            intel_desc_pool_read_sampler(cmd->dev->desc_pool,
-                    &slot->u.sampler, &sampler);
+            intel_desc_set_read_sampler(set, &slot->u.sampler, &sampler);
             break;
         case INTEL_PIPELINE_RMAP_UNUSED:
             sampler = NULL;
@@ -1527,6 +1527,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
 {
     const uint32_t sba_offset =
         cmd->writers[INTEL_CMD_WRITER_SURFACE].sba_offset;
+    const struct intel_desc_set *set = cmd->bind.dset.graphics;
     uint32_t binding_table[256], offset;
     uint32_t surface_count, i;
 
@@ -1572,12 +1573,11 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                 const uint32_t *cmd_data;
                 uint32_t cmd_len;
 
-                assert(dyn_idx < 0 || dyn_idx <
-                        cmd->bind.dset.graphics->layout->dynamic_desc_count);
+                assert(dyn_idx < 0 ||
+                       dyn_idx < set->layout->dynamic_desc_count);
 
-                intel_desc_pool_read_surface(cmd->dev->desc_pool,
-                        &slot->u.surface.offset, stage, &mem,
-                        &read_only, &cmd_data, &cmd_len);
+                intel_desc_set_read_surface(set, &slot->u.surface.offset,
+                        stage, &mem, &read_only, &cmd_data, &cmd_len);
                 if (mem) {
                     const uint32_t dynamic_offset = (dyn_idx >= 0) ?
                         cmd->bind.dset.graphics_dynamic_offsets[dyn_idx] : 0;

@@ -243,17 +243,6 @@ void intel_desc_pool_copy(struct intel_desc_pool *pool,
                           const struct intel_desc_offset *end,
                           const struct intel_desc_offset *src);
 
-void intel_desc_pool_read_surface(const struct intel_desc_pool *pool,
-                                  const struct intel_desc_offset *offset,
-                                  XGL_PIPELINE_SHADER_STAGE stage,
-                                  const struct intel_mem **mem,
-                                  bool *read_only,
-                                  const uint32_t **cmd,
-                                  uint32_t *cmd_len);
-void intel_desc_pool_read_sampler(const struct intel_desc_pool *pool,
-                                  const struct intel_desc_offset *offset,
-                                  const struct intel_sampler **sampler);
-
 XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
                                     XGL_DESCRIPTOR_REGION_USAGE usage,
                                     uint32_t max_sets,
@@ -284,6 +273,17 @@ void intel_desc_set_update_buffers(struct intel_desc_set *set,
                                    const XGL_UPDATE_BUFFERS *update);
 void intel_desc_set_update_as_copy(struct intel_desc_set *set,
                                    const XGL_UPDATE_AS_COPY *update);
+
+void intel_desc_set_read_surface(const struct intel_desc_set *set,
+                                 const struct intel_desc_offset *offset,
+                                 XGL_PIPELINE_SHADER_STAGE stage,
+                                 const struct intel_mem **mem,
+                                 bool *read_only,
+                                 const uint32_t **cmd,
+                                 uint32_t *cmd_len);
+void intel_desc_set_read_sampler(const struct intel_desc_set *set,
+                                 const struct intel_desc_offset *offset,
+                                 const struct intel_sampler **sampler);
 
 XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
                                     XGL_FLAGS stage_flags,
