@@ -190,14 +190,18 @@ public:
         if (!parent.isValid())
         {
             // if parent is not valid, then this row and column is referencing Frame data
-            if (column == 0)
+            if (row < m_frameList.count())
             {
-                return m_frameList[row].modelIndex;
+                if (column == 0)
+                {
+                    return m_frameList[row].modelIndex;
+                }
+                else
+                {
+                    return createIndex(row, column, m_frameList[row].modelIndex.internalPointer());
+                }
             }
-            else
-            {
-                return createIndex(row, column, m_frameList[row].modelIndex.internalPointer());
-            }
+
             return QModelIndex();
         }
         else if (isFrame(parent))
