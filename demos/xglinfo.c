@@ -350,7 +350,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
 
     /* enable all extensions */
     info.extensionCount = gpu->extension_count;
-    info.ppEnabledExtensionNames = gpu->extensions;
+    info.ppEnabledExtensionNames = (const char*const*) gpu->extensions;
     dev->gpu = gpu;
     err = xglCreateDevice(gpu->obj, &info, &dev->obj);
     if (err)
