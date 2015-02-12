@@ -11,7 +11,7 @@ if (POLICY CMP0020)
    cmake_policy(SET CMP0020 OLD)
 endif()
 
-find_package(Qt5 COMPONENTS Widgets Gui Core QUIET)
+find_package(Qt5 COMPONENTS Widgets Gui Core Svg QUIET)
 
 if(NOT Qt5_FOUND)
 # After Qt5.3 is installed, you may need to add the following to the cmake command line:
@@ -54,6 +54,7 @@ set(UI_HEADER_LIST
     glvdebug_qsettingsdialog.h
     glvdebug_qtimelineview.h
     glvdebug_qimageviewer.h
+    glvdebug_qsvgviewer.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
@@ -70,6 +71,7 @@ set(HEADER_LIST
     glvdebug_qsettingsdialog.h
     glvdebug_qtimelineview.h
     glvdebug_qimageviewer.h
+    glvdebug_qsvgviewer.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
@@ -110,6 +112,7 @@ endif ()
 target_link_libraries(${PROJECT_NAME}
     Qt5::Widgets
     Qt5::Core
+    Qt5::Svg
     glvcommon
     ${CMAKE_DL_LIBS}
     ${X11_X11_LIB}

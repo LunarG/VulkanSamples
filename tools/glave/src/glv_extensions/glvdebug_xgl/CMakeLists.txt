@@ -8,7 +8,7 @@ project(glvdebug_xgl)
 include("${SRC_DIR}/build_options.cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../..)
 
-find_package(Qt5 COMPONENTS Widgets Gui Core QUIET)
+find_package(Qt5 COMPONENTS Widgets Gui Core Svg QUIET)
 
 if(NOT Qt5_FOUND)
 # After Qt5.3 is installed, you may need to add the following to the cmake command line:
@@ -57,6 +57,7 @@ set(UI_HEADER_LIST
     glvdebug_xgl_qgroupframesproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_qgroupthreadsproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_qimageviewer.h
+    ${SRC_DIR}/glvdebug/glvdebug_qsvgviewer.h
     ${SRC_DIR}/glvdebug/glvdebug_QTraceFileModel.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWidget.h
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.h
@@ -92,6 +93,7 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST}
 target_link_libraries(${PROJECT_NAME} 
     Qt5::Widgets
     Qt5::Core
+    Qt5::Svg
     ${OS_REPLAYER_LIBS}
     glvcommon
 )

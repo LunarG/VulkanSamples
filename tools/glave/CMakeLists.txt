@@ -19,9 +19,9 @@ if (NOT PYTHONINTERP_FOUND)
     message(FATAL_ERROR "Missing PythonInterp. Install python interpreter 2.7 (on linux use cmd: sudo apt-get install python2.7)")
 endif()
 
-find_package(Qt5 COMPONENTS Widgets Gui Core)
+find_package(Qt5 COMPONENTS Widgets Gui Core Svg)
 if (NOT Qt5_FOUND)
-    message(WARNING "Missing Qt5 development libraries: sudo apt-get install qt5-default")
+    message(WARNING "Missing Qt5 development libraries: sudo apt-get install qt5-default libqt5svg5-dev")
 endif()
 
 set(CODE_GEN_DIR "glv_extensions/glave_xgl_gen")

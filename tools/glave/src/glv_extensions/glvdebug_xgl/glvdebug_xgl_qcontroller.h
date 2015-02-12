@@ -27,7 +27,7 @@
 #include "glv_trace_packet_identifiers.h"
 #include "glvdebug_xgl_qgroupframesproxymodel.h"
 #include "glvdebug_qgroupthreadsproxymodel.h"
-#include "glvdebug_qimageviewer.h"
+#include "glvdebug_qsvgviewer.h"
 #include "glvdebug_QReplayWidget.h"
 #include "glvdebug_QReplayWorker.h"
 #include "glvdebug_xgl_qfile_model.h"
@@ -65,8 +65,8 @@ protected slots:
     void onReplayFinished();
 
 private:
-    glvdebug_qimageviewer* m_pDrawStateDiagram;
-    int m_pDrawStateDiagramTabIndex;
+    glvdebug_qsvgviewer* m_pSvgDiagram;
+    int m_pSvgDiagramTabIndex;
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
     glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;

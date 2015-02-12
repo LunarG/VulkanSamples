@@ -40,8 +40,8 @@ extern "C" {
 #include "glvreplay_seq.h"
 
 glvdebug_xgl_QController::glvdebug_xgl_QController()
-    : m_pDrawStateDiagram(NULL),
-      m_pDrawStateDiagramTabIndex(-1),
+    : m_pSvgDiagram(NULL),
+      m_pSvgDiagramTabIndex(-1),
       m_pReplayWidget(NULL),
       m_pTraceFileModel(NULL)
 {
@@ -125,18 +125,17 @@ void glvdebug_xgl_QController::updateCallTreeBasedOnSettings()
 
 void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 {
-    if(m_pDrawStateDiagram != NULL)
+    if(m_pSvgDiagram != NULL)
     {
         if(bEnabled)
         {
-            m_pDrawStateDiagramTabIndex = m_pView->add_custom_state_viewer(m_pDrawStateDiagram, tr("Draw State Diagram"), false);
+            m_pSvgDiagramTabIndex = m_pView->add_custom_state_viewer(m_pSvgDiagram, tr("SVG Diagram"), false);
         }
         else
         {
-            m_pView->remove_custom_state_viewer(m_pDrawStateDiagramTabIndex);
-            m_pDrawStateDiagramTabIndex = -1;
+            m_pView->remove_custom_state_viewer(m_pSvgDiagramTabIndex);
+            m_pSvgDiagramTabIndex = -1;
         }
-        m_pDrawStateDiagram->setEnabled(bEnabled);
     }
 }
 
@@ -147,16 +146,16 @@ void glvdebug_xgl_QController::onReplayStarted()
 
 void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
-    if(m_pDrawStateDiagram == NULL)
+    if(m_pSvgDiagram == NULL)
     {
-        m_pDrawStateDiagram = new glvdebug_qimageviewer;
-        if(m_pDrawStateDiagram != NULL)
+        m_pSvgDiagram = new glvdebug_qsvgviewer;
+        if(m_pSvgDiagram != NULL)
         {
             setStateWidgetsEnabled(false);
         }
     }
 
-    if(m_pDrawStateDiagram != NULL)
+    if(m_pSvgDiagram != NULL)
     {
         // Check if DOT is available.
 #if defined(PLATFORM_LINUX)
@@ -172,11 +171,11 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         else
         {
             QProcess process;
-            process.start("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
+            process.start("/usr/bin/dot pipeline_dump.dot -Tsvg -o pipeline_dump.svg");
             process.waitForFinished(-1);
         }
 
-        if(m_pDrawStateDiagram->loadImage(tr("pipeline_dump.png")))
+        if(m_pSvgDiagram->load(tr("pipeline_dump.svg")))
         {
             setStateWidgetsEnabled(true);
         }
@@ -258,10 +257,11 @@ void glvdebug_xgl_QController::UnloadTraceFile(void)
         m_pReplayWidget = NULL;
     }
 
-    if (m_pDrawStateDiagram != NULL)
+    if (m_pSvgDiagram != NULL)
     {
-        delete m_pDrawStateDiagram;
-        m_pDrawStateDiagram = NULL;
+        delete m_pSvgDiagram;
+        m_pSvgDiagram = NULL;
+        m_pSvgDiagramTabIndex = -1;
     }
 
     // Clean up replayers
