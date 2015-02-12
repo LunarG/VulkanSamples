@@ -138,6 +138,8 @@ private:
     void reset_tracefile_ui();
 
     void selectApicallModelIndex(QModelIndex index, bool scrollTo, bool select);
+    QModelIndex mapTreeIndexToModel(const QModelIndex& treeIndex) const;
+    QModelIndex mapTreeIndexFromModel(const QModelIndex& modelIndex) const;
 
     static float u64ToFloat(uint64_t value);
     void build_timeline_model();

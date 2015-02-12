@@ -293,12 +293,7 @@ void glvdebug::on_replay_state_changed(bool bReplayInProgress)
 
 unsigned long long glvdebug::get_current_packet_index()
 {
-    QModelIndex index = ui->treeView->currentIndex();
-
-    if (m_pProxyModel != NULL)
-    {
-        index = m_pProxyModel->mapToSource(index);
-    }
+    QModelIndex index = mapTreeIndexToModel(ui->treeView->currentIndex());
 
     unsigned long long packetIndex = 0;
     if (index.isValid())
@@ -734,7 +729,10 @@ void glvdebug::reset_tracefile_ui()
 
 void glvdebug::on_treeView_clicked(const QModelIndex &index)
 {
-    selectApicallModelIndex(index, true, true);
+    // make sure the index is visible in tree view
+    QModelIndex srcIndex = mapTreeIndexToModel(index);
+
+    selectApicallModelIndex(srcIndex, true, true);
 }
 
 void glvdebug::slot_timeline_clicked(const QModelIndex &index)
@@ -745,9 +743,11 @@ void glvdebug::slot_timeline_clicked(const QModelIndex &index)
 void glvdebug::selectApicallModelIndex(QModelIndex index, bool scrollTo, bool select)
 {
     // make sure the index is visible in tree view
-    if (ui->treeView->currentIndex() != index)
+    QModelIndex treeIndex = mapTreeIndexFromModel(index);
+
+    if (ui->treeView->currentIndex() != treeIndex)
     {
-        QModelIndex parentIndex = index.parent();
+        QModelIndex parentIndex = treeIndex.parent();
         while (parentIndex.isValid())
         {
             if (ui->treeView->isExpanded(parentIndex) == false)
@@ -760,13 +760,13 @@ void glvdebug::selectApicallModelIndex(QModelIndex index, bool scrollTo, bool se
         // scroll to the index
         if (scrollTo)
         {
-            ui->treeView->scrollTo(index);
+            ui->treeView->scrollTo(treeIndex);
         }
 
         // select the index
         if (select)
         {
-            ui->treeView->setCurrentIndex(index);
+            ui->treeView->setCurrentIndex(treeIndex);
         }
     }
 
@@ -807,24 +807,51 @@ void glvdebug::on_searchNextButton_clicked()
 {
     if (m_pTraceFileModel != NULL)
     {
-        QModelIndex index = ui->treeView->indexBelow(ui->treeView->currentIndex());
+        QModelIndex index = ui->treeView->currentIndex();
+        if (!index.isValid())
+        {
+            // If there was no valid current index, then get the first index in the trace file model.
+            index = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_EntrypointName);
+        }
+
+        // Need to make sure this index is in model-space
+        if (index.model() == m_pProxyModel)
+        {
+            index = mapTreeIndexToModel(index);
+        }
+
+        // get the next item in the list
+        // TODO: this means that we won't be able to hit "Next" and select the first item in the trace file.
+        // However, if we move this into the loop below, then hitting "Next" will always result in finding the same item.
+        index = index.sibling(index.row()+1, glvdebug_QTraceFileModel::Column_EntrypointName);
+
+        // Can't get column count from the TreeView, so need to ask both the model and proxy if it exists.
+        int columnCount = m_pTraceFileModel->columnCount(index);
+        if (m_pProxyModel != NULL)
+        {
+            columnCount = m_pProxyModel->columnCount(index);
+        }
 
         while (index.isValid())
         {
-            for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
+            for (int column = 0; column < columnCount; column++)
             {
                 if (ui->treeView->isColumnHidden(column))
                     continue;
-                if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
+
+                QModelIndex treeIndex = mapTreeIndexFromModel(m_pTraceFileModel->index(index.row(), column, index.parent()));
+                if (treeIndex.data(Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
                 {
-                    selectApicallModelIndex(index, true, true);
+                    // Get the first column so that it can be selected
+                    QModelIndex srcIndex = m_pTraceFileModel->index(index.row(), glvdebug_QTraceFileModel::Column_EntrypointName, index.parent());
+                    selectApicallModelIndex(srcIndex, true, true);
                     ui->treeView->setFocus();
                     return;
                 }
             }
 
             // wasn't found in that row, so check the next one
-            index = ui->treeView->indexBelow(index);
+            index = index.sibling(index.row()+1, glvdebug_QTraceFileModel::Column_EntrypointName);
         }
     }
 }
@@ -833,25 +860,53 @@ void glvdebug::on_searchPrevButton_clicked()
 {
     if (m_pTraceFileModel != NULL)
     {
-        QModelIndex index = ui->treeView->indexAbove(ui->treeView->currentIndex());
+        QModelIndex index = ui->treeView->currentIndex();
+        if (!index.isValid())
+        {
+            // If there was no valid current index, then get the first index in the trace file model.
+            index = m_pTraceFileModel->index(0, glvdebug_QTraceFileModel::Column_EntrypointName);
+        }
+
+        // Need to make sure this index is in model-space
+        if (index.model() == m_pProxyModel)
+        {
+            index = mapTreeIndexToModel(index);
+        }
+
+        // get the next item in the list
+        // TODO: this means that we won't be able to hit "Prev" and select the first item in the trace file.
+        // However, if we move this into the loop below, then hitting "Prev" will always result in finding the same item.
+        index = index.sibling(index.row()-1, glvdebug_QTraceFileModel::Column_EntrypointName);
+
+        // Can't get column count from the TreeView, so need to ask both the model and proxy if it exists.
+        int columnCount = m_pTraceFileModel->columnCount(index);
+        if (m_pProxyModel != NULL)
+        {
+            columnCount = m_pProxyModel->columnCount(index);
+        }
 
         while (index.isValid())
         {
-            for (int column = 0; column < m_pTraceFileModel->columnCount(index); column++)
+            for (int column = 0; column < columnCount; column++)
             {
                 if (ui->treeView->isColumnHidden(column))
                     continue;
-                if (m_pTraceFileModel->data(m_pTraceFileModel->index(index.row(), column, index.parent()), Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
+
+                QModelIndex treeIndex = mapTreeIndexFromModel(m_pTraceFileModel->index(index.row(), column, index.parent()));
+                if (treeIndex.data(Qt::DisplayRole).toString().contains(ui->searchTextBox->text(), Qt::CaseInsensitive))
                 {
-                    selectApicallModelIndex(index, true, true);
+                    // Get the first column so that it can be selected
+                    QModelIndex srcIndex = m_pTraceFileModel->index(index.row(), glvdebug_QTraceFileModel::Column_EntrypointName, index.parent());
+                    selectApicallModelIndex(srcIndex, true, true);
                     ui->treeView->setFocus();
                     return;
                 }
             }
 
             // wasn't found in that row, so check the next one
-            index = ui->treeView->indexAbove(index);
+            index = index.sibling(index.row()-1, glvdebug_QTraceFileModel::Column_EntrypointName);
         }
+
     }
 }
 
@@ -867,57 +922,68 @@ void glvdebug::on_prevDrawcallButton_clicked()
 {
     if (m_pTraceFileModel != NULL)
     {
-        QModelIndex currentParent;
-        int currentRow = 0;
-        if (ui->treeView->currentIndex().isValid())
-        {
-            currentRow = ui->treeView->currentIndex().row();
-            currentParent = ui->treeView->currentIndex().parent();
-        }
+        QModelIndex index = ui->treeView->currentIndex();
 
-        QModelIndex index = ui->treeView->indexAbove(m_pTraceFileModel->index(currentRow, glvdebug_QTraceFileModel::Column_EntrypointName, currentParent));
+        index = mapTreeIndexToModel(index);
 
-        while (index.isValid())
+        QModelIndex indexAbove= index.sibling(index.row()-1, glvdebug_QTraceFileModel::Column_EntrypointName);
+        while (indexAbove.isValid())
         {
-            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)indexAbove.internalPointer();
             if (pHeader != NULL && m_pTraceFileModel->isDrawCall((GLV_TRACE_PACKET_ID)pHeader->packet_id))
             {
-                selectApicallModelIndex(index, true, true);
+                selectApicallModelIndex(indexAbove, true, true);
                 ui->treeView->setFocus();
                 return;
             }
 
-            // that row is not a draw call, so check the next one
-            index = ui->treeView->indexAbove(index);
+            // that row is not a draw call, so check the prev one
+            indexAbove = indexAbove.sibling(indexAbove.row()-1, glvdebug_QTraceFileModel::Column_EntrypointName);
         }
     }
+}
+
+QModelIndex glvdebug::mapTreeIndexToModel(const QModelIndex& treeIndex) const
+{
+    if (m_pProxyModel != NULL)
+    {
+        return m_pProxyModel->mapToSource(treeIndex);
+    }
+
+    return treeIndex;
+}
+
+QModelIndex glvdebug::mapTreeIndexFromModel(const QModelIndex& modelIndex) const
+{
+    if (m_pProxyModel != NULL)
+    {
+        return m_pProxyModel->mapFromSource(modelIndex);
+    }
+
+    return modelIndex;
 }
 
 void glvdebug::on_nextDrawcallButton_clicked()
 {
     if (m_pTraceFileModel != NULL)
     {
-        QModelIndex currentParent;
-        int currentRow = 0;
-        if (ui->treeView->currentIndex().isValid())
-        {
-            currentRow = ui->treeView->currentIndex().row();
-            currentParent = ui->treeView->currentIndex().parent();
-        }
+        QModelIndex index = ui->treeView->currentIndex();
 
-        QModelIndex index = ui->treeView->indexBelow(m_pTraceFileModel->index(currentRow, glvdebug_QTraceFileModel::Column_EntrypointName, currentParent));
-        while (index.isValid())
+        index = mapTreeIndexToModel(index);
+
+        QModelIndex indexBelow = index.sibling(index.row()+1, glvdebug_QTraceFileModel::Column_EntrypointName);
+        while (indexBelow.isValid())
         {
-            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)index.internalPointer();
+            glv_trace_packet_header* pHeader = (glv_trace_packet_header*)indexBelow.internalPointer();
             if (pHeader != NULL && m_pTraceFileModel->isDrawCall((GLV_TRACE_PACKET_ID)pHeader->packet_id))
             {
-                selectApicallModelIndex(index, true, true);
+                selectApicallModelIndex(indexBelow, true, true);
                 ui->treeView->setFocus();
                 return;
             }
 
             // that row is not a draw call, so check the next one
-            index = ui->treeView->indexBelow(index);
+            indexBelow = indexBelow.sibling(indexBelow.row()+1, glvdebug_QTraceFileModel::Column_EntrypointName);
         }
     }
 }
