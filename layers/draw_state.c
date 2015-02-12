@@ -1540,12 +1540,12 @@ static void synchAndPrintDSConfig(const XGL_CMD_BUFFER cb)
     if (autoDumpOnce) {
         autoDumpOnce = 0;
         dumpDotFile(cb, "pipeline_dump.dot");
-        // Convert dot to png if dot available
 #if defined(_WIN32)
 // FIXME: NEED WINDOWS EQUIVALENT
 #else // WIN32
+        // Convert dot to svg if dot available
         if(access( "/usr/bin/dot", X_OK) != -1) {
-            system("/usr/bin/dot pipeline_dump.dot -Tpng -o pipeline_dump.png");
+            system("/usr/bin/dot pipeline_dump.dot -Tsvg -o pipeline_dump.svg");
         }
 #endif // WIN32
     }
