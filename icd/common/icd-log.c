@@ -89,7 +89,7 @@ XGL_RESULT icd_logger_add_callback(XGL_DBG_MSG_CALLBACK_FUNCTION func,
 
 XGL_RESULT icd_logger_remove_callback(XGL_DBG_MSG_CALLBACK_FUNCTION func)
 {
-    struct icd_logger_callback *cb = icd_logger.callbacks;
+    struct icd_logger_callback *cb = icd_logger.callbacks, *prev = NULL;
     bool found = false;
 
     /* remove all matches */
@@ -97,10 +97,16 @@ XGL_RESULT icd_logger_remove_callback(XGL_DBG_MSG_CALLBACK_FUNCTION func)
         struct icd_logger_callback *next = cb->next;
 
         if (cb->func == func) {
+            if (prev == NULL)
+                icd_logger.callbacks = next;
+            else
+                prev->next = next;
             free(cb);
             found = true;
         }
-
+        else {
+            prev = cb;
+        }
         cb = next;
     }
 
