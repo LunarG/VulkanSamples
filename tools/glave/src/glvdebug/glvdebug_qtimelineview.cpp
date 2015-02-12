@@ -482,6 +482,11 @@ QRectF glvdebug_QTimelineView::viewportRect(const QModelIndex &index) const
 //-----------------------------------------------------------------------------
 void glvdebug_QTimelineView::scrollTo(const QModelIndex &index, ScrollHint hint/* = EnsureVisible*/)
 {
+    if (!index.isValid())
+    {
+        return;
+    }
+
     QRect viewRect = viewport()->rect();
     QRect itemRect = visualRect(index);
 
