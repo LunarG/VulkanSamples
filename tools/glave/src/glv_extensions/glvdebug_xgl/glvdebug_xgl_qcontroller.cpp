@@ -97,6 +97,14 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     m_pTraceFileModel = new glvdebug_xgl_QFileModel(NULL, pTraceFileInfo);
     updateCallTreeBasedOnSettings();
 
+    QProcess process;
+#if defined(PLATFORM_LINUX)
+    process.start("rm pipeline_dump.dot pipeline_dump.svg");
+#elif defined(WIN32)
+    // TODO: Windows.
+#endif
+    process.waitForFinished(-1);
+
     return true;
 }
 
