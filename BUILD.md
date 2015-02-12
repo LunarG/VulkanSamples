@@ -41,7 +41,7 @@ The standard build process builds the icd, the icd loader and all the tests.
 
 Example debug build:
 ```
-cd xgl  # cd to the root of the xgl git repository
+cd GL-Next  # cd to the root of the xgl git repository
 export KHRONOS_ACCOUNT_NAME= <subversion login name for svn checkout of BIL>
 ./update_external_sources.sh  # fetches and builds glslang, llvm, LunarGLASS, and BIL
 cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
