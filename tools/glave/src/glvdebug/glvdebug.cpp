@@ -109,9 +109,6 @@ glvdebug::glvdebug(QWidget *parent)
     // for now, remove these widgets since they are not used
     ui->bottomTabWidget->removeTab(ui->bottomTabWidget->indexOf(ui->machineInfoTab));
     ui->bottomTabWidget->removeTab(ui->bottomTabWidget->indexOf(ui->callStackTab));
-    ui->prevSnapshotButton->setVisible(false);
-    ui->nextSnapshotButton->setVisible(false);
-    ui->line->setVisible(false);
 }
 
 glvdebug::~glvdebug()
@@ -653,8 +650,6 @@ bool glvdebug::open_trace_file(const std::string &filename)
         ui->action_Close->setEnabled(true);
         ui->actionExport_API_Calls->setEnabled(true);
 
-        //ui->prevSnapshotButton->setEnabled(true);
-        //ui->nextSnapshotButton->setEnabled(true);
         ui->prevDrawcallButton->setEnabled(true);
         ui->nextDrawcallButton->setEnabled(true);
 
@@ -713,8 +708,6 @@ void glvdebug::reset_tracefile_ui()
     ui->action_Close->setEnabled(false);
     ui->actionExport_API_Calls->setEnabled(false);
 
-    //ui->prevSnapshotButton->setEnabled(false);
-    //ui->nextSnapshotButton->setEnabled(false);
     ui->prevDrawcallButton->setEnabled(false);
     ui->nextDrawcallButton->setEnabled(false);
     ui->searchTextBox->clear();
@@ -907,14 +900,6 @@ void glvdebug::on_searchPrevButton_clicked()
         }
 
     }
-}
-
-void glvdebug::on_prevSnapshotButton_clicked()
-{
-}
-
-void glvdebug::on_nextSnapshotButton_clicked()
-{
 }
 
 void glvdebug::on_prevDrawcallButton_clicked()

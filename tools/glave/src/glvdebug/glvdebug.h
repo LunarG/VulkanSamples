@@ -111,8 +111,6 @@ private slots:
     void on_searchTextBox_textChanged(const QString &searchText);
     void on_searchNextButton_clicked();
     void on_searchPrevButton_clicked();
-    void on_prevSnapshotButton_clicked();
-    void on_nextSnapshotButton_clicked();
     void on_prevDrawcallButton_clicked();
     void on_nextDrawcallButton_clicked();
 

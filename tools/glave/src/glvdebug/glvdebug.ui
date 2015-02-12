@@ -69,51 +69,6 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
-               <widget class="QPushButton" name="prevSnapshotButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>65</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="toolTip">
-                 <string>Jump to previous snapshot</string>
-                </property>
-                <property name="text">
-                 <string>Prev SS</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="nextSnapshotButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>65</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="toolTip">
-                 <string>Jump to next snapshot</string>
-                </property>
-                <property name="text">
-                 <string>Next SS</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="Line" name="line">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QPushButton" name="prevDrawcallButton">
                 <property name="maximumSize">
                  <size>
