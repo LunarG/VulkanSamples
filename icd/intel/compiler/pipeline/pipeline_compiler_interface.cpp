@@ -47,9 +47,16 @@ struct brw_binding_table {
     uint32_t rt_start;
 
     uint32_t texture_start;
-    uint32_t texture_used;
+    uint32_t texture_count;
 
     uint32_t ubo_start;
+    uint32_t ubo_count;
+
+    uint32_t *sampler_binding;
+    uint32_t *sampler_set;
+
+    uint32_t *uniform_binding;
+    uint32_t *uniform_set;
 };
 
 static void initialize_brw_context(struct brw_context *brw,
@@ -322,34 +329,33 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
         rmap->slots[i].u.rt = i - bt->rt_start;
     }
 
-    intel_desc_layout_find_bind_point(layout, stage, 0, 0, &iter);
     for (i = bt->texture_start; i < bt->ubo_start; i++) {
-        if (bt->texture_used & (1 << (i - bt->texture_start))) {
-            rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
-            rmap->slots[i].u.surface.offset = iter.offset_begin;
-            rmap->slots[i].u.surface.dynamic_offset_index = -1;
+        // use the set and binding data to find correct dset slot
+        intel_desc_layout_find_bind_point(layout, stage,
+                bt->sampler_set[i - bt->texture_start],
+                bt->sampler_binding[i - bt->texture_start],
+                &iter);
 
-            rmap->slots[bt->count + i - bt->texture_start].type =
-                INTEL_PIPELINE_RMAP_SAMPLER;
-            rmap->slots[bt->count + i - bt->texture_start].u.sampler =
-                iter.offset_begin;
-        } else {
-            rmap->slots[i].type = INTEL_PIPELINE_RMAP_UNUSED;
-
-            rmap->slots[bt->count + i - bt->texture_start].type =
-                INTEL_PIPELINE_RMAP_UNUSED;;
-        }
-
-        intel_desc_layout_advance_iter(layout, &iter);
-    }
-
-    intel_desc_layout_find_bind_point(layout, stage, 0, 0, &iter);
-    for (i = bt->ubo_start; i < bt->count; i++) {
         rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
         rmap->slots[i].u.surface.offset = iter.offset_begin;
         rmap->slots[i].u.surface.dynamic_offset_index = -1;
 
-        intel_desc_layout_advance_iter(layout, &iter);
+        rmap->slots[bt->count + i - bt->texture_start].type =
+            INTEL_PIPELINE_RMAP_SAMPLER;
+        rmap->slots[bt->count + i - bt->texture_start].u.sampler =
+            iter.offset_begin;
+    }
+
+    for (i = bt->ubo_start; i < bt->count; i++) {
+        // use the set and binding data to find correct dset slot
+        intel_desc_layout_find_bind_point(layout, stage,
+                bt->uniform_set[i - bt->ubo_start],
+                bt->uniform_binding[i - bt->ubo_start],
+                &iter);
+
+        rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
+        rmap->slots[i].u.surface.offset = iter.offset_begin;
+        rmap->slots[i].u.surface.dynamic_offset_index = -1;
     }
 
     return rmap;
@@ -372,6 +378,18 @@ void intel_destroy_brw_context(struct brw_context *brw)
 {
     ralloc_free(brw->shader_prog);
     ralloc_free(brw);
+}
+
+void unpack_set_and_binding(const int location, int &set, int &binding)
+{
+    // Logic mirrored from LunarGLASS GLSL backend
+    set = (unsigned) location >> 16;
+    binding = location & 0xFFFF;
+
+    // Unbias set, which was biased by 1 to distinguish between "set=0" and nothing.
+    bool setPresent = (set != 0);
+    if (setPresent)
+        --set;
 }
 
 // invoke backend compiler to generate ISA and supporting data structures
@@ -449,10 +467,40 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
 
-            bt.count = data->base.base.binding_table.size_bytes / 4;
+            bt.count         = data->base.base.binding_table.size_bytes / 4;
             bt.texture_start = data->base.base.binding_table.texture_start;
-            bt.texture_used = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->Program->SamplersUsed;
-            bt.ubo_start = data->base.base.binding_table.ubo_start;
+            bt.texture_count = data->base.base.binding_table.ubo_start -
+                               data->base.base.binding_table.texture_start;
+            bt.ubo_start     = data->base.base.binding_table.ubo_start;
+            bt.ubo_count     = bt.count - data->base.base.binding_table.ubo_start;
+
+            // Sampler mapping data
+            bt.sampler_binding = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
+            bt.sampler_set     = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
+            for (int i = 0; i < bt.texture_count; ++i) {
+                int location = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->SamplerUnits[i];
+                int set = 0;
+                int binding = 0;
+
+                unpack_set_and_binding(location, set, binding);
+
+                bt.sampler_binding[i] = binding;
+                bt.sampler_set[i]     = set;
+            }
+
+            // UBO mapping data
+            bt.uniform_binding = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
+            bt.uniform_set     = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
+            for (int i = 0; i < bt.ubo_count; ++i) {
+                int location = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->UniformBlocks[i].Binding;
+                int set = 0;
+                int binding = 0;
+
+                unpack_set_and_binding(location, set, binding);
+
+                bt.uniform_binding[i] = binding;
+                bt.uniform_set[i]     = set;
+            }
 
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
 
@@ -540,8 +588,38 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             bt.count = data->base.binding_table.size_bytes / 4;
             bt.rt_start = data->binding_table.render_target_start;
             bt.texture_start = data->base.binding_table.texture_start;
-            bt.texture_used = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program->SamplersUsed;
+            bt.texture_count = data->base.binding_table.ubo_start -
+                               data->base.binding_table.texture_start;
             bt.ubo_start = data->base.binding_table.ubo_start;
+            bt.ubo_count = bt.count - data->base.binding_table.ubo_start;
+
+            // Sampler mapping data
+            bt.sampler_binding = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
+            bt.sampler_set     = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
+            for (int i = 0; i < bt.texture_count; ++i) {
+                int location = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->SamplerUnits[i];
+                int set = 0;
+                int binding = 0;
+
+                unpack_set_and_binding(location, set, binding);
+
+                bt.sampler_binding[i] = binding;
+                bt.sampler_set[i]     = set;
+            }
+
+            // UBO mapping data
+            bt.uniform_binding = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
+            bt.uniform_set     = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
+            for (int i = 0; i < bt.ubo_count; ++i) {
+                int location = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->UniformBlocks[i].Binding;
+                int set = 0;
+                int binding = 0;
+
+                unpack_set_and_binding(location, set, binding);
+
+                bt.uniform_binding[i] = binding;
+                bt.uniform_set[i]     = set;
+            }
 
             // Ensure this is 1:1, or create a converter
             pipe_shader->barycentric_interps = data->barycentric_interp_modes;

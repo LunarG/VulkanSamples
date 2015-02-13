@@ -336,6 +336,8 @@ namespace gla {
         // Add error message
         void error(const char* msg) const;
 
+        void unPackSetAndBinding(const int location, int& set, int& binding);
+
         void setIoParameters(ir_variable* ioVar, const llvm::MDNode*);
 
         // Data ----------------------------------------------------------------

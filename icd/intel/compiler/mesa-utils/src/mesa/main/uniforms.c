@@ -75,7 +75,8 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
 
    for (s = 0; s < MAX_SAMPLERS; s++) {
       if (prog->SamplersUsed & (1 << s)) {
-         GLuint unit = shader->SamplerUnits[s];
+         // LunarG - mask out the set value, which resides in upper 16-bits
+         GLuint unit = shader->SamplerUnits[s] & 0xFFFF;
          GLuint tgt = shader->SamplerTargets[s];
          assert(unit < Elements(prog->TexturesUsed));
          assert(tgt < NUM_TEXTURE_TARGETS);

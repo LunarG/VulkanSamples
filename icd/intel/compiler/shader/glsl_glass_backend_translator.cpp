@@ -1085,6 +1085,7 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
 
             if(metaType.location) {
                 var->data.explicit_binding = true;
+                // Note: location is now two 16-bit values combined
                 var->data.binding = metaType.location;
             }
          }
@@ -3388,6 +3389,24 @@ inline void MesaGlassTranslator::emitIRLoad(const llvm::Instruction* llvmInst)
 
 /**
  * -----------------------------------------------------------------------------
+ * Location could be two combined 16-bit numbers, one for set, one for binding
+ * This function extracts and returns each of them.
+ * -----------------------------------------------------------------------------
+ */
+inline void MesaGlassTranslator::unPackSetAndBinding(const int location, int& set, int& binding)
+{
+    // Logic mirrored from LunarGLASS GLSL backend
+    set = (unsigned) location >> 16;
+    binding = location & 0xFFFF;
+
+    // Unbias set, which was biased by 1 to distinguish between "set=0" and nothing.
+    bool setPresent = (set != 0);
+    if (setPresent)
+        --set;
+}
+
+/**
+ * -----------------------------------------------------------------------------
  * Set IO variable parameters (locations, interp modes, pixel origins, etc)
  * -----------------------------------------------------------------------------
  */
@@ -3405,21 +3424,27 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
       ioVar->data.origin_upper_left    = state->fs_origin_upper_left;
       ioVar->data.pixel_center_integer = state->fs_pixel_center_integer;
 
-      if (metaType.location >= 0 && metaType.location < gla::MaxUserLayoutLocation) {
+      int location = 0;
+      int set = 0;
+      unPackSetAndBinding(metaType.location, set, location);
+
+      if (location >= 0 && location < gla::MaxUserLayoutLocation) {
 
           if (metaType.block || metaType.mdSampler != 0) {
               // If we have a sampler or a block, we need a binding
               ioVar->data.explicit_binding  = true;
+              // Note: For sampler and UBO bindings, location is now two 16-bit
+              // values combined, pass the whole thing!
               ioVar->data.binding           = metaType.location;
           } else {
               ioVar->data.explicit_location = true;
 
               if ((manager->getStage() == EShLangFragment) && metaType.qualifier == EVQOutput)
-                  ioVar->data.location      = metaType.location + FRAG_RESULT_DATA0;
+                  ioVar->data.location      = location + FRAG_RESULT_DATA0;
               else if ((manager->getStage() == EShLangVertex) && metaType.qualifier == EVQInput)
-                  ioVar->data.location      = metaType.location + VERT_ATTRIB_GENERIC0;
+                  ioVar->data.location      = location + VERT_ATTRIB_GENERIC0;
               else
-                  ioVar->data.location      = metaType.location + VARYING_SLOT_VAR0;
+                  ioVar->data.location      = location + VARYING_SLOT_VAR0;
           }
       }
    }
