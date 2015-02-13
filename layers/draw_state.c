@@ -249,21 +249,22 @@ static size_t dynStateCreateInfoSize(XGL_STRUCTURE_TYPE sType)
 #define XGL_NUM_GRAPHICS_SHADERS XGL_SHADER_STAGE_COMPUTE
 #define MAX_SLOTS 2048
 
-static uint64_t drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
+static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
+
+static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb);
 
 // TODO : Should be tracking lastBound per cmdBuffer and when draws occur, report based on that cmd buffer lastBound
 //   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
 //   to that same cmd buffer by separate thread are not changing state from underneath us
-static PIPELINE_NODE* g_pPipelineHead = NULL;
-static SAMPLER_NODE*  g_pSamplerHead = NULL;
-static IMAGE_NODE*    g_pImageHead = NULL;
-static BUFFER_NODE*   g_pBufferHead = NULL;
-static XGL_PIPELINE lastBoundPipeline = NULL;
-#define MAX_BINDING 0xFFFFFFFF
-static uint32_t g_lastVtxBinding = MAX_BINDING;
+static PIPELINE_NODE*    g_pPipelineHead = NULL;
+static SAMPLER_NODE*     g_pSamplerHead = NULL;
+static IMAGE_NODE*       g_pImageHead = NULL;
+static BUFFER_NODE*      g_pBufferHead = NULL;
+static GLOBAL_CB_NODE*   g_pCmdBufferHead = NULL;
+static XGL_CMD_BUFFER    g_lastCmdBuffer = NULL;
+#define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 
 static DYNAMIC_STATE_NODE* g_pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
-static DYNAMIC_STATE_NODE* g_pLastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {0};
 
 static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENERIC_HEADER* pCreateInfo, XGL_STATE_BIND_POINT bindPoint)
 {
@@ -295,39 +296,56 @@ static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENER
 }
 // Set the last bound dynamic state of given type
 // TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
-static void setLastBoundDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
+static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_DYNAMIC_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
 {
-    loader_platform_thread_lock_mutex(&globalLock);
-    DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
-    while (pTrav && (state != pTrav->stateObj)) {
-        pTrav = pTrav->pNext;
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        loader_platform_thread_lock_mutex(&globalLock);
+        DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
+        while (pTrav && (state != pTrav->stateObj)) {
+            pTrav = pTrav->pNext;
+        }
+        if (!pTrav) {
+            char str[1024];
+            sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
+        }
+        pCB->lastBoundDynamicState[sType] = pTrav;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
-    if (!pTrav) {
+    else {
         char str[1024];
-        sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    g_pLastBoundDynamicState[sType] = pTrav;
-    loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Print the last bound dynamic state
-static void printDynamicState()
+static void printDynamicState(const XGL_CMD_BUFFER cb)
 {
-    loader_platform_thread_lock_mutex(&globalLock);
-    char str[1024];
-    for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
-        if (g_pLastBoundDynamicState[i]) {
-            sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_XGL_STATE_BIND_POINT(i), g_pLastBoundDynamicState[i]->stateObj);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, g_pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, g_pLastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(g_pLastBoundDynamicState[i]->pCreateInfo, "  "));
-            break;
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        char str[1024];
+        for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
+            if (pCB->lastBoundDynamicState[i]) {
+                sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_XGL_STATE_BIND_POINT(i), pCB->lastBoundDynamicState[i]->stateObj);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pCB->lastBoundDynamicState[i]->pCreateInfo, "  "));
+                break;
+            }
+            else {
+                sprintf(str, "No dynamic state of type %s bound", string_XGL_STATE_BIND_POINT(i));
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
+            }
         }
-        else {
-            sprintf(str, "No dynamic state of type %s bound", string_XGL_STATE_BIND_POINT(i));
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
-        }
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
-    loader_platform_thread_unlock_mutex(&globalLock);
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cb);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
 }
 // Retrieve pipeline node ptr for given pipeline object
 static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
@@ -418,8 +436,6 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
 static REGION_NODE* g_pRegionHead = NULL;
 // ptr to HEAD of LL of top-level Layouts
 static LAYOUT_NODE* g_pLayoutHead = NULL;
-// Last DS that was bound, and slotOffset for the binding
-static XGL_DESCRIPTOR_SET g_lastBoundDS = NULL;
 
 // Return Region node ptr for specified region or else NULL
 static REGION_NODE* getRegionNode(XGL_DESCRIPTOR_REGION region)
@@ -685,7 +701,7 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
                         }
                         else {
                             // Find either the existing, matching region, or end of list for initial update chain
-                            // TODO : Need to validate this, I suspect there are holes in my algorithm
+                            // TODO : Need to validate this, I suspect there are holes in this algorithm
                             uint32_t totalIndex = 0;
                             while (pUpdateInsert && (getUpdateIndex(pUpdates) != totalIndex)) {
                                 totalIndex = getUpdateUpperBound(pUpdates);
@@ -770,168 +786,187 @@ static void clearDescriptorRegion(XGL_DESCRIPTOR_REGION region)
     }
 }
 
-// Print the last bound Gfx Pipeline
-static void printPipeline()
+// Code here to manage the Cmd buffer LL
+static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb)
 {
-    PIPELINE_NODE *pPipeTrav = getPipeline(lastBoundPipeline);
-    if (!pPipeTrav) {
-        // nothing to print
+    loader_platform_thread_lock_mutex(&globalLock);
+    GLOBAL_CB_NODE* pCB = g_pCmdBufferHead;
+    while (pCB) {
+        if (cb == pCB->cmdBuffer) {
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return pCB;
+        }
+        pCB = pCB->pNextGlobalCBNode;
     }
-    else {
-        char* pipeStr = xgl_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "{DS}");
-        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr);
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return NULL;
+}
+
+// Print the last bound Gfx Pipeline
+static void printPipeline(const XGL_CMD_BUFFER cb)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB) {
+        PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
+        if (!pPipeTrav) {
+            // nothing to print
+        }
+        else {
+            char* pipeStr = xgl_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "{DS}");
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr);
+        }
     }
 }
 // Dump subgraph w/ DS info
-static void dsDumpDot(FILE* pOutFile)
+static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
 {
-    REGION_NODE* pRegion = g_pRegionHead;
-    char tmp_str[1024];
-    while (pRegion) {
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB && pCB->lastBoundDescriptorSet) {
+        SET_NODE* pSet = getSetNode(pCB->lastBoundDescriptorSet);
+        REGION_NODE* pRegion = getRegionNode(pSet->region);
+        char tmp_str[1024];
         fprintf(pOutFile, "subgraph cluster_DescriptorRegion\n{\nlabel=\"Descriptor Region\"\n");
         sprintf(tmp_str, "Region (%p)", pRegion->region);
         fprintf(pOutFile, "%s", xgl_gv_print_xgl_descriptor_region_create_info(&pRegion->createInfo, tmp_str));
-        SET_NODE* pSet = pRegion->pSets;
-        uint32_t set_index = 0;
-        while (pSet) {
-            ++set_index;
-            fprintf(pOutFile, "subgraph cluster_DescriptorSet%u\n{\nlabel=\"Descriptor Set #%u (%p)\"\n", set_index, set_index, pSet->set);
-            sprintf(tmp_str, "Descriptor Set #%u (%p)", set_index, pSet->set);
-            LAYOUT_NODE* pLayout = pSet->pLayouts;
-            uint32_t layout_index = 0;
-            while (pLayout) {
-                ++layout_index;
-                sprintf(tmp_str, "SET%u_LAYOUT%u", set_index, layout_index);
-                fprintf(pOutFile, "%s", xgl_gv_print_xgl_descriptor_set_layout_create_info(pLayout->pCreateInfoList, tmp_str));
-                pLayout = pLayout->pNext;
-                if (pLayout) {
-                    fprintf(pOutFile, "\"%s\" -> \"SET%u_LAYOUT%u\" [];\n", tmp_str, set_index, layout_index+1);
-                }
+        fprintf(pOutFile, "subgraph cluster_DescriptorSet\n{\nlabel=\"Descriptor Set (%p)\"\n", pSet->set);
+        sprintf(tmp_str, "Descriptor Set (%p)", pSet->set);
+        LAYOUT_NODE* pLayout = pSet->pLayouts;
+        uint32_t layout_index = 0;
+        while (pLayout) {
+            ++layout_index;
+            sprintf(tmp_str, "LAYOUT%u", layout_index);
+            fprintf(pOutFile, "%s", xgl_gv_print_xgl_descriptor_set_layout_create_info(pLayout->pCreateInfoList, tmp_str));
+            pLayout = pLayout->pNext;
+            if (pLayout) {
+                fprintf(pOutFile, "\"%s\" -> \"LAYOUT%u\" [];\n", tmp_str, layout_index+1);
             }
-            if (pSet->pUpdateStructs) {
-                fprintf(pOutFile, "%s", dynamic_gv_display(pSet->pUpdateStructs, "Descriptor Updates"));
-            }
-            fprintf(pOutFile, "}\n");
-            pSet = pSet->pNext;
         }
+        if (pSet->pUpdateStructs) {
+            fprintf(pOutFile, "%s", dynamic_gv_display(pSet->pUpdateStructs, "Descriptor Updates"));
+        }
+        fprintf(pOutFile, "}\n");
         fprintf(pOutFile, "}\n");
         pRegion = pRegion->pNext;
     }
 }
 
 // Dump a GraphViz dot file showing the pipeline
-static void dumpDotFile(char *outFileName)
+static void dumpDotFile(const XGL_CMD_BUFFER cb, char *outFileName)
 {
-    PIPELINE_NODE *pPipeTrav = getPipeline(lastBoundPipeline);
-    if (pPipeTrav) {
-        FILE* pOutFile;
-        pOutFile = fopen(outFileName, "w");
-        fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
-        fprintf(pOutFile, "subgraph cluster_dynamicState\n{\nlabel=\"Dynamic State\"\n");
-        for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
-            if (g_pLastBoundDynamicState[i]) {
-                fprintf(pOutFile, "%s", dynamic_gv_display(g_pLastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i)));
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB) {
+        PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
+        if (pPipeTrav) {
+            FILE* pOutFile;
+            pOutFile = fopen(outFileName, "w");
+            fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
+            fprintf(pOutFile, "subgraph cluster_dynamicState\n{\nlabel=\"Dynamic State\"\n");
+            for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
+                if (pCB->lastBoundDynamicState[i]) {
+                    fprintf(pOutFile, "%s", dynamic_gv_display(pCB->lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i)));
+                }
             }
+            fprintf(pOutFile, "}\n"); // close dynamicState subgraph
+            fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
+            fprintf(pOutFile, "%s", xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD"));
+            fprintf(pOutFile, "}\n");
+            dsDumpDot(cb, pOutFile);
+            fprintf(pOutFile, "}\n"); // close main graph "g"
+            fclose(pOutFile);
         }
-        fprintf(pOutFile, "}\n"); // close dynamicState subgraph
-        fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
-        fprintf(pOutFile, "%s", xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD"));
-        fprintf(pOutFile, "}\n");
-        dsDumpDot(pOutFile);
-        fprintf(pOutFile, "}\n"); // close main graph "g"
-        fclose(pOutFile);
     }
 }
 // Synch up currently bound pipeline settings with DS mappings
 // TODO : Update name. We don't really have to "synch" the descriptors anymore and "mapping" is outdated as well.
-static void synchDSMapping()
+static void synchDSMapping(const XGL_CMD_BUFFER cb)
 {
-    // First verify that we have a bound pipeline
-    PIPELINE_NODE *pPipeTrav = getPipeline(lastBoundPipeline);
-    char str[1024];
-    if (!pPipeTrav) {
-        sprintf(str, "Can't find last bound Pipeline %p!", (void*)lastBoundPipeline);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS", str);
-    }
-    else {
-        // Verify Vtx binding
-        if (MAX_BINDING != g_lastVtxBinding) {
-            if (g_lastVtxBinding >= pPipeTrav->vtxBindingCount) {
-                sprintf(str, "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", g_lastVtxBinding, (pPipeTrav->vtxBindingCount - 1));
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
-            }
-            else {
-                char *tmpStr = xgl_print_xgl_vertex_input_binding_description(&pPipeTrav->pVertexBindingDescriptions[g_lastVtxBinding], "{DS}INFO : ");
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr);
-                free(tmpStr);
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB && pCB->lastBoundPipeline) {
+        // First verify that we have a Node for bound pipeline
+        PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
+        char str[1024];
+        if (!pPipeTrav) {
+            sprintf(str, "Can't find last bound Pipeline %p!", (void*)pCB->lastBoundPipeline);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS", str);
+        }
+        else {
+            // Verify Vtx binding
+            if (MAX_BINDING != pCB->lastVtxBinding) {
+                if (pCB->lastVtxBinding >= pPipeTrav->vtxBindingCount) {
+                    sprintf(str, "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipeTrav->vtxBindingCount - 1));
+                    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
+                }
+                else {
+                    char *tmpStr = xgl_print_xgl_vertex_input_binding_description(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ");
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr);
+                    free(tmpStr);
+                }
             }
         }
     }
 }
 // Print details of DS config to stdout
-static void printDSConfig()
+static void printDSConfig(const XGL_CMD_BUFFER cb)
 {
-    //uint32_t skipUnusedCount = 0; // track consecutive unused slots for minimal reporting
     char tmp_str[1024];
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
-    // TODO : Update this for new DS model
-    REGION_NODE* pRegion = g_pRegionHead;
-    while (pRegion) {
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB) {
+        SET_NODE* pSet = getSetNode(pCB->lastBoundDescriptorSet);
+        REGION_NODE* pRegion = getRegionNode(pSet->region);
         // Print out region details
         sprintf(tmp_str, "Details for region %p.", (void*)pRegion->region);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
         sprintf(ds_config_str, "%s", xgl_print_xgl_descriptor_region_create_info(&pRegion->createInfo, " "));
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
-        SET_NODE* pSet = pRegion->pSets;
-        while (pSet) {
-            // Print out set details
-            char prefix[10];
-            uint32_t index = 0;
-            sprintf(tmp_str, "Details for descriptor set %p.", (void*)pSet->set);
+        // Print out set details
+        char prefix[10];
+        uint32_t index = 0;
+        sprintf(tmp_str, "Details for descriptor set %p.", (void*)pSet->set);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+        LAYOUT_NODE* pLayout = pSet->pLayouts;
+        while (pLayout) {
+            // Print layout details
+            sprintf(tmp_str, "Layout #%u, (object %p) for DS %p.", index+1, (void*)pLayout->layout, (void*)pSet->set);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
-            LAYOUT_NODE* pLayout = pSet->pLayouts;
-            while (pLayout) {
-                // Print layout details
-                sprintf(tmp_str, "Layout #%u, (object %p) for DS %p.", index+1, (void*)pLayout->layout, (void*)pSet->set);
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
-                sprintf(prefix, "  [L%u] ", index);
-                sprintf(ds_config_str, "%s", xgl_print_xgl_descriptor_set_layout_create_info(&pLayout->pCreateInfoList[0], prefix));
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
-                pLayout = pLayout->pPriorSetLayout;
-                index++;
-            }
-            index = 0;
-            GENERIC_HEADER* pUpdate = pSet->pUpdateStructs;
+            sprintf(prefix, "  [L%u] ", index);
+            sprintf(ds_config_str, "%s", xgl_print_xgl_descriptor_set_layout_create_info(&pLayout->pCreateInfoList[0], prefix));
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
+            pLayout = pLayout->pPriorSetLayout;
+            index++;
+        }
+        GENERIC_HEADER* pUpdate = pSet->pUpdateStructs;
+        if (pUpdate) {
             sprintf(tmp_str, "Update Chain [UC] for descriptor set %p:", (void*)pSet->set);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             sprintf(prefix, "  [UC] ");
             sprintf(ds_config_str, "%s", dynamic_display(pUpdate, prefix));
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
             // TODO : If there is a "view" associated with this update, print CI for that view
-            pUpdate = (GENERIC_HEADER*)pUpdate->pNext;
-            index++;
-            pSet = pSet->pNext;
         }
-        pRegion = pRegion->pNext;
+        else {
+            sprintf(tmp_str, "No Update Chain for descriptor set %p (xglUpdateDescriptors has not been called)", (void*)pSet->set);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+        }
     }
 }
 
-static void synchAndDumpDot()
+static void synchAndDumpDot(const XGL_CMD_BUFFER cb)
 {
-    synchDSMapping();
-    dumpDotFile("pipeline_dump.dot");
+    synchDSMapping(cb);
+    dumpDotFile(cb, "pipeline_dump.dot");
 }
 
-static void synchAndPrintDSConfig()
+static void synchAndPrintDSConfig(const XGL_CMD_BUFFER cb)
 {
-    synchDSMapping();
-    printDSConfig();
-    printPipeline();
-    printDynamicState();
+    synchDSMapping(cb);
+    printDSConfig(cb);
+    printPipeline(cb);
+    printDynamicState(cb);
     static int autoDumpOnce = 1;
     if (autoDumpOnce) {
         autoDumpOnce = 0;
-        dumpDotFile("pipeline_dump.dot");
+        dumpDotFile(cb, "pipeline_dump.dot");
         // Convert dot to png if dot available
 #if defined(_WIN32)
 // FIXME: NEED WINDOWS EQUIVALENT
@@ -1423,7 +1458,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         memset(pNewNode, 0, sizeof(LAYOUT_NODE));
         // TODO : API Currently missing a count here that we should multiply by struct size
         pNewNode->pCreateInfoList = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
-        memcpy((void*)pNewNode->pCreateInfoList, pSetLayoutInfoList, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
+        memset((void*)pNewNode->pCreateInfoList, 0, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
+        if (pSetLayoutInfoList)
+            memcpy((void*)pNewNode->pCreateInfoList, pSetLayoutInfoList, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
         pNewNode->layout = *pSetLayout;
         pNewNode->stageFlags = stageFlags;
         pNewNode->startIndex = 0;
@@ -1650,248 +1687,591 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer)
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    if (XGL_SUCCESS == result) {
+        GLOBAL_CB_NODE* pCB = (GLOBAL_CB_NODE*)malloc(sizeof(GLOBAL_CB_NODE));
+        memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
+        pCB->pNextGlobalCBNode = g_pCmdBufferHead;
+        g_pCmdBufferHead = pCB;
+        pCB->cmdBuffer = *pCmdBuffer;
+        pCB->flags = pCreateInfo->flags;
+        pCB->queueType = pCreateInfo->queueType;
+        pCB->lastVtxBinding = MAX_BINDING;
+        g_lastCmdBuffer = *pCmdBuffer;
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    if (XGL_SUCCESS == result) {
+        GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+        pCB->state = CB_UPDATE_ACTIVE;
+        g_lastCmdBuffer = cmdBuffer;
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     XGL_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
+    if (XGL_SUCCESS == result) {
+        GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+        pCB->state = CB_UPDATE_COMPLETE;
+        g_lastCmdBuffer = cmdBuffer;
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
+    if (XGL_SUCCESS == result) {
+        // TODO : Free all the cmds and reset state for this CB
+        g_lastCmdBuffer = cmdBuffer;
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline)
 {
-    synchAndDumpDot();
-
-    if (getPipeline(pipeline)) {
-        lastBoundPipeline = pipeline;
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        if (getPipeline(pipeline)) {
+            pCB->lastBoundPipeline = pipeline;
+        }
+        else {
+            char str[1024];
+            sprintf(str, "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS", str);
+        }
+        synchAndDumpDot(cmdBuffer);
     }
     else {
         char str[1024];
-        sprintf(str, "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS", str);
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
 {
-    synchAndDumpDot();
-
+    synchAndDumpDot(cmdBuffer);
+    // TODO : Handle storing Pipeline Deltas to cmd buffer here
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
 {
-    synchAndDumpDot();
-
-    setLastBoundDynamicState(state, stateBindPoint);
+    setLastBoundDynamicState(cmdBuffer, state, stateBindPoint);
+    synchAndDumpDot(cmdBuffer);
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData)
 {
-    synchAndDumpDot();
-
-    // TODO : Improve this. Can track per-cmd buffer and store bind point and pUserData
-    if (getSetNode(descriptorSet)) {
-        if (dsUpdateActive(descriptorSet)) {
-            // TODO : Not sure if it's valid to made this check here. May need to make as QueueSubmit time
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (getSetNode(descriptorSet)) {
+            if (dsUpdateActive(descriptorSet)) {
+                // TODO : Not sure if it's valid to made this check here. May need to make at QueueSubmit time
+                char str[1024];
+                sprintf(str, "You must call xglEndDescriptorRegionUpdate(%p) before this call to xglCmdBindDescriptorSet()!", (void*)descriptorSet);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
+            }
+            loader_platform_thread_lock_mutex(&globalLock);
+            pCB->lastBoundDescriptorSet = descriptorSet;
+            loader_platform_thread_unlock_mutex(&globalLock);
+            synchAndDumpDot(cmdBuffer);
             char str[1024];
-            sprintf(str, "You must call xglEndDescriptorRegionUpdate(%p) before this call to xglCmdBindDescriptorSet()!", (void*)descriptorSet);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
+            sprintf(str, "DS %p bound on pipeline %s", (void*)descriptorSet, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_NONE, "DS", str);
         }
-        loader_platform_thread_lock_mutex(&globalLock);
-        g_lastBoundDS = descriptorSet;
-        loader_platform_thread_unlock_mutex(&globalLock);
-        char str[1024];
-        sprintf(str, "DS %p bound on pipeline %s", (void*)descriptorSet, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
-        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_NONE, "DS", str);
+        else {
+            char str[1024];
+            sprintf(str, "Attempt to bind DS %p that doesn't exist!", (void*)descriptorSet);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_INVALID_SET, "DS", str);
+        }
     }
     else {
         char str[1024];
-        sprintf(str, "Attempt to bind DS %p that doesn't exist!", (void*)descriptorSet);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_INVALID_SET, "DS", str);
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, descriptorSet, pUserData);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+        // TODO : Track idxBuffer binding
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t binding)
 {
-    g_lastVtxBinding = binding;
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        pCB->lastVtxBinding = binding;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
-    char str[1024];
-    sprintf(str, "xglCmdDraw() call #%lu, reporting DS state:", drawCount[DRAW]++);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
-    synchAndPrintDSConfig();
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        pCB->drawCount[DRAW]++;
+        // TODO : Insert CMD into CMD BUFFER LL
+        char str[1024];
+        sprintf(str, "xglCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        synchAndPrintDSConfig(cmdBuffer);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
-    char str[1024];
-    sprintf(str, "xglCmdDrawIndexed() call #%lu, reporting DS state:", drawCount[DRAW_INDEXED]++);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
-    synchAndPrintDSConfig();
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        pCB->drawCount[DRAW_INDEXED]++;
+        // TODO : Insert CMD into CMD BUFFER LL
+        char str[1024];
+        sprintf(str, "xglCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        synchAndPrintDSConfig(cmdBuffer);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
 {
-    char str[1024];
-    sprintf(str, "xglCmdDrawIndirect() call #%lu, reporting DS state:", drawCount[DRAW_INDIRECT]++);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
-    synchAndPrintDSConfig();
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        pCB->drawCount[DRAW_INDIRECT]++;
+        // TODO : Insert CMD into CMD BUFFER LL
+        char str[1024];
+        sprintf(str, "xglCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        synchAndPrintDSConfig(cmdBuffer);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t count, uint32_t stride)
 {
-    char str[1024];
-    sprintf(str, "xglCmdDrawIndexedIndirect() call #%lu, reporting DS state:", drawCount[DRAW_INDEXED_INDIRECT]++);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
-    synchAndPrintDSConfig();
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
+        // TODO : Insert CMD into CMD BUFFER LL
+        char str[1024];
+        sprintf(str, "xglCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        synchAndPrintDSConfig(cmdBuffer);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_COPY* pRegions)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t regionCount, const XGL_IMAGE_COPY* pRegions)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, destBuffer, regionCount, pRegions);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdClearColorImage(cmdBuffer, image, color, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const uint32_t color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdClearColorImageRaw(cmdBuffer, image, color, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdClearDepthStencil(cmdBuffer, image, depth, stencil, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdResolveImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t rectCount, const XGL_IMAGE_RESOLVE* pRects)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdResolveImage(cmdBuffer, srcImage, destImage, rectCount, pRects);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdSetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_SET_EVENT pipeEvent)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdSetEvent(cmdBuffer, event, pipeEvent);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdResetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdResetEvent(cmdBuffer, event);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdWaitEvents(XGL_CMD_BUFFER cmdBuffer, const XGL_EVENT_WAIT_INFO* pWaitInfo)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier(XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, uint32_t slot, XGL_FLAGS flags)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdEndQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, uint32_t slot)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_TIMESTAMP_TYPE timestampType, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER srcBuffer, XGL_GPU_SIZE srcOffset)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
@@ -1909,11 +2289,31 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const 
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdBeginRenderPass(cmdBuffer, renderPass);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        // TODO : Insert CMD into CMD BUFFER LL
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
@@ -2020,10 +2420,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
     return result;
 }
 #endif // WIN32
-
+// TODO : Want to pass in a cmdBuffer here based on which state to display
 void drawStateDumpDotFile(char* outFileName)
 {
-    dumpDotFile(outFileName);
+    // TODO : Currently just setting cmdBuffer based on global var
+    dumpDotFile(g_lastCmdBuffer, outFileName);
 }
 
 void drawStateDumpPngFile(char* outFileName)
@@ -2036,7 +2437,7 @@ void drawStateDumpPngFile(char* outFileName)
 #else // WIN32
     char dotExe[32] = "/usr/bin/dot";
     if( access(dotExe, X_OK) != -1) {
-        dumpDotFile("/tmp/tmp.dot");
+        dumpDotFile(g_lastCmdBuffer, "/tmp/tmp.dot");
         char dotCmd[1024];
         sprintf(dotCmd, "%s /tmp/tmp.dot -Tpng -o %s", dotExe, outFileName);
         system(dotCmd);

@@ -34,6 +34,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DS_END_WITHOUT_BEGIN,             // EndDSUpdate called w/o corresponding BeginDSUpdate
     DRAWSTATE_UPDATE_WITHOUT_BEGIN,             // Attempt to update descriptors w/o calling BeginDescriptorRegionUpdate
     DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline referenced
+    DRAWSTATE_INVALID_CMD_BUFFER,               // Invalid CmdBuffer referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
     DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
@@ -139,6 +140,78 @@ typedef struct _REGION_NODE {
     struct _REGION_NODE*                         pNext;
     SET_NODE*                                    pSets; // Head of LL of sets for this Region
 } REGION_NODE;
+
+// Cmd Buffer Tracking
+typedef enum _CMD_TYPE
+{
+    CMD_BINDPIPELINE,
+    CMD_BINDPIPELINEDELTA,
+    CMD_BINDDYNAMICSTATEOBJECT,
+    CMD_BINDDESCRIPTORSET,
+    CMD_BINDINDEXBUFFER,
+    CMD_BINDVERTEXBUFFER,
+    CMD_DRAW,
+    CMD_DRAWINDEXED,
+    CMD_DRAWINDIRECT,
+    CMD_DRAWINDEXEDINDIRECT,
+    CMD_DISPATCH,
+    CMD_DISPATCHINDIRECT,
+    CMD_COPYBUFFER,
+    CMD_COPYIMAGE,
+    CMD_COPYBUFFERTOIMAGE,
+    CMD_COPYIMAGETOBUFFER,
+    CMD_CLONEIMAGEDATA,
+    CMD_UPDATEBUFFER,
+    CMD_FILLBUFFER,
+    CMD_CLEARCOLORIMAGE,
+    CMD_CLEARCOLORIMAGERAW,
+    CMD_CLEARDEPTHSTENCIL,
+    CMD_RESOLVEIMAGE,
+    CMD_SETEVENT,
+    CMD_RESETEVENT,
+    CMD_WAITEVENTS,
+    CMD_PIPELINEBARRIER,
+    CMD_BEGINQUERY,
+    CMD_ENDQUERY,
+    CMD_RESETQUERYPOOL,
+    CMD_WRITETIMESTAMP,
+    CMD_INITATOMICCOUNTERS,
+    CMD_LOADATOMICCOUNTERS,
+    CMD_SAVEATOMICCOUNTERS,
+    CMD_BEGINRENDERPASS,
+    CMD_ENDRENDERPASS
+} CMD_TYPE;
+// Data structure for holding sequence of cmds in cmd buffer
+typedef struct _CMD_NODE {
+    struct _CMD_NODE* pNext;
+    CMD_TYPE          type;
+    uint64_t          cmdNumber;
+} CMD_NODE;
+
+typedef enum _CB_STATE
+{
+    CB_NEW,            // Newly created CB w/o any cmds
+    CB_UPDATE_ACTIVE,  // BeginCB has been called on this CB
+    CB_UPDATE_COMPLETE // EndCB has been called on this CB
+} CB_STATE;
+// Store a single LL of command buffers
+typedef struct _GLOBAL_CB_NODE {
+    struct _GLOBAL_CB_NODE*         pNextGlobalCBNode;
+    XGL_CMD_BUFFER                  cmdBuffer;
+    XGL_QUEUE_TYPE                  queueType;
+    XGL_FLAGS                       flags;
+    XGL_FENCE                       fence;    // fence tracking this cmd buffer
+    uint64_t                        numCmds;  // number of cmds in this CB
+    uint64_t                        drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
+    CB_STATE                        state; // Track if cmd buffer update status
+    // Currently storing "lastBound" objects on per-CB basis
+    //  long-term may want to create caches of "lastBound" states and could have
+    //  each individual CMD_NODE referencing its own "lastBound" state
+    XGL_PIPELINE                    lastBoundPipeline;
+    uint32_t                        lastVtxBinding;
+    DYNAMIC_STATE_NODE*             lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT];
+    XGL_DESCRIPTOR_SET              lastBoundDescriptorSet;
+} GLOBAL_CB_NODE;
 
 //prototypes for extension functions
 void drawStateDumpDotFile(char* outFileName);
