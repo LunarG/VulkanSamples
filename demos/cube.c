@@ -561,8 +561,8 @@ bool loadTexture(char *filename, uint8_t *rgba_data,
 {
   //header for testing if it is a png
   png_byte header[8];
-  int i, is_png, bit_depth, color_type,rowbytes;
-  png_uint_32 twidth, theight;
+  int is_png, bit_depth, color_type,rowbytes;
+  png_uint_32 i, twidth, theight;
   png_structp  png_ptr;
   png_infop info_ptr, end_info;
   png_byte *image_data;

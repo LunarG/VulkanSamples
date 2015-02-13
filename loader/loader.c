@@ -177,7 +177,7 @@ static void loader_log(XGL_DBG_MSG_TYPE msg_type, int32_t msg_code,
 
     va_start(ap, format);
     ret = vsnprintf(msg, sizeof(msg), format, ap);
-    if (ret >= sizeof(msg) || ret < 0) {
+    if ((ret >= (int) sizeof(msg)) || ret < 0) {
         msg[sizeof(msg) - 1] = '\0';
     }
     va_end(ap);
@@ -1058,7 +1058,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
         if ((fpEnumerateLayers = loader_platform_get_proc_address(handle, "xglEnumerateLayers")) == NULL) {
             //use default layer name based on library name XGL_LAYER_LIBRARY_PREFIX<name>.XGL_LIBRARY_SUFFIX
             char *pEnd, *cpyStr;
-            int siz;
+            size_t siz;
             loader_platform_close_library(handle);
             lib_name = basename(lib_name);
             pEnd = strrchr(lib_name, '.');

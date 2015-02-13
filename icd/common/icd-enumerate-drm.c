@@ -186,7 +186,7 @@ void icd_drm_release(struct icd_drm_device *devices)
 
     while (dev) {
         struct icd_drm_device *next = dev->next;
-        int i;
+        size_t i;
 
         for (i = 0; i < ARRAY_SIZE(dev->minors); i++)
             udev_device_unref((struct udev_device *) dev->minors[i]);

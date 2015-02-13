@@ -169,7 +169,7 @@ void icd_logv(XGL_DBG_MSG_TYPE msg_type,
     int ret;
 
     ret = vsnprintf(msg, sizeof(msg), format, ap);
-    if (ret >= sizeof(msg) || ret < 0)
+    if ((ret >= (int) sizeof(msg)) || ret < 0)
         msg[sizeof(msg) - 1] = '\0';
 
     icd_log_str(msg_type, validation_level, src_object,
