@@ -204,6 +204,8 @@ typedef struct _GLOBAL_CB_NODE {
     uint64_t                        numCmds;  // number of cmds in this CB
     uint64_t                        drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE                        state; // Track if cmd buffer update status
+    CMD_NODE*                       pCmds;
+    CMD_NODE*                       lastCmd;
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state

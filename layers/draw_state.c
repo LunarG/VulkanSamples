@@ -244,14 +244,93 @@ static size_t dynStateCreateInfoSize(XGL_STRUCTURE_TYPE sType)
             return 0;
     }
 }
+// Return a string representation of CMD_TYPE enum
+static char* cmdTypeToString(CMD_TYPE cmd)
+{
+    switch (cmd)
+    {
+        case CMD_BINDPIPELINE:
+            return "CMD_BINDPIPELINE";
+        case CMD_BINDPIPELINEDELTA:
+            return "CMD_BINDPIPELINEDELTA";
+        case CMD_BINDDYNAMICSTATEOBJECT:
+            return "CMD_BINDDYNAMICSTATEOBJECT";
+        case CMD_BINDDESCRIPTORSET:
+            return "CMD_BINDDESCRIPTORSET";
+        case CMD_BINDINDEXBUFFER:
+            return "CMD_BINDINDEXBUFFER";
+        case CMD_BINDVERTEXBUFFER:
+            return "CMD_BINDVERTEXBUFFER";
+        case CMD_DRAW:
+            return "CMD_DRAW";
+        case CMD_DRAWINDEXED:
+            return "CMD_DRAWINDEXED";
+        case CMD_DRAWINDIRECT:
+            return "CMD_DRAWINDIRECT";
+        case CMD_DRAWINDEXEDINDIRECT:
+            return "CMD_DRAWINDEXEDINDIRECT";
+        case CMD_DISPATCH:
+            return "CMD_DISPATCH";
+        case CMD_DISPATCHINDIRECT:
+            return "CMD_DISPATCHINDIRECT";
+        case CMD_COPYBUFFER:
+            return "CMD_COPYBUFFER";
+        case CMD_COPYIMAGE:
+            return "CMD_COPYIMAGE";
+        case CMD_COPYBUFFERTOIMAGE:
+            return "CMD_COPYBUFFERTOIMAGE";
+        case CMD_COPYIMAGETOBUFFER:
+            return "CMD_COPYIMAGETOBUFFER";
+        case CMD_CLONEIMAGEDATA:
+            return "CMD_CLONEIMAGEDATA";
+        case CMD_UPDATEBUFFER:
+            return "CMD_UPDATEBUFFER";
+        case CMD_FILLBUFFER:
+            return "CMD_FILLBUFFER";
+        case CMD_CLEARCOLORIMAGE:
+            return "CMD_CLEARCOLORIMAGE";
+        case CMD_CLEARCOLORIMAGERAW:
+            return "CMD_CLEARCOLORIMAGERAW";
+        case CMD_CLEARDEPTHSTENCIL:
+            return "CMD_CLEARDEPTHSTENCIL";
+        case CMD_RESOLVEIMAGE:
+            return "CMD_RESOLVEIMAGE";
+        case CMD_SETEVENT:
+            return "CMD_SETEVENT";
+        case CMD_RESETEVENT:
+            return "CMD_RESETEVENT";
+        case CMD_WAITEVENTS:
+            return "CMD_WAITEVENTS";
+        case CMD_PIPELINEBARRIER:
+            return "CMD_PIPELINEBARRIER";
+        case CMD_BEGINQUERY:
+            return "CMD_BEGINQUERY";
+        case CMD_ENDQUERY:
+            return "CMD_ENDQUERY";
+        case CMD_RESETQUERYPOOL:
+            return "CMD_RESETQUERYPOOL";
+        case CMD_WRITETIMESTAMP:
+            return "CMD_WRITETIMESTAMP";
+        case CMD_INITATOMICCOUNTERS:
+            return "CMD_INITATOMICCOUNTERS";
+        case CMD_LOADATOMICCOUNTERS:
+            return "CMD_LOADATOMICCOUNTERS";
+        case CMD_SAVEATOMICCOUNTERS:
+            return "CMD_SAVEATOMICCOUNTERS";
+        case CMD_BEGINRENDERPASS:
+            return "CMD_BEGINRENDERPASS";
+        case CMD_ENDRENDERPASS:
+            return "CMD_ENDRENDERPASS";
+        default:
+            return "UNKNOWN";
+    }
+}
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
 // Just track 2 shaders for now
 #define XGL_NUM_GRAPHICS_SHADERS XGL_SHADER_STAGE_COMPUTE
 #define MAX_SLOTS 2048
 
 static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
-
-static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb);
 
 // TODO : Should be tracking lastBound per cmdBuffer and when draws occur, report based on that cmd buffer lastBound
 //   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
@@ -294,32 +373,7 @@ static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENER
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 }
-// Set the last bound dynamic state of given type
-// TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
-static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_DYNAMIC_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
-        g_lastCmdBuffer = cmdBuffer;
-        loader_platform_thread_lock_mutex(&globalLock);
-        DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
-        while (pTrav && (state != pTrav->stateObj)) {
-            pTrav = pTrav->pNext;
-        }
-        if (!pTrav) {
-            char str[1024];
-            sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
-        }
-        pCB->lastBoundDynamicState[sType] = pTrav;
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    else {
-        char str[1024];
-        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
-    }
-}
+static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb);
 // Print the last bound dynamic state
 static void printDynamicState(const XGL_CMD_BUFFER cb)
 {
@@ -802,6 +856,80 @@ static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb)
     return NULL;
 }
 
+static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
+{
+    CMD_NODE* pCmd = (CMD_NODE*)malloc(sizeof(CMD_NODE));
+    if (pCmd) {
+        // init cmd node and append to end of cmd LL
+        memset(pCmd, 0, sizeof(CMD_NODE));
+        pCB->numCmds++;
+        pCmd->cmdNumber = pCB->numCmds;
+        pCmd->type = cmd;
+        if (!pCB->pCmds) {
+            pCB->pCmds = pCmd;
+        }
+        else {
+            assert(pCB->lastCmd);
+            pCB->lastCmd->pNext = pCmd;
+        }
+        pCB->lastCmd = pCmd;
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Out of memory while attempting to allocate new CMD_NODE for cmdBuffer %p", (void*)pCB->cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pCB->cmdBuffer, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+    }
+}
+static void resetCB(const XGL_CMD_BUFFER cb)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB) {
+        CMD_NODE* pCur = pCB->pCmds;
+        CMD_NODE* pFreeMe = pCur;
+        while (pCur) {
+            pFreeMe = pCur;
+            pCur = pCur->pNext;
+            free(pFreeMe);
+        }
+        // Reset CB state
+        GLOBAL_CB_NODE* pSaveNext = pCB->pNextGlobalCBNode;
+        XGL_FLAGS saveFlags = pCB->flags;
+        XGL_QUEUE_TYPE saveQT = pCB->queueType;
+        memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
+        pCB->cmdBuffer = cb;
+        pCB->flags = saveFlags;
+        pCB->queueType = saveQT;
+        pCB->pNextGlobalCBNode = pSaveNext;
+        pCB->lastVtxBinding = MAX_BINDING;
+    }
+}
+// Set the last bound dynamic state of given type
+// TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
+static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_DYNAMIC_STATE_OBJECT state, const XGL_STATE_BIND_POINT sType)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
+        loader_platform_thread_lock_mutex(&globalLock);
+        DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
+        while (pTrav && (state != pTrav->stateObj)) {
+            pTrav = pTrav->pNext;
+        }
+        if (!pTrav) {
+            char str[1024];
+            sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
+        }
+        pCB->lastBoundDynamicState[sType] = pTrav;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
+}
 // Print the last bound Gfx Pipeline
 static void printPipeline(const XGL_CMD_BUFFER cb)
 {
@@ -948,6 +1076,25 @@ static void printDSConfig(const XGL_CMD_BUFFER cb)
             sprintf(tmp_str, "No Update Chain for descriptor set %p (xglUpdateDescriptors has not been called)", (void*)pSet->set);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
         }
+    }
+}
+
+static void printCB(const XGL_CMD_BUFFER cb)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB) {
+        char str[1024];
+        CMD_NODE* pCmd = pCB->pCmds;
+        sprintf(str, "Cmds in CB %p", (void*)cb);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
+        while (pCmd) {
+            sprintf(str, "  CMD#%lu: %s", pCmd->cmdNumber, cmdTypeToString(pCmd->type));
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_NONE, "DS", str);
+            pCmd = pCmd->pNext;
+        }
+    }
+    else {
+        // Nothing to print
     }
 }
 
@@ -1102,6 +1249,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEU
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
+    for (uint32_t i=0; i < cmdBufferCount; i++) {
+        // Validate that cmd buffers have been updated
+    }
     XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, fence);
     return result;
 }
@@ -1706,6 +1856,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (XGL_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+        if (CB_NEW != pCB->state)
+            resetCB(cmdBuffer);
         pCB->state = CB_UPDATE_ACTIVE;
         g_lastCmdBuffer = cmdBuffer;
     }
@@ -1719,6 +1871,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
         pCB->state = CB_UPDATE_COMPLETE;
         g_lastCmdBuffer = cmdBuffer;
+        printCB(cmdBuffer);
     }
     return result;
 }
@@ -1727,7 +1880,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffe
 {
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
     if (XGL_SUCCESS == result) {
-        // TODO : Free all the cmds and reset state for this CB
+        resetCB(cmdBuffer);
         g_lastCmdBuffer = cmdBuffer;
     }
     return result;
@@ -1738,6 +1891,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_BINDPIPELINE);
         if (getPipeline(pipeline)) {
             pCB->lastBoundPipeline = pipeline;
         }
@@ -1758,8 +1912,18 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
 {
-    synchAndDumpDot(cmdBuffer);
-    // TODO : Handle storing Pipeline Deltas to cmd buffer here
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        // TODO : Handle storing Pipeline Deltas to cmd buffer here
+        g_lastCmdBuffer = cmdBuffer;
+        synchAndDumpDot(cmdBuffer);
+        addCmd(pCB, CMD_BINDPIPELINEDELTA);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
@@ -1774,6 +1938,8 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
+        g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_BINDDESCRIPTORSET);
         if (getSetNode(descriptorSet)) {
             if (dsUpdateActive(descriptorSet)) {
                 // TODO : Not sure if it's valid to made this check here. May need to make at QueueSubmit time
@@ -1808,7 +1974,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_BINDINDEXBUFFER);
         // TODO : Track idxBuffer binding
     }
     else {
@@ -1824,8 +1990,8 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XG
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_BINDVERTEXBUFFER);
         pCB->lastVtxBinding = binding;
-        // TODO : Insert CMD into CMD BUFFER LL
     }
     else {
         char str[1024];
@@ -1840,8 +2006,8 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, uint32_t first
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_DRAW);
         pCB->drawCount[DRAW]++;
-        // TODO : Insert CMD into CMD BUFFER LL
         char str[1024];
         sprintf(str, "xglCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -1860,8 +2026,8 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, uint32_
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_DRAWINDEXED);
         pCB->drawCount[DRAW_INDEXED]++;
-        // TODO : Insert CMD into CMD BUFFER LL
         char str[1024];
         sprintf(str, "xglCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -1880,8 +2046,8 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BU
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_DRAWINDIRECT);
         pCB->drawCount[DRAW_INDIRECT]++;
-        // TODO : Insert CMD into CMD BUFFER LL
         char str[1024];
         sprintf(str, "xglCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -1900,8 +2066,8 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer,
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
+        addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
         pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
-        // TODO : Insert CMD into CMD BUFFER LL
         char str[1024];
         sprintf(str, "xglCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -1920,7 +2086,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, uint32_t x
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_DISPATCH);
     }
     else {
         char str[1024];
@@ -1935,7 +2101,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XG
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_DISPATCHINDIRECT);
     }
     else {
         char str[1024];
@@ -1950,7 +2116,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFF
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_COPYBUFFER);
     }
     else {
         char str[1024];
@@ -1965,7 +2131,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_COPYIMAGE);
     }
     else {
         char str[1024];
@@ -1980,7 +2146,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, X
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_COPYBUFFERTOIMAGE);
     }
     else {
         char str[1024];
@@ -1995,7 +2161,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToBuffer(XGL_CMD_BUFFER cmdBuffer, X
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_COPYIMAGETOBUFFER);
     }
     else {
         char str[1024];
@@ -2010,7 +2176,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_CLONEIMAGEDATA);
     }
     else {
         char str[1024];
@@ -2025,7 +2191,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BU
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_UPDATEBUFFER);
     }
     else {
         char str[1024];
@@ -2040,7 +2206,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFF
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_FILLBUFFER);
     }
     else {
         char str[1024];
@@ -2055,7 +2221,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_CLEARCOLORIMAGE);
     }
     else {
         char str[1024];
@@ -2070,7 +2236,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, 
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_CLEARCOLORIMAGERAW);
     }
     else {
         char str[1024];
@@ -2085,7 +2251,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, X
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_CLEARDEPTHSTENCIL);
     }
     else {
         char str[1024];
@@ -2100,7 +2266,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResolveImage(XGL_CMD_BUFFER cmdBuffer, XGL_IM
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_RESOLVEIMAGE);
     }
     else {
         char str[1024];
@@ -2115,7 +2281,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT 
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_SETEVENT);
     }
     else {
         char str[1024];
@@ -2130,7 +2296,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVEN
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_RESETEVENT);
     }
     else {
         char str[1024];
@@ -2145,7 +2311,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdWaitEvents(XGL_CMD_BUFFER cmdBuffer, const XG
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_WAITEVENTS);
     }
     else {
         char str[1024];
@@ -2160,7 +2326,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier(XGL_CMD_BUFFER cmdBuffer, con
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_PIPELINEBARRIER);
     }
     else {
         char str[1024];
@@ -2175,7 +2341,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUER
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_BEGINQUERY);
     }
     else {
         char str[1024];
@@ -2190,7 +2356,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_ENDQUERY);
     }
     else {
         char str[1024];
@@ -2205,7 +2371,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_RESETQUERYPOOL);
     }
     else {
         char str[1024];
@@ -2220,7 +2386,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_WRITETIMESTAMP);
     }
     else {
         char str[1024];
@@ -2235,7 +2401,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_INITATOMICCOUNTERS);
     }
     else {
         char str[1024];
@@ -2250,7 +2416,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_LOADATOMICCOUNTERS);
     }
     else {
         char str[1024];
@@ -2265,7 +2431,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_SAVEATOMICCOUNTERS);
     }
     else {
         char str[1024];
@@ -2292,7 +2458,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_BEGINRENDERPASS);
     }
     else {
         char str[1024];
@@ -2307,7 +2473,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_R
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer = cmdBuffer;
-        // TODO : Insert CMD into CMD BUFFER LL
+        addCmd(pCB, CMD_ENDRENDERPASS);
     }
     else {
         char str[1024];
