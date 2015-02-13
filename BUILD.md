@@ -3,6 +3,16 @@ This project fully supports Linux today.
 Support for Windows is for the loader and layers (additional info below).  Additional Windows support will be coming in Q1'15.
 Support for Android is TBD.
 
+##Git the Bits
+
+Make sure you have access to the Khronos Github repository. If not, send an email to
+jens@lunarg.com or courtney@lunarg.com and we can add you if you have a Khronos account.
+Also need to be sure that your Github account name is in your Khronos profile or the
+system will disable Github access. Once you have access to the Khronos Github repository,
+the preferred work flow is to fork that repo, commit work on to your fork and then issue a
+pull request to integrate that work into the Khronos repo. If that's too much, it's okay
+to clone the Khronos repository directly.
+
 Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [*ICD Loader*](loader/README.md) and the [*Sample Driver*](icd).
 
 ##Linux System Requirements
@@ -36,6 +46,16 @@ sudo dpkg -i xserver-xorg-video-intel_2.99.914-1~exp1ubuntu4.1_amd64.deb
 ```
 - Either restart Ubuntu or just X11.  
   
+## Clone the repository
+
+To create your local git repository:
+```
+mkdir YOUR_DEV_DIRECTORY  # it's called GL-Next on Github, but the name doesn't matter
+cd YOUR_DEV_DIRECTORY
+git clone -o khronos git@github.com:KhronosGroup/GL-Next.git .
+# Or substitute the URL from your forked repo for git@github.com:KhronosGroup above.
+```
+
 ##Linux Build
 
 The sample driver uses cmake and should work with the usual cmake options and utilities.
@@ -43,7 +63,7 @@ The standard build process builds the icd, the icd loader and all the tests.
 
 Example debug build:
 ```
-cd GL-Next  # cd to the root of the xgl git repository
+cd YOUR_DEV_DIRECTORY  # cd to the root of the xgl git repository
 export KHRONOS_ACCOUNT_NAME= <subversion login name for svn checkout of BIL>
 ./update_external_sources.sh  # fetches and builds glslang, llvm, LunarGLASS, and BIL
 cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
