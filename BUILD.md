@@ -3,6 +3,8 @@ This project fully supports Linux today.
 Support for Windows is for the loader and layers (additional info below).  Additional Windows support will be coming in Q1'15.
 Support for Android is TBD.
 
+Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [*ICD Loader*](loader/README.md) and the [*Sample Driver*](icd).
+
 ##Linux System Requirements
 Ubuntu 14.10 needed for DRI 3
 
@@ -110,7 +112,7 @@ EOF
 Windows 7+ with additional, software:
 
 - Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
-- CMake (from https://www.python.org/downloads).  Note: Configure to add itself to the system PATH environment variable.
+- CMake (from http://www.cmake.org/cmake/resources/software.html).  Note: Configure to add itself to the system PATH environment variable.
 - Python 3 (from https://www.python.org/downloads).  Note: Configure to add itself to the system PATH environment variable.
 - Cygwin (especially a BASH shell and git packages--from https://www.cygwin.com/).
 
