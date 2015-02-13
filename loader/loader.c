@@ -43,6 +43,9 @@
 #include "table_ops.h"
 #include "loader.h"
 #include "xglIcd.h"
+// The following is #included again to catch certain OS-specific functions
+// being used:
+#include "loader_platform.h"
 
 struct loader_instance {
     struct loader_icd *icds;

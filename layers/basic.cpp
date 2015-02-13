@@ -28,6 +28,9 @@
 #include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
 #include "xglLayer.h"
+// The following is #included again to catch certain OS-specific functions
+// being used:
+#include "loader_platform.h"
 
 static std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
 

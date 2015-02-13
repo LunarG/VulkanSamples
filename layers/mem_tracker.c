@@ -32,6 +32,9 @@
 #include "xgl_struct_string_helper.h"
 #include "mem_tracker.h"
 #include "layers_config.h"
+// The following is #included again to catch certain OS-specific functions
+// being used:
+#include "loader_platform.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;

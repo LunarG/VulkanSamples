@@ -30,6 +30,9 @@
 #include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
 #include "xglLayer.h"
+// The following is #included again to catch certain OS-specific functions
+// being used:
+#include "loader_platform.h"
 
 static void initLayerTable(const XGL_BASE_LAYER_OBJECT *gpuw, XGL_LAYER_DISPATCH_TABLE *pTable, const unsigned int layerNum);
 

@@ -952,7 +952,7 @@ class LayerDispatchSubcommand(Subcommand):
 
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_body(self):
         body = [self._gen_layer_dbg_callback_header(),
@@ -968,6 +968,8 @@ class ApiDumpSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n')
+        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"')
         header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
         header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
@@ -1005,6 +1007,8 @@ class ApiDumpCppSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper_cpp.h"\n')
+        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"')
         header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
         header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
@@ -1042,6 +1046,8 @@ class ApiDumpFileSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n')
+        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"')
         header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
         header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
@@ -1080,6 +1086,8 @@ class ApiDumpNoAddrSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper_no_addr.h"\n')
+        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"')
         header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
         header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
@@ -1117,6 +1125,8 @@ class ApiDumpNoAddrCppSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper_no_addr_cpp.h"\n')
+        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"')
         header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
         header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
@@ -1153,6 +1163,8 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"')
         header_txt.append('#include "object_track.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;')
+        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static long long unsigned int object_track_index = 0;')
         header_txt.append('// Ptr to LL of dbg functions')
@@ -1465,7 +1477,7 @@ class ObjectTrackerSubcommand(Subcommand):
 
 class ParamCheckerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n#include "xgl_enum_validate_helper.h"\n#include "xgl_struct_validate_helper.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);\n\n'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n#include "xgl_enum_validate_helper.h"\n#include "xgl_struct_validate_helper.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);\n\n'
 
     def generate_body(self):
         body = [self._gen_layer_dbg_callback_header(),

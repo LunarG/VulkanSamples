@@ -29,6 +29,9 @@
 #include <xglLayer.h>
 #include "loader_platform.h"
 #include "layers_config.h"
+// The following is #included again to catch certain OS-specific functions
+// being used:
+#include "loader_platform.h"
 
 #define MAX_CHARS_PER_LINE 4096
 
