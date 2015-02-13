@@ -46,8 +46,8 @@ if (WIN32)
 endif()
 if (NOT WIN32)
     set (CMAKE_CXX_FLAGS "-std=c++11")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES -Wpointer-arith")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -Wpointer-arith")
 endif()
 
 add_custom_command(OUTPUT xgl_dispatch_table_helper.h

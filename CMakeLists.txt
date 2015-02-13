@@ -13,7 +13,7 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 include(FindPkgConfig)
 
 if (CMAKE_COMPILER_IS_GNUCC)
-    set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-missing-field-initializers")
+    set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
     set(COMMON_COMPILE_FLAGS "${COMMON_COMPILE_FLAGS} -fno-strict-aliasing -fno-builtin-memcmp")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS}")

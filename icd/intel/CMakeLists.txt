@@ -1,8 +1,9 @@
 # Create the i965 XGL DRI library
 
-add_subdirectory(compiler)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+add_subdirectory(compiler)
 
 find_package(DRM REQUIRED COMPONENTS libdrm libdrm_intel)
 

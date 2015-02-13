@@ -25,7 +25,7 @@ if (WIN32)
     target_link_libraries(XGL)
 endif()
 if (NOT WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -Wpointer-arith")
 
     add_library(XGL SHARED loader.c dispatch.c table_ops.h)
     set_target_properties(XGL PROPERTIES SOVERSION 0)
