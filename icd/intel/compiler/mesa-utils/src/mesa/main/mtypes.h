@@ -834,7 +834,8 @@ struct gl_program
    GLfloat (*LocalParams)[4];
 
    /** Map from sampler unit to texture unit (set by glUniform1i()) */
-   GLubyte SamplerUnits[MAX_SAMPLERS];
+   // LunarG - Bump to 32 bits to hold binding and set
+   GLuint SamplerUnits[MAX_SAMPLERS];
 
    /** Bitmask of which register files are read/written with indirect
     * addressing.  Mask of (1 << PROGRAM_x) bits.
@@ -1121,7 +1122,8 @@ struct gl_shader
     * The sampler unit associated with each uniform is stored in the
     * \c gl_uniform_storage::sampler field.
     */
-   GLubyte SamplerUnits[MAX_SAMPLERS];
+   // LunarG - Bump to 32 bits to hold binding and set
+   GLuint SamplerUnits[MAX_SAMPLERS];
    /** Which texture target is being sampled (TEXTURE_1D/2D/3D/etc_INDEX) */
    gl_texture_index SamplerTargets[MAX_SAMPLERS];
 
