@@ -50,8 +50,8 @@ Note: Both of the LIBXGL\_*\_PATH variables may contain more than one directory.
   #include "xglIcd.h"
 
   struct {
-        XGL_LOADER_DATA *reservedForLoader; // Reserve space for pointer to loader's dispatch table
-        myObjectClass myObj;                // Your driver's C++ class
+        XGL_LOADER_DATA reservedForLoader; // Reserve space for pointer to loader's dispatch table
+        myObjectClass myObj;               // Your driver's C++ class
   } xglObj;
 
   xglObj alloc_icd_obj()
