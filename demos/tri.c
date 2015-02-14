@@ -24,6 +24,16 @@
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
 
+struct texture_objects {
+    XGL_SAMPLER sampler;
+
+    XGL_IMAGE image;
+    uint32_t  num_mem;
+    XGL_GPU_MEMORY *mem;
+    XGL_IMAGE_VIEW view;
+    int32_t tex_width, tex_height;
+};
+
 struct demo {
 #if defined(__linux__)
     xcb_connection_t *connection;
@@ -55,14 +65,7 @@ struct demo {
         XGL_DEPTH_STENCIL_VIEW view;
     } depth;
 
-    struct {
-        XGL_SAMPLER sampler;
-
-        XGL_IMAGE image;
-        uint32_t  num_mem;
-        XGL_GPU_MEMORY *mem;
-        XGL_IMAGE_VIEW view;
-    } textures[DEMO_TEXTURE_COUNT];
+    struct texture_objects textures[DEMO_TEXTURE_COUNT];
 
     struct {
         XGL_BUFFER buf;
@@ -383,109 +386,93 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 }
 
-static void demo_prepare_textures(struct demo *demo)
+static void demo_prepare_texture_image(struct demo *demo,
+                                       const uint32_t *tex_colors,
+                                       struct texture_objects *tex_objs,
+                                       XGL_IMAGE_TILING tiling,
+                                       XGL_FLAGS mem_props)
 {
     const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
     const int32_t tex_width = 2;
     const int32_t tex_height = 2;
-    const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
-        { 0xffff0000, 0xff00ff00 },
-    };
     XGL_RESULT err;
-    uint32_t i;
 
-    XGL_CMD_BUFFER staging_cmd_buf;
-    XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {
-        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+    tex_objs->tex_width = tex_width;
+    tex_objs->tex_height = tex_height;
+
+    const XGL_IMAGE_CREATE_INFO image_create_info = {
+        .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
-        .queueType = XGL_QUEUE_TYPE_GRAPHICS,
-        .flags = 0
+        .imageType = XGL_IMAGE_2D,
+        .format = tex_format,
+        .extent = { tex_width, tex_height, 1 },
+        .mipLevels = 1,
+        .arraySize = 1,
+        .samples = 1,
+        .tiling = tiling,
+        .usage = XGL_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
+        .flags = 0,
+    };
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+        .pNext = NULL,
+    };
+    XGL_MEMORY_ALLOC_INFO mem_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext = &img_alloc,
+        .allocationSize = 0,
+        .memProps = mem_props,
+        .memType = XGL_MEMORY_TYPE_IMAGE,
+        .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
     };
 
-    err = xglCreateCommandBuffer(demo->device, &cmd_buf_create_info, &staging_cmd_buf);
+    XGL_MEMORY_REQUIREMENTS *mem_reqs;
+    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
+
+    err = xglCreateImage(demo->device, &image_create_info,
+            &tex_objs->image);
     assert(!err);
 
-    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        const XGL_IMAGE_CREATE_INFO staging_image_create_info = {
-            .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .pNext = NULL,
-            .imageType = XGL_IMAGE_2D,
-            .format = tex_format,
-            .extent = { tex_width, tex_height, 1 },
-            .mipLevels = 1,
-            .arraySize = 1,
-            .samples = 1,
-            .tiling = XGL_LINEAR_TILING,
-            .usage = XGL_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
-            .flags = 0,
-        };
-        XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
-            .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-            .pNext = NULL,
-        };
-        XGL_MEMORY_ALLOC_INFO mem_alloc = {
-            .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-            .pNext = &img_alloc,
-            .allocationSize = 0,
-            .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-            .memType = XGL_MEMORY_TYPE_IMAGE,
-            .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
-        };
+    err = xglGetObjectInfo(tex_objs->image,
+                XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                &num_alloc_size, &num_allocations);
+    assert(!err && num_alloc_size == sizeof(num_allocations));
+    mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+    tex_objs->mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+    err = xglGetObjectInfo(tex_objs->image,
+                XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+                &mem_reqs_size, mem_reqs);
+    assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+    err = xglGetObjectInfo(tex_objs->image,
+                    XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+                    &img_reqs_size, &img_reqs);
+    assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+    img_alloc.usage = img_reqs.usage;
+    img_alloc.formatClass = img_reqs.formatClass;
+    img_alloc.samples = img_reqs.samples;
+    mem_alloc.memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+    for (uint32_t j = 0; j < num_allocations; j ++) {
+        mem_alloc.allocationSize = mem_reqs[j].size;
 
-        XGL_MEMORY_REQUIREMENTS *mem_reqs;
-        size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
-        XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-        size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-        XGL_IMAGE staging_image;
-        XGL_GPU_MEMORY *staging_mem;
-        uint32_t staging_num_allocations = 0;
-        XGL_MEMORY_REF  memRefs[16];
-        uint32_t numRefs = 0;
-        uint32_t num_allocations = 0;
-        size_t num_alloc_size = sizeof(num_allocations);
-
-        err = xglCreateImage(demo->device, &staging_image_create_info,
-                &staging_image);
+        /* allocate memory */
+        err = xglAllocMemory(demo->device, &mem_alloc,
+                    &(tex_objs->mem[j]));
         assert(!err);
 
-        err = xglGetObjectInfo(staging_image,
-                    XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                    &num_alloc_size, &staging_num_allocations);
-        assert(!err && num_alloc_size == sizeof(num_allocations));
-        mem_reqs = malloc(staging_num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-        staging_mem = malloc(staging_num_allocations * sizeof(XGL_GPU_MEMORY));
-        err = xglGetObjectInfo(staging_image,
-                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, mem_reqs);
-        assert(!err && mem_reqs_size == staging_num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-        err = xglGetObjectInfo(staging_image,
-                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                        &img_reqs_size, &img_reqs);
-        assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
-        img_alloc.usage = img_reqs.usage;
-        img_alloc.formatClass = img_reqs.formatClass;
-        img_alloc.samples = img_reqs.samples;
-        mem_alloc.memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
-        for (uint32_t j = 0; j < staging_num_allocations; j ++) {
-            mem_alloc.allocationSize = mem_reqs[j].size;
+        /* bind memory */
+        err = xglBindObjectMemory(tex_objs->image, j, tex_objs->mem[j], 0);
+        assert(!err);
+    }
+    free(mem_reqs);
+    mem_reqs = NULL;
 
-            /* allocate memory */
-            err = xglAllocMemory(demo->device, &mem_alloc,
-                        &(staging_mem[j]));
-            assert(!err);
+    tex_objs->num_mem = num_allocations;
 
-            memRefs[numRefs].mem = staging_mem[j];
-            memRefs[numRefs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
-            numRefs++;
-            assert(numRefs < 16);
-
-            /* bind memory */
-            err = xglBindObjectMemory(staging_image, j, staging_mem[j], 0);
-            assert(!err);
-        }
-        free(mem_reqs);
-        mem_reqs = NULL;
-
+    if (mem_props & XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT) {
         const XGL_IMAGE_SUBRESOURCE subres = {
             .aspect = XGL_IMAGE_ASPECT_COLOR,
             .mipLevel = 0,
@@ -496,23 +483,163 @@ static void demo_prepare_textures(struct demo *demo)
         void *data;
         int32_t x, y;
 
-        err = xglGetImageSubresourceInfo(staging_image, &subres,
-                XGL_INFO_TYPE_SUBRESOURCE_LAYOUT, &layout_size, &layout);
+        err = xglGetImageSubresourceInfo(tex_objs->image, &subres,
+                                         XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+                                         &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
         /* Linear texture must be within a single memory object */
-        assert(staging_num_allocations == 1);
+        assert(num_allocations == 1);
 
-        err = xglMapMemory(staging_mem[0], 0, &data);
+        err = xglMapMemory(tex_objs->mem[0], 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
             uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
             for (x = 0; x < tex_width; x++)
-                row[x] = tex_colors[i][(x & 1) ^ (y & 1)];
+                row[x] = tex_colors[(x & 1) ^ (y & 1)];
         }
 
-        err = xglUnmapMemory(staging_mem[0]);
+        err = xglUnmapMemory(tex_objs->mem[0]);
         assert(!err);
+    }
+}
+
+static void demo_destroy_texture_image(struct texture_objects *tex_objs)
+{
+    /* clean up staging resources */
+    for (uint32_t j = 0; j < tex_objs->num_mem; j ++) {
+        xglBindObjectMemory(tex_objs->mem[j], j, XGL_NULL_HANDLE, 0);
+        xglFreeMemory(tex_objs->mem[j]);
+    }
+
+    free(tex_objs->mem);
+    xglDestroyObject(tex_objs->image);
+}
+
+static void demo_prepare_textures(struct demo *demo)
+{
+    const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
+    XGL_FORMAT_PROPERTIES props;
+    size_t size = sizeof(props);
+    const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
+        { 0xffff0000, 0xff00ff00 },
+    };
+    XGL_RESULT err;
+    uint32_t i;
+
+    err = xglGetFormatInfo(demo->device, tex_format,
+                           XGL_INFO_TYPE_FORMAT_PROPERTIES,
+                           &size, &props);
+    assert(!err);
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        if (props.linearTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
+            /* Device can texture using linear textures */
+            demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
+                                       XGL_LINEAR_TILING, XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
+        } else if (props.optimalTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT){
+            /* Must use staging buffer to copy linear texture to optimized */
+            struct texture_objects staging_texture;
+
+            memset(&staging_texture, 0, sizeof(staging_texture));
+            demo_prepare_texture_image(demo, tex_colors[i], &staging_texture,
+                                       XGL_LINEAR_TILING, XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
+
+            demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
+                                       XGL_OPTIMAL_TILING, XGL_MEMORY_PROPERTY_GPU_ONLY);
+
+            XGL_CMD_BUFFER staging_cmd_buf;
+            XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {
+                .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+                .pNext = NULL,
+                .queueType = XGL_QUEUE_TYPE_GRAPHICS,
+                .flags = 0
+            };
+
+            err = xglCreateCommandBuffer(demo->device, &cmd_buf_create_info, &staging_cmd_buf);
+            assert(!err);
+
+            /* Copy staging texture to usable texture */
+            XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_begin_info = {
+                .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+                .pNext = NULL,
+                .flags = 0
+            };
+
+            err = xglResetCommandBuffer(staging_cmd_buf);
+            assert(!err);
+
+            err = xglBeginCommandBuffer(staging_cmd_buf, &cmd_buf_begin_info);
+            assert(!err);
+
+            XGL_IMAGE_COPY copy_region = {
+                .srcSubresource = { XGL_IMAGE_ASPECT_COLOR, 0, 0 },
+                .srcOffset = { 0, 0, 0 },
+                .destSubresource = { XGL_IMAGE_ASPECT_COLOR, 0, 0 },
+                .destOffset = { 0, 0, 0 },
+                .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
+            };
+            xglCmdCopyImage(staging_cmd_buf, staging_texture.image, demo->textures[i].image, 1, &copy_region);
+
+            XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {
+                .sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = NULL,
+                .outputMask = XGL_MEMORY_OUTPUT_COPY_BIT,
+                .inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT,
+                .oldLayout = XGL_IMAGE_LAYOUT_GENERAL,
+                .newLayout = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                .image = staging_texture.image,
+                .subresourceRange = { XGL_IMAGE_ASPECT_COLOR, 0, 1, 0, 0 }
+            };
+            XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
+
+            XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+            XGL_PIPELINE_BARRIER pipeline_barrier;
+            pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+            pipeline_barrier.eventCount = 1;
+            pipeline_barrier.pEvents = set_events;
+            pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+            pipeline_barrier.memBarrierCount = 1;
+            pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+            // write barrier to the command buffer
+            xglCmdPipelineBarrier(staging_cmd_buf, &pipeline_barrier);
+
+            err = xglEndCommandBuffer(staging_cmd_buf);
+            assert(!err);
+
+            const XGL_CMD_BUFFER cmd_bufs[] = { staging_cmd_buf };
+            XGL_MEMORY_REF mem_refs[16];
+            uint32_t num_refs = 0;
+
+            for (int j = 0; j < staging_texture.num_mem; j++) {
+                mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
+                mem_refs[num_refs].mem = staging_texture.mem[j];
+                num_refs++;
+                assert(num_refs < 16);
+            }
+
+            for (int j = 0; j < demo->textures[i].num_mem; j++) {
+                mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
+                mem_refs[num_refs].mem = demo->textures[i].mem[j];
+                num_refs++;
+                assert(num_refs < 16);
+            }
+
+            err = xglQueueSubmit(demo->queue, 1, cmd_bufs,
+                                 num_refs, mem_refs, XGL_NULL_HANDLE);
+            assert(!err);
+
+            err = xglQueueWaitIdle(demo->queue);
+            assert(!err);
+
+            demo_destroy_texture_image(&staging_texture);
+
+            xglDestroyObject(staging_cmd_buf);
+        } else {
+            /* Can't support XGL_FMT_B8G8R8A8_UNORM !? */
+            assert(!"No support for tB8G8R8A8_UNORM as texture image format");
+        }
 
         const XGL_SAMPLER_CREATE_INFO sampler = {
             .sType = XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -530,25 +657,13 @@ static void demo_prepare_textures(struct demo *demo)
             .maxLod = 0.0f,
             .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
         };
-        const XGL_IMAGE_CREATE_INFO texture_image_create_info = {
-            .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .pNext = NULL,
-            .imageType = XGL_IMAGE_2D,
-            .format = tex_format,
-            .extent = { tex_width, tex_height, 1 },
-            .mipLevels = 1,
-            .arraySize = 1,
-            .samples = 1,
-            .tiling = XGL_OPTIMAL_TILING,
-            .usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT,
-            .flags = 0,
-        };
+
         XGL_IMAGE_VIEW_CREATE_INFO view = {
             .sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
             .image = XGL_NULL_HANDLE,
             .viewType = XGL_IMAGE_VIEW_2D,
-            .format = texture_image_create_info.format,
+            .format = tex_format,
             .channels = { XGL_CHANNEL_SWIZZLE_R,
                           XGL_CHANNEL_SWIZZLE_G,
                           XGL_CHANNEL_SWIZZLE_B,
@@ -562,127 +677,12 @@ static void demo_prepare_textures(struct demo *demo)
                 &demo->textures[i].sampler);
         assert(!err);
 
-        /* create image */
-        err = xglCreateImage(demo->device, &texture_image_create_info,
-                &demo->textures[i].image);
-        assert(!err);
-
-        err = xglGetObjectInfo(demo->textures[i].image,
-                    XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                    &num_alloc_size, &num_allocations);
-        assert(!err && num_alloc_size == sizeof(num_allocations));
-        mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-        demo->textures[i].mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
-        demo->textures[i].num_mem = num_allocations;
-        err = xglGetObjectInfo(demo->textures[i].image,
-                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, mem_reqs);
-        assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-        err = xglGetObjectInfo(demo->textures[i].image,
-                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                        &img_reqs_size, &img_reqs);
-        assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
-        img_alloc.usage = img_reqs.usage;
-        img_alloc.formatClass = img_reqs.formatClass;
-        img_alloc.samples = img_reqs.samples;
-        mem_alloc.memProps = XGL_MEMORY_PROPERTY_GPU_ONLY;
-        for (uint32_t j = 0; j < num_allocations; j ++) {
-            mem_alloc.allocationSize = mem_reqs[j].size;
-
-            /* allocate memory */
-            err = xglAllocMemory(demo->device, &mem_alloc,
-                        &(demo->textures[i].mem[j]));
-            assert(!err);
-
-            memRefs[numRefs].mem = demo->textures[i].mem[j];
-            memRefs[numRefs].flags = 0;
-            numRefs++;
-            assert(numRefs < 16);
-
-            /* bind memory */
-            err = xglBindObjectMemory(demo->textures[i].image, j,
-                    demo->textures[i].mem[j], 0);
-            assert(!err);
-        }
-        free(mem_reqs);
-        mem_reqs = NULL;
-
         /* create image view */
         view.image = demo->textures[i].image;
         err = xglCreateImageView(demo->device, &view,
                                  &demo->textures[i].view);
         assert(!err);
-
-        /* Copy staging texture to usable texture */
-        XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_begin_info = {
-            .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-            .pNext = NULL,
-            .flags = 0
-        };
-
-        err = xglResetCommandBuffer(staging_cmd_buf);
-        assert(!err);
-
-        err = xglBeginCommandBuffer(staging_cmd_buf, &cmd_buf_begin_info);
-        assert(!err);
-
-        XGL_IMAGE_COPY copy_region = {
-            .srcSubresource = { XGL_IMAGE_ASPECT_COLOR, 0, 0 },
-            .srcOffset = { 0, 0, 0 },
-            .destSubresource = { XGL_IMAGE_ASPECT_COLOR, 0, 0 },
-            .destOffset = { 0, 0, 0 },
-            .extent = { tex_width, tex_height, 1 },
-        };
-        xglCmdCopyImage(staging_cmd_buf, staging_image, demo->textures[i].image, 1, &copy_region);
-
-        XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {
-            .sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .pNext = NULL,
-            .outputMask = XGL_MEMORY_OUTPUT_COPY_BIT,
-            .inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT,
-            .oldLayout = XGL_IMAGE_LAYOUT_GENERAL,
-            .newLayout = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
-            .image = staging_image,
-            .subresourceRange = { XGL_IMAGE_ASPECT_COLOR, 0, 1, 0, 0 }
-        };
-        XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
-
-        XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
-        XGL_PIPELINE_BARRIER pipeline_barrier;
-        pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
-        pipeline_barrier.eventCount = 1;
-        pipeline_barrier.pEvents = set_events;
-        pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
-        pipeline_barrier.memBarrierCount = 1;
-        pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-
-        // write barrier to the command buffer
-        xglCmdPipelineBarrier(staging_cmd_buf, &pipeline_barrier);
-
-        err = xglEndCommandBuffer(staging_cmd_buf);
-        assert(!err);
-
-        const XGL_CMD_BUFFER cmd_bufs[] = { staging_cmd_buf };
-
-        err = xglQueueSubmit(demo->queue, 1, cmd_bufs,
-                             numRefs, memRefs, XGL_NULL_HANDLE);
-        assert(!err);
-
-        err = xglQueueWaitIdle(demo->queue);
-        assert(!err);
-
-        /* clean up staging resources */
-        for (uint32_t j = 0; j < staging_num_allocations; j ++) {
-            xglBindObjectMemory(staging_image, j, XGL_NULL_HANDLE, 0);
-            xglFreeMemory(staging_mem[j]);
-        }
-
-        free(staging_mem);
-        xglDestroyObject(staging_image);
     }
-
-    xglDestroyObject(staging_cmd_buf);
-
 }
 
 static void demo_prepare_vertices(struct demo *demo)
