@@ -651,7 +651,7 @@ static void demo_prepare_textures(struct demo *demo)
             .addressV = XGL_TEX_ADDRESS_WRAP,
             .addressW = XGL_TEX_ADDRESS_WRAP,
             .mipLodBias = 0.0f,
-            .maxAnisotropy = 0,
+            .maxAnisotropy = 1,
             .compareFunc = XGL_COMPARE_NEVER,
             .minLod = 0.0f,
             .maxLod = 0.0f,
