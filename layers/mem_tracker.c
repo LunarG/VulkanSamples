@@ -35,79 +35,15 @@
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
+#include "layers_msg.h"
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
-// Ptr to LL of dbg functions
-static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
-static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_INFO;
-static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
-static FILE *g_logFile = NULL;
 
 #define MAX_BINDING 0xFFFFFFFF
 static uint32_t lastVtxBinding = MAX_BINDING;
-
-// Utility function to handle reporting
-static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,
-    XGL_VALIDATION_LEVEL validationLevel,
-    XGL_BASE_OBJECT      srcObject,
-    size_t               location,
-    int32_t              msgCode,
-    const char*          pLayerPrefix,
-    const char*          pMsg)
-{
-    if (g_debugAction & (XGL_DBG_LAYER_ACTION_LOG_MSG | XGL_DBG_LAYER_ACTION_CALLBACK)) {
-         XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
-         switch (msgType) {
-            case XGL_DBG_MSG_ERROR:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_ERROR) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}ERROR : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-            case XGL_DBG_MSG_WARNING:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_WARN) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}WARN : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-            case XGL_DBG_MSG_PERF_WARNING:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_PERF_WARN) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}PERF_WARN : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-            default:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_INFO) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}INFO : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-                            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-        }
-    }
-}
 
 static GLOBAL_CB_NODE* pGlobalCBHead = NULL;
 static GLOBAL_MEM_OBJ_NODE* pGlobalMemObjHead = NULL;
