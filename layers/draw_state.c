@@ -1547,6 +1547,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
             memcpy((void*)pNewNode->pCreateInfoList, pSetLayoutInfoList, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
         pNewNode->layout = *pSetLayout;
         pNewNode->stageFlags = stageFlags;
+        uint32_t i = XGL_SHADER_STAGE_COMPUTE;
+        for (uint32_t stage = XGL_SHADER_STAGE_FLAGS_COMPUTE_BIT; stage > 0; stage >>= 1) {
+            assert(i < XGL_NUM_SHADER_STAGE);
+            if (stage & stageFlags)
+                pNewNode->shaderStageBindPoints[i] = pSetBindPoints[i];
+            i--;
+        }
         pNewNode->startIndex = 0;
         LAYOUT_NODE* pPriorNode = getLayoutNode(priorSetLayout);
         // Point to prior node or NULL if no prior node

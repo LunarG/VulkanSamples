@@ -111,7 +111,7 @@ typedef struct _DYNAMIC_STATE_NODE {
 typedef struct _LAYOUT_NODE {
     XGL_DESCRIPTOR_SET_LAYOUT                    layout;
     XGL_FLAGS                                    stageFlags;
-    const uint32_t                               shaderStageBindPoints[XGL_NUM_SHADER_STAGE];
+    uint32_t                                     shaderStageBindPoints[XGL_NUM_SHADER_STAGE];
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfoList;
     uint32_t                                     startIndex; // 1st index of this layout
     uint32_t                                     endIndex; // last index of this layout
