@@ -943,7 +943,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
 
     XglIndexBufferObj indexBuffer(m_device);
     indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), XGL_INDEX_16, g_idxData);
-    meshBuffer.BufferMemoryBarrier();
+    indexBuffer.BufferMemoryBarrier();
 
     XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
     XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
