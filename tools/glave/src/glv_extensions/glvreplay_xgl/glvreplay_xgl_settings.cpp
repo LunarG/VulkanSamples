@@ -27,7 +27,8 @@
 #include "glvreplay_xgl_settings.h"
 #include "layers_config.h"
 // declared as extern in header
-static glvreplay_xgl_settings s_defaultXglReplaySettings = { 1, "DrawState,ObjectTracker,MemTracker",
+static glvreplay_xgl_settings s_defaultXglReplaySettings = { 1, "DrawState, ObjectTracker",
+                                                            STRINGIFY(XGL_DBG_LAYER_LEVEL_ERROR), STRINGIFY(XGL_DBG_LAYER_ACTION_CALLBACK),
                                                             STRINGIFY(XGL_DBG_LAYER_LEVEL_ERROR), STRINGIFY(XGL_DBG_LAYER_ACTION_CALLBACK),
                                                             STRINGIFY(XGL_DBG_LAYER_LEVEL_ERROR), STRINGIFY(XGL_DBG_LAYER_ACTION_CALLBACK)};
 glvreplay_xgl_settings g_xglReplaySettings;
@@ -38,6 +39,8 @@ glv_SettingInfo g_settings_info[] =
     { "e", "EnableLayers", GLV_SETTING_STRING, &g_xglReplaySettings.enableLayers, &s_defaultXglReplaySettings.enableLayers, TRUE, "Comma separated list of xgl layers to enable."},
     { "dsrl", "DrawStateReportLevel", GLV_SETTING_STRING, &g_xglReplaySettings.drawStateReportLevel, &s_defaultXglReplaySettings.drawStateReportLevel, TRUE, "DrawState Layer reporting level"},
     { "dsda", "DrawStateDebugAction", GLV_SETTING_STRING, &g_xglReplaySettings.drawStateDebugAction, &s_defaultXglReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},
+    { "dsrl", "ObjectTrackerReportLevel", GLV_SETTING_STRING, &g_xglReplaySettings.objectTrackerReportLevel, &s_defaultXglReplaySettings.objectTrackerReportLevel, TRUE, "ObjectTracker Layer reporting level"},
+    { "dsda", "ObjectTrackerDebugAction", GLV_SETTING_STRING, &g_xglReplaySettings.objectTrackerDebugAction, &s_defaultXglReplaySettings.objectTrackerDebugAction, TRUE, "ObjectTracker Layer debug action"},
     { "mtrl", "MemTrackerReportLevel", GLV_SETTING_STRING, &g_xglReplaySettings.memTrackerReportLevel, &s_defaultXglReplaySettings.memTrackerReportLevel, TRUE, "MemTracker Layer reporting level"},
     { "mtda", "MemTrackerDebugAction", GLV_SETTING_STRING, &g_xglReplaySettings.memTrackerDebugAction, &s_defaultXglReplaySettings.memTrackerDebugAction, TRUE, "MemTracker Layer debug action"},};
 glv_SettingGroup g_xglReplaySettingGroup =
@@ -53,6 +56,8 @@ void apply_layerSettings_overrides()
     setLayerOptionEnum("DrawStateDebugAction", g_xglReplaySettings.drawStateDebugAction);
     setLayerOptionEnum("MemTrackerReportLevel", g_xglReplaySettings.memTrackerReportLevel);
     setLayerOptionEnum("MemTrackerDebugAction", g_xglReplaySettings.memTrackerDebugAction);
+    setLayerOptionEnum("ObjectTrackerReportLevel", g_xglReplaySettings.objectTrackerReportLevel);
+    setLayerOptionEnum("ObjectTrackerDebugAction", g_xglReplaySettings.objectTrackerDebugAction);
 }
 
 char** get_enableLayers_list(unsigned int *pNumLayers)

@@ -40,6 +40,8 @@ typedef struct glvreplay_xgl_settings
     const char* drawStateDebugAction;
     const char* memTrackerReportLevel;
     const char* memTrackerDebugAction;
+    const char* objectTrackerReportLevel;
+    const char* objectTrackerDebugAction;
 } glvreplay_xgl_settings;
 
 extern glvreplay_xgl_settings g_xglReplaySettings;
