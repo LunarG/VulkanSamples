@@ -1286,8 +1286,8 @@ static void gen6_cc_states(struct intel_cmd *cmd)
 
     if (ds) {
         ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = (ds->ds_info.stencilFrontRef && 0xff) << 24 |
-                      (ds->ds_info.stencilBackRef && 0xff) << 16;
+        stencil_ref = (ds->ds_info.stencilFrontRef & 0xff) << 24 |
+                      (ds->ds_info.stencilBackRef & 0xff) << 16;
     } else {
         ds_offset = 0;
         stencil_ref = 0;
@@ -1360,13 +1360,13 @@ static void gen7_cc_states(struct intel_cmd *cmd)
 
     if (ds) {
         offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = (ds->ds_info.stencilFrontRef && 0xff) << 24 |
-                      (ds->ds_info.stencilBackRef && 0xff) << 16;
+        stencil_ref = (ds->ds_info.stencilFrontRef & 0xff) << 24 |
+                      (ds->ds_info.stencilBackRef & 0xff) << 16;
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
                 offset);
-        stencil_ref = (ds->ds_info.stencilFrontRef && 0xff) << 24 |
-                      (ds->ds_info.stencilBackRef && 0xff) << 16;
+        stencil_ref = (ds->ds_info.stencilFrontRef & 0xff) << 24 |
+                      (ds->ds_info.stencilBackRef & 0xff) << 16;
     } else {
         stencil_ref = 0;
     }
