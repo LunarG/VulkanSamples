@@ -700,11 +700,11 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
 static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const XGL_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
+    int env_layer_count = 0;
 
     *ppLayerNames =  &layerNames[0];
-    if (!pCreateInfo) {
-        return loader_get_layer_env(icd, gpu_index, layerNames);
-    }
+    /* Load any layers specified in the environment first */
+    env_layer_count = loader_get_layer_env(icd, gpu_index, layerNames);
 
     const XGL_LAYER_CREATE_INFO *pCi =
         (const XGL_LAYER_CREATE_INFO *) pCreateInfo->pNext;
@@ -713,7 +713,7 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
         if (pCi->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) {
             const char *name;
             uint32_t len;
-            for (uint32_t i = 0; i < pCi->layerCount; i++) {
+            for (uint32_t i = env_layer_count; i < (env_layer_count + pCi->layerCount); i++) {
                 const char * lib_name = NULL;
                 name = *(pCi->ppActiveLayerNames + i);
                 if (!find_layer_name(icd, gpu_index, name, &lib_name))
