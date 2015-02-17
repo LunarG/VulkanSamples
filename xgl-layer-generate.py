@@ -935,7 +935,7 @@ class LayerDispatchSubcommand(Subcommand):
 
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_body(self):
         body = [self._generate_layer_initialization("Generic", True),
@@ -1147,6 +1147,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include "object_track.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
+        header_txt.append('#include "layers_config.h"')
         header_txt.append('#include "layers_msg.h"')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static long long unsigned int object_track_index = 0;')
