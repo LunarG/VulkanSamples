@@ -499,8 +499,6 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
 
     GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
-
-    cmdBuffer.BindVertexBuffer(&constantBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
