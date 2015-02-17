@@ -112,6 +112,7 @@ typedef struct _LAYOUT_NODE {
     XGL_DESCRIPTOR_SET_LAYOUT                    layout;
     XGL_FLAGS                                    stageFlags;
     uint32_t                                     shaderStageBindPoints[XGL_NUM_SHADER_STAGE];
+    XGL_DESCRIPTOR_TYPE*                         pTypes; // Dynamic array that will be created to verify descriptor types
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfoList;
     uint32_t                                     startIndex; // 1st index of this layout
     uint32_t                                     endIndex; // last index of this layout
