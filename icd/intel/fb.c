@@ -82,11 +82,6 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
         const struct intel_ds_view *ds = intel_ds_view(att->view);
         const struct intel_layout *layout = &ds->img->layout;
 
-        if (info->colorAttachmentCount == 0) {
-            width = layout->width0;
-            height = layout->height0;
-        }
-
         if (width > layout->width0)
             width = layout->width0;
         if (height > layout->height0)
