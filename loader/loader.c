@@ -111,6 +111,70 @@ static struct {
 } loader;
 
 
+#if defined(WIN32)
+// For ICD developers, look in the registry, and look for an environment
+// variable for a path(s) where to find the ICD(s):
+static char *loader_get_registry_and_env(const char *env_var,
+                                         const char *registry_value)
+{
+    char *env_str = getenv(env_var);
+    size_t env_len = (env_str == NULL) ? 0 : strlen(env_str);
+#define INITIAL_STR_LEN 1024
+    char *registry_str = malloc(INITIAL_STR_LEN);
+    DWORD registry_len = INITIAL_STR_LEN;
+    DWORD registry_value_type;
+    LONG  registry_return_value;
+    char *rtn_str = NULL;
+    size_t rtn_len;
+
+    registry_return_value = RegGetValue(HKEY_LOCAL_MACHINE, "Software\\XGL",
+                                        registry_value,
+                                        (RRF_RT_REG_SZ | RRF_ZEROONFAILURE),
+                                        &registry_value_type,
+                                        (PVOID) registry_str,
+                                        &registry_len);
+
+    if (registry_return_value == ERROR_MORE_DATA) {
+        registry_str = realloc(registry_str, registry_len);
+        registry_return_value = RegGetValue(HKEY_LOCAL_MACHINE, "Software\\XGL",
+                                            registry_value,
+                                            (RRF_RT_REG_SZ | RRF_ZEROONFAILURE),
+                                            &registry_value_type,
+                                            (PVOID) registry_str,
+                                            &registry_len);
+    }
+
+    rtn_len = env_len + registry_len + 1;
+    if (rtn_len <= 2) {
+        // We found neither the desired registry value, nor the environment
+        // variable; return NULL:
+        return NULL;
+    } else {
+        // We found something, and so we need to allocate memory for the string
+        // to return:
+        rtn_str = malloc(rtn_len);
+    }
+
+    if (registry_return_value != ERROR_SUCCESS) {
+        // We didn't find the desired registry value, and so we must have found
+        // only the environment variable:
+        _snprintf(rtn_str, rtn_len, "%s", env_str);
+    } else if (env_str != NULL) {
+        // We found both the desired registry value and the environment
+        // variable, so concatenate them both:
+        _snprintf(rtn_str, rtn_len, "%s;%s", registry_str, env_str);
+    } else {
+        // We must have only found the desired registry value:
+        _snprintf(rtn_str, rtn_len, "%s", registry_str);
+    }
+
+    free(registry_str);
+
+    return(rtn_str);
+}
+#endif // WIN32
+
+
 static XGL_RESULT loader_msg_callback_add(XGL_DBG_MSG_CALLBACK_FUNCTION func,
                                           void *data)
 {
@@ -355,24 +419,32 @@ static void loader_scanned_icd_add(const char *filename)
  */
 static void loader_icd_scan(void)
 {
-    const char *libPaths, *p, *next;
+    const char *p, *next;
+    char *libPaths = NULL;
     DIR *sysdir;
     struct dirent *dent;
     char icd_library[1024];
     char path[1024];
     uint32_t len;
-
-    libPaths = NULL;
-#if !defined(WIN32)
+#if defined(WIN32)
+    bool must_free_libPaths;
+    libPaths = loader_get_registry_and_env(DRIVER_PATH_ENV,
+                                           DRIVER_PATH_REGISTRY_VALUE);
+    if (libPaths != NULL) {
+        must_free_libPaths = true;
+    } else {
+        must_free_libPaths = false;
+        libPaths = DEFAULT_XGL_DRIVERS_PATH;
+    }
+#else  // WIN32
     if (geteuid() == getuid()) {
-       /* Don't allow setuid apps to use LIBXGL_DRIVERS_PATH */
-#endif // WIN32
-       libPaths = getenv("LIBXGL_DRIVERS_PATH");
-#if !defined(WIN32)
+        /* Don't allow setuid apps to use the DRIVER_PATH_ENV env var: */
+        libPaths = getenv(DRIVER_PATH_ENV);
+    }
+    if (libPaths == NULL) {
+        libPaths = DEFAULT_XGL_DRIVERS_PATH;
     }
 #endif // WIN32
-    if (libPaths == NULL)
-       libPaths = DEFAULT_XGL_DRIVERS_PATH;
 
     for (p = libPaths; *p; p = next) {
        next = strchr(p, PATH_SEPERATOR);
@@ -416,52 +488,67 @@ static void loader_icd_scan(void)
        }
     }
 
+#if defined(WIN32)
+    // Free any allocated memory:
+    if (must_free_libPaths) {
+        free(libPaths);
+    }
+#endif // WIN32
+
+    // Note that we've scanned for ICDs:
     loader.icds_scanned = true;
 }
 
 
-static void layer_lib_scan_path(const char * libInPaths)
+static void layer_lib_scan(void)
 {
     const char *p, *next;
-    char *libPaths;
+    char *libPaths = NULL;
     DIR *curdir;
     struct dirent *dent;
-    uint32_t len, i;
+    size_t len, i;
     char temp_str[1024];
 
-    len = 0;
-    loader.layer_dirs = NULL;
-    if (libInPaths){
-        len = (uint32_t) strlen(libInPaths);
-        p = libInPaths;
+#if defined(WIN32)
+    bool must_free_libPaths;
+    libPaths = loader_get_registry_and_env(LAYERS_PATH_ENV,
+                                           LAYERS_PATH_REGISTRY_VALUE);
+    if (libPaths != NULL) {
+        must_free_libPaths = true;
+    } else {
+        must_free_libPaths = false;
+        libPaths = DEFAULT_XGL_LAYERS_PATH;
     }
-    else {
-#if !defined(WIN32)
-        if (geteuid() == getuid()) {
+#else  // WIN32
+    if (geteuid() == getuid()) {
+        /* Don't allow setuid apps to use the DRIVER_PATH_ENV env var: */
+        libPaths = getenv(DRIVER_PATH_ENV);
+    }
+    if (libPaths == NULL) {
+        libPaths = DEFAULT_XGL_LAYERS_PATH;
+    }
 #endif // WIN32
-            p = getenv("LIBXGL_LAYERS_PATH");
-            if (p != NULL)
-                len = (uint32_t) strlen(p);
-#if !defined(WIN32)
-        }
-#endif // WIN32
-    }
 
-    if (len == 0) {
-        len = (uint32_t) strlen(DEFAULT_XGL_LAYERS_PATH);
-        p = DEFAULT_XGL_LAYERS_PATH;
-    }
-
-    if (len == 0) {
-        // Have no paths to search
+    if (libPaths == NULL) {
+        // Have no paths to search:
         return;
     }
+    len = strlen(libPaths);
     loader.layer_dirs = malloc(len+1);
-    if (loader.layer_dirs == NULL)
+    if (loader.layer_dirs == NULL) {
+        free(libPaths);
         return;
-
-    // Alloc passed, so we know there is enough space to hold the string, don't need strncpy
-    strcpy(loader.layer_dirs, p);
+    }
+    // Alloc passed, so we know there is enough space to hold the string, don't
+    // need strncpy
+    strcpy(loader.layer_dirs, libPaths);
+#if defined(WIN32)
+    // Free any allocated memory:
+    if (must_free_libPaths) {
+        free(libPaths);
+        must_free_libPaths = false;
+    }
+#endif // WIN32
     libPaths = loader.layer_dirs;
 
     /* cleanup any previously scanned libraries */
@@ -528,11 +615,6 @@ static void layer_lib_scan_path(const char * libInPaths)
     }
 
     loader.layer_scanned = true;
-}
-
-static void layer_lib_scan(void)
-{
-    layer_lib_scan_path(NULL);
 }
 
 static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, xglGetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
@@ -648,17 +730,30 @@ static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const ch
 
 static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
 {
-    const char *layerEnv;
+    char *layerEnv;
     uint32_t len, count = 0;
     char *p, *pOrig, *next, *name;
 
-    layerEnv = getenv("LIBXGL_LAYER_NAMES");
-    if (!layerEnv)
+#if defined(WIN32)
+    layerEnv = loader_get_registry_and_env(LAYER_NAMES_ENV,
+                                           LAYER_NAMES_REGISTRY_VALUE);
+#else  // WIN32
+    layerEnv = getenv(LAYER_NAMES_ENV);
+#endif // WIN32
+    if (layerEnv == NULL) {
         return 0;
+    }
     p = malloc(strlen(layerEnv) + 1);
-    if (!p)
+    if (p == NULL) {
+#if defined(WIN32)
+        free(layerEnv);
+#endif // WIN32
         return 0;
+    }
     strcpy(p, layerEnv);
+#if defined(WIN32)
+    free(layerEnv);
+#endif // WIN32
     pOrig = p;
 
     while (p && *p && count < MAX_LAYER_LIBRARIES) {

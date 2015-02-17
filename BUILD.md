@@ -152,28 +152,40 @@ At this point, you can use Windows Explorer to launch Visual Studio by double-cl
 
 XGL programs must be able to find and use the XGL.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
 
-To run XGL programs you must have an appropriate icd (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the
-environment variable LIBXGL_DRIVERS_PATH.  This environment variable cannot be set with Cygwin, but must be set via Windows, and may require a system restart in order for it to take effect.  Here is how to set this environment variable on a Windows 7 system:
+To run XGL programs you must have an appropriate icd (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the registry and/or an environment variable:
+
+- Registry:
+  - Root Key: HKEY_LOCAL_MACHINE
+  - Key: "System\XGL"
+  - Value: "XGL_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
+- Environment Variable: "XGL_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
+
+Note: If both the registry value and environment variable are used, they are concatenated into a new semi-colon-delimited list of folders.
+
+Note: Environment variables on Windows cannot be set with Cygwin, but must be set via the Windows Control Panel, and generally require a system restart in order to take effect.  Here is how to set this environment variable on a Windows 7 system:
 
 - Launch Control Panel (e.g. Start->Control Panel)
 - Within the search box, type "environment variable" and click on "Edit the system environment variables" (or navigate there via "System and Security->System->Advanced system settings").
 - This will launch a window with several tabs, one of which is "Advanced".  Click on the "Environment Variables..." button.
 - For either "User variables" or "System variables" click "New...".
-- Enter "LIBXGL_DRIVERS_PATH" as the variable name, and an appropriate Windows path to where your driver DLL is (e.g. C:\Users\username\GL-Next\_out64\icd\drivername\Debug).
+- Enter "XGL_DRIVERS_PATH" as the variable name, and an appropriate Windows path to where your driver DLL is (e.g. C:\Users\username\GL-Next\_out64\icd\drivername\Debug).
 
 It is possible to specify multiple icd folders.  Simply use a semi-colon (i.e. ";") to separate folders in the environment variable.
 
 The icd loader searches in all of the folders for files that are named "XGL_*.dll" (e.g. "XGL_foo.dll").  It attempts to dynamically load these files, and look for appropriate functions.
 
 To enable debug and validation layers with your XGL programs you must tell the icd loader
-where to find the layer libraries, and which ones you desire to use.  The default folder for layers is C:\Windows\System32.  However, you can use the following environment variables to specify alternate locations, and to specify which layers to use:
+where to find the layer libraries, and which ones you desire to use.  The default folder for layers is C:\Windows\System32. Again, this can be pointed to by the registry and/or an environment variable:
 
-- LIBXGL_LAYERS_PATH (semi-colon-delimited set of folders to look for layers)
-- LIBXGL_LAYER_NAMES (color-delimited list of layer names)
+- Registry:
+  - Root Key: HKEY_LOCAL_MACHINE
+  - Key: "System\XGL"
+  - Value: "XGL_LAYERS_PATH" (semi-colon-delimited set of folders to look for layers)
+  - Value: "XGL_LAYER_NAMES" (semi-colon-delimited list of layer names)
+- Environment Variables:
+  - "XGL_LAYERS_PATH" (semi-colon-delimited set of folders to look for layers)
+  - "XGL_LAYER_NAMES" (semi-colon-delimited list of layer names)
 
-For example, to enable the APIDump and DrawState layers, set:
-
-- "LIBXGL_LAYERS_PATH" to "C:\Users\username\GL-Next\_out64\layers\Debug"
-- "LIBXGL_LAYER_NAMES to "APIDump:DrawState"
+Note: If both the registry value and environment variable are used, they are concatenated into a new semi-colon-delimited list.
 
 The icd loader searches in all of the folders for files that are named "XGLLayer*.dll" (e.g. "XGLLayerParamChecker.dll").  It attempts to dynamically load these files, and look for appropriate functions.

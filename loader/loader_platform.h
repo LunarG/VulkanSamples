@@ -45,6 +45,9 @@
 // XGL Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ':'
 #define DIRECTORY_SYMBOL "/"
+#define DRIVER_PATH_ENV "LIBXGL_DRIVERS_PATH"
+#define LAYERS_PATH_ENV "LIBXGL_LAYERS_PATH"
+#define LAYER_NAMES_ENV "LIBXGL_LAYER_NAMES"
 #ifndef DEFAULT_XGL_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
@@ -146,6 +149,12 @@ using namespace std;
 // XGL Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ';'
 #define DIRECTORY_SYMBOL "\\"
+#define DRIVER_PATH_REGISTRY_VALUE "XGL_DRIVERS_PATH"
+#define LAYERS_PATH_REGISTRY_VALUE "XGL_LAYERS_PATH"
+#define LAYER_NAMES_REGISTRY_VALUE "XGL_LAYER_NAMES"
+#define DRIVER_PATH_ENV "XGL_DRIVERS_PATH"
+#define LAYERS_PATH_ENV "XGL_LAYERS_PATH"
+#define LAYER_NAMES_ENV "XGL_LAYER_NAMES"
 #ifndef DEFAULT_XGL_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
