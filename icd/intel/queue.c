@@ -185,6 +185,74 @@ static XGL_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
     return XGL_SUCCESS;
 }
 
+static XGL_RESULT queue_submit_cmd_prepare(struct intel_queue *queue,
+                                           struct intel_cmd *cmd)
+{
+    if (unlikely(cmd->result != XGL_SUCCESS)) {
+        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
+                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                "invalid command buffer submitted");
+        return cmd->result;
+    }
+
+    return queue_select_pipeline(queue, cmd->pipeline_select);
+}
+
+static XGL_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
+                                         struct intel_cmd *cmd)
+{
+    uint32_t active[2], pending[2];
+    struct intel_bo *bo;
+    XGL_GPU_SIZE used;
+    XGL_RESULT ret;
+
+    ret = queue_submit_cmd_prepare(queue, cmd);
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    if (intel_debug & INTEL_DEBUG_HANG) {
+        intel_winsys_read_reset_stats(queue->dev->winsys,
+                &active[0], &pending[0]);
+    }
+
+    bo = intel_cmd_get_batch(cmd, &used);
+    ret = queue_submit_bo(queue, bo, used);
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    if (intel_debug & INTEL_DEBUG_HANG) {
+        intel_bo_wait(bo, -1);
+        intel_winsys_read_reset_stats(queue->dev->winsys,
+                &active[1], &pending[1]);
+
+        if (active[0] != active[1] || pending[0] != pending[1]) {
+            queue_submit_hang(queue, cmd, active[1] - active[0],
+                    pending[1] - pending[0]);
+        }
+    }
+
+    if (intel_debug & INTEL_DEBUG_BATCH)
+        intel_cmd_decode(cmd, false);
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT queue_submit_cmd(struct intel_queue *queue,
+                                   struct intel_cmd *cmd)
+{
+    struct intel_bo *bo;
+    XGL_GPU_SIZE used;
+    XGL_RESULT ret;
+
+    ret = queue_submit_cmd_prepare(queue, cmd);
+    if (ret == XGL_SUCCESS) {
+        bo = intel_cmd_get_batch(cmd, &used);
+        ret = queue_submit_bo(queue, bo, used);
+    }
+
+    return ret;
+}
+
 XGL_RESULT intel_queue_create(struct intel_dev *dev,
                               enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret)
@@ -269,60 +337,46 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
 {
     struct intel_queue *queue = intel_queue(queue_);
     XGL_RESULT ret = XGL_SUCCESS;
+    struct intel_cmd *last_cmd;
     uint32_t i;
 
-    for (i = 0; i < cmdBufferCount; i++) {
-        struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
-        uint32_t active[2], pending[2];
-        struct intel_bo *bo;
-        XGL_GPU_SIZE used;
-        XGL_RESULT ret;
-
-        ret = queue_select_pipeline(queue, cmd->pipeline_select);
-        if (ret != XGL_SUCCESS)
-            break;
-
-        if (cmd->result != XGL_SUCCESS) {
-            intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                    XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                    "invalid command buffer submitted");
-            ret = cmd->result;
-            break;
-        }
-
-        if (intel_debug & INTEL_DEBUG_HANG) {
-            intel_winsys_read_reset_stats(queue->dev->winsys,
-                    &active[0], &pending[0]);
-        }
-
-        bo = intel_cmd_get_batch(cmd, &used);
-        ret = queue_submit_bo(queue, bo, used);
-        queue->last_submitted_cmd = cmd;
-
-        if ((intel_debug & INTEL_DEBUG_HANG) && ret == XGL_SUCCESS) {
-            intel_bo_wait(bo, -1);
-            intel_winsys_read_reset_stats(queue->dev->winsys,
-                    &active[1], &pending[1]);
-
-            if (active[0] != active[1] || pending[0] != pending[1]) {
-                queue_submit_hang(queue, cmd, active[1] - active[0],
-                        pending[1] - pending[0]);
-            }
-        }
-
-        if (intel_debug & INTEL_DEBUG_BATCH)
-            intel_cmd_decode(cmd, false);
-
-        if (ret != XGL_SUCCESS)
-            break;
-    }
-
-    if (ret == XGL_SUCCESS && fence_ != XGL_NULL_HANDLE) {
-        struct intel_fence *fence = intel_fence(fence_);
-        intel_fence_set_cmd(fence, queue->last_submitted_cmd);
-    }
-
     /* XGL_MEMORY_REFs are ignored as the winsys already knows them */
+    if (unlikely(intel_debug)) {
+        for (i = 0; i < cmdBufferCount; i++) {
+            struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
+            ret = queue_submit_cmd_debug(queue, cmd);
+            if (ret != XGL_SUCCESS)
+                break;
+        }
+    } else {
+        for (i = 0; i < cmdBufferCount; i++) {
+            struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
+            ret = queue_submit_cmd(queue, cmd);
+            if (ret != XGL_SUCCESS)
+                break;
+        }
+    }
+
+    /* no cmd submitted */
+    if (i == 0)
+        return ret;
+
+    last_cmd = intel_cmd(pCmdBuffers[i - 1]);
+
+    if (ret == XGL_SUCCESS) {
+        queue->last_submitted_cmd = last_cmd;
+
+        if (fence_ != XGL_NULL_HANDLE) {
+            struct intel_fence *fence = intel_fence(fence_);
+            intel_fence_set_cmd(fence, last_cmd);
+        }
+    } else {
+        struct intel_bo *last_bo;
+
+        /* unbusy submitted BOs */
+        last_bo = intel_cmd_get_batch(last_cmd, NULL);
+        intel_bo_wait(last_bo, -1);
+    }
 
     return ret;
 }
