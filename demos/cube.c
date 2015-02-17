@@ -204,6 +204,7 @@ struct demo {
     struct {
         XGL_IMAGE image;
         XGL_GPU_MEMORY mem;
+        XGL_CMD_BUFFER cmd;
 
         XGL_COLOR_ATTACHMENT_VIEW view;
         XGL_FENCE fence;
@@ -254,8 +255,6 @@ struct demo {
     float spin_increment;
     bool pause;
 
-    XGL_CMD_BUFFER cmd;
-
     XGL_DESCRIPTOR_REGION desc_region;
     XGL_DESCRIPTOR_SET desc_set;
 
@@ -266,7 +265,7 @@ struct demo {
     uint32_t current_buffer;
 };
 
-static void demo_draw_build_cmd(struct demo *demo)
+static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
 {
     const XGL_COLOR_ATTACHMENT_BIND_INFO color_attachment = {
         .view = demo->buffers[demo->current_buffer].view,
@@ -321,19 +320,19 @@ static void demo_draw_build_cmd(struct demo *demo)
     err = xglCreateRenderPass(demo->device, &rp_info, &(graphics_cmd_buf_info.renderPass));
     assert(!err);
 
-    err = xglBeginCommandBuffer(demo->cmd, &cmd_buf_info);
+    err = xglBeginCommandBuffer(cmd_buf, &cmd_buf_info);
     assert(!err);
 
-    xglCmdBindPipeline(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
+    xglCmdBindPipeline(cmd_buf, XGL_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
-    xglCmdBindDescriptorSet(demo->cmd, XGL_PIPELINE_BIND_POINT_GRAPHICS,
+    xglCmdBindDescriptorSet(cmd_buf, XGL_PIPELINE_BIND_POINT_GRAPHICS,
             demo->desc_set, NULL);
 
-    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_VIEWPORT, demo->viewport);
-    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_RASTER, demo->raster);
-    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_COLOR_BLEND,
+    xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_VIEWPORT, demo->viewport);
+    xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_RASTER, demo->raster);
+    xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_COLOR_BLEND,
                                      demo->color_blend);
-    xglCmdBindDynamicStateObject(demo->cmd, XGL_STATE_BIND_DEPTH_STENCIL,
+    xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
@@ -341,17 +340,17 @@ static void demo_draw_build_cmd(struct demo *demo)
     clear_range.mipLevels = 1;
     clear_range.baseArraySlice = 0;
     clear_range.arraySize = 1;
-    xglCmdClearColorImage(demo->cmd,
+    xglCmdClearColorImage(cmd_buf,
             demo->buffers[demo->current_buffer].image,
             clear_color, 1, &clear_range);
 
     clear_range.aspect = XGL_IMAGE_ASPECT_DEPTH;
-    xglCmdClearDepthStencil(demo->cmd, demo->depth.image,
+    xglCmdClearDepthStencil(cmd_buf, demo->depth.image,
             clear_depth, 0, 1, &clear_range);
 
-    xglCmdDraw(demo->cmd, 0, 12 * 3, 0, 1);
+    xglCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
 
-    err = xglEndCommandBuffer(demo->cmd);
+    err = xglEndCommandBuffer(cmd_buf);
     assert(!err);
 }
 
@@ -391,8 +390,6 @@ static void demo_draw(struct demo *demo)
     XGL_FENCE fence = demo->buffers[demo->current_buffer].fence;
     XGL_RESULT err;
 
-    demo_draw_build_cmd(demo);
-
     err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((uint64_t) 0));
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
@@ -418,8 +415,8 @@ static void demo_draw(struct demo *demo)
         memRefs[idx].mem = demo->uniform_data.mem[i];
         memRefs[idx].flags = 0;
     }
-    err = xglQueueSubmit(demo->queue, 1, &demo->cmd,
-            idx, memRefs, XGL_NULL_HANDLE);
+    err = xglQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
+            0, NULL, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
@@ -1338,7 +1335,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     xglClearDescriptorSets(demo->desc_region, 1, &demo->desc_set);
     xglUpdateDescriptors(demo->desc_set, &update_vs);
 
-    xglEndDescriptorRegionUpdate(demo->device, demo->cmd);
+    xglEndDescriptorRegionUpdate(demo->device, demo->buffers[demo->current_buffer].cmd);
 }
 
 static void demo_prepare(struct demo *demo)
@@ -1360,11 +1357,21 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
-    err = xglCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
-    assert(!err);
+    for (int i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        err = xglCreateCommandBuffer(demo->device, &cmd, &demo->buffers[i].cmd);
+        assert(!err);
+    }
 
     demo_prepare_descriptor_region(demo);
     demo_prepare_descriptor_set(demo);
+
+
+    for (int i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        demo->current_buffer = i;
+        demo_draw_build_cmd(demo, demo->buffers[i].cmd);
+    }
+
+    demo->current_buffer = 0;
 }
 
 static void demo_handle_event(struct demo *demo,
@@ -1575,8 +1582,6 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->desc_set);
     xglDestroyObject(demo->desc_region);
 
-    xglDestroyObject(demo->cmd);
-
     xglDestroyObject(demo->viewport);
     xglDestroyObject(demo->raster);
     xglDestroyObject(demo->color_blend);
@@ -1611,6 +1616,7 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->buffers[i].fence);
         xglDestroyObject(demo->buffers[i].view);
         xglDestroyObject(demo->buffers[i].image);
+        xglDestroyObject(demo->buffers[i].cmd);
     }
 
     xglDestroyDevice(demo->device);
