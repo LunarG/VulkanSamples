@@ -58,15 +58,48 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 
 void intel_fence_destroy(struct intel_fence *fence)
 {
+    if (fence->seqno_bo)
+        intel_bo_unreference(fence->seqno_bo);
+
     intel_base_destroy(&fence->obj.base);
+}
+
+void intel_fence_set_seqno(struct intel_fence *fence,
+                           struct intel_bo *seqno_bo)
+{
+#ifdef ENABLE_WSI_X11
+    fence->x11 = NULL;
+#endif
+
+    if (fence->seqno_bo)
+        intel_bo_unreference(fence->seqno_bo);
+
+    fence->seqno_bo = seqno_bo;
+    intel_bo_reference(fence->seqno_bo);
+}
+
+void intel_fence_set_x11(struct intel_fence *fence,
+                         struct intel_wsi_x11 *x11,
+                         struct intel_wsi_x11_window *win,
+                         uint32_t serial)
+{
+    if (fence->seqno_bo) {
+        intel_bo_unreference(fence->seqno_bo);
+        fence->seqno_bo = NULL;
+    }
+
+#ifdef ENABLE_WSI_X11
+    fence->x11 = x11;
+    fence->x11_win = win;
+    fence->x11_serial = serial;
+#endif
 }
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
-    if (fence->cmd) {
-        struct intel_bo *bo = intel_cmd_get_batch(fence->cmd, NULL);
-
-        return (intel_bo_wait(bo, timeout_ns)) ? XGL_NOT_READY : XGL_SUCCESS;
+    if (fence->seqno_bo) {
+        return (intel_bo_wait(fence->seqno_bo, timeout_ns)) ?
+            XGL_NOT_READY : XGL_SUCCESS;
     }
 
 #ifdef ENABLE_WSI_X11

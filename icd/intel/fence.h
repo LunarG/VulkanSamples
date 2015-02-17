@@ -31,14 +31,14 @@
 #include "intel.h"
 #include "obj.h"
 
-struct intel_cmd;
+struct intel_bo;
 struct intel_dev;
 struct intel_wsi_x11;
 
 struct intel_fence {
     struct intel_obj obj;
 
-    struct intel_cmd *cmd;
+    struct intel_bo *seqno_bo;
 
 #ifdef ENABLE_WSI_X11
     struct intel_wsi_x11 *x11;
@@ -64,28 +64,12 @@ void intel_fence_destroy(struct intel_fence *fence);
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
 
-static inline void intel_fence_set_cmd(struct intel_fence *fence,
-                                       struct intel_cmd *cmd)
-{
-#ifdef ENABLE_WSI_X11
-    fence->x11 = NULL;
-#endif
+void intel_fence_set_seqno(struct intel_fence *fence,
+                           struct intel_bo *seqno_bo);
 
-    fence->cmd = cmd;
-}
-
-static inline void intel_fence_set_x11(struct intel_fence *fence,
-                                       struct intel_wsi_x11 *x11,
-                                       struct intel_wsi_x11_window *win,
-                                       uint32_t serial)
-{
-    fence->cmd = NULL;
-
-#ifdef ENABLE_WSI_X11
-    fence->x11 = x11;
-    fence->x11_win = win;
-    fence->x11_serial = serial;
-#endif
-}
+void intel_fence_set_x11(struct intel_fence *fence,
+                         struct intel_wsi_x11 *x11,
+                         struct intel_wsi_x11_window *win,
+                         uint32_t serial);
 
 #endif /* FENCE_H */

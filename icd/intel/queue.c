@@ -289,6 +289,9 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
 void intel_queue_destroy(struct intel_queue *queue)
 {
+    if (queue->seqno_bo)
+        intel_bo_unreference(queue->seqno_bo);
+
     if (queue->atomic_bo)
         intel_bo_unreference(queue->atomic_bo);
     if (queue->select_graphics_bo)
@@ -300,10 +303,10 @@ void intel_queue_destroy(struct intel_queue *queue)
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 {
-    struct intel_bo *bo = (queue->last_submitted_cmd) ?
-        intel_cmd_get_batch(queue->last_submitted_cmd, NULL) : NULL;
+    if (!queue->seqno_bo)
+        return XGL_SUCCESS;
 
-    return (!bo || intel_bo_wait(bo, timeout) == 0) ?
+    return (intel_bo_wait(queue->seqno_bo, timeout) == 0) ?
         XGL_SUCCESS : XGL_ERROR_UNKNOWN;
 }
 
@@ -364,11 +367,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     last_cmd = intel_cmd(pCmdBuffers[i - 1]);
 
     if (ret == XGL_SUCCESS) {
-        queue->last_submitted_cmd = last_cmd;
+        if (queue->seqno_bo)
+            intel_bo_unreference(queue->seqno_bo);
+        queue->seqno_bo = intel_cmd_get_batch(last_cmd, NULL);
+        intel_bo_reference(queue->seqno_bo);
 
         if (fence_ != XGL_NULL_HANDLE) {
             struct intel_fence *fence = intel_fence(fence_);
-            intel_fence_set_cmd(fence, last_cmd);
+            intel_fence_set_seqno(fence, queue->seqno_bo);
         }
     } else {
         struct intel_bo *last_bo;

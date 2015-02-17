@@ -35,7 +35,6 @@
 
 #define INTEL_QUEUE_ATOMIC_COUNTER_COUNT 1024
 
-struct intel_cmd;
 struct intel_dev;
 
 struct intel_queue {
@@ -48,7 +47,7 @@ struct intel_queue {
     struct intel_bo *select_graphics_bo;
     struct intel_bo *select_compute_bo;
 
-    struct intel_cmd *last_submitted_cmd;
+    struct intel_bo *seqno_bo;
     int last_pipeline_select;
 };
 
