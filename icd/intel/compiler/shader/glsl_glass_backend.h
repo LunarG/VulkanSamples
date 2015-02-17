@@ -92,6 +92,7 @@ public:
       decompose[EDiIsNan]             =
       decompose[EDiTextureProjection] = 
       decompose[EDiRefract]           = 
+      decompose[EDiFaceForward]       =
          false;
 
       // Explicitly mention the ones we want LunarGlass to decompose for us,
