@@ -40,6 +40,14 @@
 #define U_ASSERT_ONLY
 #endif
 
+#if defined(__GNUC__)
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define likely(x)   (x)
+#define unlikely(x) (x)
+#endif
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define u_popcount(u) __builtin_popcount(u)
