@@ -612,14 +612,14 @@ static void demo_prepare_textures(struct demo *demo)
             XGL_MEMORY_REF mem_refs[16];
             uint32_t num_refs = 0;
 
-            for (int j = 0; j < staging_texture.num_mem; j++) {
+            for (uint32_t j = 0; j < staging_texture.num_mem; j++) {
                 mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
                 mem_refs[num_refs].mem = staging_texture.mem[j];
                 num_refs++;
                 assert(num_refs < 16);
             }
 
-            for (int j = 0; j < demo->textures[i].num_mem; j++) {
+            for (uint32_t j = 0; j < demo->textures[i].num_mem; j++) {
                 mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
                 mem_refs[num_refs].mem = demo->textures[i].mem[j];
                 num_refs++;
