@@ -165,6 +165,13 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
     if(m_pSvgDiagram != NULL)
     {
+        if (m_pReplayers[GLV_TID_XGL] != NULL) {
+            int err;
+            err = m_pReplayers[GLV_TID_XGL]->Dump();
+            if (err) {
+                glv_LogWarn("Couldn't Dump SVG data\n");
+            }
+        }
         // Check if DOT is available.
 #if defined(PLATFORM_LINUX)
         QFileInfo fileInfo(tr("/usr/bin/dot"));

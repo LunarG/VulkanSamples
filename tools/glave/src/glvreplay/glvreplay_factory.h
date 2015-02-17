@@ -66,6 +66,7 @@ typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Displa
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_deinitialize)();
 typedef glv_trace_packet_header* (GLVTRACER_CDECL *funcptr_glvreplayer_interpret)(glv_trace_packet_header* pPacket);
 typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
+typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_dump)();
 }
 
 struct glv_trace_packet_replay_library
@@ -78,6 +79,7 @@ struct glv_trace_packet_replay_library
     funcptr_glvreplayer_deinitialize Deinitialize;
     funcptr_glvreplayer_interpret Interpret;
     funcptr_glvreplayer_replay Replay;
+    funcptr_glvreplayer_dump Dump;
 };
 
 class ReplayFactory {

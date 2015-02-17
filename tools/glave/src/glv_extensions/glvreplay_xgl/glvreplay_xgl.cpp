@@ -155,4 +155,14 @@ GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_
     }
     return result;
 }
+
+GLVTRACER_EXPORT int GLVTRACER_CDECL Dump()
+{
+    if (g_pReplayer != NULL)
+    {
+        g_pReplayer->dump_validation_data();
+        return 0;
+    }
+    return -1;
+}
 }
