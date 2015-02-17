@@ -2028,8 +2028,8 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
     if (meta->mode != INTEL_CMD_META_VS_POINTS) {
         if (meta->ds.aspect != XGL_IMAGE_ASPECT_COLOR) {
             const uint32_t blend_color[4] = { 0, 0, 0, 0 };
-            uint32_t stencil_ref = (meta->ds.stencil_ref && 0xff) << 24 |
-                                   (meta->ds.stencil_ref && 0xff) << 16;
+            uint32_t stencil_ref = (meta->ds.stencil_ref & 0xff) << 24 |
+                                   (meta->ds.stencil_ref & 0xff) << 16;
 
             /* DEPTH_STENCIL_STATE */
             ds_offset = gen6_meta_DEPTH_STENCIL_STATE(cmd, meta);
