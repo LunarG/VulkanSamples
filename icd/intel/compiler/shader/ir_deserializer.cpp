@@ -351,7 +351,7 @@ ir_deserializer::read_ir_texture()
    new_tex->shadow_comparitor = read_ir_rvalue();
    new_tex->offset = read_ir_rvalue();
 
-   memset(&new_tex->lod_info, 0, sizeof(ir_texture::lod_info));
+   memset(&new_tex->lod_info, 0, sizeof(new_tex->lod_info));
 
    new_tex->lod_info.lod = read_ir_rvalue();
    new_tex->lod_info.bias = read_ir_rvalue();
