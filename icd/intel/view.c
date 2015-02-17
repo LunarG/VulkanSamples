@@ -200,7 +200,7 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
    }
 }
 
-static int img_type_to_view_type(XGL_IMAGE_VIEW_TYPE type)
+static int img_type_to_view_type(XGL_IMAGE_TYPE type)
 {
     switch (type) {
     case XGL_IMAGE_1D:   return XGL_IMAGE_VIEW_1D;
