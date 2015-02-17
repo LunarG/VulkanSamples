@@ -3505,6 +3505,10 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
 
       aggregate = getIRValue(gepSrc);
       irDst = traverseGEP(gepInst, aggregate, 0);
+
+   } else if (llvm::isa<llvm::Instruction>(dst)) { // temporary pointer can just be used directly
+      irDst = getIRValue(dst);
+
    } else {
       const glsl_type* irType = llvmTypeToHirType(dst->getType()->getContainedType(0), 0, llvmInst);
 
