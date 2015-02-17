@@ -1524,11 +1524,6 @@ static void printCB(const XGL_CMD_BUFFER cb)
     }
 }
 
-static void synchAndDumpDot(const XGL_CMD_BUFFER cb)
-{
-    synchDSMapping(cb);
-    dumpDotFile(cb, "pipeline_dump.dot");
-}
 
 static void synchAndPrintDSConfig(const XGL_CMD_BUFFER cb)
 {
@@ -2430,7 +2425,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
             sprintf(str, "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS", str);
         }
-        synchAndDumpDot(cmdBuffer);
     }
     else {
         char str[1024];
@@ -2446,7 +2440,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, X
     if (pCB) {
         // TODO : Handle storing Pipeline Deltas to cmd buffer here
         g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
-        synchAndDumpDot(cmdBuffer);
         addCmd(pCB, CMD_BINDPIPELINEDELTA);
     }
     else {
@@ -2460,7 +2453,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, X
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
 {
     setLastBoundDynamicState(cmdBuffer, state, stateBindPoint);
-    synchAndDumpDot(cmdBuffer);
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
@@ -2482,7 +2474,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->lastBoundDescriptorSet = descriptorSet;
             loader_platform_thread_unlock_mutex(&globalLock);
-            synchAndDumpDot(cmdBuffer);
             char str[1024];
             sprintf(str, "DS %p bound on pipeline %s", (void*)descriptorSet, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_NONE, "DS", str);
