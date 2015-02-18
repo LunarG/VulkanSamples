@@ -17,7 +17,7 @@ set(sources
     cmd_decode.c
     cmd_meta.c
     cmd_mi.c
-    cmd_prepare.c
+    cmd_barrier.c
     cmd_pipeline.c
     desc.c
     dev.c
