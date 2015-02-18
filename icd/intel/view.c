@@ -801,7 +801,7 @@ ds_init_info(const struct intel_gpu *gpu,
        *      same value (enabled or disabled) as Hierarchical Depth Buffer
        *      Enable."
        */
-      separate_stencil = img->aux_offset;
+      separate_stencil = intel_img_can_enable_hiz(img, level);
    }
 
    /*
@@ -877,14 +877,13 @@ ds_init_info(const struct intel_gpu *gpu,
       info->stencil.stride = img->layout.bo_stride * 2;
    }
 
-   if (img->aux_offset) {
+   if (intel_img_can_enable_hiz(img, level)) {
       info->hiz.stride = img->layout.aux_stride;
 
       /* offset to the level */
       if (intel_gpu_gen(gpu) == INTEL_GEN(6))
           info->hiz.offset = img->layout.aux_offsets[level];
    }
-
 
    info->width = img->layout.width0;
    info->height = img->layout.height0;
@@ -1043,6 +1042,9 @@ static void ds_view_init(struct intel_ds_view *view,
       dw[8] = 0;
       dw[9] = 0;
    }
+
+   view->has_stencil = info.stencil.stride;
+   view->has_hiz = info.hiz.stride;
 }
 
 void intel_null_view_init(struct intel_null_view *view,

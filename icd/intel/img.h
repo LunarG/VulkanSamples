@@ -83,4 +83,11 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
 void intel_img_destroy(struct intel_img *img);
 
+static inline bool intel_img_can_enable_hiz(const struct intel_img *img,
+                                            uint32_t level)
+{
+    return (img->layout.aux == INTEL_LAYOUT_AUX_HIZ &&
+            img->layout.aux_enables & (1 << level));
+}
+
 #endif /* IMG_H */

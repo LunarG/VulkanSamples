@@ -756,13 +756,16 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
 
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = view->cmd[6];
-    dw[2] = 0;
 
-    if (view->img) {
+    if (view->has_stencil) {
+        dw[1] = view->cmd[6];
+
         cmd_reserve_reloc(cmd, 1);
         cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
                 view->cmd[7], INTEL_RELOC_WRITE);
+    } else {
+        dw[1] = 0;
+        dw[2] = 0;
     }
 }
 
@@ -782,13 +785,16 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
 
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = view->cmd[8];
-    dw[2] = 0;
 
-    if (view->img) {
+    if (view->has_hiz) {
+        dw[1] = view->cmd[8];
+
         cmd_reserve_reloc(cmd, 1);
         cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
                 view->cmd[9], INTEL_RELOC_WRITE);
+    } else {
+        dw[1] = 0;
+        dw[2] = 0;
     }
 }
 

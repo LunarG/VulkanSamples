@@ -91,6 +91,8 @@ struct intel_ds_view {
      * 3DSTATE_HIER_DEPTH_BUFFER
      */
     uint32_t cmd[10];
+    bool has_stencil;
+    bool has_hiz;
 };
 
 static inline struct intel_buf_view *intel_buf_view(XGL_BUFFER_VIEW view)
