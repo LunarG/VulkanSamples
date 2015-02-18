@@ -659,7 +659,6 @@ static bool32_t validateUpdateSize(GENERIC_HEADER* pUpdateStruct, uint32_t layou
         return 0;
     return 1;
 }
-
 // Determine the update type, allocate a new struct of that type, shadow the given pUpdate
 //   struct into the new struct and return ptr to shadow struct cast as GENERIC_HEADER
 static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
@@ -668,7 +667,9 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
     size_t array_size = 0;
     size_t base_array_size = 0;
     size_t total_array_size = 0;
+    size_t baseBuffAddr = 0;
     XGL_UPDATE_BUFFERS* pUBCI;
+    XGL_UPDATE_IMAGES* pUICI;
     switch (pUpdate->sType)
     {
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -690,15 +691,20 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             }
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
+            pUICI = (XGL_UPDATE_IMAGES*)pUpdate;
             pNewNode = (GENERIC_HEADER*)malloc(sizeof(XGL_UPDATE_IMAGES));
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_IMAGES));
             base_array_size = sizeof(XGL_IMAGE_VIEW_ATTACH_INFO*) * ((XGL_UPDATE_IMAGES*)pNewNode)->count;
             total_array_size = (sizeof(XGL_IMAGE_VIEW_ATTACH_INFO) * ((XGL_UPDATE_IMAGES*)pNewNode)->count) + base_array_size;
             XGL_IMAGE_VIEW_ATTACH_INFO*** pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO***)&((XGL_UPDATE_IMAGES*)pNewNode)->pImageViews;
             *pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)malloc(total_array_size);
-            for (uint32_t i = 0; i < ((XGL_UPDATE_IMAGES*)pNewNode)->count; i++) {
-                *pppLocalImageViews[i] = (XGL_IMAGE_VIEW_ATTACH_INFO*)(*pppLocalImageViews + base_array_size + (i * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO)));
-                memcpy(*pppLocalImageViews[i], ((XGL_UPDATE_IMAGES*)pUpdate)->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
+#if ALLOC_DEBUG
+            printf("Alloc16 #%lu *pppLocalImageViews addr(%p)\n", ++g_alloc_count, (void*)*pppLocalImageViews);
+#endif
+            baseBuffAddr = (size_t)(*pppLocalImageViews) + base_array_size;
+            for (uint32_t i = 0; i < pUICI->count; i++) {
+                *pppLocalImageViews[i] = (XGL_IMAGE_VIEW_ATTACH_INFO*)(baseBuffAddr + (i * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO)));
+                memcpy(*pppLocalImageViews[i], pUICI->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
             }
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
@@ -709,9 +715,13 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             total_array_size = (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) * pUBCI->count) + base_array_size;
             XGL_BUFFER_VIEW_ATTACH_INFO*** pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO***)&((XGL_UPDATE_BUFFERS*)pNewNode)->pBufferViews;
             *pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO**)malloc(total_array_size);
+#if ALLOC_DEBUG
+            printf("Alloc18 #%lu *pppLocalBufferViews addr(%p)\n", ++g_alloc_count, (void*)*pppLocalBufferViews);
+#endif
+            baseBuffAddr = (size_t)(*pppLocalBufferViews) + base_array_size;
             for (uint32_t i = 0; i < pUBCI->count; i++) {
                 // Set ptr and then copy data into that ptr
-                *pppLocalBufferViews[i] = (XGL_BUFFER_VIEW_ATTACH_INFO*)(*pppLocalBufferViews + base_array_size + (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) * i));
+                *pppLocalBufferViews[i] = (XGL_BUFFER_VIEW_ATTACH_INFO*)(baseBuffAddr + (i * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO)));
                 memcpy(*pppLocalBufferViews[i], pUBCI->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));
             }
             break;
