@@ -40,14 +40,6 @@
 #include <xglWsiWinExt.h>
 #endif
 
-#ifndef STATIC_INLINE
-#if defined(PLATFORM_LINUX)
-#define STATIC_INLINE static inline
-#else
-#define STATIC_INLINE static
-#endif
-#endif
-
 #include "icd.h"
 #include "icd-alloc.h"
 

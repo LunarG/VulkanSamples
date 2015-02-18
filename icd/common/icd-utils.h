@@ -65,12 +65,12 @@
 /**
  * Return true if val is power of two, or zero.
  */
-STATIC_INLINE bool u_is_pow2(unsigned int val)
+static inline bool u_is_pow2(unsigned int val)
 {
     return ((val & (val - 1)) == 0);
 }
 
-STATIC_INLINE int u_ffs(int val)
+static inline int u_ffs(int val)
 {
 #if defined(PLATFORM_LINUX)
 	return ffs(val);
@@ -79,18 +79,18 @@ STATIC_INLINE int u_ffs(int val)
 #endif
 }
 
-STATIC_INLINE unsigned int u_align(unsigned int val, unsigned alignment)
+static inline unsigned int u_align(unsigned int val, unsigned alignment)
 {
     assert(alignment && u_is_pow2(alignment));
     return (val + alignment - 1) & ~(alignment - 1);
 }
 
-STATIC_INLINE unsigned int u_minify(unsigned int val, unsigned level)
+static inline unsigned int u_minify(unsigned int val, unsigned level)
 {
     return (val >> level) ? val >> level : 1;
 }
 
-STATIC_INLINE uint32_t u_fui(float f)
+static inline uint32_t u_fui(float f)
 {
     union {
         float f;
@@ -100,7 +100,7 @@ STATIC_INLINE uint32_t u_fui(float f)
     return u.ui;
 }
 
-STATIC_INLINE float u_uif(uint32_t ui)
+static inline float u_uif(uint32_t ui)
 {
     union {
         float f;
@@ -110,7 +110,7 @@ STATIC_INLINE float u_uif(uint32_t ui)
     return u.f;
 }
 
-STATIC_INLINE int u_iround(float f)
+static inline int u_iround(float f)
 {
     if (f >= 0.0f)
         return (int) (f + 0.5f);

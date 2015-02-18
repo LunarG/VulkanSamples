@@ -1015,7 +1015,7 @@ class EnumCodeGen:
         body = []
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("STATIC_INLINE uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
+            body.append("static inline uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
                     body.append('        case %s:' % (e))
@@ -1028,7 +1028,7 @@ class EnumCodeGen:
             # bet == base_enum_type, fet == final_enum_type
         for bet in self.et_dict:
             fet = self.tf_dict[bet]
-            body.append("STATIC_INLINE const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
+            body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
                 if (self.ev_dict[e]['unique']):
                     body.append('        case %s:\n            return "%s";' % (e, e))
@@ -1038,12 +1038,7 @@ class EnumCodeGen:
     def _generateSHHeader(self):
         header = []
         header.append('#pragma once\n')
-        header.append('#include <%s>\n' % self.in_file)
-        header.append('#if defined(_WIN32)')
-        header.append('#define STATIC_INLINE static')
-        header.append('#else  // defined(_WIN32)')
-        header.append('#define STATIC_INLINE static inline')
-        header.append('#endif // defined(_WIN32)\n\n\n')
+        header.append('#include <%s>\n\n\n' % self.in_file)
         return "\n".join(header)
         
 

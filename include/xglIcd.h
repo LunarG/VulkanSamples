@@ -18,12 +18,12 @@ typedef union _XGL_LOADER_DATA {
   void *loaderData;
 } XGL_LOADER_DATA;
 
-STATIC_INLINE void set_loader_magic_value(void *pNewObject) {
+static inline void set_loader_magic_value(void *pNewObject) {
     XGL_LOADER_DATA *loader_info = (XGL_LOADER_DATA *) pNewObject;
     loader_info->loaderMagic = ICD_LOADER_MAGIC;
 }
 
-STATIC_INLINE bool valid_loader_magic_value(void *pNewObject) {
+static inline bool valid_loader_magic_value(void *pNewObject) {
     const XGL_LOADER_DATA *loader_info = (XGL_LOADER_DATA *) pNewObject;
     return loader_info->loaderMagic == ICD_LOADER_MAGIC;
 }

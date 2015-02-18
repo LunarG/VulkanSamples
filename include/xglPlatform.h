@@ -44,13 +44,13 @@ extern "C"
     #define XGLAPI   __stdcall
 
     // C99:
-    #define STATIC_INLINE static
+#ifndef __cplusplus
+    #undef inline
+    #define inline __inline
+#endif // __cplusplus
 #elif defined(__GNUC__)
     // On other platforms using GCC, XGLAPI stays undefined
     #define XGLAPI
-
-    // C99:
-    #define STATIC_INLINE static inline
 #else
     // Unsupported Platform!
     #error "Unsupported OS Platform detected!"

@@ -275,7 +275,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         stmts.append("#endif")
 
         func = []
-        func.append("STATIC_INLINE void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
+        func.append("static inline void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
         func.append("%s                                              xglGetProcAddrType gpa,"
                 % (" " * len(self.prefix)))
@@ -298,7 +298,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         lookups.append("#endif")
 
         func = []
-        func.append("STATIC_INLINE void *%s_lookup_dispatch_table(const XGL_LAYER_DISPATCH_TABLE *table,"
+        func.append("static inline void *%s_lookup_dispatch_table(const XGL_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
         func.append("%s                                           const char *name)"
                 % (" " * len(self.prefix)))
@@ -419,7 +419,7 @@ class LayerInterceptProcSubcommand(Subcommand):
         lookups.append("#endif")
 
         body = []
-        body.append("STATIC_INLINE %s layer_intercept_proc(const char *name)" %
+        body.append("static inline %s layer_intercept_proc(const char *name)" %
                 self.gpa.ret)
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
