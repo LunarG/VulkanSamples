@@ -1727,7 +1727,24 @@ inline ir_constant* MesaGlassTranslator::addIRUndefined(const llvm::Type* type)
       }
 
    case llvm::Type::StructTyID:
-      assert(0 && "TODO: Handle struct case");
+      {
+         const llvm::StructType* structType = llvm::dyn_cast<const llvm::StructType>(type);
+         assert(structType);
+
+         const int structSize = structType->getStructNumElements();
+         ralloc_array(shader, ir_constant*, structSize);
+
+         exec_list* constants = new(shader) exec_list;
+
+         for (unsigned int f = 0; f < structSize; ++f) {
+            const llvm::Type* containedType = structType->getContainedType(f);
+            ir_constant* elementValue = addIRUndefined(containedType)->as_constant();
+            constants->push_tail(elementValue);
+         }
+
+         return new(shader) ir_constant(llvmTypeToHirType(type), constants);
+      }
+
 
    case llvm::Type::PointerTyID: // fall through
    case llvm::Type::VoidTyID:    // fall through
