@@ -126,7 +126,7 @@ void intel_fb_destroy(struct intel_fb *fb)
 
 static void render_pass_destroy(struct intel_obj *obj)
 {
-    struct intel_render_pass *rp = intel_rp_from_obj(obj);
+    struct intel_render_pass *rp = intel_render_pass_from_obj(obj);
 
     intel_render_pass_destroy(rp);
 }

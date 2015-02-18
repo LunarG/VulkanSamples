@@ -59,7 +59,7 @@ static inline struct intel_render_pass *intel_render_pass(XGL_RENDER_PASS rp)
     return (struct intel_render_pass *) rp;
 }
 
-static inline struct intel_render_pass *intel_rp_from_obj(struct intel_obj *obj)
+static inline struct intel_render_pass *intel_render_pass_from_obj(struct intel_obj *obj)
 {
     return (struct intel_render_pass *) obj;
 }
