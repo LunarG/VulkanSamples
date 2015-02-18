@@ -71,10 +71,7 @@
 typedef void * loader_platform_dl_handle;
 static inline loader_platform_dl_handle loader_platform_open_library(const char* libPath)
 {
-    // NOTE: The prior (Linux only) loader code always used RTLD_LAZY.  In one
-    // place, it used RTLD_DEEPBIND.  It probably doesn't hurt to always use
-    // RTLD_DEEPBIND, and so that is what is being done.
-    return dlopen(libPath, RTLD_LAZY | RTLD_DEEPBIND | RTLD_LOCAL);
+    return dlopen(libPath, RTLD_LAZY | RTLD_LOCAL);
 }
 static inline char * loader_platform_open_library_error(const char* libPath)
 {

@@ -31,6 +31,7 @@ else()
 	add_library(XGLLayer${target} SHARED ${ARGN})
         target_link_Libraries(XGLLayer${target} layer_utils)
 	add_dependencies(XGLLayer${target} generate_xgl_layer_helpers)
+	set_target_properties(XGLLayer${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
     endmacro()
 endif()
 
