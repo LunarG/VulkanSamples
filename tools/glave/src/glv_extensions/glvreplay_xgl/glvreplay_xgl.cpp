@@ -100,11 +100,11 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL UpdateFromSettings(glv_SettingGroup* pSett
     glv_SettingGroup_Apply_Overrides(&g_xglReplaySettingGroup, pSettingGroups, numSettingGroups);
 }
 
-GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay)
+GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, glvreplay_settings *pReplaySettings)
 {
     try
     {
-        g_pReplayer = (ApiReplay*)new xglReplay();
+        g_pReplayer = (ApiReplay*)new xglReplay(pReplaySettings);
     }
     catch (int e)
     {

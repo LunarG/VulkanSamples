@@ -402,7 +402,7 @@ protected:
                     m_pReplayers[tracerId]->UpdateFromSettings(pGlobalSettings, numGlobalSettings);
 
                     // Initialize the replayer
-                    int err = m_pReplayers[tracerId]->Initialize(&disp);
+                    int err = m_pReplayers[tracerId]->Initialize(&disp, NULL);
                     if (err) {
                         glv_LogError("Couldn't Initialize replayer for TracerId %d.\n", tracerId);
                         return false;

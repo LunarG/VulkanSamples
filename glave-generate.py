@@ -1889,7 +1889,7 @@ class Subcommand(object):
         rc_body.append('class xglReplay : public ApiReplay {')
         rc_body.append('public:')
         rc_body.append('    ~xglReplay();')
-        rc_body.append('    xglReplay();\n')
+        rc_body.append('    xglReplay(glvreplay_settings *pReplaySettings);\n')
         rc_body.append('    int init(glv_replay::Display & disp);')
         rc_body.append('    xglDisplay * get_display() {return m_display;}')
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);')
@@ -2274,8 +2274,9 @@ class Subcommand(object):
 
     def _generate_replay_structors(self):
         rs_body = []
-        rs_body.append('xglReplay::xglReplay()')
+        rs_body.append('xglReplay::xglReplay(glvreplay_settings *pReplaySettings)')
         rs_body.append('{')
+        rs_body.append('    g_pReplaySettings = pReplaySettings;')
         rs_body.append('    m_display = new xglDisplay();')
         rs_body.append('    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {')
         rs_body.append('        process_screenshot_list(g_pReplaySettings->screenshotList);')
@@ -3590,7 +3591,7 @@ class GlaveReplayC(Subcommand):
         header_txt.append('#include "glvreplay_main.h"\n')
         header_txt.append('#include <algorithm>')
         header_txt.append('#include <queue>')
-        header_txt.append('extern glvreplay_settings *g_pReplaySettings;')
+        header_txt.append('glvreplay_settings *g_pReplaySettings;')
         header_txt.append('extern "C" {')
         header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
         header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')

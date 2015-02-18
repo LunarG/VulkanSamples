@@ -30,6 +30,7 @@ extern "C" {
 #include "glv_trace_packet_identifiers.h"
 }
 #include "glvreplay_window.h"
+#include "glvreplay_main.h"
 
 namespace glv_replay {
 
@@ -61,7 +62,7 @@ extern "C"
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_registerdbgmsgcallback)(GLV_DBG_MSG_CALLBACK_FUNCTION pCallback);
 typedef glv_SettingGroup* (GLVTRACER_CDECL *funcptr_glvreplayer_getSettings)();
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_updatefromsettings)(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
-typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay);
+typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay, glvreplay_settings* pReplaySettings);
 typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_deinitialize)();
 typedef glv_trace_packet_header* (GLVTRACER_CDECL *funcptr_glvreplayer_interpret)(glv_trace_packet_header* pPacket);
 typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
