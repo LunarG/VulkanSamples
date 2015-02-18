@@ -519,7 +519,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
           (viewport->viewport_count - 1);
 
     /* TODO: framebuffer requests layer_count > 1 */
-    if (cmd->bind.render_pass->fb->layer_count == 1) {
+    if (cmd->bind.render_pass->fb->array_size == 1) {
         dw3 |= GEN6_CLIP_DW3_RTAINDEX_FORCED_ZERO;
     }
 

@@ -22,7 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-#pragma once
+
+#ifndef FB_H
+#define FB_H
+
+#include "intel.h"
+#include "obj.h"
 
 struct intel_fb {
     struct intel_obj obj;
@@ -35,7 +40,7 @@ struct intel_fb {
     uint32_t sample_count;
     uint32_t width;
     uint32_t height;
-    uint32_t layer_count;
+    uint32_t array_size;
 };
 
 struct intel_render_pass {
@@ -65,11 +70,13 @@ static inline struct intel_render_pass *intel_render_pass_from_obj(struct intel_
 }
 
 XGL_RESULT intel_fb_create(struct intel_dev *dev,
-                           const XGL_FRAMEBUFFER_CREATE_INFO* pInfo,
-                           struct intel_fb ** ppFramebuffer);
+                           const XGL_FRAMEBUFFER_CREATE_INFO *pInfo,
+                           struct intel_fb **fb_ret);
 void intel_fb_destroy(struct intel_fb *fb);
 
 XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
-                           const XGL_RENDER_PASS_CREATE_INFO* pInfo,
-                           struct intel_render_pass** ppRenderPass);
+                                    const XGL_RENDER_PASS_CREATE_INFO *pInfo,
+                                    struct intel_render_pass **rp_ret);
 void intel_render_pass_destroy(struct intel_render_pass *rp);
+
+#endif /* FB_H */

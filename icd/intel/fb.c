@@ -38,22 +38,24 @@ static void fb_destroy(struct intel_obj *obj)
 }
 
 XGL_RESULT intel_fb_create(struct intel_dev *dev,
-                           const XGL_FRAMEBUFFER_CREATE_INFO* info,
-                           struct intel_fb ** fb_ret)
+                           const XGL_FRAMEBUFFER_CREATE_INFO *info,
+                           struct intel_fb **fb_ret)
 {
     struct intel_fb *fb;
+    uint32_t width, height, array_size, i;
+
     fb = (struct intel_fb *) intel_base_create(dev, sizeof(*fb),
             dev->base.dbg, XGL_DBG_OBJECT_FRAMEBUFFER, info, 0);
     if (!fb)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    uint32_t width  = info->width;
-    uint32_t height = info->height;
-    uint32_t layers = info->layers;
-    uint32_t i;
+    width = info->width;
+    height = info->height;
+    array_size = info->layers;
 
     for (i = 0; i < info->colorAttachmentCount; i++) {
-        const XGL_COLOR_ATTACHMENT_BIND_INFO *att = &(info->pColorAttachments[i]);
+        const XGL_COLOR_ATTACHMENT_BIND_INFO *att =
+            &info->pColorAttachments[i];
         const struct intel_rt_view *rt = intel_rt_view(att->view);
         const struct intel_layout *layout = &rt->img->layout;
 
@@ -61,24 +63,24 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
             width = layout->width0;
         if (height > layout->height0)
             height = layout->height0;
-        if (layers > rt->array_size)
-            layers = rt->array_size;
+        if (array_size > rt->array_size)
+            array_size = rt->array_size;
 
         if (rt->img->samples != info->sampleCount) {
             intel_fb_destroy(fb);
             return XGL_ERROR_INVALID_VALUE;
         }
+
         fb->rt[i] = rt;
     }
 
     fb->rt_count = info->colorAttachmentCount;
 
     if (info->pDepthStencilAttachment) {
-        const struct intel_layout *layout;
-
-        fb->ds = intel_ds_view(info->pDepthStencilAttachment->view);
-
-        layout = &fb->ds->img->layout;
+        const XGL_DEPTH_STENCIL_BIND_INFO *att =
+            info->pDepthStencilAttachment;
+        const struct intel_ds_view *ds = intel_ds_view(att->view);
+        const struct intel_layout *layout = &ds->img->layout;
 
         if (info->colorAttachmentCount == 0) {
             width = layout->width0;
@@ -89,14 +91,15 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
             width = layout->width0;
         if (height > layout->height0)
             height = layout->height0;
-        if (layers > fb->ds->array_size)
-            layers = fb->ds->array_size;
+        if (array_size > ds->array_size)
+            array_size = ds->array_size;
 
-        if (fb->ds->img->samples != info->sampleCount) {
+        if (ds->img->samples != info->sampleCount) {
             intel_fb_destroy(fb);
             return XGL_ERROR_INVALID_VALUE;
         }
 
+        fb->ds = ds;
     } else {
         fb->ds = NULL;
     }
@@ -104,18 +107,18 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
     /* Behavior is undefined if width,height are larger
        than an attachment in some direction, but Intel hardware
        cannot handle this case */
-    fb->width        = width;
-    fb->height       = height;
-    fb->layer_count  = layers;
+    fb->width = width;
+    fb->height = height;
+    fb->array_size = array_size;
+
     /* This information must match pipeline state */
     fb->sample_count = info->sampleCount;
 
-    fb->obj.destroy  = fb_destroy;
+    fb->obj.destroy = fb_destroy;
 
     *fb_ret = fb;
 
     return XGL_SUCCESS;
-
 }
 
 void intel_fb_destroy(struct intel_fb *fb)
@@ -131,16 +134,18 @@ static void render_pass_destroy(struct intel_obj *obj)
 }
 
 XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
-                           const XGL_RENDER_PASS_CREATE_INFO* info,
-                           struct intel_render_pass** rp_ret)
+                                    const XGL_RENDER_PASS_CREATE_INFO *info,
+                                    struct intel_render_pass **rp_ret)
 {
     struct intel_render_pass *rp;
+
     rp = (struct intel_render_pass *) intel_base_create(dev, sizeof(*rp),
             dev->base.dbg, XGL_DBG_OBJECT_RENDER_PASS, info, 0);
     if (!rp)
         return XGL_ERROR_OUT_OF_MEMORY;
 
     rp->obj.destroy = render_pass_destroy;
+
     rp->fb = intel_fb(info->framebuffer);
     //TODO add any clear color ops
 
@@ -158,21 +163,22 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
 
 XGL_RESULT XGLAPI xglCreateFramebuffer(
     XGL_DEVICE                                  device,
-    const XGL_FRAMEBUFFER_CREATE_INFO*          info,
-    XGL_FRAMEBUFFER*                            fb_ret)
+    const XGL_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
+    XGL_FRAMEBUFFER*                            pFramebuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_fb_create(dev, info, (struct intel_fb **) fb_ret);
+    return intel_fb_create(dev, pCreateInfo,
+            (struct intel_fb **) pFramebuffer);
 }
-
 
 XGL_RESULT XGLAPI xglCreateRenderPass(
     XGL_DEVICE                                  device,
-    const XGL_RENDER_PASS_CREATE_INFO*          info,
-    XGL_RENDER_PASS*                            rp_ret)
+    const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
+    XGL_RENDER_PASS*                            pRenderPass)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_render_pass_create(dev, info, (struct intel_render_pass **) rp_ret);
+    return intel_render_pass_create(dev, pCreateInfo,
+            (struct intel_render_pass **) pRenderPass);
 }
