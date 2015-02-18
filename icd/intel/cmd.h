@@ -42,6 +42,7 @@ struct intel_msaa_state;
 struct intel_blend_state;
 struct intel_ds_state;
 struct intel_desc_set;
+struct intel_render_pass;
 
 struct intel_cmd_item;
 struct intel_cmd_reloc;
@@ -190,7 +191,7 @@ struct intel_cmd_bind {
     } index;
 
 
-    struct intel_render_pass *render_pass;
+    const struct intel_render_pass *render_pass;
 
     uint32_t draw_count;
     uint32_t wa_flags;

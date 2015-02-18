@@ -314,31 +314,30 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
     intel_base_destroy(&cmd->obj.base);
 }
 
-XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INFO* info)
+XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INFO *info)
 {
+    const XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
     XGL_RESULT ret;
     uint32_t i;
     XGL_FLAGS flags = 0;
-    XGL_CMD_BUFFER_BEGIN_INFO* next= (XGL_CMD_BUFFER_BEGIN_INFO*) info;
-    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
 
     cmd_reset(cmd);
 
-    while (next != NULL) {
-        switch (next->sType) {
+    while (info != NULL) {
+        switch (info->sType) {
         case XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
-            flags = next->flags;
+            flags = info->flags;
             break;
         case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
-            ginfo = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) next;
-            cmd_begin_render_pass(cmd,  (struct intel_render_pass *)
-                                        ginfo->renderPass);
+            ginfo = (const XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) info;
+            cmd_begin_render_pass(cmd, intel_render_pass(ginfo->renderPass));
             break;
         default:
             return XGL_ERROR_INVALID_VALUE;
             break;
         }
-        next = (XGL_CMD_BUFFER_BEGIN_INFO*) next->pNext;
+
+        info = (const XGL_CMD_BUFFER_BEGIN_INFO*) info->pNext;
     }
 
     if (cmd->flags != flags) {
