@@ -987,7 +987,7 @@ bool intel_desc_layout_advance_iter(const struct intel_desc_layout *layout,
     return true;
 }
 
-XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_DEVICE                                   device,
     XGL_FLAGS                                    stageFlags,
     const uint32_t*                              pSetBindPoints,
@@ -1003,7 +1003,7 @@ XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
+ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_UPDATE_MODE                   updateMode)
 {
@@ -1013,7 +1013,7 @@ XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
     return intel_desc_pool_begin_update(pool, updateMode);
 }
 
-XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
+ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
     XGL_DEVICE                                   device,
     XGL_CMD_BUFFER                               cmd_)
 {
@@ -1024,7 +1024,7 @@ XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
     return intel_desc_pool_end_update(pool, cmd);
 }
 
-XGL_RESULT XGLAPI xglCreateDescriptorRegion(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_REGION_USAGE                  regionUsage,
     uint32_t                                     maxSets,
@@ -1037,7 +1037,7 @@ XGL_RESULT XGLAPI xglCreateDescriptorRegion(
             (struct intel_desc_region **) pDescriptorRegion);
 }
 
-XGL_RESULT XGLAPI xglClearDescriptorRegion(
+ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(
     XGL_DESCRIPTOR_REGION                        descriptorRegion)
 {
     struct intel_desc_region *region = intel_desc_region(descriptorRegion);
@@ -1047,7 +1047,7 @@ XGL_RESULT XGLAPI xglClearDescriptorRegion(
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XGLAPI xglAllocDescriptorSets(
+ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
     XGL_DESCRIPTOR_REGION                        descriptorRegion,
     XGL_DESCRIPTOR_SET_USAGE                     setUsage,
     uint32_t                                     count,
@@ -1076,7 +1076,7 @@ XGL_RESULT XGLAPI xglAllocDescriptorSets(
     return ret;
 }
 
-void XGLAPI xglClearDescriptorSets(
+ICD_EXPORT void XGLAPI xglClearDescriptorSets(
     XGL_DESCRIPTOR_REGION                        descriptorRegion,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET*                    pDescriptorSets)
@@ -1091,7 +1091,7 @@ void XGLAPI xglClearDescriptorSets(
     }
 }
 
-void XGLAPI xglUpdateDescriptors(
+ICD_EXPORT void XGLAPI xglUpdateDescriptors(
     XGL_DESCRIPTOR_SET                           descriptorSet,
     const void*                                  pUpdateChain)
 {

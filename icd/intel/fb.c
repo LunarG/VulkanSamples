@@ -161,7 +161,7 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
     intel_base_destroy(&rp->obj.base);
 }
 
-XGL_RESULT XGLAPI xglCreateFramebuffer(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(
     XGL_DEVICE                                  device,
     const XGL_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
     XGL_FRAMEBUFFER*                            pFramebuffer)
@@ -172,7 +172,7 @@ XGL_RESULT XGLAPI xglCreateFramebuffer(
             (struct intel_fb **) pFramebuffer);
 }
 
-XGL_RESULT XGLAPI xglCreateRenderPass(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(
     XGL_DEVICE                                  device,
     const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
     XGL_RENDER_PASS*                            pRenderPass)

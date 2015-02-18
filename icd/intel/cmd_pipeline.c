@@ -3339,7 +3339,7 @@ ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
     cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 }
 
-void XGLAPI xglCmdBeginRenderPass(
+ICD_EXPORT void XGLAPI xglCmdBeginRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_RENDER_PASS                             renderPass)
 {
@@ -3348,7 +3348,7 @@ void XGLAPI xglCmdBeginRenderPass(
    cmd_begin_render_pass(cmd, (struct intel_render_pass *) renderPass);
 }
 
-void XGLAPI xglCmdEndRenderPass(
+ICD_EXPORT void XGLAPI xglCmdEndRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_RENDER_PASS                             renderPass)
 {
