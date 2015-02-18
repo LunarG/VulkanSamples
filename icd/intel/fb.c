@@ -24,7 +24,6 @@
  */
 
 #include "dev.h"
-#include "mem.h"
 #include "obj.h"
 #include "view.h"
 #include "img.h"
@@ -43,6 +42,9 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
 {
     struct intel_fb *fb;
     uint32_t width, height, array_size, i;
+
+    if (info->colorAttachmentCount > INTEL_MAX_RENDER_TARGETS)
+        return XGL_ERROR_INVALID_VALUE;
 
     fb = (struct intel_fb *) intel_base_create(dev, sizeof(*fb),
             dev->base.dbg, XGL_DBG_OBJECT_FRAMEBUFFER, info, 0);
@@ -99,9 +101,6 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
         fb->ds = NULL;
     }
 
-    /* Behavior is undefined if width,height are larger
-       than an attachment in some direction, but Intel hardware
-       cannot handle this case */
     fb->width = width;
     fb->height = height;
     fb->array_size = array_size;
@@ -133,6 +132,7 @@ XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
                                     struct intel_render_pass **rp_ret)
 {
     struct intel_render_pass *rp;
+    uint32_t i;
 
     rp = (struct intel_render_pass *) intel_base_create(dev, sizeof(*rp),
             dev->base.dbg, XGL_DBG_OBJECT_RENDER_PASS, info, 0);
@@ -142,7 +142,12 @@ XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
     rp->obj.destroy = render_pass_destroy;
 
     rp->fb = intel_fb(info->framebuffer);
-    //TODO add any clear color ops
+
+    /* TODO add any clear color ops */
+    for (i = 0; i < info->colorAttachmentCount; i++)
+        assert(info->pColorLoadOps[i] != XGL_ATTACHMENT_LOAD_OP_CLEAR);
+    assert(info->depthLoadOp != XGL_ATTACHMENT_LOAD_OP_CLEAR);
+    assert(info->stencilLoadOp != XGL_ATTACHMENT_LOAD_OP_CLEAR);
 
     *rp_ret = rp;
 
