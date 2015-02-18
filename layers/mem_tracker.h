@@ -91,26 +91,15 @@ typedef struct _MINI_NODE {
 } MINI_NODE;
 
 struct GLOBAL_MEM_OBJ_NODE;
-// Store a linked-list of transition nodes to account for different states across a single mem obj
-typedef struct _MEM_STATE_TRANSITION_NODE {
-    struct _MEM_STATE_TRANSITION_NODE* pNext;
-    //uint32_t isMem; // 1 for memory, 0 for image
-    union {
-        XGL_MEMORY_STATE_TRANSITION memory;
-        XGL_IMAGE_STATE_TRANSITION image; // use when img attached to this mem obj
-    } transition;
-} MEM_STATE_TRANSITION_NODE;
 
 // Data struct for tracking memory object
 typedef struct _GLOBAL_MEM_OBJ_NODE {
-    struct _GLOBAL_MEM_OBJ_NODE* pNextGlobalNode; // Ptr to next mem obj in global list of all objs
-    MINI_NODE* pObjBindings; // Ptr to list of objects bound to this memory
-    MINI_NODE* pCmdBufferBindings; // Ptr to list of cmd buffers that this mem object references
-    uint32_t refCount; // Count of references (obj bindings or CB use)
-    XGL_GPU_MEMORY mem;
-    XGL_MEMORY_ALLOC_INFO allocInfo;
-    uint32_t numRegions; // Allocation may be broken into various regions
-    MEM_STATE_TRANSITION_NODE* pRegions; // LL of transitions for this Mem Obj
+    struct _GLOBAL_MEM_OBJ_NODE *pNextGlobalNode;    // Ptr to next mem obj in global list of all objs
+    MINI_NODE                   *pObjBindings;       // Ptr to list of objects bound to this memory
+    MINI_NODE                   *pCmdBufferBindings; // Ptr to list of cmd buffers that reference this mem object
+    uint32_t                     refCount;           // Count of references (obj bindings or CB use)
+    XGL_GPU_MEMORY               mem;
+    XGL_MEMORY_ALLOC_INFO        allocInfo;
 } GLOBAL_MEM_OBJ_NODE;
 
 typedef struct _GLOBAL_OBJECT_NODE {
@@ -130,13 +119,9 @@ typedef struct _GLOBAL_OBJECT_NODE {
         XGL_GRAPHICS_PIPELINE_CREATE_INFO graphics_pipeline_create_info;
         XGL_COMPUTE_PIPELINE_CREATE_INFO compute_pipeline_create_info;
         XGL_SAMPLER_CREATE_INFO sampler_create_info;
-        XGL_DESCRIPTOR_SET_CREATE_INFO descriptor_set_create_info;
-        XGL_VIEWPORT_STATE_CREATE_INFO viewport_create_info;
-        XGL_DEPTH_STENCIL_STATE_CREATE_INFO ds_state_create_info;
-        XGL_RASTER_STATE_CREATE_INFO raster_state_create_info;
-        XGL_COLOR_BLEND_STATE_CREATE_INFO cb_state_create_info;
-        XGL_MSAA_STATE_CREATE_INFO msaa_state_create_info;
+#ifndef _WIN32
         XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
+#endif // _WIN32
     } create_info;
     char object_name[32];
 } GLOBAL_OBJECT_NODE;
@@ -148,17 +133,9 @@ typedef struct _MEMORY_BINDING {
     XGL_OBJECT      mem;
     XGL_GPU_SIZE    offset;
     uint32_t        binding;
+    XGL_BUFFER      buffer;
     XGL_INDEX_TYPE  indexType;
 } MEMORY_BINDING;
-
-/*
- * Track a Descriptor Set binding
- */
-typedef struct _DS_BINDING {
-    XGL_PIPELINE_BIND_POINT     pipelineBindPoint;
-    XGL_DESCRIPTOR_SET          descriptorSet;
-    uint32_t                    slotOffset;
-} DS_BINDING;
 
 // Store a single LL of command buffers
 typedef struct _GLOBAL_CB_NODE {
@@ -169,9 +146,7 @@ typedef struct _GLOBAL_CB_NODE {
     MINI_NODE*                      pIndexBufList;
     GLOBAL_OBJECT_NODE*             pDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
-    DS_BINDING                      descriptorSets[XGL_MAX_DESCRIPTOR_SETS];
     uint32_t                        colorAttachmentCount;
-    XGL_COLOR_ATTACHMENT_BIND_INFO  attachments[XGL_MAX_COLOR_ATTACHMENTS];
     XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
     XGL_CMD_BUFFER cmdBuffer;
     XGL_FENCE fence; // fence tracking this cmd buffer

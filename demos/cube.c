@@ -396,8 +396,30 @@ static void demo_draw(struct demo *demo)
     err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((uint64_t) 0));
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
+    uint32_t i, idx = 0;
+    XGL_MEMORY_REF *memRefs;
+    memRefs = malloc(sizeof(XGL_MEMORY_REF) * (DEMO_BUFFER_COUNT         +
+                                               demo->depth.num_mem       +
+                                               demo->textures[0].num_mem +
+                                               demo->uniform_data.num_mem));
+    for (i = 0; i < demo->depth.num_mem; i++, idx++) {
+        memRefs[idx].mem = demo->depth.mem[i];
+        memRefs[idx].flags = 0;
+    }
+    for (i = 0; i < demo->textures[0].num_mem; i++, idx++) {
+        memRefs[idx].mem = demo->textures[0].mem[i];
+        memRefs[idx].flags = 0;
+    }
+    memRefs[idx].mem = demo->buffers[0].mem;
+    memRefs[idx++].flags = 0;
+    memRefs[idx].mem = demo->buffers[1].mem;
+    memRefs[idx++].flags = 0;
+    for (i = 0; i < demo->uniform_data.num_mem; i++, idx++) {
+        memRefs[idx].mem = demo->uniform_data.mem[i];
+        memRefs[idx].flags = 0;
+    }
     err = xglQueueSubmit(demo->queue, 1, &demo->cmd,
-            0, NULL, XGL_NULL_HANDLE);
+            idx, memRefs, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
@@ -1564,10 +1586,9 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->desc_layout_fs);
     xglDestroyObject(demo->desc_layout_vs);
 
-//    xglFreeMemory(demo->vertices.mem);
-
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         xglDestroyObject(demo->textures[i].view);
+        xglBindObjectMemory(demo->textures[i].image, 0, XGL_NULL_HANDLE, 0);
         xglDestroyObject(demo->textures[i].image);
         for (j = 0; j < demo->textures[i].num_mem; j++)
             xglFreeMemory(demo->textures[i].mem[j]);
@@ -1575,9 +1596,13 @@ static void demo_cleanup(struct demo *demo)
     }
 
     xglDestroyObject(demo->depth.view);
+    xglBindObjectMemory(demo->depth.image, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->depth.image);
     for (j = 0; j < demo->depth.num_mem; j++)
         xglFreeMemory(demo->depth.mem[j]);
+
+    xglDestroyObject(demo->uniform_data.view);
+    xglBindObjectMemory(demo->uniform_data.buf, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->uniform_data.buf);
     for (j = 0; j < demo->uniform_data.num_mem; j++)
         xglFreeMemory(demo->uniform_data.mem[j]);

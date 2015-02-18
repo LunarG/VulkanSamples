@@ -342,6 +342,8 @@ public:
     XglMemoryRefManager();
     void AddMemoryRef(XglConstantBufferObj* constantBuffer);
     void AddMemoryRef(XglTextureObj *texture);
+    void AddMemoryRef(XGL_GPU_MEMORY *mem, uint32_t refCount);
+    void AddRTMemoryRefs(vector<XglImage *>images, uint32_t rtCount);
     XGL_MEMORY_REF* GetMemoryRefList();
     int GetNumRefs();
 

@@ -198,6 +198,8 @@ void XglRenderFramework::InitRenderTarget()
     xglCreateRenderPass(device(), &rp_info, &m_renderPass);
 }
 
+
+
 XglDevice::XglDevice(uint32_t id, XGL_PHYSICAL_GPU obj) :
     xgl_testing::Device(obj), id(id)
 {
@@ -942,6 +944,20 @@ void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
     const std::vector<XGL_GPU_MEMORY> mems = texture->memories();
     if (!mems.empty())
         m_bufferObjs.push_back(mems[0]);
+}
+
+void XglMemoryRefManager::AddMemoryRef(XGL_GPU_MEMORY *mem, uint32_t refCount) {
+    for (size_t i = 0; i < refCount; i++) {
+        m_bufferObjs.push_back(mem[i]);
+    }
+}
+
+void XglMemoryRefManager::AddRTMemoryRefs(vector<XglImage*>images, uint32_t rtCount) {
+    for (uint32_t i = 0; i < rtCount; i++) {
+        const std::vector<XGL_GPU_MEMORY> mems = images[i]->memories();
+        if (!mems.empty())
+            m_bufferObjs.push_back(mems[0]);
+    }
 }
 
 XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
