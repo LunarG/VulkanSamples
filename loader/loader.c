@@ -807,12 +807,13 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
     while (pCi) {
         if (pCi->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) {
             const char *name;
-            uint32_t len;
+            uint32_t len, j = 0;
             for (uint32_t i = env_layer_count; i < (env_layer_count + pCi->layerCount); i++) {
                 const char * lib_name = NULL;
-                name = *(pCi->ppActiveLayerNames + i);
-                if (!find_layer_name(icd, gpu_index, name, &lib_name))
-                    return loader_get_layer_env(icd, gpu_index, layerNames);
+                name = *(pCi->ppActiveLayerNames + j);
+                if (!find_layer_name(icd, gpu_index, name, &lib_name)) {
+                    return i;
+                }
                 len = (uint32_t) strlen(name);
                 layerNames[i].layer_name = malloc(len + 1);
                 if (!layerNames[i].layer_name)
@@ -820,12 +821,13 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
                 strncpy((char *) layerNames[i].layer_name, name, len);
                 layerNames[i].layer_name[len] = '\0';
                 layerNames[i].lib_name = lib_name;
+                j++;
             }
-            return pCi->layerCount + loader_get_layer_env(icd, gpu_index, layerNames);
+            return pCi->layerCount + env_layer_count;
         }
         pCi = pCi->pNext;
     }
-    return loader_get_layer_env(icd, gpu_index, layerNames);
+    return env_layer_count;
 }
 
 static void loader_deactivate_layer(const struct loader_instance *instance)
