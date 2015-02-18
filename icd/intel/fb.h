@@ -73,16 +73,3 @@ XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
                            const XGL_RENDER_PASS_CREATE_INFO* pInfo,
                            struct intel_render_pass** ppRenderPass);
 void intel_render_pass_destroy(struct intel_render_pass *rp);
-void intel_cmd_begin_render_pass(struct intel_cmd *cmd,
-                                 const struct intel_render_pass *rp);
-void intel_cmd_end_render_pass(struct intel_cmd *cmd,
-                               const struct intel_render_pass *rp);
-XGL_RESULT XGLAPI intelCreateFramebuffer(
-    XGL_DEVICE                                  device,
-    const XGL_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
-    XGL_FRAMEBUFFER*                            pFramebuffer);
-
-XGL_RESULT XGLAPI intelCreateRenderPass(
-    XGL_DEVICE                                  device,
-    const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
-    XGL_RENDER_PASS*                            pRenderPass);

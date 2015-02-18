@@ -28,7 +28,6 @@
 #include "obj.h"
 #include "view.h"
 #include "img.h"
-#include "cmd.h"
 #include "fb.h"
 
 static void fb_destroy(struct intel_obj *obj)
@@ -157,19 +156,6 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
     intel_base_destroy(&rp->obj.base);
 }
 
-void intel_cmd_begin_render_pass(struct intel_cmd *cmd,
-                                 const struct intel_render_pass *rp)
-{
-    cmd->bind.render_pass = (struct intel_render_pass *) rp;
-}
-
-void intel_cmd_end_render_pass(struct intel_cmd *cmd,
-                               const struct intel_render_pass *rp)
-{
-    //note what to do if rp != bound rp
-    cmd->bind.render_pass = 0;
-}
-
 XGL_RESULT XGLAPI xglCreateFramebuffer(
     XGL_DEVICE                                  device,
     const XGL_FRAMEBUFFER_CREATE_INFO*          info,
@@ -190,22 +176,3 @@ XGL_RESULT XGLAPI xglCreateRenderPass(
 
     return intel_render_pass_create(dev, info, (struct intel_render_pass **) rp_ret);
 }
-
-void XGLAPI xglCmdBeginRenderPass(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_RENDER_PASS                             renderPass)
-{
-   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-   intel_cmd_begin_render_pass(cmd, (struct intel_render_pass *) renderPass);
-}
-
-void XGLAPI xglCmdEndRenderPass(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_RENDER_PASS                             renderPass)
-{
-   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-   intel_cmd_end_render_pass(cmd, (struct intel_render_pass *) renderPass);
-}
-

@@ -3338,3 +3338,21 @@ ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
 
     cmd_fail(cmd, XGL_ERROR_UNKNOWN);
 }
+
+void XGLAPI xglCmdBeginRenderPass(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_RENDER_PASS                             renderPass)
+{
+   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+   cmd_begin_render_pass(cmd, (struct intel_render_pass *) renderPass);
+}
+
+void XGLAPI xglCmdEndRenderPass(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_RENDER_PASS                             renderPass)
+{
+   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+   cmd_end_render_pass(cmd, (struct intel_render_pass *) renderPass);
+}

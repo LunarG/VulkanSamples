@@ -472,6 +472,19 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
     }
 }
 
+static inline void cmd_begin_render_pass(struct intel_cmd *cmd,
+                                         const struct intel_render_pass *rp)
+{
+    cmd->bind.render_pass = (struct intel_render_pass *) rp;
+}
+
+static inline void cmd_end_render_pass(struct intel_cmd *cmd,
+                                       const struct intel_render_pass *rp)
+{
+    //note what to do if rp != bound rp
+    cmd->bind.render_pass = 0;
+}
+
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0);
 void cmd_batch_flush_all(struct intel_cmd *cmd);
 
