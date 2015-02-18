@@ -636,6 +636,8 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
         buf_format = XGL_FMT_R32G32B32A32_UINT;
         break;
     default:
+        img_format = XGL_FMT_UNDEFINED;
+        buf_format = XGL_FMT_UNDEFINED;
         break;
     }
 
