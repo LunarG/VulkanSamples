@@ -367,8 +367,8 @@ void intel_ds_state_destroy(struct intel_dynamic_ds *state)
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(
     XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_VP_STATE_CREATE_INFO*       pCreateInfo,
-    XGL_DYNAMIC_VP_STATE_OBJECT*                  pState)
+    const XGL_DYNAMIC_VP_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_VP_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -378,8 +378,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(
     XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_RS_STATE_CREATE_INFO*         pCreateInfo,
-    XGL_DYNAMIC_RS_STATE_OBJECT*                    pState)
+    const XGL_DYNAMIC_RS_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_RS_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -389,8 +389,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
     XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_CB_STATE_CREATE_INFO*    pCreateInfo,
-    XGL_DYNAMIC_CB_STATE_OBJECT*               pState)
+    const XGL_DYNAMIC_CB_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_CB_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -400,8 +400,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(
     XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_DS_STATE_CREATE_INFO*  pCreateInfo,
-    XGL_DYNAMIC_DS_STATE_OBJECT*             pState)
+    const XGL_DYNAMIC_DS_STATE_CREATE_INFO*     pCreateInfo,
+    XGL_DYNAMIC_DS_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
