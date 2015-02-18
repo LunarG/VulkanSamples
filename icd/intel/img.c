@@ -83,7 +83,7 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
         {
             XGL_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
 
-            *size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+            *size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             buf_req->usage = img->usage;
