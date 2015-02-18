@@ -33,17 +33,17 @@
 
 static void fb_destroy(struct intel_obj *obj)
 {
-    struct intel_framebuffer *fb = intel_fb_from_obj(obj);
+    struct intel_fb *fb = intel_fb_from_obj(obj);
 
     intel_fb_destroy(fb);
 }
 
 XGL_RESULT intel_fb_create(struct intel_dev *dev,
                            const XGL_FRAMEBUFFER_CREATE_INFO* info,
-                           struct intel_framebuffer ** fb_ret)
+                           struct intel_fb ** fb_ret)
 {
-    struct intel_framebuffer *fb;
-    fb = (struct intel_framebuffer *) intel_base_create(dev, sizeof(*fb),
+    struct intel_fb *fb;
+    fb = (struct intel_fb *) intel_base_create(dev, sizeof(*fb),
             dev->base.dbg, XGL_DBG_OBJECT_FRAMEBUFFER, info, 0);
     if (!fb)
         return XGL_ERROR_OUT_OF_MEMORY;
@@ -119,7 +119,7 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
 
 }
 
-void intel_fb_destroy(struct intel_framebuffer *fb)
+void intel_fb_destroy(struct intel_fb *fb)
 {
     intel_base_destroy(&fb->obj.base);
 }
@@ -142,7 +142,7 @@ XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
         return XGL_ERROR_OUT_OF_MEMORY;
 
     rp->obj.destroy = render_pass_destroy;
-    rp->fb = intel_framebuffer(info->framebuffer);
+    rp->fb = intel_fb(info->framebuffer);
     //TODO add any clear color ops
 
     *rp_ret = rp;
@@ -177,7 +177,7 @@ XGL_RESULT XGLAPI xglCreateFramebuffer(
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_fb_create(dev, info, (struct intel_framebuffer **) fb_ret);
+    return intel_fb_create(dev, info, (struct intel_fb **) fb_ret);
 }
 
 

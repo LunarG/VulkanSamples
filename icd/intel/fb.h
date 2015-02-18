@@ -24,7 +24,7 @@
  */
 #pragma once
 
-struct intel_framebuffer {
+struct intel_fb {
     struct intel_obj obj;
 
     const struct intel_rt_view *rt[INTEL_MAX_RENDER_TARGETS];
@@ -41,17 +41,17 @@ struct intel_framebuffer {
 struct intel_render_pass {
     struct intel_obj obj;
 
-    struct intel_framebuffer *fb;
+    struct intel_fb *fb;
 };
 
-static inline struct intel_framebuffer *intel_framebuffer(XGL_FRAMEBUFFER fb)
+static inline struct intel_fb *intel_fb(XGL_FRAMEBUFFER fb)
 {
-    return (struct intel_framebuffer *) fb;
+    return (struct intel_fb *) fb;
 }
 
-static inline struct intel_framebuffer *intel_fb_from_obj(struct intel_obj *obj)
+static inline struct intel_fb *intel_fb_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_framebuffer *) obj;
+    return (struct intel_fb *) obj;
 }
 
 static inline struct intel_render_pass *intel_render_pass(XGL_RENDER_PASS rp)
@@ -66,8 +66,8 @@ static inline struct intel_render_pass *intel_rp_from_obj(struct intel_obj *obj)
 
 XGL_RESULT intel_fb_create(struct intel_dev *dev,
                            const XGL_FRAMEBUFFER_CREATE_INFO* pInfo,
-                           struct intel_framebuffer ** ppFramebuffer);
-void intel_fb_destroy(struct intel_framebuffer *fb);
+                           struct intel_fb ** ppFramebuffer);
+void intel_fb_destroy(struct intel_fb *fb);
 
 XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
                            const XGL_RENDER_PASS_CREATE_INFO* pInfo,
