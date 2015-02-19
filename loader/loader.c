@@ -522,7 +522,7 @@ static void layer_lib_scan(void)
 #else  // WIN32
     if (geteuid() == getuid()) {
         /* Don't allow setuid apps to use the DRIVER_PATH_ENV env var: */
-        libPaths = getenv(DRIVER_PATH_ENV);
+        libPaths = getenv(LAYERS_PATH_ENV);
     }
     if (libPaths == NULL) {
         libPaths = DEFAULT_XGL_LAYERS_PATH;
