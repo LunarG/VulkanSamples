@@ -31,12 +31,56 @@
 #include "cmd_priv.h"
 
 enum {
+    READ_OP          = 1 << 0,
+    WRITE_OP         = 1 << 1,
+    HIZ_OP           = 1 << 2,
+};
+
+enum {
     MEM_CACHE        = 1 << 0,
     DATA_READ_CACHE  = 1 << 1,
     DATA_WRITE_CACHE = 1 << 2,
     RENDER_CACHE     = 1 << 3,
     SAMPLER_CACHE    = 1 << 4,
 };
+
+static uint32_t img_get_layout_ops(const struct intel_img *img,
+                                   XGL_IMAGE_LAYOUT layout)
+{
+    uint32_t ops;
+
+    switch (layout) {
+    case XGL_IMAGE_LAYOUT_GENERAL:
+        ops = READ_OP | WRITE_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        ops = READ_OP | WRITE_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        ops = READ_OP | WRITE_OP | HIZ_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        ops = READ_OP | HIZ_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        ops = READ_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL:
+        ops = WRITE_OP | HIZ_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+        ops = READ_OP;
+        break;
+    case XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+        ops = WRITE_OP;
+        break;
+    default:
+        ops = 0;
+        break;
+    }
+
+    return ops;
+}
 
 static uint32_t img_get_layout_caches(const struct intel_img *img,
                                      XGL_IMAGE_LAYOUT layout)
@@ -82,6 +126,23 @@ static uint32_t img_get_layout_caches(const struct intel_img *img,
     }
 
     return caches;
+}
+
+static void cmd_resolve_depth(struct intel_cmd *cmd,
+                              struct intel_img *img,
+                              XGL_IMAGE_LAYOUT old_layout,
+                              XGL_IMAGE_LAYOUT new_layout,
+                              const XGL_IMAGE_SUBRESOURCE_RANGE *range)
+{
+    const uint32_t old_ops = img_get_layout_ops(img, old_layout);
+    const uint32_t new_ops = img_get_layout_ops(img, new_layout);
+
+    if (old_ops & WRITE_OP) {
+        if ((old_ops & HIZ_OP) && !(new_ops & HIZ_OP))
+            cmd_meta_ds_op(cmd, INTEL_CMD_META_DS_RESOLVE, img, range);
+        else if (!(old_ops & HIZ_OP) && (new_ops & HIZ_OP))
+            cmd_meta_ds_op(cmd, INTEL_CMD_META_DS_HIZ_RESOLVE, img, range);
+    }
 }
 
 static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
@@ -156,6 +217,10 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
             input_mask  |= u->img.inputMask;
             {
                 struct intel_img *img = intel_img(u->img.image);
+
+                cmd_resolve_depth(cmd, img, u->img.oldLayout,
+                        u->img.newLayout, &u->img.subresourceRange);
+
                 flush_flags |= cmd_get_flush_flags(cmd,
                         img_get_layout_caches(img, u->img.oldLayout),
                         img_get_layout_caches(img, u->img.newLayout),

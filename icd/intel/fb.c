@@ -97,8 +97,19 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
         }
 
         fb->ds = ds;
+
+        switch (att->layout) {
+        case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+            fb->optimal_ds = true;
+            break;
+        default:
+            fb->optimal_ds = false;
+            break;
+        }
     } else {
         fb->ds = NULL;
+        fb->optimal_ds = false;
     }
 
     fb->width = width;

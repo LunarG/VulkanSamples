@@ -1840,9 +1840,9 @@ static void emit_ds(struct intel_cmd *cmd)
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, false);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, false);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, false);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, fb->optimal_ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, fb->optimal_ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, fb->optimal_ds);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);

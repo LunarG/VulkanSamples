@@ -762,6 +762,9 @@ layout_want_hiz(const struct intel_layout *layout,
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
 
+   if (intel_debug & INTEL_DEBUG_NOHIZ)
+       return false;
+
    if (!(info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT))
       return false;
 
@@ -769,23 +772,12 @@ layout_want_hiz(const struct intel_layout *layout,
       return false;
 
    /*
-    * As can be seen in layout_calculate_hiz_size(), HiZ may not be enabled
-    * for every level.  This is generally fine except on GEN6, where HiZ and
-    * separate stencil are enabled and disabled at the same time.  When the
-    * format is PIPE_FORMAT_Z32_FLOAT_S8X24_UINT, enabling and disabling HiZ
-    * can result in incompatible formats.
+    * HiZ implies separate stencil on Gen6.  We do not want to copy stencils
+    * values between combined and separate stencil buffers when HiZ is enabled
+    * or disabled.
     */
-   if (intel_gpu_gen(params->gpu) == INTEL_GEN(6) &&
-       info->format == XGL_FMT_D32_SFLOAT_S8_UINT &&
-       info->mipLevels > 1)
-      return false;
-
-   if (true) {
-       intel_dev_log(params->dev, XGL_DBG_MSG_PERF_WARNING,
-               XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-               "HiZ disabled");
+   if (intel_gpu_gen(params->gpu) == INTEL_GEN(6))
        return false;
-   }
 
    return true;
 }

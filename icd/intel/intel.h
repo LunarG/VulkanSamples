@@ -64,7 +64,8 @@ enum intel_debug_flags {
 
     INTEL_DEBUG_NOHW        = 1 << 20,
     INTEL_DEBUG_NOCACHE     = 1 << 21,
-    INTEL_DEBUG_HANG        = 1 << 22,
+    INTEL_DEBUG_NOHIZ       = 1 << 22,
+    INTEL_DEBUG_HANG        = 1 << 23,
 };
 
 extern int intel_debug;

@@ -36,6 +36,7 @@ struct intel_fb {
     uint32_t rt_count;
 
     const struct intel_ds_view *ds;
+    bool optimal_ds;
 
     uint32_t sample_count;
     uint32_t width;
