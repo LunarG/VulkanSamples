@@ -936,7 +936,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
     struct loader_instance *ptr_instance = NULL;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
-    XGL_RESULT res;
+    XGL_RESULT res = XGL_ERROR_INITIALIZATION_FAILED;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
