@@ -420,7 +420,13 @@ static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
         return XGL_FALSE;
     }
     else {
-        // First clear any CB bindings for completed CBs
+        if (pTrav->allocInfo.allocationSize == 0) {
+            char str[1024];
+            sprintf(str, "Attempting to free memory associated with a Presentable Image, %p, this should not be explicitly freed\n", (void*)mem);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            return XGL_FALSE;
+        }
+        // Clear any CB bindings for completed CBs
         //   TODO : Is there a better place to do this?
         MINI_NODE* pMiniCB = pTrav->pCmdBufferBindings;
         while (pMiniCB) {
@@ -805,8 +811,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
     // Report any memory leaks
     GLOBAL_MEM_OBJ_NODE* pTrav = pGlobalMemObjHead;
     while (pTrav) {
-        sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling xglFreeMemory(%p) prior to xglDestroyDevice().", pTrav->mem, pTrav->mem);
-        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pTrav->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+        if (pTrav->allocInfo.allocationSize != 0) {
+            sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling xglFreeMemory(%p) prior to xglDestroyDevice().", pTrav->mem, pTrav->mem);
+            layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pTrav->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+        }
         pTrav = pTrav->pNextGlobalNode;
     }
     XGL_RESULT result = nextTable.DestroyDevice(device);
