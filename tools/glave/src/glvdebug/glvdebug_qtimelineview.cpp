@@ -360,16 +360,24 @@ void glvdebug_QTimelineView::resizeEvent(QResizeEvent *event)
     m_hashIsDirty = true;
     deletePixmap();
 
-    uint64_t rawDuration = m_rawEndTime - m_rawStartTime;
-
-    // the duration to viewport scale should allow us to map the entire timeline into the current window width.
-    if (rawDuration > 0)
+    // The duration to viewport scale should allow us to map the entire timeline into the current window width.
+    if (m_lineLength > 0)
     {
-        int initialTimelineWidth = viewport()->width() - 2*m_margin - m_scrollBarWidth;
-        m_durationToViewportScale = (float)initialTimelineWidth / u64ToFloat(rawDuration);
-    }
+        // Calculate zoom ratio prior to the resize
+        float ratio = m_zoomFactor / m_durationToViewportScale;
 
-    updateGeometries();
+        // Adjust scale that fits the timeline duration to the viewport area
+        int timelineViewportWidth = viewport()->width() - 2*m_margin - m_scrollBarWidth;
+        m_durationToViewportScale = (float)timelineViewportWidth / u64ToFloat(m_lineLength);
+
+        // Adjust the zoom factor based on the new duration to viewport scale and the previous ratio
+        m_zoomFactor = m_durationToViewportScale * ratio;
+
+        // Adjust horizontal scroll bar to maintain current view as best as possible
+        float hRatio = (float)horizontalScrollBar()->value() / qMax(1.0f,(float)horizontalScrollBar()->maximum());
+        updateGeometries();
+        horizontalScrollBar()->setValue(hRatio * horizontalScrollBar()->maximum());
+    }
 }
 
 //-----------------------------------------------------------------------------
