@@ -38,6 +38,9 @@ glv_SettingInfo g_settings_info[] =
     { "pe", "PauseOnReplayError", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayError, &s_defaultXglSettings.pauseOnReplayError, TRUE, "Pause replay if an error message is reported."},
     { "gf", "GroupByFrame", GLV_SETTING_BOOL, &g_xglDebugSettings.groupByFrame, &s_defaultXglSettings.groupByFrame, TRUE, "Group API calls by frame."},
     { "gt", "GroupByThread", GLV_SETTING_BOOL, &g_xglDebugSettings.groupByThread, &s_defaultXglSettings.groupByThread, TRUE, "Group API calls by the CPU thread Id on which they executed."},
+    { "rw", "replay_window_width", GLV_SETTING_INT, &g_xglDebugSettings.replay_window_width, &s_defaultXglSettings.replay_window_width, TRUE, "Width of replay window on startup."},
+    { "rh", "replay_window_height", GLV_SETTING_INT, &g_xglDebugSettings.replay_window_height, &s_defaultXglSettings.replay_window_height, TRUE, "Height of replay window on startup."},
+    { "sr", "separate_replay_window", GLV_SETTING_BOOL, &g_xglDebugSettings.separate_replay_window, &s_defaultXglSettings.separate_replay_window, TRUE, "Use a separate replay window."},
 };
 
 glv_SettingGroup g_xglDebugSettingGroup =
@@ -57,4 +60,7 @@ void initialize_default_settings()
     s_defaultXglSettings.pauseOnReplayError = TRUE;
     s_defaultXglSettings.groupByFrame = FALSE;
     s_defaultXglSettings.groupByThread = FALSE;
+    s_defaultXglSettings.replay_window_width = 1024;
+    s_defaultXglSettings.replay_window_height = 768;
+    s_defaultXglSettings.separate_replay_window = FALSE;
 };

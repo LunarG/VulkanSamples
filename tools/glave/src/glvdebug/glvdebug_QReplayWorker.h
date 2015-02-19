@@ -344,23 +344,33 @@ protected:
         emit ReplayFinished();
     }
 
-    bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo, QWidget* pReplayWindow)
+    bool load_replayers(glvdebug_trace_file_info* pTraceFileInfo,
+        QWidget* pReplayWindow, int const replayWindowWidth,
+        int const replayWindowHeight, bool const separateReplayWindow)
     {
         // Get window handle of the widget to replay into.
         assert(pReplayWindow != NULL);
-        unsigned int windowWidth = 800;
-        unsigned int windowHeight = 600;
+        assert(replayWindowWidth > 0);
+        assert(replayWindowHeight > 0);
+
+        // TODO: Get the width and height from the replayer. We can't do this yet
+        // because the replayer doesn't know the render target's size.
+
         WId hWindow = pReplayWindow->winId();
-        windowWidth = pReplayWindow->geometry().width();
-        windowHeight = pReplayWindow->geometry().height();
 
         // load any API specific driver libraries and init replayer objects
         uint8_t tidApi = GLV_TID_RESERVED;
         bool bReplayerLoaded = false;
 
-        // uncomment this to display in a separate window (and then comment out the line below it)
-    //    glv_replay::Display disp(windowWidth, windowHeight, 0, false);
-        glv_replay::Display disp((glv_window_handle)hWindow, windowWidth, windowHeight);
+        glv_replay::Display disp;
+        if(separateReplayWindow)
+        {
+            disp = glv_replay::Display(replayWindowWidth, replayWindowHeight, 0, false);
+        }
+        else
+        {
+            disp = glv_replay::Display((glv_window_handle)hWindow, replayWindowWidth, replayWindowHeight);
+        }
 
         for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
         {

@@ -76,7 +76,10 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     if (m_pReplayWidget != NULL)
     {
         // load available replayers
-        if (!load_replayers(pTraceFileInfo, m_pReplayWidget->GetReplayWindow()))
+        if (!load_replayers(pTraceFileInfo, m_pReplayWidget->GetReplayWindow(),
+            g_xglDebugSettings.replay_window_width,
+            g_xglDebugSettings.replay_window_height,
+            g_xglDebugSettings.separate_replay_window))
         {
             m_pView->output_error("Failed to load necessary replayers.");
             delete m_pReplayWidget;
