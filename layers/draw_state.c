@@ -1390,7 +1390,7 @@ static void synchAndPrintDSConfig(const XGL_CMD_BUFFER cb)
     printDSConfig(cb);
     printPipeline(cb);
     printDynamicState(cb);
-    static int autoDumpOnce = 1;
+    static int autoDumpOnce = 0;
     if (autoDumpOnce) {
         autoDumpOnce = 0;
         dumpDotFile(cb, "pipeline_dump.dot");
@@ -2326,10 +2326,12 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
         addCmd(pCB, CMD_BINDDESCRIPTORSET);
         if (getSetNode(descriptorSet)) {
             if (dsUpdateActive(descriptorSet)) {
-                // TODO : Not sure if it's valid to made this check here. May need to make at QueueSubmit time
+                // TODO : This check here needs to be made at QueueSubmit time
+/*
                 char str[1024];
                 sprintf(str, "You must call xglEndDescriptorRegionUpdate(%p) before this call to xglCmdBindDescriptorSet()!", (void*)descriptorSet);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
+*/
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->lastBoundDescriptorSet = descriptorSet;
