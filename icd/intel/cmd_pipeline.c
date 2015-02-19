@@ -1973,39 +1973,38 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 }
 
 static uint32_t gen6_meta_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
-                                         const struct intel_cmd_meta *meta)
+                                              const struct intel_cmd_meta *meta)
 {
     const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
     const uint8_t cmd_len = 3;
     uint32_t dw[3];
-    uint32_t cmd_depth_stencil;
-    uint32_t cmd_depth_test;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    cmd_depth_stencil = 0;
-    cmd_depth_test = 0;
     if (meta->ds.aspect == XGL_IMAGE_ASPECT_DEPTH) {
-        cmd_depth_test |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE |
-                          GEN6_COMPAREFUNCTION_ALWAYS << 27;
-    }
-    else if (meta->ds.aspect == XGL_IMAGE_ASPECT_STENCIL) {
-        cmd_depth_stencil = 1 << 31 |
+        dw[0] = 0;
+        dw[1] = 0;
+        dw[2] = GEN6_COMPAREFUNCTION_ALWAYS << 27 |
+                GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
+    } else if (meta->ds.aspect == XGL_IMAGE_ASPECT_STENCIL) {
+        dw[0] = GEN6_ZS_DW0_STENCIL_TEST_ENABLE |
                 (GEN6_COMPAREFUNCTION_ALWAYS) << 28 |
                 (GEN6_STENCILOP_KEEP) << 25 |
                 (GEN6_STENCILOP_KEEP) << 22 |
                 (GEN6_STENCILOP_REPLACE) << 19 |
-                1 << 15 |
+                GEN6_ZS_DW0_STENCIL_WRITE_ENABLE |
+                GEN6_ZS_DW0_STENCIL1_ENABLE |
                 (GEN6_COMPAREFUNCTION_ALWAYS) << 12 |
                 (GEN6_STENCILOP_KEEP) << 9 |
                 (GEN6_STENCILOP_KEEP) << 6 |
                 (GEN6_STENCILOP_REPLACE) << 3;
-    }
 
-    cmd_depth_test |= GEN6_COMPAREFUNCTION_ALWAYS << 27;
-    dw[0] = cmd_depth_stencil | 1 << 18;
-    dw[1] = (0xff) << 24 | (0xff) << 16;
-    dw[2] = cmd_depth_test;
+        dw[1] = 0xff << GEN6_ZS_DW1_STENCIL0_VALUEMASK__SHIFT |
+                0xff << GEN6_ZS_DW1_STENCIL0_WRITEMASK__SHIFT |
+                0xff << GEN6_ZS_DW1_STENCIL1_VALUEMASK__SHIFT |
+                0xff << GEN6_ZS_DW1_STENCIL1_WRITEMASK__SHIFT;
+        dw[2] = 0;
+    }
 
     return cmd_state_write(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
             cmd_align, cmd_len, dw);
