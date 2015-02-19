@@ -840,8 +840,13 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
         meta->dst.lod = range->baseMipLevel + i;
         meta->dst.layer = range->baseArraySlice;
 
+        /* TODO INTEL_CMD_META_DS_HIZ_CLEAR requires 8x4 aligned rectangle */
         meta->width = u_minify(img->layout.width0, meta->dst.lod);
         meta->height = u_minify(img->layout.height0, meta->dst.lod);
+
+        if (meta->ds.op != INTEL_CMD_META_DS_NOP &&
+            !intel_img_can_enable_hiz(img, meta->dst.lod))
+            continue;
 
         for (j = 0; j < array_size; j++) {
             if (range->aspect == XGL_IMAGE_ASPECT_COLOR) {
@@ -863,6 +868,29 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
             meta->dst.layer++;
         }
     }
+}
+
+void cmd_meta_ds_op(struct intel_cmd *cmd,
+                    enum intel_cmd_meta_ds_op op,
+                    struct intel_img *img,
+                    const XGL_IMAGE_SUBRESOURCE_RANGE *range)
+{
+    struct intel_cmd_meta meta;
+
+    if (img->layout.aux != INTEL_LAYOUT_AUX_HIZ)
+        return;
+    if (range->aspect != XGL_IMAGE_ASPECT_DEPTH)
+        return;
+
+    memset(&meta, 0, sizeof(meta));
+    meta.mode = INTEL_CMD_META_DEPTH_STENCIL_RECT;
+    meta.samples = img->samples;
+
+    meta.ds.aspect = XGL_IMAGE_ASPECT_DEPTH;
+    meta.ds.op = op;
+    meta.ds.optimal = true;
+
+    cmd_meta_clear_image(cmd, img, img->layout.format, &meta, range);
 }
 
 ICD_EXPORT void XGLAPI xglCmdClearColorImage(
@@ -941,6 +969,9 @@ ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
 
     meta.clear_val[0] = u_fui(depth);
     meta.clear_val[1] = stencil;
+
+    /* assume optimal DS until revision 59 */
+    meta.ds.optimal = true;
 
     for (i = 0; i < rangeCount; i++) {
         const XGL_IMAGE_SUBRESOURCE_RANGE *range = &pRanges[i];

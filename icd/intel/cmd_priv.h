@@ -97,6 +97,13 @@ enum intel_cmd_meta_mode {
     INTEL_CMD_META_DEPTH_STENCIL_RECT,
 };
 
+enum intel_cmd_meta_ds_op {
+    INTEL_CMD_META_DS_NOP,
+    INTEL_CMD_META_DS_HIZ_CLEAR,
+    INTEL_CMD_META_DS_HIZ_RESOLVE,
+    INTEL_CMD_META_DS_RESOLVE,
+};
+
 struct intel_cmd_meta {
     enum intel_cmd_meta_mode mode;
     enum intel_dev_meta_shader shader_id;
@@ -119,6 +126,9 @@ struct intel_cmd_meta {
         struct intel_ds_view *view;
         uint32_t stencil_ref;
         XGL_IMAGE_ASPECT aspect;
+
+        enum intel_cmd_meta_ds_op op;
+        bool optimal;
     } ds;
 
     uint32_t clear_val[4];
@@ -503,5 +513,10 @@ void cmd_batch_immediate(struct intel_cmd *cmd,
                          uint64_t val);
 
 void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta);
+
+void cmd_meta_ds_op(struct intel_cmd *cmd,
+                    enum intel_cmd_meta_ds_op op,
+                    struct intel_img *img,
+                    const XGL_IMAGE_SUBRESOURCE_RANGE *range);
 
 #endif /* CMD_PRIV_H */

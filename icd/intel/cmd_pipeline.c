@@ -711,7 +711,8 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 }
 
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
-                                      const struct intel_ds_view *view)
+                                      const struct intel_ds_view *view,
+                                      bool optimal_ds)
 {
     const uint8_t cmd_len = 7;
     uint32_t dw0, *dw;
@@ -726,7 +727,12 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
 
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
+
     dw[1] = view->cmd[0];
+    /* note that we only enable HiZ on Gen7+ */
+    if (!optimal_ds)
+        dw[1] &= ~GEN7_DEPTH_DW1_HIZ_ENABLE;
+
     dw[2] = 0;
     dw[3] = view->cmd[2];
     dw[4] = view->cmd[3];
@@ -741,7 +747,8 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
 }
 
 static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
-                                        const struct intel_ds_view *view)
+                                        const struct intel_ds_view *view,
+                                        bool optimal_ds)
 {
     const uint8_t cmd_len = 3;
     uint32_t dw0, *dw;
@@ -770,7 +777,8 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
 }
 
 static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
-                                           const struct intel_ds_view *view)
+                                           const struct intel_ds_view *view,
+                                           bool optimal_ds)
 {
     const uint8_t cmd_len = 3;
     uint32_t dw0, *dw;
@@ -786,7 +794,7 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
 
-    if (view->has_hiz) {
+    if (view->has_hiz && optimal_ds) {
         dw[1] = view->cmd[8];
 
         cmd_reserve_reloc(cmd, 1);
@@ -1822,7 +1830,8 @@ static void emit_rt(struct intel_cmd *cmd)
 
 static void emit_ds(struct intel_cmd *cmd)
 {
-    const struct intel_ds_view *ds = cmd->bind.render_pass->fb->ds;
+    const struct intel_fb *fb = cmd->bind.render_pass->fb;
+    const struct intel_ds_view *ds = fb->ds;
 
     if (!ds) {
         /* all zeros */
@@ -1831,9 +1840,9 @@ static void emit_ds(struct intel_cmd *cmd)
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, false);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, false);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, false);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
@@ -1984,8 +1993,15 @@ static uint32_t gen6_meta_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
     if (meta->ds.aspect == XGL_IMAGE_ASPECT_DEPTH) {
         dw[0] = 0;
         dw[1] = 0;
-        dw[2] = GEN6_COMPAREFUNCTION_ALWAYS << 27 |
-                GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
+
+        if (meta->ds.op == INTEL_CMD_META_DS_RESOLVE) {
+            dw[2] = GEN6_ZS_DW2_DEPTH_TEST_ENABLE |
+                    GEN6_COMPAREFUNCTION_NEVER << 27 |
+                    GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
+        } else {
+            dw[2] = GEN6_COMPAREFUNCTION_ALWAYS << 27 |
+                    GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
+        }
     } else if (meta->ds.aspect == XGL_IMAGE_ASPECT_STENCIL) {
         dw[0] = GEN6_ZS_DW0_STENCIL_TEST_ENABLE |
                 (GEN6_COMPAREFUNCTION_ALWAYS) << 28 |
@@ -2698,7 +2714,22 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
         dw[1] = 0;
         dw[2] = 0;
         dw[3] = 0;
-        dw[4] = 0;
+
+        switch (meta->ds.op) {
+        case INTEL_CMD_META_DS_HIZ_CLEAR:
+            dw[4] = GEN6_WM_DW4_DEPTH_CLEAR;
+            break;
+        case INTEL_CMD_META_DS_HIZ_RESOLVE:
+            dw[4] = GEN6_WM_DW4_HIZ_RESOLVE;
+            break;
+        case INTEL_CMD_META_DS_RESOLVE:
+            dw[4] = GEN6_WM_DW4_DEPTH_RESOLVE;
+            break;
+        default:
+            dw[4] = 0;
+            break;
+        }
+
         dw[5] = (sh->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
         dw[6] = 0;
         dw[7] = 0;
@@ -2764,7 +2795,23 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
         /* 3DSTATE_WM */
         cmd_batch_pointer(cmd, 3, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (3 - 2);
-        memset(&dw[1], 0, sizeof(*dw) * (3 - 1));
+
+        switch (meta->ds.op) {
+        case INTEL_CMD_META_DS_HIZ_CLEAR:
+            dw[1] = GEN7_WM_DW1_DEPTH_CLEAR;
+            break;
+        case INTEL_CMD_META_DS_HIZ_RESOLVE:
+            dw[1] = GEN7_WM_DW1_HIZ_RESOLVE;
+            break;
+        case INTEL_CMD_META_DS_RESOLVE:
+            dw[1] = GEN7_WM_DW1_DEPTH_RESOLVE;
+            break;
+        default:
+            dw[1] = 0;
+            break;
+        }
+
+        dw[2] = 0;
 
         /* 3DSTATE_CONSTANT_GS */
         cmd_batch_pointer(cmd, 7, &dw);
@@ -2850,9 +2897,9 @@ static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, meta->ds.optimal);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, meta->ds.optimal);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, meta->ds.optimal);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
