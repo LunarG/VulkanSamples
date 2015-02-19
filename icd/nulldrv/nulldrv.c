@@ -2029,3 +2029,29 @@ ICD_EXPORT void XGLAPI xglCmdEndRenderPass(
 {
     NULLDRV_LOG_FUNC;
 }
+
+ICD_EXPORT void* xcbCreateWindow(
+    uint16_t         width,
+    uint16_t         height)
+{
+    static uint32_t  window;  // Kludge to the max
+    NULLDRV_LOG_FUNC;
+    return &window;
+}
+
+// May not be needed, if we stub out stuf in tri.c
+ICD_EXPORT void xcbDestroyWindow()
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT int xcbGetMessage(void *msg)
+{
+    NULLDRV_LOG_FUNC;
+    return 0;
+}
+
+ICD_EXPORT XGL_RESULT xcbQueuePresent(void *queue, void *image, void* fence)
+{
+    return XGL_SUCCESS;
+}

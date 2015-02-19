@@ -30,3 +30,7 @@ EXPORTS
    xglCreateInstance
    xglEnumerateGpus
    xglDestroyInstance
+   xcbCreateWindow
+   xcbDestroyWindow
+   xcbGetMessage
+   xcbQueuePresent
