@@ -50,12 +50,6 @@ static inline bool intel_format_is_depth(const struct intel_gpu *gpu,
     return is_depth;
 }
 
-static inline bool intel_format_is_stencil(const struct intel_gpu *gpu,
-                                           XGL_FORMAT format)
-{
-   return format == XGL_FMT_S8_UINT;
-}
-
 int intel_format_translate_color(const struct intel_gpu *gpu,
                                  XGL_FORMAT format);
 

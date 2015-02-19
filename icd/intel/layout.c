@@ -259,7 +259,7 @@ layout_init_lods(struct intel_layout *layout,
 
          /* every LOD begins at tile boundaries */
          if (info->mipLevels > 1) {
-            intel_format_is_stencil(params->gpu, layout->format);
+            assert(layout->format == XGL_FMT_S8_UINT);
             cur_x = u_align(cur_x, 64);
             cur_y = u_align(cur_y, 64);
          }
@@ -632,7 +632,7 @@ layout_init_walk_gen6(struct intel_layout *layout,
     */
    layout->walk =
       (params->info->imageType == XGL_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
-      intel_format_is_stencil(params->gpu, layout->format) ? INTEL_LAYOUT_WALK_LOD :
+      (layout->format == XGL_FMT_S8_UINT) ? INTEL_LAYOUT_WALK_LOD :
       INTEL_LAYOUT_WALK_LAYER;
 
    /* GEN6 supports only interleaved samples */
@@ -927,7 +927,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
          align_h = 32;
          break;
       default:
-         if (intel_format_is_stencil(params->gpu, layout->format)) {
+         if (layout->format == XGL_FMT_S8_UINT) {
             /*
              * From the Sandy Bridge PRM, volume 1 part 2, page 22:
              *
