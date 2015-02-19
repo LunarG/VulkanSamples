@@ -32,22 +32,25 @@
 
 struct intel_gpu;
 
-static inline bool intel_format_is_depth(const struct intel_gpu *gpu,
-                                         XGL_FORMAT format)
+static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
+                                          XGL_FORMAT format)
 {
-    bool is_depth = false;
+    bool has_depth = false;
 
     switch (format) {
     case XGL_FMT_D16_UNORM:
     case XGL_FMT_D24_UNORM:
     case XGL_FMT_D32_SFLOAT:
-        is_depth = true;
+    /* XGL_FMT_D16_UNORM_S8_UINT is unsupported */
+    case XGL_FMT_D24_UNORM_S8_UINT:
+    case XGL_FMT_D32_SFLOAT_S8_UINT:
+        has_depth = true;
         break;
     default:
         break;
     }
 
-    return is_depth;
+    return has_depth;
 }
 
 int intel_format_translate_color(const struct intel_gpu *gpu,

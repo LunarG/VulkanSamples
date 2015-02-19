@@ -765,7 +765,7 @@ layout_want_hiz(const struct intel_layout *layout,
    if (!(info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT))
       return false;
 
-   if (!intel_format_is_depth(params->gpu, info->format))
+   if (!intel_format_has_depth(params->gpu, info->format))
       return false;
 
    /*
