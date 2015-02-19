@@ -672,16 +672,16 @@ static uint32_t getUpdateUpperBound(GENERIC_HEADER* pUpdateStruct)
     switch (pUpdateStruct->sType)
     {
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return (((XGL_UPDATE_SAMPLERS*)pUpdateStruct)->count + ((XGL_UPDATE_SAMPLERS*)pUpdateStruct)->index) - 1;
+            return (((XGL_UPDATE_SAMPLERS*)pUpdateStruct)->count + ((XGL_UPDATE_SAMPLERS*)pUpdateStruct)->index);
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return (((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->count + ((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->index) - 1;
+            return (((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->count + ((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->index);
         case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return (((XGL_UPDATE_IMAGES*)pUpdateStruct)->count + ((XGL_UPDATE_IMAGES*)pUpdateStruct)->index) - 1;
+            return (((XGL_UPDATE_IMAGES*)pUpdateStruct)->count + ((XGL_UPDATE_IMAGES*)pUpdateStruct)->index);
         case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return (((XGL_UPDATE_BUFFERS*)pUpdateStruct)->count + ((XGL_UPDATE_BUFFERS*)pUpdateStruct)->index) - 1;
+            return (((XGL_UPDATE_BUFFERS*)pUpdateStruct)->count + ((XGL_UPDATE_BUFFERS*)pUpdateStruct)->index);
         case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
             // TODO : Need to understand this case better and make sure code is correct
-            return (((XGL_UPDATE_AS_COPY*)pUpdateStruct)->count + ((XGL_UPDATE_AS_COPY*)pUpdateStruct)->descriptorIndex) - 1;
+            return (((XGL_UPDATE_AS_COPY*)pUpdateStruct)->count + ((XGL_UPDATE_AS_COPY*)pUpdateStruct)->descriptorIndex);
         default:
             // TODO : Flag specific error for this case
             return 0;
@@ -716,7 +716,7 @@ static bool32_t validateUpdateType(GENERIC_HEADER* pUpdateStruct, const LAYOUT_N
             // TODO : Flag specific error for this case
             return 0;
     }
-    for (i = ((XGL_UPDATE_SAMPLERS*)pUpdateStruct)->index; i < bound; i++) {
+    for (i = getUpdateIndex(pUpdateStruct); i < bound; i++) {
         if (pLayout->pTypes[i] != actualType)
             return 0;
     }
@@ -726,7 +726,7 @@ static bool32_t validateUpdateType(GENERIC_HEADER* pUpdateStruct, const LAYOUT_N
 // Verify that update region for this update does not exceed max layout index for this type
 static bool32_t validateUpdateSize(GENERIC_HEADER* pUpdateStruct, uint32_t layoutIdx)
 {
-    if (getUpdateUpperBound(pUpdateStruct) > layoutIdx)
+    if ((getUpdateUpperBound(pUpdateStruct)-1) > layoutIdx)
         return 0;
     return 1;
 }
@@ -870,10 +870,8 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
                     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS", str);
                 }
                 else {
-                    // Finally perform the update
+                    // Save the update info
                     // TODO : Info message that update successful
-                    GENERIC_HEADER* pUpdateInsert = pSet->pUpdateStructs;
-                    GENERIC_HEADER* pPrev = pUpdateInsert;
                     // Create new update struct for this set's shadow copy
                     GENERIC_HEADER* pNewNode = shadowUpdateNode(pUpdates);
                     if (NULL == pNewNode) {
@@ -882,19 +880,12 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
                         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
                     }
                     else {
-                        if (!pUpdateInsert) {
-                            pSet->pUpdateStructs = pNewNode;
-                        }
-                        else {
-                            // Find either the existing, matching region, or end of list for initial update chain
-                            // TODO : Need to validate this, I suspect there are holes in this algorithm
-                            uint32_t totalIndex = 0;
-                            while (pUpdateInsert && (getUpdateIndex(pUpdates) != totalIndex)) {
-                                totalIndex = getUpdateUpperBound(pUpdates);
-                                pPrev = pUpdateInsert;
-                                pUpdateInsert = (GENERIC_HEADER*)pUpdateInsert->pNext;
-                            }
-                            pPrev->pNext = pNewNode;
+                        // Insert shadow node into LL of updates for this set
+                        pNewNode->pNext = pSet->pUpdateStructs;
+                        pSet->pUpdateStructs = pNewNode;
+                        // Now update appropriate descriptor(s) to point to new Update node
+                        for (uint32_t i = getUpdateIndex(pUpdates); i < getUpdateUpperBound(pUpdates); i++) {
+                            pSet->ppDescriptors[i] = pNewNode;
                         }
                     }
                 }
@@ -993,8 +984,14 @@ static void freeRegions()
             // Freeing layouts handled in freeLayouts() function
             // Free Update shadow struct tree
             freeShadowUpdateTree(pFreeSet->pUpdateStructs);
+            if (pFreeSet->ppDescriptors) {
 #if ALLOC_DEBUG
-    printf("Free32 #%lu pSet addr(%p)\n", ++g_free_count, (void*)pFreeSet);
+                printf("Free35 #%lu pSet->ppDescriptors addr(%p)\n", ++g_free_count, (void*)pFreeSet->ppDescriptors);
+#endif
+                free(pFreeSet->ppDescriptors);
+            }
+#if ALLOC_DEBUG
+            printf("Free32 #%lu pSet addr(%p)\n", ++g_free_count, (void*)pFreeSet);
 #endif
             free(pFreeSet);
         }
@@ -1259,7 +1256,7 @@ static void dumpDotFile(const XGL_CMD_BUFFER cb, char *outFileName)
             fprintf(pOutFile, "subgraph cluster_dynamicState\n{\nlabel=\"Dynamic State\"\n");
             char* pGVstr = NULL;
             for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
-                if (pCB->lastBoundDynamicState[i]) {
+                if (pCB->lastBoundDynamicState[i] && pCB->lastBoundDynamicState[i]->pCreateInfo) {
                     pGVstr = dynamic_gv_display(pCB->lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i));
                     fprintf(pOutFile, "%s", pGVstr);
                     free(pGVstr);
@@ -1940,7 +1937,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
 #endif
             memcpy((void*)*ppNext, pCITrav, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
             pCITrav = (void*)((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pCITrav)->pNext;
-            *ppNext = (void*)((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)*ppNext)->pNext;
+            ppNext = (void**)&((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)*ppNext)->pNext;
         }
         if (totalCount > 0) {
             pNewNode->pTypes = (XGL_DESCRIPTOR_TYPE*)malloc(totalCount*sizeof(XGL_DESCRIPTOR_TYPE));
@@ -1948,10 +1945,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
     printf("Alloc29 #%lu pNewNode->pTypes addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pTypes);
 #endif
             XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLCI = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pSetLayoutInfoList;
+            uint32_t offset = 0;
+            uint32_t i = 0;
             while (pLCI) {
-                for (uint32_t i = 0; i < pLCI->count; i++) {
-                    pNewNode->pTypes[i] = pLCI->descriptorType;
+                for (i = 0; i < pLCI->count; i++) {
+                    pNewNode->pTypes[offset + i] = pLCI->descriptorType;
                 }
+                offset += i;
                 pLCI = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pLCI->pNext;
             }
         }
@@ -2114,7 +2114,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
                 // Create new set node and add to head of region nodes
                 SET_NODE* pNewNode = (SET_NODE*)malloc(sizeof(SET_NODE));
 #if ALLOC_DEBUG
-    printf("Alloc32 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+                printf("Alloc32 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
 #endif
                 if (NULL == pNewNode) {
                     char str[1024];
@@ -2136,8 +2136,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
                     pNewNode->region = descriptorRegion;
                     pNewNode->set = pDescriptorSets[i];
                     pNewNode->setUsage = setUsage;
-                    // TODO : Make sure to set this correctly
                     pNewNode->descriptorCount = pLayout->endIndex + 1;
+                    size_t descriptorArraySize = sizeof(GENERIC_HEADER*)*pNewNode->descriptorCount;
+                    pNewNode->ppDescriptors = (GENERIC_HEADER**)malloc(descriptorArraySize);
+#if ALLOC_DEBUG
+                    printf("Alloc35 #%lu pSet->ppDescriptors addr(%p)\n", ++g_alloc_count, (void*)pNewNode->ppDescriptors);
+#endif
+                    memset(pNewNode->ppDescriptors, 0, descriptorArraySize);
                 }
             }
         }
@@ -2221,9 +2226,16 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (XGL_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-        if (CB_NEW != pCB->state)
-            resetCB(cmdBuffer);
-        pCB->state = CB_UPDATE_ACTIVE;
+        if (pCB) {
+            if (CB_NEW != pCB->state)
+                resetCB(cmdBuffer);
+            pCB->state = CB_UPDATE_ACTIVE;
+        }
+        else {
+            char str[1024];
+            sprintf(str, "In xglBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        }
         g_lastCmdBuffer = cmdBuffer;
     }
     return result;
@@ -2234,9 +2246,16 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
     XGL_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
     if (XGL_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-        pCB->state = CB_UPDATE_COMPLETE;
+        if (pCB) {
+            pCB->state = CB_UPDATE_COMPLETE;
+            printCB(cmdBuffer);
+        }
+        else {
+            char str[1024];
+            sprintf(str, "In xglEndCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        }
         g_lastCmdBuffer = cmdBuffer;
-        printCB(cmdBuffer);
     }
     return result;
 }

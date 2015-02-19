@@ -119,15 +119,15 @@ typedef struct _LAYOUT_NODE {
     struct _LAYOUT_NODE*                         pPriorSetLayout; // Points to node w/ priorSetLayout
     struct _LAYOUT_NODE*                         pNext; // Point to next layout in global LL chain of layouts
 } LAYOUT_NODE;
-
 typedef struct _SET_NODE {
     XGL_DESCRIPTOR_SET                           set;
     XGL_DESCRIPTOR_REGION                        region;
     XGL_DESCRIPTOR_SET_USAGE                     setUsage;
-    // Head of LL of Update structs for this set
+    // Head of LL of all Update structs for this set
     GENERIC_HEADER*                              pUpdateStructs;
     // Total num of descriptors in this set (count of its layout plus all prior layouts)
     uint32_t                                     descriptorCount;
+    GENERIC_HEADER**                             ppDescriptors; // Array where each index points to update node for its slot
     LAYOUT_NODE*                                 pLayouts;
     struct _SET_NODE*                            pNext;
 } SET_NODE;
