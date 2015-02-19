@@ -100,13 +100,7 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     m_pTraceFileModel = new glvdebug_xgl_QFileModel(NULL, pTraceFileInfo);
     updateCallTreeBasedOnSettings();
 
-    QProcess process;
-#if defined(PLATFORM_LINUX)
-    process.start("rm pipeline_dump.dot pipeline_dump.svg");
-#elif defined(WIN32)
-    // TODO: Windows.
-#endif
-    process.waitForFinished(-1);
+    deleteStateDumps();
 
     return true;
 }
@@ -134,6 +128,12 @@ void glvdebug_xgl_QController::updateCallTreeBasedOnSettings()
     }
 }
 
+void glvdebug_xgl_QController::deleteStateDumps() const
+{
+    QFile::remove("pipeline_dump.dot");
+    QFile::remove("pipeline_dump.svg");
+}
+
 void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 {
     if(m_pSvgDiagram != NULL)
@@ -152,6 +152,7 @@ void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 
 void glvdebug_xgl_QController::onReplayStarted()
 {
+    deleteStateDumps();
     setStateWidgetsEnabled(false);
 }
 
@@ -178,7 +179,7 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         // Check if DOT is available.
 #if defined(PLATFORM_LINUX)
         QFileInfo fileInfo(tr("/usr/bin/dot"));
-#elif defined(WIN32)
+#elif defined(PLATFORM_WINDOWS)
         // TODO: Windows path to DOT?
         QFileInfo fileInfo(tr(""));
 #endif
@@ -188,9 +189,13 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         }
         else
         {
+#if defined(PLATFORM_LINUX)
             QProcess process;
             process.start("/usr/bin/dot pipeline_dump.dot -Tsvg -o pipeline_dump.svg");
             process.waitForFinished(-1);
+#else
+            assert(!"State Diagram not supported on this platform");
+#endif
         }
 
         if(m_pSvgDiagram->load(tr("pipeline_dump.svg")))
@@ -202,6 +207,7 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
 void glvdebug_xgl_QController::onReplayContinued()
 {
+    deleteStateDumps();
     setStateWidgetsEnabled(false);
 }
 

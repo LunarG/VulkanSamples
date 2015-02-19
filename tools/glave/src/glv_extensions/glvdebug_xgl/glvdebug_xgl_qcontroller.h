@@ -74,6 +74,7 @@ private:
 
     void setStateWidgetsEnabled(bool bEnabled);
     void updateCallTreeBasedOnSettings();
+    void deleteStateDumps() const;
 };
 
 #endif // GLVDEBUG_XGL_QCONTROLLER_H
