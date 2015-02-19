@@ -792,8 +792,8 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 #endif
             baseBuffAddr = (size_t)(*pppLocalImageViews) + base_array_size;
             for (uint32_t i = 0; i < pUICI->count; i++) {
-                *pppLocalImageViews[i] = (XGL_IMAGE_VIEW_ATTACH_INFO*)(baseBuffAddr + (i * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO)));
-                memcpy(*pppLocalImageViews[i], pUICI->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
+                (*pppLocalImageViews)[i] = (XGL_IMAGE_VIEW_ATTACH_INFO*)(baseBuffAddr + (i * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO)));
+                memcpy((*pppLocalImageViews)[i], pUICI->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
             }
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
@@ -813,8 +813,8 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             baseBuffAddr = (size_t)(*pppLocalBufferViews) + base_array_size;
             for (uint32_t i = 0; i < pUBCI->count; i++) {
                 // Set ptr and then copy data into that ptr
-                *pppLocalBufferViews[i] = (XGL_BUFFER_VIEW_ATTACH_INFO*)(baseBuffAddr + (i * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO)));
-                memcpy(*pppLocalBufferViews[i], pUBCI->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));
+                (*pppLocalBufferViews)[i] = (XGL_BUFFER_VIEW_ATTACH_INFO*)(baseBuffAddr + (i * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO)));
+                memcpy((*pppLocalBufferViews)[i], pUBCI->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO));
             }
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
