@@ -41,7 +41,6 @@ extern "C" {
 
 glvdebug_xgl_QController::glvdebug_xgl_QController()
     : m_pSvgDiagram(NULL),
-      m_pSvgDiagramTabIndex(-1),
       m_pReplayWidget(NULL),
       m_pTraceFileModel(NULL)
 {
@@ -138,15 +137,7 @@ void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 {
     if(m_pSvgDiagram != NULL)
     {
-        if(bEnabled)
-        {
-            m_pSvgDiagramTabIndex = m_pView->add_custom_state_viewer(m_pSvgDiagram, tr("Draw State Diagram"), false);
-        }
-        else
-        {
-            m_pView->remove_custom_state_viewer(m_pSvgDiagramTabIndex);
-            m_pSvgDiagramTabIndex = -1;
-        }
+        m_pSvgDiagram->setEnabled(bEnabled);
     }
 }
 
@@ -163,6 +154,7 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         m_pSvgDiagram = new glvdebug_qsvgviewer;
         if(m_pSvgDiagram != NULL)
         {
+            m_pView->add_custom_state_viewer(m_pSvgDiagram, tr("Draw State Diagram"), false);
             setStateWidgetsEnabled(false);
         }
     }
@@ -285,7 +277,6 @@ void glvdebug_xgl_QController::UnloadTraceFile(void)
     {
         delete m_pSvgDiagram;
         m_pSvgDiagram = NULL;
-        m_pSvgDiagramTabIndex = -1;
     }
 
     // Clean up replayers

@@ -36,11 +36,15 @@ class glvdebug_qsvgviewer : public QGraphicsView
     Q_OBJECT
 public:
     glvdebug_qsvgviewer(QWidget* parent = 0) :
-        QGraphicsView(parent)
+        QGraphicsView(parent),
+        disabledScene(NULL),
+        enabledScene(NULL)
     {
         // The destructor for QGraphicsScene will be called when this QGraphicsView is
         // destroyed.
-        this->setScene(new QGraphicsScene(this));
+        enabledScene = new QGraphicsScene(this);
+        disabledScene = new QGraphicsScene(this);
+        this->setScene(disabledScene);
 
         // Anchor the point under the mouse during view transformations.
         this->setTransformationAnchor(AnchorUnderMouse);
@@ -51,6 +55,25 @@ public:
         // Always update the entire viewport. Don't waste time trying to figure out
         // which items need to be updated since there is only one.
         this->setViewportUpdateMode(FullViewportUpdate);
+    }
+
+    void changeEvent(QEvent* event)
+    {
+        switch(event->type())
+        {
+            case QEvent::EnabledChange:
+                if(this->isEnabled())
+                {
+                    this->setScene(enabledScene);
+                }
+                else
+                {
+                    this->setScene(disabledScene);
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     void wheelEvent(QWheelEvent* event)
@@ -81,16 +104,20 @@ public:
 
         this->resetTransform();
 
-        this->scene()->clear();
+        enabledScene->clear();
 
         // The destructor for QGraphicsSvgItem will be called when the scene is cleared.
         // This occurs when a SVG is loaded or when the QGraphicsScene is destroyed.
-        this->scene()->addItem(new QGraphicsSvgItem(fileName));
+        enabledScene->addItem(new QGraphicsSvgItem(fileName));
 
-        this->fitInView(this->scene()->itemsBoundingRect(), Qt::KeepAspectRatio);
+        this->fitInView(enabledScene->itemsBoundingRect(), Qt::KeepAspectRatio);
 
         return true;
     }
+
+private:
+    QGraphicsScene* disabledScene;
+    QGraphicsScene* enabledScene;
 };
 
 #endif // _GLVDEBUG_QSVGVIEWER_H_
