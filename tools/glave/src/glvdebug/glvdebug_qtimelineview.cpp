@@ -280,7 +280,7 @@ void glvdebug_QTimelineView::calculateRectsIfNecessary()
         return;
     }
 
-    int itemHeight = m_threadHeight/2;
+    int itemHeight = m_threadHeight * 0.4;
 
     for (int threadIndex = 0; threadIndex < m_threadIdList.size(); threadIndex++)
     {
@@ -579,20 +579,25 @@ void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& r
 {
     int numThreads = threadList.count();
 
-    int height = (numThreads > 0) ? rect.height() / numThreads : rect.height();
+    painter->save();
+    QFont font = painter->font();
+    int fontHeight = qMin((int)(m_threadHeight * 0.3), font.pointSize());
+    font.setPointSize(fontHeight);
+    painter->setFont(font);
 
     for (int i = 0; i < numThreads; i++)
     {
-        int threadTop = (i*height);
+        int threadTop = (i*m_threadHeight);
 
-        painter->drawText(0, threadTop + 15, QString("Thread %1").arg(threadList[i]));
+        painter->drawText(0, threadTop + fontHeight, QString("Thread %1").arg(threadList[i]));
 
         // draw the timeline in the middle of this thread's area
         int lineStart = m_margin - horizontalOffset();
         int lineEnd = lineStart + scaleDurationHorizontally(m_lineLength);
-        int lineY = threadTop + height/2;
+        int lineY = threadTop + m_threadHeight/2;
         painter->drawLine(lineStart, lineY, lineEnd, lineY);
     }
+    painter->restore();
 }
 
 //-----------------------------------------------------------------------------
