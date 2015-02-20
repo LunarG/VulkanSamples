@@ -26,9 +26,10 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
+#include "xglIcd.h"
 #include "icd-enumerate-drm.h"
 #include "gpu.h"
-#include "intel.h"
+#include "instance.h"
 
 static int intel_devid_override;
 int intel_debug = -1;
@@ -77,42 +78,29 @@ static void intel_debug_init(void)
     }
 }
 
-static XGL_RESULT intel_instance_destroy(struct intel_instance *inst)
+static void intel_instance_destroy(struct intel_instance *instance)
 {
-    intel_base_destroy(&inst->obj.base);
     intel_gpu_remove_all();
-    return XGL_SUCCESS;
+    icd_free(instance);
 }
 
-static void inst_destroy(struct intel_obj *obj)
+static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *app_info,
+                                                    const XGL_ALLOC_CALLBACKS *alloc_cb)
 {
-    struct intel_instance *inst = intel_instance_from_obj(obj);
-
-    intel_instance_destroy(inst);
-}
-
-static XGL_RESULT intel_instance_create(
-    const XGL_APPLICATION_INFO*                 info,
-    const XGL_ALLOC_CALLBACKS*                  cb,
-    struct intel_instance**                         inst_ret)
-{
-    struct intel_instance *inst;
-    XGL_RESULT ret;
-
-    inst = (struct intel_instance *) intel_base_create(NULL, sizeof(*inst), false,
-                XGL_DBG_OBJECT_INSTANCE, info, 0);
-    if (!inst)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    inst->obj.destroy = inst_destroy;
-    inst->obj.base.get_info = intel_base_get_info;
-
-    *inst_ret = inst;
+    struct intel_instance *instance;
 
     intel_debug_init();
 
-    ret = icd_allocator_init(cb);
-    return ret;
+    instance = icd_alloc(sizeof(*instance), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    if (!instance)
+        return NULL;
+
+    memset(instance, 0, sizeof(*instance));
+    set_loader_magic_value(instance);
+
+    icd_allocator_init(alloc_cb);
+
+    return instance;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
@@ -120,13 +108,25 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
     const XGL_ALLOC_CALLBACKS*                  pAllocCb,
     XGL_INSTANCE*                               pInstance)
 {
-    return intel_instance_create(pAppInfo, pAllocCb, (struct intel_instance **) pInstance);
+    struct intel_instance *instance;
+
+    instance = intel_instance_create(pAppInfo, pAllocCb);
+    if (!instance)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    *pInstance = (XGL_INSTANCE) instance;
+
+    return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
     XGL_INSTANCE                                pInstance)
 {
-    return intel_instance_destroy((struct intel_instance *) pInstance);
+    struct intel_instance *instance = intel_instance(pInstance);
+
+    intel_instance_destroy(instance);
+
+    return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(

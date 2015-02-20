@@ -1,7 +1,7 @@
 /*
  * XGL
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,44 +25,19 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef INTEL_H
-#define INTEL_H
+#ifndef INSTANCE_H
+#define INSTANCE_H
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
+#include "intel.h"
 
-#include <xgl.h>
-#include <xglDbg.h>
-#include <xglWsiX11Ext.h>
-
-#include "icd.h"
-#include "icd-alloc.h"
-#include "icd-bil.h"
-#include "icd-format.h"
-#include "icd-log.h"
-#include "icd-utils.h"
-
-#define INTEL_API_VERSION XGL_API_VERSION
-#define INTEL_DRIVER_VERSION 0
-
-#define INTEL_GEN(gen) ((int) ((gen) * 100))
-
-#define INTEL_MAX_VERTEX_BINDING_COUNT 33
-#define INTEL_MAX_VERTEX_ELEMENT_COUNT (INTEL_MAX_VERTEX_BINDING_COUNT + 1)
-#define INTEL_MAX_RENDER_TARGETS 8
-
-enum intel_debug_flags {
-    INTEL_DEBUG_BATCH       = 1 << 0,
-
-    INTEL_DEBUG_NOHW        = 1 << 20,
-    INTEL_DEBUG_NOCACHE     = 1 << 21,
-    INTEL_DEBUG_NOHIZ       = 1 << 22,
-    INTEL_DEBUG_HANG        = 1 << 23,
+struct intel_instance {
+    /* the loader expects a "void *" at the beginning */
+    void *loader_data;
 };
 
-extern int intel_debug;
+static inline struct intel_instance *intel_instance(XGL_INSTANCE instance)
+{
+    return (struct intel_instance *) instance;
+}
 
-#endif /* INTEL_H */
+#endif /* INSTANCE_H */
