@@ -48,6 +48,7 @@ enum intel_gpu_engine_type {
     INTEL_GPU_ENGINE_COUNT
 };
 
+struct intel_instance;
 struct intel_winsys;
 struct intel_wsi_x11;
 
@@ -98,12 +99,10 @@ static inline int intel_gpu_gen(const struct intel_gpu *gpu)
 #endif
 }
 
-bool intel_gpu_is_valid(const struct intel_gpu *gpu);
-
-XGL_RESULT intel_gpu_add(int devid, const char *primary_node,
-                         const char *render_node, struct intel_gpu **gpu_ret);
-void intel_gpu_remove_all(void);
-struct intel_gpu *intel_gpu_get_list(void);
+XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
+                            const char *primary_node, const char *render_node,
+                            struct intel_gpu **gpu_ret);
+void intel_gpu_destroy(struct intel_gpu *gpu);
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
                          XGL_PHYSICAL_GPU_PROPERTIES *props);

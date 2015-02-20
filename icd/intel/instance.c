@@ -78,9 +78,30 @@ static void intel_debug_init(void)
     }
 }
 
+static void intel_instance_add_gpu(struct intel_instance *instance,
+                                   struct intel_gpu *gpu)
+{
+    gpu->next = instance->gpus;
+    instance->gpus = gpu;
+}
+
+static void intel_instance_remove_gpus(struct intel_instance *instance)
+{
+    struct intel_gpu *gpu = instance->gpus;
+
+    while (gpu) {
+        struct intel_gpu *next = gpu->next;
+
+        intel_gpu_destroy(gpu);
+        gpu = next;
+    }
+
+    instance->gpus = NULL;
+}
+
 static void intel_instance_destroy(struct intel_instance *instance)
 {
-    intel_gpu_remove_all();
+    intel_instance_remove_gpus(instance);
     icd_free(instance);
 }
 
@@ -130,16 +151,17 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
-    XGL_INSTANCE                                instance,
+    XGL_INSTANCE                                instance_,
     uint32_t                                    maxGpus,
     uint32_t*                                   pGpuCount,
     XGL_PHYSICAL_GPU*                           pGpus)
 {
+    struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;
     XGL_RESULT ret;
     uint32_t count;
 
-    intel_gpu_remove_all();
+    intel_instance_remove_gpus(instance);
 
     if (!maxGpus) {
         *pGpuCount = 0;
@@ -162,8 +184,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
         render_node = icd_drm_get_devnode(dev, ICD_DRM_MINOR_RENDER);
 
         devid = (intel_devid_override) ? intel_devid_override : dev->devid;
-        ret = intel_gpu_add(devid, primary_node, render_node, &gpu);
+        ret = intel_gpu_create(instance, devid,
+                primary_node, render_node, &gpu);
         if (ret == XGL_SUCCESS) {
+            intel_instance_add_gpu(instance, gpu);
+
             pGpus[count++] = (XGL_PHYSICAL_GPU) gpu;
             if (count >= maxGpus)
                 break;

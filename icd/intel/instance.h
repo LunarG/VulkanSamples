@@ -30,9 +30,13 @@
 
 #include "intel.h"
 
+struct intel_gpu;
+
 struct intel_instance {
     /* the loader expects a "void *" at the beginning */
     void *loader_data;
+
+    struct intel_gpu *gpus;
 };
 
 static inline struct intel_instance *intel_instance(XGL_INSTANCE instance)

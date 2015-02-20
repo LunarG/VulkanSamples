@@ -38,8 +38,6 @@
 #include "wsi_x11.h"
 #include "xglIcd.h"
 
-static struct intel_gpu *intel_gpus;
-
 static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
 #ifdef ENABLE_WSI_X11
     [INTEL_EXT_WSI_X11] = "XGL_WSI_X11",
@@ -114,16 +112,57 @@ static const char *gpu_get_name(const struct intel_gpu *gpu)
     return name;
 }
 
-static struct intel_gpu *gpu_create(int gen, int devid,
-                                    const char *primary_node,
-                                    const char *render_node)
+void intel_gpu_destroy(struct intel_gpu *gpu)
 {
-    struct intel_gpu *gpu;
+    intel_gpu_close(gpu);
+
+#ifdef ENABLE_WSI_X11
+    if (gpu->x11)
+        intel_wsi_x11_destroy(gpu->x11);
+#endif
+
+    icd_free(gpu->primary_node);
+    icd_free(gpu);
+}
+
+static int devid_to_gen(int devid)
+{
+    int gen;
+
+    if (gen_is_hsw(devid))
+        gen = INTEL_GEN(7.5);
+    else if (gen_is_ivb(devid))
+        gen = INTEL_GEN(7);
+    else if (gen_is_snb(devid))
+        gen = INTEL_GEN(6);
+    else
+        gen = -1;
+
+#ifdef INTEL_GEN_SPECIALIZED
+    if (gen != INTEL_GEN(INTEL_GEN_SPECIALIZED))
+        gen = -1;
+#endif
+
+    return gen;
+}
+
+XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
+                            const char *primary_node, const char *render_node,
+                            struct intel_gpu **gpu_ret)
+{
+    const int gen = devid_to_gen(devid);
     size_t primary_len, render_len;
+    struct intel_gpu *gpu;
+
+    if (gen < 0) {
+        icd_log(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
+                0, 0, "unsupported device id 0x%04x", devid);
+        return XGL_ERROR_INITIALIZATION_FAILED;
+    }
 
     gpu = icd_alloc(sizeof(*gpu), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!gpu)
-        return NULL;
+        return XGL_ERROR_OUT_OF_MEMORY;
 
     memset(gpu, 0, sizeof(*gpu));
     set_loader_magic_value(gpu);
@@ -137,7 +176,7 @@ static struct intel_gpu *gpu_create(int gen, int devid,
             ((render_len) ? (render_len + 1) : 0), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!gpu->primary_node) {
         icd_free(gpu);
-        return NULL;
+        return XGL_ERROR_OUT_OF_MEMORY;
     }
 
     memcpy(gpu->primary_node, primary_node, primary_len + 1);
@@ -171,100 +210,9 @@ static struct intel_gpu *gpu_create(int gen, int devid,
     gpu->primary_fd_internal = -1;
     gpu->render_fd_internal = -1;
 
-    return gpu;
-}
-
-static void gpu_destroy(struct intel_gpu *gpu)
-{
-    intel_gpu_close(gpu);
-
-#ifdef ENABLE_WSI_X11
-    if (gpu->x11)
-        intel_wsi_x11_destroy(gpu->x11);
-#endif
-
-    icd_free(gpu->primary_node);
-    icd_free(gpu);
-}
-
-/**
- * Return true if \p gpu is a valid intel_gpu.
- */
-bool intel_gpu_is_valid(const struct intel_gpu *gpu)
-{
-    const struct intel_gpu *iter = intel_gpus;
-
-    while (iter) {
-        if (iter == gpu)
-            return true;
-        iter = iter->next;
-    }
-
-    return false;
-}
-
-static int devid_to_gen(int devid)
-{
-    int gen;
-
-    if (gen_is_hsw(devid))
-        gen = INTEL_GEN(7.5);
-    else if (gen_is_ivb(devid))
-        gen = INTEL_GEN(7);
-    else if (gen_is_snb(devid))
-        gen = INTEL_GEN(6);
-    else
-        gen = -1;
-
-#ifdef INTEL_GEN_SPECIALIZED
-    if (gen != INTEL_GEN(INTEL_GEN_SPECIALIZED))
-        gen = -1;
-#endif
-
-    return gen;
-}
-
-XGL_RESULT intel_gpu_add(int devid, const char *primary_node,
-                         const char *render_node, struct intel_gpu **gpu_ret)
-{
-    const int gen = devid_to_gen(devid);
-    struct intel_gpu *gpu;
-
-    if (gen < 0) {
-        icd_log(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
-                0, 0, "unsupported device id 0x%04x", devid);
-        return XGL_ERROR_INITIALIZATION_FAILED;
-    }
-
-    gpu = gpu_create(gen, devid, primary_node, render_node);
-    if (!gpu)
-        return XGL_ERROR_OUT_OF_MEMORY;
-
-    gpu->next = intel_gpus;
-    intel_gpus = gpu;
-
     *gpu_ret = gpu;
 
     return XGL_SUCCESS;
-}
-
-void intel_gpu_remove_all(void)
-{
-    struct intel_gpu *gpu = intel_gpus;
-
-    while (gpu) {
-        struct intel_gpu *next = gpu->next;
-
-        gpu_destroy(gpu);
-        gpu = next;
-    }
-
-    intel_gpus = NULL;
-}
-
-struct intel_gpu *intel_gpu_get_list(void)
-{
-    return intel_gpus;
 }
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
