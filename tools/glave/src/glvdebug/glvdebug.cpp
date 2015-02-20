@@ -362,9 +362,6 @@ glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
     //        save_session_to_disk(get_sessionfile_path(m_openFilename, *m_pTraceReader), m_openFilename, m_pTraceReader, m_pApiCallTreeModel);
     //    }
 
-        // close any existing trace
-        close_trace_file();
-
         // try to open the new file
         if (pre_open_trace_file(tracefile) == false)
         {
@@ -529,6 +526,9 @@ void glvdebug::on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int
 
 bool glvdebug::pre_open_trace_file(const QString& filename)
 {
+    // close any existing trace
+    close_trace_file();
+
     if (open_trace_file(filename.toStdString()))
     {
         //// trace file was loaded, now attempt to open additional session data
