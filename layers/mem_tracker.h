@@ -123,7 +123,7 @@ typedef struct _GLOBAL_OBJECT_NODE {
         XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
 #endif // _WIN32
     } create_info;
-    char object_name[32];
+    char object_name[64];
 } GLOBAL_OBJECT_NODE;
 
 /*
