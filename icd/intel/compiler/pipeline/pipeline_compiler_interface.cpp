@@ -474,6 +474,17 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             bt.ubo_start     = data->base.base.binding_table.ubo_start;
             bt.ubo_count     = bt.count - data->base.base.binding_table.ubo_start;
 
+            if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->NumUniformBlocks) {
+                // If there is no UBO data to pull from, the shader is using a default uniform, which
+                // will not work in XGL.  We need a binding slot to pull from.
+                icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                        "compile error: VS reads from global, non-block uniform");
+
+                assert(0);
+                status = XGL_ERROR_BAD_PIPELINE_DATA;
+                break;
+            }
+
             // Sampler mapping data
             bt.sampler_binding = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
             bt.sampler_set     = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
@@ -592,6 +603,17 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
                                data->base.binding_table.texture_start;
             bt.ubo_start = data->base.binding_table.ubo_start;
             bt.ubo_count = bt.count - data->base.binding_table.ubo_start;
+
+            if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumUniformBlocks) {
+                // If there is no UBO data to pull from, the shader is using a default uniform, which
+                // will not work in XGL.  We need a binding slot to pull from.
+                icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                        "compile error: FS reads from global, non-block uniform");
+
+                assert(0);
+                status = XGL_ERROR_BAD_PIPELINE_DATA;
+                break;
+            }
 
             // Sampler mapping data
             bt.sampler_binding = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
