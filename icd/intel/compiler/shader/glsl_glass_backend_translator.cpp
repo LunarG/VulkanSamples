@@ -988,7 +988,7 @@ void MesaGlassTranslator::addGlobal(const llvm::GlobalVariable* global)
       type = global->getType();
 
    const ir_variable_mode irMode   = VariableQualifierToIR(qualifier);
-   const std::string&     name     = global->getName();
+   const std::string      name     = global->getName();
 
    // Remember the ir_variable_mode for this declaration
    if (globalVarModeMap.find(name) == globalVarModeMap.end()) {
@@ -1167,28 +1167,29 @@ MesaGlassTranslator::convertStructType(const llvm::Type*       structType,
 
    // Allocate an array of glsl_struct_fields of size to hold all subtypes
    glsl_struct_field *const fields = ralloc_array(shader, glsl_struct_field, containedTypeCount);
-   
-   char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
 
    for (int index = 0; index < containedTypeCount; ++index) {
       const llvm::MDNode* subMdAggregate =
          mdNode ? llvm::dyn_cast<llvm::MDNode>(mdNode->getOperand(GetAggregateMdSubAggregateOp(index))) : 0;
 
-      const char* subName;
+      std::string subName;
+      subName.reserve(20);
+
       const llvm::Type* containedType  = structType->getContainedType(index);
 
       // If there's metadata, use that field name.  Else, make up a field name.
       if (mdNode) {
-         subName = mdNode->getOperand(GetAggregateMdNameOp(index))->getName().str().c_str();
+         subName = mdNode->getOperand(GetAggregateMdNameOp(index))->getName().str();
       } else {
+         char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
          snprintf(anonFieldName, sizeof(anonFieldName), "anon_%d", index);
-         subName = anonFieldName;
+         subName.assign(anonFieldName);
       }
 
       // TODO: set arrayChild, etc properly
       MetaType metaType;
 
-      fields[index].name          = ralloc_strdup(shader, subName);
+      fields[index].name          = ralloc_strdup(shader, subName.c_str());
       fields[index].type          = llvmTypeToHirType(containedType, subMdAggregate);
 
       if (subMdAggregate) {
