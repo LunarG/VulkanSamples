@@ -139,6 +139,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
     XGL_RESULT ret;
     uint32_t count;
 
+    intel_gpu_remove_all();
+
     if (!maxGpus) {
         *pGpuCount = 0;
         return XGL_SUCCESS;
