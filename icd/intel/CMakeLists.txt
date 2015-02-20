@@ -20,7 +20,7 @@ set(sources
     cmd_pipeline.c
     desc.c
     dev.c
-    intel.c
+    instance.c
     event.c
     fb.c
     fence.c
