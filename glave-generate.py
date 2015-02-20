@@ -470,8 +470,10 @@ class Subcommand(object):
                         func_body.append('    customSize = colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) + dsSize;')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, sizeof(XGL_FRAMEBUFFER_CREATE_INFO) + sizeof(XGL_FRAMEBUFFER) + customSize);')
                     elif 'CreateRenderPass' == proto.name:
-                        func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorLoadOps != NULL && pCreateInfo->pColorStoreOps != NULL && pCreateInfo->pColorLoadClearValues != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
-                        func_body.append('    customSize = colorCount * (sizeof(XGL_ATTACHMENT_LOAD_OP) + sizeof(XGL_ATTACHMENT_STORE_OP) + sizeof(XGL_CLEAR_COLOR));')
+                        func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && (pCreateInfo->pColorLoadOps != NULL || pCreateInfo->pColorStoreOps != NULL || pCreateInfo->pColorLoadClearValues != NULL)) ? pCreateInfo->colorAttachmentCount : 0;')
+                        func_body.append('    customSize = colorCount * ((pCreateInfo->pColorLoadOps != NULL) ? sizeof(XGL_ATTACHMENT_LOAD_OP) : 0);')
+                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorStoreOps != NULL) ? sizeof(XGL_ATTACHMENT_STORE_OP) : 0);')
+                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorLoadClearValues != NULL) ? sizeof(XGL_CLEAR_COLOR) : 0);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
                     elif 'BeginCommandBuffer' == proto.name:
                         func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
