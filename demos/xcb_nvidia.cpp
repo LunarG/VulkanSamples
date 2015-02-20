@@ -37,11 +37,11 @@ std::deque<XcbId> g_xcbIds;
 
 xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
 {
-    std::string xglNvidia = getenv(DRIVER_PATH_ENV);
+    std::string xglNvidia = (getenv(DRIVER_PATH_ENV) == NULL) ? "" : getenv(DRIVER_PATH_ENV);
     xglNvidia += "\\xgl_nvidia.dll";
     HMODULE module = LoadLibrary(xglNvidia.c_str());
     if (!module) {
-        std::string xglNulldrv = getenv("LIBXGL_DRIVERS_PATH");
+        std::string xglNulldrv = (getenv("XGL_DRIVERS_PATH") == NULL) ? "" : getenv("LIBXGL_DRIVERS_PATH");
         xglNulldrv += "\\xgl_nulldrv.dll";
         module = LoadLibrary(xglNulldrv.c_str());
     }
