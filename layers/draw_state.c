@@ -39,6 +39,7 @@
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
+// TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 #define ALLOC_DEBUG 0
@@ -339,27 +340,28 @@ static void freeDynamicState()
                 if (pVPCI->pViewports) {
                     void** ppToFree = (void**)&pVPCI->pViewports;
 #if ALLOC_DEBUG
-    printf("Free3 #%lu pViewports addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                    printf("Free3 #%lu pViewports addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                     free(*ppToFree);
                 }
                 if (pVPCI->pScissors) {
                     void** ppToFree = (void**)&pVPCI->pScissors;
 #if ALLOC_DEBUG
-    printf("Free4 #%lu pScissors addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                    printf("Free4 #%lu pScissors addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                     free(*ppToFree);
                 }
             }
 #if ALLOC_DEBUG
-    printf("Free2 #%lu pStateNode->CreateInfo addr(%p)\n", ++g_free_count, (void*)pFreeMe->pCreateInfo);
+            printf("Free2 #%lu pStateNode->CreateInfo addr(%p)\n", ++g_free_count, (void*)pFreeMe->pCreateInfo);
 #endif
             free(pFreeMe->pCreateInfo);
 #if ALLOC_DEBUG
-    printf("Free1 #%lu pStateNode addr(%p)\n", ++g_free_count, (void*)pFreeMe);
+            printf("Free1 #%lu pStateNode addr(%p)\n", ++g_free_count, (void*)pFreeMe);
 #endif
             free(pFreeMe);
         }
+        g_pDynamicStateHead[i] = NULL;
     }
 }
 // Free all sampler nodes
@@ -371,10 +373,11 @@ static void freeSamplers()
         pFreeMe = pSampler;
         pSampler = pSampler->pNext;
 #if ALLOC_DEBUG
-    printf("Free25 #%lu pSampler addr(%p)\n", ++g_free_count, (void*)pFreeMe);
+        printf("Free25 #%lu pSampler addr(%p)\n", ++g_free_count, (void*)pFreeMe);
 #endif
         free(pFreeMe);
     }
+    g_pSamplerHead = NULL;
 }
 // Free all image nodes
 static void freeImages()
@@ -385,10 +388,11 @@ static void freeImages()
         pFreeMe = pImage;
         pImage = pImage->pNext;
 #if ALLOC_DEBUG
-    printf("Free22 #%lu pImage addr(%p)\n", ++g_free_count, (void*)pFreeMe);
+        printf("Free22 #%lu pImage addr(%p)\n", ++g_free_count, (void*)pFreeMe);
 #endif
         free(pFreeMe);
     }
+    g_pImageHead = NULL;
 }
 // Free all buffer nodes
 static void freeBuffers()
@@ -403,6 +407,7 @@ static void freeBuffers()
 #endif
         free(pFreeMe);
     }
+    g_pBufferHead = NULL;
 }
 static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb);
 // Print the last bound dynamic state
@@ -545,13 +550,13 @@ static void freePipelines()
                 // Free the vtx data shadowed directly into pPipeline node
                 if (pFreeMe->pVertexBindingDescriptions) {
 #if ALLOC_DEBUG
-    printf("Free7 #%lu pVertexBindingDescriptions addr(%p)\n", ++g_free_count, (void*)pFreeMe->pVertexBindingDescriptions);
+                    printf("Free7 #%lu pVertexBindingDescriptions addr(%p)\n", ++g_free_count, (void*)pFreeMe->pVertexBindingDescriptions);
 #endif
                     free(pFreeMe->pVertexBindingDescriptions);
                 }
                 if (pFreeMe->pVertexAttributeDescriptions) {
 #if ALLOC_DEBUG
-    printf("Free8 #%lu pVertexAttributeDescriptions addr(%p)\n", ++g_free_count, (void*)pFreeMe->pVertexAttributeDescriptions);
+                    printf("Free8 #%lu pVertexAttributeDescriptions addr(%p)\n", ++g_free_count, (void*)pFreeMe->pVertexAttributeDescriptions);
 #endif
                     free(pFreeMe->pVertexAttributeDescriptions);
                 }
@@ -560,22 +565,23 @@ static void freePipelines()
                 // Free attachment data shadowed into pPipeline node
                 if (pFreeMe->pAttachments) {
 #if ALLOC_DEBUG
-    printf("Free9 #%lu pAttachments addr(%p)\n", ++g_free_count, (void*)pFreeMe->pAttachments);
+                    printf("Free9 #%lu pAttachments addr(%p)\n", ++g_free_count, (void*)pFreeMe->pAttachments);
 #endif
                     free(pFreeMe->pAttachments);
                 }
             }
 #if ALLOC_DEBUG
-    printf("Free5 & Free6 #%lu pShadowNode addr(%p)\n", ++g_free_count, (void*)pShadowFree);
+            printf("Free5 & Free6 #%lu pShadowNode addr(%p)\n", ++g_free_count, (void*)pShadowFree);
 #endif
             free(pShadowFree);
         }
         pPipeline = pPipeline->pNext;
 #if ALLOC_DEBUG
-    printf("Free23 & Free24 #%lu pPipeline addr(%p)\n", ++g_free_count, (void*)pFreeMe);
+        printf("Free23 & Free24 #%lu pPipeline addr(%p)\n", ++g_free_count, (void*)pFreeMe);
 #endif
         free(pFreeMe);
     }
+    g_pPipelineHead = NULL;
 }
 // Block of code at start here specifically for managing/tracking DSs
 
@@ -622,6 +628,7 @@ static SET_NODE* getSetNode(XGL_DESCRIPTOR_SET set)
 // Return XGL_TRUE if DS Exists and is within an xglBeginDescriptorRegionUpdate() call sequence, otherwise XGL_FALSE
 static bool32_t dsUpdateActive(XGL_DESCRIPTOR_SET ds)
 {
+    // Note, both "get" functions use global mutex so this guy does not
     SET_NODE* pTrav = getSetNode(ds);
     if (pTrav) {
         REGION_NODE* pRegion = NULL;
@@ -732,6 +739,7 @@ static bool32_t validateUpdateSize(GENERIC_HEADER* pUpdateStruct, uint32_t layou
 }
 // Determine the update type, allocate a new struct of that type, shadow the given pUpdate
 //   struct into the new struct and return ptr to shadow struct cast as GENERIC_HEADER
+// NOTE : Calls to this function should be wrapped in mutex
 static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pNewNode = NULL;
@@ -746,32 +754,32 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
             pNewNode = (GENERIC_HEADER*)malloc(sizeof(XGL_UPDATE_SAMPLERS));
 #if ALLOC_DEBUG
-    printf("Alloc10 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+            printf("Alloc10 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
 #endif
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_SAMPLERS));
             array_size = sizeof(XGL_SAMPLER) * ((XGL_UPDATE_SAMPLERS*)pNewNode)->count;
             ((XGL_UPDATE_SAMPLERS*)pNewNode)->pSamplers = (XGL_SAMPLER*)malloc(array_size);
 #if ALLOC_DEBUG
-    printf("Alloc11 #%lu pNewNode->pSamplers addr(%p)\n", ++g_alloc_count, (void*)((XGL_UPDATE_SAMPLERS*)pNewNode)->pSamplers);
+            printf("Alloc11 #%lu pNewNode->pSamplers addr(%p)\n", ++g_alloc_count, (void*)((XGL_UPDATE_SAMPLERS*)pNewNode)->pSamplers);
 #endif
             memcpy((XGL_SAMPLER*)((XGL_UPDATE_SAMPLERS*)pNewNode)->pSamplers, ((XGL_UPDATE_SAMPLERS*)pUpdate)->pSamplers, array_size);
             break;
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
             pNewNode = (GENERIC_HEADER*)malloc(sizeof(XGL_UPDATE_SAMPLER_TEXTURES));
 #if ALLOC_DEBUG
-    printf("Alloc12 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+            printf("Alloc12 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
 #endif
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_SAMPLER_TEXTURES));
             array_size = sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO) * ((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->count;
             ((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews = (XGL_SAMPLER_IMAGE_VIEW_INFO*)malloc(array_size);
 #if ALLOC_DEBUG
-    printf("Alloc13 #%lu pNewNode->pSamplerImageViews addr(%p)\n", ++g_alloc_count, (void*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews);
+            printf("Alloc13 #%lu pNewNode->pSamplerImageViews addr(%p)\n", ++g_alloc_count, (void*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews);
 #endif
             for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->count; i++) {
                 memcpy((XGL_SAMPLER_IMAGE_VIEW_INFO*)&((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews[i], &((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i], sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO));
                 ((XGL_SAMPLER_IMAGE_VIEW_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView = malloc(sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
 #if ALLOC_DEBUG
-    printf("Alloc14 #%lu pSamplerImageViews)[%u].pImageView addr(%p)\n", ++g_alloc_count, i, (void*)((XGL_SAMPLER_IMAGE_VIEW_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView);
+                printf("Alloc14 #%lu pSamplerImageViews)[%u].pImageView addr(%p)\n", ++g_alloc_count, i, (void*)((XGL_SAMPLER_IMAGE_VIEW_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView);
 #endif
                 memcpy((XGL_IMAGE_VIEW_ATTACH_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews[i].pImageView, ((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
             }
@@ -836,6 +844,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
 {
     SET_NODE* pSet = getSetNode(ds);
+    loader_platform_thread_lock_mutex(&globalLock);
     LAYOUT_NODE* pLayout = NULL;
     XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLayoutCI;
     // TODO : If pCIList is NULL, flag error
@@ -893,8 +902,10 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
         }
         pUpdates = (GENERIC_HEADER*)pUpdates->pNext;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Free a shadowed update node
+// NOTE : Calls to this function should be wrapped in mutex
 static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pShadowUpdate = pUpdate;
@@ -915,7 +926,7 @@ static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
                 if (pUS->pSamplers) {
                     ppToFree = (void**)&pUS->pSamplers;
 #if ALLOC_DEBUG
-    printf("Free11 #%lu pSamplers addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                    printf("Free11 #%lu pSamplers addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                     free(*ppToFree);
                 }
@@ -926,14 +937,14 @@ static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
                     if (pUST->pSamplerImageViews[index].pImageView) {
                         ppToFree = (void**)&pUST->pSamplerImageViews[index].pImageView;
 #if ALLOC_DEBUG
-    printf("Free14 #%lu pImageView addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                        printf("Free14 #%lu pImageView addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                         free(*ppToFree);
                     }
                 }
                 ppToFree = (void**)&pUST->pSamplerImageViews;
 #if ALLOC_DEBUG
-    printf("Free13 #%lu pSamplerImageViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                printf("Free13 #%lu pSamplerImageViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                 free(*ppToFree);
                 break;
@@ -942,7 +953,7 @@ static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
                 if (pUI->pImageViews) {
                     ppToFree = (void**)&pUI->pImageViews;
 #if ALLOC_DEBUG
-    printf("Free16 #%lu pImageViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                    printf("Free16 #%lu pImageViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                     free(*ppToFree);
                 }
@@ -952,7 +963,7 @@ static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
                 if (pUB->pBufferViews) {
                     ppToFree = (void**)&pUB->pBufferViews;
 #if ALLOC_DEBUG
-    printf("Free18 #%lu pBufferViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
+                    printf("Free18 #%lu pBufferViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
 #endif
                     free(*ppToFree);
                 }
@@ -964,12 +975,13 @@ static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
                 break;
         }
 #if ALLOC_DEBUG
-    printf("Free10, Free12, Free15, Free17, Free19 #%lu pUpdateNode addr(%p)\n", ++g_free_count, (void*)pFreeUpdate);
+        printf("Free10, Free12, Free15, Free17, Free19 #%lu pUpdateNode addr(%p)\n", ++g_free_count, (void*)pFreeUpdate);
 #endif
         free(pFreeUpdate);
     }
 }
 // Free all DS Regions including their Sets & related sub-structs
+// NOTE : Calls to this function should be wrapped in mutex
 static void freeRegions()
 {
     REGION_NODE* pRegion = g_pRegionHead;
@@ -1008,8 +1020,10 @@ static void freeRegions()
 #endif
         free(pFreeMe);
     }
+    g_pRegionHead = NULL;
 }
 // WARN : Once freeLayouts() called, any layout ptrs in Region/Set data structure will be invalid
+// NOTE : Calls to this function should be wrapped in mutex
 static void freeLayouts()
 {
     LAYOUT_NODE* pLayout = g_pLayoutHead;
@@ -1037,6 +1051,7 @@ static void freeLayouts()
 #endif
         free(pFreeLayout);
     }
+    g_pLayoutHead = NULL;
 }
 // Currently clearing a set is removing all previous updates to that set
 //  TODO : Validate if this is correct clearing behavior
@@ -1047,7 +1062,9 @@ static void clearDescriptorSet(XGL_DESCRIPTOR_SET set)
         // TODO : Return error
     }
     else {
+        loader_platform_thread_lock_mutex(&globalLock);
         freeShadowUpdateTree(pSet->pUpdateStructs);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
 }
 
@@ -1085,6 +1102,7 @@ static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb)
     return NULL;
 }
 // Free all CB Nodes
+// NOTE : Calls to this function should be wrapped in mutex
 static void freeCmdBuffers()
 {
     GLOBAL_CB_NODE* pCB = g_pCmdBufferHead;
@@ -1107,6 +1125,7 @@ static void freeCmdBuffers()
 #endif
         free(pFreeMe);
     }
+    g_pCmdBufferHead = NULL;
 }
 static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
 {
@@ -1145,7 +1164,7 @@ static void resetCB(const XGL_CMD_BUFFER cb)
             pFreeMe = pCur;
             pCur = pCur->pNext;
 #if ALLOC_DEBUG
-    printf("Free20 #%lu pCmd addr(%p)\n", ++g_free_count, (void*)pFreeMe);
+            printf("Free20 #%lu pCmd addr(%p)\n", ++g_free_count, (void*)pFreeMe);
 #endif
             free(pFreeMe);
         }
@@ -1167,9 +1186,9 @@ static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_D
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
+        loader_platform_thread_lock_mutex(&globalLock);
         g_lastCmdBuffer = cmdBuffer;
         addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
-        loader_platform_thread_lock_mutex(&globalLock);
         DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
         while (pTrav && (state != pTrav->stateObj)) {
             pTrav = pTrav->pNext;
@@ -1890,7 +1909,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
         loader_platform_thread_lock_mutex(&globalLock);
         SAMPLER_NODE *pNewNode = (SAMPLER_NODE*)malloc(sizeof(SAMPLER_NODE));
 #if ALLOC_DEBUG
-    printf("Alloc25 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+        printf("Alloc25 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
 #endif
         pNewNode->sampler = *pSampler;
         memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO));
@@ -1907,7 +1926,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
     if (XGL_SUCCESS == result) {
         LAYOUT_NODE* pNewNode = (LAYOUT_NODE*)malloc(sizeof(LAYOUT_NODE));
 #if ALLOC_DEBUG
-    printf("Alloc26 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+        printf("Alloc26 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
 #endif
         if (NULL == pNewNode) {
             char str[1024];
@@ -1918,7 +1937,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         // TODO : API Currently missing a count here that we should multiply by struct size
         pNewNode->pCreateInfoList = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
 #if ALLOC_DEBUG
-    printf("Alloc27 #%lu pNewNode->pCreateInfoList addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pCreateInfoList);
+        printf("Alloc27 #%lu pNewNode->pCreateInfoList addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pCreateInfoList);
 #endif
         memset((void*)pNewNode->pCreateInfoList, 0, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
         void* pCITrav = NULL;
@@ -1933,7 +1952,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
             totalCount += ((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pCITrav)->count;
             *ppNext = (void*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
 #if ALLOC_DEBUG
-    printf("Alloc28 #%lu *ppNext addr(%p)\n", ++g_alloc_count, (void*)*ppNext);
+            printf("Alloc28 #%lu *ppNext addr(%p)\n", ++g_alloc_count, (void*)*ppNext);
 #endif
             memcpy((void*)*ppNext, pCITrav, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
             pCITrav = (void*)((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pCITrav)->pNext;
@@ -1942,7 +1961,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         if (totalCount > 0) {
             pNewNode->pTypes = (XGL_DESCRIPTOR_TYPE*)malloc(totalCount*sizeof(XGL_DESCRIPTOR_TYPE));
 #if ALLOC_DEBUG
-    printf("Alloc29 #%lu pNewNode->pTypes addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pTypes);
+            printf("Alloc29 #%lu pNewNode->pTypes addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pTypes);
 #endif
             XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLCI = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pSetLayoutInfoList;
             uint32_t offset = 0;
@@ -1980,8 +1999,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         assert(pNewNode->endIndex >= pNewNode->startIndex);
         pNewNode->pPriorSetLayout = pPriorNode;
         // Put new node at Head of global Layer list
+        loader_platform_thread_lock_mutex(&globalLock);
         pNewNode->pNext = g_pLayoutHead;
         g_pLayoutHead = pNewNode;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -1990,22 +2011,17 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(XGL_DEVICE dev
 {
     XGL_RESULT result = nextTable.BeginDescriptorRegionUpdate(device, updateMode);
     if (XGL_SUCCESS == result) {
-        if (!g_pRegionHead) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        REGION_NODE* pRegionNode = g_pRegionHead;
+        if (!pRegionNode) {
             char str[1024];
-            sprintf(str, "No descriptor region found! Global descriptor region is NULL!");
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_NO_DS_REGION, "DS", str);
+            sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
         }
         else {
-            REGION_NODE* pRegionNode = g_pRegionHead;
-            if (!pRegionNode) {
-                char str[1024];
-                sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
-            }
-            else {
-                pRegionNode->updateActive = 1;
-            }
+            pRegionNode->updateActive = 1;
         }
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2014,29 +2030,24 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(XGL_DEVICE devic
 {
     XGL_RESULT result = nextTable.EndDescriptorRegionUpdate(device, cmd);
     if (XGL_SUCCESS == result) {
-        if (!g_pRegionHead) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        REGION_NODE* pRegionNode = g_pRegionHead;
+        if (!pRegionNode) {
             char str[1024];
-            sprintf(str, "No descriptor region found! Global descriptor region is NULL!");
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_NO_DS_REGION, "DS", str);
+            sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
         }
         else {
-            REGION_NODE* pRegionNode = g_pRegionHead;
-            if (!pRegionNode) {
+            if (!pRegionNode->updateActive) {
                 char str[1024];
-                sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
+                sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglEndDescriptorRegionUpdate()!");
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
             }
             else {
-                if (!pRegionNode->updateActive) {
-                    char str[1024];
-                    sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglEndDescriptorRegionUpdate()!");
-                    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
-                }
-                else {
-                    pRegionNode->updateActive = 0;
-                }
+                pRegionNode->updateActive = 0;
             }
         }
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2052,7 +2063,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, 
         loader_platform_thread_lock_mutex(&globalLock);
         REGION_NODE* pNewNode = (REGION_NODE*)malloc(sizeof(REGION_NODE));
 #if ALLOC_DEBUG
-    printf("Alloc30 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+        printf("Alloc30 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
 #endif
         if (NULL == pNewNode) {
             char str[1024];
@@ -2070,7 +2081,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, 
                 XGL_DESCRIPTOR_TYPE_COUNT** ppTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT**)&pNewNode->createInfo.pTypeCount;
                 *ppTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT*)malloc(typeCountSize);
 #if ALLOC_DEBUG
-    printf("Alloc31 #%lu *ppTypeCount addr(%p)\n", ++g_alloc_count, (void*)*ppTypeCount);
+                printf("Alloc31 #%lu *ppTypeCount addr(%p)\n", ++g_alloc_count, (void*)*ppTypeCount);
 #endif
                 memcpy((void*)*ppTypeCount, pCreateInfo->pTypeCount, typeCountSize);
             }
@@ -2163,7 +2174,7 @@ XGL_LAYER_EXPORT void XGLAPI xglUpdateDescriptors(XGL_DESCRIPTOR_SET descriptorS
     if (!dsUpdateActive(descriptorSet)) {
         char str[1024];
         sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglUpdateDescriptors()!");
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead->region, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
     }
     else {
         // pUpdateChain is a Linked-list of XGL_UPDATE_* structures defining the mappings for the descriptors
@@ -2205,9 +2216,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     if (XGL_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
         GLOBAL_CB_NODE* pCB = (GLOBAL_CB_NODE*)malloc(sizeof(GLOBAL_CB_NODE));
 #if ALLOC_DEBUG
-    printf("Alloc33 #%lu pCB addr(%p)\n", ++g_alloc_count, (void*)pCB);
+        printf("Alloc33 #%lu pCB addr(%p)\n", ++g_alloc_count, (void*)pCB);
 #endif
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->pNextGlobalCBNode = g_pCmdBufferHead;
@@ -2217,6 +2229,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
         pCB->queueType = pCreateInfo->queueType;
         pCB->lastVtxBinding = MAX_BINDING;
         g_lastCmdBuffer = *pCmdBuffer;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2236,7 +2249,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
             sprintf(str, "In xglBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         }
+        loader_platform_thread_lock_mutex(&globalLock);
         g_lastCmdBuffer = cmdBuffer;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2255,7 +2270,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
             sprintf(str, "In xglEndCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         }
+        loader_platform_thread_lock_mutex(&globalLock);
         g_lastCmdBuffer = cmdBuffer;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2265,7 +2282,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffe
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
     if (XGL_SUCCESS == result) {
         resetCB(cmdBuffer);
+        loader_platform_thread_lock_mutex(&globalLock);
         g_lastCmdBuffer = cmdBuffer;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
