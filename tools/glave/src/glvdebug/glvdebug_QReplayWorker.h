@@ -60,6 +60,13 @@ public:
     {
         setView(NULL);
         s_pWorker = NULL;
+
+        if (m_pActionRunToHere != NULL)
+        {
+            disconnect(m_pActionRunToHere, SIGNAL(triggered()), this, SLOT(onPlayToHere()));
+            delete m_pActionRunToHere;
+            m_pActionRunToHere = NULL;
+        }
     }
 
     virtual BOOL PrintReplayInfoMsgs()
