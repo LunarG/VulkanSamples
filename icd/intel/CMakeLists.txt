@@ -6,8 +6,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 add_subdirectory(kmd)
 add_subdirectory(compiler)
 
-add_custom_command(OUTPUT intel_gpa.c
-    COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > intel_gpa.c
+add_custom_command(OUTPUT gpa.c
+    COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > gpa.c
     DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 set(sources
@@ -21,11 +21,11 @@ set(sources
     desc.c
     dev.c
     intel.c
-    intel_gpa.c
     event.c
     fb.c
     fence.c
     format.c
+    gpa.c
     gpu.c
     img.c
     layout.c
