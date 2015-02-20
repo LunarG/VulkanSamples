@@ -45,8 +45,12 @@ struct icd_drm_device {
     struct icd_drm_device *next;
 };
 
-struct icd_drm_device *icd_drm_enumerate(int vendor_id);
-void icd_drm_release(struct icd_drm_device *devices);
+struct icd_instance;
+
+struct icd_drm_device *icd_drm_enumerate(const struct icd_instance *instance,
+                                         int vendor_id);
+void icd_drm_release(const struct icd_instance *instance,
+                     struct icd_drm_device *devices);
 
 const char *icd_drm_get_devnode(struct icd_drm_device *dev,
                                 enum icd_drm_minor_type minor);

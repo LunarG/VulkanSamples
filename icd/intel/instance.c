@@ -181,7 +181,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
         return XGL_SUCCESS;
     }
 
-    devices = icd_drm_enumerate(0x8086);
+    devices = icd_drm_enumerate(instance->icd, 0x8086);
 
     count = 0;
     dev = devices;
@@ -210,7 +210,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
         dev = dev->next;
     }
 
-    icd_drm_release(devices);
+    icd_drm_release(instance->icd, devices);
 
     *pGpuCount = count;
 

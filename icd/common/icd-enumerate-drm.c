@@ -30,8 +30,7 @@
 #include <string.h>
 #include <libudev.h>
 
-#include "icd-alloc.h"
-#include "icd-log.h"
+#include "icd-instance.h"
 #include "icd-utils.h"
 #include "icd-enumerate-drm.h"
 
@@ -78,7 +77,8 @@ static struct icd_drm_device *find_dev(struct icd_drm_device *devices,
     return dev;
 }
 
-static struct icd_drm_device *probe_syspath(struct icd_drm_device *devices,
+static struct icd_drm_device *probe_syspath(const struct icd_instance *instance,
+                                            struct icd_drm_device *devices,
                                             struct udev *udev, const char *syspath,
                                             int vendor_id_match)
 {
@@ -124,7 +124,8 @@ static struct icd_drm_device *probe_syspath(struct icd_drm_device *devices,
 
         return devices;
     } else {
-        dev = icd_alloc(sizeof(*dev), 0, XGL_SYSTEM_ALLOC_INTERNAL_TEMP);
+        dev = icd_instance_alloc(instance, sizeof(*dev), 0,
+                XGL_SYSTEM_ALLOC_INTERNAL_TEMP);
         if (!dev)
             return devices;
 
@@ -140,7 +141,8 @@ static struct icd_drm_device *probe_syspath(struct icd_drm_device *devices,
     }
 }
 
-struct icd_drm_device *icd_drm_enumerate(int vendor_id)
+struct icd_drm_device *icd_drm_enumerate(const struct icd_instance *instance,
+                                         int vendor_id)
 {
     struct icd_drm_device *devices = NULL;
     struct udev *udev;
@@ -149,7 +151,7 @@ struct icd_drm_device *icd_drm_enumerate(int vendor_id)
 
     udev = udev_new();
     if (udev == NULL) {
-        icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+        icd_instance_log(instance, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
                 XGL_NULL_HANDLE, 0, 0, "failed to initialize udev context");
 
         return NULL;
@@ -157,7 +159,7 @@ struct icd_drm_device *icd_drm_enumerate(int vendor_id)
 
     e = udev_enumerate_new(udev);
     if (e == NULL) {
-        icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+        icd_instance_log(instance, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
                 XGL_NULL_HANDLE, 0, 0,
                 "failed to initialize udev enumerate context");
         udev_unref(udev);
@@ -171,7 +173,7 @@ struct icd_drm_device *icd_drm_enumerate(int vendor_id)
     udev_enumerate_scan_devices(e);
 
     udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(e)) {
-        devices = probe_syspath(devices, udev,
+        devices = probe_syspath(instance, devices, udev,
                 udev_list_entry_get_name(entry), vendor_id);
     }
 
@@ -180,7 +182,8 @@ struct icd_drm_device *icd_drm_enumerate(int vendor_id)
     return devices;
 }
 
-void icd_drm_release(struct icd_drm_device *devices)
+void icd_drm_release(const struct icd_instance *instance,
+                     struct icd_drm_device *devices)
 {
     struct icd_drm_device *dev = devices;
 
@@ -191,7 +194,7 @@ void icd_drm_release(struct icd_drm_device *devices)
         for (i = 0; i < ARRAY_SIZE(dev->minors); i++)
             udev_device_unref((struct udev_device *) dev->minors[i]);
 
-        icd_free(dev);
+        icd_instance_free(instance, dev);
         dev = next;
     }
 }
