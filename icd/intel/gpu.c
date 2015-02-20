@@ -451,6 +451,22 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
     return type;
 }
 
+ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
+    XGL_PHYSICAL_GPU                            gpu,
+    size_t                                      maxLayerCount,
+    size_t                                      maxStringSize,
+    size_t*                                     pOutLayerCount,
+    char* const*                                pOutLayers,
+    void*                                       pReserved)
+{
+    if (!pOutLayerCount)
+        return XGL_ERROR_INVALID_POINTER;
+
+    *pOutLayerCount = 0;
+
+    return XGL_SUCCESS;
+}
+
 ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
     XGL_PHYSICAL_GPU                            gpu_,
     XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,

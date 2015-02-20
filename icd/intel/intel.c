@@ -177,22 +177,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
     return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
-    XGL_PHYSICAL_GPU                            gpu,
-    size_t                                      maxLayerCount,
-    size_t                                      maxStringSize,
-    size_t*                                     pOutLayerCount,
-    char* const*                                pOutLayers,
-    void*                                       pReserved)
-{
-    if (!pOutLayerCount)
-        return XGL_ERROR_INVALID_POINTER;
-
-    *pOutLayerCount = 0;
-
-    return XGL_SUCCESS;
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
