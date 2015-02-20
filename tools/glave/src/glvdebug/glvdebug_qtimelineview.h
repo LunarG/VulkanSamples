@@ -70,7 +70,7 @@ public:
     virtual QModelIndex indexAt(const QPoint &point) const;
     // End public virtual functions of QAbstractItemView
 
-    QList<int> getModelThreadList() const;
+    QList<uint32_t> getModelThreadList() const;
     QRectF itemRect(const QModelIndex &item) const;
     float getMaxItemDuration() const
     {
@@ -93,8 +93,8 @@ private:
     QFont m_textFont;
 
     // new members
-    QList<int> m_threadIdList;
-    QHash< int, QVector<int> > m_threadMask;
+    QList<uint32_t> m_threadIdList;
+    QHash< uint32_t, QVector<int> > m_threadMask;
     QList<QRect> m_threadArea;
     float m_maxItemDuration;
     uint64_t m_rawStartTime;
@@ -114,7 +114,7 @@ private:
     glvdebug_QTimelineItemDelegate m_itemDelegate;
 
     void calculateRectsIfNecessary();
-    void drawBaseTimelines(QPainter *painter, const QRect &rect, const QList<int> &threadList);
+    void drawBaseTimelines(QPainter *painter, const QRect &rect, const QList<uint32_t> &threadList);
     void drawTimelineItem(QPainter* painter, const QModelIndex &index);
 
     QRectF viewportRect(const QModelIndex &index) const;

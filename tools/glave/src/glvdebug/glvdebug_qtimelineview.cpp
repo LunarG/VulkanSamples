@@ -218,7 +218,7 @@ void glvdebug_QTimelineView::setModel(QAbstractItemModel* pModel)
         QModelIndex item = model()->index(i, glvdebug_QTraceFileModel::Column_ThreadId);
         if (item.isValid())
         {
-            int threadId = item.data().toInt();
+            uint32_t threadId = item.data().toUInt();
             if (!m_threadIdList.contains(threadId))
             {
                 m_threadIdList.append(threadId);
@@ -575,7 +575,7 @@ void glvdebug_QTimelineView::paintEvent(QPaintEvent *event)
 }
 
 //-----------------------------------------------------------------------------
-void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& rect, const QList<int> &threadList)
+void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& rect, const QList<uint32_t> &threadList)
 {
     int numThreads = threadList.count();
 
@@ -596,7 +596,7 @@ void glvdebug_QTimelineView::drawBaseTimelines(QPainter* painter, const QRect& r
 }
 
 //-----------------------------------------------------------------------------
-QList<int> glvdebug_QTimelineView::getModelThreadList() const
+QList<uint32_t> glvdebug_QTimelineView::getModelThreadList() const
 {
     return m_threadIdList;
 }
@@ -619,7 +619,7 @@ void glvdebug_QTimelineView::paint(QPainter *painter, QPaintEvent *event)
     triangle.setPoint(1, -arrowHalfWidth, arrowTop+arrowHeight);
     triangle.setPoint(2, arrowHalfWidth, arrowTop+arrowHeight);
 
-    QList<int> threadList = getModelThreadList();
+    QList<uint32_t> threadList = getModelThreadList();
 
     calculateRectsIfNecessary();
 
