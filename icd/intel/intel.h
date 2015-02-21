@@ -43,6 +43,7 @@
 #include "icd-alloc.h"
 #include "icd-bil.h"
 #include "icd-format.h"
+#include "icd-instance.h"
 #include "icd-log.h"
 #include "icd-utils.h"
 

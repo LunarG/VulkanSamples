@@ -35,6 +35,8 @@ struct intel_gpu;
 struct intel_instance {
     struct intel_handle handle;
 
+    struct icd_instance *icd;
+
     struct intel_gpu *gpus;
 };
 

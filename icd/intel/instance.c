@@ -100,23 +100,37 @@ static void intel_instance_remove_gpus(struct intel_instance *instance)
 
 static void intel_instance_destroy(struct intel_instance *instance)
 {
+    struct icd_instance *icd = instance->icd;
+
     intel_instance_remove_gpus(instance);
-    icd_free(instance);
+    icd_instance_free(icd, instance);
+
+    icd_instance_destroy(icd);
 }
 
 static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *app_info,
                                                     const XGL_ALLOC_CALLBACKS *alloc_cb)
 {
     struct intel_instance *instance;
+    struct icd_instance *icd;
 
     intel_debug_init();
 
-    instance = icd_alloc(sizeof(*instance), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
-    if (!instance)
+    icd = icd_instance_create(app_info, alloc_cb);
+    if (!icd)
         return NULL;
+
+    instance = icd_instance_alloc(icd, sizeof(*instance), 0,
+            XGL_SYSTEM_ALLOC_API_OBJECT);
+    if (!instance) {
+        icd_instance_destroy(icd);
+        return NULL;
+    }
 
     memset(instance, 0, sizeof(*instance));
     intel_handle_init(&instance->handle, XGL_DBG_OBJECT_INSTANCE);
+
+    instance->icd = icd;
 
     icd_allocator_init(alloc_cb);
 
