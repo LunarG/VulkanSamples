@@ -40,6 +40,10 @@ static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,
     const char*          pLayerPrefix,
     const char*          pMsg)
 {
+    if (g_logFile == NULL) {
+	g_logFile = stdout;
+    }
+
     if (g_debugAction & (XGL_DBG_LAYER_ACTION_LOG_MSG | XGL_DBG_LAYER_ACTION_CALLBACK)) {
         XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
         switch (msgType) {
