@@ -42,7 +42,6 @@
 #include <xglIcd.h>
 
 #include "icd.h"
-#include "icd-alloc.h"
 #include "icd-bil.h"
 #include "icd-format.h"
 #include "icd-instance.h"

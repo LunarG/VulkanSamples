@@ -160,10 +160,11 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     return sh;
 }
 
-void intel_pipeline_shader_destroy(struct intel_pipeline_shader *sh)
+void intel_pipeline_shader_destroy(struct intel_dev *dev,
+                                   struct intel_pipeline_shader *sh)
 {
-    intel_pipeline_shader_cleanup(sh);
-    icd_free(sh);
+    intel_pipeline_shader_cleanup(sh, dev->gpu);
+    intel_free(dev, sh);
 }
 
 static XGL_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
@@ -382,27 +383,27 @@ static void pipeline_destroy(struct intel_obj *obj)
     struct intel_pipeline *pipeline = intel_pipeline_from_obj(obj);
 
     if (pipeline->active_shaders & SHADER_VERTEX_FLAG) {
-        intel_pipeline_shader_cleanup(&pipeline->vs);
+        intel_pipeline_shader_cleanup(&pipeline->vs, pipeline->dev->gpu);
     }
 
     if (pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) {
-        intel_pipeline_shader_cleanup(&pipeline->tcs);
+        intel_pipeline_shader_cleanup(&pipeline->tcs, pipeline->dev->gpu);
     }
 
     if (pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) {
-        intel_pipeline_shader_cleanup(&pipeline->tes);
+        intel_pipeline_shader_cleanup(&pipeline->tes, pipeline->dev->gpu);
     }
 
     if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
-        intel_pipeline_shader_cleanup(&pipeline->gs);
+        intel_pipeline_shader_cleanup(&pipeline->gs, pipeline->dev->gpu);
     }
 
     if (pipeline->active_shaders & SHADER_FRAGMENT_FLAG) {
-        intel_pipeline_shader_cleanup(&pipeline->fs);
+        intel_pipeline_shader_cleanup(&pipeline->fs, pipeline->dev->gpu);
     }
 
     if (pipeline->active_shaders & SHADER_COMPUTE_FLAG) {
-        intel_pipeline_shader_cleanup(&pipeline->cs);
+        intel_pipeline_shader_cleanup(&pipeline->cs, pipeline->dev->gpu);
     }
 
     intel_base_destroy(&pipeline->obj.base);

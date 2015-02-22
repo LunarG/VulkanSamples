@@ -49,7 +49,8 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
                                          const struct intel_desc_layout *layout,
                                          const XGL_PIPELINE_SHADER *info);
 
-void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh);
+void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh,
+                                   const struct intel_gpu *gpu);
 
 XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,

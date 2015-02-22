@@ -132,8 +132,6 @@ static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *
 
     instance->icd = icd;
 
-    icd_allocator_init(alloc_cb);
-
     return instance;
 }
 

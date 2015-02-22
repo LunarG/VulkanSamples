@@ -252,6 +252,7 @@ static inline struct intel_pipeline *intel_pipeline_from_obj(struct intel_obj *o
 
 struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev *dev,
                                                                 enum intel_dev_meta_shader id);
-void intel_pipeline_shader_destroy(struct intel_pipeline_shader *sh);
+void intel_pipeline_shader_destroy(struct intel_dev *dev,
+                                   struct intel_pipeline_shader *sh);
 
 #endif /* PIPELINE_H */

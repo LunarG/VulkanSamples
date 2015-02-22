@@ -78,7 +78,8 @@ XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
+static bool base_dbg_copy_create_info(const struct intel_handle *handle,
+                                      struct intel_base_dbg *dbg,
                                       const void *create_info)
 {
     const union {
@@ -194,7 +195,8 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
     }
 
     if (shallow_copy) {
-        dbg->create_info = icd_alloc(shallow_copy, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        dbg->create_info = intel_alloc(handle, shallow_copy, 0,
+                XGL_SYSTEM_ALLOC_DEBUG);
         if (!dbg->create_info)
             return false;
 
@@ -223,7 +225,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
             ptr_next = (XGL_MEMORY_ALLOC_INFO *) ptr_next->pNext;
         }
         dbg->create_info_size = size;
-        dst = icd_alloc(size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        dst = intel_alloc(handle, size, 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!dst)
             return false;
         memcpy(dst, src, sizeof(*src));
@@ -264,7 +266,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
             size += 1 + strlen(src->ppEnabledExtensionNames[i]);
         }
 
-        dst = icd_alloc(size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        dst = intel_alloc(handle, size, 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!dst)
             return false;
 
@@ -319,10 +321,9 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
 
     memset(dbg, 0, dbg_size);
 
-    dbg->alloc_id = icd_allocator_get_id();
     dbg->type = type;
 
-    if (!base_dbg_copy_create_info(dbg, create_info)) {
+    if (!base_dbg_copy_create_info(handle, dbg, create_info)) {
         intel_free(handle, dbg);
         return NULL;
     }
@@ -330,15 +331,16 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
     return dbg;
 }
 
-void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
+void intel_base_dbg_destroy(const struct intel_handle *handle,
+                            struct intel_base_dbg *dbg)
 {
     if (dbg->tag)
-        icd_free(dbg->tag);
+        intel_free(handle, dbg->tag);
 
     if (dbg->create_info)
-        icd_free(dbg->create_info);
+        intel_free(handle, dbg->create_info);
 
-    icd_free(dbg);
+    intel_free(handle, dbg);
 }
 
 /**
@@ -366,7 +368,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
     intel_handle_init(&base->handle, type, handle->icd);
 
     if (debug) {
-        base->dbg = intel_base_dbg_create(handle,
+        base->dbg = intel_base_dbg_create(&base->handle,
                 type, create_info, dbg_size);
         if (!base->dbg) {
             intel_free(handle, base);
@@ -382,7 +384,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
 void intel_base_destroy(struct intel_base *base)
 {
     if (base->dbg)
-        intel_base_dbg_destroy(base->dbg);
+        intel_base_dbg_destroy(&base->handle, base->dbg);
     intel_free(base, base);
 }
 

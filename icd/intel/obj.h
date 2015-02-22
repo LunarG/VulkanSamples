@@ -34,7 +34,6 @@ struct intel_dev;
 struct intel_mem;
 
 struct intel_base_dbg {
-    uint32_t alloc_id;
     XGL_DBG_OBJECT_TYPE type;
 
     void *create_info;
@@ -88,7 +87,8 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
                                              XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              size_t dbg_size);
-void intel_base_dbg_destroy(struct intel_base_dbg *dbg);
+void intel_base_dbg_destroy(const struct intel_handle *handle,
+                            struct intel_base_dbg *dbg);
 
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,

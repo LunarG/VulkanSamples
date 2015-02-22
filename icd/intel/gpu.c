@@ -118,7 +118,7 @@ void intel_gpu_destroy(struct intel_gpu *gpu)
 
 #ifdef ENABLE_WSI_X11
     if (gpu->x11)
-        intel_wsi_x11_destroy(gpu->x11);
+        intel_wsi_x11_destroy(gpu, gpu->x11);
 #endif
 
     intel_free(gpu, gpu->primary_node);
@@ -363,7 +363,7 @@ XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
     if (fd < 0)
         return XGL_ERROR_UNKNOWN;
 
-    gpu->winsys = intel_winsys_create_for_fd(fd);
+    gpu->winsys = intel_winsys_create_for_fd(gpu->handle.icd, fd);
     if (!gpu->winsys) {
         icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
                 0, 0, "failed to create GPU winsys");

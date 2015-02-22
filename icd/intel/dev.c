@@ -41,7 +41,7 @@ static void dev_destroy_meta_shaders(struct intel_dev *dev)
         if (!dev->cmd_meta_shaders[i])
             break;
 
-        intel_pipeline_shader_destroy(dev->cmd_meta_shaders[i]);
+        intel_pipeline_shader_destroy(dev, dev->cmd_meta_shaders[i]);
         dev->cmd_meta_shaders[i] = NULL;
     }
 }
@@ -195,7 +195,7 @@ void intel_dev_destroy(struct intel_dev *dev)
     }
 
     if (dev->desc_pool)
-        intel_desc_pool_destroy(dev->desc_pool);
+        intel_desc_pool_destroy(dev, dev->desc_pool);
 
     dev_destroy_meta_shaders(dev);
 

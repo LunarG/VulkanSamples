@@ -107,11 +107,12 @@ XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
     return XGL_SUCCESS;
 }
 
-void intel_desc_pool_destroy(struct intel_desc_pool *pool)
+void intel_desc_pool_destroy(struct intel_dev *dev,
+                             struct intel_desc_pool *pool)
 {
-    icd_free(pool->samplers);
-    icd_free(pool->surfaces);
-    icd_free(pool);
+    intel_free(dev, pool->samplers);
+    intel_free(dev, pool->surfaces);
+    intel_free(dev, pool);
 }
 
 /**

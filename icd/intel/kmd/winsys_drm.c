@@ -38,11 +38,12 @@
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
-#include "icd-alloc.h"
+#include "icd-instance.h"
 #include "icd-utils.h"
 #include "winsys.h"
 
 struct intel_winsys {
+   const struct icd_instance *instance;
    int fd;
    drm_intel_bufmgr *bufmgr;
    struct intel_winsys_info info;
@@ -160,29 +161,31 @@ probe_winsys(struct intel_winsys *winsys)
 }
 
 struct intel_winsys *
-intel_winsys_create_for_fd(int fd)
+intel_winsys_create_for_fd(const struct icd_instance *instance, int fd)
 {
    /* so that we can have enough relocs per bo */
    const int batch_size = sizeof(uint32_t) * 150 * 1024;
    struct intel_winsys *winsys;
 
-   winsys = icd_alloc(sizeof(*winsys), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+   winsys = icd_instance_alloc(instance, sizeof(*winsys), 0,
+           XGL_SYSTEM_ALLOC_INTERNAL);
    if (!winsys)
       return NULL;
 
    memset(winsys, 0, sizeof(*winsys));
 
+   winsys->instance = instance;
    winsys->fd = fd;
 
    winsys->bufmgr = drm_intel_bufmgr_gem_init(winsys->fd, batch_size);
    if (!winsys->bufmgr) {
-      icd_free(winsys);
+      icd_instance_free(instance, winsys);
       return NULL;
    }
 
    if (!probe_winsys(winsys)) {
       drm_intel_bufmgr_destroy(winsys->bufmgr);
-      icd_free(winsys);
+      icd_instance_free(instance, winsys);
       return NULL;
    }
 
@@ -203,7 +206,7 @@ intel_winsys_destroy(struct intel_winsys *winsys)
 {
    drm_intel_gem_context_destroy(winsys->ctx);
    drm_intel_bufmgr_destroy(winsys->bufmgr);
-   icd_free(winsys);
+   icd_instance_free(winsys->instance, winsys);
 }
 
 const struct intel_winsys_info *

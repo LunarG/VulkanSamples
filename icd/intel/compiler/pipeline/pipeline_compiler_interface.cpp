@@ -280,10 +280,11 @@ static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
     fflush(fp);
 }
 
-static void rmap_destroy(struct intel_pipeline_rmap *rmap)
+static void rmap_destroy(const struct intel_gpu *gpu,
+                         struct intel_pipeline_rmap *rmap)
 {
-    icd_free(rmap->slots);
-    icd_free(rmap);
+    intel_free(gpu, rmap->slots);
+    intel_free(gpu, rmap);
 }
 
 static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
@@ -686,7 +687,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     if (status == XGL_SUCCESS) {
         pipe_shader->rmap = rmap_create(gpu, info->stage, layout, &bt);
         if (!pipe_shader->rmap) {
-            intel_pipeline_shader_cleanup(pipe_shader);
+            intel_pipeline_shader_cleanup(pipe_shader, gpu);
             status = XGL_ERROR_OUT_OF_MEMORY;
         }
     }
@@ -696,11 +697,12 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     return status;
 }
 
-void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh)
+void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh,
+                                   const struct intel_gpu *gpu)
 {
-    icd_free(sh->pCode);
+    intel_free(gpu, sh->pCode);
     if (sh->rmap)
-        rmap_destroy(sh->rmap);
+        rmap_destroy(gpu, sh->rmap);
     memset(sh, 0, sizeof(*sh));
 }
 

@@ -65,6 +65,7 @@ enum intel_winsys_handle_type {
    INTEL_WINSYS_HANDLE_FD,
 };
 
+struct icd_instance;
 struct intel_winsys;
 struct intel_bo;
 
@@ -94,7 +95,7 @@ struct intel_winsys_handle {
 };
 
 struct intel_winsys *
-intel_winsys_create_for_fd(int fd);
+intel_winsys_create_for_fd(const struct icd_instance *instance, int fd);
 
 void
 intel_winsys_destroy(struct intel_winsys *winsys);

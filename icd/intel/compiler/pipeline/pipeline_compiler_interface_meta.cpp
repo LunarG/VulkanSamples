@@ -44,7 +44,8 @@ enum sampler_param {
 class intel_meta_compiler : public brw_blorp_eu_emitter
 {
 public:
-    intel_meta_compiler(struct brw_context *brw,
+    intel_meta_compiler(const struct intel_gpu *gpu,
+                        struct brw_context *brw,
                         enum intel_dev_meta_shader id);
     void *compile(brw_blorp_prog_data *prog_data, uint32_t *code_size);
 
@@ -80,6 +81,7 @@ private:
     void emit_clear_depth();
     void *codegen(uint32_t *code_size);
 
+    const struct intel_gpu *gpu;
     struct brw_context *brw;
     enum intel_dev_meta_shader id;
 
@@ -112,9 +114,10 @@ private:
     struct brw_reg temps[4];
 };
 
-intel_meta_compiler::intel_meta_compiler(struct brw_context *brw,
+intel_meta_compiler::intel_meta_compiler(const struct intel_gpu *gpu,
+                                         struct brw_context *brw,
                                          enum intel_dev_meta_shader id)
-    : brw_blorp_eu_emitter(brw), brw(brw), id(id),
+    : brw_blorp_eu_emitter(brw), gpu(gpu), brw(brw), id(id),
       poison(brw_imm_ud(0x12345678)),
       r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD)),
       r1(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD)),
@@ -616,7 +619,7 @@ void *intel_meta_compiler::codegen(uint32_t *code_size)
 
     prog = get_program(&prog_size, stderr);
 
-    code = icd_alloc(prog_size, 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    code = intel_alloc(gpu, prog_size, 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!code)
         return NULL;
 
@@ -698,7 +701,7 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
 {
     struct brw_context *brw = intel_create_brw_context(gpu);
 
-    intel_meta_compiler c(brw, id);
+    intel_meta_compiler c(gpu, brw, id);
     brw_blorp_prog_data prog_data;
 
     sh->pCode = c.compile(&prog_data, &sh->codeSize);

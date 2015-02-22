@@ -117,7 +117,8 @@ static int wsi_x11_get_root_depth(struct intel_wsi_x11 *x11)
 /**
  * Query DRI3 and Present versions and return an intel_wsi_x11.
  */
-static struct intel_wsi_x11 *wsi_x11_create(xcb_connection_t *c,
+static struct intel_wsi_x11 *wsi_x11_create(const struct intel_gpu *gpu,
+                                            xcb_connection_t *c,
                                             xcb_window_t root,
                                             xcb_randr_provider_t provider)
 {
@@ -132,7 +133,7 @@ static struct intel_wsi_x11 *wsi_x11_create(xcb_connection_t *c,
     present_cookie = xcb_present_query_version(c,
             XCB_PRESENT_MAJOR_VERSION, XCB_PRESENT_MINOR_VERSION);
 
-    x11 = icd_alloc(sizeof(*x11), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    x11 = intel_alloc(gpu, sizeof(*x11), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!x11)
         return NULL;
     memset(x11, 0, sizeof(*x11));
@@ -145,7 +146,7 @@ static struct intel_wsi_x11 *wsi_x11_create(xcb_connection_t *c,
 
     dri3_reply = xcb_dri3_query_version_reply(c, dri3_cookie, NULL);
     if (!dri3_reply) {
-        icd_free(x11);
+        intel_free(gpu, x11);
         return NULL;
     }
 
@@ -155,7 +156,7 @@ static struct intel_wsi_x11 *wsi_x11_create(xcb_connection_t *c,
 
     present_reply = xcb_present_query_version_reply(c, present_cookie, NULL);
     if (!present_reply) {
-        icd_free(x11);
+        intel_free(gpu, x11);
         return NULL;
     }
 
@@ -355,12 +356,13 @@ static void wsi_x11_present_event(struct intel_wsi_x11 *x11,
     }
 }
 
-static struct intel_wsi_x11_window *wsi_x11_create_window(struct intel_wsi_x11 *x11,
+static struct intel_wsi_x11_window *wsi_x11_create_window(const struct intel_gpu *gpu,
+                                                          struct intel_wsi_x11 *x11,
                                                           xcb_window_t win_id)
 {
     struct intel_wsi_x11_window *win;
 
-    win = icd_alloc(sizeof(*win), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    win = intel_alloc(gpu, sizeof(*win), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!win)
         return NULL;
 
@@ -369,23 +371,25 @@ static struct intel_wsi_x11_window *wsi_x11_create_window(struct intel_wsi_x11 *
     win->window_id = win_id;
 
     if (wsi_x11_present_select_input(x11, win) != XGL_SUCCESS) {
-        icd_free(win);
+        intel_free(gpu, win);
         return NULL;
     }
 
     return win;
 }
 
-static void wsi_x11_destroy_window(struct intel_wsi_x11 *x11,
+static void wsi_x11_destroy_window(const struct intel_gpu *gpu,
+                                   struct intel_wsi_x11 *x11,
                                    struct intel_wsi_x11_window *win)
 {
     if (win->present_special_event)
         xcb_unregister_for_special_event(x11->c, win->present_special_event);
 
-    icd_free(win);
+    intel_free(gpu, win);
 }
 
-static struct intel_wsi_x11_window *wsi_x11_lookup_window(struct intel_wsi_x11 *x11,
+static struct intel_wsi_x11_window *wsi_x11_lookup_window(const struct intel_gpu *gpu,
+                                                          struct intel_wsi_x11 *x11,
                                                           xcb_window_t win_id)
 {
     struct intel_wsi_x11_window *win = x11->windows;
@@ -398,7 +402,7 @@ static struct intel_wsi_x11_window *wsi_x11_lookup_window(struct intel_wsi_x11 *
 
     /* lookup failed */
     if (!win) {
-        win = wsi_x11_create_window(x11, win_id);
+        win = wsi_x11_create_window(gpu, x11, win_id);
         if (win) {
             win->next = x11->windows;
             x11->windows = win;
@@ -408,20 +412,21 @@ static struct intel_wsi_x11_window *wsi_x11_lookup_window(struct intel_wsi_x11 *
     return win;
 }
 
-void intel_wsi_x11_destroy(struct intel_wsi_x11 *x11)
+void intel_wsi_x11_destroy(const struct intel_gpu *gpu,
+                           struct intel_wsi_x11 *x11)
 {
     struct intel_wsi_x11_window *win = x11->windows;
 
     while (win) {
         struct intel_wsi_x11_window *next = win->next;
-        wsi_x11_destroy_window(x11, win);
+        wsi_x11_destroy_window(gpu, x11, win);
         win = next;
     }
 
     if (x11->fd >= 0)
         close(x11->fd);
 
-    icd_free(x11);
+    intel_free(gpu, x11);
 }
 
 XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
@@ -552,19 +557,19 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(
     if (!wsi_x11_has_dri3_and_present(pConnectionInfo->pConnection))
         return XGL_ERROR_UNKNOWN;
 
-    x11 = wsi_x11_create(pConnectionInfo->pConnection,
+    x11 = wsi_x11_create(gpu, pConnectionInfo->pConnection,
             pConnectionInfo->root, pConnectionInfo->provider);
     if (!x11)
         return XGL_ERROR_UNKNOWN;
 
     ret = wsi_x11_dri3_open(x11);
     if (ret != XGL_SUCCESS) {
-        intel_wsi_x11_destroy(x11);
+        intel_wsi_x11_destroy(gpu, x11);
         return ret;
     }
 
     if (!wsi_x11_uses_gpu(x11, gpu)) {
-        intel_wsi_x11_destroy(x11);
+        intel_wsi_x11_destroy(gpu, x11);
         return XGL_ERROR_UNKNOWN;
     }
 
@@ -584,7 +589,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(
     struct intel_wsi_x11_window *win;
     XGL_RESULT ret;
 
-    win = wsi_x11_lookup_window(x11, window);
+    win = wsi_x11_lookup_window(dev->gpu, x11, window);
     if (!win)
         return XGL_ERROR_UNKNOWN;
 
@@ -631,7 +636,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
     struct intel_wsi_x11_window *win;
     XGL_RESULT ret;
 
-    win = wsi_x11_lookup_window(x11, pPresentInfo->destWindow);
+    win = wsi_x11_lookup_window(queue->dev->gpu,
+            x11, pPresentInfo->destWindow);
     if (!win)
         return XGL_ERROR_UNKNOWN;
 

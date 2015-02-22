@@ -213,7 +213,8 @@ static inline bool intel_desc_offset_within(const struct intel_desc_offset *offs
 
 XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
                                   struct intel_desc_pool **pool_ret);
-void intel_desc_pool_destroy(struct intel_desc_pool *pool);
+void intel_desc_pool_destroy(struct intel_dev *dev,
+                             struct intel_desc_pool *pool);
 
 XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
                                  const XGL_DESCRIPTOR_REGION_CREATE_INFO *info,
