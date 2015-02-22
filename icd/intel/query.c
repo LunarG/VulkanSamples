@@ -69,8 +69,9 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
 {
     struct intel_query *query;
 
-    query = (struct intel_query *) intel_base_create(dev, sizeof(*query),
-            dev->base.dbg, XGL_DBG_OBJECT_QUERY_POOL, info, 0);
+    query = (struct intel_query *) intel_base_create(&dev->base.handle,
+            sizeof(*query), dev->base.dbg, XGL_DBG_OBJECT_QUERY_POOL,
+            info, 0);
     if (!query)
         return XGL_ERROR_OUT_OF_MEMORY;
 

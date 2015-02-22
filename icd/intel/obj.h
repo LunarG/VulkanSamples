@@ -42,12 +42,6 @@ struct intel_base_dbg {
 
     void *tag;
     size_t tag_size;
-
-    /*
-     * Need pointer to base object to be able to log debug
-     * messages with intel_dev_log
-     */
-    struct intel_dev *dev;
 };
 
 struct intel_base {
@@ -90,13 +84,13 @@ static inline void intel_obj_bind_mem(struct intel_obj *obj,
 XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
                                size_t *size, void *data);
 
-struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
+struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
                                              XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              size_t dbg_size);
 void intel_base_dbg_destroy(struct intel_base_dbg *dbg);
 
-struct intel_base *intel_base_create(struct intel_dev *dev,
+struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
                                      XGL_DBG_OBJECT_TYPE type,
                                      const void *create_info,

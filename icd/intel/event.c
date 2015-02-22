@@ -123,8 +123,8 @@ XGL_RESULT intel_event_create(struct intel_dev *dev,
 {
     struct intel_event *event;
 
-    event = (struct intel_event *) intel_base_create(dev, sizeof(*event),
-            dev->base.dbg, XGL_DBG_OBJECT_EVENT, info, 0);
+    event = (struct intel_event *) intel_base_create(&dev->base.handle,
+            sizeof(*event), dev->base.dbg, XGL_DBG_OBJECT_EVENT, info, 0);
     if (!event)
         return XGL_ERROR_OUT_OF_MEMORY;
 

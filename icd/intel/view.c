@@ -1087,8 +1087,9 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
     struct intel_buf_view *view;
     int i;
 
-    view = (struct intel_buf_view *) intel_base_create(dev, sizeof(*view),
-            dev->base.dbg, XGL_DBG_OBJECT_BUFFER_VIEW, info, 0);
+    view = (struct intel_buf_view *) intel_base_create(&dev->base.handle,
+            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_BUFFER_VIEW,
+            info, 0);
     if (!view)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -1173,8 +1174,8 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
     if (array_size > img->array_size - info->subresourceRange.baseArraySlice)
         array_size = img->array_size - info->subresourceRange.baseArraySlice;
 
-    view = (struct intel_img_view *) intel_base_create(dev, sizeof(*view),
-            dev->base.dbg, XGL_DBG_OBJECT_IMAGE_VIEW, info, 0);
+    view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
+            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_IMAGE_VIEW, info, 0);
     if (!view)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -1251,8 +1252,9 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
     struct intel_img *img = intel_img(info->image);
     struct intel_rt_view *view;
 
-    view = (struct intel_rt_view *) intel_base_create(dev, sizeof(*view),
-            dev->base.dbg, XGL_DBG_OBJECT_COLOR_TARGET_VIEW, info, 0);
+    view = (struct intel_rt_view *) intel_base_create(&dev->base.handle,
+            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_COLOR_TARGET_VIEW,
+            info, 0);
     if (!view)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -1302,8 +1304,9 @@ XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
     struct intel_img *img = intel_img(info->image);
     struct intel_ds_view *view;
 
-    view = (struct intel_ds_view *) intel_base_create(dev, sizeof(*view),
-            dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW, info, 0);
+    view = (struct intel_ds_view *) intel_base_create(&dev->base.handle,
+            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW,
+            info, 0);
     if (!view)
         return XGL_ERROR_OUT_OF_MEMORY;
 

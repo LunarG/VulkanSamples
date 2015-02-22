@@ -188,10 +188,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
         shallow_copy = sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO);
         break;
     default:
-        // log debug message regarding invalid struct_type?
-        intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
-                      XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                      "Invalid Create Info type: 0x%x", info.header->struct_type);
+        assert(!"unknown dbg object type");
         return false;
         break;
     }
@@ -221,10 +218,6 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
                     size += sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
                     break;
                 default:
-                    intel_dev_log(dbg->dev, XGL_DBG_MSG_ERROR,
-                          XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                          "Invalid Memory Alloc Create Info type: 0x%x",
-                          ptr_next->sType);
                     return false;
             }
             ptr_next = (XGL_MEMORY_ALLOC_INFO *) ptr_next->pNext;
@@ -308,7 +301,7 @@ static bool base_dbg_copy_create_info(struct intel_base_dbg *dbg,
  * Create an intel_base_dbg.  When dbg_size is non-zero, a buffer of that
  * size is allocated and zeroed.
  */
-struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
+struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
                                              XGL_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              size_t dbg_size)
@@ -328,7 +321,6 @@ struct intel_base_dbg *intel_base_dbg_create(struct intel_dev *dev,
 
     dbg->alloc_id = icd_allocator_get_id();
     dbg->type = type;
-    dbg->dev = dev;
 
     if (!base_dbg_copy_create_info(dbg, create_info)) {
         icd_free(dbg);
@@ -353,7 +345,7 @@ void intel_base_dbg_destroy(struct intel_base_dbg *dbg)
  * Create an intel_base.  obj_size and dbg_size specify the real sizes of the
  * object and the debug metadata.  Memories are zeroed.
  */
-struct intel_base *intel_base_create(struct intel_dev *dev,
+struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
                                      XGL_DBG_OBJECT_TYPE type,
                                      const void *create_info,
@@ -373,16 +365,9 @@ struct intel_base *intel_base_create(struct intel_dev *dev,
     memset(base, 0, obj_size);
     intel_handle_init(&base->handle, type);
 
-    if (dev == NULL) {
-        /*
-         * dev is NULL when we are creating the base device object
-         * Set dev now so that debug setup happens correctly
-         */
-        dev = (struct intel_dev *) base;
-    }
-
     if (debug) {
-        base->dbg = intel_base_dbg_create(dev, type, create_info, dbg_size);
+        base->dbg = intel_base_dbg_create(handle,
+                type, create_info, dbg_size);
         if (!base->dbg) {
             icd_free(base);
             return NULL;

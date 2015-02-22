@@ -228,7 +228,7 @@ XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
     struct intel_dynamic_vp *state;
     XGL_RESULT ret;
 
-    state = (struct intel_dynamic_vp *) intel_base_create(dev,
+    state = (struct intel_dynamic_vp *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_VIEWPORT_STATE,
             info, 0);
     if (!state)
@@ -266,7 +266,7 @@ XGL_RESULT intel_raster_state_create(struct intel_dev *dev,
 {
     struct intel_dynamic_rs *state;
 
-    state = (struct intel_dynamic_rs *) intel_base_create(dev,
+    state = (struct intel_dynamic_rs *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_RASTER_STATE,
             info, 0);
     if (!state)
@@ -298,7 +298,7 @@ XGL_RESULT intel_blend_state_create(struct intel_dev *dev,
 {
     struct intel_dynamic_cb *state;
 
-    state = (struct intel_dynamic_cb *) intel_base_create(dev,
+    state = (struct intel_dynamic_cb *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_COLOR_BLEND_STATE,
             info, 0);
     if (!state)
@@ -330,7 +330,7 @@ XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
 {
     struct intel_dynamic_ds *state;
 
-    state = (struct intel_dynamic_ds *) intel_base_create(dev,
+    state = (struct intel_dynamic_ds *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_STATE,
             info, 0);
     if (!state)

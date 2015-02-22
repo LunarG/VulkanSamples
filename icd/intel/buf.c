@@ -92,8 +92,8 @@ XGL_RESULT intel_buf_create(struct intel_dev *dev,
 {
     struct intel_buf *buf;
 
-    buf = (struct intel_buf *) intel_base_create(dev, sizeof(*buf),
-            dev->base.dbg, XGL_DBG_OBJECT_BUFFER, info, 0);
+    buf = (struct intel_buf *) intel_base_create(&dev->base.handle,
+            sizeof(*buf), dev->base.dbg, XGL_DBG_OBJECT_BUFFER, info, 0);
     if (!buf)
         return XGL_ERROR_OUT_OF_MEMORY;
 

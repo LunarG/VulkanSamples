@@ -109,8 +109,8 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     struct intel_img *img;
     struct intel_layout *layout;
 
-    img = (struct intel_img *) intel_base_create(dev, sizeof(*img),
-            dev->base.dbg, XGL_DBG_OBJECT_IMAGE, info, 0);
+    img = (struct intel_img *) intel_base_create(&dev->base.handle,
+            sizeof(*img), dev->base.dbg, XGL_DBG_OBJECT_IMAGE, info, 0);
     if (!img)
         return XGL_ERROR_OUT_OF_MEMORY;
 

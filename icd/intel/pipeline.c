@@ -1386,9 +1386,9 @@ static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
     if (ret != XGL_SUCCESS)
         return ret;
 
-    pipeline = (struct intel_pipeline *)
-        intel_base_create(dev, sizeof(*pipeline), dev->base.dbg,
-                XGL_DBG_OBJECT_GRAPHICS_PIPELINE, info_, 0);
+    pipeline = (struct intel_pipeline *) intel_base_create(&dev->base.handle,
+            sizeof(*pipeline), dev->base.dbg,
+            XGL_DBG_OBJECT_GRAPHICS_PIPELINE, info_, 0);
     if (!pipeline)
         return XGL_ERROR_OUT_OF_MEMORY;
 

@@ -277,8 +277,8 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
         break;
     }
 
-    cmd = (struct intel_cmd *) intel_base_create(dev, sizeof(*cmd),
-            dev->base.dbg, XGL_DBG_OBJECT_CMD_BUFFER, info, 0);
+    cmd = (struct intel_cmd *) intel_base_create(&dev->base.handle,
+            sizeof(*cmd), dev->base.dbg, XGL_DBG_OBJECT_CMD_BUFFER, info, 0);
     if (!cmd)
         return XGL_ERROR_OUT_OF_MEMORY;
 

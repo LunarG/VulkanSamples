@@ -110,8 +110,8 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
     if (gpu->winsys)
         return XGL_ERROR_DEVICE_ALREADY_CREATED;
 
-    dev = (struct intel_dev *) intel_base_create(NULL, sizeof(*dev),
-            info->flags & XGL_DEVICE_CREATE_VALIDATION_BIT,
+    dev = (struct intel_dev *) intel_base_create(&gpu->handle,
+            sizeof(*dev), info->flags & XGL_DEVICE_CREATE_VALIDATION_BIT,
             XGL_DBG_OBJECT_DEVICE, info, sizeof(struct intel_dev_dbg));
     if (!dev)
         return XGL_ERROR_OUT_OF_MEMORY;

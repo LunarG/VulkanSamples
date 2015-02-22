@@ -47,8 +47,8 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
         (const struct icd_bil_header *) info->pCode;
     struct intel_shader *sh;
 
-    sh = (struct intel_shader *) intel_base_create(dev, sizeof(*sh),
-            dev->base.dbg, XGL_DBG_OBJECT_SHADER, info, 0);
+    sh = (struct intel_shader *) intel_base_create(&dev->base.handle,
+            sizeof(*sh), dev->base.dbg, XGL_DBG_OBJECT_SHADER, info, 0);
     if (!sh)
         return XGL_ERROR_OUT_OF_MEMORY;
 

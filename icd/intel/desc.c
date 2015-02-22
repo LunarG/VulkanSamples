@@ -311,9 +311,9 @@ XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
     struct intel_desc_region *region;
     XGL_RESULT ret;
 
-    region = (struct intel_desc_region *)
-        intel_base_create(dev, sizeof(*region), dev->base.dbg,
-                XGL_DBG_OBJECT_DESCRIPTOR_REGION, info, 0);
+    region = (struct intel_desc_region *) intel_base_create(&dev->base.handle,
+            sizeof(*region), dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_REGION,
+            info, 0);
     if (!region)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -382,9 +382,9 @@ XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
     struct intel_desc_set *set;
     XGL_RESULT ret;
 
-    set = (struct intel_desc_set *)
-        intel_base_create(dev, sizeof(*set), dev->base.dbg,
-                XGL_DBG_OBJECT_DESCRIPTOR_SET, NULL, 0);
+    set = (struct intel_desc_set *) intel_base_create(&dev->base.handle,
+            sizeof(*set), dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_SET,
+            NULL, 0);
     if (!set)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -828,9 +828,9 @@ XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
     struct intel_desc_layout *layout;
     XGL_RESULT ret;
 
-    layout = (struct intel_desc_layout *)
-        intel_base_create(dev, sizeof(*layout), dev->base.dbg,
-                XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT, info, 0);
+    layout = (struct intel_desc_layout *) intel_base_create(&dev->base.handle,
+            sizeof(*layout), dev->base.dbg,
+            XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT, info, 0);
     if (!layout)
         return XGL_ERROR_OUT_OF_MEMORY;
 

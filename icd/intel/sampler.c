@@ -367,7 +367,7 @@ XGL_RESULT intel_sampler_create(struct intel_dev *dev,
 {
     struct intel_sampler *sampler;
 
-    sampler = (struct intel_sampler *) intel_base_create(dev,
+    sampler = (struct intel_sampler *) intel_base_create(&dev->base.handle,
             sizeof(*sampler), dev->base.dbg, XGL_DBG_OBJECT_SAMPLER, info, 0);
     if (!sampler)
         return XGL_ERROR_OUT_OF_MEMORY;

@@ -36,8 +36,8 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
 
     /* ignore any IMAGE_INFO and BUFFER_INFO usage: they don't alter allocations */
 
-    mem = (struct intel_mem *) intel_base_create(dev, sizeof(*mem),
-            dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
+    mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
+            sizeof(*mem), dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
     if (!mem)
         return XGL_ERROR_OUT_OF_MEMORY;
 
