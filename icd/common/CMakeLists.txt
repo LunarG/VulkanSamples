@@ -3,7 +3,6 @@ if (WIN32)
 endif()
 
 set(sources
-    icd-alloc.c
     icd-format.c
     icd-instance.c
     icd-log.c
