@@ -146,7 +146,7 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     if (layout->separate_stencil) {
         XGL_IMAGE_CREATE_INFO s8_info;
 
-        img->s8_layout = icd_alloc(sizeof(*img->s8_layout), 0,
+        img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), 0,
                 XGL_SYSTEM_ALLOC_INTERNAL);
         if (!img->s8_layout) {
             intel_img_destroy(img);
@@ -186,7 +186,7 @@ void intel_img_destroy(struct intel_img *img)
 #endif
 
     if (img->s8_layout)
-        icd_free(img->s8_layout);
+        intel_free(img, img->s8_layout);
 
     intel_base_destroy(&img->obj.base);
 }

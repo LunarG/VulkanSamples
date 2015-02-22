@@ -174,7 +174,7 @@ static void dev_clear_msg_filters(struct intel_dev *dev)
     filter = dbg->filters;
     while (filter) {
         struct intel_dev_dbg_msg_filter *next = filter->next;
-        icd_free(filter);
+        intel_free(dev, filter);
         filter = next;
     }
 
@@ -229,7 +229,7 @@ XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
             f->triggered = false;
         }
     } else {
-        f = icd_alloc(sizeof(*f), 0, XGL_SYSTEM_ALLOC_DEBUG);
+        f = intel_alloc(dev, sizeof(*f), 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!f)
             return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -257,7 +257,7 @@ void intel_dev_remove_msg_filter(struct intel_dev *dev,
             else
                 dbg->filters = f->next;
 
-            icd_free(f);
+            intel_free(dev, f);
             break;
         }
 

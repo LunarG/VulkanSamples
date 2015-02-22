@@ -72,14 +72,14 @@ XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
     const uint32_t sampler_count = 16384;
     struct intel_desc_pool *pool;
 
-    pool = icd_alloc(sizeof(*pool), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    pool = intel_alloc(dev, sizeof(*pool), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!pool)
         return XGL_ERROR_OUT_OF_MEMORY;
 
     memset(pool, 0, sizeof(*pool));
 
     if (!desc_pool_init_desc_sizes(pool, dev->gpu)) {
-        icd_free(pool);
+        intel_free(dev, pool);
         return XGL_ERROR_UNKNOWN;
     }
 
@@ -87,18 +87,18 @@ XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
             pool->surface_desc_size * surface_count,
             pool->sampler_desc_size * sampler_count);
 
-    pool->surfaces = icd_alloc(pool->size.surface,
+    pool->surfaces = intel_alloc(dev, pool->size.surface,
             64, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!pool->surfaces) {
-        icd_free(pool);
+        intel_free(dev, pool);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    pool->samplers = icd_alloc(pool->size.sampler,
+    pool->samplers = intel_alloc(dev, pool->size.sampler,
             64, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!pool->samplers) {
-        icd_free(pool->surfaces);
-        icd_free(pool);
+        intel_free(dev, pool->surfaces);
+        intel_free(dev, pool);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
@@ -712,7 +712,7 @@ static XGL_RESULT desc_layout_alloc_ranges(struct intel_desc_layout *layout,
         info = info->pNext;
     }
 
-    layout->ranges = icd_alloc(sizeof(layout->ranges[0]) *
+    layout->ranges = intel_alloc(layout, sizeof(layout->ranges[0]) *
             layout->range_count, 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!layout->ranges)
         return XGL_ERROR_OUT_OF_MEMORY;
@@ -853,7 +853,7 @@ XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
 
 void intel_desc_layout_destroy(struct intel_desc_layout *layout)
 {
-    icd_free(layout->ranges);
+    intel_free(layout, layout->ranges);
     intel_base_destroy(&layout->obj.base);
 }
 

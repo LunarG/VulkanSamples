@@ -1884,13 +1884,13 @@ static uint32_t emit_shader(struct intel_cmd *cmd,
         const uint32_t count = cache->count + 16;
         void *entries;
 
-        entries = icd_alloc(sizeof(cache->entries[0]) * count, 0,
+        entries = intel_alloc(cmd, sizeof(cache->entries[0]) * count, 0,
                 XGL_SYSTEM_ALLOC_INTERNAL);
         if (entries) {
             if (cache->entries) {
                 memcpy(entries, cache->entries,
                         sizeof(cache->entries[0]) * cache->used);
-                icd_free(cache->entries);
+                intel_free(cmd, cache->entries);
             }
 
             cache->entries = entries;
@@ -2954,10 +2954,10 @@ static void cmd_bind_graphics_dset(struct intel_cmd *cmd,
 
     if (size > cmd->bind.dset.graphics_dynamic_offset_size) {
         if (cmd->bind.dset.graphics_dynamic_offsets)
-            icd_free(cmd->bind.dset.graphics_dynamic_offsets);
+            intel_free(cmd, cmd->bind.dset.graphics_dynamic_offsets);
 
-        cmd->bind.dset.graphics_dynamic_offsets = icd_alloc(size,
-                4, XGL_SYSTEM_ALLOC_INTERNAL);
+        cmd->bind.dset.graphics_dynamic_offsets = intel_alloc(cmd,
+                size, 4, XGL_SYSTEM_ALLOC_INTERNAL);
         if (!cmd->bind.dset.graphics_dynamic_offsets) {
             cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
             return;
@@ -2979,10 +2979,10 @@ static void cmd_bind_compute_dset(struct intel_cmd *cmd,
 
     if (size > cmd->bind.dset.compute_dynamic_offset_size) {
         if (cmd->bind.dset.compute_dynamic_offsets)
-            icd_free(cmd->bind.dset.compute_dynamic_offsets);
+            intel_free(cmd, cmd->bind.dset.compute_dynamic_offsets);
 
-        cmd->bind.dset.compute_dynamic_offsets = icd_alloc(size,
-                4, XGL_SYSTEM_ALLOC_INTERNAL);
+        cmd->bind.dset.compute_dynamic_offsets = intel_alloc(cmd,
+                size, 4, XGL_SYSTEM_ALLOC_INTERNAL);
         if (!cmd->bind.dset.compute_dynamic_offsets) {
             cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
             return;

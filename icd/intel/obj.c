@@ -313,7 +313,7 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
 
     assert(dbg_size >= sizeof(*dbg));
 
-    dbg = icd_alloc(dbg_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    dbg = intel_alloc(handle, dbg_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
     if (!dbg)
         return NULL;
 
@@ -323,7 +323,7 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
     dbg->type = type;
 
     if (!base_dbg_copy_create_info(dbg, create_info)) {
-        icd_free(dbg);
+        intel_free(handle, dbg);
         return NULL;
     }
 
@@ -358,7 +358,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
 
     assert(obj_size >= sizeof(*base));
 
-    base = icd_alloc(obj_size, 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    base = intel_alloc(handle, obj_size, 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!base)
         return NULL;
 
@@ -369,7 +369,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
         base->dbg = intel_base_dbg_create(handle,
                 type, create_info, dbg_size);
         if (!base->dbg) {
-            icd_free(base);
+            intel_free(handle, base);
             return NULL;
         }
     }
@@ -383,7 +383,7 @@ void intel_base_destroy(struct intel_base *base)
 {
     if (base->dbg)
         intel_base_dbg_destroy(base->dbg);
-    icd_free(base);
+    intel_free(base, base);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyObject(
@@ -454,14 +454,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
     if (!dbg)
         return XGL_SUCCESS;
 
-    tag = icd_alloc(tagSize, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    tag = intel_alloc(base, tagSize, 0, XGL_SYSTEM_ALLOC_DEBUG);
     if (!tag)
         return XGL_ERROR_OUT_OF_MEMORY;
 
     memcpy(tag, pTag, tagSize);
 
     if (dbg->tag)
-        icd_free(dbg->tag);
+        intel_free(base, dbg->tag);
 
     dbg->tag = tag;
     dbg->tag_size = tagSize;

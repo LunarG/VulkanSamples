@@ -296,7 +296,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
-        icd_alloc(sizeof(*rmap), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+        intel_alloc(gpu, sizeof(*rmap), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!rmap)
         return NULL;
 
@@ -312,10 +312,10 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     rmap->slot_count = surface_count + rmap->sampler_count;
 
     rmap->slots = (struct intel_pipeline_rmap_slot *)
-        icd_alloc(sizeof(rmap->slots[0]) * rmap->slot_count,
+        intel_alloc(gpu, sizeof(rmap->slots[0]) * rmap->slot_count,
             0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!rmap->slots) {
-        icd_free(rmap);
+        intel_free(gpu, rmap);
         return NULL;
     }
 
@@ -419,7 +419,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
         {
             pipe_shader->codeSize = get_vs_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = icd_alloc(pipe_shader->codeSize, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
             if (!pipe_shader->pCode) {
                 status = XGL_ERROR_OUT_OF_MEMORY;
                 break;
@@ -538,7 +538,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             pipe_shader->codeSize = get_wm_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = icd_alloc(pipe_shader->codeSize, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
             if (!pipe_shader->pCode) {
                 status = XGL_ERROR_OUT_OF_MEMORY;
                 break;

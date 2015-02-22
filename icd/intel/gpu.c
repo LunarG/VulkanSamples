@@ -121,8 +121,8 @@ void intel_gpu_destroy(struct intel_gpu *gpu)
         intel_wsi_x11_destroy(gpu->x11);
 #endif
 
-    icd_free(gpu->primary_node);
-    icd_free(gpu);
+    intel_free(gpu, gpu->primary_node);
+    intel_free(gpu, gpu);
 }
 
 static int devid_to_gen(int devid)
@@ -160,7 +160,7 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
         return XGL_ERROR_INITIALIZATION_FAILED;
     }
 
-    gpu = icd_alloc(sizeof(*gpu), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    gpu = intel_alloc(instance, sizeof(*gpu), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!gpu)
         return XGL_ERROR_OUT_OF_MEMORY;
 
@@ -173,10 +173,10 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
     primary_len = strlen(primary_node);
     render_len = (render_node) ? strlen(render_node) : 0;
 
-    gpu->primary_node = icd_alloc(primary_len + 1 +
+    gpu->primary_node = intel_alloc(gpu, primary_len + 1 +
             ((render_len) ? (render_len + 1) : 0), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!gpu->primary_node) {
-        icd_free(gpu);
+        intel_free(instance, gpu);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 

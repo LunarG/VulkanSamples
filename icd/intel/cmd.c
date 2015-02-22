@@ -58,7 +58,7 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
     writer->sba_offset = 0;
 
     if (writer->items) {
-        icd_free(writer->items);
+        intel_free(cmd, writer->items);
         writer->items = NULL;
         writer->item_alloc = 0;
         writer->item_used = 0;
@@ -194,7 +194,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
             writer->item_alloc << 1 : 256;
         struct intel_cmd_item *items;
 
-        items = icd_alloc(sizeof(writer->items[0]) * new_alloc,
+        items = intel_alloc(cmd, sizeof(writer->items[0]) * new_alloc,
                 0, XGL_SYSTEM_ALLOC_DEBUG);
         if (!items) {
             writer->item_used = 0;
@@ -205,7 +205,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
         memcpy(items, writer->items,
                 sizeof(writer->items[0]) * writer->item_alloc);
 
-        icd_free(writer->items);
+        intel_free(cmd, writer->items);
 
         writer->items = items;
         writer->item_alloc = new_alloc;
@@ -235,12 +235,12 @@ static void cmd_reset(struct intel_cmd *cmd)
         cmd_writer_reset(cmd, i);
 
     if (cmd->bind.shader_cache.entries)
-        icd_free(cmd->bind.shader_cache.entries);
+        intel_free(cmd, cmd->bind.shader_cache.entries);
 
     if (cmd->bind.dset.graphics_dynamic_offsets)
-        icd_free(cmd->bind.dset.graphics_dynamic_offsets);
+        intel_free(cmd, cmd->bind.dset.graphics_dynamic_offsets);
     if (cmd->bind.dset.compute_dynamic_offsets)
-        icd_free(cmd->bind.dset.compute_dynamic_offsets);
+        intel_free(cmd, cmd->bind.dset.compute_dynamic_offsets);
 
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
@@ -294,7 +294,7 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
      * and end offsets, for each referenced memories.
      */
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
-    cmd->relocs = icd_alloc(sizeof(cmd->relocs[0]) * cmd->reloc_count,
+    cmd->relocs = intel_alloc(cmd, sizeof(cmd->relocs[0]) * cmd->reloc_count,
             4096, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!cmd->relocs) {
         intel_cmd_destroy(cmd);
@@ -310,7 +310,7 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
 {
     cmd_reset(cmd);
 
-    icd_free(cmd->relocs);
+    intel_free(cmd, cmd->relocs);
     intel_base_destroy(&cmd->obj.base);
 }
 

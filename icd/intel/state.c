@@ -117,7 +117,7 @@ viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
     state->cmd_scissor_rect_pos = state->cmd_len;
     state->cmd_len += 2 * info->viewportAndScissorCount;
 
-    state->cmd = icd_alloc(sizeof(uint32_t) * state->cmd_len,
+    state->cmd = intel_alloc(state, sizeof(uint32_t) * state->cmd_len,
             0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!state->cmd)
         return XGL_ERROR_OUT_OF_MEMORY;
@@ -249,7 +249,7 @@ XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
 
 void intel_viewport_state_destroy(struct intel_dynamic_vp *state)
 {
-    icd_free(state->cmd);
+    intel_free(state, state->cmd);
     intel_base_destroy(&state->obj.base);
 }
 

@@ -133,14 +133,14 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     struct intel_pipeline_shader *sh;
     XGL_RESULT ret;
 
-    sh = icd_alloc(sizeof(*sh), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    sh = intel_alloc(dev, sizeof(*sh), 0, XGL_SYSTEM_ALLOC_INTERNAL);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));
 
     ret = intel_pipeline_shader_compile_meta(sh, dev->gpu, id);
     if (ret != XGL_SUCCESS) {
-        icd_free(sh);
+        intel_free(dev, sh);
         return NULL;
     }
 
