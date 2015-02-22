@@ -5,7 +5,6 @@ endif()
 set(sources
     icd-format.c
     icd-instance.c
-    icd-log.c
     icd-utils.c)
 
 set(include_dirs "")
