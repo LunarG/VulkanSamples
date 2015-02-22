@@ -108,7 +108,7 @@ static struct nulldrv_base *nulldrv_base_create(struct nulldrv_dev *dev,
 
     assert(obj_size >= sizeof(*base));
 
-	base = (struct nulldrv_base*)icd_alloc(obj_size, 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+	base = (struct nulldrv_base*)malloc(obj_size);
     if (!base)
         return NULL;
 
@@ -136,7 +136,7 @@ static XGL_RESULT nulldrv_gpu_add(int devid, const char *primary_node,
 {
     struct nulldrv_gpu *gpu;
 
-	gpu = icd_alloc(sizeof(*gpu), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+	gpu = malloc(sizeof(*gpu));
     if (!gpu)
         return XGL_ERROR_OUT_OF_MEMORY;
 	memset(gpu, 0, sizeof(*gpu));
@@ -1519,7 +1519,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
 
     *pInstance = (XGL_INSTANCE*)inst;
 
-    return icd_allocator_init(pAllocCb);
+    return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(

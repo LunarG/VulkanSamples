@@ -41,7 +41,6 @@
 #endif
 
 #include "icd.h"
-#include "icd-alloc.h"
 
 #include "icd-format.h"
 #include "icd-utils.h"
