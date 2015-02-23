@@ -35,7 +35,7 @@
 const size_t kSendBufferSize = 1024 * 1024;
 
 MessageStream* gMessageStream = NULL;
-
+static GLV_CRITICAL_SECTION gSendLock;
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -217,6 +217,7 @@ BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
     struct addrinfo hostAddrInfo = { 0 },
         *currentAttempt = NULL;
 
+    glv_create_critical_section(&gSendLock);
     hostAddrInfo.ai_family = AF_UNSPEC;
     hostAddrInfo.ai_socktype = SOCK_STREAM;
     hostAddrInfo.ai_protocol = IPPROTO_TCP;
@@ -364,6 +365,7 @@ BOOL glv_MessageStream_ReallySend(MessageStream* pStream, const void* _bytes, si
     size_t bytesSent = 0;
     assert(_size > 0);
 
+    glv_enter_critical_section(&gSendLock);
     do {
         int sentThisTime = send(pStream->mSocket, (const char*)_bytes + bytesSent, (int)_size - (int)bytesSent, 0);
         if (sentThisTime == SOCKET_ERROR) {
@@ -374,19 +376,23 @@ BOOL glv_MessageStream_ReallySend(MessageStream* pStream, const void* _bytes, si
             }
 
             if (!_optional) {
+                glv_leave_critical_section(&gSendLock);
                 return FALSE;
             } 
         }
         if (sentThisTime == 0) {
             if (!_optional) {
+                glv_leave_critical_section(&gSendLock);
                 return FALSE;
             }
+            glv_LogDebug("Send on socket 0 bytes, totalbytes sent so far %u\n", bytesSent);
             break;
         }
 
         bytesSent += sentThisTime;
 
     } while (bytesSent < _size);
+    glv_leave_critical_section(&gSendLock);
     return TRUE;
 }
 
@@ -409,6 +415,7 @@ BOOL glv_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len)
                 // I've split these into two blocks because one of them is expected and the other isn't.
             } else if (pStream->mErrorNum == WSAECONNRESET) {
                 // The remote client disconnected, probably not an issue.
+                //glv_LogDebug("Connection was reset by client\n");
                 return FALSE;
             } else {
                 // Some other wonky network error--place a breakpoint here.

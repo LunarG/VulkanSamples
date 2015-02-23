@@ -231,6 +231,7 @@ glv_trace_packet_header* glv_read_trace_packet(FileLike* pFile)
 
     if (glv_FileLike_ReadRaw(pFile, &total_packet_size, sizeof(uint64_t)) == FALSE)
     {
+        glv_LogError("Failed to read trace packet size\n");
         return NULL;
     }
 
@@ -243,10 +244,14 @@ glv_trace_packet_header* glv_read_trace_packet(FileLike* pFile)
         pHeader->size = total_packet_size;
         if (glv_FileLike_ReadRaw(pFile, (char*)pHeader + sizeof(uint64_t), (size_t)total_packet_size - sizeof(uint64_t)) == FALSE)
         {
+            glv_LogError("Failed to read trace packet with size of %u\n", total_packet_size);
             return NULL;
         }
 
         pHeader->pBody = (uintptr_t)pHeader + sizeof(glv_trace_packet_header);
+    }
+    else {
+        glv_LogError("malloc failed in glv_read_trace_packet of size %u\n", total_packet_size);
     }
 
     return pHeader;
