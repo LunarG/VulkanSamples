@@ -1155,11 +1155,12 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         .stageFlags = XGL_SHADER_STAGE_FLAGS_VERTEX_BIT,
         .immutableSampler = XGL_NULL_HANDLE,
     };
-    const uint32_t bind_points[2] = { 0, 0 };
+
+    const uint32_t bind_point = 0;
     XGL_RESULT err;
 
     err = xglCreateDescriptorSetLayout(demo->device,
-            XGL_SHADER_STAGE_FLAGS_VERTEX_BIT | XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT, bind_points,
+            XGL_SHADER_STAGE_FLAGS_ALL, &bind_point,
             XGL_NULL_HANDLE, &descriptor_layout_vs,
             &demo->desc_layout);
     assert(!err);
