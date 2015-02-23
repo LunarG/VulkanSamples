@@ -231,7 +231,7 @@ glv_trace_packet_header* glv_read_trace_packet(FileLike* pFile)
 
     if (glv_FileLike_ReadRaw(pFile, &total_packet_size, sizeof(uint64_t)) == FALSE)
     {
-        glv_LogError("Failed to read trace packet size\n");
+        //glv_LogError("Failed to read trace packet size\n");
         return NULL;
     }
 

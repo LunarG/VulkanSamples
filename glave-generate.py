@@ -3406,6 +3406,7 @@ class Subcommand(object):
                 elif proto.name in do_while_dict:
                     rbody[-1] = '    %s' % rbody[-1]
                     rbody.append('            } while (%s);' % do_while_dict[proto.name])
+                    rbody.append('            if (pPacket->result != XGL_NOT_READY || replayResult != XGL_SUCCESS)')
                 elif proto.name == 'EnumerateLayers':
                     rbody.append('            for (unsigned int i = 0; i < pPacket->maxLayerCount; i++)')
                     rbody.append('                GLV_DELETE(bufptr[i]);')
