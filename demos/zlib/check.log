@@ -1,0 +1,10 @@
+hello world
+zlib version 1.2.3 = 0x1230, compile flags = 0x95
+uncompress(): hello, hello!
+gzread(): hello, hello!
+gzgets() after gzseek:  hello!
+inflate(): hello, hello!
+large_inflate(): OK
+after inflateSync(): hello, hello!
+inflate with dictionary: hello, hello!
+		*** zlib test OK ***

@@ -13,7 +13,9 @@
 #include "icd-bil.h"
 
 #include "linmath.h"
+#if defined(__linux__)
 #include <unistd.h>
+#endif
 #include <png.h>
 
 #define DEMO_BUFFER_COUNT 2
@@ -23,7 +25,9 @@
  * When not defined, code will use built-in GLSL compiler
  * which may not be supported on all drivers
  */
+#if !defined(XCB_NVIDIA)
 #define EXTERNAL_BIL
+#endif
 
 /*
  * structure to track all objects related to a texture.
@@ -375,7 +379,7 @@ void demo_update_data_buffer(struct demo *demo)
 
     // Rotate 22.5 degrees around the Y axis
     mat4x4_dup(Model, demo->model_matrix);
-    mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f, degreesToRadians(demo->spin_angle));
+    mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f, (float)degreesToRadians(demo->spin_angle));
     mat4x4_mul(MVP, VP, demo->model_matrix);
 
     assert(demo->uniform_data.num_mem == 1);
@@ -425,7 +429,7 @@ static void demo_draw(struct demo *demo)
         memRefs[idx].flags = 0;
     }
     err = xglQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
-            0, NULL, XGL_NULL_HANDLE);
+            idx, memRefs, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
@@ -747,9 +751,13 @@ static void demo_prepare_texture_image(struct demo *demo,
         .usage = XGL_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
         .flags = 0,
     };
+    XGL_MEMORY_ALLOC_BUFFER_INFO buf_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO,
+        .pNext = NULL,
+    };
     XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = NULL,
+        .pNext = &buf_alloc,
     };
     XGL_MEMORY_ALLOC_INFO mem_alloc = {
         .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
@@ -762,6 +770,8 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     XGL_MEMORY_REQUIREMENTS *mem_reqs;
     size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_BUFFER_MEMORY_REQUIREMENTS buf_reqs;
+    size_t buf_reqs_size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
     XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
     size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     uint32_t num_allocations = 0;
@@ -790,8 +800,19 @@ static void demo_prepare_texture_image(struct demo *demo,
     img_alloc.samples = img_reqs.samples;
     mem_alloc.memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
     for (uint32_t j = 0; j < num_allocations; j ++) {
-        mem_alloc.allocationSize = mem_reqs[j].size;
         mem_alloc.memType = mem_reqs[j].memType;
+        mem_alloc.allocationSize = mem_reqs[j].size;
+
+        if (mem_alloc.memType == XGL_MEMORY_TYPE_BUFFER) {
+            err = xglGetObjectInfo(tex_objs->image,
+                            XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS,
+                            &buf_reqs_size, &buf_reqs);
+            assert(!err && buf_reqs_size == sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS));
+            buf_alloc.usage = buf_reqs.usage;
+            img_alloc.pNext = &buf_alloc;
+        } else {
+            img_alloc.pNext = 0;
+        }
 
         /* allocate memory */
         err = xglAllocMemory(demo->device, &mem_alloc,
@@ -1092,7 +1113,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         err = xglMapMemory(demo->uniform_data.mem[i], 0, (void **) &pData);
         assert(!err);
 
-        memcpy(pData, &data, alloc_info.allocationSize);
+        memcpy(pData, &data, (size_t)alloc_info.allocationSize);
 
         err = xglUnmapMemory(demo->uniform_data.mem[i]);
         assert(!err);
@@ -1134,11 +1155,11 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         .stageFlags = XGL_SHADER_STAGE_FLAGS_VERTEX_BIT,
         .immutableSampler = XGL_NULL_HANDLE,
     };
-    const uint32_t bind_point = 0;
+    const uint32_t bind_points[2] = { 0, 0 };
     XGL_RESULT err;
 
     err = xglCreateDescriptorSetLayout(demo->device,
-            XGL_SHADER_STAGE_FLAGS_ALL, &bind_point,
+            XGL_SHADER_STAGE_FLAGS_VERTEX_BIT | XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT, bind_points,
             XGL_NULL_HANDLE, &descriptor_layout_vs,
             &demo->desc_layout);
     assert(!err);
@@ -1375,26 +1396,36 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     viewport_create.sType = XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
     viewport_create.viewportAndScissorCount = 1;
     XGL_VIEWPORT viewport;
-    XGL_RECT scissor;
+    memset(&viewport, 0, sizeof(viewport));
     viewport.height = (float) demo->height;
     viewport.width = (float) demo->width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
+    viewport_create.pViewports = &viewport;
+    XGL_RECT scissor;
+    memset(&scissor, 0, sizeof(scissor));
     scissor.extent.width = demo->width;
     scissor.extent.height = demo->height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    viewport_create.pViewports = &viewport;
     viewport_create.pScissors = &scissor;
 
     memset(&raster, 0, sizeof(raster));
     raster.sType = XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
+    raster.pointSize = 1.0;
+    raster.lineWidth = 1.0;
 
     memset(&color_blend, 0, sizeof(color_blend));
     color_blend.sType = XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
+    color_blend.blendConst[0] = 1.0f;
+    color_blend.blendConst[1] = 1.0f;
+    color_blend.blendConst[2] = 1.0f;
+    color_blend.blendConst[3] = 1.0f;
 
     memset(&depth_stencil, 0, sizeof(depth_stencil));
     depth_stencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
+    depth_stencil.minDepth = 0.0f;
+    depth_stencil.maxDepth = 1.0f;
     depth_stencil.stencilBackRef = 0;
     depth_stencil.stencilFrontRef = 0;
     depth_stencil.stencilReadMask = 0xff;
@@ -1530,7 +1561,7 @@ static void demo_prepare(struct demo *demo)
 static void demo_handle_event(struct demo *demo,
                               const xcb_generic_event_t *event)
 {
-    u_int8_t event_code = event->response_type & 0x7f;
+    uint8_t event_code = event->response_type & 0x7f;
     switch (event_code) {
     case XCB_EXPOSE:
         // TODO: Resize window
@@ -1558,7 +1589,7 @@ static void demo_handle_event(struct demo *demo,
                 break;
             case 0x41:
                 demo->pause = !demo->pause;
-                 break;
+                break;
             }
         }
         break;
@@ -1712,7 +1743,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
 
     memset(demo, 0, sizeof(*demo));
 
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "--use_staging", strlen("--use_staging")) == 0)
             demo->use_staging_buffer = true;
     }
@@ -1728,7 +1759,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
     demo->spin_increment = 0.01f;
     demo->pause = false;
 
-    mat4x4_perspective(demo->projection_matrix, degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+    mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
     mat4x4_look_at(demo->view_matrix, eye, origin, up);
     mat4x4_identity(demo->model_matrix);
 }
@@ -1774,6 +1805,9 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->buffers[i].view);
         xglDestroyObject(demo->buffers[i].image);
         xglDestroyObject(demo->buffers[i].cmd);
+#if defined(XCB_NVIDIA)
+        xglFreeMemory(demo->buffers[i].mem);
+#endif
     }
 
     xglDestroyDevice(demo->device);

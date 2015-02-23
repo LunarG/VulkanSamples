@@ -1,0 +1,96 @@
+Hmm...  Looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/Makefile zlib-1.2.2/Makefile
+|--- zlib-1.2.2-orig/Makefile	2004-09-15 16:27:20.000000000 +0200
+|+++ zlib-1.2.2/Makefile	2005-01-02 13:29:11.187500000 +0100
+--------------------------
+Patching file Makefile using Plan A...
+Hunk #1 FAILED at 16.
+Hunk #2 succeeded at 105.
+Hunk #3 succeeded at 117.
+Hunk #4 succeeded at 169.
+Not setting time of file Makefile (time mismatch)
+1 out of 4 hunks FAILED -- saving rejects to file Makefile.rej
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/contrib/blast/Makefile zlib-1.2.2/contrib/blast/Makefile
+|--- zlib-1.2.2-orig/contrib/blast/Makefile	2003-03-03 06:45:22.000000000 +0100
+|+++ zlib-1.2.2/contrib/blast/Makefile	2004-12-25 11:00:15.343750000 +0100
+--------------------------
+Patching file contrib/blast/Makefile using Plan A...
+Hunk #1 succeeded at 1.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/contrib/minizip/Makefile zlib-1.2.2/contrib/minizip/Makefile
+|--- zlib-1.2.2-orig/contrib/minizip/Makefile	2003-09-10 20:00:16.000000000 +0200
+|+++ zlib-1.2.2/contrib/minizip/Makefile	2004-12-25 11:00:15.343750000 +0100
+--------------------------
+Patching file contrib/minizip/Makefile using Plan A...
+Hunk #1 succeeded at 1.
+Not setting time of file contrib/minizip/Makefile (time mismatch)
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/contrib/minizip/miniunz.c zlib-1.2.2/contrib/minizip/miniunz.c
+|--- zlib-1.2.2-orig/contrib/minizip/miniunz.c	2004-10-04 04:45:05.000000000 +0200
+|+++ zlib-1.2.2/contrib/minizip/miniunz.c	2004-12-25 11:00:15.359375000 +0100
+--------------------------
+Patching file contrib/minizip/miniunz.c using Plan A...
+Hunk #1 succeeded at 9.
+Hunk #2 succeeded at 19.
+Not setting time of file contrib/minizip/miniunz.c (time mismatch)
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/contrib/minizip/minizip.c zlib-1.2.2/contrib/minizip/minizip.c
+|--- zlib-1.2.2-orig/contrib/minizip/minizip.c	2004-05-31 01:24:32.000000000 +0200
+|+++ zlib-1.2.2/contrib/minizip/minizip.c	2004-12-25 11:00:15.359375000 +0100
+--------------------------
+Patching file contrib/minizip/minizip.c using Plan A...
+Hunk #1 succeeded at 8.
+Hunk #2 succeeded at 20.
+Not setting time of file contrib/minizip/minizip.c (time mismatch)
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/contrib/minizip/zip.c zlib-1.2.2/contrib/minizip/zip.c
+|--- zlib-1.2.2-orig/contrib/minizip/zip.c	2004-09-22 16:36:50.000000000 +0200
+|+++ zlib-1.2.2/contrib/minizip/zip.c	2004-12-25 11:00:15.375000000 +0100
+--------------------------
+Patching file contrib/minizip/zip.c using Plan A...
+Hunk #1 succeeded at 16 (offset 3 lines).
+Not setting time of file contrib/minizip/zip.c (time mismatch)
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/contrib/untgz/untgz.c zlib-1.2.2/contrib/untgz/untgz.c
+|--- zlib-1.2.2-orig/contrib/untgz/untgz.c	2004-03-07 07:00:00.000000000 +0100
+|+++ zlib-1.2.2/contrib/untgz/untgz.c	2004-12-25 11:00:15.375000000 +0100
+--------------------------
+Patching file contrib/untgz/untgz.c using Plan A...
+Hunk #1 succeeded at 9.
+Hunk #2 succeeded at 31.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/gzio.c zlib-1.2.2/gzio.c
+|--- zlib-1.2.2-orig/gzio.c	2004-10-04 04:30:37.000000000 +0200
+|+++ zlib-1.2.2/gzio.c	2004-12-25 11:00:15.390625000 +0100
+--------------------------
+Patching file gzio.c using Plan A...
+Hunk #1 succeeded at 881.
+Not setting time of file gzio.c (time mismatch)
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.2-orig/zconf.h zlib-1.2.2/zconf.h
+|--- zlib-1.2.2-orig/zconf.h	2004-05-30 22:38:00.000000000 +0200
+|+++ zlib-1.2.2/zconf.h	2004-12-25 11:00:15.390625000 +0100
+--------------------------
+Patching file zconf.h using Plan A...
+Hunk #1 succeeded at 284 (offset 6 lines).
+Not setting time of file zconf.h (time mismatch)
+done

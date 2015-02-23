@@ -10,6 +10,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#if defined(XCB_NVIDIA)
+#define __linux__
+#endif
+
 #if defined(__linux__)
 #include <xcb/xcb.h>
 #endif
@@ -50,7 +54,8 @@ struct demo {
 
     struct {
         XGL_IMAGE image;
-        XGL_GPU_MEMORY mem;
+        uint32_t num_mem;
+        XGL_GPU_MEMORY *mem;
 
         XGL_COLOR_ATTACHMENT_VIEW view;
         XGL_FENCE fence;
@@ -149,7 +154,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = demo->width;
     rp_info.renderArea.extent.height = demo->height;
-    rp_info.colorAttachmentCount = 1;
+    rp_info.colorAttachmentCount = fb_info.colorAttachmentCount;
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -177,6 +182,7 @@ static void demo_draw_build_cmd(struct demo *demo)
 
     xglCmdBindVertexBuffer(demo->cmd, demo->vertices.buf, 0, 0);
 
+    xglCmdBeginRenderPass(demo->cmd, graphics_cmd_buf_info.renderPass);
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
     clear_range.mipLevels = 1;
@@ -191,6 +197,7 @@ static void demo_draw_build_cmd(struct demo *demo)
             clear_depth, 0, 1, &clear_range);
 
     xglCmdDraw(demo->cmd, 0, 3, 0, 1);
+    xglCmdEndRenderPass(demo->cmd, graphics_cmd_buf_info.renderPass);
 
     err = xglEndCommandBuffer(demo->cmd);
     assert(!err);
@@ -216,7 +223,7 @@ static void demo_draw(struct demo *demo)
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
     uint32_t i, idx = 0;
-    XGL_MEMORY_REF *memRefs;
+    XGL_MEMORY_REF *memRefs = 0;
     memRefs = malloc(sizeof(XGL_MEMORY_REF) * (2 + demo->depth.num_mem +
                      demo->textures[0].num_mem + demo->vertices.num_mem));
     for (i = 0; i < demo->depth.num_mem; i++, idx++) {
@@ -227,10 +234,12 @@ static void demo_draw(struct demo *demo)
         memRefs[idx].mem = demo->textures[0].mem[i];
         memRefs[idx].flags = 0;
     }
-    memRefs[idx].mem = demo->buffers[0].mem;
-    memRefs[idx++].flags = 0;
-    memRefs[idx].mem = demo->buffers[1].mem;
-    memRefs[idx++].flags = 0;
+    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        for (uint32_t j = 0; j < demo->buffers[i].num_mem; j++) {
+            memRefs[idx].mem = demo->buffers[i].mem[j];
+            memRefs[idx++].flags = 0;
+        }
+    }
     for (i = 0; i < demo->vertices.num_mem; i++, idx++) {
         memRefs[idx].mem = demo->vertices.mem[i];
         memRefs[idx].flags = 0;
@@ -259,6 +268,38 @@ static void demo_prepare_buffers(struct demo *demo)
         },
         .flags = 0,
     };
+#else
+    const XGL_IMAGE_CREATE_INFO presentable_image = {
+        .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = NULL,
+        .imageType = XGL_IMAGE_2D,
+        .format = demo->format,
+        .extent = { demo->width, demo->height, 1 },
+        .mipLevels = 1,
+        .arraySize = 1,
+        .samples = 1,
+        .tiling = XGL_OPTIMAL_TILING,
+        .usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .flags = 0,
+    };
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+        .pNext = NULL,
+    };
+    XGL_MEMORY_ALLOC_INFO mem_alloc = {
+        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext = &img_alloc,
+        .allocationSize = 0,
+        .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
+        .memType = XGL_MEMORY_TYPE_IMAGE,
+        .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
+    };
+    XGL_MEMORY_REQUIREMENTS *mem_reqs;
+    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
+    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    uint32_t num_allocations = 0;
+    size_t num_alloc_size = sizeof(num_allocations);
 #endif
     const XGL_FENCE_CREATE_INFO fence = {
         .sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -279,12 +320,43 @@ static void demo_prepare_buffers(struct demo *demo)
         };
 
 #if defined(__linux__)
+        demo->buffers[i].mem = malloc(sizeof(XGL_GPU_MEMORY));
         err = xglWsiX11CreatePresentableImage(demo->device, &presentable_image,
-                &demo->buffers[i].image, &demo->buffers[i].mem);
+                &demo->buffers[i].image, &demo->buffers[i].mem[0]);
         assert(!err);
+        demo->buffers[i].num_mem = 1;
 #else
-        demo->buffers[i].image = NULL;
-        demo->buffers[i].mem = NULL;
+        err = xglCreateImage(demo->device, &presentable_image, &demo->buffers[i].image);
+        assert(!err);
+        err = xglGetObjectInfo(demo->buffers[i].image, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
+        assert(!err && num_alloc_size == sizeof(num_allocations));
+        mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+        demo->buffers[i].mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+        demo->buffers[i].num_mem = num_allocations;
+        err = xglGetObjectInfo(demo->buffers[i].image,
+            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+            &mem_reqs_size, mem_reqs);
+        assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
+        err = xglGetObjectInfo(demo->buffers[i].image,
+            XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+            &img_reqs_size, &img_reqs);
+        assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+        img_alloc.usage = img_reqs.usage;
+        img_alloc.formatClass = img_reqs.formatClass;
+        img_alloc.samples = img_reqs.samples;
+        for (uint32_t i = 0; i < num_allocations; i++) {
+            mem_alloc.allocationSize = mem_reqs[i].size;
+
+            /* allocate memory */
+            err = xglAllocMemory(demo->device, &mem_alloc,
+                &(demo->buffers[i].mem[i]));
+            assert(!err);
+
+            /* bind memory */
+            err = xglBindObjectMemory(demo->buffers[i].image, i,
+                demo->buffers[i].mem[i], 0);
+            assert(!err);
+        }
 #endif
 
         color_attachment_view.image = demo->buffers[i].image;
@@ -297,6 +369,8 @@ static void demo_prepare_buffers(struct demo *demo)
                 &fence, &demo->buffers[i].fence);
         assert(!err);
     }
+
+    demo->current_buffer = 0;
 }
 
 static void demo_prepare_depth(struct demo *demo)
@@ -644,7 +718,7 @@ static void demo_prepare_textures(struct demo *demo)
             xglDestroyObject(staging_cmd_buf);
         } else {
             /* Can't support XGL_FMT_B8G8R8A8_UNORM !? */
-            assert(!"No support for tB8G8R8A8_UNORM as texture image format");
+            assert(!"No support for B8G8R8A8_UNORM as texture image format");
         }
 
         const XGL_SAMPLER_CREATE_INFO sampler = {
@@ -663,7 +737,6 @@ static void demo_prepare_textures(struct demo *demo)
             .maxLod = 0.0f,
             .borderColorType = XGL_BORDER_COLOR_OPAQUE_WHITE,
         };
-
         XGL_IMAGE_VIEW_CREATE_INFO view = {
             .sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
@@ -913,7 +986,8 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&vp, 0, sizeof(vp));
     vp.sType = XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
-
+    vp.numViewports = 1;
+    vp.clipOrigin = XGL_COORDINATE_ORIGIN_UPPER_LEFT;
 
     memset(&ds, 0, sizeof(ds));
     ds.sType = XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
@@ -974,27 +1048,36 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     viewport_create.sType = XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
     viewport_create.viewportAndScissorCount = 1;
     XGL_VIEWPORT viewport;
-    XGL_RECT scissor;
     memset(&viewport, 0, sizeof(viewport));
     viewport.height = (float) demo->height;
     viewport.width = (float) demo->width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
+    viewport_create.pViewports = &viewport;
+    XGL_RECT scissor;
+    memset(&scissor, 0, sizeof(scissor));
     scissor.extent.width = demo->width;
     scissor.extent.height = demo->height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    viewport_create.pViewports = &viewport;
     viewport_create.pScissors = &scissor;
 
     memset(&raster, 0, sizeof(raster));
     raster.sType = XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
+    raster.pointSize = 1.0;
+    raster.lineWidth = 1.0;
 
     memset(&color_blend, 0, sizeof(color_blend));
     color_blend.sType = XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
+    color_blend.blendConst[0] = 1.0f;
+    color_blend.blendConst[1] = 1.0f;
+    color_blend.blendConst[2] = 1.0f;
+    color_blend.blendConst[3] = 1.0f;
 
     memset(&depth_stencil, 0, sizeof(depth_stencil));
     depth_stencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
+    depth_stencil.minDepth = 0.0f;
+    depth_stencil.maxDepth = 1.0f;
     depth_stencil.stencilBackRef = 0;
     depth_stencil.stencilFrontRef = 0;
     depth_stencil.stencilReadMask = 0xff;
@@ -1326,6 +1409,7 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->textures[i].image);
         for (j = 0; j < demo->textures[i].num_mem; j++)
             xglFreeMemory(demo->textures[i].mem[j]);
+        free(demo->textures[i].mem);
         xglDestroyObject(demo->textures[i].sampler);
     }
 
@@ -1338,9 +1422,12 @@ static void demo_cleanup(struct demo *demo)
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         xglDestroyObject(demo->buffers[i].fence);
         xglDestroyObject(demo->buffers[i].view);
-#if defined(__linux__)
         xglDestroyObject(demo->buffers[i].image);
+#if defined(XCB_NVIDIA)
+        for (j = 0; j < demo->buffers[i].num_mem; j++)
+            xglFreeMemory(demo->buffers[i].mem[j]);
 #endif
+        free(demo->buffers[i].mem);
     }
 
     xglDestroyDevice(demo->device);

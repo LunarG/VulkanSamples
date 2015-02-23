@@ -35,7 +35,7 @@ GLV_CRITICAL_SECTION g_handlerLock;
 XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
 glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION g_fpGlvCallback = NULL;
 
-static void xglErrorHandler(
+static void XGLAPI xglErrorHandler(
                                             XGL_DBG_MSG_TYPE     msgType,
                                             XGL_VALIDATION_LEVEL validationLevel,
                                             XGL_BASE_OBJECT      srcObject,

@@ -1,0 +1,2 @@
+#TargetFrameworkVersion=v4.0:PlatformToolSet=v120:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit
+LIB Debug|Win32|P:\github.com\KhronosGroup\GL-Next\demos\libpng\projects\visualc71\|

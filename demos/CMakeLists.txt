@@ -17,8 +17,13 @@ file(GLOB TEXTURES
 file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES")
 
+if(WIN32)
+    set (LIBRARIES "XGLstatic")
+endif()
 if(NOT WIN32)
+    set (LIBRARIES "XGL")
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
        COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -b ${PROJECT_SOURCE_DIR}/demos/cube.vert 
        COMMAND mv vert.bil ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
@@ -45,15 +50,31 @@ if(WIN32)
        "${PROJECT_SOURCE_DIR}/icd/common"
        )
 
-    link_libraries(XGL)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXCB_NVIDIA -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXCB_NVIDIA -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
+    add_library(xcb_nvidia STATIC xcb_nvidia.cpp)
+    set (LIBRARIES ${LIBRARIES} xcb_nvidia)
 endif()
 
 add_executable(xglinfo xglinfo.c)
+target_link_libraries(xglinfo ${LIBRARIES})
 
 add_executable(tri tri.c)
-target_link_libraries(tri)
+target_link_libraries(tri ${LIBRARIES})
 
 if(NOT WIN32)
     add_executable(cube cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.bil ${CMAKE_BINARY_DIR}/demos/cube-frag.bil)
-    target_link_libraries(cube)
+    target_link_libraries(cube ${LIBRARIES})
+else()
+    if (CMAKE_CL_64)
+        set (LIB_DIR "Win64")
+    else()
+        set (LIB_DIR "Win32")
+    endif()
+    add_library(libpngd STATIC IMPORTED)
+    set_target_properties(libpngd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/demos/${LIB_DIR}/libpngd.lib)
+    add_library(zlibd STATIC IMPORTED)
+    set_target_properties(zlibd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/demos/${LIB_DIR}/zlibd.lib)
+    add_executable(cube cube.c)
+    target_link_libraries(cube ${LIBRARIES} libpngd zlibd)
 endif()

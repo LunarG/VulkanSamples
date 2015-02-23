@@ -237,11 +237,18 @@ static char * loader_platform_get_proc_address_error(const char *name)
 typedef HANDLE loader_platform_thread;
 #define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) \
     INIT_ONCE var = INIT_ONCE_STATIC_INIT;
+static BOOL CALLBACK InitFuncWrapper(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context)
+{
+    void (*func)(void) = (void (*)(void))Parameter;
+    func();
+    return TRUE;
+}
+
 static void loader_platform_thread_once(void *ctl, void (* func) (void))
 {
     assert(func != NULL);
     assert(ctl != NULL);
-    InitOnceExecuteOnce((PINIT_ONCE) ctl, (PINIT_ONCE_FN) func, NULL, NULL);
+    InitOnceExecuteOnce((PINIT_ONCE) ctl, InitFuncWrapper, func, NULL);
 }
 
 // Thread IDs:

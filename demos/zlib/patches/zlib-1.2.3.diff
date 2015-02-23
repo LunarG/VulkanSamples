@@ -1,0 +1,299 @@
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/Makefile zlib-1.2.3/Makefile
+--- zlib-1.2.3-orig/Makefile	2005-07-18 04:25:21.000000000 +0200
++++ zlib-1.2.3/Makefile	2005-07-20 17:52:28.453125000 +0200
+@@ -16,45 +16,81 @@
+ # To install in $HOME instead of /usr/local, use:
+ #    make install prefix=$HOME
+ 
+-CC=cc
++CC=gcc
+ 
+ CFLAGS=-O
+ #CFLAGS=-O -DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
+ #CFLAGS=-g -DDEBUG
+ #CFLAGS=-O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
+ #           -Wstrict-prototypes -Wmissing-prototypes
++CFLAGS = -O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
++            -Wstrict-prototypes -Wmissing-prototypes \
++            -D__GW32__ -D_LARGEFILE_SOURCE=1 -D_LARGEFILE64_SOURCE=1 -D_FILE_OFFSET_BITS=64 \
++            -mms-bitfields  -fno-exceptions -fomit-frame-pointer -march=i386 -mcpu=i686  \
++   -idirafter e:/progra~1/gnuwin32/include -idirafter h:/glibc/include
+ 
+-LDFLAGS=libz.a
+-LDSHARED=$(CC)
++LDFLAGS=-Wl,-s $(VERSADD)
++LDSHARED=o2dll
+ CPP=$(CC) -E
+ 
++MAJOR=1
++MINOR=2
++BUILD=3
++VERSION = $(MAJOR).$(MINOR).$(BUILD)
++CURRENT = 4# MAJOR + BUILD
++REVISION = $(MINOR)
++AGE = $(BUILD)
++LTVERSION = $(CURRENT):$(REVISION):$(AGE)
++VERSADD = -Wl,--major-image-version=$(MAJOR) -Wl,--minor-image-version=$(MINOR) 
++
+ LIBS=libz.a
+ SHAREDLIB=libz.so
+ SHAREDLIBV=libz.so.1.2.3
+ SHAREDLIBM=libz.so.1
++STATLIB=libz.a
++IMPLIB=libz.dll.a
++LIBS=$(STATLIB) $(IMPLIB) zlib.lib zlib-bcc.lib
++SHAREDLIB=zlib.dll
++SHAREDLIBV=zlib1.dll
++SHAREDLIBM=zlib121.dll
++EXTRALIBS=-Le:/progra~1/gnuwin32/lib -lgw32c
+ 
+ AR=ar rc
+ RANLIB=ranlib
+ TAR=tar
+ SHELL=/bin/sh
+-EXE=
++EXE=.exe
++
++.SUFFIXES:
++.SUFFIXES: .c .rc .o .exe
++
++%.E : %.c
++	$(CPP) $(CFLAGS) -o $@ $<
++%.pic.o : CFLAGS += -DZLIB_DLL
++%.pic.o : %.c
++	$(CC) -c $(CFLAGS) -o $@ $<
++# Rule to make compiled resource (Windows)
++.rc.o:
++	windres -i $< -o $@
+ 
+-prefix = /usr/local
++prefix = c:/progra~1/Zlib
+ exec_prefix = ${prefix}
++bindir = ${exec_prefix}/lib
+ libdir = ${exec_prefix}/lib
+ includedir = ${prefix}/include
+-mandir = ${prefix}/share/man
++mandir = ${prefix}/man
+ man3dir = ${mandir}/man3
+ 
+ OBJS = adler32.o compress.o crc32.o gzio.o uncompr.o deflate.o trees.o \
+        zutil.o inflate.o infback.o inftrees.o inffast.o
++DLLOBJS = $(OBJS:.o=.pic.o) zlib-dll-res.o zlib-dllversion.o
+ 
+ OBJA =
+ # to use the asm code: make OBJA=match.o
+ 
+ TEST_OBJS = example.o minigzip.o
+ 
+-all: example$(EXE) minigzip$(EXE)
++all: example minigzip example-static minigzip-static
+ 
+ check: test
+ test: all
+@@ -67,7 +103,9 @@ test: all
+ 	  echo '		*** zlib test FAILED ***'; \
+ 	fi
+ 
+-libz.a: $(OBJS) $(OBJA)
++$(IMPLIB): $(STATLIB) $(SHAREDLIBV)
++
++$(STATLIB): $(OBJS) $(OBJA)
+ 	$(AR) $@ $(OBJS) $(OBJA)
+ 	-@ ($(RANLIB) $@ || true) >/dev/null 2>&1
+ 
+@@ -77,35 +115,45 @@ match.o: match.S
+ 	mv _match.o match.o
+ 	rm -f _match.s
+ 
+-$(SHAREDLIBV): $(OBJS)
+-	$(LDSHARED) -o $@ $(OBJS)
++$(SHAREDLIBV): $(DLLOBJS)
++	echo $(LDSHARED) -o $(SHAREDLIB) -l $(IMPLIB) $(DLLOBJS) $(LDFLAGS) -version-info $(LTVERSION) $(EXTRALIBS)
++	$(LDSHARED) -o $(SHAREDLIB) -l $(IMPLIB) $(DLLOBJS) $(LDFLAGS) -version-info $(LTVERSION) $(EXTRALIBS)
+ 	rm -f $(SHAREDLIB) $(SHAREDLIBM)
+-	ln -s $@ $(SHAREDLIB)
+-	ln -s $@ $(SHAREDLIBM)
++#	ln -s $@ $(SHAREDLIB)
++#	ln -s $@ $(SHAREDLIBM)
++
++example-static: example.o example-res.o $(STATLIB)
++	$(CC) $(CFLAGS) -o $@ example.o  example-res.o $(LDFLAGS) libz.a $(EXTRALIBS)
++
++example: example.pic.o example-res.o $(IMPLIB)
++	$(CC) $(CFLAGS) -o $@ example.pic.o  example-res.o $(LDFLAGS) libz.dll.a $(EXTRALIBS)
+ 
+-example$(EXE): example.o $(LIBS)
+-	$(CC) $(CFLAGS) -o $@ example.o $(LDFLAGS)
++minigzip-static: minigzip.o minigzip-res.o $(STATLIB)
++	$(CC) $(CFLAGS) -o $@ minigzip.o  minigzip-res.o $(LDFLAGS) libz.a $(EXTRALIBS)
+ 
+-minigzip$(EXE): minigzip.o $(LIBS)
+-	$(CC) $(CFLAGS) -o $@ minigzip.o $(LDFLAGS)
++minigzip: minigzip.pic.o minigzip-res.o $(IMPLIB)
++	$(CC) $(CFLAGS) -o $@ minigzip.pic.o  minigzip-res.o $(LDFLAGS) libz.dll.a $(EXTRALIBS)
+ 
+ install: $(LIBS)
+ 	-@if [ ! -d $(exec_prefix) ]; then mkdir -p $(exec_prefix); fi
+ 	-@if [ ! -d $(includedir)  ]; then mkdir -p $(includedir); fi
+ 	-@if [ ! -d $(libdir)      ]; then mkdir -p $(libdir); fi
++	-@if [ ! -d $(bindir)      ]; then mkdir -p $(bindir); fi
+ 	-@if [ ! -d $(man3dir)     ]; then mkdir -p $(man3dir); fi
+-	cp zlib.h zconf.h $(includedir)
++	cp -fp zlib.h zconf.h $(includedir)
+ 	chmod 644 $(includedir)/zlib.h $(includedir)/zconf.h
+-	cp $(LIBS) $(libdir)
++	cp -fp $(LIBS) $(libdir)
+ 	cd $(libdir); chmod 755 $(LIBS)
+ 	-@(cd $(libdir); $(RANLIB) libz.a || true) >/dev/null 2>&1
+-	cd $(libdir); if test -f $(SHAREDLIBV); then \
++	cp -fp $(SHAREDLIBV) $(bindir)
++	cd $(bindir); chmod 755 $(SHAREDLIBV); \
++#	if test -f $(SHAREDLIBV); then \
+ 	  rm -f $(SHAREDLIB) $(SHAREDLIBM); \
+ 	  ln -s $(SHAREDLIBV) $(SHAREDLIB); \
+ 	  ln -s $(SHAREDLIBV) $(SHAREDLIBM); \
+ 	  (ldconfig || true)  >/dev/null 2>&1; \
+ 	fi
+-	cp zlib.3 $(man3dir)
++	cp -fp zlib.3 $(man3dir)
+ 	chmod 644 $(man3dir)/zlib.3
+ # The ranlib in install is needed on NeXTSTEP which checks file times
+ # ldconfig is for Linux
+@@ -120,8 +168,8 @@ uninstall:
+ 
+ mostlyclean: clean
+ clean:
+-	rm -f *.o *~ example$(EXE) minigzip$(EXE) \
+-	   libz.* foo.gz so_locations \
++	rm -f *.o *.pic.o *~ example$(EXE) minigzip$(EXE) \
++	   libz.* $(LIBS) $(SHAREDLIBV) foo.gz so_locations \
+ 	   _match.s maketree contrib/infback9/*.o
+ 
+ maintainer-clean: distclean
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/contrib/blast/Makefile zlib-1.2.3/contrib/blast/Makefile
+--- zlib-1.2.3-orig/contrib/blast/Makefile	2003-03-03 06:45:22.000000000 +0100
++++ zlib-1.2.3/contrib/blast/Makefile	2004-12-25 11:00:15.000000000 +0100
+@@ -1,5 +1,5 @@
+ blast: blast.c blast.h
+-	cc -DTEST -o blast blast.c
++	gcc -DTEST -o blast blast.c
+ 
+ test: blast
+ 	blast < test.pk | cmp - test.txt
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/contrib/minizip/Makefile zlib-1.2.3/contrib/minizip/Makefile
+--- zlib-1.2.3-orig/contrib/minizip/Makefile	2005-07-12 20:08:40.000000000 +0200
++++ zlib-1.2.3/contrib/minizip/Makefile	2005-07-20 17:40:26.093750000 +0200
+@@ -1,8 +1,8 @@
+-CC=cc
++CC=gcc
+ CFLAGS=-O -I../..
+ 
+-UNZ_OBJS = miniunz.o unzip.o ioapi.o ../../libz.a
+-ZIP_OBJS = minizip.o zip.o   ioapi.o ../../libz.a
++UNZ_OBJS = miniunz.o unzip.o iowin32.o ioapi.o ../../libz.a
++ZIP_OBJS = minizip.o zip.o   iowin32.o ioapi.o ../../libz.a
+ 
+ .c.o:
+ 	$(CC) -c $(CFLAGS) $*.c
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/contrib/minizip/miniunz.c zlib-1.2.3/contrib/minizip/miniunz.c
+--- zlib-1.2.3-orig/contrib/minizip/miniunz.c	2005-07-12 20:08:40.000000000 +0200
++++ zlib-1.2.3/contrib/minizip/miniunz.c	2005-07-20 17:40:26.093750000 +0200
+@@ -9,7 +9,6 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <time.h>
+ #include <errno.h>
+ #include <fcntl.h>
+ 
+@@ -20,6 +19,10 @@
+ # include <direct.h>
+ # include <io.h>
+ #endif
++#ifdef __WIN32__
++#include <windows.h>
++#endif
++#include <time.h>
+ 
+ #include "unzip.h"
+ 
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/contrib/minizip/minizip.c zlib-1.2.3/contrib/minizip/minizip.c
+--- zlib-1.2.3-orig/contrib/minizip/minizip.c	2005-07-12 20:08:40.000000000 +0200
++++ zlib-1.2.3/contrib/minizip/minizip.c	2005-07-20 17:40:26.109375000 +0200
+@@ -8,7 +8,6 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <time.h>
+ #include <errno.h>
+ #include <fcntl.h>
+ 
+@@ -21,6 +20,10 @@
+ # include <direct.h>
+ # include <io.h>
+ #endif
++#ifdef __WIN32__
++#include <windows.h>
++#endif
++#include <time.h>
+ 
+ #include "zip.h"
+ 
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/contrib/minizip/zip.c zlib-1.2.3/contrib/minizip/zip.c
+--- zlib-1.2.3-orig/contrib/minizip/zip.c	2005-07-12 20:08:40.000000000 +0200
++++ zlib-1.2.3/contrib/minizip/zip.c	2005-07-20 17:40:26.109375000 +0200
+@@ -16,6 +16,7 @@
+ #include <time.h>
+ #include "zlib.h"
+ #include "zip.h"
++#include "zutil.h"
+ 
+ #ifdef STDC
+ #  include <stddef.h>
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/contrib/untgz/untgz.c zlib-1.2.3/contrib/untgz/untgz.c
+--- zlib-1.2.3-orig/contrib/untgz/untgz.c	2004-03-07 07:00:00.000000000 +0100
++++ zlib-1.2.3/contrib/untgz/untgz.c	2004-12-25 11:00:15.000000000 +0100
+@@ -9,7 +9,6 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <time.h>
+ #include <errno.h>
+ 
+ #include "zlib.h"
+@@ -32,9 +31,11 @@
+ #    define chmod(path,mode)    _chmod(path,mode)
+ #    define strdup(str)         _strdup(str)
+ #  endif
++#include <windows.h>
+ #else
+ #  include <utime.h>
+ #endif
++#include <time.h>
+ 
+ 
+ /* values used in typeflag field */
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/gzio.c zlib-1.2.3/gzio.c
+--- zlib-1.2.3-orig/gzio.c	2005-07-11 22:31:48.000000000 +0200
++++ zlib-1.2.3/gzio.c	2005-07-20 17:40:26.125000000 +0200
+@@ -881,7 +881,7 @@ int ZEXPORT gzrewind (file)
+ z_off_t ZEXPORT gztell (file)
+     gzFile file;
+ {
+-    return gzseek(file, 0L, SEEK_CUR);
++    return gzseek(file, 0LL, SEEK_CUR);
+ }
+ 
+ /* ===========================================================================
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' zlib-1.2.3-orig/zconf.h zlib-1.2.3/zconf.h
+--- zlib-1.2.3-orig/zconf.h	2005-05-28 08:40:35.000000000 +0200
++++ zlib-1.2.3/zconf.h	2005-07-20 17:40:26.125000000 +0200
+@@ -284,7 +284,7 @@ typedef uLong FAR uLongf;
+    typedef Byte       *voidp;
+ #endif
+ 
+-#if 0           /* HAVE_UNISTD_H -- this line is updated by ./configure */
++#if 1           /* HAVE_UNISTD_H -- this line is updated by ./configure */
+ #  include <sys/types.h> /* for off_t */
+ #  include <unistd.h>    /* for SEEK_* and off_t */
+ #  ifdef VMS

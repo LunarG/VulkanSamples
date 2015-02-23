@@ -369,7 +369,7 @@ static inline void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, 
         M[0][0] = 2.f*n/(r-l);
         M[0][1] = M[0][2] = M[0][3] = 0.f;
 
-        M[1][1] = 2.*n/(t-b);
+        M[1][1] = 2.f*n/(t-b);
         M[1][0] = M[1][2] = M[1][3] = 0.f;
 
         M[2][0] = (r+l)/(r-l);
@@ -400,7 +400,7 @@ static inline void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float
 {
         /* NOTE: Degrees are an unhandy unit to work with.
          * linmath.h uses radians for everything! */
-        float const a = 1.f / tan(y_fov / 2.f);
+        float const a = (float)(1.f / tan(y_fov / 2.f));
 
         m[0][0] = a / aspect;
         m[0][1] = 0.f;

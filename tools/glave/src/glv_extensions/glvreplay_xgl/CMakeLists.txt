@@ -20,9 +20,10 @@ add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvt
 	                   ${SRC_DIR}/../../../xgl_helper.py)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-set(OS_REPLAYER_LIBS
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_BUILD_TYPE}/XGL.lib
-)
+    set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
+    set(OS_REPLAYER_LIBS
+        ${PATH_TO_WIN_XGL}/XGL.lib
+    )
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -65,5 +66,12 @@ target_link_libraries(${PROJECT_NAME}
     glvcommon
     layer_utils
 )
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    add_custom_command(TARGET ${PROJECT_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PATH_TO_WIN_XGL}/XGL.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    )
+endif()
 
 build_options_finalize()

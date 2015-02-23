@@ -37,7 +37,7 @@ struct icd_allocator {
     XGL_ALLOC_CALLBACKS callbacks;
 };
 
-static void *default_alloc(void *user_data, size_t size, size_t alignment,
+static void * XGLAPI default_alloc(void *user_data, size_t size, size_t alignment,
                            XGL_SYSTEM_ALLOC_TYPE allocType)
 {
     if (alignment <= 1) {
@@ -61,7 +61,7 @@ static void *default_alloc(void *user_data, size_t size, size_t alignment,
     }
 }
 
-static void default_free(void *user_data, void *ptr)
+static void XGLAPI default_free(void *user_data, void *ptr)
 {
     free(ptr);
 }

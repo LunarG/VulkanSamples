@@ -21,3 +21,17 @@ layers/xgl_struct_string_helper.h
 layers/xgl_struct_wrappers.cpp
 layers/xgl_struct_wrappers.h
 _out64
+out32/*
+out64/*
+demos/Debug/*
+demos/tri.dir/Debug/*
+demos/tri/Debug/*
+*.pyc
+*.vcproj
+*.sln
+*.suo
+*.vcxproj
+*.sdf
+*.filters
+demos/Win32/Debug/*
+demos/xcb_nvidia.dir/*
