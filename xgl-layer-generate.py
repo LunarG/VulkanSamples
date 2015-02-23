@@ -598,7 +598,9 @@ class Subcommand(object):
                     elif True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance']]:
                         using_line = ''
                     else:
-                        using_line = '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                        using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                        using_line += '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                        using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                     if 'QueueSubmit' in proto.name:
                         using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
                         using_line += '    validate_memory_mapping_status(pMemRefs, memRefCount);\n'
@@ -621,16 +623,24 @@ class Subcommand(object):
                         using_line += '    reset_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
                     if 'AllocDescriptor' in proto.name: # Allocates array of DSs
                         create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
+                        create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
                         create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
+                        create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
                         create_line += '    }\n'
                     elif 'Create' in proto.name or 'Alloc' in proto.name:
-                        create_line = '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+                        create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                        create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+                        create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                     if 'DestroyObject' in proto.name:
-                        destroy_line = '    ll_destroy_obj((void*)%s);\n' % (param0_name)
+                        destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                        destroy_line += '    ll_destroy_obj((void*)%s);\n' % (param0_name)
+                        destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                         using_line = ''
                     else:
                         if 'Destroy' in proto.name or 'Free' in proto.name:
-                            destroy_line = '    ll_remove_obj_type((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                            destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                            destroy_line += '    ll_remove_obj_type((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                             using_line = ''
                         if 'DestroyDevice' in proto.name:
                             destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
@@ -867,7 +877,7 @@ class Subcommand(object):
                          "}\n")
         return "\n".join(func_body)
 
-    def _generate_layer_initialization(self, name, init_opts=False, prefix='xgl'):
+    def _generate_layer_initialization(self, name, init_opts=False, prefix='xgl', lockname=None):
         func_body = ["#include \"xgl_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
                          '{\n' % name)
@@ -898,6 +908,13 @@ class Subcommand(object):
                          '    assert(fpNextGPA);\n')
 
         func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (XGL_PHYSICAL_GPU) pCurObj->nextObject);")
+        if lockname is not None:
+            func_body.append("    if (!%sLockInitialized)" % lockname)
+            func_body.append("    {")
+            func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
+            func_body.append("        loader_platform_thread_create_mutex(&%sLock);" % lockname)
+            func_body.append("        %sLockInitialized = 1;" % lockname)
+            func_body.append("    }")
         func_body.append("}\n")
         return "\n".join(func_body)
 
@@ -1151,6 +1168,8 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include "layers_msg.h"')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static long long unsigned int object_track_index = 0;')
+        header_txt.append('static int objLockInitialized = 0;')
+        header_txt.append('static loader_platform_thread_mutex objLock;')
         header_txt.append('')
         header_txt.append('// We maintain a "Global" list which links every object and a')
         header_txt.append('//  per-Object list which just links objects of a given type')
@@ -1289,12 +1308,12 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('            // update HEAD of global list if needed')
         header_txt.append('            if (pGlobalHead == pTrav)')
         header_txt.append('                pGlobalHead = pTrav->pNextGlobal;')
-        header_txt.append('            free(pTrav);')
         header_txt.append('            assert(numTotalObjs > 0);')
         header_txt.append('            numTotalObjs--;')
         header_txt.append('            char str[1024];')
         header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));')
         header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('            free(pTrav);')
         header_txt.append('            return;')
         header_txt.append('        }')
         header_txt.append('        pPrev = pTrav;')
@@ -1418,7 +1437,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization("ObjectTracker", True),
+        body = [self._generate_layer_initialization("ObjectTracker", True, lockname='obj'),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "ObjectTracker"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function("ObjectTracker", extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
