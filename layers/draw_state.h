@@ -43,7 +43,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
-    DRAWSTATE_INVALID_UPDATE_INDEX              // Index of requested update is invalid for specified descriptors set
+    DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
+    DRAWSTATE_INVALID_UPDATE_STRUCT             // Struct in DS Update tree is of invalid type
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE

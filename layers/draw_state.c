@@ -765,6 +765,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
     size_t baseBuffAddr = 0;
     XGL_UPDATE_BUFFERS* pUBCI;
     XGL_UPDATE_IMAGES* pUICI;
+    char str[1024];
     switch (pUpdate->sType)
     {
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -849,14 +850,15 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_AS_COPY));
             break;
         default:
-            // TODO : Flag specific error for this case
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in xglUpdateDescriptors() struct tree", string_XGL_STRUCTURE_TYPE(pUpdate->sType), pUpdate->sType);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return NULL;
     }
     // Make sure that pNext for the end of shadow copy is NULL
     pNewNode->pNext = NULL;
     return pNewNode;
 }
-// For given ds, update it's mapping based on pUpdateChain linked-list
+// For given ds, update its mapping based on pUpdateChain linked-list
 static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
 {
     SET_NODE* pSet = getSetNode(ds);
@@ -920,11 +922,12 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 }
-// Free a shadowed update node
+// Free the shadowed update node for this Set
 // NOTE : Calls to this function should be wrapped in mutex
-static void freeShadowUpdateTree(GENERIC_HEADER* pUpdate)
+static void freeShadowUpdateTree(SET_NODE* pSet)
 {
-    GENERIC_HEADER* pShadowUpdate = pUpdate;
+    GENERIC_HEADER* pShadowUpdate = pSet->pUpdateStructs;
+    pSet->pUpdateStructs = NULL;
     GENERIC_HEADER* pFreeUpdate = pShadowUpdate;
     while(pShadowUpdate) {
         pFreeUpdate = pShadowUpdate;
@@ -1011,7 +1014,7 @@ static void freeRegions()
             pSet = pSet->pNext;
             // Freeing layouts handled in freeLayouts() function
             // Free Update shadow struct tree
-            freeShadowUpdateTree(pFreeSet->pUpdateStructs);
+            freeShadowUpdateTree(pFreeSet);
             if (pFreeSet->ppDescriptors) {
 #if ALLOC_DEBUG
                 printf("Free35 #%lu pSet->ppDescriptors addr(%p)\n", ++g_free_count, (void*)pFreeSet->ppDescriptors);
@@ -1079,7 +1082,7 @@ static void clearDescriptorSet(XGL_DESCRIPTOR_SET set)
     }
     else {
         loader_platform_thread_lock_mutex(&globalLock);
-        freeShadowUpdateTree(pSet->pUpdateStructs);
+        freeShadowUpdateTree(pSet);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 }
