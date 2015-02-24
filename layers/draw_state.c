@@ -395,6 +395,20 @@ static void freeSamplers()
     }
     g_pSamplerHead = NULL;
 }
+static XGL_IMAGE_VIEW_CREATE_INFO* getImageViewCreateInfo(XGL_IMAGE_VIEW view)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    IMAGE_NODE* pTrav = g_pImageHead;
+    while (pTrav) {
+        if (view == pTrav->image) {
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return &pTrav->createInfo;
+        }
+        pTrav = pTrav->pNext;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return NULL;
+}
 // Free all image nodes
 static void freeImages()
 {
@@ -409,6 +423,20 @@ static void freeImages()
         free(pFreeMe);
     }
     g_pImageHead = NULL;
+}
+static XGL_BUFFER_VIEW_CREATE_INFO* getBufferViewCreateInfo(XGL_BUFFER_VIEW view)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    BUFFER_NODE* pTrav = g_pBufferHead;
+    while (pTrav) {
+        if (view == pTrav->buffer) {
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return &pTrav->createInfo;
+        }
+        pTrav = pTrav->pNext;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return NULL;
 }
 // Free all buffer nodes
 static void freeBuffers()
@@ -470,9 +498,6 @@ static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
 }
 
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
-// TODO : Use this function to display sampler info
-//   commenting out for now to avoid warning about not being used
-/*
 static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 {
     loader_platform_thread_lock_mutex(&globalLock);
@@ -487,7 +512,6 @@ static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
     loader_platform_thread_unlock_mutex(&globalLock);
     return NULL;
 }
-*/
 
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
@@ -1275,6 +1299,90 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
             fprintf(pOutFile, "%s", pGVstr);
             free(pGVstr);
         }
+        if (pSet->ppDescriptors) {
+            //void* pDesc = NULL;
+            fprintf(pOutFile, "\"DESCRIPTORS\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD PORT=\"desc\">DESCRIPTORS</TD></TR>");
+            uint32_t i = 0;
+            for (i=0; i < pSet->descriptorCount; i++) {
+                if (pSet->ppDescriptors[i]) {
+                    fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", i, i);
+                }
+            }
+            fprintf(pOutFile, "</TABLE>>\n];\n");
+            // Now add the views that are mapped to active descriptors
+            XGL_UPDATE_SAMPLERS* pUS = NULL;
+            XGL_UPDATE_SAMPLER_TEXTURES* pUST = NULL;
+            XGL_UPDATE_IMAGES* pUI = NULL;
+            XGL_UPDATE_BUFFERS* pUB = NULL;
+            XGL_UPDATE_AS_COPY* pUAC = NULL;
+            XGL_SAMPLER_CREATE_INFO* pSCI = NULL;
+            XGL_IMAGE_VIEW_CREATE_INFO* pIVCI = NULL;
+            XGL_BUFFER_VIEW_CREATE_INFO* pBVCI = NULL;
+            for (i=0; i < pSet->descriptorCount; i++) {
+                if (pSet->ppDescriptors[i]) {
+                    switch (pSet->ppDescriptors[i]->sType)
+                    {
+                        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
+                            pUS = (XGL_UPDATE_SAMPLERS*)pSet->ppDescriptors[i];
+                            pSCI = getSamplerCreateInfo(pUS->pSamplers[i-pUS->index]);
+                            if (pSCI) {
+                                sprintf(tmp_str, "SAMPLER%u", i);
+                                fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(pSCI, tmp_str));
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            }
+                            break;
+                        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
+                            pUST = (XGL_UPDATE_SAMPLER_TEXTURES*)pSet->ppDescriptors[i];
+                            pSCI = getSamplerCreateInfo(pUST->pSamplerImageViews[i-pUST->index].pSampler);
+                            if (pSCI) {
+                                sprintf(tmp_str, "SAMPLER%u", i);
+                                fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(pSCI, tmp_str));
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            }
+                            pIVCI = getImageViewCreateInfo(pUST->pSamplerImageViews[i-pUST->index].pImageView->view);
+                            if (pIVCI) {
+                                sprintf(tmp_str, "IMAGE_VIEW%u", i);
+                                fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_create_info(pIVCI, tmp_str));
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            }
+                            break;
+                        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
+                            pUI = (XGL_UPDATE_IMAGES*)pSet->ppDescriptors[i];
+                            pIVCI = getImageViewCreateInfo(pUI->pImageViews[i-pUI->index]->view);
+                            if (pIVCI) {
+                                sprintf(tmp_str, "IMAGE_VIEW%u", i);
+                                fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_create_info(pIVCI, tmp_str));
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            }
+                            break;
+                        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
+                            pUB = (XGL_UPDATE_BUFFERS*)pSet->ppDescriptors[i];
+                            pBVCI = getBufferViewCreateInfo(pUB->pBufferViews[i-pUB->index]->view);
+                            if (pBVCI) {
+                                sprintf(tmp_str, "BUFFER_VIEW%u", i);
+                                fprintf(pOutFile, "%s", xgl_gv_print_xgl_buffer_view_create_info(pBVCI, tmp_str));
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            }
+                            break;
+                        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
+                            pUAC = (XGL_UPDATE_AS_COPY*)pSet->ppDescriptors[i];
+                            // TODO : Need to validate this code
+                            // Save off pNext and set to NULL while printing this struct, then restore it
+                            void** ppNextPtr = (void*)&pUAC->pNext;
+                            void* pSaveNext = *ppNextPtr;
+                            *ppNextPtr = NULL;
+                            sprintf(tmp_str, "UPDATE_AS_COPY%u", i);
+                            fprintf(pOutFile, "%s", xgl_gv_print_xgl_update_as_copy(pUAC, tmp_str));
+                            fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            // Restore next ptr
+                            *ppNextPtr = pSaveNext;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
         fprintf(pOutFile, "}\n");
         fprintf(pOutFile, "}\n");
         pRegion = pRegion->pNext;
@@ -1784,24 +1892,24 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMA
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_BUFFER_CREATE_INFO* pCreateInfo, XGL_BUFFER* pBuffer)
 {
     XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
-    if (XGL_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        BUFFER_NODE *pNewNode = (BUFFER_NODE*)malloc(sizeof(BUFFER_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc21 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
-        pNewNode->buffer = *pBuffer;
-        memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_BUFFER_CREATE_INFO));
-        pNewNode->pNext = g_pBufferHead;
-        g_pBufferHead = pNewNode;
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo, XGL_BUFFER_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    if (XGL_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        BUFFER_NODE *pNewNode = (BUFFER_NODE*)malloc(sizeof(BUFFER_NODE));
+#if ALLOC_DEBUG
+    printf("Alloc21 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
+#endif
+        pNewNode->buffer = *pView;
+        memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_BUFFER_VIEW_CREATE_INFO));
+        pNewNode->pNext = g_pBufferHead;
+        g_pBufferHead = pNewNode;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
     return result;
 }
 
