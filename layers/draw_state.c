@@ -1388,7 +1388,36 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
         pRegion = pRegion->pNext;
     }
 }
-
+// Dump a GraphViz dot file showing the Cmd Buffers
+static void cbDumpDotFile(char *outFileName)
+{
+    // Print CB Chain for each CB
+    FILE* pOutFile;
+    pOutFile = fopen(outFileName, "w");
+    fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
+    fprintf(pOutFile, "subgraph cluster_cmdBuffers\n{\nlabel=\"Command Buffers\"\n");
+    for (uint32_t i=0; i < MAX_TID; i++) {
+        if (g_lastCmdBuffer[i]) {
+            GLOBAL_CB_NODE* pCB = getCBNode(g_lastCmdBuffer[i]);
+            if (pCB) {
+                fprintf(pOutFile, "subgraph cluster_cmdBuffer%u\n{\nlabel=\"Command Buffer #%u\"\n", i, i);
+                CMD_NODE* pCmd = pCB->pCmds;
+                uint32_t instNum = 0;
+                while (pCmd) {
+                    if (instNum)
+                        fprintf(pOutFile, "\"CB%pCMD%u\" -> \"CB%pCMD%u\" [];\n", (void*)pCB->cmdBuffer, instNum-1, (void*)pCB->cmdBuffer, instNum);
+                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString(pCmd->type));
+                    ++instNum;
+                    pCmd = pCmd->pNext;
+                }
+                fprintf(pOutFile, "}\n");
+            }
+        }
+    }
+    fprintf(pOutFile, "}\n");
+    fprintf(pOutFile, "}\n"); // close main graph "g"
+    fclose(pOutFile);
+}
 // Dump a GraphViz dot file showing the pipeline
 static void dumpDotFile(const XGL_CMD_BUFFER cb, char *outFileName)
 {
@@ -1535,6 +1564,7 @@ static void synchAndPrintDSConfig(const XGL_CMD_BUFFER cb)
     if (autoDumpOnce) {
         autoDumpOnce = 0;
         dumpDotFile(cb, "pipeline_dump.dot");
+        cbDumpDotFile("cb_dump.dot");
 #if defined(_WIN32)
 // FIXME: NEED WINDOWS EQUIVALENT
 #else // WIN32
@@ -2395,6 +2425,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
         loader_platform_thread_lock_mutex(&globalLock);
         g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
         loader_platform_thread_unlock_mutex(&globalLock);
+        cbDumpDotFile("cb_dump.dot");
     }
     return result;
 }
@@ -3122,6 +3153,11 @@ void drawStateDumpDotFile(char* outFileName)
     dumpDotFile(g_lastCmdBuffer[getTIDIndex()], outFileName);
 }
 
+void drawStateDumpCommandBufferDotFile(char* outFileName)
+{
+    cbDumpDotFile(outFileName);
+}
+
 void drawStateDumpPngFile(char* outFileName)
 {
 #if defined(_WIN32)
@@ -3161,6 +3197,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return addr;
     else if (!strncmp("drawStateDumpDotFile", funcName, sizeof("drawStateDumpDotFile")))
         return drawStateDumpDotFile;
+    else if (!strncmp("drawStateDumpCommandBufferDotFile", funcName, sizeof("drawStateDumpCommandBufferDotFile")))
+        return drawStateDumpCommandBufferDotFile;
     else if (!strncmp("drawStateDumpPngFile", funcName, sizeof("drawStateDumpPngFile")))
         return drawStateDumpPngFile;
     else {
