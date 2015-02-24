@@ -94,7 +94,7 @@ protected:
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
+        this->app_info.apiVersion = XGL_API_VERSION;
 
         InitFramework();
     }

@@ -95,7 +95,7 @@ protected:
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
+        this->app_info.apiVersion = XGL_API_VERSION;
 
         err = xglCreateInstance(&app_info, NULL, &inst);
         ASSERT_XGL_SUCCESS(err);
@@ -135,7 +135,7 @@ TEST(Initialization, xglEnumerateGpus) {
     app_info.appVersion = 1;
     app_info.pEngineName = "unittest";
     app_info.engineVersion = 1;
-    app_info.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
+    app_info.apiVersion = XGL_API_VERSION;
 
     err = xglCreateInstance(&app_info, NULL, &inst);
     ASSERT_XGL_SUCCESS(err);

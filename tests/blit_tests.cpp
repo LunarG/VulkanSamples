@@ -107,7 +107,7 @@ Environment::Environment() :
     app_.appVersion = 1;
     app_.pEngineName = "xgl_testing";
     app_.engineVersion = 1;
-    app_.apiVersion = XGL_MAKE_VERSION(0, 22, 0);
+    app_.apiVersion = XGL_API_VERSION;
 }
 
 bool Environment::parse_args(int argc, char **argv)

@@ -46,7 +46,7 @@
 #include "icd-utils.h"
 #include "obj.h"
 
-#define INTEL_API_VERSION XGL_MAKE_VERSION(0, 22, 0)
+#define INTEL_API_VERSION XGL_API_VERSION
 #define INTEL_DRIVER_VERSION 0
 
 #define INTEL_GEN(gen) ((int) ((gen) * 100))

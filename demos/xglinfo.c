@@ -650,7 +650,7 @@ int main(int argc, char **argv)
         .appVersion = 1,
         .pEngineName = "xglinfo",
         .engineVersion = 1,
-        .apiVersion = XGL_MAKE_VERSION(0, 22, 0),
+        .apiVersion = XGL_API_VERSION,
     };
     struct app_gpu gpus[MAX_GPUS];
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
