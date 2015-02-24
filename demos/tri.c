@@ -1051,7 +1051,7 @@ static void demo_init_xgl(struct demo *demo)
         .appVersion = 0,
         .pEngineName = "tri",
         .engineVersion = 0,
-        .apiVersion = XGL_MAKE_VERSION(0, 22, 0),
+        .apiVersion = XGL_API_VERSION,
     };
 #if defined(__linux__)
     const XGL_WSI_X11_CONNECTION_INFO connection = {
