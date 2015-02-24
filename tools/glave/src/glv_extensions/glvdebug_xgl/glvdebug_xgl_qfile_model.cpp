@@ -46,7 +46,9 @@ QString glvdebug_xgl_QFileModel::get_packet_string(const glv_trace_packet_header
     }
     else
     {
-        return QString(stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) pHeader->packet_id, pHeader));
+        QString packetString = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) pHeader->packet_id, pHeader);
+        // TODO: temporarily replace xgl with vk for demo purposes.
+        return packetString.replace("xgl", "vk").replace("XGL", "VK");
     }
 }
 
