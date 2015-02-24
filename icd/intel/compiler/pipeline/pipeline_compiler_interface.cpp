@@ -568,6 +568,10 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             pipe_shader->urb_grf_start = data->first_curbe_grf;
             pipe_shader->in_count      = data->num_varying_inputs;
 
+            // Pass on SIMD16 info
+            pipe_shader->urb_grf_start_16 = data->first_curbe_grf_16;
+            pipe_shader->offset_16        = data->prog_offset_16;
+
             // These are programmed based on gen7_wm_state.c::upload_wm_state()
             struct gl_fragment_program *fp = (struct gl_fragment_program *)
                sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program;

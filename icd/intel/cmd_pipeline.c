@@ -556,7 +556,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const uint8_t cmd_len = 9;
     uint32_t pos;
-    uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
+    uint32_t dw0, dw2, dw4, dw5, dw6, dw8, *dw;
 
     CMD_ASSERT(cmd, 6, 6);
 
@@ -568,11 +568,14 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     dw4 = GEN6_WM_DW4_STATISTICS |
           fs->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT |
           0 << GEN6_WM_DW4_URB_GRF_START1__SHIFT |
-          0 << GEN6_WM_DW4_URB_GRF_START2__SHIFT;
+          fs->urb_grf_start_16 << GEN6_WM_DW4_URB_GRF_START2__SHIFT;
 
     dw5 = (fs->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
           GEN6_WM_DW5_PS_ENABLE |
           GEN6_WM_DW5_8_PIXEL_DISPATCH;
+
+    if (fs->offset_16)
+        dw5 |= GEN6_WM_DW5_16_PIXEL_DISPATCH;
 
     if (fs->uses & INTEL_SHADER_USE_KILL ||
         pipeline->cb_state.alphaToCoverageEnable)
@@ -602,6 +605,8 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
                GEN6_WM_DW6_MSDISPMODE_PERSAMPLE;
     }
 
+    dw8 = (fs->offset_16) ? cmd->bind.pipeline.fs_offset + fs->offset_16 : 0;
+
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
     dw[1] = cmd->bind.pipeline.fs_offset;
@@ -611,7 +616,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
     dw[5] = dw5;
     dw[6] = dw6;
     dw[7] = 0; /* kernel 1 */
-    dw[8] = 0; /* kernel 2 */
+    dw[8] = dw8; /* kernel 2 */
 
     if (fs->per_thread_scratch_size)
         gen6_add_scratch_space(cmd, pos + 3, pipeline, fs);
@@ -666,7 +671,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const uint8_t cmd_len = 8;
-    uint32_t dw0, dw2, dw4, dw5, *dw;
+    uint32_t dw0, dw2, dw4, dw5, dw7, *dw;
     uint32_t pos;
 
     CMD_ASSERT(cmd, 7, 7.5);
@@ -678,6 +683,9 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 
     dw4 = GEN7_PS_DW4_POSOFFSET_NONE |
           GEN7_PS_DW4_8_PIXEL_DISPATCH;
+
+    if (fs->offset_16)
+        dw4 |= GEN7_PS_DW4_16_PIXEL_DISPATCH;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
         dw4 |= (fs->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
@@ -694,7 +702,9 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
 
     dw5 = fs->urb_grf_start << GEN7_PS_DW5_URB_GRF_START0__SHIFT |
           0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
-          0 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
+          fs->urb_grf_start_16 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
+
+    dw7 = (fs->offset_16) ? cmd->bind.pipeline.fs_offset + fs->offset_16 : 0;
 
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
@@ -704,7 +714,7 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
     dw[4] = dw4;
     dw[5] = dw5;
     dw[6] = 0; /* kernel 1 */
-    dw[7] = 0; /* kernel 2 */
+    dw[7] = dw7; /* kernel 2 */
 
     if (fs->per_thread_scratch_size)
         gen6_add_scratch_space(cmd, pos + 3, pipeline, fs);

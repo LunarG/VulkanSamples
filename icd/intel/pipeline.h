@@ -127,6 +127,10 @@ struct intel_pipeline_shader {
 
     uint32_t ubo_start;
     uint32_t urb_grf_start;
+    uint32_t urb_grf_start_16;
+
+    /* If present, where does the SIMD16 kernel start? */
+    uint32_t offset_16;
 
     XGL_FLAGS barycentric_interps;
 
