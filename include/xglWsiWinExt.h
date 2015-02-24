@@ -3,10 +3,6 @@
 #ifndef __XGLWSIWINEXT_H__
 #define __XGLWSIWINEXT_H__
 
-// This should be moved out of this WSI header file and
-// into a platform-specific file.
-#define snprintf _snprintf
-
 // This is just to get windows to build.
 // Need to replace with the declarations for Windows wsi.
 typedef void XGL_WSI_X11_CONNECTION_INFO;

@@ -14,9 +14,7 @@
 #define __linux__
 #endif
 
-#if defined(__linux__)
 #include <xcb/xcb.h>
-#endif
 #include <xgl.h>
 #include <xglDbg.h>
 #if defined(__linux__)

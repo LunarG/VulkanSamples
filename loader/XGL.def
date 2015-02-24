@@ -148,3 +148,7 @@ EXPORTS
    xglDbgSetDeviceOption
    xglCmdDbgMarkerBegin
    xglCmdDbgMarkerEnd
+   xglWsiX11AssociateConnection
+   xglWsiX11GetMSC
+   xglWsiX11CreatePresentableImage
+   xglWsiX11QueuePresent

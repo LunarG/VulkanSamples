@@ -28,11 +28,11 @@ extern "C"{
 #include "glv_platform.h"
 }
 
-#if defined(WIN32)
-typedef HWND glv_window_handle;
-#elif defined(PLATFORM_LINUX)
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
 #include <xcb/xcb.h>
 typedef xcb_window_t glv_window_handle;
+#elif defined(WIN32)
+typedef HWND glv_window_handle;
 #endif
 
 /* classes to abstract the display and initialization of rendering API for presenting

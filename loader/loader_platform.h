@@ -135,6 +135,7 @@ static inline void loader_platform_thread_delete_mutex(loader_platform_thread_mu
 /* Windows-specific common code: */
 
 // Headers:
+#include <WinSock2.h>
 #include <windows.h>
 #include <assert.h>
 #ifdef __cplusplus

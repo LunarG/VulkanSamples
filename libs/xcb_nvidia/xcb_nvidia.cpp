@@ -1,5 +1,4 @@
 #include <xcb/xcb.h>
-#include <xglWsiX11Ext.h>
 
 #include <Windows.h>
 #include <string>
@@ -13,7 +12,6 @@ typedef void (*xcbCreateWindowType)(uint16_t width, uint16_t height);
 typedef void (*xcbDestroyWindowType)();
 typedef int (*xcbGetMessageType)(MSG * msg);
 typedef BOOL (*xcbPeekMessageType)(MSG * msg);
-typedef XGL_RESULT (*xcbQueuePresentType)(XGL_QUEUE queue, XGL_IMAGE image, XGL_FENCE fence);
 
 struct xcb_connection_t {
     xcb_screen_t screens[1];
@@ -24,7 +22,6 @@ struct xcb_connection_t {
     xcbDestroyWindowType xcbDestroyWindow;
     xcbGetMessageType xcbGetMessage;
     xcbPeekMessageType xcbPeekMessage;
-    xcbQueuePresentType xcbQueuePresent;
 };
 
 // XCB id database.
@@ -56,7 +53,6 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
     connection->xcbDestroyWindow = (xcbDestroyWindowType)GetProcAddress(module, "xcbDestroyWindow");
     connection->xcbGetMessage = (xcbGetMessageType)GetProcAddress(module, "xcbGetMessage");
     connection->xcbPeekMessage = (xcbPeekMessageType)GetProcAddress(module, "xcbPeekMessage");
-    connection->xcbQueuePresent = (xcbQueuePresentType)GetProcAddress(module, "xcbQueuePresent");
 
     *screenp = 0;
     return static_cast<xcb_connection_t *>(connection);
@@ -272,97 +268,32 @@ xcb_screen_next(xcb_screen_iterator_t *i)
 {
 }
 
-XGL_RESULT XGLAPI xglWsiX11AssociateConnection(
-    XGL_PHYSICAL_GPU                            gpu,
-    const XGL_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
+xcb_void_cookie_t
+xcb_configure_window (xcb_connection_t *c  ,
+                      xcb_window_t      window  ,
+                      uint16_t          value_mask  ,
+                      const uint32_t   *value_list  )
 {
-    return XGL_SUCCESS;
-}
+    uint32_t width = 0;
+    uint32_t height = 0;
 
-XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(
-    XGL_DEVICE                                  device,
-    const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    XGL_IMAGE*                                  pImage,
-    XGL_GPU_MEMORY*                             pMem)
-{
-    XGL_RESULT err;
-
-    XGL_IMAGE_CREATE_INFO presentable_image = { XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    presentable_image.imageType = XGL_IMAGE_2D;
-    presentable_image.format = pCreateInfo->format;
-    presentable_image.extent.width = pCreateInfo->extent.width;
-    presentable_image.extent.height = pCreateInfo->extent.height;
-    presentable_image.extent.depth = 1;
-    presentable_image.mipLevels = 1;
-    presentable_image.arraySize = 1;
-    presentable_image.samples = 1;
-    presentable_image.tiling = XGL_OPTIMAL_TILING;
-    presentable_image.usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    err = xglCreateImage(device, &presentable_image, pImage);
-    if (err != XGL_SUCCESS) {
-        return err;
+    size_t index = 0;
+    for (size_t i = 0; i < sizeof (uint16_t); ++i) {
+        switch (value_mask & (1 << i)) {
+        case XCB_CONFIG_WINDOW_WIDTH:
+            width = value_list[index++];
+            break;
+        case XCB_CONFIG_WINDOW_HEIGHT:
+            height = value_list[index++];
+            break;
+        default:
+            break;
+        }
     }
 
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
-    err = xglGetObjectInfo(*pImage, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
-    if (err != XGL_SUCCESS) {
-        xglDestroyObject(*pImage);
-        return err;
-    }
-    if (num_allocations > 1) {
-        xglDestroyObject(*pImage);
-        return XGL_UNSUPPORTED;
+    if (width && height) {
+        // Resize the window...
     }
 
-    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
-    XGL_MEMORY_REQUIREMENTS mem_reqs;
-    err = xglGetObjectInfo(*pImage, XGL_INFO_TYPE_MEMORY_REQUIREMENTS, &mem_reqs_size, &mem_reqs);
-    if (err != XGL_SUCCESS) {
-        xglDestroyObject(*pImage);
-        return err;
-    }
-
-    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    err = xglGetObjectInfo(*pImage, XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, &img_reqs_size, &img_reqs);
-    if (err != XGL_SUCCESS) {
-        xglDestroyObject(*pImage);
-        return err;
-    }
-
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = { XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO };
-    img_alloc.usage = img_reqs.usage;
-    img_alloc.formatClass = img_reqs.formatClass;
-    img_alloc.samples = img_reqs.samples;
-    XGL_MEMORY_ALLOC_INFO mem_alloc = { XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO };
-    mem_alloc.pNext = &img_alloc;
-    mem_alloc.allocationSize = 0,
-    mem_alloc.memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-    mem_alloc.memType = XGL_MEMORY_TYPE_IMAGE,
-    mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL,
-    mem_alloc.allocationSize = mem_reqs.size;
-    err = xglAllocMemory(device, &mem_alloc, pMem);
-    if (err != XGL_SUCCESS) {
-        xglDestroyObject(*pImage);
-        return err;
-    }
-
-    err = xglBindObjectMemory(*pImage, 0, *pMem, 0);
-    if (err != XGL_SUCCESS) {
-        xglFreeMemory(*pMem);
-        xglDestroyObject(*pImage);
-        return err;
-    }
-
-    return XGL_SUCCESS;
-}
-
-XGL_RESULT XGLAPI xglWsiX11QueuePresent(
-    XGL_QUEUE                                   queue,
-    const XGL_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    XGL_FENCE                                   fence)
-{
-    xcb_connection_t * connection = g_xcbIds[pPresentInfo->destWindow].connection;
-    return connection->xcbQueuePresent(queue, pPresentInfo->srcImage, fence);
+    return xcb_void_cookie_t();
 }

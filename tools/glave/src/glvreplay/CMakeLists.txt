@@ -19,11 +19,16 @@ include_directories(
     ${SRC_DIR}/thirdparty
 )
 
+set (LIBRARIES getopt_bundled glvcommon)
+
+if(WIN32)
+    set (LIBRARIES ${LIBRARIES} xcb_nvidia)
+endif()
+
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 target_link_libraries(${PROJECT_NAME} 
-    getopt_bundled
-    glvcommon
+    ${LIBRARIES}
 )
 
 build_options_finalize()

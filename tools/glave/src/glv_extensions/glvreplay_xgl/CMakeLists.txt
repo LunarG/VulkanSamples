@@ -20,9 +20,12 @@ add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvt
 	                   ${SRC_DIR}/../../../xgl_helper.py)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXCB_NVIDIA")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXCB_NVIDIA")
     set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
     set(OS_REPLAYER_LIBS
         ${PATH_TO_WIN_XGL}/XGL.lib
+        xcb_nvidia
     )
 endif()
 

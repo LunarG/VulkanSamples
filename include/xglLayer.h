@@ -6,11 +6,9 @@
 
 #include "xgl.h"
 #include "xglDbg.h"
-#if defined(_WIN32)
-#else // WIN32
-// FIXME: NEED WINDOWS EQUIVALENT
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
 #include "xglWsiX11Ext.h"
-#endif // WIN32
+#endif
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define XGL_LAYER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -151,9 +149,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglDbgSetDeviceOptionType DbgSetDeviceOption;
     xglCmdDbgMarkerBeginType CmdDbgMarkerBegin;
     xglCmdDbgMarkerEndType CmdDbgMarkerEnd;
-#if defined(_WIN32)
-// FIXME: NEED WINDOWS EQUIVALENT
-#else // WIN32
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     xglWsiX11AssociateConnectionType WsiX11AssociateConnection;
     xglWsiX11GetMSCType WsiX11GetMSC;
     xglWsiX11CreatePresentableImageType WsiX11CreatePresentableImage;
