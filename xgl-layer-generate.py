@@ -639,7 +639,7 @@ class Subcommand(object):
                     else:
                         if 'Destroy' in proto.name or 'Free' in proto.name:
                             destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                            destroy_line += '    ll_remove_obj_type((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+                            destroy_line += '    ll_destroy_obj((void*)%s);\n' % (param0_name)
                             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                             using_line = ''
                         if 'DestroyDevice' in proto.name:
