@@ -96,6 +96,7 @@ struct demo {
 #endif
 
     bool quit;
+    bool use_staging_buffer;
     uint32_t current_buffer;
 };
 
@@ -533,7 +534,7 @@ static void demo_prepare_textures(struct demo *demo)
     assert(!err);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        if (props.linearTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
+        if ((props.linearTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
                                        XGL_LINEAR_TILING, XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
@@ -1275,9 +1276,14 @@ static void demo_init_connection(struct demo *demo)
 #endif
 }
 
-static void demo_init(struct demo *demo)
+static void demo_init(struct demo *demo, const int argc, const char *argv[])
 {
     memset(demo, 0, sizeof(*demo));
+
+    for (int i = 0; i < argc; i++) {
+        if (strncmp(argv[i], "--use_staging", strlen("--use_staging")) == 0)
+            demo->use_staging_buffer = true;
+    }
 
     demo_init_connection(demo);
     demo_init_xgl(demo);
@@ -1341,11 +1347,11 @@ static void demo_cleanup(struct demo *demo)
 #endif
 }
 
-int main(void)
+int main(const int argc, const char *argv[])
 {
     struct demo demo;
 
-    demo_init(&demo);
+    demo_init(&demo, argc, argv);
 
     demo_prepare(&demo);
     demo_create_window(&demo);
