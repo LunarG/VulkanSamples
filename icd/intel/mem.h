@@ -49,7 +49,7 @@ XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
 
 static inline void *intel_mem_map(struct intel_mem *mem, XGL_FLAGS flags)
 {
-    return intel_bo_map_gtt_async(mem->bo);
+    return intel_bo_map_async(mem->bo);
 }
 
 static inline void *intel_mem_map_sync(struct intel_mem *mem, bool rw)
