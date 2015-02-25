@@ -936,6 +936,7 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
                         pSet->pUpdateStructs = pNewNode;
                         // Now update appropriate descriptor(s) to point to new Update node
                         for (uint32_t i = getUpdateIndex(pUpdates); i < getUpdateUpperBound(pUpdates); i++) {
+                            assert(i<pSet->descriptorCount);
                             pSet->ppDescriptors[i] = pNewNode;
                         }
                     }
@@ -954,7 +955,7 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
     pSet->pUpdateStructs = NULL;
     GENERIC_HEADER* pFreeUpdate = pShadowUpdate;
     // Clear the descriptor mappings as they will now be invalid
-    memset(pSet->ppDescriptors, 0, pSet->descriptorCount*sizeof(GENERIC_HEADER));
+    memset(pSet->ppDescriptors, 0, pSet->descriptorCount*sizeof(GENERIC_HEADER*));
     while(pShadowUpdate) {
         pFreeUpdate = pShadowUpdate;
         pShadowUpdate = (GENERIC_HEADER*)pShadowUpdate->pNext;
