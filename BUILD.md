@@ -19,7 +19,7 @@ Note: If you are doing ICD (driver) development, please make sure to look at doc
 Ubuntu 14.10 needed for DRI 3
 
 ```
-sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default
+sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev
 sudo apt-get build-dep mesa
 ```
 Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
