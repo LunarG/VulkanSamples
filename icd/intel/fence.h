@@ -70,6 +70,7 @@ void intel_fence_set_seqno(struct intel_fence *fence,
 void intel_fence_set_x11(struct intel_fence *fence,
                          struct intel_wsi_x11 *x11,
                          struct intel_wsi_x11_window *win,
-                         uint32_t serial);
+                         uint32_t serial,
+                         struct intel_bo *seqno_bo);
 
 #endif /* FENCE_H */

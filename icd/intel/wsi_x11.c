@@ -639,8 +639,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
     if (ret != XGL_SUCCESS)
         return ret;
 
-    if (fence)
-        intel_fence_set_x11(fence, x11, win, win->local.serial);
+    if (fence) {
+        struct intel_img *img = intel_img(pPresentInfo->srcImage);
+
+        intel_fence_set_x11(fence, x11, win, win->local.serial,
+                img->obj.mem->bo);
+    }
 
     return XGL_SUCCESS;
 }
