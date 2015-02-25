@@ -171,10 +171,6 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
         argv[n] = argv[i];
         n++;
     }
-
-    if (m_show_images) {
-        glutInit(argc, argv);
-    }
 }
 
 void XglTestFramework::WritePPM( const char *basename, XglImage *image )

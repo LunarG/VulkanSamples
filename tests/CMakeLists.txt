@@ -4,8 +4,6 @@ if(NOT WIN32)
     find_package(XCB REQUIRED)
 endif()
 
-find_package (OpenGL REQUIRED)
-find_package (GLUT REQUIRED)
 find_package(ImageMagick COMPONENTS MagickWand)
 
 if(NOT EXISTS /usr/include/glm/glm.hpp)
@@ -40,8 +38,6 @@ link_directories(
 
 
 set(TEST_LIBRARIES
-   ${OPENGL_gl_LIBRARY}
-   ${GLUT_glut_LIBRARY}
    glslang
    OGLCompiler
    OSDependent
