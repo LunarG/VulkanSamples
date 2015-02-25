@@ -214,11 +214,27 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
     file << 255 << "\n";
 
     for (y = 0; y < image->height(); y++) {
-        const char *row = ptr;
+        const int *row = (const int *) ptr;
+        int swapped;
 
-        for (x = 0; x < image->width(); x++) {
-            file.write(row, 3);
-            row += 4;
+        if (image->format() == XGL_FMT_B8G8R8A8_UNORM)
+        {
+            for (x = 0; x < image->width(); x++) {
+                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
+                file.write((char *) &swapped, 3);
+                row++;
+            }
+        }
+        else if (image->format() == XGL_FMT_R8G8B8A8_UNORM)
+        {
+            for (x = 0; x < image->width(); x++) {
+                file.write((char *) row, 3);
+                row++;
+            }
+        }
+        else {
+            printf("Unrecognized image format - will not write image files");
+            break;
         }
 
         ptr += sr_layout.rowPitch;

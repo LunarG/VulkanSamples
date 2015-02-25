@@ -38,7 +38,7 @@ XglRenderFramework::XglRenderFramework() :
 {
     m_renderTargetCount = 1;
 
-    m_render_target_fmt = XGL_FMT_R8G8B8A8_UNORM;
+    m_render_target_fmt = XGL_FMT_B8G8R8A8_UNORM;
 
     m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
@@ -83,7 +83,7 @@ void XglRenderFramework::InitState()
 {
     XGL_RESULT err;
 
-    m_render_target_fmt = XGL_FMT_R8G8B8A8_UNORM;
+    m_render_target_fmt = XGL_FMT_B8G8R8A8_UNORM;
 
     // create a raster state (solid, back-face culling)
     XGL_DYNAMIC_RS_STATE_CREATE_INFO raster = {};
@@ -383,7 +383,7 @@ void XglImage::init(uint32_t w, uint32_t h,
         XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
         XGL_NULL_HANDLE,
         obj(),
-        XGL_FMT_R8G8B8A8_UNORM,
+        XGL_FMT_B8G8R8A8_UNORM,
         0,
         0,
         1
@@ -805,7 +805,7 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
 
     XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
     att.blendEnable = XGL_FALSE;
-    att.format = XGL_FMT_R8G8B8A8_UNORM;
+    att.format = XGL_FMT_B8G8R8A8_UNORM;
     att.channelWriteMask = 0xf;
     AddColorAttachment(0, &att);
 

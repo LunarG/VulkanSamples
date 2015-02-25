@@ -407,6 +407,7 @@ public:
     XGL_IMAGE_SUBRESOURCE_RANGE subresource_range(XGL_IMAGE_ASPECT aspect) const { return subresource_range(create_info_, aspect); }
     XGL_EXTENT3D extent() const { return create_info_.extent; }
     XGL_EXTENT3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
+    XGL_FORMAT format() const {return create_info_.format;}
 
     XGL_IMAGE_MEMORY_BARRIER image_memory_barrier(XGL_FLAGS output_mask, XGL_FLAGS input_mask,
                                                   XGL_IMAGE_LAYOUT old_layout,
