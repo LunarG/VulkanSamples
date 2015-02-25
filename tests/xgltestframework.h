@@ -28,6 +28,8 @@
 #include "GLSL450Lib.h"
 #include "icd-bil.h"
 #include "test_common.h"
+#include "xgltestbinding.h"
+#include "test_environment.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,6 +38,7 @@
 #include <iostream>
 #include <fstream>
 #include <list>
+#include <xglWsiX11Ext.h>
 
 // Can be used by tests to record additional details / description of test
 #define TEST_DESCRIPTION(desc) RecordProperty("description", desc)
@@ -43,6 +46,7 @@
 using namespace std;
 
 class XglImage;
+
 
 class XglTestImageRecord
 {
@@ -54,11 +58,13 @@ public:
     int operator==(const XglTestImageRecord &rhs) const;
     int operator<(const XglTestImageRecord &rhs) const;
 
-    string      m_title;
-    int         m_width;
-    int         m_height;
-    void       *m_data;
-    unsigned    m_data_size;
+    string                    m_title;
+    int                       m_width;
+    int                       m_height;
+    void                     *m_data;
+    XGL_IMAGE                 m_presentableImage;
+    XGL_GPU_MEMORY            m_presentableMemory;
+    unsigned                  m_data_size;
 };
 
 class XglTestFramework : public ::testing::Test
@@ -93,29 +99,55 @@ private:
     EShLanguage FindLanguage(const XGL_PIPELINE_SHADER_STAGE shader_type);
     std::string ConfigFile;
     bool SetConfigFile(const std::string& name);
-    static void Reshape( int w, int h );
-    static void Display();
-    static void Key(unsigned char key, int x, int y);
-    static void SpecialKey( int key, int x, int y );
 
-    void InitGLUT(int w, int h);
+    static bool                             m_show_images;
+    static bool                             m_save_images;
+    static bool                             m_compare_images;
 
-    static bool         m_show_images;
-    static bool         m_save_images;
-    static bool         m_compare_images;
-
-    static std::list<XglTestImageRecord> m_images;
+    static std::list<XglTestImageRecord>    m_images;
     static std::list<XglTestImageRecord>::iterator m_display_image;
-    static int          m_display_image_idx;
+    static int                              m_display_image_idx;
 
-    static bool         m_glut_initialized;
-    static int          m_window;
-    static int          m_width;            // Window width
-    static int          m_height;           // Window height
+    static int                              m_width;            // Window width
+    static int                              m_height;           // Window height
 
-    int          m_frameNum;
-    string       m_testName;
+    int                                     m_frameNum;
+    string                                  m_testName;
 
+};
+
+
+class TestFrameworkXglPresent
+{
+public:
+    TestFrameworkXglPresent();
+
+    void Run();
+    void InitPresentFramework(std::list<XglTestImageRecord> &imagesIn);
+    void CreateWindow();
+    void CreatePresentableImages();
+    void TearDown();
+
+protected:
+    xgl_testing::Device                    &m_device;
+    xgl_testing::Queue                     &m_queue;
+    xgl_testing::CmdBuffer                  m_cmdbuf;
+
+private:
+    xcb_window_t                            m_window;
+    xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
+    std::list<XglTestImageRecord>           m_images;
+
+    bool                                    m_quit;
+    bool                                    m_pause;
+
+    uint32_t                                m_width;
+    uint32_t                                m_height;
+
+    std::list<XglTestImageRecord>::iterator m_display_image;
+
+    void Display();
+    void HandleEvent(xcb_generic_event_t *event);
 };
 
 class TestEnvironment : public ::testing::Environment

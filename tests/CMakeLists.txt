@@ -1,5 +1,9 @@
 include (FindPkgConfig)
 
+if(NOT WIN32)
+    find_package(XCB REQUIRED)
+endif()
+
 find_package (OpenGL REQUIRED)
 find_package (GLUT REQUIRED)
 find_package(ImageMagick COMPONENTS MagickWand)
@@ -42,6 +46,7 @@ set(TEST_LIBRARIES
    OGLCompiler
    OSDependent
    BIL
+   ${XCB_LIBRARIES}
    ${ImageMagick_LIBRARIES}
    )
 
@@ -51,6 +56,7 @@ include_directories(
     "${GLSLANG_PREFIX}/glslang/Include"
     "${GLSLANG_PREFIX}/glslang/Public"
     "${GLSLANG_PREFIX}/BIL"
+    ${XCB_INCLUDE_DIRS}
     ${ImageMagick_INCLUDE_DIRS}
     )
 

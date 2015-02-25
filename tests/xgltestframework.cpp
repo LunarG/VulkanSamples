@@ -110,8 +110,6 @@ bool XglTestFramework::m_compare_images = false;
 bool XglTestFramework::m_use_bil = true;
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
-int XglTestFramework::m_window = 0;
-bool XglTestFramework::m_glut_initialized = false;
 std::list<XglTestImageRecord> XglTestFramework::m_images;
 std::list<XglTestImageRecord>::iterator XglTestFramework::m_display_image;
 int m_display_image_idx = 0;
@@ -179,31 +177,6 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
     }
 }
 
-void XglTestFramework::Reshape( int w, int h )
-{
-    if (!m_show_images) return;  // Do nothing except save info if not enabled
-
-    // Resize window to be large enough to handle biggest image we've seen
-    // TODO: Probably need some sort of limits for the Window system.
-    if (w > m_width) {
-        m_width = w;
-    }
-    if (h > m_height) {
-        m_height = h;
-    }
-
-    glutReshapeWindow(m_width, m_height);
-
-    glViewport( 0, 0, m_width, m_height );
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    glOrtho( 0.0, m_width, 0.0, m_height, 0.0, 2.0 );
-    glMatrixMode( GL_MODELVIEW );
-    glLoadIdentity();
-
-//    glScissor(width/4, height/4, width/2, height/2);
-}
-
 void XglTestFramework::WritePPM( const char *basename, XglImage *image )
 {
     string filename;
@@ -257,21 +230,6 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
     ASSERT_XGL_SUCCESS( err );
 }
 
-void XglTestFramework::InitGLUT(int w, int h)
-{
-
-    if (!m_show_images) return;
-
-    if (!m_glut_initialized) {
-        glutInitWindowSize(w, h);
-
-        glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-        m_window = glutCreateWindow(NULL);
-        m_glut_initialized = true;
-    }
-
-    Reshape(w, h);
-}
 void XglTestFramework::Compare(const char *basename, XglImage *image )
 {
 
@@ -334,24 +292,22 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
     };
     XGL_SUBRESOURCE_LAYOUT sr_layout;
     size_t data_size = sizeof(sr_layout);
+    XglTestImageRecord record;
 
     if (!m_show_images) return;
-
-    InitGLUT(image->width(), image->height());
 
     err = xglGetImageSubresourceInfo( image->image(), &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
                                       &data_size, &sr_layout);
     ASSERT_XGL_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
 
-    const char *ptr;
+    char *ptr;
 
     err = image->MapMemory( (void **) &ptr );
     ASSERT_XGL_SUCCESS( err );
 
     ptr += sr_layout.offset;
 
-    XglTestImageRecord record;
     record.m_title.append(comment);
     record.m_width = image->width();
     record.m_height = image->height();
@@ -362,11 +318,9 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
     m_images.push_back(record);
     m_display_image = --m_images.end();
 
-//    Display();
-    glutPostRedisplay();
-
     err = image->UnmapMemory();
     ASSERT_XGL_SUCCESS( err );
+
 }
 
 void XglTestFramework::RecordImage(XglImage *image, char *tag)
@@ -428,69 +382,242 @@ void XglTestFramework::RecordImage(XglImage *image)
     }
 }
 
-void XglTestFramework::Display()
+static xgl_testing::Environment *environment;
+
+TestFrameworkXglPresent::TestFrameworkXglPresent() :
+m_device(environment->default_device()),
+m_queue(*m_device.graphics_queues()[0]),
+m_cmdbuf(m_device, xgl_testing::CmdBuffer::create_info(XGL_QUEUE_TYPE_GRAPHICS))
 {
-    glutSetWindowTitle(m_display_image->m_title.c_str());
-
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glRasterPos3f(0, 0, 0);
-    glBitmap(0, 0, 0, 0, 0, 0, NULL);
-    glDrawPixels(m_display_image->m_width, m_display_image->m_height,
-                 GL_RGBA, GL_UNSIGNED_BYTE, m_display_image->m_data);
-
-    glutSwapBuffers();
+    m_quit = false;
+    m_pause = false;
+    m_width = 0;
+    m_height = 0;
 }
 
-void XglTestFramework::Key( unsigned char key, int x, int y )
+void  TestFrameworkXglPresent::Display()
 {
-   (void) x;
-   (void) y;
-   switch (key) {
-      case 27:
-         glutDestroyWindow(m_window);
-         exit(0);
-         break;
-   }
-   glutPostRedisplay();
+    XGL_RESULT err;
+
+    XGL_WSI_X11_PRESENT_INFO present = {
+        .destWindow = m_window,
+        .srcImage = m_display_image->m_presentableImage,
+    };
+
+    xcb_change_property (environment->m_connection,
+                         XCB_PROP_MODE_REPLACE,
+                         m_window,
+                         XCB_ATOM_WM_NAME,
+                         XCB_ATOM_STRING,
+                         8,
+                         m_display_image->m_title.size(),
+                         m_display_image->m_title.c_str());
+
+    err = xglWsiX11QueuePresent(m_queue.obj(), &present, NULL);
+    assert(!err);
+
+    m_queue.wait();
+
 }
 
-void XglTestFramework::SpecialKey( int key, int x, int y )
+void  TestFrameworkXglPresent::HandleEvent(xcb_generic_event_t *event)
 {
-    (void) x;
-    (void) y;
-    switch (key) {
-    case GLUT_KEY_UP:
-    case GLUT_KEY_RIGHT:
-        ++m_display_image;
-        if (m_display_image == m_images.end()) {
-            m_display_image = m_images.begin();
+    u_int8_t event_code = event->response_type & 0x7f;
+    switch (event_code) {
+    case XCB_EXPOSE:
+        Display();  // TODO: handle resize
+        break;
+    case XCB_CLIENT_MESSAGE:
+        if((*(xcb_client_message_event_t*)event).data.data32[0] ==
+           (m_atom_wm_delete_window)->atom) {
+            m_quit = true;
         }
         break;
-    case GLUT_KEY_DOWN:
-    case GLUT_KEY_LEFT:
-        if (m_display_image == m_images.begin()) {
-            m_display_image = --m_images.end();
-        } else {
-            --m_display_image;
-        }
+    case XCB_KEY_RELEASE:
+        {
+            const xcb_key_release_event_t *key =
+                (const xcb_key_release_event_t *) event;
 
+            switch (key->detail) {
+            case 0x9:           // Escape
+                m_quit = true;
+                break;
+            case 0x71:          // left arrow key
+                if (m_display_image == m_images.begin()) {
+                    m_display_image = --m_images.end();
+                } else {
+                    --m_display_image;
+                }
+                break;
+            case 0x72:          // right arrow key
+                ++m_display_image;
+                if (m_display_image == m_images.end()) {
+                    m_display_image = m_images.begin();
+                }
+                break;
+            case 0x41:
+                 m_pause = !m_pause;
+                 break;
+            }
+            Display();
+        }
+        break;
+    default:
         break;
     }
-    glutPostRedisplay();
+}
+
+void  TestFrameworkXglPresent::Run()
+{
+    xcb_flush(environment->m_connection);
+
+    while (! m_quit) {
+        xcb_generic_event_t *event;
+
+        if (m_pause) {
+            event = xcb_wait_for_event(environment->m_connection);
+        } else {
+            event = xcb_poll_for_event(environment->m_connection);
+        }
+        if (event) {
+            HandleEvent(event);
+            free(event);
+        }
+    }
+}
+
+void TestFrameworkXglPresent::CreatePresentableImages()
+{
+    XGL_RESULT err;
+
+    m_display_image = m_images.begin();
+
+    for (int x=0; x < m_images.size(); x++)
+    {
+        const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {
+            .format = XGL_FMT_B8G8R8A8_UNORM,
+            .usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .extent = {
+                .width = m_display_image->m_width,
+                .height = m_display_image->m_height,
+            },
+            .flags = 0,
+        };
+
+        void *dest_ptr;
+
+        err = xglWsiX11CreatePresentableImage(m_device.obj(), &presentable_image_info,
+                        &m_display_image->m_presentableImage, &m_display_image->m_presentableMemory);
+        assert(!err);
+
+        xgl_testing::Buffer buf;
+        buf.init(m_device, (XGL_GPU_SIZE) m_display_image->m_data_size);
+        dest_ptr = buf.map();
+        memcpy(dest_ptr,m_display_image->m_data, m_display_image->m_data_size);
+        buf.unmap();
+
+        m_cmdbuf.begin();
+
+        XGL_BUFFER_IMAGE_COPY region = {};
+        region.imageExtent.height = m_display_image->m_height;
+        region.imageExtent.width = m_display_image->m_width;
+        region.imageExtent.depth = 1;
+
+        xglCmdCopyBufferToImage(m_cmdbuf.obj(), buf.obj(), m_display_image->m_presentableImage, 1, &region);
+        m_cmdbuf.end();
+
+        uint32_t     numMemRefs=2;
+        XGL_MEMORY_REF memRefs[2];
+        memRefs[0].flags = 0;
+        memRefs[0].mem = m_display_image->m_presentableMemory;
+        memRefs[1].flags = 0;
+        memRefs[1].mem = buf.memories()[0];
+
+        XGL_CMD_BUFFER cmdBufs[1];
+        cmdBufs[0] = m_cmdbuf.obj();
+
+        xglQueueSubmit(m_queue.obj(), 1, cmdBufs, numMemRefs, memRefs, NULL);
+        m_queue.wait();
+
+
+        if (m_display_image->m_width > m_width)
+            m_width = m_display_image->m_width;
+
+        if (m_display_image->m_height > m_height)
+            m_height = m_display_image->m_height;
+
+
+        ++m_display_image;
+
+    }
+
+    m_display_image = m_images.begin();
+}
+
+void  TestFrameworkXglPresent::InitPresentFramework(std::list<XglTestImageRecord>  &imagesIn)
+{
+    m_images = imagesIn;
+}
+
+void  TestFrameworkXglPresent::CreateWindow()
+{
+    uint32_t value_mask, value_list[32];
+
+    m_window = xcb_generate_id(environment->m_connection);
+
+    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    value_list[0] = environment->m_screen->black_pixel;
+    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
+                    XCB_EVENT_MASK_EXPOSURE |
+                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+
+    xcb_create_window(environment->m_connection,
+            XCB_COPY_FROM_PARENT,
+            m_window, environment->m_screen->root,
+            0, 0, m_width, m_height, 0,
+            XCB_WINDOW_CLASS_INPUT_OUTPUT,
+            environment->m_screen->root_visual,
+            value_mask, value_list);
+
+    /* Magic code that will send notification when window is destroyed */
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(environment->m_connection, 1, 12,
+                                                      "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(environment->m_connection, cookie, 0);
+
+    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(environment->m_connection, 0, 16, "WM_DELETE_WINDOW");
+    m_atom_wm_delete_window = xcb_intern_atom_reply(environment->m_connection, cookie2, 0);
+
+    xcb_change_property(environment->m_connection, XCB_PROP_MODE_REPLACE,
+                        m_window, (*reply).atom, 4, 32, 1,
+                        &(*m_atom_wm_delete_window).atom);
+    free(reply);
+
+    xcb_map_window(environment->m_connection, m_window);
+}
+
+void TestFrameworkXglPresent::TearDown()
+{
+    xcb_destroy_window(environment->m_connection, m_window);
 }
 
 void XglTestFramework::Finish()
 {
     if (m_images.size() == 0) return;
 
-    glutReshapeFunc( Reshape );
-    glutKeyboardFunc( Key );
-    glutSpecialFunc( SpecialKey );
-    glutDisplayFunc( Display );
-    glutIdleFunc(NULL);
+    environment = new xgl_testing::Environment();
+    ::testing::AddGlobalTestEnvironment(environment);
+    environment->X11SetUp();
 
-    glutMainLoop();
+    {
+        TestFrameworkXglPresent xglPresent;
+
+        xglPresent.InitPresentFramework(m_images);
+        xglPresent.CreatePresentableImages();
+        xglPresent.CreateWindow();
+        xglPresent.Run();
+        xglPresent.TearDown();
+    }
+    environment->TearDown();
 }
 
 //
@@ -1051,6 +1178,8 @@ XglTestImageRecord::XglTestImageRecord() : // Constructor
     m_width( 0 ),
     m_height( 0 ),
     m_data( NULL ),
+    m_presentableImage( NULL ),
+    m_presentableMemory( NULL),
     m_data_size( 0 )
 {
 }
@@ -1067,6 +1196,8 @@ XglTestImageRecord::XglTestImageRecord(const XglTestImageRecord &copyin)   // Co
     m_height = copyin.m_height;
     m_data_size = copyin.m_data_size;
     m_data = copyin.m_data; // TODO: Do we need to copy the data or is pointer okay?
+    m_presentableImage = copyin.m_presentableImage;
+    m_presentableMemory = copyin.m_presentableMemory;
 }
 
 ostream &operator<<(ostream &output, const XglTestImageRecord &XglTestImageRecord)
@@ -1083,6 +1214,8 @@ XglTestImageRecord& XglTestImageRecord::operator=(const XglTestImageRecord &rhs)
     m_height = rhs.m_height;
     m_data_size = rhs.m_data_size;
     m_data = rhs.m_data;
+    m_presentableImage = rhs.m_presentableImage;
+    m_presentableMemory = rhs.m_presentableMemory;
     return *this;
 }
 
