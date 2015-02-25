@@ -3,9 +3,8 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
+add_subdirectory(kmd)
 add_subdirectory(compiler)
-
-find_package(DRM REQUIRED COMPONENTS libdrm libdrm_intel)
 
 add_custom_command(OUTPUT intel_gpa.c
     COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > intel_gpa.c
@@ -39,16 +38,15 @@ set(sources
     shader.c
     state.c
     view.c
-    kmd/winsys_drm.c
     )
 
 set(definitions "")
-set(include_dirs ${DRM_INCLUDE_DIRS})
+set(include_dirs "")
 
 set(libraries
-    ${DRM_LIBRARIES}
     m
     icd
+    intelkmd
     intelcompiler)
 
 find_package(XCB COMPONENTS xcb xcb-dri3 xcb-present)
