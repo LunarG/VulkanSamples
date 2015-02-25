@@ -81,6 +81,16 @@ const char *getLayerOption(const char *_option)
     return g_configFileObj.getOption(_option);
 }
 
+uint32_t getLayerOptionEnum(const char *_option)
+{
+    uint32_t val = 0;
+    const char *option = (g_configFileObj.getOption(_option));
+    if (option != NULL) {
+       val = convertStringEnumVal(option);
+    }
+    return val;
+}
+
 void setLayerOptionEnum(const char *_option, const char *_valEnum)
 {
     unsigned int val = convertStringEnumVal(_valEnum);

@@ -1580,13 +1580,8 @@ static void initDrawState(void)
 {
     const char *strOpt;
     // initialize DrawState options
-    strOpt = getLayerOption("DrawStateReportLevel");
-    if (strOpt != NULL)
-        g_reportingLevel = atoi(strOpt);
-
-    strOpt = getLayerOption("DrawStateDebugAction");
-    if (strOpt != NULL)
-        g_debugAction = atoi(strOpt);
+    g_reportingLevel = (XGL_LAYER_DBG_REPORT_LEVEL)getLayerOptionEnum("MemTrackerReportLevel");
+    g_debugAction = (XGL_LAYER_DBG_ACTION)getLayerOptionEnum("MemTrackerDebugAction");
 
     if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
     {
