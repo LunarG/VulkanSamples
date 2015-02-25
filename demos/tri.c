@@ -194,6 +194,9 @@ static void demo_draw_build_cmd(struct demo *demo)
 
     err = xglEndCommandBuffer(demo->cmd);
     assert(!err);
+
+    xglDestroyObject(graphics_cmd_buf_info.renderPass);
+    xglDestroyObject(rp_info.framebuffer);
 }
 
 static void demo_draw(struct demo *demo)
