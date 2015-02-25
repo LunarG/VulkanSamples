@@ -888,7 +888,7 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
     SET_NODE* pSet = getSetNode(ds);
     loader_platform_thread_lock_mutex(&globalLock);
     LAYOUT_NODE* pLayout = NULL;
-    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLayoutCI;
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLayoutCI = NULL;
     // TODO : If pCIList is NULL, flag error
     GENERIC_HEADER* pUpdates = pUpdateChain;
     // Perform all updates
@@ -907,8 +907,8 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
             // Next verify that update is correct size
             if (!validateUpdateSize(pUpdates, pLayout->endIndex)) {
                 char str[48*1024]; // TODO : Keep count of layout CI structs and size this string dynamically based on that count
-                char* pDSstr = xgl_print_xgl_descriptor_set_layout_create_info(pLayoutCI, "{DS}    ");
                 pLayoutCI = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pLayout->pCreateInfoList;
+                char* pDSstr = xgl_print_xgl_descriptor_set_layout_create_info(pLayoutCI, "{DS}    ");
                 sprintf(str, "Descriptor update type of %s is out of bounds for matching layout w/ CI:\n%s!", string_XGL_STRUCTURE_TYPE(pUpdates->sType), pDSstr);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS", str);
                 free(pDSstr);
