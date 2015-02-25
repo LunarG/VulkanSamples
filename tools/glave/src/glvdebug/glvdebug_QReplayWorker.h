@@ -50,7 +50,10 @@ public:
           m_pTraceFileInfo(NULL),
           m_currentReplayPacketIndex(0),
           m_pActionRunToHere(NULL),
-          m_pauseAtPacketIndex((uint64_t)-1)
+          m_pauseAtPacketIndex((uint64_t)-1),
+          m_pReplayWindow(NULL),
+          m_pReplayWindowWidth(0),
+          m_pReplayWindowHeight(0)
     {
         memset(m_pReplayers, 0, sizeof(glv_replay::glv_trace_packet_replay_library*) * GLV_MAX_TRACER_ID_ARRAY_SIZE);
         s_pWorker = this;
@@ -278,6 +281,31 @@ public slots:
         m_bStopReplay = true;
     }
 
+    void DetachReplay(bool detach)
+    {
+        for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
+        {
+            if(m_pReplayers[i] != NULL)
+            {
+                m_pReplayers[i]->Deinitialize();
+
+                glv_replay::Display disp;
+                if(detach)
+                {
+                    disp = glv_replay::Display(m_pReplayWindowWidth, m_pReplayWindowHeight, 0, false);
+                }
+                else
+                {
+                    WId hWindow = m_pReplayWindow->winId();
+                    disp = glv_replay::Display((glv_window_handle)hWindow, m_pReplayWindowWidth, m_pReplayWindowHeight);
+                }
+
+                int err = m_pReplayers[i]->Initialize(&disp, NULL);
+                assert(err == 0);
+            }
+        }
+    }
+
     void onSettingsUpdated(glv_SettingGroup* pGroups, unsigned int numGroups)
     {
         if (m_pReplayers != NULL)
@@ -308,6 +336,10 @@ protected:
     uint64_t m_currentReplayPacketIndex;
     QAction* m_pActionRunToHere;
     uint64_t m_pauseAtPacketIndex;
+
+    QWidget* m_pReplayWindow;
+    int m_pReplayWindowWidth;
+    int m_pReplayWindowHeight;
 
     void setView(glvdebug_view* pView)
     {
@@ -359,6 +391,10 @@ protected:
         assert(pReplayWindow != NULL);
         assert(replayWindowWidth > 0);
         assert(replayWindowHeight > 0);
+
+        m_pReplayWindow = pReplayWindow;
+        m_pReplayWindowWidth = replayWindowWidth;
+        m_pReplayWindowHeight = replayWindowHeight;
 
         // TODO: Get the width and height from the replayer. We can't do this yet
         // because the replayer doesn't know the render target's size.
