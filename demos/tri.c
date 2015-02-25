@@ -510,7 +510,7 @@ static void demo_destroy_texture_image(struct texture_objects *tex_objs)
 {
     /* clean up staging resources */
     for (uint32_t j = 0; j < tex_objs->num_mem; j ++) {
-        xglBindObjectMemory(tex_objs->mem[j], j, XGL_NULL_HANDLE, 0);
+        xglBindObjectMemory(tex_objs->image, j, XGL_NULL_HANDLE, 0);
         xglFreeMemory(tex_objs->mem[j]);
     }
 
