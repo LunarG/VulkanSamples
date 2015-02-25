@@ -1258,7 +1258,7 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (binding = 0) uniform sampler2D tex;\n"
+            "layout (binding = 1) uniform sampler2D tex;\n"
             "\n"
             "layout (location = 0) in vec4 texcoord;\n"
             "void main() {\n"
