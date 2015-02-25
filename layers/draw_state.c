@@ -953,6 +953,8 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
     GENERIC_HEADER* pShadowUpdate = pSet->pUpdateStructs;
     pSet->pUpdateStructs = NULL;
     GENERIC_HEADER* pFreeUpdate = pShadowUpdate;
+    // Clear the descriptor mappings as they will now be invalid
+    memset(pSet->ppDescriptors, 0, pSet->descriptorCount*sizeof(GENERIC_HEADER));
     while(pShadowUpdate) {
         pFreeUpdate = pShadowUpdate;
         pShadowUpdate = (GENERIC_HEADER*)pShadowUpdate->pNext;
@@ -1308,6 +1310,16 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                     fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", i, i);
                 }
             }
+            static const uint32_t NUM_COLORS = 7;
+            char* edgeColors[NUM_COLORS];
+            edgeColors[0] = "0000ff";
+            edgeColors[1] = "ff00ff";
+            edgeColors[2] = "ffff00";
+            edgeColors[3] = "00ff00";
+            edgeColors[4] = "000000";
+            edgeColors[5] = "00ffff";
+            edgeColors[6] = "ff0000";
+            uint32_t colorIdx = 0;
             fprintf(pOutFile, "</TABLE>>\n];\n");
             // Now add the views that are mapped to active descriptors
             XGL_UPDATE_SAMPLERS* pUS = NULL;
@@ -1328,7 +1340,7 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(pSCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
@@ -1337,13 +1349,13 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(pSCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
                             }
                             pIVCI = getImageViewCreateInfo(pUST->pSamplerImageViews[i-pUST->index].pImageView->view);
                             if (pIVCI) {
                                 sprintf(tmp_str, "IMAGE_VIEW%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_create_info(pIVCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
@@ -1352,7 +1364,7 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                             if (pIVCI) {
                                 sprintf(tmp_str, "IMAGE_VIEW%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_create_info(pIVCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
@@ -1361,7 +1373,7 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                             if (pBVCI) {
                                 sprintf(tmp_str, "BUFFER_VIEW%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_buffer_view_create_info(pBVCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
@@ -1373,13 +1385,14 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                             *ppNextPtr = NULL;
                             sprintf(tmp_str, "UPDATE_AS_COPY%u", i);
                             fprintf(pOutFile, "%s", xgl_gv_print_xgl_update_as_copy(pUAC, tmp_str));
-                            fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [];\n", i, tmp_str);
+                            fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
                             // Restore next ptr
                             *ppNextPtr = pSaveNext;
                             break;
                         default:
                             break;
                     }
+                    colorIdx = (colorIdx+1) % NUM_COLORS;
                 }
             }
         }
