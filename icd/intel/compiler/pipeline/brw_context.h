@@ -41,19 +41,7 @@
 #include "main/mtypes.h"
 #include "brw_structs.h"
 
-#ifdef __cplusplus
-extern "C" {
-	/* Evil hack for using libdrm in a c++ compiler. */
-        #define virtual virt
-#endif
-
-#include <drm.h>
-#include <intel_bufmgr.h>
-#include <i915_drm.h>
-#ifdef __cplusplus
-	#undef virtual
-}
-#endif
+typedef struct drm_intel_bo drm_intel_bo;
 
 #ifdef __cplusplus
 extern "C" {

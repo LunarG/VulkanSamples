@@ -1,7 +1,7 @@
 # Create the i965 compiler library
 
 # Mesa required defines
-add_definitions(-D_GNU_SOURCE -DHAVE_PTHREAD)
+add_definitions(-D_GNU_SOURCE -DHAVE_PTHREAD -D__NOT_HAVE_DRM_H)
 # LLVM required defines
 add_definitions(-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
 
@@ -72,8 +72,6 @@ SET(COMPILER_LINK_DIRS
     -L${LUNARGLASS_PREFIX}/build/Core/Passes/Analysis
     -L${LUNARGLASS_PREFIX}/build/Core/Passes/Util
 )
-
-find_package(DRM REQUIRED COMPONENTS libdrm libdrm_intel)
 
 SET(COMPILER_LIBS
    glslangFrontend
@@ -333,12 +331,11 @@ set_target_properties(intelcompiler-os PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_library(intelcompiler STATIC ${COMPILER_SOURCES})
 
 target_include_directories(intelcompiler
-    PRIVATE ${DRM_INCLUDE_DIRS} ${COMPILER_INCLUDE_DIRS}
+    PRIVATE ${COMPILER_INCLUDE_DIRS}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 target_link_libraries(intelcompiler
     icd
-    ${DRM_LIBRARIES}
     ${COMPILER_LINK_DIRS}
     ${COMPILER_LIBS}
     intelcompiler-os

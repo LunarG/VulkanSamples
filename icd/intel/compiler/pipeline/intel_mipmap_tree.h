@@ -49,7 +49,6 @@
 #include <assert.h>
 
 #include "main/mtypes.h"
-#include "intel_bufmgr.h"
 #include "intel_resolve_map.h"
 #include <GL/internal/dri_interface.h>
 
