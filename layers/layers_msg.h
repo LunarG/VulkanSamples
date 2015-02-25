@@ -43,8 +43,10 @@ static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,
         switch (msgType) {
             case XGL_DBG_MSG_ERROR:
                 if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_ERROR) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG) {
                         fprintf(g_logFile, "{%s}ERROR : %s\n", pLayerPrefix, pMsg);
+                        fflush(g_logFile);
+                    }
                     if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
                         while (pTrav) {
 				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
