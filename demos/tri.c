@@ -598,6 +598,7 @@ static void demo_prepare_textures(struct demo *demo)
             XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
             XGL_PIPELINE_BARRIER pipeline_barrier;
             pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+            pipeline_barrier.pNext = NULL;
             pipeline_barrier.eventCount = 1;
             pipeline_barrier.pEvents = set_events;
             pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
