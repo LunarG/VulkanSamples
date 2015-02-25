@@ -788,6 +788,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     mem_alloc.memProps = XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
     for (uint32_t j = 0; j < num_allocations; j ++) {
         mem_alloc.allocationSize = mem_reqs[j].size;
+        mem_alloc.memType = mem_reqs[j].memType;
 
         /* allocate memory */
         err = xglAllocMemory(demo->device, &mem_alloc,
