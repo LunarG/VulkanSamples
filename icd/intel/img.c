@@ -64,7 +64,11 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
                 return ret;
             mem_req->size = img->total_size;
             mem_req->alignment = 4096;
-            mem_req->memType = XGL_MEMORY_TYPE_BUFFER;
+            if (img->format_class == XGL_IMAGE_FORMAT_CLASS_LINEAR) {
+                mem_req->memType = XGL_MEMORY_TYPE_BUFFER;
+            } else {
+                mem_req->memType = XGL_MEMORY_TYPE_IMAGE;
+            }
         }
         break;
     case XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
