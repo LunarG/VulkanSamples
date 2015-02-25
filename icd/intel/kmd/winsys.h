@@ -234,6 +234,9 @@ void *
 intel_bo_map(struct intel_bo *bo, bool write_enable);
 
 void *
+intel_bo_map_async(struct intel_bo *bo);
+
+void *
 intel_bo_map_gtt(struct intel_bo *bo);
 
 void *

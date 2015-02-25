@@ -462,6 +462,19 @@ intel_bo_map(struct intel_bo *bo, bool write_enable)
 }
 
 void *
+intel_bo_map_async(struct intel_bo *bo)
+{
+   int err;
+
+   err = drm_intel_gem_bo_map_unsynchronized_non_gtt(gem_bo(bo));
+   if (err) {
+      return NULL;
+   }
+
+   return gem_bo(bo)->virtual;
+}
+
+void *
 intel_bo_map_gtt(struct intel_bo *bo)
 {
    int err;

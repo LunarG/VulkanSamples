@@ -1268,20 +1268,11 @@ static void drm_intel_gem_bo_unreference(drm_intel_bo *bo)
 	}
 }
 
-static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
+static int map_bo(drm_intel_bo *bo)
 {
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
 	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
-	struct drm_i915_gem_set_domain set_domain;
 	int ret;
-
-	if (bo_gem->is_userptr) {
-		/* Return the same user ptr */
-		bo->virtual = bo_gem->user_virtual;
-		return 0;
-	}
-
-	pthread_mutex_lock(&bufmgr_gem->lock);
 
 	if (bo_gem->map_count++ == 0)
 		drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
@@ -1305,7 +1296,6 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
 				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
-			pthread_mutex_unlock(&bufmgr_gem->lock);
 			return ret;
 		}
 		VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
@@ -1314,6 +1304,33 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 	DBG("bo_map: %d (%s) -> %p\n", bo_gem->gem_handle, bo_gem->name,
 	    bo_gem->mem_virtual);
 	bo->virtual = bo_gem->mem_virtual;
+
+	drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
+
+	return 0;
+}
+
+static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
+{
+	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	struct drm_i915_gem_set_domain set_domain;
+	int ret;
+
+	if (bo_gem->is_userptr) {
+		/* Return the same user ptr */
+		bo->virtual = bo_gem->user_virtual;
+		return 0;
+	}
+
+	pthread_mutex_lock(&bufmgr_gem->lock);
+
+        ret = map_bo(bo);
+        if (ret != 0) {
+		pthread_mutex_unlock(&bufmgr_gem->lock);
+		return ret;
+        }
 
 	memclear(set_domain);
 	set_domain.handle = bo_gem->gem_handle;
@@ -1334,11 +1351,32 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 	if (write_enable)
 		bo_gem->mapped_cpu_write = true;
 
-	drm_intel_gem_bo_mark_mmaps_incoherent(bo);
-	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 
 	return 0;
+}
+
+drm_public int
+drm_intel_gem_bo_map_unsynchronized_non_gtt(drm_intel_bo *bo)
+{
+	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	int ret;
+
+	if (!bufmgr_gem->has_llc)
+		return drm_intel_gem_bo_map(bo, true);
+
+	if (bo_gem->is_userptr) {
+		/* Return the same user ptr */
+		bo->virtual = bo_gem->user_virtual;
+		return 0;
+	}
+
+	pthread_mutex_lock(&bufmgr_gem->lock);
+	ret = map_bo(bo);
+	pthread_mutex_unlock(&bufmgr_gem->lock);
+
+	return ret;
 }
 
 static int
