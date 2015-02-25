@@ -627,6 +627,10 @@ class Subcommand(object):
                         create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
                         create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
                         create_line += '    }\n'
+                    elif 'CreatePresentableImage' in proto.name:
+                        create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                        create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').strip('const ')])
+                        create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                     elif 'Create' in proto.name or 'Alloc' in proto.name:
                         create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
                         create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
