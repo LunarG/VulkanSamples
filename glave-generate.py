@@ -386,7 +386,8 @@ class Subcommand(object):
                         buff_ptr_indices.append(proto.params.index(p))
                     else:
                         if 'color' == p.name:
-                            packet_update_txt += '    memcpy((void*)pPacket->color, color, 4 * sizeof(uint32_t));\n'
+                            array_str = p.ty[p.ty.find('[')+1:p.ty.find(']')]
+                            packet_update_txt += '    memcpy((void*)pPacket->color, color, %s * sizeof(%s));\n' % (array_str, p.ty.strip('*').replace('const ', '').replace('[%s]' % array_str, ''))
                         else:
                             packet_update_txt += '    pPacket->%s = %s;\n' % (p.name, p.name)
                     if 'Count' in p.name and proto.params[-1].name != p.name and p.name not in ['queryCount', 'vertexCount', 'indexCount', 'startCounter'] and proto.name not in ['CmdLoadAtomicCounters', 'CmdSaveAtomicCounters']:
