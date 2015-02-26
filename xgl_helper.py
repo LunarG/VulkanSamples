@@ -212,6 +212,7 @@ class HeaderFileParser:
         self.struct_dict[struct_type][num]['full_type'] = member_type
         if '*' in member_type:
             self.struct_dict[struct_type][num]['ptr'] = True
+            member_type = member_type.rstrip(' const*')
             member_type = member_type.strip('*')
         else:
             self.struct_dict[struct_type][num]['ptr'] = False
@@ -231,7 +232,7 @@ class HeaderFileParser:
             (member_name, array_size) = member_name.split('[', 1)
             self.struct_dict[struct_type][num]['array'] = True
             self.struct_dict[struct_type][num]['array_size'] = array_size.strip(']')
-        else:
+        elif not 'array' in self.struct_dict[struct_type][num]:
             self.struct_dict[struct_type][num]['array'] = False
             self.struct_dict[struct_type][num]['array_size'] = 0
         self.struct_dict[struct_type][num]['name'] = member_name
@@ -567,7 +568,11 @@ class StructWrapperGen:
                                 sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);\n' % index)
                             sh_funcs.append('        free(tmpStr);\n')
                         else:
-                            sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
+                                # TODO : This is a quick hack to handle these arrays of ptrs
+                                sh_funcs.append('        tmpStr = %s(pStruct->%s[0], extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            else:
+                                sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);\n' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             sh_funcs.append('        len = 256+strlen(tmpStr)+strlen(prefix);\n')
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);\n' % (index))
                             if self.no_addr:
@@ -684,7 +689,11 @@ class StructWrapperGen:
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')
                         else:
-                            sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
+                                # TODO : This is a quick hack to handle these arrays of ptrs
+                                sh_funcs.append('        tmp_str = %s(pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            else:
+                                sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('        ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
                             sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
@@ -1162,12 +1171,18 @@ class GraphVizGen:
     def _generateBody(self):
         gv_funcs = []
         array_func_list = [] # structs for which we'll generate an array version of their print function
-        array_func_list.append('xgl_descriptor_slot_info')
+        array_func_list.append('xgl_buffer_view_attach_info')
+        array_func_list.append('xgl_image_view_attach_info')
+        array_func_list.append('xgl_sampler_image_view_info')
+        array_func_list.append('xgl_descriptor_type_count')
         # For first pass, generate prototype
         for s in self.struct_dict:
             gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
             if s.lower().strip("_") in array_func_list:
-                gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                if s.lower().strip("_") in ['xgl_buffer_view_attach_info', 'xgl_image_view_attach_info']:
+                    gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                else:
+                    gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
         gv_funcs.append('\n')
         for s in self.struct_dict:
             p_out = ""
@@ -1176,7 +1191,7 @@ class GraphVizGen:
             # the fields below are a super-hacky way for now to get port labels into GV output, TODO : Clean this up!            
             pl_dict = {}
             struct_num = 0
-            # This isn't great but this pre-pass counts chars in struct members and flags structs w/ pNext            
+            # This isn't great but this pre-pass flags structs w/ pNext and other struct ptrs
             for m in sorted(self.struct_dict[s]):
                 if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
                     stp_list.append(self.struct_dict[s][m])
@@ -1206,8 +1221,8 @@ class GraphVizGen:
                             gv_funcs.append('        free(tmpStr);\n')
                         else:
                             gv_funcs.append('        sprintf(nodeName, "%s_%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                            if 'pDescriptorInfo' == stp_list[index]['name']:
-                                gv_funcs.append('        tmpStr = %s_array(pStruct->descriptorCount, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                            if stp_list[index]['name'] in ['pTypeCount', 'pBufferViews', 'pImageViews', 'pSamplerImageViews']:
+                                gv_funcs.append('        tmpStr = %s_array(pStruct->count, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             else:
                                 gv_funcs.append('        tmpStr = %s(pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
@@ -1248,7 +1263,12 @@ class GraphVizGen:
                 gv_funcs.append('    }\n')
             gv_funcs.append("    return str;\n}\n")
             if s.lower().strip("_") in array_func_list:
-                gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                ptr_array = False
+                if s.lower().strip("_") in ['xgl_buffer_view_attach_info', 'xgl_image_view_attach_info']:
+                    ptr_array = True
+                    gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
+                else:
+                    gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 gv_funcs.append('    str = (char*)malloc(sizeof(char)*1024*count);\n')
                 gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
                 gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
@@ -1256,30 +1276,24 @@ class GraphVizGen:
                 p_args = ""
                 p_out = ""
                 for m in sorted(self.struct_dict[s]):
-                    if 2 == m: # TODO : Hard-coded hack to skip last element of union for xgl_descriptor_slot_info struct
-                        continue
                     plabel = ""
                     (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
-                    if 0 == m: # Add array index notation at end of first row (TODO : ROWSPAN# should be dynamic based on number of elements, but hard-coding for now)
-                        p_out1 = '%s<TD ROWSPAN=\\"2\\" PORT=\\"slot%%u\\">%%u</TD></TR>' % (p_out1[:-5])
+                    if 0 == m: # Add array index notation at end of first row
+                        p_out1 = '%s<TD ROWSPAN=\\"%i\\" PORT=\\"slot%%u\\">%%u</TD></TR>' % (p_out1[:-5], len(self.struct_dict[s]))
                         p_args1 += ', i, i'
                     p_out += p_out1
                     p_args += p_args1
                 p_out += '"'
                 p_args += ");\n"
-                p_args = p_args.replace('->', '[i].')
+                if ptr_array:
+                    p_args = p_args.replace('->', '[i]->')
+                else:
+                    p_args = p_args.replace('->', '[i].')
                 gv_funcs.append(p_out);
                 gv_funcs.append(p_args);
                 gv_funcs.append('        strncat(str, tmpStr, strlen(tmpStr));\n')
                 gv_funcs.append('    }\n')
                 gv_funcs.append('    strncat(str, "</TABLE>>\\n];\\n\\n", 20);\n')
-                # TODO : Another hard-coded hack.  Tie these slots to "magical" DS0_MEMORY slots that should appear separately
-                gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
-                gv_funcs.append('        if (XGL_SLOT_UNUSED != pStruct[i].slotObjectType) {\n')
-                gv_funcs.append('            sprintf(tmpStr, "\\"%s\\":slot%u -> \\"DS0_MEMORY\\":slot%u [];\\n", myNodeName, i, i);\n')
-                gv_funcs.append('            strncat(str, tmpStr, strlen(tmpStr));\n')
-                gv_funcs.append('        }\n')
-                gv_funcs.append('    }\n')
                 gv_funcs.append('    return str;\n}\n')
         # Add function to dynamically print out unknown struct
         gv_funcs.append("char* dynamic_gv_display(const void* pStruct, const char* nodeName)\n{\n")
