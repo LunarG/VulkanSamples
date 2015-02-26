@@ -35,7 +35,7 @@
 #include <QLabel>
 #include <QScrollArea>
 
-class glvdebug_xgl_QController : public glvdebug_QReplayWorker
+class glvdebug_xgl_QController : public QObject
 {
     Q_OBJECT
 public:
@@ -46,12 +46,11 @@ public:
     bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
     void UnloadTraceFile(void);
 
-    virtual BOOL PrintReplayInfoMsgs();
-    virtual BOOL PrintReplayWarningMsgs();
-    virtual BOOL PrintReplayErrorMsgs();
-    virtual BOOL PauseOnReplayInfoMsg();
-    virtual BOOL PauseOnReplayWarningMsg();
-    virtual BOOL PauseOnReplayErrorMsg();
+    void setView(glvdebug_view* pView)
+    {
+        m_pView = pView;
+        m_replayWorker.setView(pView);
+    }
 
     void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
 
@@ -62,9 +61,16 @@ protected slots:
     void onReplayPaused(uint64_t packetIndex);
     void onReplayContinued();
     void onReplayStopped(uint64_t packetIndex);
-    void onReplayFinished();
+    void onReplayFinished(uint64_t packetIndex);
+
+    void OnOutputMessage(const QString& msg);
+    void OnOutputError(const QString& msg);
+    void OnOutputWarning(const QString &msg);
 
 private:
+    glvdebug_view* m_pView;
+    glvdebug_trace_file_info* m_pTraceFileInfo;
+    glvdebug_QReplayWorker m_replayWorker;
     glvdebug_qsvgviewer* m_pSvgDiagram;
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;

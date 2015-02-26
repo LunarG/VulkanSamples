@@ -75,9 +75,9 @@ public:
 
     // Implementation of glvdebug_view
     virtual void reset_view();
-    virtual void output_message(QString message, bool bRefresh = true);
-    virtual void output_warning(QString message, bool bRefresh = true);
-    virtual void output_error(QString message, bool bRefresh = true);
+    virtual void output_message(QString message);
+    virtual void output_warning(QString message);
+    virtual void output_error(QString message);
     virtual void add_setting_group(glv_SettingGroup* pGroup);
     virtual unsigned int get_global_settings(glv_SettingGroup** ppGroups);
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false);

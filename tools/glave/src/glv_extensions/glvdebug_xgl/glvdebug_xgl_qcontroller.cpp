@@ -40,7 +40,9 @@ extern "C" {
 #include "glvreplay_seq.h"
 
 glvdebug_xgl_QController::glvdebug_xgl_QController()
-    : m_pSvgDiagram(NULL),
+    : m_pView(NULL),
+      m_pTraceFileInfo(NULL),
+      m_pSvgDiagram(NULL),
       m_pReplayWidget(NULL),
       m_pTraceFileModel(NULL)
 {
@@ -71,11 +73,11 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
     setView(pView);
     m_pTraceFileInfo = pTraceFileInfo;
 
-    m_pReplayWidget = new glvdebug_QReplayWidget(this);
+    m_pReplayWidget = new glvdebug_QReplayWidget(&m_replayWorker);
     if (m_pReplayWidget != NULL)
     {
         // load available replayers
-        if (!load_replayers(pTraceFileInfo, m_pReplayWidget->GetReplayWindow(),
+        if (!m_replayWorker.load_replayers(pTraceFileInfo, m_pReplayWidget->GetReplayWindow(),
             g_xglDebugSettings.replay_window_width,
             g_xglDebugSettings.replay_window_height,
             g_xglDebugSettings.separate_replay_window))
@@ -88,11 +90,15 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
         {
             m_pView->add_custom_state_viewer(m_pReplayWidget, "Replayer", true);
             m_pReplayWidget->setEnabled(true);
-            connect(m_pReplayWidget, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()));
-            connect(m_pReplayWidget, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)));
-            connect(m_pReplayWidget, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()));
-            connect(m_pReplayWidget, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)));
-            connect(m_pReplayWidget, SIGNAL(ReplayFinished()), this, SLOT(onReplayFinished()));
+            connect(m_pReplayWidget, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(ReplayFinished(uint64_t)), this, SLOT(onReplayFinished(uint64_t)), Qt::QueuedConnection);
+
+            connect(m_pReplayWidget, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)), Qt::QueuedConnection);
         }
     }
 
@@ -143,12 +149,20 @@ void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 
 void glvdebug_xgl_QController::onReplayStarted()
 {
+    m_pView->output_message(QString("Replay Started"));
     deleteStateDumps();
     setStateWidgetsEnabled(false);
 }
 
 void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 {
+    m_pView->output_message(QString("Replay Paused at packet index %1").arg(packetIndex));
+    m_pView->on_replay_state_changed(false);
+
+    // When paused, the replay will 'continue' from the last packet,
+    // so select that call to indicate to the user where the pause occured.
+    m_pView->select_call_at_packet_index(packetIndex);
+
     if(m_pSvgDiagram == NULL)
     {
         m_pSvgDiagram = new glvdebug_qsvgviewer;
@@ -161,10 +175,13 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
     if(m_pSvgDiagram != NULL)
     {
-        if (m_pReplayers[GLV_TID_XGL] != NULL) {
+        glv_replay::glv_trace_packet_replay_library* pXglReplayer = m_replayWorker.getReplayer(GLV_TID_XGL);
+        if (pXglReplayer != NULL)
+        {
             int err;
-            err = m_pReplayers[GLV_TID_XGL]->Dump();
-            if (err) {
+            err = pXglReplayer->Dump();
+            if (err)
+            {
                 glv_LogWarn("Couldn't Dump SVG data\n");
             }
         }
@@ -199,56 +216,56 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
 void glvdebug_xgl_QController::onReplayContinued()
 {
+    m_pView->output_message(QString("Replay Continued"));
     deleteStateDumps();
     setStateWidgetsEnabled(false);
 }
 
 void glvdebug_xgl_QController::onReplayStopped(uint64_t packetIndex)
 {
+    m_pView->output_message(QString("Replay Stopped at packet index %1").arg(packetIndex));
+    m_pView->on_replay_state_changed(false);
+
+    // Stopping the replay means that it will 'play' or 'step' from the beginning,
+    // so select the first packet index to indicate to the user what stopping replay does.
+    m_pView->select_call_at_packet_index(0);
 }
 
-void glvdebug_xgl_QController::onReplayFinished()
+void glvdebug_xgl_QController::onReplayFinished(uint64_t packetIndex)
 {
+    m_pView->output_message(QString("Replay Finished"));
+    m_pView->on_replay_state_changed(false);
+
+    // The replay has completed, so highlight the final packet index.
+    m_pView->select_call_at_packet_index(packetIndex);
 }
 
-BOOL glvdebug_xgl_QController::PrintReplayInfoMsgs()
+void glvdebug_xgl_QController::OnOutputMessage(const QString& msg)
 {
-    return g_xglDebugSettings.printReplayInfoMsgs;
+    m_pView->output_message(msg);
 }
 
-BOOL glvdebug_xgl_QController::PrintReplayWarningMsgs()
+void glvdebug_xgl_QController::OnOutputError(const QString& msg)
 {
-    return g_xglDebugSettings.printReplayWarningMsgs;
+    m_pView->output_error(msg);
 }
 
-BOOL glvdebug_xgl_QController::PrintReplayErrorMsgs()
+void glvdebug_xgl_QController::OnOutputWarning(const QString& msg)
 {
-    return g_xglDebugSettings.printReplayErrorMsgs;
-}
-
-BOOL glvdebug_xgl_QController::PauseOnReplayInfoMsg()
-{
-    return g_xglDebugSettings.pauseOnReplayInfo;
-}
-
-BOOL glvdebug_xgl_QController::PauseOnReplayWarningMsg()
-{
-    return g_xglDebugSettings.pauseOnReplayWarning;
-}
-
-BOOL glvdebug_xgl_QController::PauseOnReplayErrorMsg()
-{
-    return g_xglDebugSettings.pauseOnReplayError;
+    m_pView->output_warning(msg);
 }
 
 void glvdebug_xgl_QController::onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups)
 {
     glv_SettingGroup_Apply_Overrides(&g_xglDebugSettingGroup, pGroups, numGroups);
 
-    if (m_pReplayWidget != NULL)
-    {
-        m_pReplayWidget->OnSettingsUpdated(pGroups, numGroups);
-    }
+    m_replayWorker.setPrintReplayMessages(g_xglDebugSettings.printReplayInfoMsgs,
+                                          g_xglDebugSettings.printReplayWarningMsgs,
+                                          g_xglDebugSettings.printReplayErrorMsgs);
+
+    m_replayWorker.setPauseOnReplayMessages(g_xglDebugSettings.pauseOnReplayInfo,
+                                            g_xglDebugSettings.pauseOnReplayWarning,
+                                            g_xglDebugSettings.pauseOnReplayError);
 
     updateCallTreeBasedOnSettings();
 }
@@ -279,17 +296,6 @@ void glvdebug_xgl_QController::UnloadTraceFile(void)
         m_pSvgDiagram = NULL;
     }
 
-    // Clean up replayers
-    if (m_pReplayers != NULL)
-    {
-        for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
-        {
-            if (m_pReplayers[i] != NULL)
-            {
-                m_pReplayers[i]->Deinitialize();
-                m_replayerFactory.Destroy(&m_pReplayers[i]);
-            }
-        }
-    }
+    m_replayWorker.unloadReplayers();
 }
 

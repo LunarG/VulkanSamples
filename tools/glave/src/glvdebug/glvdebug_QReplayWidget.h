@@ -30,7 +30,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
-
+#include <QDebug>
 #include "glvdebug_QReplayWorker.h"
 
 class glvdebug_QReplayWidget : public QWidget
@@ -80,36 +80,33 @@ public:
         m_pReplayWindow = new QWidget(this);
         pLayout->addWidget(m_pReplayWindow);
 
-        connect(this, SIGNAL(PlayButtonClicked()), m_pWorker, SLOT(StartReplay()));
-        connect(this, SIGNAL(StepButtonClicked()), m_pWorker, SLOT(StepReplay()));
-        connect(this, SIGNAL(PauseButtonClicked()), m_pWorker, SLOT(PauseReplay()));
-        connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()));
-        connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()));
-
-//        qRegisterMetaType<uint64_t>("uint64_t");
+        connect(this, SIGNAL(PlayButtonClicked()), m_pWorker, SLOT(StartReplay()), Qt::QueuedConnection);
+        connect(this, SIGNAL(StepButtonClicked()), m_pWorker, SLOT(StepReplay()), Qt::DirectConnection);
+        connect(this, SIGNAL(PauseButtonClicked()), m_pWorker, SLOT(PauseReplay()), Qt::DirectConnection);
+        connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()), Qt::QueuedConnection);
+        connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()), Qt::DirectConnection);
 
         // connect worker signals to widget actions
-        connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(slotReplayStarted()));
-        connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(slotReplayPaused(uint64_t)));
-        connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(slotReplayContinued()));
-        connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(slotReplayStopped(uint64_t)));
-        connect(m_pWorker, SIGNAL(ReplayFinished()), this, SLOT(slotReplayFinished()));
+        qRegisterMetaType<uint64_t>("uint64_t");
+        m_replayThread.setObjectName("ReplayThread");
+        m_pWorker->moveToThread(&m_replayThread);
+        m_replayThread.start();
 
-        connect(m_pWorker, SIGNAL(ReplayStarted()), this, SIGNAL(ReplayStarted()));
-        connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SIGNAL(ReplayPaused(uint64_t)));
-        connect(m_pWorker, SIGNAL(ReplayContinued()), this, SIGNAL(ReplayContinued()));
-        connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SIGNAL(ReplayStopped(uint64_t)));
-        connect(m_pWorker, SIGNAL(ReplayFinished()), this, SIGNAL(ReplayFinished()));
+        connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(slotReplayStarted()), Qt::QueuedConnection);
+        connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(slotReplayPaused(uint64_t)), Qt::QueuedConnection);
+        connect(m_pWorker, SIGNAL(ReplayContinued()), this, SLOT(slotReplayContinued()), Qt::QueuedConnection);
+        connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(slotReplayStopped(uint64_t)), Qt::QueuedConnection);
+        connect(m_pWorker, SIGNAL(ReplayFinished(uint64_t)), this, SLOT(slotReplayFinished(uint64_t)), Qt::QueuedConnection);
 
-//        m_replayThread.setObjectName("ReplayThread");
-//        m_pWorker->moveToThread(&m_replayThread);
-//        m_replayThread.start();
+        connect(m_pWorker, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)), Qt::BlockingQueuedConnection);
+        connect(m_pWorker, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)), Qt::BlockingQueuedConnection);
+        connect(m_pWorker, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)), Qt::BlockingQueuedConnection);
     }
 
     virtual ~glvdebug_QReplayWidget()
     {
-//        m_replayThread.exit();
-//        m_replayThread.wait();
+        m_replayThread.quit();
+        m_replayThread.wait();
     }
 
     virtual QPaintEngine* paintEngine() const
@@ -133,7 +130,11 @@ signals:
     void ReplayPaused(uint64_t packetIndex);
     void ReplayContinued();
     void ReplayStopped(uint64_t packetIndex);
-    void ReplayFinished();
+    void ReplayFinished(uint64_t packetIndex);
+
+    void OutputMessage(const QString& msg);
+    void OutputError(const QString& msg);
+    void OutputWarning(const QString& msg);
 
 private slots:
 
@@ -144,15 +145,19 @@ private slots:
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
+
+        emit ReplayStarted();
     }
 
-    void slotReplayPaused(uint64_t)
+    void slotReplayPaused(uint64_t packetIndex)
     {
         m_pPlayButton->setEnabled(false);
         m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(true);
         m_pStopButton->setEnabled(false);
+
+        emit ReplayPaused(packetIndex);
     }
 
     void slotReplayContinued()
@@ -162,24 +167,45 @@ private slots:
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
+
+        emit ReplayContinued();
     }
 
-    void slotReplayStopped(uint64_t)
+    void slotReplayStopped(uint64_t packetIndex)
     {
         m_pPlayButton->setEnabled(true);
         m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
+
+        emit ReplayStopped(packetIndex);
     }
 
-    void slotReplayFinished()
+    void slotReplayFinished(uint64_t packetIndex)
     {
         m_pPlayButton->setEnabled(true);
         m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
+
+        emit ReplayFinished(packetIndex);
+    }
+
+    void OnOutputMessage(const QString& msg)
+    {
+        emit OutputMessage(msg);
+    }
+
+    void OnOutputError(const QString& msg)
+    {
+        emit OutputError(msg);
+    }
+
+    void OnOutputWarning(const QString& msg)
+    {
+        emit OutputWarning(msg);
     }
 
 public slots:
@@ -211,14 +237,6 @@ public slots:
     void onStopButtonClicked()
     {
         emit StopButtonClicked();
-    }
-
-    void OnSettingsUpdated(glv_SettingGroup* pGroups, unsigned int numGroups)
-    {
-        if (m_pWorker != NULL)
-        {
-            m_pWorker->onSettingsUpdated(pGroups, numGroups);
-        }
     }
 
 private:

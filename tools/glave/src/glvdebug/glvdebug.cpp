@@ -306,25 +306,27 @@ unsigned long long glvdebug::get_current_packet_index()
 
 void glvdebug::reset_view()
 {
-    while (ui->stateTabWidget->count() > 0)
+    int count = ui->stateTabWidget->count();
+    while (count > 0)
     {
         delete ui->stateTabWidget->widget(0);
+        count = ui->stateTabWidget->count();
     }
 }
 
-void glvdebug::output_message(QString message, bool bRefresh)
+void glvdebug::output_message(QString message)
 {
-    glvdebug_output_message(message.toStdString().c_str(), bRefresh);
+    gs_OUTPUT.message(message);
 }
 
-void glvdebug::output_warning(QString message, bool bRefresh)
+void glvdebug::output_warning(QString message)
 {
-    glvdebug_output_warning(message.toStdString().c_str(), bRefresh);
+    gs_OUTPUT.warning(message);
 }
 
-void glvdebug::output_error(QString message, bool bRefresh)
+void glvdebug::output_error(QString message)
 {
-    glvdebug_output_error(message.toStdString().c_str(), bRefresh);
+    gs_OUTPUT.error(message);
 }
 
 void glvdebug::add_setting_group(glv_SettingGroup* pGroup)

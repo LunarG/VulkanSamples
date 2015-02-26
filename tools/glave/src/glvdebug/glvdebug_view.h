@@ -37,9 +37,9 @@ class glvdebug_view
 public:
     virtual void reset_view() = 0;
 
-    virtual void output_message(QString message, bool bRefresh = true) = 0;
-    virtual void output_warning(QString message, bool bRefresh = true) = 0;
-    virtual void output_error(QString message, bool bRefresh = true) = 0;
+    virtual void output_message(QString message) = 0;
+    virtual void output_warning(QString message) = 0;
+    virtual void output_error(QString message) = 0;
 
     virtual void add_setting_group(glv_SettingGroup* pGroup) = 0;
     virtual unsigned int get_global_settings(glv_SettingGroup** ppGroups) = 0;

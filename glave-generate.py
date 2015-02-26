@@ -2328,6 +2328,7 @@ class Subcommand(object):
         rs_body.append('{')
         rs_body.append('    g_pReplaySettings = pReplaySettings;')
         rs_body.append('    m_display = new xglDisplay();')
+        rs_body.append('    m_pDSDump = NULL;')
         rs_body.append('    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {')
         rs_body.append('        process_screenshot_list(g_pReplaySettings->screenshotList);')
         rs_body.append('    }')

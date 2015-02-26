@@ -46,6 +46,7 @@ set(SRC_LIST
     glvdebug_xgl_settings.cpp
     glvdebug_xgl_qcontroller.cpp
     glvdebug_xgl_qfile_model.cpp
+    ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
 )
 
