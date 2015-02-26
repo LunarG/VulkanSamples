@@ -615,8 +615,9 @@ class StructWrapperGen:
         # Add function to dynamically print out unknown struct
         sh_funcs.append("char* dynamic_display(const void* pStruct, const char* prefix)\n{\n")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
-        sh_funcs.append("    if (pStruct == NULL)\n")
+        sh_funcs.append("    if (pStruct == NULL) {\n")
         sh_funcs.append("        return NULL;\n")
+        sh_funcs.append("    }\n")
         sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
         sh_funcs.append('    char indent[100];\n    strcpy(indent, "    ");\n    strcat(indent, prefix);\n')
         sh_funcs.append("    switch (sType)\n    {\n")
@@ -760,8 +761,9 @@ class StructWrapperGen:
         # Add function to dynamically print out unknown struct
         sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")
-        sh_funcs.append("    if (pStruct == NULL)")
+        sh_funcs.append("    if (pStruct == NULL) {\n")
         sh_funcs.append("        return NULL;")
+        sh_funcs.append("    }\n")
         sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;")
         sh_funcs.append('    string indent = "    ";')
         sh_funcs.append('    indent += prefix;')
