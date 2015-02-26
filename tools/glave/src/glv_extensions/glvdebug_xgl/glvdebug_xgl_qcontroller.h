@@ -65,7 +65,8 @@ protected slots:
     void onReplayFinished();
 
 private:
-    glvdebug_qsvgviewer* m_pSvgDiagram;
+    glvdebug_qsvgviewer* m_pDrawStateDiagram;
+    glvdebug_qsvgviewer* m_pCommandBuffersDiagram;
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
     glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;
