@@ -307,7 +307,7 @@ class Subcommand(object):
                             prev_count_name = ''
                     log_func = log_func.strip(', ')
                     if proto.ret != "void":
-                        log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << "\\n"'
+                        log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << endl'
                         #print_vals += ', string_XGL_RESULT_CODE(result)'
                     else:
                         log_func += ')\\n"'
