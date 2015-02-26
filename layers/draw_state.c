@@ -1311,7 +1311,7 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
                     fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", i, i);
                 }
             }
-            static const uint32_t NUM_COLORS = 7;
+#define NUM_COLORS 7
             char* edgeColors[NUM_COLORS];
             edgeColors[0] = "0000ff";
             edgeColors[1] = "ff00ff";
