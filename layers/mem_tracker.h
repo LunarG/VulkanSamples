@@ -149,5 +149,6 @@ typedef struct _GLOBAL_CB_NODE {
     uint32_t                        colorAttachmentCount;
     XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
     XGL_CMD_BUFFER cmdBuffer;
-    XGL_FENCE fence; // fence tracking this cmd buffer
+    XGL_FENCE fence;                // fence tracking this cmd buffer
+    bool32_t localFlag;             // fence is internal to layer
 } GLOBAL_CB_NODE;

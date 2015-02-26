@@ -120,7 +120,7 @@ static GLOBAL_CB_NODE* getGlobalCBNode(const XGL_CMD_BUFFER cb)
     return pTrav;
 }
 // Set fence for given cb in global cb node
-static bool32_t setCBFence(const XGL_CMD_BUFFER cb, const XGL_FENCE fence)
+static bool32_t setCBFence(const XGL_CMD_BUFFER cb, const XGL_FENCE fence, bool32_t localFlag)
 {
     GLOBAL_CB_NODE* pTrav = getGlobalCBNode(cb);
     if (!pTrav) {
@@ -130,6 +130,7 @@ static bool32_t setCBFence(const XGL_CMD_BUFFER cb, const XGL_FENCE fence)
         return XGL_FALSE;
     }
     pTrav->fence = fence;
+    pTrav->localFlag = localFlag;
     return XGL_TRUE;
 }
 
@@ -283,6 +284,11 @@ static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
         sprintf(str, "Unable to find global CB node %p for deletion", cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         return XGL_FALSE;
+    }
+    if ((pCBTrav->fence != NULL) && (pCBTrav->localFlag == XGL_TRUE)) {
+        nextTable.DestroyObject(pCBTrav->fence);
+        pCBTrav->fence = NULL;
+        pCBTrav->localFlag = XGL_FALSE;
     }
     MINI_NODE* pMemTrav = pCBTrav->pMemObjList;
     MINI_NODE* pDeleteMe = NULL;
@@ -853,10 +859,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEU
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
+    bool32_t localFlag = XGL_FALSE;
     // TODO : Need to track fence and clear mem references when fence clears
     XGL_FENCE localFence = fence;
     if (XGL_NULL_HANDLE == fence) { // allocate our own fence to track cmd buffer
         localFence = createLocalFence();
+        localFlag = XGL_TRUE;
     }
     char str[1024];
     sprintf(str, "In xglQueueSubmit(), checking %u cmdBuffers with %u memRefs", cmdBufferCount, memRefCount);
@@ -864,7 +872,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
     printMemList();
     printGlobalCB();
     for (uint32_t i = 0; i < cmdBufferCount; i++) {
-        setCBFence(pCmdBuffers[i], localFence);
+        setCBFence(pCmdBuffers[i], localFence, localFlag);
         sprintf(str, "Verifying mem refs for CB %p", pCmdBuffers[i]);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
         if (XGL_FALSE == validateCBMemRef(pCmdBuffers[i], memRefCount, pMemRefs)) {
