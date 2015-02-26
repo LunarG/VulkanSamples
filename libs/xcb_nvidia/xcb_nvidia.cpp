@@ -43,6 +43,27 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
         module = LoadLibrary(xglNulldrv.c_str());
     }
     if (!module) {
+        // TODO: Adapted up the following code (copied from "loader.c"):
+#define INITIAL_STR_LEN 1024
+        char *registry_str = (char *) malloc(INITIAL_STR_LEN);
+        DWORD registry_len = INITIAL_STR_LEN;
+        DWORD registry_value_type;
+        LONG  registry_return_value;
+        char *rtn_str = NULL;
+        size_t rtn_len;
+
+        registry_return_value = RegGetValue(HKEY_LOCAL_MACHINE, "Software\\XGL",
+                                            "XGL_DRIVERS_PATH",
+                                            (RRF_RT_REG_SZ | RRF_ZEROONFAILURE),
+                                            &registry_value_type,
+                                            (PVOID) registry_str,
+                                            &registry_len);
+        rtn_len = registry_len + 16;
+        rtn_str = (char *) malloc(rtn_len);
+        _snprintf(rtn_str, rtn_len, "%s\\%s", registry_str, "xgl_nvidia.dll");
+        module = LoadLibrary(rtn_str);
+    }
+    if (!module) {
         return 0;
     }
 
