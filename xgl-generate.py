@@ -121,7 +121,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             if not self._is_dispatchable(proto):
                 continue
             if 'WsiX11AssociateConnection' == proto.name:
-                funcs.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             decl = proto.c_func(prefix="xgl", attr="XGLAPI")
             stmt = "(*disp)->%s" % proto.c_call()
             if proto.name == "CreateDevice":
@@ -265,7 +265,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         stmts = []
         for proto in self.protos:
             if 'WsiX11AssociateConnection' == proto.name:
-                stmts.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                stmts.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             if proto.name == "GetProcAddr":
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
@@ -291,7 +291,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         lookups = []
         for proto in self.protos:
             if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
             lookups.append("    return (void *) table->%s;"
                     % (proto.name))
@@ -367,7 +367,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
         lookups = []
         for proto in self.protos:
             if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(%s, \"%s\"))" %
                     (gpa_pname, proto.name))
             lookups.append("    return (%s) %s%s;" %
@@ -412,7 +412,7 @@ class LayerInterceptProcSubcommand(Subcommand):
                 continue
 
             if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (%s) %s%s;" %
                     (self.gpa.ret, self.prefix, proto.name))

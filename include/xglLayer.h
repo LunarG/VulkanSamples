@@ -6,7 +6,7 @@
 
 #include "xgl.h"
 #include "xglDbg.h"
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(__linux__) || defined(XCB_NVIDIA)
 #include "xglWsiX11Ext.h"
 #endif
 #if defined(__GNUC__) && __GNUC__ >= 4
@@ -149,7 +149,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglDbgSetDeviceOptionType DbgSetDeviceOption;
     xglCmdDbgMarkerBeginType CmdDbgMarkerBegin;
     xglCmdDbgMarkerEndType CmdDbgMarkerEnd;
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(__linux__) || defined(XCB_NVIDIA)
     xglWsiX11AssociateConnectionType WsiX11AssociateConnection;
     xglWsiX11GetMSCType WsiX11GetMSC;
     xglWsiX11CreatePresentableImageType WsiX11CreatePresentableImage;

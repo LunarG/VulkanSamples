@@ -196,7 +196,7 @@ class Subcommand(object):
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
@@ -370,7 +370,7 @@ class Subcommand(object):
                                     #log_func += '\n        fflush(stdout);'
                                 log_func += '\n    }'
                     if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
@@ -519,7 +519,7 @@ class Subcommand(object):
                                     log_func += '\n        fflush(stdout);'
                                 log_func += '\n        free(pTmpStr);\n    }'
                     if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
@@ -658,7 +658,7 @@ class Subcommand(object):
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
@@ -767,7 +767,7 @@ class Subcommand(object):
                         ret_val = "XGL_RESULT result = "
                         stmt = "    return result;\n"
                     if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)")
+                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
                     if proto.name == "EnumerateLayers":
                         c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
                         funcs.append('%s%s\n'
