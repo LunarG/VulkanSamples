@@ -365,7 +365,7 @@ static void reportMemReferences(const GLOBAL_MEM_OBJ_NODE* pMemObjTrav)
     if (refCount != pMemObjTrav->refCount) {
         char str[1024];
         sprintf(str, "Refcount of %u for Mem Obj %p does't match reported refs of %u", pMemObjTrav->refCount, pMemObjTrav->mem, refCount);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObjTrav->object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pMemObjTrav->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
 }
 
