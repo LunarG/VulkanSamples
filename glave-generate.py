@@ -297,7 +297,7 @@ class Subcommand(object):
         init_tracer.append('    FINISH_TRACE_PACKET();\n}\n')
 
         init_tracer.append('static GLV_CRITICAL_SECTION g_memInfoLock;')
-        init_tracer.append('void InitTracer()\n{')
+        init_tracer.append('void InitTracer(void)\n{')
         init_tracer.append('    char *ipAddr = glv_get_global_var("GLVLIB_TRACE_IPADDR");')
         init_tracer.append('    if (ipAddr == NULL)')
         init_tracer.append('        ipAddr = "127.0.0.1";')
@@ -693,7 +693,10 @@ class Subcommand(object):
                 if proto.name in thread_once_funcs:
                     func_body.append('    glv_platform_thread_once(&gInitOnce, InitTracer);')
                 func_body.append('    SEND_ENTRYPOINT_ID(xgl%s);' % proto.name)
-                func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, packet_size))
+                if 'DbgRegisterMsgCallback' in proto.name:
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, sizeof(char));' % proto.name)
+                else:
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, packet_size))
                 func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                 func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
                 func_body.append(packet_update_txt.strip('\n'))
@@ -702,6 +705,8 @@ class Subcommand(object):
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
                     elif 'Size' in proto.params[idx-1].name:
                         func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s, %s);' % (proto.params[idx].name, proto.params[idx-1].name, proto.params[idx].name))
+                    elif 'DbgRegisterMsgCallback' in proto.name:
+                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, 'char', proto.params[idx].name))
                     else:
                         func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
                 if 'WsiX11AssociateConnection' in proto.name:
@@ -3462,7 +3467,7 @@ class GlaveTraceHeader(Subcommand):
         header_txt.append('#include "glvtrace_xgl_packet_id.h"\n')
         header_txt.append('void AttachHooks();')
         header_txt.append('void DetachHooks();')
-        header_txt.append('void InitTracer();\n')
+        header_txt.append('void InitTracer(void);\n')
         return "\n".join(header_txt)
 
     def generate_body(self):
