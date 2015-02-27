@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-# this project is currently only available on Linux
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-
 project(glvtrace_xgl)
 
 include("${SRC_DIR}/build_options.cmake")
@@ -64,14 +61,23 @@ target_link_libraries(${PROJECT_NAME}
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-target_link_libraries(${PROJECT_NAME} 
-    glvcommon
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.dll
-)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -DXCB_NVIDIA")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES -DXCB_NVIDIA")
+    set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
+    set(PATH_TO_MHOOK ${CMAKE_CURRENT_BINARY_DIR}/../../thirdparty/mhook/mhook-lib/${CMAKE_CFG_INTDIR})
+    set(PATH_TO_DISASM ${CMAKE_CURRENT_BINARY_DIR}/../../thirdparty/mhook/disasm-lib/${CMAKE_CFG_INTDIR})
+    set(OS_REPLAYER_LIBS
+        ${PATH_TO_WIN_XGL}/XGL.lib
+        ${PATH_TO_MHOOK}/mhook.lib
+        ${PATH_TO_DISASM}/disasm.lib
+        xcb_nvidia
+    )
+    target_link_libraries(${PROJECT_NAME} 
+        glvcommon
+	${OS_REPLAYER_LIBS}
+    )
 endif()
 
 build_options_finalize()
 
 set_target_properties(glvtrace_xgl PROPERTIES LINKER_LANGUAGE C)
-
-endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")

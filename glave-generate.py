@@ -160,7 +160,7 @@ class Subcommand(object):
         func_protos.append('// Hooked function prototypes\n')
         for proto in self.protos:
             if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
-                func_protos.append('%s;' % proto.c_func(prefix="__HOOKED_xgl", attr="XGLAPI"))
+                func_protos.append('GLVTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_xgl", attr="XGLAPI"))
 
         return "\n".join(func_protos)
 
@@ -169,7 +169,7 @@ class Subcommand(object):
         func_protos.append('// Hooked function prototypes\n')
         for proto in self.protos:
             if func_class in proto.name:
-                func_protos.append('%s;' % proto.c_func(prefix="__HOOKED_xgl", attr="XGLAPI"))
+                func_protos.append('GLVTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_xgl", attr="XGLAPI"))
 
         return "\n".join(func_protos)
 
