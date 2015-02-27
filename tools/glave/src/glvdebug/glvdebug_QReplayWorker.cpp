@@ -316,7 +316,6 @@ void glvdebug_QReplayWorker::playCurrentTraceFile(uint64_t startPacketIndex)
         }
 
         // Process events and pause or stop if needed
-        QCoreApplication::sendPostedEvents();
         if (m_bPauseReplay || m_pauseAtPacketIndex == m_currentReplayPacketIndex)
         {
             if (m_pauseAtPacketIndex == m_currentReplayPacketIndex)

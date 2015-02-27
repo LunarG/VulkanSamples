@@ -87,19 +87,21 @@ public:
         m_pReplayWindow = new QWidget(this);
         pLayout->addWidget(m_pReplayWindow);
 
-        connect(this, SIGNAL(PlayButtonClicked()), m_pWorker, SLOT(StartReplay()), Qt::QueuedConnection);
-        connect(this, SIGNAL(StepButtonClicked()), m_pWorker, SLOT(StepReplay()), Qt::DirectConnection);
-        connect(this, SIGNAL(PauseButtonClicked()), m_pWorker, SLOT(PauseReplay()), Qt::DirectConnection);
-        connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()), Qt::QueuedConnection);
-        connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()), Qt::DirectConnection);
-        connect(this, SIGNAL(DetachCheckBoxClicked(bool)), m_pWorker, SLOT(DetachReplay(bool)));
-
-
         // connect worker signals to widget actions
         qRegisterMetaType<uint64_t>("uint64_t");
         m_replayThread.setObjectName("ReplayThread");
         m_pWorker->moveToThread(&m_replayThread);
         m_replayThread.start();
+
+        // Clicking the Pause and Stop buttons are direct connections so that they happen more immediately than a queued connection.
+        // Queued connections are used here whenever the replay will be advanced from a stopped state,
+        // and for all the signals FROM the worker object since it is on a different thread.
+        connect(this, SIGNAL(PlayButtonClicked()), m_pWorker, SLOT(StartReplay()), Qt::QueuedConnection);
+        connect(this, SIGNAL(StepButtonClicked()), m_pWorker, SLOT(StepReplay()), Qt::QueuedConnection);
+        connect(this, SIGNAL(PauseButtonClicked()), m_pWorker, SLOT(PauseReplay()), Qt::DirectConnection);
+        connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()), Qt::QueuedConnection);
+        connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()), Qt::DirectConnection);
+        connect(this, SIGNAL(DetachCheckBoxClicked(bool)), m_pWorker, SLOT(DetachReplay(bool)), Qt::QueuedConnection);
 
         connect(m_pWorker, SIGNAL(ReplayStarted()), this, SLOT(slotReplayStarted()), Qt::QueuedConnection);
         connect(m_pWorker, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(slotReplayPaused(uint64_t)), Qt::QueuedConnection);
@@ -107,9 +109,10 @@ public:
         connect(m_pWorker, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(slotReplayStopped(uint64_t)), Qt::QueuedConnection);
         connect(m_pWorker, SIGNAL(ReplayFinished(uint64_t)), this, SLOT(slotReplayFinished(uint64_t)), Qt::QueuedConnection);
 
-        connect(m_pWorker, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)), Qt::BlockingQueuedConnection);
-        connect(m_pWorker, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)), Qt::BlockingQueuedConnection);
-        connect(m_pWorker, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)), Qt::BlockingQueuedConnection);
+        connect(m_pWorker, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)), Qt::QueuedConnection);
+        connect(m_pWorker, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)), Qt::QueuedConnection);
+        connect(m_pWorker, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)), Qt::QueuedConnection);
+
     }
 
     virtual ~glvdebug_QReplayWidget()

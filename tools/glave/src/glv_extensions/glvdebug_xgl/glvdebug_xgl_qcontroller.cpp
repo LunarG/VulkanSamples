@@ -91,15 +91,15 @@ bool glvdebug_xgl_QController::LoadTraceFile(glvdebug_trace_file_info* pTraceFil
         {
             m_pView->add_custom_state_viewer(m_pReplayWidget, "Replayer", true);
             m_pReplayWidget->setEnabled(true);
-            connect(m_pReplayWidget, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()), Qt::QueuedConnection);
-            connect(m_pReplayWidget, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)), Qt::QueuedConnection);
-            connect(m_pReplayWidget, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()), Qt::QueuedConnection);
-            connect(m_pReplayWidget, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)), Qt::QueuedConnection);
-            connect(m_pReplayWidget, SIGNAL(ReplayFinished(uint64_t)), this, SLOT(onReplayFinished(uint64_t)), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(ReplayStarted()), this, SLOT(onReplayStarted()));
+            connect(m_pReplayWidget, SIGNAL(ReplayPaused(uint64_t)), this, SLOT(onReplayPaused(uint64_t)));
+            connect(m_pReplayWidget, SIGNAL(ReplayContinued()), this, SLOT(onReplayContinued()));
+            connect(m_pReplayWidget, SIGNAL(ReplayStopped(uint64_t)), this, SLOT(onReplayStopped(uint64_t)));
+            connect(m_pReplayWidget, SIGNAL(ReplayFinished(uint64_t)), this, SLOT(onReplayFinished(uint64_t)));
 
-            connect(m_pReplayWidget, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)), Qt::QueuedConnection);
-            connect(m_pReplayWidget, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)), Qt::QueuedConnection);
-            connect(m_pReplayWidget, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)), Qt::QueuedConnection);
+            connect(m_pReplayWidget, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)));
+            connect(m_pReplayWidget, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)));
+            connect(m_pReplayWidget, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)));
         }
     }
 
