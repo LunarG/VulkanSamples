@@ -486,6 +486,7 @@ static inline void cmd_begin_render_pass(struct intel_cmd *cmd,
                                          const struct intel_render_pass *rp)
 {
     cmd->bind.render_pass = rp;
+    cmd->bind.render_pass_changed = true;
 }
 
 static inline void cmd_end_render_pass(struct intel_cmd *cmd,

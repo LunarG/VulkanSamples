@@ -192,6 +192,7 @@ struct intel_cmd_bind {
 
 
     const struct intel_render_pass *render_pass;
+    bool render_pass_changed;
 
     uint32_t draw_count;
     uint32_t wa_flags;

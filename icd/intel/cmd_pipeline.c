@@ -1876,6 +1876,9 @@ static void emit_msaa(struct intel_cmd *cmd)
 {
     const struct intel_fb *fb = cmd->bind.render_pass->fb;
 
+    if (!cmd->bind.render_pass_changed)
+        return;
+
     if (fb->sample_count != cmd->bind.pipeline.graphics->sample_count)
         cmd->result = XGL_ERROR_UNKNOWN;
 
@@ -1885,15 +1888,22 @@ static void emit_msaa(struct intel_cmd *cmd)
 
 static void emit_rt(struct intel_cmd *cmd)
 {
+    const struct intel_fb *fb = cmd->bind.render_pass->fb;
+
+    if (!cmd->bind.render_pass_changed)
+        return;
+
     cmd_wa_gen6_pre_depth_stall_write(cmd);
-    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, cmd->bind.render_pass->fb->width,
-            cmd->bind.render_pass->fb->height);
+    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, fb->width, fb->height);
 }
 
 static void emit_ds(struct intel_cmd *cmd)
 {
     const struct intel_fb *fb = cmd->bind.render_pass->fb;
     const struct intel_ds_view *ds = fb->ds;
+
+    if (!cmd->bind.render_pass_changed)
+        return;
 
     if (!ds) {
         /* all zeros */
@@ -3200,6 +3210,7 @@ static void cmd_draw(struct intel_cmd *cmd,
     }
 
     cmd->bind.draw_count++;
+    cmd->bind.render_pass_changed = false;
     /* need to re-emit all workarounds */
     cmd->bind.wa_flags = 0;
 
@@ -3261,6 +3272,9 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
     cmd->bind.wa_flags = 0;
 
     cmd->bind.meta = NULL;
+
+    /* make the normal path believe the render pass has changed */
+    cmd->bind.render_pass_changed = true;
 
     if (intel_debug & INTEL_DEBUG_NOCACHE)
         cmd_batch_flush_all(cmd);
