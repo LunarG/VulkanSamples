@@ -2330,6 +2330,7 @@ class Subcommand(object):
         rs_body.append('    g_pReplaySettings = pReplaySettings;')
         rs_body.append('    m_display = new xglDisplay();')
         rs_body.append('    m_pDSDump = NULL;')
+        rs_body.append('    m_pCBDump = NULL;')
         rs_body.append('    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {')
         rs_body.append('        process_screenshot_list(g_pReplaySettings->screenshotList);')
         rs_body.append('    }')
@@ -3401,6 +3402,8 @@ class Subcommand(object):
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
                     rbody.append('            {')
+                    rbody.append('                m_pCBDump = NULL;')
+                    rbody.append('                m_pDSDump = NULL;')
                     rbody.append('                rm_from_map(pPacket->device);')
                     rbody.append('                m_display->m_initedXGL = false;')
                     rbody.append('            }')
