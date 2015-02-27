@@ -83,6 +83,7 @@ struct loader_scanned_icds {
     xglCreateInstanceType CreateInstance;
     xglDestroyInstanceType DestroyInstance;
     xglEnumerateGpusType EnumerateGpus;
+    xglGetExtensionSupportType GetExtensionSupport;
     XGL_INSTANCE instance;
     struct loader_scanned_icds *next;
 };
@@ -262,7 +263,7 @@ static struct loader_icd *loader_icd_add(struct loader_instance *ptr_inst,
 static void loader_scanned_icd_add(const char *filename)
 {
     loader_platform_dl_handle handle;
-    void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst;
+    void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst, *fp_get_extension_support;
     struct loader_scanned_icds *new_node;
 
     // Used to call: dlopen(filename, RTLD_LAZY);
@@ -284,6 +285,7 @@ static void loader_scanned_icd_add(const char *filename)
     LOOKUP(fp_create_inst, CreateInstance);
     LOOKUP(fp_destroy_inst, DestroyInstance);
     LOOKUP(fp_enumerate, EnumerateGpus);
+    LOOKUP(fp_get_extension_support, GetExtensionSupport);
 #undef LOOKUP
 
     new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds));
@@ -297,6 +299,7 @@ static void loader_scanned_icd_add(const char *filename)
     new_node->CreateInstance = fp_create_inst;
     new_node->DestroyInstance = fp_destroy_inst;
     new_node->EnumerateGpus = fp_enumerate;
+    new_node->GetExtensionSupport = fp_get_extension_support;
     new_node->next = loader.scanned_icd_list;
     loader.scanned_icd_list = new_node;
 }
@@ -575,52 +578,77 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
     }
 }
 
-static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const char * layer_name, const char **lib_name)
+static XGL_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
 {
+    XGL_RESULT err;
+    char *search_name;
     loader_platform_dl_handle handle;
-    xglEnumerateLayersType fpEnumerateLayers;
-    char layer_buf[16][256];
-    char * layers[16];
+    xglGetExtensionSupportType fpGetExtensionSupport;
 
-    for (int i = 0; i < 16; i++)
-         layers[i] = &layer_buf[i][0];
+    /*
+     * The loader provides the abstraction that make layers and extensions work via
+     * the currently defined extension mechanism. That is, when app queries for an extension
+     * via xglGetExtensionSupport, the loader will call both the driver as well as any layers
+     * to see who implements that extension. Then, if the app enables the extension during
+     * xglCreateDevice the loader will find and load any layers that implement that extension.
+     */
 
-    for (unsigned int j = 0; j < loader.scanned_layer_count; j++) {
-        *lib_name = loader.scanned_layer_names[j];
-        // Used to call: dlopen(*lib_name, RTLD_LAZY)
-        if ((handle = loader_platform_open_library(*lib_name)) == NULL)
-            continue;
-        if ((fpEnumerateLayers = (xglEnumerateLayersType) loader_platform_get_proc_address(handle, "xglEnumerateLayers")) == NULL) {
-            char * lib_str = malloc(strlen(*lib_name) + 1 + strlen(layer_name));
-            //use default layer name
-            snprintf(lib_str, strlen(*lib_name) + strlen(layer_name),
-                     XGL_LAYER_LIBRARY_PREFIX "%s" XGL_LIBRARY_SUFFIX,
-                     layer_name);
-            loader_platform_close_library(handle);
-            if (!strcmp(*lib_name, lib_str)) {
-                free(lib_str);
-                return true;
-            }
-            else {
-                free(lib_str);
-                continue;
-            }
+    // TODO: What if extension is in multiple places?
+
+    // TODO: Who should we ask first? Driver or layers? Do driver for now.
+    err = icd->scanned_icds[gpu_index].GetExtensionSupport((XGL_PHYSICAL_GPU) (icd->gpus[gpu_index].nextObject), pExtName);
+    if (err == XGL_SUCCESS) {
+        if (lib_name) {
+            *lib_name = NULL;
         }
-        else {
-            size_t cnt;
-            fpEnumerateLayers(NULL, 16, 256, &cnt, layers, (char *) icd->gpus + gpu_index);
-            for (unsigned int i = 0; i < cnt; i++) {
-                if (!strcmp((char *) layers[i], layer_name)) {
-                    loader_platform_close_library(handle);
-                    return true;
-                }
-            }
-        }
-
-        loader_platform_close_library(handle);
+        return XGL_SUCCESS;
     }
 
-    return false;
+    for (unsigned int j = 0; j < loader.scanned_layer_count; j++) {
+        search_name = loader.scanned_layer_names[j];
+
+        if ((handle = loader_platform_open_library(search_name)) == NULL)
+            continue;
+
+        fpGetExtensionSupport = loader_platform_get_proc_address(handle, "xglGetExtensionSupport");
+
+        if (fpGetExtensionSupport != NULL) {
+            // Found layer's GetExtensionSupport call
+            err = fpGetExtensionSupport((XGL_PHYSICAL_GPU) (icd->gpus + gpu_index), pExtName);
+
+            loader_platform_close_library(handle);
+
+            if (err == XGL_SUCCESS) {
+                if (lib_name) {
+                    *lib_name = loader.scanned_layer_names[j];
+                }
+                return XGL_SUCCESS;
+            }
+        } else {
+            loader_platform_close_library(handle);
+        }
+
+        // No GetExtensionSupport or GetExtensionSupport returned invalid extension
+        // for the layer, so test the layer name as if it is an extension name
+        // use default layer name based on library name XGL_LAYER_LIBRARY_PREFIX<name>.XGL_LIBRARY_SUFFIX
+        char *pEnd;
+        size_t siz;
+
+        search_name = basename(search_name);
+        search_name += strlen(XGL_LAYER_LIBRARY_PREFIX);
+        pEnd = strrchr(search_name, '.');
+        siz = (int) (pEnd - search_name);
+        if (siz != strlen(pExtName))
+            continue;
+
+        if (strncmp(search_name, pExtName, siz) == 0) {
+            if (lib_name) {
+                *lib_name = loader.scanned_layer_names[j];
+            }
+            return XGL_SUCCESS;
+        }
+    }
+    return XGL_ERROR_INVALID_EXTENSION;
 }
 
 static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
@@ -657,14 +685,13 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
         if (next == NULL) {
             len = (uint32_t) strlen(p);
             next = p + len;
-        }
-        else {
+        } else {
             len = (uint32_t) (next - p);
             *(char *) next = '\0';
             next++;
         }
         name = basename(p);
-        if (!find_layer_name(icd, gpu_index, name, &lib_name)) {
+        if (find_layer_extension(icd, gpu_index, name, &lib_name) != XGL_SUCCESS) {
             p = next;
             continue;
         }
@@ -681,7 +708,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
         count++;
         p = next;
 
-    };
+    }
 
     free(pOrig);
     return count;
@@ -690,39 +717,46 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
 static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const XGL_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
-    int env_layer_count = 0;
+    const char *lib_name = NULL;
+    uint32_t count = 0;
 
     *ppLayerNames =  &layerNames[0];
     /* Load any layers specified in the environment first */
-    env_layer_count = loader_get_layer_env(icd, gpu_index, layerNames);
+    count = loader_get_layer_env(icd, gpu_index, layerNames);
 
-    const XGL_LAYER_CREATE_INFO *pCi =
-        (const XGL_LAYER_CREATE_INFO *) pCreateInfo->pNext;
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+        const char *pExtName = pCreateInfo->ppEnabledExtensionNames[i];
 
-    while (pCi) {
-        if (pCi->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) {
-            const char *name;
-            uint32_t len, j = 0;
-            for (uint32_t i = env_layer_count; i < (env_layer_count + pCi->layerCount); i++) {
-                const char * lib_name = NULL;
-                name = *(pCi->ppActiveLayerNames + j);
-                if (!find_layer_name(icd, gpu_index, name, &lib_name)) {
-                    return i;
+        if (find_layer_extension(icd, gpu_index, pExtName, &lib_name) == XGL_SUCCESS) {
+            uint32_t len;
+
+            /*
+             * the library name is NULL if the driver supports this
+             * extension and thus no layer to load.
+             */
+            if (lib_name == NULL)
+                continue;
+
+            len = (uint32_t) strlen(pExtName);
+            for (uint32_t j = 0; j < count; j++) {
+                if (len == strlen(layerNames[j].layer_name) &&
+                     strncmp(pExtName, layerNames[j].layer_name, len) == 0) {
+                    // Extension / Layer already on the list
+                    continue;
                 }
-                len = (uint32_t) strlen(name);
-                layerNames[i].layer_name = malloc(len + 1);
-                if (!layerNames[i].layer_name)
-                    return i;
-                strncpy((char *) layerNames[i].layer_name, name, len);
-                layerNames[i].layer_name[len] = '\0';
-                layerNames[i].lib_name = lib_name;
-                j++;
             }
-            return pCi->layerCount + env_layer_count;
+
+            layerNames[count].layer_name = malloc(len + 1);
+            if (!layerNames[count].layer_name)
+                return count;
+            strncpy((char *) layerNames[count].layer_name, pExtName, len);
+            layerNames[count].layer_name[len] = '\0';
+            layerNames[count].lib_name = lib_name;
+            count++;
         }
-        pCi = pCi->pNext;
     }
-    return env_layer_count;
+
+    return count;
 }
 
 static void loader_deactivate_layer(const struct loader_instance *instance)
@@ -1013,6 +1047,17 @@ LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pN
     }
 }
 
+LOADER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char *pExtName)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+
+    if (!icd)
+        return XGL_ERROR_UNAVAILABLE;
+
+    return find_layer_extension(icd, gpu_index, pExtName, NULL);
+}
+
 LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     uint32_t gpu_index;
@@ -1061,8 +1106,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
             pOutLayers[count][siz - 1] = '\0';
             count++;
             free(cpyStr);
-        }
-        else {
+        } else {
             size_t cnt;
             uint32_t n;
             XGL_RESULT res;
