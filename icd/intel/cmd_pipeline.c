@@ -1180,6 +1180,8 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
     const uint8_t cmd_len = 10;
     const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
+    const uint32_t mocs = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
+        (GEN7_MOCS_L3_ON << 8 | GEN7_MOCS_L3_ON << 4) : 0;
     uint32_t pos;
     uint32_t *dw;
 
@@ -1189,7 +1191,7 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
 
     dw[0] = dw0;
     /* start offsets */
-    dw[1] = 1;
+    dw[1] = mocs | 1;
     dw[2] = 1;
     dw[3] = 1;
     dw[4] = 1;
@@ -1664,8 +1666,10 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
         dw[0] = i << GEN6_VB_STATE_DW0_INDEX__SHIFT |
                 pipeline->vb[i].strideInBytes;
 
-        if (cmd_gen(cmd) >= INTEL_GEN(7))
-            dw[0] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+        if (cmd_gen(cmd) >= INTEL_GEN(7)) {
+            dw[0] |= GEN7_MOCS_L3_ON << GEN6_VB_STATE_DW0_MOCS__SHIFT |
+                     GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+        }
 
         switch (pipeline->vb[i].stepRate) {
         case XGL_VERTEX_INPUT_STEP_RATE_VERTEX:
@@ -2433,7 +2437,7 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (7 - 2);
         dw[1] = 1 << GEN7_PCB_ANY_DW1_PCB0_SIZE__SHIFT;
         dw[2] = 0;
-        dw[3] = offset;
+        dw[3] = offset | GEN7_MOCS_L3_ON;
         dw[4] = 0;
         dw[5] = 0;
         dw[6] = 0;
@@ -2861,7 +2865,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (7 - 2);
     dw[1] = 1 << GEN7_PCB_ANY_DW1_PCB0_SIZE__SHIFT;
     dw[2] = 0;
-    dw[3] = offset;
+    dw[3] = offset | GEN7_MOCS_L3_ON;
     dw[4] = 0;
     dw[5] = 0;
     dw[6] = 0;
