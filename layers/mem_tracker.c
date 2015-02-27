@@ -558,10 +558,10 @@ static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
     }
     char str[1024];
     GLOBAL_OBJECT_NODE* pGlobalObjTrav = getGlobalObjectNode(object);
-    assert(pGlobalObjTrav);
     if (!pGlobalObjTrav) {
         sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        return XGL_FALSE;
     }
     // non-null case so should have real mem obj
     GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
