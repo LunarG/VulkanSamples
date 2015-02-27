@@ -296,7 +296,12 @@ static SAMPLER_NODE*     g_pSamplerHead = NULL;
 static IMAGE_NODE*       g_pImageHead = NULL;
 static BUFFER_NODE*      g_pBufferHead = NULL;
 static GLOBAL_CB_NODE*   g_pCmdBufferHead = NULL;
+// Track the last cmd buffer touched by this thread
 static XGL_CMD_BUFFER    g_lastCmdBuffer[MAX_TID] = {NULL};
+// Track the last global DrawState of interest touched by any thread
+static PIPELINE_NODE*         g_lastBoundPipeline = NULL;
+static DYNAMIC_STATE_NODE*    g_lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {NULL};
+static XGL_DESCRIPTOR_SET     g_lastBoundDescriptorSet = NULL;
 #define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 
 static DYNAMIC_STATE_NODE* g_pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
@@ -1245,6 +1250,7 @@ static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_D
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
         }
         pCB->lastBoundDynamicState[sType] = pTrav;
+        g_lastBoundDynamicState[sType] = pTrav;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     else {
@@ -1269,12 +1275,11 @@ static void printPipeline(const XGL_CMD_BUFFER cb)
         }
     }
 }
-// Dump subgraph w/ DS info
-static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
+// Common Dot dumping code
+static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
 {
-    GLOBAL_CB_NODE* pCB = getCBNode(cb);
-    if (pCB && pCB->lastBoundDescriptorSet) {
-        SET_NODE* pSet = getSetNode(pCB->lastBoundDescriptorSet);
+    SET_NODE* pSet = getSetNode(ds);
+    if (pSet) {
         REGION_NODE* pRegion = getRegionNode(pSet->region);
         char tmp_str[4*1024];
         fprintf(pOutFile, "subgraph cluster_DescriptorRegion\n{\nlabel=\"Descriptor Region\"\n");
@@ -1402,6 +1407,14 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
         pRegion = pRegion->pNext;
     }
 }
+// Dump subgraph w/ DS info
+static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    if (pCB && pCB->lastBoundDescriptorSet) {
+        dsCoreDumpDot(pCB->lastBoundDescriptorSet, pOutFile);
+    }
+}
 // Dump a GraphViz dot file showing the Cmd Buffers
 static void cbDumpDotFile(char *outFileName)
 {
@@ -1432,7 +1445,35 @@ static void cbDumpDotFile(char *outFileName)
     fprintf(pOutFile, "}\n"); // close main graph "g"
     fclose(pOutFile);
 }
-// Dump a GraphViz dot file showing the pipeline
+// Dump a GraphViz dot file showing the pipeline for last bound global state
+static void dumpGlobalDotFile(char *outFileName)
+{
+    PIPELINE_NODE *pPipeTrav = g_lastBoundPipeline;
+    if (pPipeTrav) {
+        FILE* pOutFile;
+        pOutFile = fopen(outFileName, "w");
+        fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
+        fprintf(pOutFile, "subgraph cluster_dynamicState\n{\nlabel=\"Dynamic State\"\n");
+        char* pGVstr = NULL;
+        for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
+            if (g_lastBoundDynamicState[i] && g_lastBoundDynamicState[i]->pCreateInfo) {
+                pGVstr = dynamic_gv_display(g_lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i));
+                fprintf(pOutFile, "%s", pGVstr);
+                free(pGVstr);
+            }
+        }
+        fprintf(pOutFile, "}\n"); // close dynamicState subgraph
+        fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
+        pGVstr = xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD");
+        fprintf(pOutFile, "%s", pGVstr);
+        free(pGVstr);
+        fprintf(pOutFile, "}\n");
+        dsCoreDumpDot(g_lastBoundDescriptorSet, pOutFile);
+        fprintf(pOutFile, "}\n"); // close main graph "g"
+        fclose(pOutFile);
+    }
+}
+// Dump a GraphViz dot file showing the pipeline for a given CB
 static void dumpDotFile(const XGL_CMD_BUFFER cb, char *outFileName)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
@@ -2456,6 +2497,10 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        loader_platform_thread_lock_mutex(&globalLock);
+        g_lastBoundPipeline = cmdBuffer;
+        loader_platform_thread_unlock_mutex(&globalLock);
+        drawStateDumpDotFile("pipeline_diagram.dot");
         addCmd(pCB, CMD_BINDPIPELINE);
         if (getPipeline(pipeline)) {
             pCB->lastBoundPipeline = pipeline;
@@ -2513,6 +2558,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->lastBoundDescriptorSet = descriptorSet;
+            g_lastBoundDescriptorSet = descriptorSet;
             loader_platform_thread_unlock_mutex(&globalLock);
             char str[1024];
             sprintf(str, "DS %p bound on pipeline %s", (void*)descriptorSet, string_XGL_PIPELINE_BIND_POINT(pipelineBindPoint));
@@ -3160,7 +3206,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
 void drawStateDumpDotFile(char* outFileName)
 {
     // TODO : Currently just setting cmdBuffer based on global var
-    dumpDotFile(g_lastCmdBuffer[getTIDIndex()], outFileName);
+    //dumpDotFile(g_lastDrawStateCmdBuffer, outFileName);
+    dumpGlobalDotFile(outFileName);
 }
 
 void drawStateDumpCommandBufferDotFile(char* outFileName)

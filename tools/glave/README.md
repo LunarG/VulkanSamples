@@ -89,7 +89,7 @@ To launch app/game from Glave tracer one must use the "-p" option. Also the
 -l<number> option should be given for specifying the tracing library.
 ```
 cd <xgl build directory>/tools/glave
-./glvtrace64 -p <path to app to luanch>  <more options>
+./glvtrace64 -p <path to app to launch>  <more options>
 ```
 Example to trace the spinning cube demo from sample implementation
 ```
