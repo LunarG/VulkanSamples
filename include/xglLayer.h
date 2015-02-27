@@ -48,6 +48,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglSetMemoryPriorityType SetMemoryPriority;
     xglMapMemoryType MapMemory;
     xglUnmapMemoryType UnmapMemory;
+    xglRecordMemoryRangeType RecordMemoryRange;
     xglPinSystemMemoryType PinSystemMemory;
     xglGetMultiGpuCompatibilityType GetMultiGpuCompatibility;
     xglOpenSharedMemoryType OpenSharedMemory;

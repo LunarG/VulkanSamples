@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 50, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 50, 2)
 
 #ifdef __cplusplus
 extern "C"
@@ -2241,6 +2241,7 @@ typedef XGL_RESULT (XGLAPI *xglFreeMemoryType)(XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglSetMemoryPriorityType)(XGL_GPU_MEMORY mem, XGL_MEMORY_PRIORITY priority);
 typedef XGL_RESULT (XGLAPI *xglMapMemoryType)(XGL_GPU_MEMORY mem, XGL_FLAGS flags, void** ppData);
 typedef XGL_RESULT (XGLAPI *xglUnmapMemoryType)(XGL_GPU_MEMORY mem);
+typedef XGL_RESULT (XGLAPI *xglRecordMemoryRangeType)(XGL_GPU_MEMORY mem, XGL_GPU_SIZE rangeSize, XGL_GPU_SIZE rangeOffset);
 typedef XGL_RESULT (XGLAPI *xglPinSystemMemoryType)(XGL_DEVICE device, const void* pSysMem, size_t memSize, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglGetMultiGpuCompatibilityType)(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo);
 typedef XGL_RESULT (XGLAPI *xglOpenSharedMemoryType)(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem);
@@ -2438,6 +2439,11 @@ XGL_RESULT XGLAPI xglMapMemory(
 
 XGL_RESULT XGLAPI xglUnmapMemory(
     XGL_GPU_MEMORY                              mem);
+
+XGL_RESULT XGLAPI xglRecordMemoryRange(
+    XGL_GPU_MEMORY                              mem,
+    XGL_GPU_SIZE                                rangeSize,
+    XGL_GPU_SIZE                                rangeOffset);
 
 XGL_RESULT XGLAPI xglPinSystemMemory(
     XGL_DEVICE                                  device,
