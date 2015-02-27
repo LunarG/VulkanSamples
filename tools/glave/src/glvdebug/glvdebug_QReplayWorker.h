@@ -70,6 +70,8 @@ public slots:
 
     glv_replay::glv_trace_packet_replay_library* getReplayer(GLV_TRACER_ID tracerId);
 
+    void DetachReplay(bool detach);
+
 signals:
     void ReplayStarted();
     void ReplayPaused(uint64_t packetIndex);
@@ -89,6 +91,10 @@ private:
     uint64_t m_currentReplayPacketIndex;
     QAction* m_pActionRunToHere;
     uint64_t m_pauseAtPacketIndex;
+
+    QWidget* m_pReplayWindow;
+    int m_pReplayWindowWidth;
+    int m_pReplayWindowHeight;
 
     BOOL m_bPrintReplayInfoMessages;
     BOOL m_bPrintReplayWarningMessages;

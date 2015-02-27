@@ -71,7 +71,8 @@ private:
     glvdebug_view* m_pView;
     glvdebug_trace_file_info* m_pTraceFileInfo;
     glvdebug_QReplayWorker m_replayWorker;
-    glvdebug_qsvgviewer* m_pSvgDiagram;
+    glvdebug_qsvgviewer* m_pDrawStateDiagram;
+    glvdebug_qsvgviewer* m_pCommandBuffersDiagram;
     glvdebug_QReplayWidget* m_pReplayWidget;
     glvdebug_xgl_QFileModel* m_pTraceFileModel;
     glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;

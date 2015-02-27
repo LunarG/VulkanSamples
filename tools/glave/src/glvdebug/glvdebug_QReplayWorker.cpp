@@ -41,6 +41,9 @@ glvdebug_QReplayWorker::glvdebug_QReplayWorker()
       m_currentReplayPacketIndex(0),
       m_pActionRunToHere(NULL),
       m_pauseAtPacketIndex((uint64_t)-1),
+      m_pReplayWindow(NULL),
+      m_pReplayWindowWidth(0),
+      m_pReplayWindowHeight(0),
       m_bPrintReplayInfoMessages(TRUE),
       m_bPrintReplayWarningMessages(TRUE),
       m_bPrintReplayErrorMessages(TRUE),
@@ -122,6 +125,10 @@ bool glvdebug_QReplayWorker::load_replayers(glvdebug_trace_file_info* pTraceFile
     assert(pReplayWindow != NULL);
     assert(replayWindowWidth > 0);
     assert(replayWindowHeight > 0);
+
+    m_pReplayWindow = pReplayWindow;
+    m_pReplayWindowWidth = replayWindowWidth;
+    m_pReplayWindowHeight = replayWindowHeight;
 
     m_pTraceFileInfo = pTraceFileInfo;
 
@@ -423,6 +430,31 @@ glv_replay::glv_trace_packet_replay_library* glvdebug_QReplayWorker::getReplayer
     }
 
     return m_pReplayers[tracerId];
+}
+
+void glvdebug_QReplayWorker::DetachReplay(bool detach)
+{
+    for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
+    {
+        if(m_pReplayers[i] != NULL)
+        {
+            m_pReplayers[i]->Deinitialize();
+
+            glv_replay::Display disp;
+            if(detach)
+            {
+                disp = glv_replay::Display(m_pReplayWindowWidth, m_pReplayWindowHeight, 0, false);
+            }
+            else
+            {
+                WId hWindow = m_pReplayWindow->winId();
+                disp = glv_replay::Display((glv_window_handle)hWindow, m_pReplayWindowWidth, m_pReplayWindowHeight);
+            }
+
+            int err = m_pReplayers[i]->Initialize(&disp, NULL);
+            assert(err == 0);
+        }
+    }
 }
 
 void glvdebug_QReplayWorker::doReplayPaused(uint64_t packetIndex)

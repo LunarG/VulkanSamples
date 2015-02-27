@@ -30,7 +30,8 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
-#include <QDebug>
+#include <QCheckBox>
+
 #include "glvdebug_QReplayWorker.h"
 
 class glvdebug_QReplayWidget : public QWidget
@@ -77,6 +78,12 @@ public:
         m_pToolBar->addWidget(m_pStopButton);
         connect(m_pStopButton, SIGNAL(clicked()), this, SLOT(onStopButtonClicked()));
 
+        m_pDetachCheckBox = new QCheckBox(m_pToolBar);
+        m_pDetachCheckBox->setText("Detach");
+        m_pDetachCheckBox->setEnabled(true);
+        m_pToolBar->addWidget(m_pDetachCheckBox);
+        connect(m_pDetachCheckBox, SIGNAL(clicked(bool)), this, SLOT(onDetachCheckBoxClicked(bool)));
+
         m_pReplayWindow = new QWidget(this);
         pLayout->addWidget(m_pReplayWindow);
 
@@ -85,6 +92,8 @@ public:
         connect(this, SIGNAL(PauseButtonClicked()), m_pWorker, SLOT(PauseReplay()), Qt::DirectConnection);
         connect(this, SIGNAL(ContinueButtonClicked()), m_pWorker, SLOT(ContinueReplay()), Qt::QueuedConnection);
         connect(this, SIGNAL(StopButtonClicked()), m_pWorker, SLOT(StopReplay()), Qt::DirectConnection);
+        connect(this, SIGNAL(DetachCheckBoxClicked(bool)), m_pWorker, SLOT(DetachReplay(bool)));
+
 
         // connect worker signals to widget actions
         qRegisterMetaType<uint64_t>("uint64_t");
@@ -125,6 +134,7 @@ signals:
     void PauseButtonClicked();
     void ContinueButtonClicked();
     void StopButtonClicked();
+    void DetachCheckBoxClicked(bool checked);
 
     void ReplayStarted();
     void ReplayPaused(uint64_t packetIndex);
@@ -145,6 +155,7 @@ private slots:
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
+        m_pDetachCheckBox->setEnabled(false);
 
         emit ReplayStarted();
     }
@@ -156,6 +167,7 @@ private slots:
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(true);
         m_pStopButton->setEnabled(false);
+        m_pDetachCheckBox->setEnabled(false);
 
         emit ReplayPaused(packetIndex);
     }
@@ -167,6 +179,7 @@ private slots:
         m_pPauseButton->setEnabled(true);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(true);
+        m_pDetachCheckBox->setEnabled(false);
 
         emit ReplayContinued();
     }
@@ -178,6 +191,7 @@ private slots:
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
+        m_pDetachCheckBox->setEnabled(true);
 
         emit ReplayStopped(packetIndex);
     }
@@ -189,6 +203,7 @@ private slots:
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
+        m_pDetachCheckBox->setEnabled(true);
 
         emit ReplayFinished(packetIndex);
     }
@@ -239,6 +254,11 @@ public slots:
         emit StopButtonClicked();
     }
 
+    void onDetachCheckBoxClicked(bool checked)
+    {
+        emit DetachCheckBoxClicked(checked);
+    }
+
 private:
     glvdebug_QReplayWorker* m_pWorker;
     QWidget* m_pReplayWindow;
@@ -248,6 +268,7 @@ private:
     QToolButton* m_pPauseButton;
     QToolButton* m_pContinueButton;
     QToolButton* m_pStopButton;
+    QCheckBox* m_pDetachCheckBox;
     QThread m_replayThread;
 };
 

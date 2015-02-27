@@ -220,6 +220,8 @@ typedef struct _GLOBAL_CB_NODE {
 //prototypes for extension functions
 void drawStateDumpDotFile(char* outFileName);
 void drawStateDumpPngFile(char* outFileName);
+void drawStateDumpCommandBufferDotFile(char* outFileName);
 // Func ptr typedefs
 typedef void (*DRAW_STATE_DUMP_DOT_FILE)(char*);
 typedef void (*DRAW_STATE_DUMP_PNG_FILE)(char*);
+typedef void (*DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE)(char*);

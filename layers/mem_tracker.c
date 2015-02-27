@@ -365,7 +365,7 @@ static void reportMemReferences(const GLOBAL_MEM_OBJ_NODE* pMemObjTrav)
     if (refCount != pMemObjTrav->refCount) {
         char str[1024];
         sprintf(str, "Refcount of %u for Mem Obj %p does't match reported refs of %u", pMemObjTrav->refCount, pMemObjTrav->mem, refCount);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObjTrav->object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pMemObjTrav->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
 }
 
@@ -558,10 +558,10 @@ static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
     }
     char str[1024];
     GLOBAL_OBJECT_NODE* pGlobalObjTrav = getGlobalObjectNode(object);
-    assert(pGlobalObjTrav);
     if (!pGlobalObjTrav) {
         sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        return XGL_FALSE;
     }
     // non-null case so should have real mem obj
     GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
@@ -655,11 +655,15 @@ static void printMemList()
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
             sprintf(str, "    pNext Mem Obj Node: %p", (void*)pTrav->pNextGlobalNode);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-            if (0 != pTrav->allocInfo.allocationSize)
-                sprintf(str, "    Mem Alloc info:\n%s", xgl_print_xgl_memory_alloc_info(&pTrav->allocInfo, "{MEM}INFO :       "));
-            else
+            if (0 != pTrav->allocInfo.allocationSize) {
+                char* pAllocInfoMsg = xgl_print_xgl_memory_alloc_info(&pTrav->allocInfo, "{MEM}INFO :       ");
+                sprintf(str, "    Mem Alloc info:\n%s", pAllocInfoMsg);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+                free(pAllocInfoMsg);
+            } else {
                 sprintf(str, "    Mem Alloc info is NULL (alloc done by xglWsiX11CreatePresentableImage())");
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            }
             MINI_NODE* pObjTrav = pTrav->pObjBindings;
             if (!pObjTrav) {
                 sprintf(str, "    No XGL Object bindings");
