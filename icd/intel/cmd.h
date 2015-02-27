@@ -94,12 +94,6 @@ enum intel_cmd_wa_flags {
      *
      *     "Due to an HW issue driver needs to send a pipe control with stall
      *      when ever there is state change in depth bias related state"
-     *
-     * From the Ivy Bridge PRM, volume 2 part 1, page 292:
-     *
-     *     "A PIPE_CONTOL command with the CS Stall bit set must be programmed
-     *      in the ring after this instruction
-     *      (3DSTATE_PUSH_CONSTANT_ALLOC_PS)."
      */
     INTEL_CMD_WA_GEN7_POST_COMMAND_CS_STALL = 1 << 3,
 

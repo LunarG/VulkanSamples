@@ -155,7 +155,6 @@ struct intel_pipeline_shader {
  * On GEN7, there are
  *
  *  - 3DSTATE_URB_x (2*4)
- *  - 3DSTATE_PUSH_CONSTANT_ALLOC_x (2*5)
  *  - 3DSTATE_VERTEX_ELEMENTS (1+2*INTEL_MAX_VERTEX_ELEMENT_COUNT)
  *  - 3DSTATE_SBE (14)
  *  - 3DSTATE_HS (7)

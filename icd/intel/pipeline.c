@@ -724,89 +724,6 @@ static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
     }
 }
 
-static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline,
-                                                 const struct intel_pipeline_create_info *info)
-{
-    const struct intel_gpu *gpu = pipeline->dev->gpu;
-    const uint8_t cmd_len = 2;
-    uint32_t offset = 0;
-    uint32_t size = 8192;
-    uint32_t *dw;
-    int end;
-
-    INTEL_GPU_ASSERT(pipeline->dev->gpu, 7, 7.5);
-
-    /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 68:
-    *
-    *     "(A table that says the maximum size of each constant buffer is
-    *      16KB")
-    *
-    * From the Ivy Bridge PRM, volume 2 part 1, page 115:
-    *
-    *     "The sum of the Constant Buffer Offset and the Constant Buffer Size
-    *      may not exceed the maximum value of the Constant Buffer Size."
-    *
-    * Thus, the valid range of buffer end is [0KB, 16KB].
-    */
-    end = (offset + size) / 1024;
-    if (end > 16) {
-        assert(!"invalid constant buffer end");
-        end = 16;
-    }
-
-    /* the valid range of buffer offset is [0KB, 15KB] */
-    offset = (offset + 1023) / 1024;
-    if (offset > 15) {
-        assert(!"invalid constant buffer offset");
-        offset = 15;
-    }
-
-    if (offset > end) {
-        assert(!size);
-        offset = end;
-    }
-
-    /* the valid range of buffer size is [0KB, 15KB] */
-    size = end - offset;
-    if (size > 15) {
-        assert(!"invalid constant buffer size");
-        size = 15;
-    }
-
-    if (gpu->gt == 3)
-        size *= 2;
-
-    dw = pipeline_cmd_ptr(pipeline, cmd_len * 5);
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (cmd_len - 2);
-    dw[1] = offset << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-                      size << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-
-    dw += 2;
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (cmd_len - 2);
-    dw[1] = size << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-                    size << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-
-    dw += 2;
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (cmd_len - 2);
-    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-                 0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-
-    dw += 2;
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) | (cmd_len - 2);
-    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-                 0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-
-    dw += 2;
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (cmd_len - 2);
-    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-                 0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-
-    // gen7_wa_pipe_control_cs_stall(p, true, true);
-    // looks equivalent to: gen6_wa_wm_multisample_flush - this does more
-    // than the documentation seems to imply
-}
-
 static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
                                            const struct intel_pipeline_create_info *info)
 {
@@ -1240,7 +1157,6 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 
     if (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) {
         pipeline_build_urb_alloc_gen7(pipeline, info);
-        pipeline_build_push_const_alloc_gen7(pipeline, info);
         pipeline_build_gs(pipeline, info);
         pipeline_build_hs(pipeline, info);
         pipeline_build_te(pipeline, info);

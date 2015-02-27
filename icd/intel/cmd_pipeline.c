@@ -1248,6 +1248,56 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
             cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].sba_offset + 1);
 }
 
+void cmd_batch_push_const_alloc(struct intel_cmd *cmd)
+{
+    const uint32_t size = (cmd->dev->gpu->gt == 3) ? 16 : 8;
+    const uint8_t cmd_len = 2;
+    uint32_t offset = 0;
+    uint32_t *dw;
+
+    if (cmd_gen(cmd) <= INTEL_GEN(6))
+        return;
+
+    CMD_ASSERT(cmd, 7, 7.5);
+
+    /* 3DSTATE_PUSH_CONSTANT_ALLOC_x */
+    cmd_batch_pointer(cmd, cmd_len * 5, &dw);
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (cmd_len - 2);
+    dw[1] = offset << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+            size << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
+    offset += size;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (cmd_len - 2);
+    dw[1] = offset << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+            size << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (cmd_len - 2);
+    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+            0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) | (cmd_len - 2);
+    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+            0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
+
+    dw += 2;
+    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (cmd_len - 2);
+    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+            0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
+
+    /*
+     *
+     * From the Ivy Bridge PRM, volume 2 part 1, page 292:
+     *
+     *     "A PIPE_CONTOL command with the CS Stall bit set must be programmed
+     *      in the ring after this instruction
+     *      (3DSTATE_PUSH_CONSTANT_ALLOC_PS)."
+     */
+    cmd_wa_gen7_post_command_cs_stall(cmd);
+}
+
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0)
 {
     if (pipe_control_dw0 == 0)
@@ -2257,31 +2307,6 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     uint32_t *dw;
 
     CMD_ASSERT(cmd, 7, 7.5);
-
-    /* 3DSTATE_PUSH_CONSTANT_ALLOC_x */
-    cmd_batch_pointer(cmd, 10, &dw);
-
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (2 - 2);
-    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-    dw += 2;
-
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (2 - 2);
-    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-            pcb_alloc << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
-    dw += 2;
-
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (2 - 2);
-    dw[1] = 0;
-    dw += 2;
-
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) | (2 - 2);
-    dw[1] = 0;
-    dw += 2;
-
-    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (2 - 2);
-    dw[1] = 0;
-
-    cmd_wa_gen7_post_command_cs_stall(cmd);
 
     cmd_wa_gen7_pre_vs_depth_stall_write(cmd);
 

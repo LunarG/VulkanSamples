@@ -455,6 +455,7 @@ static inline void cmd_batch_reloc_writer(struct intel_cmd *cmd, uint32_t pos,
 }
 
 void cmd_batch_state_base_address(struct intel_cmd *cmd);
+void cmd_batch_push_const_alloc(struct intel_cmd *cmd);
 
 /**
  * Begin the batch buffer.
@@ -462,6 +463,7 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd);
 static inline void cmd_batch_begin(struct intel_cmd *cmd)
 {
     cmd_batch_state_base_address(cmd);
+    cmd_batch_push_const_alloc(cmd);
 }
 
 /**
