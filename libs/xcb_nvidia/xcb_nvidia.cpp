@@ -1,13 +1,10 @@
 #include <xcb/xcb.h>
 
-#include <Windows.h>
 #include <string>
-#include <deque>
 
 #include <xgl.h>
 
-#include "../loader/loader_platform.h"
-
+typedef HWND (*xcbConnectType)();
 typedef void (*xcbCreateWindowType)(uint16_t width, uint16_t height);
 typedef void (*xcbDestroyWindowType)();
 typedef int (*xcbGetMessageType)(MSG * msg);
@@ -18,27 +15,22 @@ struct xcb_connection_t {
     xcb_setup_t setup;
     HMODULE xcbNvidia;
 
+    xcbConnectType xcbConnect;
     xcbCreateWindowType xcbCreateWindow;
     xcbDestroyWindowType xcbDestroyWindow;
     xcbGetMessageType xcbGetMessage;
     xcbPeekMessageType xcbPeekMessage;
-};
 
-// XCB id database.
-// FIXME: This is not thread safe.
-uint32_t g_xcbId = 0;
-struct XcbId {
-    xcb_connection_t * connection;
+    HWND hwnd;
 };
-std::deque<XcbId> g_xcbIds;
 
 xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
 {
-    std::string xglNvidia = (getenv(DRIVER_PATH_ENV) == NULL) ? "" : getenv(DRIVER_PATH_ENV);
-    xglNvidia += "\\xgl_nvidia.dll";
+    std::string xglNvidia = (getenv("XGL_DRIVERS_PATH") == NULL) ? "" : getenv("XGL_DRIVERS_PATH");
+    xglNvidia += "\\XGL_nvidia.dll";
     HMODULE module = LoadLibrary(xglNvidia.c_str());
     if (!module) {
-        std::string xglNulldrv = (getenv("XGL_DRIVERS_PATH") == NULL) ? "" : getenv("LIBXGL_DRIVERS_PATH");
+        std::string xglNulldrv = (getenv("LIBXGL_DRIVERS_PATH") == NULL) ? "" : getenv("LIBXGL_DRIVERS_PATH");
         xglNulldrv += "\\xgl_nulldrv.dll";
         module = LoadLibrary(xglNulldrv.c_str());
     }
@@ -70,10 +62,16 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
     xcb_connection_t * connection = (xcb_connection_t *)calloc(1, sizeof(xcb_connection_t));
     connection->xcbNvidia = module;
 
+    connection->xcbConnect = (xcbConnectType)GetProcAddress(module, "xcbConnect");
     connection->xcbCreateWindow = (xcbCreateWindowType)GetProcAddress(module, "xcbCreateWindow");
     connection->xcbDestroyWindow = (xcbDestroyWindowType)GetProcAddress(module, "xcbDestroyWindow");
     connection->xcbGetMessage = (xcbGetMessageType)GetProcAddress(module, "xcbGetMessage");
     connection->xcbPeekMessage = (xcbPeekMessageType)GetProcAddress(module, "xcbPeekMessage");
+
+    if (!connection->xcbConnect) {
+        return 0;
+    }
+    connection->hwnd = connection->xcbConnect();
 
     *screenp = 0;
     return static_cast<xcb_connection_t *>(connection);
@@ -172,11 +170,9 @@ xcb_generic_event_t *xcb_poll_for_event(xcb_connection_t *c)
 
 uint32_t xcb_generate_id(xcb_connection_t *c)
 {
-    // FIXME: THIS IS NOT THREAD SAFE.
-    uint32_t id = (uint32_t)g_xcbIds.size();
-    XcbId xcbId = { static_cast<xcb_connection_t *>(c) };
-    g_xcbIds.push_back(xcbId);
-    return id;
+    // This is a MONSTER hack to make XGL_nvidia compatible with both
+    // the LunarG apps and Dota2.
+    return (uint32_t)c->hwnd;
 }
 
 xcb_void_cookie_t
