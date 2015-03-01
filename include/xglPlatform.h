@@ -40,6 +40,9 @@ extern "C"
 */
 
 #if defined(_WIN32)
+    // Ensure we don't pick up min/max macros from Winddef.h
+    #define NOMINMAX
+
     // On Windows, XGLAPI should equate to the __stdcall convention
     #define XGLAPI   __stdcall
 

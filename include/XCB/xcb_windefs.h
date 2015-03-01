@@ -31,6 +31,7 @@
 #define WINVER 0x0501 /* required for getaddrinfo/freeaddrinfo defined only for WinXP and above */
 #endif
 
+#define VC_EXTRALEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windef.h>
