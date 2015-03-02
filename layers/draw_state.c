@@ -48,19 +48,19 @@ static uint64_t g_alloc_count = 0;
 static uint64_t g_free_count = 0;
 #endif
 #define MAX_TID 513
-static loader_platform_thread_id tidMapping[MAX_TID] = {0};
+static loader_platform_thread_id g_tidMapping[MAX_TID] = {0};
 static uint32_t g_maxTID = 0;
 // Map actual TID to an index value and return that index
 //  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs
 static uint32_t getTIDIndex() {
     loader_platform_thread_id tid = loader_platform_get_thread_id();
     for (uint32_t i = 0; i < g_maxTID; i++) {
-        if (tid == tidMapping[i])
+        if (tid == g_tidMapping[i])
             return i;
     }
     // Don't yet have mapping, set it and return newly set index
     uint32_t retVal = (uint32_t) g_maxTID;
-    tidMapping[g_maxTID++] = tid;
+    g_tidMapping[g_maxTID++] = tid;
     assert(g_maxTID < MAX_TID);
     return retVal;
 }
@@ -277,6 +277,10 @@ static char* cmdTypeToString(CMD_TYPE cmd)
             return "CMD_BEGINRENDERPASS";
         case CMD_ENDRENDERPASS:
             return "CMD_ENDRENDERPASS";
+        case CMD_DBGMARKERBEGIN:
+            return "CMD_DBGMARKERBEGIN";
+        case CMD_DBGMARKEREND:
+            return "CMD_DBGMARKEREND";
         default:
             return "UNKNOWN";
     }
@@ -285,6 +289,7 @@ static char* cmdTypeToString(CMD_TYPE cmd)
 // Just track 2 shaders for now
 #define XGL_NUM_GRAPHICS_SHADERS XGL_SHADER_STAGE_COMPUTE
 #define MAX_SLOTS 2048
+#define NUM_COMMAND_BUFFERS_TO_DISPLAY 10
 
 static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
 
@@ -298,7 +303,11 @@ static BUFFER_NODE*      g_pBufferHead = NULL;
 static GLOBAL_CB_NODE*   g_pCmdBufferHead = NULL;
 // Track the last cmd buffer touched by this thread
 static XGL_CMD_BUFFER    g_lastCmdBuffer[MAX_TID] = {NULL};
+// Track the last group of CBs touched for displaying to dot file
+static GLOBAL_CB_NODE*   g_pLastTouchedCB[NUM_COMMAND_BUFFERS_TO_DISPLAY] = {NULL};
+static uint32_t g_lastTouchedCBIndex = 0;
 // Track the last global DrawState of interest touched by any thread
+static GLOBAL_CB_NODE*        g_lastGlobalCB = NULL;
 static PIPELINE_NODE*         g_lastBoundPipeline = NULL;
 static DYNAMIC_STATE_NODE*    g_lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] = {NULL};
 static XGL_DESCRIPTOR_SET     g_lastBoundDescriptorSet = NULL;
@@ -459,6 +468,25 @@ static void freeBuffers()
     g_pBufferHead = NULL;
 }
 static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb);
+
+static void updateCBTracking(XGL_CMD_BUFFER cb)
+{
+    g_lastCmdBuffer[getTIDIndex()] = cb;
+    GLOBAL_CB_NODE* pCB = getCBNode(cb);
+    loader_platform_thread_lock_mutex(&globalLock);
+    g_lastGlobalCB = pCB;
+    // TODO : This is a dumb algorithm. Need smart LRU that drops off oldest
+    for (uint32_t i = 0; i < NUM_COMMAND_BUFFERS_TO_DISPLAY; i++) {
+        if (g_pLastTouchedCB[i] == pCB) {
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return;
+        }
+    }
+    g_pLastTouchedCB[g_lastTouchedCBIndex++] = pCB;
+    g_lastTouchedCBIndex = g_lastTouchedCBIndex % NUM_COMMAND_BUFFERS_TO_DISPLAY;
+    loader_platform_thread_unlock_mutex(&globalLock);
+}
+
 // Print the last bound dynamic state
 static void printDynamicState(const XGL_CMD_BUFFER cb)
 {
@@ -1237,8 +1265,8 @@ static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_D
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
+        updateCBTracking(cmdBuffer);
         loader_platform_thread_lock_mutex(&globalLock);
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
         addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
         DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
         while (pTrav && (state != pTrav->stateObj)) {
@@ -1423,22 +1451,27 @@ static void cbDumpDotFile(char *outFileName)
     pOutFile = fopen(outFileName, "w");
     fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
     fprintf(pOutFile, "subgraph cluster_cmdBuffers\n{\nlabel=\"Command Buffers\"\n");
-    for (uint32_t i=0; i < MAX_TID; i++) {
-        if (g_lastCmdBuffer[i]) {
-            GLOBAL_CB_NODE* pCB = getCBNode(g_lastCmdBuffer[i]);
-            if (pCB) {
-                fprintf(pOutFile, "subgraph cluster_cmdBuffer%u\n{\nlabel=\"Command Buffer #%u\"\n", i, i);
-                CMD_NODE* pCmd = pCB->pCmds;
-                uint32_t instNum = 0;
-                while (pCmd) {
-                    if (instNum)
-                        fprintf(pOutFile, "\"CB%pCMD%u\" -> \"CB%pCMD%u\" [];\n", (void*)pCB->cmdBuffer, instNum-1, (void*)pCB->cmdBuffer, instNum);
-                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString(pCmd->type));
-                    ++instNum;
-                    pCmd = pCmd->pNext;
+    GLOBAL_CB_NODE* pCB = g_pCmdBufferHead;
+    for (uint32_t i = 0; i < NUM_COMMAND_BUFFERS_TO_DISPLAY; i++) {
+        pCB = g_pLastTouchedCB[i];
+        if (pCB) {
+            fprintf(pOutFile, "subgraph cluster_cmdBuffer%u\n{\nlabel=\"Command Buffer #%u\"\n", i, i);
+            CMD_NODE* pCmd = pCB->pCmds;
+            uint32_t instNum = 0;
+            while (pCmd) {
+                if (instNum) {
+                    fprintf(pOutFile, "\"CB%pCMD%u\" -> \"CB%pCMD%u\" [];\n", (void*)pCB->cmdBuffer, instNum-1, (void*)pCB->cmdBuffer, instNum);
                 }
-                fprintf(pOutFile, "}\n");
+                if (pCB == g_lastGlobalCB) {
+                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BGCOLOR=\"#00FF00\" BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString(pCmd->type));
+                }
+                else {
+                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString(pCmd->type));
+                }
+                ++instNum;
+                pCmd = pCmd->pNext;
             }
+            fprintf(pOutFile, "}\n");
         }
     }
     fprintf(pOutFile, "}\n");
@@ -2430,8 +2463,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
         pCB->flags = pCreateInfo->flags;
         pCB->queueType = pCreateInfo->queueType;
         pCB->lastVtxBinding = MAX_BINDING;
-        g_lastCmdBuffer[getTIDIndex()] = *pCmdBuffer;
         loader_platform_thread_unlock_mutex(&globalLock);
+        updateCBTracking(*pCmdBuffer);
     }
     return result;
 }
@@ -2451,9 +2484,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
             sprintf(str, "In xglBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         }
-        loader_platform_thread_lock_mutex(&globalLock);
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
-        loader_platform_thread_unlock_mutex(&globalLock);
+        updateCBTracking(cmdBuffer);
     }
     return result;
 }
@@ -2472,10 +2503,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
             sprintf(str, "In xglEndCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         }
-        loader_platform_thread_lock_mutex(&globalLock);
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
-        loader_platform_thread_unlock_mutex(&globalLock);
-        cbDumpDotFile("cb_dump.dot");
+        updateCBTracking(cmdBuffer);
+        //cbDumpDotFile("cb_dump.dot");
     }
     return result;
 }
@@ -2485,9 +2514,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffe
     XGL_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
     if (XGL_SUCCESS == result) {
         resetCB(cmdBuffer);
-        loader_platform_thread_lock_mutex(&globalLock);
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
-        loader_platform_thread_unlock_mutex(&globalLock);
+        updateCBTracking(cmdBuffer);
     }
     return result;
 }
@@ -2496,7 +2523,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         loader_platform_thread_lock_mutex(&globalLock);
         g_lastBoundPipeline = cmdBuffer;
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -2524,7 +2551,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, X
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         // TODO : Handle storing Pipeline Deltas to cmd buffer here
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDPIPELINEDELTA);
     }
     else {
@@ -2545,7 +2572,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, X
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDDESCRIPTORSET);
         if (getSetNode(descriptorSet)) {
             if (dsUpdateActive(descriptorSet)) {
@@ -2583,7 +2610,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindIndexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDINDEXBUFFER);
         // TODO : Track idxBuffer binding
     }
@@ -2599,7 +2626,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XG
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDVERTEXBUFFER);
         pCB->lastVtxBinding = binding;
     }
@@ -2615,7 +2642,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, uint32_t first
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAW);
         pCB->drawCount[DRAW]++;
         char str[1024];
@@ -2635,7 +2662,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, uint32_
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAWINDEXED);
         pCB->drawCount[DRAW_INDEXED]++;
         char str[1024];
@@ -2655,7 +2682,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BU
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAWINDIRECT);
         pCB->drawCount[DRAW_INDIRECT]++;
         char str[1024];
@@ -2675,7 +2702,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer,
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
         pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
         char str[1024];
@@ -2695,7 +2722,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDispatch(XGL_CMD_BUFFER cmdBuffer, uint32_t x
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DISPATCH);
     }
     else {
@@ -2710,7 +2737,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDispatchIndirect(XGL_CMD_BUFFER cmdBuffer, XG
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DISPATCHINDIRECT);
     }
     else {
@@ -2725,7 +2752,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFF
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_COPYBUFFER);
     }
     else {
@@ -2740,7 +2767,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_COPYIMAGE);
     }
     else {
@@ -2755,7 +2782,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, X
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_COPYBUFFERTOIMAGE);
     }
     else {
@@ -2770,7 +2797,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImageToBuffer(XGL_CMD_BUFFER cmdBuffer, X
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_COPYIMAGETOBUFFER);
     }
     else {
@@ -2785,7 +2812,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCloneImageData(XGL_CMD_BUFFER cmdBuffer, XGL_
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_CLONEIMAGEDATA);
     }
     else {
@@ -2800,7 +2827,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdUpdateBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BU
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_UPDATEBUFFER);
     }
     else {
@@ -2815,7 +2842,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFF
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_FILLBUFFER);
     }
     else {
@@ -2830,7 +2857,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_CLEARCOLORIMAGE);
     }
     else {
@@ -2845,7 +2872,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, 
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_CLEARCOLORIMAGERAW);
     }
     else {
@@ -2860,7 +2887,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, X
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_CLEARDEPTHSTENCIL);
     }
     else {
@@ -2875,7 +2902,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResolveImage(XGL_CMD_BUFFER cmdBuffer, XGL_IM
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_RESOLVEIMAGE);
     }
     else {
@@ -2890,7 +2917,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT 
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_SETEVENT);
     }
     else {
@@ -2905,7 +2932,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResetEvent(XGL_CMD_BUFFER cmdBuffer, XGL_EVEN
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_RESETEVENT);
     }
     else {
@@ -2920,7 +2947,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdWaitEvents(XGL_CMD_BUFFER cmdBuffer, const XG
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_WAITEVENTS);
     }
     else {
@@ -2935,7 +2962,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdPipelineBarrier(XGL_CMD_BUFFER cmdBuffer, con
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_PIPELINEBARRIER);
     }
     else {
@@ -2950,7 +2977,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBeginQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUER
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BEGINQUERY);
     }
     else {
@@ -2965,7 +2992,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndQuery(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_ENDQUERY);
     }
     else {
@@ -2980,7 +3007,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdResetQueryPool(XGL_CMD_BUFFER cmdBuffer, XGL_
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_RESETQUERYPOOL);
     }
     else {
@@ -2995,7 +3022,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdWriteTimestamp(XGL_CMD_BUFFER cmdBuffer, XGL_
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_WRITETIMESTAMP);
     }
     else {
@@ -3010,7 +3037,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdInitAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_INITATOMICCOUNTERS);
     }
     else {
@@ -3025,7 +3052,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdLoadAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_LOADATOMICCOUNTERS);
     }
     else {
@@ -3040,7 +3067,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_SAVEATOMICCOUNTERS);
     }
     else {
@@ -3067,7 +3094,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BEGINRENDERPASS);
     }
     else {
@@ -3082,7 +3109,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_R
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        g_lastCmdBuffer[getTIDIndex()] = cmdBuffer;
+        updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_ENDRENDERPASS);
     }
     else {
@@ -3164,11 +3191,31 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(XGL_DEVICE device, XGL_
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDbgMarkerBegin(XGL_CMD_BUFFER cmdBuffer, const char* pMarker)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        updateCBTracking(cmdBuffer);
+        addCmd(pCB, CMD_DBGMARKERBEGIN);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
 {
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        updateCBTracking(cmdBuffer);
+        addCmd(pCB, CMD_DBGMARKEREND);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 

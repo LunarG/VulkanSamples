@@ -181,7 +181,9 @@ typedef enum _CMD_TYPE
     CMD_LOADATOMICCOUNTERS,
     CMD_SAVEATOMICCOUNTERS,
     CMD_BEGINRENDERPASS,
-    CMD_ENDRENDERPASS
+    CMD_ENDRENDERPASS,
+    CMD_DBGMARKERBEGIN,
+    CMD_DBGMARKEREND,
 } CMD_TYPE;
 // Data structure for holding sequence of cmds in cmd buffer
 typedef struct _CMD_NODE {
