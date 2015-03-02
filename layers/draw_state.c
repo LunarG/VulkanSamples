@@ -27,7 +27,6 @@
 #include <string.h>
 #include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
-#include "xgl_generic_intercept_proc_helper.h"
 #include "xgl_struct_string_helper.h"
 #include "xgl_struct_graphviz_helper.h"
 #include "draw_state.h"
@@ -1705,33 +1704,6 @@ static void initDrawState(void)
     }
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
-{
-    XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(XGL_INSTANCE instance)
-{
-    XGL_RESULT result = nextTable.DestroyInstance(instance);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(XGL_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus)
-{
-    XGL_RESULT result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData)
-{
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    pCurObj = gpuw;
-    loader_platform_thread_once(&g_initOnce, initDrawState);
-    XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
@@ -1758,15 +1730,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)
-{
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    pCurObj = gpuw;
-    loader_platform_thread_once(&g_initOnce, initDrawState);
-    XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
@@ -1787,12 +1750,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     }
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, uint32_t queueIndex, XGL_QUEUE* pQueue)
-{
-    XGL_RESULT result = nextTable.GetDeviceQueue(device, queueType, queueIndex, pQueue);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     for (uint32_t i=0; i < cmdBufferCount; i++) {
@@ -1802,205 +1759,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(XGL_QUEUE queue, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs)
-{
-    XGL_RESULT result = nextTable.QueueSetGlobalMemReferences(queue, memRefCount, pMemRefs);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
-{
-    XGL_RESULT result = nextTable.QueueWaitIdle(queue);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
-{
-    XGL_RESULT result = nextTable.DeviceWaitIdle(device);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_GPU_MEMORY* pMem)
-{
-    XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
-{
-    XGL_RESULT result = nextTable.FreeMemory(mem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(XGL_GPU_MEMORY mem, XGL_MEMORY_PRIORITY priority)
-{
-    XGL_RESULT result = nextTable.SetMemoryPriority(mem, priority);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglMapMemory(XGL_GPU_MEMORY mem, XGL_FLAGS flags, void** ppData)
-{
-    XGL_RESULT result = nextTable.MapMemory(mem, flags, ppData);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(XGL_GPU_MEMORY mem)
-{
-    XGL_RESULT result = nextTable.UnmapMemory(mem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(XGL_DEVICE device, const void* pSysMem, size_t memSize, XGL_GPU_MEMORY* pMem)
-{
-    XGL_RESULT result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo)
-{
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu0;
-    pCurObj = gpuw;
-    loader_platform_thread_once(&g_initOnce, initDrawState);
-    XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
-{
-    XGL_RESULT result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
-{
-    XGL_RESULT result = nextTable.OpenSharedQueueSemaphore(device, pOpenInfo, pSemaphore);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(XGL_DEVICE device, const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem)
-{
-    XGL_RESULT result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
-{
-    XGL_RESULT result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
     // TODO : When wrapped objects (such as dynamic state) are destroyed, need to clean up memory
     XGL_RESULT result = nextTable.DestroyObject(object);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(XGL_BASE_OBJECT object, XGL_OBJECT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
-{
-    XGL_RESULT result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, uint32_t allocationIdx, XGL_GPU_MEMORY mem, XGL_GPU_SIZE offset)
-{
-    XGL_RESULT result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(XGL_OBJECT object, uint32_t allocationIdx, XGL_GPU_SIZE rangeOffset, XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset)
-{
-    XGL_RESULT result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(XGL_IMAGE image, uint32_t allocationIdx, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset)
-{
-    XGL_RESULT result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence)
-{
-    XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
-{
-    XGL_RESULT result = nextTable.GetFenceStatus(fence);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t fenceCount, const XGL_FENCE* pFences, bool32_t waitAll, uint64_t timeout)
-{
-    XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
-{
-    XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
-{
-    XGL_RESULT result = nextTable.SignalQueueSemaphore(queue, semaphore);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
-{
-    XGL_RESULT result = nextTable.WaitQueueSemaphore(queue, semaphore);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_EVENT_CREATE_INFO* pCreateInfo, XGL_EVENT* pEvent)
-{
-    XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(XGL_EVENT event)
-{
-    XGL_RESULT result = nextTable.GetEventStatus(event);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetEvent(XGL_EVENT event)
-{
-    XGL_RESULT result = nextTable.SetEvent(event);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetEvent(XGL_EVENT event)
-{
-    XGL_RESULT result = nextTable.ResetEvent(event);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo, XGL_QUERY_POOL* pQueryPool)
-{
-    XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(XGL_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData)
-{
-    XGL_RESULT result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
-{
-    XGL_RESULT result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_BUFFER_CREATE_INFO* pCreateInfo, XGL_BUFFER* pBuffer)
-{
-    XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     return result;
 }
 
@@ -2022,30 +1784,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const 
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage)
-{
-    XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(XGL_IMAGE image, const float color[4])
-{
-    XGL_RESULT result = nextTable.SetFastClearColor(image, color);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(XGL_IMAGE image, float depth)
-{
-    XGL_RESULT result = nextTable.SetFastClearDepth(image, depth);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, size_t* pDataSize, void* pData)
-{
-    XGL_RESULT result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo, XGL_IMAGE_VIEW* pView)
 {
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
@@ -2061,24 +1799,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
         g_pImageHead = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE device, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, XGL_COLOR_ATTACHMENT_VIEW* pView)
-{
-    XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_VIEW* pView)
-{
-    XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_SHADER_CREATE_INFO* pCreateInfo, XGL_SHADER* pShader)
-{
-    XGL_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
     return result;
 }
 
@@ -2111,30 +1831,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     pTrav->pipeline = *pPipeline;
     initPipeline(pTrav, pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
-{
-    XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglStorePipeline(XGL_PIPELINE pipeline, size_t* pDataSize, void* pData)
-{
-    XGL_RESULT result = nextTable.StorePipeline(pipeline, pDataSize, pData);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE* pPipeline)
-{
-    XGL_RESULT result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta)
-{
-    XGL_RESULT result = nextTable.CreatePipelineDelta(device, p1, p2, delta);
     return result;
 }
 
@@ -3080,18 +2776,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer)
-{
-    XGL_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass)
-{
-    XGL_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
-    return result;
-}
-
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -3120,12 +2804,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_R
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel)
-{
-    XGL_RESULT result = nextTable.DbgSetValidationLevel(device, validationLevel);
-    return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
@@ -3177,30 +2855,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLB
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetMessageFilter(XGL_DEVICE device, int32_t msgCode, XGL_DBG_MSG_FILTER filter)
-{
-    XGL_RESULT result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(XGL_BASE_OBJECT object, size_t tagSize, const void* pTag)
-{
-    XGL_RESULT result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
-{
-    XGL_RESULT result = nextTable.DbgSetGlobalOption(dbgOption, dataSize, pData);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetDeviceOption(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
-{
-    XGL_RESULT result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
-    return result;
-}
-
 XGL_LAYER_EXPORT void XGLAPI xglCmdDbgMarkerBegin(XGL_CMD_BUFFER cmdBuffer, const char* pMarker)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -3231,36 +2885,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDbgMarkerEnd(XGL_CMD_BUFFER cmdBuffer)
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 
-#if defined(WIN32)
-// FIXME: NEED WINDOWS EQUIVALENT
-#else // WIN32
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU gpu, const XGL_WSI_X11_CONNECTION_INFO* pConnectionInfo)
-{
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    pCurObj = gpuw;
-    loader_platform_thread_once(&g_initOnce, initDrawState);
-    XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(XGL_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
-{
-    XGL_RESULT result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE device, const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem)
-{
-    XGL_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO* pPresentInfo, XGL_FENCE fence)
-{
-    XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
-    return result;
-}
-#endif // WIN32
 // TODO : Want to pass in a cmdBuffer here based on which state to display
 void drawStateDumpDotFile(char* outFileName)
 {
@@ -3301,21 +2925,149 @@ void drawStateDumpPngFile(char* outFileName)
 XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    void *addr;
 
     if (gpu == NULL)
         return NULL;
     pCurObj = gpuw;
     loader_platform_thread_once(&g_initOnce, initDrawState);
 
-    addr = layer_intercept_proc(funcName);
-    if (addr)
-        return addr;
-    else if (!strncmp("drawStateDumpDotFile", funcName, sizeof("drawStateDumpDotFile")))
+    if (!strcmp(funcName, "xglGetProcAddr"))
+        return (void *) xglGetProcAddr;
+    if (!strcmp(funcName, "xglCreateDevice"))
+        return (void*) xglCreateDevice;
+    if (!strcmp(funcName, "xglDestroyDevice"))
+        return (void*) xglDestroyDevice;
+    if (!strcmp(funcName, "xglEnumerateLayers"))
+        return (void*) xglEnumerateLayers;
+    if (!strcmp(funcName, "xglQueueSubmit"))
+        return (void*) xglQueueSubmit;
+    if (!strcmp(funcName, "xglDestroyObject"))
+        return (void*) xglDestroyObject;
+    if (!strcmp(funcName, "xglCreateBufferView"))
+        return (void*) xglCreateBufferView;
+    if (!strcmp(funcName, "xglCreateImageView"))
+        return (void*) xglCreateImageView;
+    if (!strcmp(funcName, "xglCreateGraphicsPipeline"))
+        return (void*) xglCreateGraphicsPipeline;
+    if (!strcmp(funcName, "xglCreateSampler"))
+        return (void*) xglCreateSampler;
+    if (!strcmp(funcName, "xglCreateDescriptorSetLayout"))
+        return (void*) xglCreateDescriptorSetLayout;
+    if (!strcmp(funcName, "xglBeginDescriptorRegionUpdate"))
+        return (void*) xglBeginDescriptorRegionUpdate;
+    if (!strcmp(funcName, "xglEndDescriptorRegionUpdate"))
+        return (void*) xglEndDescriptorRegionUpdate;
+    if (!strcmp(funcName, "xglCreateDescriptorRegion"))
+        return (void*) xglCreateDescriptorRegion;
+    if (!strcmp(funcName, "xglClearDescriptorRegion"))
+        return (void*) xglClearDescriptorRegion;
+    if (!strcmp(funcName, "xglAllocDescriptorSets"))
+        return (void*) xglAllocDescriptorSets;
+    if (!strcmp(funcName, "xglClearDescriptorSets"))
+        return (void*) xglClearDescriptorSets;
+    if (!strcmp(funcName, "xglUpdateDescriptors"))
+        return (void*) xglUpdateDescriptors;
+    if (!strcmp(funcName, "xglCreateDynamicViewportState"))
+        return (void*) xglCreateDynamicViewportState;
+    if (!strcmp(funcName, "xglCreateDynamicRasterState"))
+        return (void*) xglCreateDynamicRasterState;
+    if (!strcmp(funcName, "xglCreateDynamicColorBlendState"))
+        return (void*) xglCreateDynamicColorBlendState;
+    if (!strcmp(funcName, "xglCreateDynamicDepthStencilState"))
+        return (void*) xglCreateDynamicDepthStencilState;
+    if (!strcmp(funcName, "xglCreateCommandBuffer"))
+        return (void*) xglCreateCommandBuffer;
+    if (!strcmp(funcName, "xglBeginCommandBuffer"))
+        return (void*) xglBeginCommandBuffer;
+    if (!strcmp(funcName, "xglEndCommandBuffer"))
+        return (void*) xglEndCommandBuffer;
+    if (!strcmp(funcName, "xglResetCommandBuffer"))
+        return (void*) xglResetCommandBuffer;
+    if (!strcmp(funcName, "xglCmdBindPipeline"))
+        return (void*) xglCmdBindPipeline;
+    if (!strcmp(funcName, "xglCmdBindPipelineDelta"))
+        return (void*) xglCmdBindPipelineDelta;
+    if (!strcmp(funcName, "xglCmdBindDynamicStateObject"))
+        return (void*) xglCmdBindDynamicStateObject;
+    if (!strcmp(funcName, "xglCmdBindDescriptorSet"))
+        return (void*) xglCmdBindDescriptorSet;
+    if (!strcmp(funcName, "xglCmdBindVertexBuffer"))
+        return (void*) xglCmdBindVertexBuffer;
+    if (!strcmp(funcName, "xglCmdBindIndexBuffer"))
+        return (void*) xglCmdBindIndexBuffer;
+    if (!strcmp(funcName, "xglCmdDraw"))
+        return (void*) xglCmdDraw;
+    if (!strcmp(funcName, "xglCmdDrawIndexed"))
+        return (void*) xglCmdDrawIndexed;
+    if (!strcmp(funcName, "xglCmdDrawIndirect"))
+        return (void*) xglCmdDrawIndirect;
+    if (!strcmp(funcName, "xglCmdDrawIndexedIndirect"))
+        return (void*) xglCmdDrawIndexedIndirect;
+    if (!strcmp(funcName, "xglCmdDispatch"))
+        return (void*) xglCmdDispatch;
+    if (!strcmp(funcName, "xglCmdDispatchIndirect"))
+        return (void*) xglCmdDispatchIndirect;
+    if (!strcmp(funcName, "xglCmdCopyBuffer"))
+        return (void*) xglCmdCopyBuffer;
+    if (!strcmp(funcName, "xglCmdCopyImage"))
+        return (void*) xglCmdCopyImage;
+    if (!strcmp(funcName, "xglCmdCopyBufferToImage"))
+        return (void*) xglCmdCopyBufferToImage;
+    if (!strcmp(funcName, "xglCmdCopyImageToBuffer"))
+        return (void*) xglCmdCopyImageToBuffer;
+    if (!strcmp(funcName, "xglCmdCloneImageData"))
+        return (void*) xglCmdCloneImageData;
+    if (!strcmp(funcName, "xglCmdUpdateBuffer"))
+        return (void*) xglCmdUpdateBuffer;
+    if (!strcmp(funcName, "xglCmdFillBuffer"))
+        return (void*) xglCmdFillBuffer;
+    if (!strcmp(funcName, "xglCmdClearColorImage"))
+        return (void*) xglCmdClearColorImage;
+    if (!strcmp(funcName, "xglCmdClearColorImageRaw"))
+        return (void*) xglCmdClearColorImageRaw;
+    if (!strcmp(funcName, "xglCmdClearDepthStencil"))
+        return (void*) xglCmdClearDepthStencil;
+    if (!strcmp(funcName, "xglCmdResolveImage"))
+        return (void*) xglCmdResolveImage;
+    if (!strcmp(funcName, "xglCmdSetEvent"))
+        return (void*) xglCmdSetEvent;
+    if (!strcmp(funcName, "xglCmdResetEvent"))
+        return (void*) xglCmdResetEvent;
+    if (!strcmp(funcName, "xglCmdWaitEvents"))
+        return (void*) xglCmdWaitEvents;
+    if (!strcmp(funcName, "xglCmdPipelineBarrier"))
+        return (void*) xglCmdPipelineBarrier;
+    if (!strcmp(funcName, "xglCmdBeginQuery"))
+        return (void*) xglCmdBeginQuery;
+    if (!strcmp(funcName, "xglCmdEndQuery"))
+        return (void*) xglCmdEndQuery;
+    if (!strcmp(funcName, "xglCmdResetQueryPool"))
+        return (void*) xglCmdResetQueryPool;
+    if (!strcmp(funcName, "xglCmdWriteTimestamp"))
+        return (void*) xglCmdWriteTimestamp;
+    if (!strcmp(funcName, "xglCmdInitAtomicCounters"))
+        return (void*) xglCmdInitAtomicCounters;
+    if (!strcmp(funcName, "xglCmdLoadAtomicCounters"))
+        return (void*) xglCmdLoadAtomicCounters;
+    if (!strcmp(funcName, "xglCmdSaveAtomicCounters"))
+        return (void*) xglCmdSaveAtomicCounters;
+    if (!strcmp(funcName, "xglCmdBeginRenderPass"))
+        return (void*) xglCmdBeginRenderPass;
+    if (!strcmp(funcName, "xglCmdEndRenderPass"))
+        return (void*) xglCmdEndRenderPass;
+    if (!strcmp(funcName, "xglDbgRegisterMsgCallback"))
+        return (void*) xglDbgRegisterMsgCallback;
+    if (!strcmp(funcName, "xglDbgUnregisterMsgCallback"))
+        return (void*) xglDbgUnregisterMsgCallback;
+    if (!strcmp(funcName, "xglCmdDbgMarkerBegin"))
+        return (void*) xglCmdDbgMarkerBegin;
+    if (!strcmp(funcName, "xglCmdDbgMarkerEnd"))
+        return (void*) xglCmdDbgMarkerEnd;
+    if (!strcmp("drawStateDumpDotFile", funcName))
         return drawStateDumpDotFile;
-    else if (!strncmp("drawStateDumpCommandBufferDotFile", funcName, sizeof("drawStateDumpCommandBufferDotFile")))
+    if (!strcmp("drawStateDumpCommandBufferDotFile", funcName))
         return drawStateDumpCommandBufferDotFile;
-    else if (!strncmp("drawStateDumpPngFile", funcName, sizeof("drawStateDumpPngFile")))
+    if (!strcmp("drawStateDumpPngFile", funcName))
         return drawStateDumpPngFile;
     else {
         if (gpuw->pGPA == NULL)
