@@ -24,32 +24,13 @@
 
 #include "test_common.h"
 #include "xgltestbinding.h"
+#include "test_environment.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 namespace xgl_testing {
 
 size_t get_format_size(XGL_FORMAT format);
-
-class Environment : public ::testing::Environment {
-public:
-    Environment();
-
-    bool parse_args(int argc, char **argv);
-
-    virtual void SetUp();
-    virtual void TearDown();
-
-    const std::vector<Device *> &devices() { return devs_; }
-    Device &default_device() { return *(devs_[default_dev_]); }
-
-private:
-    XGL_APPLICATION_INFO app_;
-    int default_dev_;
-    XGL_INSTANCE inst;
-
-    std::vector<Device *> devs_;
-};
 
 class ImageChecker {
 public:
@@ -99,77 +80,6 @@ private:
     std::vector<uint8_t> pattern_solid_;
 };
 
-Environment::Environment() :
-    default_dev_(0)
-{
-    app_.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_.pAppName = "xgl_testing";
-    app_.appVersion = 1;
-    app_.pEngineName = "xgl_testing";
-    app_.engineVersion = 1;
-    app_.apiVersion = XGL_API_VERSION;
-}
-
-bool Environment::parse_args(int argc, char **argv)
-{
-    int i;
-
-    for (i = 1; i < argc; i++) {
-#define ARG(name) (strcmp(argv[i], name) == 0)
-#define ARG_P(name) (i < argc - 1 && ARG(name))
-        if (ARG_P("--gpu")) {
-            default_dev_ = atoi(argv[++i]);
-        } else {
-            break;
-        }
-#undef ARG
-#undef ARG_P
-    }
-
-    if (i < argc) {
-        std::cout <<
-            "invalid argument: " << argv[i] << "\n\n" <<
-            "Usage: " << argv[0] << " <options>\n\n" <<
-            "Options:\n"
-            "  --gpu <n>  Use GPU<n> as the default GPU\n";
-
-        return false;
-    }
-
-    return true;
-}
-
-void Environment::SetUp()
-{
-    XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
-    uint32_t count;
-    XGL_RESULT err;
-
-    err = xglCreateInstance(&app_, NULL, &inst);
-    ASSERT_EQ(XGL_SUCCESS, err);
-    err = xglEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
-    ASSERT_EQ(XGL_SUCCESS, err);
-    ASSERT_GT(count, default_dev_);
-
-    devs_.reserve(count);
-    for (uint32_t i = 0; i < count; i++) {
-        devs_.push_back(new Device(gpus[i]));
-        if (i == default_dev_) {
-            devs_[i]->init();
-            ASSERT_NE(true, devs_[i]->graphics_queues().empty());
-        }
-    }
-}
-
-void Environment::TearDown()
-{
-    // destroy devices first
-    for (std::vector<Device *>::iterator it = devs_.begin(); it != devs_.end(); it++)
-        delete *it;
-    devs_.clear();
-
-    xglDestroyInstance(inst);
-}
 
 uint32_t ImageChecker::hash_salt_;
 
@@ -582,7 +492,7 @@ namespace {
 
 #define DO(action) ASSERT_EQ(true, action);
 
-xgl_testing::Environment *environment;
+static xgl_testing::Environment *environment;
 
 class XglCmdBlitTest : public ::testing::Test {
 protected:

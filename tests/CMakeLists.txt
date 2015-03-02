@@ -18,6 +18,7 @@ SET(COMMON_CPP
     xglrenderframework.cpp
     xgltestbinding.cpp
     xgltestframework.cpp
+    test_environment.cpp
    )
 
 # Expect libraries to be in either the build (release build) or dbuild (debug) directories
