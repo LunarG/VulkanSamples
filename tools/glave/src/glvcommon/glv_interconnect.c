@@ -139,6 +139,7 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
     struct addrinfo hostAddrInfo = { 0 };
     SOCKET listenSocket;
 
+    glv_create_critical_section(&gSendLock);
     hostAddrInfo.ai_family = AF_INET;
     hostAddrInfo.ai_socktype = SOCK_STREAM;
     hostAddrInfo.ai_protocol = IPPROTO_TCP;
@@ -216,7 +217,6 @@ BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
     BOOL bConnected = FALSE;
     struct addrinfo hostAddrInfo = { 0 },
         *currentAttempt = NULL;
-
     glv_create_critical_section(&gSendLock);
     hostAddrInfo.ai_family = AF_UNSPEC;
     hostAddrInfo.ai_socktype = SOCK_STREAM;
