@@ -1109,42 +1109,13 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-
-    pipeline->sample_count = (info->ms.samples <= 1)?1:info->ms.samples;
-
-    /* 3DSTATE_MULTISAMPLE */
-    cmd = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE);
-    cmd_len = (intel_gpu_gen(pipeline->dev->gpu) >= INTEL_GEN(7)) ? 4 : 3;
-    dw = pipeline_cmd_ptr(pipeline, cmd_len + 2);
-    dw[0] = cmd | (cmd_len - 2);
-    if (pipeline->sample_count <= 1)
-        dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
-    else if (pipeline->sample_count <= 4 || intel_gpu_gen(pipeline->dev->gpu) == INTEL_GEN(6))
-        dw[1] = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
-    else
-        dw[1] = GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
-
-    switch (pipeline->sample_count) {
-    case 2:
-        dw[2] = pipeline->dev->sample_pattern_2x;
-        break;
-    case 4:
-        dw[2] = pipeline->dev->sample_pattern_4x;
-        break;
-    case 8:
-        dw[2] = pipeline->dev->sample_pattern_8x[0];
-        dw[3] = pipeline->dev->sample_pattern_8x[1];
-        break;
-    default:
-        break;
-    }
-
-    dw += cmd_len;
+    pipeline->sample_count = (info->ms.samples <= 1) ? 1 : info->ms.samples;
 
     /* 3DSTATE_SAMPLE_MASK */
     cmd = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK);
     cmd_len = 2;
 
+    dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = cmd | (cmd_len - 2);
     dw[1] = info->ms.sampleMask & ((1 << pipeline->sample_count) - 1);
     pipeline->cmd_sample_mask = dw[1];

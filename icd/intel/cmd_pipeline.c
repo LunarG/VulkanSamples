@@ -720,6 +720,43 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
         gen6_add_scratch_space(cmd, pos + 3, pipeline, fs);
 }
 
+static void gen6_3DSTATE_MULTISAMPLE(struct intel_cmd *cmd,
+                                     uint32_t sample_count)
+{
+    const uint8_t cmd_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 3;
+    uint32_t dw1, dw2, dw3, *dw;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    switch (sample_count) {
+    case 4:
+        dw1 = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
+        dw2 = cmd->dev->sample_pattern_4x;
+        dw3 = 0;
+        break;
+    case 8:
+        assert(cmd_gen(cmd) >= INTEL_GEN(7));
+        dw1 = GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+        dw2 = cmd->dev->sample_pattern_8x[0];
+        dw3 = cmd->dev->sample_pattern_8x[1];
+        break;
+    default:
+        assert(sample_count <= 1);
+        dw1 = GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+        dw2 = 0;
+        dw3 = 0;
+        break;
+    }
+
+    cmd_batch_pointer(cmd, cmd_len, &dw);
+
+    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (cmd_len - 2);
+    dw[1] = dw1;
+    dw[2] = dw2;
+    if (cmd_gen(cmd) >= INTEL_GEN(7))
+        dw[3] = dw3;
+}
+
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
                                       const struct intel_ds_view *view,
                                       bool optimal_ds)
@@ -1835,6 +1872,17 @@ static void emit_shader_resources(struct intel_cmd *cmd)
     }
 }
 
+static void emit_msaa(struct intel_cmd *cmd)
+{
+    const struct intel_fb *fb = cmd->bind.render_pass->fb;
+
+    if (fb->sample_count != cmd->bind.pipeline.graphics->sample_count)
+        cmd->result = XGL_ERROR_UNKNOWN;
+
+    cmd_wa_gen6_pre_multisample_depth_flush(cmd);
+    gen6_3DSTATE_MULTISAMPLE(cmd, fb->sample_count);
+}
+
 static void emit_rt(struct intel_cmd *cmd)
 {
     cmd_wa_gen6_pre_depth_stall_write(cmd);
@@ -1953,6 +2001,7 @@ static void emit_graphics_pipeline(struct intel_cmd *cmd)
 
 static void emit_bounded_states(struct intel_cmd *cmd)
 {
+    emit_msaa(cmd);
 
     emit_graphics_pipeline(cmd);
 
@@ -1989,7 +2038,6 @@ static void emit_bounded_states(struct intel_cmd *cmd)
     emit_shader_resources(cmd);
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
-    cmd_wa_gen6_pre_multisample_depth_flush(cmd);
 
     gen6_3DSTATE_VERTEX_BUFFERS(cmd);
     gen6_3DSTATE_VS(cmd);

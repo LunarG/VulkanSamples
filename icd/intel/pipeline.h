@@ -150,7 +150,6 @@ struct intel_pipeline_shader {
  *
  *  - 3DSTATE_URB (3)
  *  - 3DSTATE_VERTEX_ELEMENTS (1+2*INTEL_MAX_VERTEX_ELEMENT_COUNT)
- *  - 3DSTATE_MULTISAMPLE (3)
  *  - 3DSTATE_SAMPLE_MASK (2)
  *
  * On GEN7, there are
@@ -162,7 +161,6 @@ struct intel_pipeline_shader {
  *  - 3DSTATE_HS (7)
  *  - 3DSTATE_TE (4)
  *  - 3DSTATE_DS (6)
- *  - 3DSTATE_MULTISAMPLE (4)
  *  - 3DSTATE_SAMPLE_MASK (2)
  */
 #define INTEL_PSO_CMD_ENTRIES   128
