@@ -152,12 +152,12 @@ void glvdebug_xgl_QController::setStateWidgetsEnabled(bool bEnabled)
 {
     if(m_pDrawStateDiagram != NULL)
     {
-        m_pDrawStateDiagram->setEnabled(bEnabled);
+        m_pView->enable_custom_state_viewer(m_pDrawStateDiagram, bEnabled);
     }
 
     if(m_pCommandBuffersDiagram != NULL)
     {
-        m_pCommandBuffersDiagram->setEnabled(bEnabled);
+        m_pView->enable_custom_state_viewer(m_pCommandBuffersDiagram, bEnabled);
     }
 }
 
@@ -183,7 +183,7 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         if(m_pDrawStateDiagram != NULL)
         {
             m_pView->add_custom_state_viewer(m_pDrawStateDiagram, tr("Draw State"), false);
-            m_pDrawStateDiagram->setEnabled(false);
+            m_pView->enable_custom_state_viewer(m_pDrawStateDiagram, false);
         }
     }
 
@@ -193,7 +193,7 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         if(m_pCommandBuffersDiagram != NULL)
         {
             m_pView->add_custom_state_viewer(m_pCommandBuffersDiagram, tr("Command Buffers"), false);
-            m_pCommandBuffersDiagram->setEnabled(false);
+            m_pView->enable_custom_state_viewer(m_pCommandBuffersDiagram, false);
         }
     }
 
@@ -236,12 +236,12 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
 
         if(m_pDrawStateDiagram->load(tr("pipeline_dump.svg")))
         {
-            m_pDrawStateDiagram->setEnabled(true);
+            m_pView->enable_custom_state_viewer(m_pDrawStateDiagram, true);
         }
 
         if(m_pCommandBuffersDiagram->load(tr("cb_dump.svg")))
         {
-            m_pCommandBuffersDiagram->setEnabled(true);
+            m_pView->enable_custom_state_viewer(m_pCommandBuffersDiagram, true);
         }
     }
 }
@@ -257,6 +257,7 @@ void glvdebug_xgl_QController::onReplayStopped(uint64_t packetIndex)
 {
     m_pView->output_message(QString("Replay Stopped at packet index %1").arg(packetIndex));
     m_pView->on_replay_state_changed(false);
+    setStateWidgetsEnabled(false);
 
     // Stopping the replay means that it will 'play' or 'step' from the beginning,
     // so select the first packet index to indicate to the user what stopping replay does.
@@ -267,6 +268,7 @@ void glvdebug_xgl_QController::onReplayFinished(uint64_t packetIndex)
 {
     m_pView->output_message(QString("Replay Finished"));
     m_pView->on_replay_state_changed(false);
+    setStateWidgetsEnabled(false);
 
     // The replay has completed, so highlight the final packet index.
     m_pView->select_call_at_packet_index(packetIndex);

@@ -51,6 +51,7 @@ public:
     // \return tab index of state viewer
     virtual int add_custom_state_viewer(QWidget* pWidget, const QString& title, bool bBringToFront = false) = 0;
     virtual void remove_custom_state_viewer(int tabIndex) = 0;
+    virtual void enable_custom_state_viewer(QWidget* pWidget, bool bEnabled) = 0;
 
     virtual QToolButton* add_toolbar_button(const QString& title, bool bEnabled) = 0;
 

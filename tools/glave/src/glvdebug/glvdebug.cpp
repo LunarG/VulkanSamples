@@ -160,6 +160,11 @@ void glvdebug::remove_custom_state_viewer(int const tabIndex)
     ui->stateTabWidget->removeTab(tabIndex);
 }
 
+void glvdebug::enable_custom_state_viewer(QWidget* pWidget, bool bEnabled)
+{
+    ui->stateTabWidget->setTabEnabled(ui->stateTabWidget->indexOf(pWidget), bEnabled);
+}
+
 QToolButton* glvdebug::add_toolbar_button(const QString& title, bool bEnabled)
 {
     QToolButton* pButton = new QToolButton(ui->mainToolBar);
