@@ -920,6 +920,7 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
 {
     SET_NODE* pSet = getSetNode(ds);
     loader_platform_thread_lock_mutex(&globalLock);
+    g_lastBoundDescriptorSet = pSet->set;
     LAYOUT_NODE* pLayout = NULL;
     XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLayoutCI = NULL;
     // TODO : If pCIList is NULL, flag error
@@ -1337,11 +1338,11 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
         }
         if (pSet->ppDescriptors) {
             //void* pDesc = NULL;
-            fprintf(pOutFile, "\"DESCRIPTORS\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD PORT=\"desc\">DESCRIPTORS</TD></TR>");
+            fprintf(pOutFile, "\"DESCRIPTORS\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD COLSPAN=\"2\" PORT=\"desc\">DESCRIPTORS</TD></TR>");
             uint32_t i = 0;
             for (i=0; i < pSet->descriptorCount; i++) {
                 if (pSet->ppDescriptors[i]) {
-                    fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD></TR>", i, i);
+                    fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD><TD>%s</TD></TR>", i, i, string_XGL_STRUCTURE_TYPE(pSet->ppDescriptors[i]->sType));
                 }
             }
 #define NUM_COLORS 7
