@@ -296,6 +296,7 @@ void glvdebug::on_replay_state_changed(bool bReplayInProgress)
     ui->searchNextButton->setEnabled(bEnableUi);
     ui->searchPrevButton->setEnabled(bEnableUi);
     ui->searchTextBox->setEnabled(bEnableUi);
+    m_pTimeline->setEnabled(bEnableUi);
 }
 
 unsigned long long glvdebug::get_current_packet_index()
