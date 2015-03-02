@@ -120,12 +120,18 @@ void glvdebug_xgl_QController::updateCallTreeBasedOnSettings()
 
     if (g_xglDebugSettings.groupByFrame)
     {
-        m_groupByFramesProxy.setSourceModel(m_pTraceFileModel);
+        if (m_groupByFramesProxy.sourceModel() != m_pTraceFileModel)
+        {
+            m_groupByFramesProxy.setSourceModel(m_pTraceFileModel);
+        }
         m_pView->set_calltree_model(m_pTraceFileModel, &m_groupByFramesProxy);
     }
     else if (g_xglDebugSettings.groupByThread)
     {
-        m_groupByThreadsProxy.setSourceModel(m_pTraceFileModel);
+        if (m_groupByThreadsProxy.sourceModel() != m_pTraceFileModel)
+        {
+            m_groupByThreadsProxy.setSourceModel(m_pTraceFileModel);
+        }
         m_pView->set_calltree_model(m_pTraceFileModel, &m_groupByThreadsProxy);
     }
     else

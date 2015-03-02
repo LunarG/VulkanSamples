@@ -171,6 +171,12 @@ QToolButton* glvdebug::add_toolbar_button(const QString& title, bool bEnabled)
 
 void glvdebug::set_calltree_model(glvdebug_QTraceFileModel* pTraceFileModel, QAbstractProxyModel* pModel)
 {
+    if (m_pTraceFileModel == pTraceFileModel && pModel == m_pProxyModel)
+    {
+        // Setting model and proxy to the same thing they are already set to, so there's nothing to do!
+        return;
+    }
+
     m_pTraceFileModel = pTraceFileModel;
     m_pProxyModel = pModel;
 

@@ -238,7 +238,14 @@ public:
                 {
                     // parent is a frame
                     int frameIndex = (int)child.internalId();
-                    return createIndex(frameIndex, 0, (void*)&m_frameList[frameIndex]);
+                    if (frameIndex < m_frameList.count())
+                    {
+                        return createIndex(frameIndex, 0, (void*)&m_frameList[frameIndex]);
+                    }
+                    else
+                    {
+                        // This case has been hit in an unexpected scrolling bug.
+                    }
                 }
             }
         }
