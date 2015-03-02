@@ -38,7 +38,8 @@ public:
     glvdebug_qsvgviewer(QWidget* parent = 0) :
         QGraphicsView(parent),
         disabledScene(NULL),
-        enabledScene(NULL)
+        enabledScene(NULL),
+        autoFit(false)
     {
         // The destructor for QGraphicsScene will be called when this QGraphicsView is
         // destroyed.
@@ -76,6 +77,19 @@ public:
         }
     }
 
+    void paintEvent(QPaintEvent* event)
+    {
+        // Resize the scene to fit the widget. This is deferred until the first paint
+        // event (when the widget size is known).
+        if(autoFit)
+        {
+            this->fitInView(enabledScene->itemsBoundingRect(), Qt::KeepAspectRatio);
+            autoFit = false;
+        }
+
+        QGraphicsView::paintEvent(event);
+    }
+
     void wheelEvent(QWheelEvent* event)
     {
         if(event->orientation() == Qt::Vertical)
@@ -110,7 +124,7 @@ public:
         // This occurs when a SVG is loaded or when the QGraphicsScene is destroyed.
         enabledScene->addItem(new QGraphicsSvgItem(fileName));
 
-        this->fitInView(enabledScene->itemsBoundingRect(), Qt::KeepAspectRatio);
+        autoFit = true;
 
         return true;
     }
@@ -118,6 +132,8 @@ public:
 private:
     QGraphicsScene* disabledScene;
     QGraphicsScene* enabledScene;
+
+    bool autoFit;
 };
 
 #endif // _GLVDEBUG_QSVGVIEWER_H_
