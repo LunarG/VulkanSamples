@@ -154,6 +154,13 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return ret;
     }
 
+    intel_pipeline_init_default_sample_patterns(dev,
+            (uint8_t *) &dev->sample_pattern_1x,
+            (uint8_t *) &dev->sample_pattern_2x,
+            (uint8_t *) &dev->sample_pattern_4x,
+            (uint8_t *) dev->sample_pattern_8x,
+            (uint8_t *) dev->sample_pattern_16x);
+
     ret = dev_create_queues(dev, info->pRequestedQueues,
             info->queueRecordCount);
     if (ret != XGL_SUCCESS) {

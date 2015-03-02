@@ -127,6 +127,77 @@ struct intel_pipeline_create_info {
 
     XGL_COMPUTE_PIPELINE_CREATE_INFO    compute;
 };
+
+/* in S1.3 */
+struct intel_pipeline_sample_position {
+    int8_t x, y;
+};
+
+static uint8_t pack_sample_position(const struct intel_dev *dev,
+                                    const struct intel_pipeline_sample_position *pos)
+{
+    return (pos->x + 8) << 4 | (pos->y + 8);
+}
+
+void intel_pipeline_init_default_sample_patterns(const struct intel_dev *dev,
+                                                 uint8_t *pat_1x, uint8_t *pat_2x,
+                                                 uint8_t *pat_4x, uint8_t *pat_8x,
+                                                 uint8_t *pat_16x)
+{
+    static const struct intel_pipeline_sample_position default_1x[1] = {
+        {  0,  0 },
+    };
+    static const struct intel_pipeline_sample_position default_2x[2] = {
+        { -4, -4 },
+        {  4,  4 },
+    };
+    static const struct intel_pipeline_sample_position default_4x[4] = {
+        { -2, -6 },
+        {  6, -2 },
+        { -6,  2 },
+        {  2,  6 },
+    };
+    static const struct intel_pipeline_sample_position default_8x[8] = {
+        { -1,  1 },
+        {  1,  5 },
+        {  3, -5 },
+        {  5,  3 },
+        { -7, -1 },
+        { -3, -7 },
+        {  7, -3 },
+        { -5,  7 },
+    };
+    static const struct intel_pipeline_sample_position default_16x[16] = {
+        {  0,  2 },
+        {  3,  0 },
+        { -3, -2 },
+        { -2, -4 },
+        {  4,  3 },
+        {  5,  1 },
+        {  6, -1 },
+        {  2, -6 },
+        { -4,  5 },
+        { -5, -5 },
+        { -1, -7 },
+        {  7, -3 },
+        { -7,  4 },
+        {  1, -8 },
+        { -6,  6 },
+        { -8,  7 },
+    };
+    int i;
+
+    pat_1x[0] = pack_sample_position(dev, default_1x);
+    for (i = 0; i < 2; i++)
+        pat_2x[i] = pack_sample_position(dev, &default_2x[i]);
+    for (i = 0; i < 4; i++)
+        pat_4x[i] = pack_sample_position(dev, &default_4x[i]);
+    for (i = 0; i < 8; i++)
+        pat_8x[i] = pack_sample_position(dev, &default_8x[i]);
+    for (i = 0; i < 16; i++)
+        pat_16x[i] = pack_sample_position(dev, &default_16x[i]);
+}
+
 struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev *dev,
                                                                 enum intel_dev_meta_shader id)
 {
@@ -1030,56 +1101,6 @@ static void pipeline_build_depth_stencil(struct intel_pipeline *pipeline,
        pipeline->cmd_depth_test |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
 }
 
-static void pipeline_init_sample_pattern(struct intel_pipeline *pipeline,
-                                         uint8_t *samples)
-{
-    struct sample {
-        int x, y;
-    };
-    static const struct sample default_pattern_2x[2] = {
-        { -4, -4 },
-        {  4,  4 },
-    };
-    static const struct sample default_pattern_4x[4] = {
-        { -2, -6 },
-        {  6, -2 },
-        { -6,  2 },
-        {  2,  6 },
-    };
-    static const struct sample default_pattern_8x[8] = {
-        {  1, -3 },
-        { -1,  3 },
-        {  5,  1 },
-        { -3, -5 },
-        { -5,  5 },
-        { -7, -1 },
-        {  3,  7 },
-        {  7, -7 },
-    };
-
-    const struct sample *pattern;
-    int i;
-
-    switch (pipeline->sample_count) {
-    case 2:
-        pattern = default_pattern_2x;
-        break;
-    case 4:
-        pattern = default_pattern_4x;
-        break;
-    case 8:
-        pattern = default_pattern_8x;
-        break;
-    default:
-        memset(samples, 0, pipeline->sample_count);
-        return;
-        break;
-    }
-
-    for (i = 0; i < pipeline->sample_count; i++)
-        samples[i] = (pattern[i].x + 8) << 4 | (pattern[i].y + 8);
-}
-
 static void pipeline_build_msaa(struct intel_pipeline *pipeline,
                                 const struct intel_pipeline_create_info *info)
 {
@@ -1103,7 +1124,20 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
     else
         dw[1] = GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
 
-    pipeline_init_sample_pattern(pipeline, (uint8_t *) &dw[2]);
+    switch (pipeline->sample_count) {
+    case 2:
+        dw[2] = pipeline->dev->sample_pattern_2x;
+        break;
+    case 4:
+        dw[2] = pipeline->dev->sample_pattern_4x;
+        break;
+    case 8:
+        dw[2] = pipeline->dev->sample_pattern_8x[0];
+        dw[3] = pipeline->dev->sample_pattern_8x[1];
+        break;
+    default:
+        break;
+    }
 
     dw += cmd_len;
 

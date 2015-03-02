@@ -255,4 +255,9 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
 void intel_pipeline_shader_destroy(struct intel_dev *dev,
                                    struct intel_pipeline_shader *sh);
 
+void intel_pipeline_init_default_sample_patterns(const struct intel_dev *dev,
+                                                 uint8_t *pat_1x, uint8_t *pat_2x,
+                                                 uint8_t *pat_4x, uint8_t *pat_8x,
+                                                 uint8_t *pat_16x);
+
 #endif /* PIPELINE_H */
