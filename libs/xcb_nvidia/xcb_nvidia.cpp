@@ -30,7 +30,7 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
     xglNvidia += "\\XGL_nvidia.dll";
     HMODULE module = LoadLibrary(xglNvidia.c_str());
     if (!module) {
-        std::string xglNulldrv = (getenv("LIBXGL_DRIVERS_PATH") == NULL) ? "" : getenv("LIBXGL_DRIVERS_PATH");
+        std::string xglNulldrv = (getenv("XGL_DRIVERS_PATH") == NULL) ? "" : getenv("XGL_DRIVERS_PATH");
         xglNulldrv += "\\xgl_nulldrv.dll";
         module = LoadLibrary(xglNulldrv.c_str());
     }
