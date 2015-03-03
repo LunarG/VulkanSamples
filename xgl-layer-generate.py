@@ -148,6 +148,9 @@ class Subcommand(object):
         r_body.append('    pNewDbgFuncNode->pUserData = pUserData;')
         r_body.append('    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;')
         r_body.append('    g_pDbgFunctionHead = pNewDbgFuncNode;')
+        r_body.append('    // force callbacks if DebugAction hasn\'t been set already other than initial value')
+        r_body.append('    if (g_actionIsDefault)')
+        r_body.append('        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;')
         r_body.append('    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);')
         r_body.append('    return result;')
         r_body.append('}')
@@ -169,6 +172,13 @@ class Subcommand(object):
         ur_body.append('        }')
         ur_body.append('        pPrev = pTrav;')
         ur_body.append('        pTrav = pTrav->pNext;')
+        ur_body.append('    }')
+        ur_body.append('    if (g_pDbgFunctionHead == NULL)')
+        ur_body.append('    {')
+        ur_body.append('        if (g_actionIsDefault)')
+        ur_body.append('            g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;')
+        ur_body.append('        else')
+        ur_body.append('            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;')
         ur_body.append('    }')
         ur_body.append('    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);')
         ur_body.append('    return result;')
@@ -580,6 +590,9 @@ class Subcommand(object):
                         using_line += '    pNewDbgFuncNode->pUserData = pUserData;\n'
                         using_line += '    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;\n'
                         using_line += '    g_pDbgFunctionHead = pNewDbgFuncNode;\n'
+                        using_line += '    // force callbacks if DebugAction hasn\'t been set already other than initial value\n'
+                        using_line += '    if (g_actionIsDefault)\n'
+                        using_line += '        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;\n'
                     elif 'DbgUnregisterMsgCallback' in proto.name:
                         using_line =  '    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;\n'
                         using_line += '    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;\n'
@@ -593,6 +606,13 @@ class Subcommand(object):
                         using_line += '        }\n'
                         using_line += '        pPrev = pTrav;\n'
                         using_line += '        pTrav = pTrav->pNext;\n'
+                        using_line += '    }\n'
+                        using_line += '    if (g_pDbgFunctionHead == NULL)\n'
+                        using_line += '    {\n'
+                        using_line += '        if (g_actionIsDefault)\n'
+                        using_line += '            g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;\n'
+                        using_line += '        else\n'
+                        using_line += '            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;\n'
                         using_line += '    }\n'
                     # Special cases for API funcs that don't use an object as first arg
                     elif True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'SignalQueueSemaphore', 'WaitQueueSemaphore', 'WsiX11QueuePresent']]:
@@ -888,8 +908,8 @@ class Subcommand(object):
         if init_opts:
             func_body.append('    const char *strOpt;')
             func_body.append('    // initialize %s options' % name)
-            func_body.append('    g_reportingLevel = getLayerOptionEnum("%sReportLevel", g_reportingLevel);' % name)
-            func_body.append('    g_debugAction    = getLayerOptionEnum("%sDebugAction", g_debugAction);' % name)
+            func_body.append('    getLayerOptionEnum("%sReportLevel", &g_reportingLevel);' % name)
+            func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", &g_debugAction);' % name)
             func_body.append('')
             func_body.append('    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)')
             func_body.append('    {')

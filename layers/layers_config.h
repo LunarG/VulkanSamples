@@ -23,13 +23,14 @@
  *
  **************************************************************************/
 #pragma once
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 const char *getLayerOption(const char *_option);
-uint32_t getLayerOptionEnum(const char *_option, uint32_t optionDefault);
+bool getLayerOptionEnum(const char *_option, uint32_t *optionDefault);
 
 void setLayerOption(const char *_option, const char *_val);
 void setLayerOptionEnum(const char *_option, const char *_valEnum);

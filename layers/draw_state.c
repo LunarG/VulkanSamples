@@ -1669,8 +1669,8 @@ static void initDrawState(void)
 {
     const char *strOpt;
     // initialize DrawState options
-    g_reportingLevel = getLayerOptionEnum("DrawStateReportLevel", g_reportingLevel);
-    g_debugAction    = getLayerOptionEnum("DrawStateDebugAction", g_debugAction);
+    getLayerOptionEnum("DrawStateReportLevel", &g_reportingLevel);
+    g_actionIsDefault = getLayerOptionEnum("DrawStateDebugAction", &g_debugAction);
 
     if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
     {
@@ -3141,6 +3141,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBAC
     pNewDbgFuncNode->pUserData = pUserData;
     pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
     g_pDbgFunctionHead = pNewDbgFuncNode;
+    // force callbacks if DebugAction hasn't been set already other than initial value
+    if (g_actionIsDefault)
+        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
     return result;
 }
@@ -3162,6 +3165,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLB
         }
         pPrev = pTrav;
         pTrav = pTrav->pNext;
+    }
+    if (g_pDbgFunctionHead == NULL)
+    {
+        if (g_actionIsDefault)
+            g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
+        else
+            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;
     }
     XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
     return result;

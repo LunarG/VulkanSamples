@@ -22,10 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <stdio.h>
+#include <stdbool.h>
 
 static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
 static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_INFO;
 static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
+static bool g_actionIsDefault = true;
 static FILE *g_logFile = NULL;
 
 // Utility function to handle reporting
