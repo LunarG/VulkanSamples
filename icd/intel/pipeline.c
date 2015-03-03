@@ -331,26 +331,8 @@ static XGL_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
     case XGL_TOPOLOGY_TRIANGLE_STRIP:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP;
         break;
-    case XGL_TOPOLOGY_RECT_LIST:
-        /*
-         * TODO: Rect lists are special in XGL, do we need to do
-         * something special here?
-         * XGL Guide:
-         * The rectangle list is a special geometry primitive type
-         * that can be used for implementing post-processing techniques
-         * or efficient copy operations. There are some special limitations
-         * for rectangle primitives. They cannot be clipped, must
-         * be axis aligned and cannot have depth gradient.
-         * Failure to comply with these restrictions results in
-         * undefined rendering results.
-         */
-        pipeline->prim_type = GEN6_3DPRIM_RECTLIST;
-        break;
-    case XGL_TOPOLOGY_QUAD_LIST:
-        pipeline->prim_type = GEN6_3DPRIM_QUADLIST;
-        break;
-    case XGL_TOPOLOGY_QUAD_STRIP:
-        pipeline->prim_type = GEN6_3DPRIM_QUADSTRIP;
+    case XGL_TOPOLOGY_TRIANGLE_FAN:
+        pipeline->prim_type = GEN6_3DPRIM_TRIFAN;
         break;
     case XGL_TOPOLOGY_LINE_LIST_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_LINELIST_ADJ;

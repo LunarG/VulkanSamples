@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 52, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 53, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -397,14 +397,12 @@ typedef enum _XGL_PRIMITIVE_TOPOLOGY
     XGL_TOPOLOGY_LINE_STRIP                                 = 0x00000002,
     XGL_TOPOLOGY_TRIANGLE_LIST                              = 0x00000003,
     XGL_TOPOLOGY_TRIANGLE_STRIP                             = 0x00000004,
-    XGL_TOPOLOGY_RECT_LIST                                  = 0x00000005,
-    XGL_TOPOLOGY_QUAD_LIST                                  = 0x00000006,
-    XGL_TOPOLOGY_QUAD_STRIP                                 = 0x00000007,
-    XGL_TOPOLOGY_LINE_LIST_ADJ                              = 0x00000008,
-    XGL_TOPOLOGY_LINE_STRIP_ADJ                             = 0x00000009,
-    XGL_TOPOLOGY_TRIANGLE_LIST_ADJ                          = 0x0000000a,
-    XGL_TOPOLOGY_TRIANGLE_STRIP_ADJ                         = 0x0000000b,
-    XGL_TOPOLOGY_PATCH                                      = 0x0000000c,
+    XGL_TOPOLOGY_TRIANGLE_FAN                               = 0x00000005,
+    XGL_TOPOLOGY_LINE_LIST_ADJ                              = 0x00000006,
+    XGL_TOPOLOGY_LINE_STRIP_ADJ                             = 0x00000007,
+    XGL_TOPOLOGY_TRIANGLE_LIST_ADJ                          = 0x00000008,
+    XGL_TOPOLOGY_TRIANGLE_STRIP_ADJ                         = 0x00000009,
+    XGL_TOPOLOGY_PATCH                                      = 0x0000000a,
 
     XGL_PRIMITIVE_TOPOLOGY_BEGIN_RANGE                      = XGL_TOPOLOGY_POINT_LIST,
     XGL_PRIMITIVE_TOPOLOGY_END_RANGE                        = XGL_TOPOLOGY_PATCH,
