@@ -510,7 +510,7 @@ class Subcommand(object):
                                 if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
                                     cis_print_func = 'pTmpStr = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
                                 else:
-                                    cis_print_func = 'pTmpStr = (char*)malloc(sizeof(char));\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
+                                    cis_print_func = 'pTmpStr = (char*)malloc(32);\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
                                 if not i_decl:
                                     log_func += '\n    uint32_t i;'
                                     i_decl = True
