@@ -300,6 +300,8 @@ void glvdebug_xgl_QController::onSettingsUpdated(glv_SettingGroup *pGroups, unsi
                                             g_xglDebugSettings.pauseOnReplayWarning,
                                             g_xglDebugSettings.pauseOnReplayError);
 
+    m_replayWorker.onSettingsUpdated(pGroups, numGroups);
+
     updateCallTreeBasedOnSettings();
 }
 
