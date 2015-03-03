@@ -316,27 +316,27 @@ void glvdebug_QReplayWorker::playCurrentTraceFile(uint64_t startPacketIndex)
         }
 
         // Process events and pause or stop if needed
-        if (m_bPauseReplay || m_pauseAtPacketIndex == m_currentReplayPacketIndex)
+        if (m_bPauseReplay || m_pauseAtPacketIndex == pCurPacket->pHeader->global_packet_index)
         {
-            if (m_pauseAtPacketIndex == m_currentReplayPacketIndex)
+            if (m_pauseAtPacketIndex == pCurPacket->pHeader->global_packet_index)
             {
                 // reset
                 m_pauseAtPacketIndex = -1;
             }
 
-            doReplayPaused(m_currentReplayPacketIndex);
+            doReplayPaused(pCurPacket->pHeader->global_packet_index);
             return;
         }
 
         if (m_bStopReplay)
         {
-            doReplayStopped(m_currentReplayPacketIndex);
+            doReplayStopped(pCurPacket->pHeader->global_packet_index);
             m_currentReplayPacketIndex = 0;
             return;
         }
     }
 
-    doReplayFinished(m_currentReplayPacketIndex);
+    doReplayFinished(pCurPacket->pHeader->global_packet_index);
 }
 
 void glvdebug_QReplayWorker::onPlayToHere()
