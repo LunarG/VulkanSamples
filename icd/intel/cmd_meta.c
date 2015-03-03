@@ -45,10 +45,6 @@ static XGL_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
     info.viewType = XGL_BUFFER_VIEW_TYPED;
     info.stride = icd_format_get_size(format);
     info.format = format;
-    info.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    info.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    info.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    info.channels.a = XGL_CHANNEL_SWIZZLE_A;
     info.range = range;
 
     /*

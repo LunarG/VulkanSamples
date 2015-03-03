@@ -129,8 +129,10 @@ static const struct icd_format_info {
     [XGL_FMT_D16_UNORM_S8_UINT]    = { 3,  2 },
     [XGL_FMT_D24_UNORM_S8_UINT]    = { 4,  2 },
     [XGL_FMT_D32_SFLOAT_S8_UINT]   = { 4,  2 },
-    [XGL_FMT_BC1_UNORM]            = { 8,  4 },
-    [XGL_FMT_BC1_SRGB]             = { 8,  4 },
+    [XGL_FMT_BC1_RGB_UNORM]        = { 8,  4 },
+    [XGL_FMT_BC1_RGB_SRGB]         = { 8,  4 },
+    [XGL_FMT_BC1_RGBA_UNORM]       = { 8,  4 },
+    [XGL_FMT_BC1_RGBA_SRGB]        = { 8,  4 },
     [XGL_FMT_BC2_UNORM]            = { 16, 4 },
     [XGL_FMT_BC2_SRGB]             = { 16, 4 },
     [XGL_FMT_BC3_UNORM]            = { 16, 4 },
@@ -153,8 +155,8 @@ static const struct icd_format_info {
     [XGL_FMT_EAC_R11G11_SNORM]     = { 0, 0 },
     [XGL_FMT_ASTC_4x4_UNORM]       = { 0, 0 },
     [XGL_FMT_ASTC_4x4_SRGB]        = { 0, 0 },
-    [XGL_FMT_ASTC_4x5_UNORM]       = { 0, 0 },
-    [XGL_FMT_ASTC_4x5_SRGB]        = { 0, 0 },
+    [XGL_FMT_ASTC_5x4_UNORM]       = { 0, 0 },
+    [XGL_FMT_ASTC_5x4_SRGB]        = { 0, 0 },
     [XGL_FMT_ASTC_5x5_UNORM]       = { 0, 0 },
     [XGL_FMT_ASTC_5x5_SRGB]        = { 0, 0 },
     [XGL_FMT_ASTC_6x5_UNORM]       = { 0, 0 },
@@ -251,7 +253,7 @@ bool icd_format_is_norm(XGL_FORMAT format)
     case XGL_FMT_R16G16B16_SNORM:
     case XGL_FMT_R16G16B16A16_UNORM:
     case XGL_FMT_R16G16B16A16_SNORM:
-    case XGL_FMT_BC1_UNORM:
+    case XGL_FMT_BC1_RGB_UNORM:
     case XGL_FMT_BC2_UNORM:
     case XGL_FMT_BC3_UNORM:
     case XGL_FMT_BC4_UNORM:
@@ -267,7 +269,7 @@ bool icd_format_is_norm(XGL_FORMAT format)
     case XGL_FMT_EAC_R11G11_UNORM:
     case XGL_FMT_EAC_R11G11_SNORM:
     case XGL_FMT_ASTC_4x4_UNORM:
-    case XGL_FMT_ASTC_4x5_UNORM:
+    case XGL_FMT_ASTC_5x4_UNORM:
     case XGL_FMT_ASTC_5x5_UNORM:
     case XGL_FMT_ASTC_6x5_UNORM:
     case XGL_FMT_ASTC_6x6_UNORM:
@@ -381,12 +383,12 @@ bool icd_format_is_srgb(XGL_FORMAT format)
     case XGL_FMT_R8G8_SRGB:
     case XGL_FMT_R8G8B8_SRGB:
     case XGL_FMT_R8G8B8A8_SRGB:
-    case XGL_FMT_BC1_SRGB:
+    case XGL_FMT_BC1_RGB_SRGB:
     case XGL_FMT_BC2_SRGB:
     case XGL_FMT_BC3_SRGB:
     case XGL_FMT_BC7_SRGB:
     case XGL_FMT_ASTC_4x4_SRGB:
-    case XGL_FMT_ASTC_4x5_SRGB:
+    case XGL_FMT_ASTC_5x4_SRGB:
     case XGL_FMT_ASTC_5x5_SRGB:
     case XGL_FMT_ASTC_6x5_SRGB:
     case XGL_FMT_ASTC_6x6_SRGB:
@@ -413,8 +415,8 @@ bool icd_format_is_srgb(XGL_FORMAT format)
 bool icd_format_is_compressed(XGL_FORMAT format)
 {
     switch (format) {
-    case XGL_FMT_BC1_UNORM:
-    case XGL_FMT_BC1_SRGB:
+    case XGL_FMT_BC1_RGB_UNORM:
+    case XGL_FMT_BC1_RGB_SRGB:
     case XGL_FMT_BC2_UNORM:
     case XGL_FMT_BC2_SRGB:
     case XGL_FMT_BC3_UNORM:
@@ -436,8 +438,8 @@ bool icd_format_is_compressed(XGL_FORMAT format)
     case XGL_FMT_EAC_R11G11_SNORM:
     case XGL_FMT_ASTC_4x4_UNORM:
     case XGL_FMT_ASTC_4x4_SRGB:
-    case XGL_FMT_ASTC_4x5_UNORM:
-    case XGL_FMT_ASTC_4x5_SRGB:
+    case XGL_FMT_ASTC_5x4_UNORM:
+    case XGL_FMT_ASTC_5x4_SRGB:
     case XGL_FMT_ASTC_5x5_UNORM:
     case XGL_FMT_ASTC_5x5_SRGB:
     case XGL_FMT_ASTC_6x5_UNORM:
@@ -711,8 +713,8 @@ void icd_format_get_raw_value(XGL_FORMAT format,
                                   (color[2] & 0x1ff) << 18 |
                                   (color[3] & 0x1f)  << 27;
         break;
-    case XGL_FMT_BC1_UNORM:
-    case XGL_FMT_BC1_SRGB:
+    case XGL_FMT_BC1_RGB_UNORM:
+    case XGL_FMT_BC1_RGB_SRGB:
     case XGL_FMT_BC4_UNORM:
     case XGL_FMT_BC4_SNORM:
         memcpy(value, color, 8);

@@ -398,8 +398,10 @@ size_t get_format_size(XGL_FORMAT format)
         [XGL_FMT_D16_UNORM_S8_UINT]    = { 3,  2 },
         [XGL_FMT_D24_UNORM_S8_UINT]    = { 4,  2 },
         [XGL_FMT_D32_SFLOAT_S8_UINT]   = { 4,  2 },
-        [XGL_FMT_BC1_UNORM]            = { 8,  4 },
-        [XGL_FMT_BC1_SRGB]             = { 8,  4 },
+        [XGL_FMT_BC1_RGB_UNORM]        = { 8,  4 },
+        [XGL_FMT_BC1_RGB_SRGB]         = { 8,  4 },
+        [XGL_FMT_BC1_RGBA_UNORM]       = { 8,  4 },
+        [XGL_FMT_BC1_RGBA_SRGB]        = { 8,  4 },
         [XGL_FMT_BC2_UNORM]            = { 16, 4 },
         [XGL_FMT_BC2_SRGB]             = { 16, 4 },
         [XGL_FMT_BC3_UNORM]            = { 16, 4 },
@@ -414,16 +416,19 @@ size_t get_format_size(XGL_FORMAT format)
         [XGL_FMT_BC7_SRGB]             = { 16, 4 },
         // TODO: Initialize remaining compressed formats.
         [XGL_FMT_ETC2_R8G8B8_UNORM]    = { 0, 0 },
+        [XGL_FMT_ETC2_R8G8B8_SRGB]     = { 0, 0 },
         [XGL_FMT_ETC2_R8G8B8A1_UNORM]  = { 0, 0 },
+        [XGL_FMT_ETC2_R8G8B8A1_SRGB]   = { 0, 0 },
         [XGL_FMT_ETC2_R8G8B8A8_UNORM]  = { 0, 0 },
+        [XGL_FMT_ETC2_R8G8B8A8_SRGB]   = { 0, 0 },
         [XGL_FMT_EAC_R11_UNORM]        = { 0, 0 },
         [XGL_FMT_EAC_R11_SNORM]        = { 0, 0 },
         [XGL_FMT_EAC_R11G11_UNORM]     = { 0, 0 },
         [XGL_FMT_EAC_R11G11_SNORM]     = { 0, 0 },
         [XGL_FMT_ASTC_4x4_UNORM]       = { 0, 0 },
         [XGL_FMT_ASTC_4x4_SRGB]        = { 0, 0 },
-        [XGL_FMT_ASTC_4x5_UNORM]       = { 0, 0 },
-        [XGL_FMT_ASTC_4x5_SRGB]        = { 0, 0 },
+        [XGL_FMT_ASTC_5x4_UNORM]       = { 0, 0 },
+        [XGL_FMT_ASTC_5x4_SRGB]        = { 0, 0 },
         [XGL_FMT_ASTC_5x5_UNORM]       = { 0, 0 },
         [XGL_FMT_ASTC_5x5_SRGB]        = { 0, 0 },
         [XGL_FMT_ASTC_6x5_UNORM]       = { 0, 0 },
@@ -448,6 +453,8 @@ size_t get_format_size(XGL_FORMAT format)
         [XGL_FMT_ASTC_12x10_SRGB]      = { 0, 0 },
         [XGL_FMT_ASTC_12x12_UNORM]     = { 0, 0 },
         [XGL_FMT_ASTC_12x12_SRGB]      = { 0, 0 },
+        [XGL_FMT_B4G4R4A4_UNORM]       = { 2, 4 },
+        [XGL_FMT_B5G5R5A1_UNORM]       = { 2, 4 },
         [XGL_FMT_B5G6R5_UNORM]         = { 2, 3 },
         [XGL_FMT_B5G6R5_USCALED]       = { 2, 3 },
         [XGL_FMT_B8G8R8_UNORM]         = { 3, 3 },
@@ -1227,7 +1234,7 @@ TEST_F(XglCmdCloneImageDataTest, Basic)
              it->format <= XGL_FMT_R32G32B32_SFLOAT) ||
             (it->format >= XGL_FMT_B8G8R8_UNORM &&
              it->format <= XGL_FMT_B8G8R8_SRGB) ||
-            (it->format >= XGL_FMT_BC1_UNORM &&
+            (it->format >= XGL_FMT_BC1_RGB_UNORM &&
              it->format <= XGL_FMT_ASTC_12x12_SRGB) ||
             (it->format >= XGL_FMT_D16_UNORM &&
              it->format <= XGL_FMT_D32_SFLOAT_S8_UINT) ||

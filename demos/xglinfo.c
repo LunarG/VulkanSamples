@@ -232,8 +232,8 @@ static const char *xgl_format_string(XGL_FORMAT fmt)
     STR(D16_UNORM_S8_UINT);
     STR(D24_UNORM_S8_UINT);
     STR(D32_SFLOAT_S8_UINT);
-    STR(BC1_UNORM);
-    STR(BC1_SRGB);
+    STR(BC1_RGB_UNORM);
+    STR(BC1_RGB_SRGB);
     STR(BC2_UNORM);
     STR(BC2_SRGB);
     STR(BC3_UNORM);
@@ -255,8 +255,8 @@ static const char *xgl_format_string(XGL_FORMAT fmt)
     STR(EAC_R11G11_SNORM);
     STR(ASTC_4x4_UNORM);
     STR(ASTC_4x4_SRGB);
-    STR(ASTC_4x5_UNORM);
-    STR(ASTC_4x5_SRGB);
+    STR(ASTC_5x4_UNORM);
+    STR(ASTC_5x4_SRGB);
     STR(ASTC_5x5_UNORM);
     STR(ASTC_5x5_SRGB);
     STR(ASTC_6x5_UNORM);

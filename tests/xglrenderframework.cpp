@@ -797,10 +797,6 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
     view_info.viewType = XGL_BUFFER_VIEW_TYPED;
     view_info.stride = m_stride;
     view_info.format = viewFormat;
-    view_info.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    view_info.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    view_info.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    view_info.channels.a = XGL_CHANNEL_SWIZZLE_A;
     view_info.offset = 0;
     view_info.range  = allocationSize;
     m_bufferView.init(*m_device, view_info);
