@@ -122,14 +122,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglRecordMemoryRange(
-    XGL_GPU_MEMORY                              mem_,
-    XGL_GPU_SIZE                                rangeSize,
-    XGL_GPU_SIZE                                rangeOffset)
-{
-    return XGL_SUCCESS;
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
     XGL_DEVICE                                  device,
     const void*                                 pSysMem,

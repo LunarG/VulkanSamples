@@ -306,11 +306,6 @@ core = Extension(
         Proto("XGL_RESULT", "UnmapMemory",
             [Param("XGL_GPU_MEMORY", "mem")]),
 
-        Proto("XGL_RESULT", "RecordMemoryRange",
-            [Param("XGL_GPU_MEMORY", "mem"),
-             Param("XGL_GPU_SIZE", "rangeSize"),
-             Param("XGL_GPU_SIZE", "rangeOffset")]),
-
         Proto("XGL_RESULT", "PinSystemMemory",
             [Param("XGL_DEVICE", "device"),
              Param("const void*", "pSysMem"),
