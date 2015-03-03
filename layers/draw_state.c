@@ -2525,13 +2525,14 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         updateCBTracking(cmdBuffer);
-        loader_platform_thread_lock_mutex(&globalLock);
-        g_lastBoundPipeline = cmdBuffer;
-        loader_platform_thread_unlock_mutex(&globalLock);
         drawStateDumpDotFile("pipeline_diagram.dot");
         addCmd(pCB, CMD_BINDPIPELINE);
-        if (getPipeline(pipeline)) {
+        PIPELINE_NODE* pPN = getPipeline(pipeline);
+        if (pPN) {
             pCB->lastBoundPipeline = pipeline;
+            loader_platform_thread_lock_mutex(&globalLock);
+            g_lastBoundPipeline = pPN;
+            loader_platform_thread_unlock_mutex(&globalLock);
         }
         else {
             char str[1024];
