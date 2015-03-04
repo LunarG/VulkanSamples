@@ -55,8 +55,6 @@ public:
     void onSettingsUpdated(glv_SettingGroup *pGroups, unsigned int numGroups);
 
 protected slots:
-    void playCurrentTraceFile();
-
     void onReplayStarted();
     void onReplayPaused(uint64_t packetIndex);
     void onReplayContinued();
