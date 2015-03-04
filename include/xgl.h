@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 55, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 56, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1916,8 +1916,6 @@ typedef struct _XGL_PIPELINE_TESS_STATE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     uint32_t                                patchControlPoints;
-    float                                   optimalTessFactor;
-    float                                   fixedTessFactor;
 } XGL_PIPELINE_TESS_STATE_CREATE_INFO;
 
 typedef struct _XGL_PIPELINE_VP_STATE_CREATE_INFO
