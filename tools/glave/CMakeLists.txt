@@ -1,5 +1,10 @@
 PROJECT(glave)
-cmake_minimum_required(VERSION 2.8)
+if (WIN32)
+    # For Windows, we need CMake version 3.0+ in order to "find_package(Qt5)":
+    cmake_minimum_required(VERSION 3.0)
+else()
+    cmake_minimum_required(VERSION 2.8)
+endif()
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -11,6 +16,12 @@ if (WIN32)
 #    set(CMAKE_PREFIX_PATH "${CMAKE_EXTERNAL_PATH}/windows")
     set(WIN32_PTHREADS_PATH "${SRC_DIR}/thirdparty/pthreads.2")
     set(WIN32_PTHREADS_INCLUDE_PATH "${WIN32_PTHREADS_PATH}/include")
+    if (EXISTS "C:\\Qt\\5.3\\msvc2013_64\\lib\\cmake\\Qt5")
+        message("Found Qt 5.3 installed in the default location on your system ... setting Qt5_DIR to point to it.")
+        set(Qt5_DIR "C:\\Qt\\5.3\\msvc2013_64\\lib\\cmake\\Qt5")
+    else()
+        message(WARNING "Please install Qt 5.3 in the default location, or add \"-DQt5_DIR=<path-to-Qt5.3>\" to your cmake command.")
+    endif()
 endif()
 
 find_package(PythonInterp)
