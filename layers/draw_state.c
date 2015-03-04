@@ -2820,8 +2820,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBAC
     pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
     g_pDbgFunctionHead = pNewDbgFuncNode;
     // force callbacks if DebugAction hasn't been set already other than initial value
-    if (g_actionIsDefault)
-        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;
+	if (g_actionIsDefault) {
+		g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;
+	}
     XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
     return result;
 }
