@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 54, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 55, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1837,12 +1837,26 @@ typedef struct _XGL_LINK_CONST_BUFFER
     const void*                                 pBufferData;
 } XGL_LINK_CONST_BUFFER;
 
+typedef struct _XGL_SPECIALIZATION_MAP_ENTRY
+{
+    uint32_t                                constantId;         // The SpecConstant ID specified in the BIL
+    uint32_t                                offset;             // Offset of the value in the data block
+} XGL_SPECIALIZATION_MAP_ENTRY;
+
+typedef struct _XGL_SPECIALIZATION_INFO
+{
+    uint32_t                                mapEntryCount;
+    const XGL_SPECIALIZATION_MAP_ENTRY*     pMap;               // mapEntryCount entries
+    const void*                             pData;
+} XGL_SPECIALIZATION_INFO;
+
 typedef struct _XGL_PIPELINE_SHADER
 {
     XGL_PIPELINE_SHADER_STAGE               stage;
     XGL_SHADER                              shader;
     uint32_t                                linkConstBufferCount;
     const XGL_LINK_CONST_BUFFER*            pLinkConstBufferInfo;
+    const XGL_SPECIALIZATION_INFO*          pSpecializationInfo;
 } XGL_PIPELINE_SHADER;
 
 typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
