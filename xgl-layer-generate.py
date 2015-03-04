@@ -615,7 +615,7 @@ class Subcommand(object):
                         using_line += '            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;\n'
                         using_line += '    }\n'
                     # Special cases for API funcs that don't use an object as first arg
-                    elif True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'SignalQueueSemaphore', 'WaitQueueSemaphore', 'WsiX11QueuePresent']]:
+                    elif True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'GetGpuInfo', 'SignalQueueSemaphore', 'WaitQueueSemaphore', 'WsiX11QueuePresent']]:
                         using_line = ''
                     else:
                         using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
