@@ -27,6 +27,10 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QToolTip>
+#ifdef _WIN32
+// The following line allows Visual Studio to provide the M_PI_2 constant:
+#define _USE_MATH_DEFINES
+#endif
 #include <math.h>
 #include "glvdebug_qtimelineview.h"
 #include "glvdebug_QTraceFileModel.h"

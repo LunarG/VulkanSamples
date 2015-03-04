@@ -28,8 +28,9 @@ add_custom_command(OUTPUT glvtrace_xgl_packet_id.h glvtrace_xgl_xgl_structs.h gl
                            ${SRC_DIR}/../../../xgl_helper.py)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-set(OS_REPLAYER_LIBS
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.dll
+    set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
+    set(OS_REPLAYER_LIBS
+        ${PATH_TO_WIN_XGL}/XGL.lib
 )
 endif()
 

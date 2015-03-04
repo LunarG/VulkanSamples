@@ -52,6 +52,8 @@ typedef pthread_mutex_t GLV_CRITICAL_SECTION;
 #elif defined(WIN32)
 #define _CRT_RAND_S
 #define WIN32_LEAN_AND_MEAN
+// The following line is needed to use the C++ std::min() or std::max():
+#define NOMINMAX
 #include <Windows.h>
 #include <tchar.h>
 #define GLV_WINAPI WINAPI
