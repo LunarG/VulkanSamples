@@ -41,6 +41,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_OUT_OF_MEMORY_ERROR           = 13, // malloc failed
     MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
     MEMTRACK_INVALID_STATE                 = 15, // Memory not in the correct state
+    MEMTRACK_RESET_CB_WHILE_IN_FLIGHT      = 16, // xglResetCommandBuffer() called on a CB that hasn't completed
 } MEM_TRACK_ERROR;
 
 /*
@@ -119,6 +120,7 @@ typedef struct _GLOBAL_OBJECT_NODE {
         XGL_GRAPHICS_PIPELINE_CREATE_INFO graphics_pipeline_create_info;
         XGL_COMPUTE_PIPELINE_CREATE_INFO compute_pipeline_create_info;
         XGL_SAMPLER_CREATE_INFO sampler_create_info;
+        XGL_FENCE_CREATE_INFO fence_create_info;
 #ifndef _WIN32
         XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
 #endif // _WIN32

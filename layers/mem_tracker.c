@@ -197,6 +197,7 @@ static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, 
     return result;
 }
 // Return ptr to node in global LL containing mem, or NULL if not found
+//  Calls to this function should be wrapped in mutex
 static GLOBAL_MEM_OBJ_NODE* getGlobalMemNode(const XGL_GPU_MEMORY mem)
 {
     GLOBAL_MEM_OBJ_NODE* pTrav = pGlobalMemObjHead;
@@ -268,26 +269,31 @@ static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY me
 }
 
 // Clear the CB Binding for mem
+//  Calls to this function should be wrapped in mutex
 static void clearCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY mem)
 {
     GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
-    MINI_NODE* pMiniCB = pTrav->pCmdBufferBindings;
-    MINI_NODE* pPrev = pMiniCB;
-    while (pMiniCB && (cb != pMiniCB->cmdBuffer)) {
-        pPrev = pMiniCB;
-        pMiniCB = pMiniCB->pNext;
-    }
-    if (!pMiniCB) {
-        char str[1024];
-        sprintf(str, "Trying to clear CB binding but CB %p not in binding list for mem obj %p", cb, mem);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
-    }
-    else { // remove node from list & decrement refCount
-        pPrev->pNext = pMiniCB->pNext;
-        if (pMiniCB == pTrav->pCmdBufferBindings)
-            pTrav->pCmdBufferBindings = NULL;
-        free(pMiniCB);
-        pTrav->refCount--;
+    // TODO : Having this check is not ideal, really if mem node was deleted,
+    //   its CB bindings should be cleared and then freeCBBindings wouldn't call
+    //   us here with stale mem objs
+    if (pTrav) {
+        MINI_NODE* pMiniCB = pTrav->pCmdBufferBindings;
+        MINI_NODE* pPrev = pMiniCB;
+        while (pMiniCB && (cb != pMiniCB->cmdBuffer)) {
+            pPrev = pMiniCB;
+            pMiniCB = pMiniCB->pNext;
+        }
+        if (!pMiniCB) {
+            char str[1024];
+            sprintf(str, "Trying to clear CB binding but CB %p not in binding list for mem obj %p", cb, mem);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        } else { // remove node from list & decrement refCount
+            pPrev->pNext = pMiniCB->pNext;
+            if (pMiniCB == pTrav->pCmdBufferBindings)
+                pTrav->pCmdBufferBindings = NULL;
+            free(pMiniCB);
+            pTrav->refCount--;
+        }
     }
 }
 
@@ -304,9 +310,9 @@ static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
     } else {
         if ((pCBTrav->fence != NULL) && (pCBTrav->localFlag == XGL_TRUE)) {
             nextTable.DestroyObject(pCBTrav->fence);
-            pCBTrav->fence = NULL;
             pCBTrav->localFlag = XGL_FALSE;
         }
+        pCBTrav->fence = NULL;
         MINI_NODE* pMemTrav = pCBTrav->pMemObjList;
         MINI_NODE* pDeleteMe = NULL;
         // We traverse LL in order and free nodes as they're cleared
@@ -437,6 +443,20 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
         }
     }
     return result;
+}
+
+static void clearCBFence(const XGL_FENCE fence)
+{
+    // TODO : This is slow and stupid
+    //  Ultimately would like a quick fence lookup w/ all of the CBs using that fence
+    //  We have to loop every CB for now b/c multiple CBs may use same fence
+    GLOBAL_CB_NODE* pCBTrav = pGlobalCBHead;
+    while (pCBTrav) {
+        if (pCBTrav->fence == fence) {
+            pCBTrav->fence = NULL;
+        }
+        pCBTrav = pCBTrav->pNextGlobalCBNode;
+    }
 }
 
 static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
@@ -1024,6 +1044,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
                 clearObjectBinding(object);
             }
         }
+        if (XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO == pTrav->sType) {
+            clearCBFence((XGL_FENCE)object);
+        }
         if (pGlobalObjectHead == pTrav) // update HEAD if needed
             pGlobalObjectHead = pTrav->pNext;
         // Delete the obj node from global list
@@ -1057,6 +1080,50 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(XGL_OBJECT object, uint32
     printObjList();
     printMemList();
     loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence)
+{
+    XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
+    if (XGL_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        insertGlobalObjectNode(*pFence, pCreateInfo->sType, pCreateInfo, sizeof(XGL_FENCE_CREATE_INFO), "fence");
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
+{
+    XGL_RESULT result = nextTable.GetFenceStatus(fence);
+    if (XGL_SUCCESS == result) {
+        // TODO : Properly we should add validation to make sure app is checking fence
+        //  on CB before Reset/Begin CB call is made
+        clearCBFence(fence);
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t fenceCount, const XGL_FENCE* pFences, bool32_t waitAll, uint64_t timeout)
+{
+    XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    if (XGL_SUCCESS == result) {
+        // TODO : Properly we should add validation to make sure app is checking fence
+        //  on CB before Reset/Begin CB call is made
+        if (waitAll) { // Clear all the fences
+            for(uint32_t i = 0; i < fenceCount; i++) {
+                clearCBFence(pFences[i]);
+            }
+        }
+        else { // Clear only completed fences
+            for(uint32_t i = 0; i < fenceCount; i++) {
+                if (XGL_SUCCESS == nextTable.GetFenceStatus(pFences[i])) {
+                    clearCBFence(pFences[i]);
+                }
+            }
+        }
+    }
     return result;
 }
 
@@ -1245,7 +1312,16 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
-    // This implicitly resets the Cmd Buffer so clear memory references
+    // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
+    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
+    if (pCBTrav && pCBTrav->fence) {
+        bool32_t cbDone = checkCBCompleted(cmdBuffer);
+        if (XGL_FALSE == cbDone) {
+            char str[1024];
+            sprintf(str, "Calling xglBeginCommandBuffer() on active CB %p before it has completed. You must check CB flag before this call.", cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
+        }
+    }
     XGL_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     loader_platform_thread_lock_mutex(&globalLock);
     freeCBBindings(cmdBuffer);
@@ -1262,7 +1338,17 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
-    // Clear memory references as this point.  Anything else to do here?
+    // Verify that CB is complete (not in-flight)
+    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
+    if (pCBTrav && pCBTrav->fence) {
+        bool32_t cbDone = checkCBCompleted(cmdBuffer);
+        if (XGL_FALSE == cbDone) {
+            char str[1024];
+            sprintf(str, "Resetting CB %p before it has completed. You must check CB flag before calling xglResetCommandBuffer().", cmdBuffer);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
+        }
+    }
+    // Clear memory references as this point.
     loader_platform_thread_lock_mutex(&globalLock);
     freeCBBindings(cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1749,6 +1835,12 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglGetObjectInfo;
     if (!strcmp(funcName, "xglBindObjectMemory"))
         return (void*) xglBindObjectMemory;
+    if (!strcmp(funcName, "xglCreateFence"))
+        return (void*) xglCreateFence;
+    if (!strcmp(funcName, "xglGetFenceStatus"))
+        return (void*) xglGetFenceStatus;
+    if (!strcmp(funcName, "xglWaitForFences"))
+        return (void*) xglWaitForFences;
     if (!strcmp(funcName, "xglCreateEvent"))
         return (void*) xglCreateEvent;
     if (!strcmp(funcName, "xglCreateQueryPool"))
