@@ -652,6 +652,8 @@ class Subcommand(object):
                     elif 'CreatePresentableImage' in proto.name:
                         create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
                         create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').strip('const ')])
+                        create_line += '    ll_insert_obj((void*)*pMem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
+                        # create_line += '    ll_insert_obj((void*)*%s, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
                         create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                     elif 'Create' in proto.name or 'Alloc' in proto.name:
                         create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -670,10 +672,17 @@ class Subcommand(object):
                             using_line = ''
                         if 'DestroyDevice' in proto.name:
                             destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                            destroy_line += '        char str[1024];\n'
-                            destroy_line += '        sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
-                            destroy_line += '        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
-                            destroy_line += '        pTrav = pTrav->pNextGlobal;\n    }\n'
+                            destroy_line += '        if (pTrav->obj.objType == XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {\n'
+                            destroy_line += '            objNode *pDel = pTrav;\n'
+                            destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
+                            destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
+                            destroy_line += '        } else {\n'
+                            destroy_line += '            char str[1024];\n'
+                            destroy_line += '            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
+                            destroy_line += '            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
+                            destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
+                            destroy_line += '        }\n'
+                            destroy_line += '    }\n'
                     ret_val = ''
                     stmt = ''
                     if proto.ret != "void":
@@ -1404,7 +1413,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
-        header_txt.append('static void validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
+        header_txt.append('static bool32_t validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
@@ -1412,15 +1421,19 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('                char str[1024];')
         header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_XGL_OBJECT_TYPE(objType), (void*)pObj, fail_msg);')
         header_txt.append('                layerCbMsg(error_level, XGL_VALIDATION_LEVEL_0, pObj, 0, error_code, "OBJTRACK", str);')
+        header_txt.append('                return XGL_FALSE;')
         header_txt.append('            }')
-        header_txt.append('            return;')
+        header_txt.append('            return XGL_TRUE;')
         header_txt.append('        }')
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
-        header_txt.append('    // If we do not find it print an error')
-        header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    if (objType != XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {')
+        header_txt.append('        // If we do not find it print an error')
+        header_txt.append('        char str[1024];')
+        header_txt.append('        sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    }')
+        header_txt.append('    return XGL_FALSE;')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void validate_draw_state_flags(void* pObj) {')
@@ -1433,8 +1446,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint32_t numRefs) {')
         header_txt.append('    uint32_t i;')
         header_txt.append('    for (i = 0; i < numRefs; i++) {')
-        header_txt.append('        if(pMemRefs[i].mem)')
-        header_txt.append('            validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
+        header_txt.append('        if(pMemRefs[i].mem) {')
+        header_txt.append('            // If mem reference is in presentable image memory list, skip the check of the GPU_MEMORY list')
+        header_txt.append('            if (!validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, OBJTRACK_NONE, NULL) == XGL_TRUE)')
+        header_txt.append('            {')
+        header_txt.append('                validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
+        header_txt.append('            }')
+        header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')

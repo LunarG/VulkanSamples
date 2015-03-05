@@ -453,7 +453,7 @@ static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
         if (pTrav->allocInfo.allocationSize == 0) {
             char str[1024];
             sprintf(str, "Attempting to free memory associated with a Presentable Image, %p, this should not be explicitly freed\n", (void*)mem);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             result = XGL_FALSE;
         } else {
             // Clear any CB bindings for completed CBs
