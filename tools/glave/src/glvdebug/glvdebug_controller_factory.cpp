@@ -12,7 +12,11 @@ glvdebug_controller_factory::~glvdebug_controller_factory()
 glvdebug_controller* glvdebug_controller_factory::Load(const char* filename)
 {
     char* exeDir = glv_platform_get_current_executable_directory();
+#if defined(PLATFORM_WINDOWS)
+    char* controllerPath = glv_copy_and_append(exeDir,"\\", filename);
+#else
     char* controllerPath = glv_copy_and_append(exeDir,"/", filename);
+#endif
 
     void* pLibrary = glv_platform_open_library(controllerPath);
     if (pLibrary == NULL)
