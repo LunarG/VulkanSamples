@@ -187,7 +187,7 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
            pitch;
 
    dw[4] = 0;
-   dw[5] = GEN7_MOCS_L3_ON << GEN7_SURFACE_DW5_MOCS__SHIFT;
+   dw[5] = GEN7_MOCS_L3_WB << GEN7_SURFACE_DW5_MOCS__SHIFT;
 
    dw[6] = 0;
    dw[7] = 0;
@@ -431,7 +431,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
    else
       dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_1;
 
-   dw[5] = GEN7_MOCS_L3_ON << GEN7_SURFACE_DW5_MOCS__SHIFT |
+   dw[5] = GEN7_MOCS_L3_WB << GEN7_SURFACE_DW5_MOCS__SHIFT |
            (first_level) << GEN7_SURFACE_DW5_MIN_LOD__SHIFT |
            lod;
 
@@ -979,7 +979,7 @@ static void ds_view_init(struct intel_ds_view *view,
 
       dw4 = (info.depth - 1) << 21 |
             info.first_layer << 10 |
-            GEN7_MOCS_L3_ON;
+            GEN7_MOCS_L3_WB;
 
       dw5 = 0;
 
@@ -1028,7 +1028,7 @@ static void ds_view_init(struct intel_ds_view *view,
       dw[7] = img->s8_offset;
 
       if (intel_gpu_gen(gpu) >= INTEL_GEN(7))
-         dw[6] |= GEN7_MOCS_L3_ON << GEN6_STENCIL_DW1_MOCS__SHIFT;
+         dw[6] |= GEN7_MOCS_L3_WB << GEN6_STENCIL_DW1_MOCS__SHIFT;
       if (intel_gpu_gen(gpu) >= INTEL_GEN(7.5))
          dw[6] |= GEN75_STENCIL_DW1_STENCIL_BUFFER_ENABLE;
    }
@@ -1043,7 +1043,7 @@ static void ds_view_init(struct intel_ds_view *view,
       dw[9] = img->aux_offset;
 
       if (intel_gpu_gen(gpu) >= INTEL_GEN(7))
-         dw[8] |= GEN7_MOCS_L3_ON << GEN6_HIZ_DW1_MOCS__SHIFT;
+         dw[8] |= GEN7_MOCS_L3_WB << GEN6_HIZ_DW1_MOCS__SHIFT;
    }
    else {
       dw[8] = 0;

@@ -166,7 +166,7 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
     if ((old_caches & DATA_WRITE_CACHE) &&
         (new_caches & ~(DATA_READ_CACHE | DATA_WRITE_CACHE))) {
         if (cmd_gen(cmd) >= INTEL_GEN(7))
-            flags |= GEN7_PIPE_CONTROL_DC_FLUSH_ENABLE;
+            flags |= GEN7_PIPE_CONTROL_DC_FLUSH;
     }
 
     if (new_caches & SAMPLER_CACHE)
@@ -233,7 +233,7 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
     }
 
     if (output_mask & XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT) {
-        flush_flags |= GEN7_PIPE_CONTROL_DC_FLUSH_ENABLE;
+        flush_flags |= GEN7_PIPE_CONTROL_DC_FLUSH;
     }
     if (output_mask & XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH;

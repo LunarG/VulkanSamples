@@ -571,15 +571,15 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
           fs->urb_grf_start_16 << GEN6_WM_DW4_URB_GRF_START2__SHIFT;
 
     dw5 = (fs->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
-          GEN6_WM_DW5_PS_ENABLE |
-          GEN6_WM_DW5_8_PIXEL_DISPATCH;
+          GEN6_WM_DW5_PS_DISPATCH_ENABLE |
+          GEN6_PS_DISPATCH_8 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
     if (fs->offset_16)
-        dw5 |= GEN6_WM_DW5_16_PIXEL_DISPATCH;
+        dw5 |= GEN6_PS_DISPATCH_16 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
     if (fs->uses & INTEL_SHADER_USE_KILL ||
         pipeline->cb_state.alphaToCoverageEnable)
-        dw5 |= GEN6_WM_DW5_PS_KILL;
+        dw5 |= GEN6_WM_DW5_PS_KILL_PIXEL;
 
     if (fs->computed_depth_mode)
         dw5 |= GEN6_WM_DW5_PS_COMPUTE_DEPTH;
@@ -589,10 +589,10 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
         dw5 |= GEN6_WM_DW5_PS_USE_W;
 
     if (pipeline->dual_source_blend_enable)
-        dw5 |= GEN6_WM_DW5_DUAL_SOURCE_BLEND;
+        dw5 |= GEN6_WM_DW5_PS_DUAL_SOURCE_BLEND;
 
     dw6 = fs->in_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
-          GEN6_WM_DW6_POSOFFSET_NONE |
+          GEN6_WM_DW6_PS_POSOFFSET_NONE |
           GEN6_WM_DW6_ZW_INTERP_PIXEL |
           fs->barycentric_interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT |
           GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
@@ -634,14 +634,14 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
     dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
 
     dw1 = GEN7_WM_DW1_STATISTICS |
-          GEN7_WM_DW1_PS_ENABLE |
+          GEN7_WM_DW1_PS_DISPATCH_ENABLE |
           GEN7_WM_DW1_ZW_INTERP_PIXEL |
           fs->barycentric_interps << GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT |
           GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
 
     if (fs->uses & INTEL_SHADER_USE_KILL ||
         pipeline->cb_state.alphaToCoverageEnable)
-        dw1 |= GEN7_WM_DW1_PS_KILL;
+        dw1 |= GEN7_WM_DW1_PS_KILL_PIXEL;
 
     dw1 |= fs->computed_depth_mode << GEN7_WM_DW1_PSCDEPTH__SHIFT;
 
@@ -682,10 +682,10 @@ static void gen7_3DSTATE_PS(struct intel_cmd *cmd)
           fs->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
 
     dw4 = GEN7_PS_DW4_POSOFFSET_NONE |
-          GEN7_PS_DW4_8_PIXEL_DISPATCH;
+          GEN6_PS_DISPATCH_8 << GEN7_PS_DW4_DISPATCH_MODE__SHIFT;
 
     if (fs->offset_16)
-        dw4 |= GEN7_PS_DW4_16_PIXEL_DISPATCH;
+        dw4 |= GEN6_PS_DISPATCH_16 << GEN7_PS_DW4_DISPATCH_MODE__SHIFT;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
         dw4 |= (fs->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
@@ -879,9 +879,9 @@ static void gen6_3DSTATE_VIEWPORT_STATE_POINTERS(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 6);
 
     dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_VIEWPORT_STATE_POINTERS) |
-          GEN6_PTR_VP_DW0_CLIP_CHANGED |
-          GEN6_PTR_VP_DW0_SF_CHANGED |
-          GEN6_PTR_VP_DW0_CC_CHANGED |
+          GEN6_VP_PTR_DW0_CLIP_CHANGED |
+          GEN6_VP_PTR_DW0_SF_CHANGED |
+          GEN6_VP_PTR_DW0_CC_CHANGED |
           (cmd_len - 2);
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
@@ -918,9 +918,9 @@ static void gen6_3DSTATE_BINDING_TABLE_POINTERS(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 6);
 
     dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_BINDING_TABLE_POINTERS) |
-          GEN6_PTR_BINDING_TABLE_DW0_VS_CHANGED |
-          GEN6_PTR_BINDING_TABLE_DW0_GS_CHANGED |
-          GEN6_PTR_BINDING_TABLE_DW0_PS_CHANGED |
+          GEN6_BINDING_TABLE_PTR_DW0_VS_CHANGED |
+          GEN6_BINDING_TABLE_PTR_DW0_GS_CHANGED |
+          GEN6_BINDING_TABLE_PTR_DW0_PS_CHANGED |
           (cmd_len - 2);
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
@@ -941,9 +941,9 @@ static void gen6_3DSTATE_SAMPLER_STATE_POINTERS(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 6);
 
     dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLER_STATE_POINTERS) |
-          GEN6_PTR_SAMPLER_DW0_VS_CHANGED |
-          GEN6_PTR_SAMPLER_DW0_GS_CHANGED |
-          GEN6_PTR_SAMPLER_DW0_PS_CHANGED |
+          GEN6_SAMPLER_PTR_DW0_VS_CHANGED |
+          GEN6_SAMPLER_PTR_DW0_GS_CHANGED |
+          GEN6_SAMPLER_PTR_DW0_PS_CHANGED |
           (cmd_len - 2);
 
     cmd_batch_pointer(cmd, cmd_len, &dw);
@@ -1181,7 +1181,7 @@ void cmd_batch_state_base_address(struct intel_cmd *cmd)
     const uint32_t dw0 = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) |
                          (cmd_len - 2);
     const uint32_t mocs = (cmd_gen(cmd) >= INTEL_GEN(7)) ?
-        (GEN7_MOCS_L3_ON << 8 | GEN7_MOCS_L3_ON << 4) : 0;
+        (GEN7_MOCS_L3_WB << 8 | GEN7_MOCS_L3_WB << 4) : 0;
     uint32_t pos;
     uint32_t *dw;
 
@@ -1470,7 +1470,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 {
     const uint32_t border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
     const uint32_t border_stride =
-        u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR / 4);
+        u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR_STATE / 4);
     const struct intel_desc_set *set = cmd->bind.dset.graphics;
     uint32_t border_offset, *border_dw, sampler_offset, *sampler_dw;
     uint32_t surface_count;
@@ -1488,7 +1488,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
      * cmd_state_pointer() would invalidate the pointer
      */
     border_offset = cmd_state_reserve(cmd, INTEL_CMD_ITEM_BLOB,
-            GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR,
+            GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR_STATE,
             border_stride * rmap->sampler_count);
 
     sampler_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_SAMPLER,
@@ -1663,30 +1663,30 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
     for (i = 0; i < pipeline->vb_count; i++) {
         assert(pipeline->vb[i].strideInBytes <= 2048);
 
-        dw[0] = i << GEN6_VB_STATE_DW0_INDEX__SHIFT |
+        dw[0] = i << GEN6_VB_DW0_INDEX__SHIFT |
                 pipeline->vb[i].strideInBytes;
 
         if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-            dw[0] |= GEN7_MOCS_L3_ON << GEN6_VB_STATE_DW0_MOCS__SHIFT |
-                     GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+            dw[0] |= GEN7_MOCS_L3_WB << GEN6_VB_DW0_MOCS__SHIFT |
+                     GEN7_VB_DW0_ADDR_MODIFIED;
         }
 
         switch (pipeline->vb[i].stepRate) {
         case XGL_VERTEX_INPUT_STEP_RATE_VERTEX:
-            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_VERTEXDATA;
+            dw[0] |= GEN6_VB_DW0_ACCESS_VERTEXDATA;
             dw[3] = 0;
             break;
         case XGL_VERTEX_INPUT_STEP_RATE_INSTANCE:
-            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_INSTANCEDATA;
+            dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
             dw[3] = 1;
             break;
         case XGL_VERTEX_INPUT_STEP_RATE_DRAW:
-            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_INSTANCEDATA;
+            dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
             dw[3] = 0;
             break;
         default:
             assert(!"unknown step rate");
-            dw[0] |= GEN6_VB_STATE_DW0_ACCESS_VERTEXDATA;
+            dw[0] |= GEN6_VB_DW0_ACCESS_VERTEXDATA;
             dw[3] = 0;
             break;
         }
@@ -1699,7 +1699,7 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
             cmd_batch_reloc(cmd, pos + 1, buf->obj.mem->bo, offset, 0);
             cmd_batch_reloc(cmd, pos + 2, buf->obj.mem->bo, buf->size - 1, 0);
         } else {
-            dw[0] |= GEN6_VB_STATE_DW0_IS_NULL;
+            dw[0] |= GEN6_VB_DW0_IS_NULL;
             dw[1] = 0;
             dw[2] = 0;
         }
@@ -2057,7 +2057,7 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
         blend_offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLEND,
                 GEN6_ALIGNMENT_BLEND_STATE, 2, &dw);
         dw[0] = 0;
-        dw[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT | 0x3;
+        dw[1] = GEN6_RT_DW1_COLORCLAMP_RTFORMAT | 0x3;
     }
 
     if (meta->mode != INTEL_CMD_META_VS_POINTS) {
@@ -2107,7 +2107,7 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
         /* 3DSTATE_VIEWPORT_STATE_POINTERS */
         cmd_batch_pointer(cmd, 4, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VIEWPORT_STATE_POINTERS) | (4 - 2) |
-                GEN6_PTR_VP_DW0_CC_CHANGED;
+                GEN6_VP_PTR_DW0_CC_CHANGED;
         dw[1] = 0;
         dw[2] = 0;
         dw[3] = cc_vp_offset;
@@ -2204,12 +2204,12 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     cmd_batch_pointer(cmd, 10, &dw);
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (2 - 2);
-    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (2 - 2);
-    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
-            pcb_alloc << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = pcb_alloc << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+            pcb_alloc << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (2 - 2);
@@ -2241,20 +2241,20 @@ static void gen7_meta_urb(struct intel_cmd *cmd)
     cmd_batch_pointer(cmd, 8, &dw);
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (2 - 2);
-    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
+    dw[1] = urb_offset << GEN7_URB_DW1_OFFSET__SHIFT |
             vs_entry_count;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (2 - 2);
-    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+    dw[1] = urb_offset << GEN7_URB_DW1_OFFSET__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_DS) | (2 - 2);
-    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+    dw[1] = urb_offset << GEN7_URB_DW1_OFFSET__SHIFT;
     dw += 2;
 
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_GS) | (2 - 2);
-    dw[1] = urb_offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+    dw[1] = urb_offset << GEN7_URB_DW1_OFFSET__SHIFT;
     dw += 2;
 }
 
@@ -2272,11 +2272,11 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
     case INTEL_CMD_META_VS_POINTS:
         cmd_batch_pointer(cmd, 3, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) | (3 - 2);
-        dw[1] = GEN6_VE_STATE_DW0_VALID;
-        dw[2] = GEN6_VFCOMP_STORE_VID << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-                GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-                GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-                GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+        dw[1] = GEN6_VE_DW0_VALID;
+        dw[2] = GEN6_VFCOMP_STORE_VID << GEN6_VE_DW1_COMP0__SHIFT |
+                GEN6_VFCOMP_NOSTORE << GEN6_VE_DW1_COMP1__SHIFT |
+                GEN6_VFCOMP_NOSTORE << GEN6_VE_DW1_COMP2__SHIFT |
+                GEN6_VFCOMP_NOSTORE << GEN6_VE_DW1_COMP3__SHIFT;
         return;
         break;
     case INTEL_CMD_META_FS_RECT:
@@ -2334,7 +2334,7 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_BUFFERS) | (5 - 2);
     dw[1] = vb_stride;
     if (cmd_gen(cmd) >= INTEL_GEN(7))
-        dw[1] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+        dw[1] |= GEN7_VB_DW0_ADDR_MODIFIED;
 
     cmd_reserve_reloc(cmd, 2);
     cmd_batch_reloc_writer(cmd, pos + 2, INTEL_CMD_WRITER_STATE, vb_start);
@@ -2345,17 +2345,17 @@ static void gen6_meta_vf(struct intel_cmd *cmd)
     /* 3DSTATE_VERTEX_ELEMENTS */
     cmd_batch_pointer(cmd, 5, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) | (5 - 2);
-    dw[1] = GEN6_VE_STATE_DW0_VALID;
-    dw[2] = GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP0__SHIFT | /* Reserved */
-            GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP1__SHIFT | /* Render Target Array Index */
-            GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP2__SHIFT | /* Viewport Index */
-            GEN6_VFCOMP_STORE_0 << GEN6_VE_STATE_DW1_COMP3__SHIFT;  /* Point Width */
-    dw[3] = GEN6_VE_STATE_DW0_VALID |
-            ve_format << GEN6_VE_STATE_DW0_FORMAT__SHIFT;
-    dw[4] = GEN6_VFCOMP_STORE_SRC  << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-            GEN6_VFCOMP_STORE_SRC  << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-            ve_z_source            << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-            GEN6_VFCOMP_STORE_1_FP << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+    dw[1] = GEN6_VE_DW0_VALID;
+    dw[2] = GEN6_VFCOMP_STORE_0 << GEN6_VE_DW1_COMP0__SHIFT | /* Reserved */
+            GEN6_VFCOMP_STORE_0 << GEN6_VE_DW1_COMP1__SHIFT | /* Render Target Array Index */
+            GEN6_VFCOMP_STORE_0 << GEN6_VE_DW1_COMP2__SHIFT | /* Viewport Index */
+            GEN6_VFCOMP_STORE_0 << GEN6_VE_DW1_COMP3__SHIFT;  /* Point Width */
+    dw[3] = GEN6_VE_DW0_VALID |
+            ve_format << GEN6_VE_DW0_FORMAT__SHIFT;
+    dw[4] = GEN6_VFCOMP_STORE_SRC  << GEN6_VE_DW1_COMP0__SHIFT |
+            GEN6_VFCOMP_STORE_SRC  << GEN6_VE_DW1_COMP1__SHIFT |
+            ve_z_source            << GEN6_VE_DW1_COMP2__SHIFT |
+            GEN6_VFCOMP_STORE_1_FP << GEN6_VE_DW1_COMP3__SHIFT;
 }
 
 static uint32_t gen6_meta_vs_constants(struct intel_cmd *cmd)
@@ -2435,16 +2435,16 @@ static void gen6_meta_vs(struct intel_cmd *cmd)
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         cmd_batch_pointer(cmd, 7, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (7 - 2);
-        dw[1] = 1 << GEN7_PCB_ANY_DW1_PCB0_SIZE__SHIFT;
+        dw[1] = 1 << GEN7_CONSTANT_DW1_BUFFER0_READ_LEN__SHIFT;
         dw[2] = 0;
-        dw[3] = offset | GEN7_MOCS_L3_ON;
+        dw[3] = offset | GEN7_MOCS_L3_WB;
         dw[4] = 0;
         dw[5] = 0;
         dw[6] = 0;
     } else {
         cmd_batch_pointer(cmd, 5, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_VS) | (5 - 2) |
-            GEN6_PCB_ANY_DW0_PCB0_VALID;
+                1 << GEN6_CONSTANT_DW0_BUFFER_ENABLES__SHIFT;
         dw[1] = offset;
         dw[2] = 0;
         dw[3] = 0;
@@ -2759,7 +2759,7 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
     offset = gen6_meta_ps_constants(cmd);
     cmd_batch_pointer(cmd, 5, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (5 - 2) |
-            GEN6_PCB_ANY_DW0_PCB0_VALID;
+            1 << GEN6_CONSTANT_DW0_BUFFER_ENABLES__SHIFT;
     dw[1] = offset;
     dw[2] = 0;
     dw[3] = 0;
@@ -2775,11 +2775,11 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
     dw[3] = 0; /* scratch */
     dw[4] = sh->urb_grf_start << GEN6_WM_DW4_URB_GRF_START0__SHIFT;
     dw[5] = (sh->max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT |
-            GEN6_WM_DW5_PS_ENABLE |
-            GEN6_WM_DW5_16_PIXEL_DISPATCH;
+            GEN6_WM_DW5_PS_DISPATCH_ENABLE |
+            GEN6_PS_DISPATCH_16 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
     dw[6] = sh->in_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
-            GEN6_WM_DW6_POSOFFSET_NONE |
+            GEN6_WM_DW6_PS_POSOFFSET_NONE |
             GEN6_WM_DW6_ZW_INTERP_PIXEL |
             sh->barycentric_interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT |
             GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
@@ -2838,7 +2838,8 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
         dw[1] = 0;
         dw[2] = 0;
         dw[3] = 0;
-        dw[4] = GEN7_PS_DW4_8_PIXEL_DISPATCH | /* required to avoid hangs */
+        /* required to avoid hangs */
+        dw[4] = GEN6_PS_DISPATCH_8 << GEN7_PS_DW4_DISPATCH_MODE__SHIFT |
                 (sh->max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
         dw[5] = 0;
         dw[6] = 0;
@@ -2853,7 +2854,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     /* 3DSTATE_WM */
     cmd_batch_pointer(cmd, 3, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (3 - 2);
-    dw[1] = GEN7_WM_DW1_PS_ENABLE |
+    dw[1] = GEN7_WM_DW1_PS_DISPATCH_ENABLE |
             GEN7_WM_DW1_ZW_INTERP_PIXEL |
             sh->barycentric_interps << GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT |
             GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
@@ -2863,9 +2864,9 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
     offset = gen6_meta_ps_constants(cmd);
     cmd_batch_pointer(cmd, 7, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) | (7 - 2);
-    dw[1] = 1 << GEN7_PCB_ANY_DW1_PCB0_SIZE__SHIFT;
+    dw[1] = 1 << GEN7_CONSTANT_DW1_BUFFER0_READ_LEN__SHIFT;
     dw[2] = 0;
-    dw[3] = offset | GEN7_MOCS_L3_ON;
+    dw[3] = offset | GEN7_MOCS_L3_WB;
     dw[4] = 0;
     dw[5] = 0;
     dw[6] = 0;
@@ -2881,7 +2882,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 
     dw[4] = GEN7_PS_DW4_PUSH_CONSTANT_ENABLE |
             GEN7_PS_DW4_POSOFFSET_NONE |
-            GEN7_PS_DW4_16_PIXEL_DISPATCH;
+            GEN6_PS_DISPATCH_16 << GEN7_PS_DW4_DISPATCH_MODE__SHIFT;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
         dw[4] |= (sh->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;

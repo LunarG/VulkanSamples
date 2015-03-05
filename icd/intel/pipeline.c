@@ -631,25 +631,25 @@ static void pipeline_build_urb_alloc_gen7(struct intel_pipeline *pipeline,
 
         dw = pipeline_cmd_ptr(pipeline, cmd_len*4);
         dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (cmd_len - 2);
-        dw[1] = (urb_offset / 8192) << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
-                (vs_alloc_size - 1) << GEN7_URB_ANY_DW1_ENTRY_SIZE__SHIFT |
+        dw[1] = (urb_offset / 8192) << GEN7_URB_DW1_OFFSET__SHIFT |
+                (vs_alloc_size - 1) << GEN7_URB_DW1_ENTRY_SIZE__SHIFT |
                 vs_entry_count;
 
         dw += 2;
         if (gs_size)
             urb_offset += vs_size;
         dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_GS) | (cmd_len - 2);
-        dw[1] = (urb_offset  / 8192) << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
-                (gs_alloc_size - 1) << GEN7_URB_ANY_DW1_ENTRY_SIZE__SHIFT |
+        dw[1] = (urb_offset  / 8192) << GEN7_URB_DW1_OFFSET__SHIFT |
+                (gs_alloc_size - 1) << GEN7_URB_DW1_ENTRY_SIZE__SHIFT |
                 gs_entry_count;
 
         dw += 2;
         dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (cmd_len - 2);
-        dw[1] = (urb_offset / 8192)  << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+        dw[1] = (urb_offset / 8192)  << GEN7_URB_DW1_OFFSET__SHIFT;
 
         dw += 2;
         dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_DS) | (cmd_len - 2);
-        dw[1] = (urb_offset / 8192)  << GEN7_URB_ANY_DW1_OFFSET__SHIFT;
+        dw[1] = (urb_offset / 8192)  << GEN7_URB_DW1_OFFSET__SHIFT;
     }
 }
 
@@ -708,28 +708,28 @@ static void pipeline_build_push_const_alloc_gen7(struct intel_pipeline *pipeline
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len * 5);
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) | (cmd_len - 2);
-    dw[1] = offset << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
-                      size << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = offset << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+                      size << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
 
     dw += 2;
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) | (cmd_len - 2);
-    dw[1] = size << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
-                    size << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = size << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+                    size << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
 
     dw += 2;
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) | (cmd_len - 2);
-    dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
-                 0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+                 0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
 
     dw += 2;
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) | (cmd_len - 2);
-    dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
-                 0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+                 0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
 
     dw += 2;
     dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) | (cmd_len - 2);
-    dw[1] = 0 << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
-                 0 << GEN7_PCB_ALLOC_ANY_DW1_SIZE__SHIFT;
+    dw[1] = 0 << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
+                 0 << GEN7_PCB_ALLOC_DW1_SIZE__SHIFT;
 
     // gen7_wa_pipe_control_cs_stall(p, true, true);
     // looks equivalent to: gen6_wa_wm_multisample_flush - this does more
@@ -786,15 +786,15 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
         assert(attr->offsetInBytes <= 2047);
 
-        dw[0] = attr->binding << GEN6_VE_STATE_DW0_VB_INDEX__SHIFT |
-                GEN6_VE_STATE_DW0_VALID |
-                format << GEN6_VE_STATE_DW0_FORMAT__SHIFT |
+        dw[0] = attr->binding << GEN6_VE_DW0_VB_INDEX__SHIFT |
+                GEN6_VE_DW0_VALID |
+                format << GEN6_VE_DW0_FORMAT__SHIFT |
                 attr->offsetInBytes;
 
-        dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-                comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-                comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-                comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+        dw[1] = comps[0] << GEN6_VE_DW1_COMP0__SHIFT |
+                comps[1] << GEN6_VE_DW1_COMP1__SHIFT |
+                comps[2] << GEN6_VE_DW1_COMP2__SHIFT |
+                comps[3] << GEN6_VE_DW1_COMP3__SHIFT;
 
         dw += 2;
     }
@@ -807,11 +807,11 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
         comps[2] = GEN6_VFCOMP_NOSTORE;
         comps[3] = GEN6_VFCOMP_NOSTORE;
 
-        dw[0] = GEN6_VE_STATE_DW0_VALID;
-        dw[1] = comps[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-                comps[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-                comps[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-                comps[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+        dw[0] = GEN6_VE_DW0_VALID;
+        dw[1] = comps[0] << GEN6_VE_DW1_COMP0__SHIFT |
+                comps[1] << GEN6_VE_DW1_COMP1__SHIFT |
+                comps[2] << GEN6_VE_DW1_COMP2__SHIFT |
+                comps[3] << GEN6_VE_DW1_COMP3__SHIFT;
 
         dw += 2;
     }
@@ -888,11 +888,11 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
                 // program the SBE to read it.  Our choices are to allow it to
                 // read junk from a GRF, or get zero.  We're choosing zero.
                 if (i >= fs->generic_input_start) {
-                    vs_slot[fs_in] = GEN7_SBE_ATTR_CONST_0000 |
-                                     GEN7_SBE_ATTR_OVERRIDE_X |
-                                     GEN7_SBE_ATTR_OVERRIDE_Y |
-                                     GEN7_SBE_ATTR_OVERRIDE_Z |
-                                     GEN7_SBE_ATTR_OVERRIDE_W;
+                    vs_slot[fs_in] = GEN8_SBE_SWIZ_CONST_0000 |
+                                     GEN8_SBE_SWIZ_OVERRIDE_X |
+                                     GEN8_SBE_SWIZ_OVERRIDE_Y |
+                                     GEN8_SBE_SWIZ_OVERRIDE_Z |
+                                     GEN8_SBE_SWIZ_OVERRIDE_W;
                 }
             }
 
@@ -918,7 +918,7 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
             lo = 0;
         }
 
-        body[2 + i] = hi << GEN7_SBE_ATTR_HIGH__SHIFT | lo;
+        body[2 + i] = hi << GEN8_SBE_SWIZ_HIGH__SHIFT | lo;
     }
 
     body[10] = 0; /* point sprite enables */
@@ -1133,9 +1133,9 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
 
 
         dw0 = 0;
-        dw1 = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
-              GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
-              GEN6_BLEND_DW1_POST_BLEND_CLAMP;
+        dw1 = GEN6_RT_DW1_COLORCLAMP_RTFORMAT |
+              GEN6_RT_DW1_PRE_BLEND_CLAMP |
+              GEN6_RT_DW1_POST_BLEND_CLAMP;
 
         if (att->blendEnable) {
             dw0 = 1 << 31 |
@@ -1179,18 +1179,18 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
                 break;
             }
 
-            dw1 |= GEN6_BLEND_DW1_LOGICOP_ENABLE |
-                   logicop << GEN6_BLEND_DW1_LOGICOP_FUNC__SHIFT;
+            dw1 |= GEN6_RT_DW1_LOGICOP_ENABLE |
+                   logicop << GEN6_RT_DW1_LOGICOP_FUNC__SHIFT;
         }
 
         if (!(att->channelWriteMask & 0x1))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_R;
+            dw1 |= GEN6_RT_DW1_WRITE_DISABLE_R;
         if (!(att->channelWriteMask & 0x2))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_G;
+            dw1 |= GEN6_RT_DW1_WRITE_DISABLE_G;
         if (!(att->channelWriteMask & 0x4))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_B;
+            dw1 |= GEN6_RT_DW1_WRITE_DISABLE_B;
         if (!(att->channelWriteMask & 0x8))
-            dw1 |= GEN6_BLEND_DW1_WRITE_DISABLE_A;
+            dw1 |= GEN6_RT_DW1_WRITE_DISABLE_A;
 
         dw[2 * i] = dw0;
         dw[2 * i + 1] = dw1;
@@ -1199,13 +1199,13 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
     for (i=info->cb.attachmentCount; i < INTEL_MAX_RENDER_TARGETS; i++)
     {
         dw[2 * i] = 0;
-        dw[2 * i + 1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
-                GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
-                GEN6_BLEND_DW1_POST_BLEND_CLAMP |
-                GEN6_BLEND_DW1_WRITE_DISABLE_R |
-                GEN6_BLEND_DW1_WRITE_DISABLE_G |
-                GEN6_BLEND_DW1_WRITE_DISABLE_B |
-                GEN6_BLEND_DW1_WRITE_DISABLE_A;
+        dw[2 * i + 1] = GEN6_RT_DW1_COLORCLAMP_RTFORMAT |
+                GEN6_RT_DW1_PRE_BLEND_CLAMP |
+                GEN6_RT_DW1_POST_BLEND_CLAMP |
+                GEN6_RT_DW1_WRITE_DISABLE_R |
+                GEN6_RT_DW1_WRITE_DISABLE_G |
+                GEN6_RT_DW1_WRITE_DISABLE_B |
+                GEN6_RT_DW1_WRITE_DISABLE_A;
     }
 
 }
