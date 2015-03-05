@@ -283,11 +283,7 @@ static void clearCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY mem)
             pPrev = pMiniCB;
             pMiniCB = pMiniCB->pNext;
         }
-        if (!pMiniCB) {
-            char str[1024];
-            sprintf(str, "Trying to clear CB binding but CB %p not in binding list for mem obj %p", cb, mem);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
-        } else { // remove node from list & decrement refCount
+        if (pMiniCB) { // remove node from list & decrement refCount
             pPrev->pNext = pMiniCB->pNext;
             if (pMiniCB == pTrav->pCmdBufferBindings)
                 pTrav->pCmdBufferBindings = NULL;
@@ -428,12 +424,7 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if (!pCBTrav->fence) {
-            char str[1024];
-            sprintf(str, "No fence found for CB %p to check for completion", cb);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_CB_MISSING_FENCE, "MEM", str);
-            result = XGL_FALSE;
-        } else {
+        if (pCBTrav->fence) {
             if (XGL_SUCCESS != nextTable.GetFenceStatus(pCBTrav->fence)) {
                 char str[1024];
                 sprintf(str, "Fence %p for CB %p has not completed", pCBTrav->fence, cb);
