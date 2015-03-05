@@ -136,7 +136,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
 
     dev->winsys = gpu->winsys;
 
-    dev->cmd_scratch_bo = intel_winsys_alloc_buffer(dev->winsys,
+    dev->cmd_scratch_bo = intel_winsys_alloc_bo(dev->winsys,
             "command buffer scratch", 4096, false);
     if (!dev->cmd_scratch_bo) {
         intel_dev_destroy(dev);
@@ -206,8 +206,7 @@ void intel_dev_destroy(struct intel_dev *dev)
 
     dev_destroy_meta_shaders(dev);
 
-    if (dev->cmd_scratch_bo)
-        intel_bo_unreference(dev->cmd_scratch_bo);
+    intel_bo_unref(dev->cmd_scratch_bo);
 
     intel_base_destroy(&dev->base);
 

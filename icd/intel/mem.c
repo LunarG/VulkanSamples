@@ -41,7 +41,7 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
     if (!mem)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    mem->bo = intel_winsys_alloc_buffer(dev->winsys,
+    mem->bo = intel_winsys_alloc_bo(dev->winsys,
             "xgl-gpu-memory", info->allocationSize, 0);
     if (!mem->bo) {
         intel_mem_free(mem);
@@ -57,8 +57,7 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
 
 void intel_mem_free(struct intel_mem *mem)
 {
-    if (mem->bo)
-        intel_bo_unreference(mem->bo);
+    intel_bo_unref(mem->bo);
 
     intel_base_destroy(&mem->base);
 }

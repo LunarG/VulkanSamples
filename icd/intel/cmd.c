@@ -48,10 +48,8 @@ static void cmd_writer_reset(struct intel_cmd *cmd,
         writer->ptr = NULL;
     }
 
-    if (writer->bo) {
-        intel_bo_unreference(writer->bo);
-        writer->bo = NULL;
-    }
+    intel_bo_unref(writer->bo);
+    writer->bo = NULL;
 
     writer->used = 0;
 
@@ -89,7 +87,7 @@ static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
         [INTEL_CMD_WRITER_INSTRUCTION] = "instruction",
     };
 
-    return intel_winsys_alloc_buffer(winsys, writer_names[which], size, true);
+    return intel_winsys_alloc_bo(winsys, writer_names[which], size, true);
 }
 
 /**
@@ -103,8 +101,7 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
 
     bo = alloc_writer_bo(cmd->dev->winsys, which, writer->size);
     if (bo) {
-        if (writer->bo)
-            intel_bo_unreference(writer->bo);
+        intel_bo_unref(writer->bo);
         writer->bo = bo;
     } else if (writer->bo) {
         /* reuse the old bo */
@@ -162,7 +159,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     /* map and copy the data over */
     new_ptr = intel_bo_map(new_bo, true);
     if (!new_ptr) {
-        intel_bo_unreference(new_bo);
+        intel_bo_unref(new_bo);
         cmd_writer_discard(cmd, which);
         cmd_fail(cmd, XGL_ERROR_UNKNOWN);
         return;
@@ -171,7 +168,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     memcpy(new_ptr, writer->ptr, writer->used);
 
     intel_bo_unmap(writer->bo);
-    intel_bo_unreference(writer->bo);
+    intel_bo_unref(writer->bo);
 
     writer->size = new_size;
     writer->bo = new_bo;

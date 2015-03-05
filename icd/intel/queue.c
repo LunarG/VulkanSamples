@@ -68,7 +68,7 @@ static struct intel_bo *queue_create_bo(struct intel_queue *queue,
     struct intel_bo *bo;
     void *ptr;
 
-    bo = intel_winsys_alloc_buffer(queue->dev->winsys,
+    bo = intel_winsys_alloc_bo(queue->dev->winsys,
             "queue bo", size, true);
     if (!bo)
         return NULL;
@@ -78,7 +78,7 @@ static struct intel_bo *queue_create_bo(struct intel_queue *queue,
 
     ptr = intel_bo_map(bo, true);
     if (!ptr) {
-        intel_bo_unreference(bo);
+        intel_bo_unref(bo);
         return NULL;
     }
 
@@ -174,7 +174,7 @@ static XGL_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 
     ret = queue_submit_bo(queue, bo, sizeof(ctx_init_cmd));
     if (ret != XGL_SUCCESS) {
-        intel_bo_unreference(bo);
+        intel_bo_unref(bo);
         return ret;
     }
 
@@ -211,7 +211,7 @@ static XGL_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
         return ret;
 
     if (intel_debug & INTEL_DEBUG_HANG) {
-        intel_winsys_read_reset_stats(queue->dev->winsys,
+        intel_winsys_get_reset_stats(queue->dev->winsys,
                 &active[0], &pending[0]);
     }
 
@@ -222,7 +222,7 @@ static XGL_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
 
     if (intel_debug & INTEL_DEBUG_HANG) {
         intel_bo_wait(bo, -1);
-        intel_winsys_read_reset_stats(queue->dev->winsys,
+        intel_winsys_get_reset_stats(queue->dev->winsys,
                 &active[1], &pending[1]);
 
         if (active[0] != active[1] || pending[0] != pending[1]) {
@@ -289,15 +289,11 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
 void intel_queue_destroy(struct intel_queue *queue)
 {
-    if (queue->seqno_bo)
-        intel_bo_unreference(queue->seqno_bo);
+    intel_bo_unref(queue->seqno_bo);
+    intel_bo_unref(queue->atomic_bo);
+    intel_bo_unref(queue->select_graphics_bo);
+    intel_bo_unref(queue->select_compute_bo);
 
-    if (queue->atomic_bo)
-        intel_bo_unreference(queue->atomic_bo);
-    if (queue->select_graphics_bo)
-        intel_bo_unreference(queue->select_graphics_bo);
-    if (queue->select_compute_bo)
-        intel_bo_unreference(queue->select_compute_bo);
     intel_base_destroy(&queue->base);
 }
 
@@ -367,10 +363,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     last_cmd = intel_cmd(pCmdBuffers[i - 1]);
 
     if (ret == XGL_SUCCESS) {
-        if (queue->seqno_bo)
-            intel_bo_unreference(queue->seqno_bo);
-        queue->seqno_bo = intel_cmd_get_batch(last_cmd, NULL);
-        intel_bo_reference(queue->seqno_bo);
+        intel_bo_unref(queue->seqno_bo);
+        queue->seqno_bo = intel_bo_ref(intel_cmd_get_batch(last_cmd, NULL));
 
         if (fence_ != XGL_NULL_HANDLE) {
             struct intel_fence *fence = intel_fence(fence_);

@@ -115,34 +115,38 @@ intel_winsys_read_reg(struct intel_winsys *winsys,
                       uint32_t reg, uint64_t *val);
 
 /**
+ * Return the numbers of submissions lost due to GPU reset.
+ *
+ * \param active_lost      Number of lost active/guilty submissions
+ * \param pending_lost     Number of lost pending/innocent submissions
+ */
+int
+intel_winsys_get_reset_stats(struct intel_winsys *winsys,
+                             uint32_t *active_lost,
+                             uint32_t *pending_lost);
+/**
  * Allocate a buffer object.
  *
  * \param name             Informative description of the bo.
- * \param tiling           Tiling mode.
- * \param pitch            Pitch of the bo.
- * \param height           Height of the bo.
+ * \param size             Size of the bo.
  * \param cpu_init         Will be initialized by CPU.
  */
 struct intel_bo *
 intel_winsys_alloc_bo(struct intel_winsys *winsys,
                       const char *name,
-                      enum intel_tiling_mode tiling,
-                      unsigned long pitch,
-                      unsigned long height,
+                      unsigned long size,
                       bool cpu_init);
 
 /**
- * Allocate a linear buffer object.
+ * Create a bo from a user memory pointer.  Both \p userptr and \p size must
+ * be page aligned.
  */
-static inline struct intel_bo *
-intel_winsys_alloc_buffer(struct intel_winsys *winsys,
-                          const char *name,
-                          unsigned long size,
-                          bool cpu_init)
-{
-   return intel_winsys_alloc_bo(winsys, name,
-         INTEL_TILING_NONE, size, 1, cpu_init);
-}
+struct intel_bo *
+intel_winsys_import_userptr(struct intel_winsys *winsys,
+                            const char *name,
+                            void *userptr,
+                            unsigned long size,
+                            unsigned long flags);
 
 /**
  * Create a bo from a winsys handle.
@@ -156,7 +160,8 @@ intel_winsys_import_handle(struct intel_winsys *winsys,
                            unsigned long *pitch);
 
 /**
- * Export \p bo as a winsys handle for inter-process sharing.
+ * Export \p bo as a winsys handle for inter-process sharing.  \p tiling and
+ * \p pitch must match those set by \p intel_bo_set_tiling().
  */
 int
 intel_winsys_export_handle(struct intel_winsys *winsys,
@@ -198,22 +203,26 @@ void
 intel_winsys_decode_bo(struct intel_winsys *winsys,
                        struct intel_bo *bo, int used);
 
-int
-intel_winsys_read_reset_stats(struct intel_winsys *winsys,
-                              uint32_t *active, uint32_t *pending);
-
 /**
- * Increase the reference count of \p bo.
+ * Increase the reference count of \p bo.  No-op when \p bo is NULL.
  */
-void
-intel_bo_reference(struct intel_bo *bo);
+struct intel_bo *
+intel_bo_ref(struct intel_bo *bo);
 
 /**
  * Decrease the reference count of \p bo.  When the reference count reaches
- * zero, \p bo is destroyed.
+ * zero, \p bo is destroyed.  No-op when \p bo is NULL.
  */
 void
-intel_bo_unreference(struct intel_bo *bo);
+intel_bo_unref(struct intel_bo *bo);
+
+/**
+ * Set the tiling of \p bo.  The info is used by GTT mapping and bo export.
+ */
+int
+intel_bo_set_tiling(struct intel_bo *bo,
+                    enum intel_tiling_mode tiling,
+                    unsigned long pitch);
 
 /**
  * Map \p bo for CPU access.  Recursive mapping is allowed.
@@ -229,7 +238,8 @@ intel_bo_unreference(struct intel_bo *bo);
  * sequential writes, but reads would be very slow.  Callers always have a
  * linear view of the bo.
  *
- * map_gtt_async() is similar to map_gtt(), except that it does not block.
+ * map_async() and map_gtt_async() work similar to map() and map_gtt()
+ * respectively, except that they do not block.
  */
 void *
 intel_bo_map(struct intel_bo *bo, bool write_enable);

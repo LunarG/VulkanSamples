@@ -58,8 +58,7 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 
 void intel_fence_destroy(struct intel_fence *fence)
 {
-    if (fence->seqno_bo)
-        intel_bo_unreference(fence->seqno_bo);
+    intel_bo_unref(fence->seqno_bo);
 
     intel_base_destroy(&fence->obj.base);
 }
@@ -71,11 +70,8 @@ void intel_fence_set_seqno(struct intel_fence *fence,
     fence->x11 = NULL;
 #endif
 
-    if (fence->seqno_bo)
-        intel_bo_unreference(fence->seqno_bo);
-
-    fence->seqno_bo = seqno_bo;
-    intel_bo_reference(fence->seqno_bo);
+    intel_bo_unref(fence->seqno_bo);
+    fence->seqno_bo = intel_bo_ref(seqno_bo);
 }
 
 void intel_fence_set_x11(struct intel_fence *fence,
@@ -90,11 +86,8 @@ void intel_fence_set_x11(struct intel_fence *fence,
     fence->x11_serial = serial;
 #endif
 
-    if (fence->seqno_bo)
-        intel_bo_unreference(fence->seqno_bo);
-
-    fence->seqno_bo = seqno_bo;
-    intel_bo_reference(fence->seqno_bo);
+    intel_bo_unref(fence->seqno_bo);
+    fence->seqno_bo = intel_bo_ref(seqno_bo);
 }
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)

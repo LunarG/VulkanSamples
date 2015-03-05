@@ -222,55 +222,47 @@ intel_winsys_read_reg(struct intel_winsys *winsys,
    return drm_intel_reg_read(winsys->bufmgr, reg, val);
 }
 
+int
+intel_winsys_get_reset_stats(struct intel_winsys *winsys,
+                             uint32_t *active_lost,
+                             uint32_t *pending_lost)
+{
+   uint32_t reset_count;
+
+   return drm_intel_get_reset_stats(winsys->ctx,
+         &reset_count, active_lost, pending_lost);
+}
+
 struct intel_bo *
 intel_winsys_alloc_bo(struct intel_winsys *winsys,
                       const char *name,
-                      enum intel_tiling_mode tiling,
-                      unsigned long pitch,
-                      unsigned long height,
+                      unsigned long size,
                       bool cpu_init)
 {
    const unsigned int alignment = 4096; /* always page-aligned */
-   unsigned long size;
    drm_intel_bo *bo;
-
-   switch (tiling) {
-   case INTEL_TILING_X:
-      if (pitch % 512)
-         return NULL;
-      break;
-   case INTEL_TILING_Y:
-      if (pitch % 128)
-         return NULL;
-      break;
-   default:
-      break;
-   }
-
-   if (pitch > ULONG_MAX / height)
-      return NULL;
-
-   size = pitch * height;
 
    if (cpu_init) {
       bo = drm_intel_bo_alloc(winsys->bufmgr, name, size, alignment);
-   }
-   else {
+   } else {
       bo = drm_intel_bo_alloc_for_render(winsys->bufmgr,
             name, size, alignment);
    }
 
-   if (bo && tiling != INTEL_TILING_NONE) {
-      uint32_t real_tiling = tiling;
-      int err;
+   return (struct intel_bo *) bo;
+}
 
-      err = drm_intel_bo_set_tiling(bo, &real_tiling, pitch);
-      if (err || real_tiling != tiling) {
-         assert(!"tiling mismatch");
-         drm_intel_bo_unreference(bo);
-         return NULL;
-      }
-   }
+struct intel_bo *
+intel_winsys_import_userptr(struct intel_winsys *winsys,
+                            const char *name,
+                            void *userptr,
+                            unsigned long size,
+                            unsigned long flags)
+{
+   drm_intel_bo *bo;
+
+   bo = drm_intel_bo_alloc_userptr(winsys->bufmgr, name, userptr,
+            INTEL_TILING_NONE, 0, size, flags);
 
    return (struct intel_bo *) bo;
 }
@@ -432,23 +424,50 @@ intel_winsys_decode_bo(struct intel_winsys *winsys,
    intel_bo_unmap(bo);
 }
 
+struct intel_bo *
+intel_bo_ref(struct intel_bo *bo)
+{
+   if (bo)
+      drm_intel_bo_reference(gem_bo(bo));
+
+   return bo;
+}
+
+void
+intel_bo_unref(struct intel_bo *bo)
+{
+   if (bo)
+      drm_intel_bo_unreference(gem_bo(bo));
+}
+
 int
-intel_winsys_read_reset_stats(struct intel_winsys *winsys,
-                              uint32_t *active, uint32_t *pending)
+intel_bo_set_tiling(struct intel_bo *bo,
+                    enum intel_tiling_mode tiling,
+                    unsigned long pitch)
 {
-    return drm_intel_get_reset_stats(winsys->ctx, NULL, active, pending);
-}
+   uint32_t real_tiling = tiling;
+   int err;
 
-void
-intel_bo_reference(struct intel_bo *bo)
-{
-   drm_intel_bo_reference(gem_bo(bo));
-}
+   switch (tiling) {
+   case INTEL_TILING_X:
+      if (pitch % 512)
+         return -1;
+      break;
+   case INTEL_TILING_Y:
+      if (pitch % 128)
+         return -1;
+      break;
+   default:
+      break;
+   }
 
-void
-intel_bo_unreference(struct intel_bo *bo)
-{
-   drm_intel_bo_unreference(gem_bo(bo));
+   err = drm_intel_bo_set_tiling(gem_bo(bo), &real_tiling, pitch);
+   if (err || real_tiling != tiling) {
+      assert(!"tiling mismatch");
+      return -1;
+   }
+
+   return 0;
 }
 
 void *
