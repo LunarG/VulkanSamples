@@ -56,10 +56,6 @@ struct nulldrv_obj {
     struct nulldrv_base base;
 };
 
-struct nulldrv_base *nulldrv_base_create(struct nulldrv_dev *dev,
-                                     size_t obj_size,
-                                     XGL_DBG_OBJECT_TYPE type1);
-
 enum nulldrv_ext_type {
    NULLDRV_EXT_WSI_X11,
    NULLDRV_EXT_WSI_WINDOWS,
@@ -81,10 +77,6 @@ struct nulldrv_dev {
      bool exts[NULLDRV_EXT_COUNT];
      struct nulldrv_desc_pool *desc_pool;
      struct nulldrv_queue *queues[1];
-};
-
-struct nulldrv_layout {
-   enum nulldrv_layout_aux_type aux;
 };
 
 struct nulldrv_desc_pool {

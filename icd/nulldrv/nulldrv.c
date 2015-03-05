@@ -150,7 +150,7 @@ static XGL_RESULT nulldrv_gpu_add(int devid, const char *primary_node,
 }
 
 static XGL_RESULT nulldrv_queue_create(struct nulldrv_dev *dev,
-                              enum nulldrv_gpu_engine_type engine,
+                              uint32_t node_index,
                               struct nulldrv_queue **queue_ret)
 {
     struct nulldrv_queue *queue;
@@ -214,8 +214,6 @@ static enum nulldrv_ext_type nulldrv_gpu_lookup_extension(const struct nulldrv_g
 static XGL_RESULT nulldrv_desc_pool_create(struct nulldrv_dev *dev,
                                   struct nulldrv_desc_pool **pool_ret)
 {
-    const uint32_t surface_count = 1;
-    const uint32_t sampler_count = 1;
     struct nulldrv_desc_pool *pool;
 
     pool = malloc(sizeof(*pool));
@@ -414,7 +412,7 @@ static XGL_RESULT nulldrv_mem_alloc(struct nulldrv_dev *dev,
     if (!mem)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    mem->bo = _aligned_malloc(info->allocationSize, 4096);
+    mem->bo = malloc(info->allocationSize);
     if (!mem->bo) {
         return XGL_ERROR_OUT_OF_MEMORY;
     }
@@ -469,12 +467,6 @@ static XGL_RESULT nulldrv_img_view_create(struct nulldrv_dev *dev,
 {
     struct nulldrv_img *img = nulldrv_img(info->image);
     struct nulldrv_img_view *view;
-    uint32_t mip_levels, array_size;
-    XGL_CHANNEL_MAPPING state_swizzles;
-
-    mip_levels = info->subresourceRange.mipLevels;
-
-    array_size = info->subresourceRange.arraySize;
 
     view = (struct nulldrv_img_view *) nulldrv_base_create(dev, sizeof(*view),
             XGL_DBG_OBJECT_IMAGE_VIEW);
@@ -483,8 +475,6 @@ static XGL_RESULT nulldrv_img_view_create(struct nulldrv_dev *dev,
 
     view->img = img;
     view->min_lod = info->minLod;
-
-    state_swizzles = info->channels;
 
     view->cmd_len = 8;
 
@@ -597,8 +587,6 @@ static XGL_RESULT shader_create(struct nulldrv_dev *dev,
                                 const XGL_SHADER_CREATE_INFO *info,
                                 struct nulldrv_shader **sh_ret)
 {
-    const struct icd_bil_header *bil =
-        (const struct icd_bil_header *) info->pCode;
     struct nulldrv_shader *sh;
 
     sh = (struct nulldrv_shader *) nulldrv_base_create(dev, sizeof(*sh),
@@ -697,10 +685,7 @@ static XGL_RESULT nulldrv_cmd_create(struct nulldrv_dev *dev,
                             const XGL_CMD_BUFFER_CREATE_INFO *info,
                             struct nulldrv_cmd **cmd_ret)
 {
-    int pipeline_select;
     struct nulldrv_cmd *cmd;
-
-    pipeline_select = 0;
 
     cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
             XGL_DBG_OBJECT_CMD_BUFFER);
@@ -1385,7 +1370,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;
-    const struct nulldrv_img *img = nulldrv_img(image);
     XGL_RESULT ret = XGL_SUCCESS;
 
     switch (infoType) {
