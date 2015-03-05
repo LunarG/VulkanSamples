@@ -299,7 +299,7 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
         // Wait for work to finish before cleaning up.
         xglDeviceWaitIdle(m_device->device());
 
-        assert(m_renderTargetCount == 1);
+        assert(m_renderTargets.size() == 1);
         RecordImage(m_renderTargets[0]);
     }
 }
@@ -493,7 +493,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     m_memoryRefManager.AddMemoryRef(&constantBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -511,7 +511,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
     if (rotate)
@@ -792,7 +792,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -808,7 +808,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -863,9 +863,8 @@ TEST_F(XglRenderTest, TriangleMRT)
     XglDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
 
-    m_renderTargetCount = 2;
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget(2));
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
     XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
@@ -895,7 +894,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -984,7 +983,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     ASSERT_XGL_SUCCESS(cmdBuffer.BeginCommandBuffer(renderPass()));
@@ -1006,7 +1005,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -1081,7 +1080,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1101,7 +1100,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -1176,7 +1175,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1196,7 +1195,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -1281,7 +1280,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1301,7 +1300,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -1376,7 +1375,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1396,7 +1395,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -1451,7 +1450,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     m_memoryRefManager.AddMemoryRef(&MVPBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1471,7 +1470,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
     RotateTriangleVSUniform(Projection, View, Model, &MVPBuffer, &cmdBuffer);
@@ -1529,7 +1528,7 @@ TEST_F(XglRenderTest, MixTriangle)
     descriptorSet.AppendDummy();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1548,7 +1547,7 @@ TEST_F(XglRenderTest, MixTriangle)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -1618,7 +1617,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1638,7 +1637,7 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -1712,7 +1711,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1732,7 +1731,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -1826,7 +1825,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1845,7 +1844,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -1896,7 +1895,7 @@ TEST_F(XglRenderTest, VSTexture)
     m_memoryRefManager.AddMemoryRef(&texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1915,7 +1914,7 @@ TEST_F(XglRenderTest, VSTexture)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 TEST_F(XglRenderTest, TexturedTriangle)
@@ -1969,7 +1968,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
     m_memoryRefManager.AddMemoryRef(&texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -1988,7 +1987,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 TEST_F(XglRenderTest, TexturedTriangleClip)
@@ -2053,7 +2052,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     m_memoryRefManager.AddMemoryRef(&texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2072,7 +2071,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 TEST_F(XglRenderTest, FSTriangle)
@@ -2126,7 +2125,7 @@ TEST_F(XglRenderTest, FSTriangle)
     m_memoryRefManager.AddMemoryRef(&texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2145,7 +2144,7 @@ TEST_F(XglRenderTest, FSTriangle)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 TEST_F(XglRenderTest, SamplerBindingsTriangle)
@@ -2220,7 +2219,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     m_memoryRefManager.AddMemoryRef(&texture3);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2239,7 +2238,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -2304,7 +2303,7 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &colorBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2323,7 +2322,7 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -2407,7 +2406,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2426,7 +2425,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 
@@ -2505,7 +2504,7 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2524,7 +2523,7 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -2635,7 +2634,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.SetDepthStencil(&ds_state);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2654,7 +2653,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -2757,7 +2756,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     m_memoryRefManager.AddMemoryRef(&texture7);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2776,7 +2775,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -2873,7 +2872,7 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     m_memoryRefManager.AddMemoryRef(&texture7);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2892,7 +2891,7 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 
 }
@@ -3126,7 +3125,7 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &mixedBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -3145,7 +3144,7 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
     cmdBuffer.EndCommandBuffer();
     cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
 
-    for (int i = 0; i < m_renderTargetCount; i++)
+    for (int i = 0; i < m_renderTargets.size(); i++)
         RecordImage(m_renderTargets[i]);
 }
 

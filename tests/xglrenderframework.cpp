@@ -36,9 +36,7 @@ XglRenderFramework::XglRenderFramework() :
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 )                   // default window height
 {
-    m_renderTargetCount = 1;
-
-    m_render_target_fmt = XGL_FMT_B8G8R8A8_UNORM;
+    m_render_target_fmt = XGL_FMT_R8G8B8A8_UNORM;
 
     m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
@@ -162,9 +160,14 @@ void XglRenderFramework::InitViewport()
 
 void XglRenderFramework::InitRenderTarget()
 {
+    InitRenderTarget(1);
+}
+
+void XglRenderFramework::InitRenderTarget(uint32_t targets)
+{
     uint32_t i;
 
-    for (i = 0; i < m_renderTargetCount; i++) {
+    for (i = 0; i < targets; i++) {
         XglImage *img = new XglImage(m_device);
         img->init(m_width, m_height, m_render_target_fmt,
                 XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
@@ -190,7 +193,7 @@ void XglRenderFramework::InitRenderTarget()
     XGL_FRAMEBUFFER_CREATE_INFO fb_info = {};
     fb_info.sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
-    fb_info.colorAttachmentCount = m_renderTargetCount;
+    fb_info.colorAttachmentCount = m_renderTargets.size();
     fb_info.pColorAttachments = m_colorBindings;
     fb_info.pDepthStencilAttachment = dsBinding;
     fb_info.sampleCount = 1;
@@ -205,7 +208,7 @@ void XglRenderFramework::InitRenderTarget()
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = m_width;
     rp_info.renderArea.extent.height = m_height;
-    rp_info.colorAttachmentCount = m_renderTargetCount;
+    rp_info.colorAttachmentCount = m_renderTargets.size();
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
     rp_info.pColorLoadClearValues = &clear_color;
@@ -455,7 +458,7 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {};
     cmd_buf_create_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
     cmd_buf_create_info.pNext = NULL;
-    cmd_buf_create_info.queueNodeIndex = 0;
+    cmd_buf_create_info.queueNodeIndex = m_device->graphics_queue_node_index_;
     cmd_buf_create_info.flags = 0;
 
     err = xglCreateCommandBuffer(m_device->device(), &cmd_buf_create_info, &cmd_buf);
@@ -1103,7 +1106,6 @@ XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
     : xgl_testing::CmdBuffer(*device, xgl_testing::CmdBuffer::create_info(device->graphics_queue_node_index_))
 {
     m_device = device;
-    m_renderTargetCount = 0;
 }
 
 XGL_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
@@ -1185,7 +1187,7 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     clearColor.color.rawColor[3] = 0;
     clearColor.useRawValue = true;
 
-    for (i = 0; i < m_renderTargetCount; i++) {
+    for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
@@ -1269,7 +1271,7 @@ void XglCommandBufferObj::PrepareAttachments()
     pipeline_barrier.memBarrierCount = 1;
     pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
 
-    for(i=0; i<m_renderTargetCount; i++)
+    for(i=0; i<m_renderTargets.size(); i++)
     {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
@@ -1286,7 +1288,6 @@ void XglCommandBufferObj::BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, X
 void XglCommandBufferObj::AddRenderTarget(XglImage *renderTarget)
 {
     m_renderTargets.push_back(renderTarget);
-    m_renderTargetCount++;
 }
 
 void XglCommandBufferObj::DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)

@@ -58,6 +58,7 @@ public:
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();
+    void InitRenderTarget(uint32_t targets);
     void InitFramework();
     void ShutdownFramework();
     void InitState();
@@ -78,7 +79,6 @@ protected:
     XGL_DYNAMIC_VP_STATE_OBJECT             m_stateViewport;
     XGL_DYNAMIC_DS_STATE_OBJECT             m_stateDepthStencil;
     vector<XglImage*>                       m_renderTargets;
-    uint32_t                                m_renderTargetCount;
     float                                   m_width, m_height;
     XGL_FORMAT                              m_render_target_fmt;
     XGL_COLOR_ATTACHMENT_BIND_INFO          m_colorBindings[8];
@@ -135,7 +135,6 @@ public:
 protected:
     XglDevice                      *m_device;
     vector<XglImage*>               m_renderTargets;
-    uint32_t                        m_renderTargetCount;
 
 };
 
