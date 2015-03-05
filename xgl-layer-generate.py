@@ -149,8 +149,9 @@ class Subcommand(object):
         r_body.append('    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;')
         r_body.append('    g_pDbgFunctionHead = pNewDbgFuncNode;')
         r_body.append('    // force callbacks if DebugAction hasn\'t been set already other than initial value')
-        r_body.append('    if (g_actionIsDefault)')
+        r_body.append('    if (g_actionIsDefault) {')
         r_body.append('        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;')
+        r_body.append('    }')
         r_body.append('    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);')
         r_body.append('    return result;')
         r_body.append('}')
@@ -591,8 +592,9 @@ class Subcommand(object):
                         using_line += '    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;\n'
                         using_line += '    g_pDbgFunctionHead = pNewDbgFuncNode;\n'
                         using_line += '    // force callbacks if DebugAction hasn\'t been set already other than initial value\n'
-                        using_line += '    if (g_actionIsDefault)\n'
+                        using_line += '    if (g_actionIsDefault) {\n'
                         using_line += '        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;\n'
+                        using_line += '    }'
                     elif 'DbgUnregisterMsgCallback' in proto.name:
                         using_line =  '    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;\n'
                         using_line += '    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;\n'
