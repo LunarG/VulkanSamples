@@ -141,6 +141,8 @@ if (MSVC)
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_BINS}/icudt52.dll" "${COPY_DEST}"
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_BINS}/icuin52.dll" "${COPY_DEST}"
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_BINS}/icuuc52.dll" "${COPY_DEST}"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_BINS}/libGLESv2d.dll" "${COPY_DEST}"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_BINS}/libEGLd.dll" "${COPY_DEST}"
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_PLUGINS}/platforms/qwindows.dll" "${COPY_DEST}/platforms"
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QT_INSTALL_PLUGINS}/platforms/qwindowsd.dll"  "${COPY_DEST}/platforms"
                     COMMENT "Copying glvdebug Qt5 dependencies to ${COPY_DEST}"
