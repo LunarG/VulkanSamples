@@ -62,6 +62,36 @@ void intel_mem_free(struct intel_mem *mem)
     intel_base_destroy(&mem->base);
 }
 
+XGL_RESULT intel_mem_import_userptr(struct intel_dev *dev,
+                                    const void *userptr,
+                                    size_t size,
+                                    struct intel_mem **mem_ret)
+{
+    const size_t alignment = 4096;
+    struct intel_mem *mem;
+
+    if ((uintptr_t) userptr % alignment || size % alignment)
+        return XGL_ERROR_INVALID_ALIGNMENT;
+
+    mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
+            sizeof(*mem), dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, NULL, 0);
+    if (!mem)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    mem->bo = intel_winsys_import_userptr(dev->winsys,
+            "xgl-gpu-memory-userptr", (void *) userptr, size, 0);
+    if (!mem->bo) {
+        intel_mem_free(mem);
+        return XGL_ERROR_UNKNOWN;
+    }
+
+    mem->size = size;
+
+    *mem_ret = mem;
+
+    return XGL_SUCCESS;
+}
+
 XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
                                   XGL_MEMORY_PRIORITY priority)
 {
@@ -127,8 +157,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
     size_t                                      memSize,
     XGL_GPU_MEMORY*                             pMem)
 {
-    /* add DRM_I915_GEM_USERPTR to wisys first */
-    return XGL_ERROR_UNAVAILABLE;
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_mem_import_userptr(dev, pSysMem, memSize,
+            (struct intel_mem **) pMem);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(

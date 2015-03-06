@@ -284,9 +284,7 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props)
 {
     props->supportsMigration = false;
-
-    /* no winsys support for DRM_I915_GEM_USERPTR yet */
-    props->supportsPinning = false;
+    props->supportsPinning = true;
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,

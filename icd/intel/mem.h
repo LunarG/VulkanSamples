@@ -44,6 +44,11 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
                            struct intel_mem **mem_ret);
 void intel_mem_free(struct intel_mem *mem);
 
+XGL_RESULT intel_mem_import_userptr(struct intel_dev *dev,
+                                    const void *userptr,
+                                    size_t size,
+                                    struct intel_mem **mem_ret);
+
 XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
                                   XGL_MEMORY_PRIORITY priority);
 
