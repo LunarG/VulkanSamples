@@ -161,7 +161,7 @@ QSize glvdebug_QTimelineItemDelegate::sizeHint( const QStyleOptionViewItem &opti
 glvdebug_QTimelineView::glvdebug_QTimelineView(QWidget *parent) :
     QAbstractItemView(parent),
     m_maxItemDuration(0),
-    m_maxZoom(.001),
+    m_maxZoom(0.001f),
     m_threadHeight(0),
     m_hashIsDirty(true),
     m_margin(10),
