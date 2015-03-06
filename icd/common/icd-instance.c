@@ -45,7 +45,11 @@ static void * XGLAPI default_alloc(void *user_data, size_t size,
 
         size = (size + alignment - 1) & ~(alignment - 1);
 
+#if defined(_WIN32)
+        return _aligned_malloc(alignment, size);
+#else
         return aligned_alloc(alignment, size);
+#endif
     }
     else {
         return NULL;
