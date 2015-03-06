@@ -1,6 +1,6 @@
 # Build Instructions
 This project fully supports Linux today.
-Support for Windows is for the loader and layers (additional info below).  Additional Windows support will be coming in Q1'15.
+Support for Windows is for the loader, layers, and the Glave debugger (additional info below).  Additional Windows support will be coming in Q1'15.
 Support for Android is TBD.
 
 ##Git the Bits
@@ -132,9 +132,23 @@ EOF
 Windows 7+ with additional, software:
 
 - Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
-- CMake (from http://www.cmake.org/cmake/resources/software.html).  Note: Configure to add itself to the system PATH environment variable.
-- Python 3 (from https://www.python.org/downloads).  Note: Configure to add itself to the system PATH environment variable.
-- Cygwin (especially a BASH shell and git packages--from https://www.cygwin.com/).
+- CMake (from http://www.cmake.org/download/).  Notes:
+  - In order to build the Glave debugger, you need at least version 3.0.
+  - Tell the installer to "Add CMake to the system PATH" environment variable.
+- Python 3 (from https://www.python.org/downloads).  Notes:
+  - Select to install the optional sub-package to add Python to the system PATH environment variable.
+- Optional Packages:
+  - Qt 5.3 (from http://www.qt.io/download/).  Notes:
+    - Qt 5.3 is required in order to build the Glave debugger (GUI).  The Glave trace and replay tools can be built without Qt, but the debugger/GUI is built on top of Qt 5.3.  Various dependencies, from the Qt package are copied to the directory where the Glave debugger and its libraries are built.  In order to copy and run the debugger in another directory, these libraries must also be copied.  Other notes:
+    - While there are commercial licenses, you can also use the "Community" (free) license.
+    - By default, the installer will select the latest version (e.g. Qt 5.4) as well as some other components.  You must select "Qt 5.3"!  You can have multiple versions installed (e.g. Qt 5.2.1, 5.3, and 5.4).
+    - Installing Qt takes a long time.
+  - Cygwin (from https://www.cygwin.com/).  Notes:
+    - Cygwin provides some Linux-like tools, which are valuable for obtaining the source code, and running CMake.
+      Especially valuable are the BASH shell and git packages.
+    - If you don't want to use Cygwin, there are other shells and environments that can be used.
+      You can also use a Git package that doesn't come from Cygwin.
+  - Git (from http://git-scm.com/download/win).
 
 ##Windows Build
 
@@ -152,7 +166,7 @@ At this point, you can use Windows Explorer to launch Visual Studio by double-cl
 
 XGL programs must be able to find and use the XGL.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
 
-To run XGL programs you must have an appropriate icd (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the registry and/or an environment variable:
+To run XGL programs you must have an appropriate ICD (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the registry and/or an environment variable:
 
 - Registry:
   - Root Key: HKEY_LOCAL_MACHINE
