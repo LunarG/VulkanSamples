@@ -228,7 +228,6 @@ protected:
 
     XGL_SAMPLER m_sampler;
 
-    XGL_FORMAT                  m_depth_stencil_fmt;
     XGL_IMAGE                   m_depthStencilImage;
     uint32_t                    m_num_mem;
     XGL_GPU_MEMORY              *m_depthStencilMem;
@@ -261,7 +260,8 @@ protected:
 
 void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet)
 {
-    cmdBuffer->ClearAllBuffers(&m_depthStencilBinding, m_depthStencilImage);
+    cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color,
+                               &m_depthStencilBinding, m_depthStencilImage);
     cmdBuffer->PrepareAttachments();
     cmdBuffer->BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
     cmdBuffer->BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);

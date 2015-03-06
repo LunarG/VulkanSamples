@@ -34,9 +34,18 @@ XglRenderFramework::XglRenderFramework() :
     m_stateViewport( XGL_NULL_HANDLE ),
     m_stateDepthStencil( XGL_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
-    m_height( 256.0 )                   // default window height
+    m_height( 256.0 ),                  // default window height
+    m_render_target_fmt( XGL_FMT_R8G8B8A8_UNORM ),
+    m_depth_stencil_fmt( XGL_FMT_UNDEFINED ),
+    m_depth_clear_color( 1.0 ),
+    m_stencil_clear_color( 0 )
 {
-    m_render_target_fmt = XGL_FMT_R8G8B8A8_UNORM;
+    // clear the back buffer to dark grey
+    m_clear_color.color.rawColor[0] = 64;
+    m_clear_color.color.rawColor[1] = 64;
+    m_clear_color.color.rawColor[2] = 64;
+    m_clear_color.color.rawColor[3] = 0;
+    m_clear_color.useRawValue = true;
 
     m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
@@ -1142,7 +1151,8 @@ void XglCommandBufferObj::PipelineBarrier(XGL_PIPELINE_BARRIER *barrierPtr)
     xglCmdPipelineBarrier(obj(), barrierPtr);
 }
 
-void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage)
+void XglCommandBufferObj::ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color,
+                                          XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage)
 {
     uint32_t i;
     const XGL_FLAGS output_mask =
@@ -1178,22 +1188,13 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     pipeline_barrier.memBarrierCount = 1;
     pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
 
-    // clear the back buffer to dark grey
-    XGL_CLEAR_COLOR clearColor = {};
-
-    clearColor.color.rawColor[0] = 64;
-    clearColor.color.rawColor[1] = 64;
-    clearColor.color.rawColor[2] = 64;
-    clearColor.color.rawColor[3] = 0;
-    clearColor.useRawValue = true;
-
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
-        xglCmdClearColorImage( obj(), m_renderTargets[i]->image(), clearColor, 1, &srRange );
+        xglCmdClearColorImage( obj(), m_renderTargets[i]->image(), clear_color, 1, &srRange );
     }
 
     if (depthStencilImage)
@@ -1215,7 +1216,9 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
         depthStencilBinding->layout = memory_barrier.newLayout;
 
-        xglCmdClearDepthStencil(obj(), depthStencilImage, 1.0f, 0, 1, &dsRange);
+        xglCmdClearDepthStencil(obj(), depthStencilImage,
+                                depth_clear_color,  stencil_clear_color,
+                                1, &dsRange);
 
         // prepare depth buffer for rendering
         memory_barrier.image = depthStencilImage;

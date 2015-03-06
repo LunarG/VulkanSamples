@@ -81,8 +81,12 @@ protected:
     vector<XglImage*>                       m_renderTargets;
     float                                   m_width, m_height;
     XGL_FORMAT                              m_render_target_fmt;
+    XGL_FORMAT                              m_depth_stencil_fmt;
     XGL_COLOR_ATTACHMENT_BIND_INFO          m_colorBindings[8];
     XGL_DEPTH_STENCIL_BIND_INFO             m_depthStencilBinding;
+    XGL_CLEAR_COLOR                         m_clear_color;
+    float                                   m_depth_clear_color;
+    uint32_t                                m_stencil_clear_color;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
@@ -120,8 +124,7 @@ public:
     void PipelineBarrier(XGL_PIPELINE_BARRIER *barrierPtr);
     void AddRenderTarget(XglImage *renderTarget);
     void AddDepthStencil();
-    void ClearAllBuffers();
-    void ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage);
+    void ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color, XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage);
     void PrepareAttachments();
     void BindPipeline(XGL_PIPELINE pipeline);
     void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
