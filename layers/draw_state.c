@@ -1668,8 +1668,8 @@ static void initDrawState(void)
 {
     const char *strOpt;
     // initialize DrawState options
-    getLayerOptionEnum("DrawStateReportLevel", &g_reportingLevel);
-    g_actionIsDefault = getLayerOptionEnum("DrawStateDebugAction", &g_debugAction);
+    getLayerOptionEnum("DrawStateReportLevel", (uint32_t *) &g_reportingLevel);
+    g_actionIsDefault = getLayerOptionEnum("DrawStateDebugAction", (uint32_t *) &g_debugAction);
 
     if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
     {

@@ -910,8 +910,8 @@ class Subcommand(object):
         if init_opts:
             func_body.append('    const char *strOpt;')
             func_body.append('    // initialize %s options' % name)
-            func_body.append('    getLayerOptionEnum("%sReportLevel", &g_reportingLevel);' % name)
-            func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", &g_debugAction);' % name)
+            func_body.append('    getLayerOptionEnum("%sReportLevel", (uint32_t *) &g_reportingLevel);' % name)
+            func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", (uint32_t *) &g_debugAction);' % name)
             func_body.append('')
             func_body.append('    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)')
             func_body.append('    {')

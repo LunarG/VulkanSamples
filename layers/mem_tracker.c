@@ -769,8 +769,8 @@ static void initMemTracker(void)
 {
     const char *strOpt;
     // initialize MemTracker options
-    getLayerOptionEnum("MemTrackerReportLevel", &g_reportingLevel);
-    g_actionIsDefault = getLayerOptionEnum("MemTrackerDebugAction", &g_debugAction);
+    getLayerOptionEnum("MemTrackerReportLevel", (uint32_t *) &g_reportingLevel);
+    g_actionIsDefault = getLayerOptionEnum("MemTrackerDebugAction", (uint32_t *) &g_debugAction);
 
     if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
     {
