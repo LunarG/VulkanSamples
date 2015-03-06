@@ -74,7 +74,7 @@ struct xglFuncs {
     type_xglEnumerateLayers real_xglEnumerateLayers;
     typedef XGL_RESULT( XGLAPI * type_xglGetDeviceQueue)(
         XGL_DEVICE device,
-        XGL_QUEUE_TYPE queueType,
+        uint32_t queueNodeIndex,
         uint32_t queueIndex,
         XGL_QUEUE* pQueue);
     type_xglGetDeviceQueue real_xglGetDeviceQueue;

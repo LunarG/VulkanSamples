@@ -259,15 +259,9 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     int pipeline_select;
     struct intel_cmd *cmd;
 
-    switch (info->queueType) {
-    case XGL_QUEUE_TYPE_GRAPHICS:
+    switch (info->queueNodeIndex) {
+    case INTEL_GPU_ENGINE_3D:
         pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_3D;
-        break;
-    case XGL_QUEUE_TYPE_COMPUTE:
-        pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_MEDIA;
-        break;
-    case XGL_QUEUE_TYPE_DMA:
-        pipeline_select = -1;
         break;
     default:
         return XGL_ERROR_INVALID_VALUE;

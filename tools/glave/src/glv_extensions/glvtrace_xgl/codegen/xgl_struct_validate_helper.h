@@ -223,8 +223,6 @@ uint32_t xgl_validate_xgl_cmd_buffer_create_info(const XGL_CMD_BUFFER_CREATE_INF
 {
     if (!validate_XGL_STRUCTURE_TYPE(pStruct->sType))
         return 0;
-    if (!validate_XGL_QUEUE_TYPE(pStruct->queueType))
-        return 0;
     return 1;
 }
 uint32_t xgl_validate_xgl_cmd_buffer_graphics_begin_info(const XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pStruct)

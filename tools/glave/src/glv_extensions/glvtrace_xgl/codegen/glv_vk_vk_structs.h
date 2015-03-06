@@ -308,7 +308,7 @@ static struct_xglEnumerateLayers* interpret_body_as_xglEnumerateLayers(glv_trace
 typedef struct struct_xglGetDeviceQueue {
     glv_trace_packet_header* header;
     XGL_DEVICE device;
-    XGL_QUEUE_TYPE queueType;
+    uint32_t queueNodeIndex;
     uint32_t queueIndex;
     XGL_QUEUE* pQueue;
     XGL_RESULT result;

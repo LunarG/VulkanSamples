@@ -1056,7 +1056,7 @@ void xgl_cmd_buffer_create_info_struct_wrapper::display_struct_members()
 {
     printf("%*s    %ssType = %s\n", m_indent, "", &m_dummy_prefix, string_XGL_STRUCTURE_TYPE(m_struct.sType));
     printf("%*s    %spNext = %p\n", m_indent, "", &m_dummy_prefix, (m_struct.pNext));
-    printf("%*s    %squeueType = %s\n", m_indent, "", &m_dummy_prefix, string_XGL_QUEUE_TYPE(m_struct.queueType));
+    printf("%*s    %squeueNodeIndex = %u\n", m_indent, "", &m_dummy_prefix, (m_struct.queueNodeIndex));
     printf("%*s    %sflags = %u\n", m_indent, "", &m_dummy_prefix, (m_struct.flags));
 }
 

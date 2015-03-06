@@ -120,7 +120,8 @@ void XglRenderFramework::InitState()
     XGL_CMD_BUFFER_CREATE_INFO cmdInfo = {};
 
     cmdInfo.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    cmdInfo.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    cmdInfo.queueNodeIndex = m_device->graphics_queue_node_index_;
+
     err = xglCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
     ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
 }
@@ -454,7 +455,7 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {};
     cmd_buf_create_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
     cmd_buf_create_info.pNext = NULL;
-    cmd_buf_create_info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    cmd_buf_create_info.queueNodeIndex = 0;
     cmd_buf_create_info.flags = 0;
 
     err = xglCreateCommandBuffer(m_device->device(), &cmd_buf_create_info, &cmd_buf);
@@ -1103,7 +1104,7 @@ int XglMemoryRefManager::GetNumRefs() {
 }
 
 XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
-    : xgl_testing::CmdBuffer(*device, xgl_testing::CmdBuffer::create_info(XGL_QUEUE_TYPE_GRAPHICS))
+    : xgl_testing::CmdBuffer(*device, xgl_testing::CmdBuffer::create_info(device->graphics_queue_node_index_))
 {
     m_device = device;
     m_renderTargetCount = 0;

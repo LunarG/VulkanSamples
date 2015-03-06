@@ -38,6 +38,8 @@ struct demo {
     XGL_PHYSICAL_GPU gpu;
     XGL_DEVICE device;
     XGL_QUEUE queue;
+    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+    uint32_t graphics_queue_node_index;
 
     int width, height;
     XGL_FORMAT format;
@@ -539,7 +541,7 @@ static void demo_prepare_textures(struct demo *demo)
             XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {
                 .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
                 .pNext = NULL,
-                .queueType = XGL_QUEUE_TYPE_GRAPHICS,
+                .queueNodeIndex = demo->graphics_queue_node_index,
                 .flags = 0
             };
 
@@ -1071,7 +1073,7 @@ static void demo_prepare(struct demo *demo)
     const XGL_CMD_BUFFER_CREATE_INFO cmd = {
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
         .pNext = NULL,
-        .queueType = XGL_QUEUE_TYPE_GRAPHICS,
+        .queueNodeIndex = demo->graphics_queue_node_index,
         .flags = 0,
     };
     XGL_RESULT err;
@@ -1208,6 +1210,8 @@ static void demo_init_xgl(struct demo *demo)
     XGL_RESULT err;
     uint32_t gpu_count;
     uint32_t i;
+    size_t data_size;
+    uint32_t queue_count;
 
     err = xglCreateInstance(&app, NULL, &demo->inst);
     if (err == XGL_ERROR_INCOMPATIBLE_DRIVER) {
@@ -1232,7 +1236,25 @@ static void demo_init_xgl(struct demo *demo)
     err = xglCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
 
-    err = xglGetDeviceQueue(demo->device, XGL_QUEUE_TYPE_GRAPHICS,
+    err = xglGetGpuInfo(demo->gpu, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+                        &data_size, NULL);
+    assert(!err);
+
+    demo->queue_props = (XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *) malloc(data_size);
+    err = xglGetGpuInfo(demo->gpu, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+                        &data_size, demo->queue_props);
+    assert(!err);
+    queue_count = data_size / sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES);
+    assert(queue_count >= 1);
+
+    for (i = 0; i < queue_count; i++) {
+        if (demo->queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT)
+            break;
+    }
+    assert(i < queue_count);
+    demo->graphics_queue_node_index = i;
+
+    err = xglGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
     assert(!err);
 }

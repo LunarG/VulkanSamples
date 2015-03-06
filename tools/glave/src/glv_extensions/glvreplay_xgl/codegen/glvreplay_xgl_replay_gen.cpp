@@ -272,7 +272,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         {
             struct_xglGetDeviceQueue* pPacket = (struct_xglGetDeviceQueue*)(packet->pBody);
             XGL_QUEUE local_pQueue;
-            replayResult = m_xglFuncs.real_xglGetDeviceQueue(m_objMapper.remap(pPacket->device), pPacket->queueType, pPacket->queueIndex, &local_pQueue);
+            replayResult = m_xglFuncs.real_xglGetDeviceQueue(m_objMapper.remap(pPacket->device), pPacket->queueNodeIndex, pPacket->queueIndex, &local_pQueue);
             if (replayResult == XGL_SUCCESS)
             {
                 m_objMapper.add_to_map(pPacket->pQueue, &local_pQueue);

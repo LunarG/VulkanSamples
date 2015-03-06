@@ -374,6 +374,9 @@ void Device::init(bool enable_layers)
         XGL_DEVICE_QUEUE_CREATE_INFO qi = {};
         qi.queueNodeIndex = i;
         qi.queueCount = queue_props[i].queueCount;
+        if (queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+            graphics_queue_node_index_ = i;
+        }
         queue_info.push_back(qi);
     }
 
@@ -414,24 +417,41 @@ void Device::init(const XGL_DEVICE_CREATE_INFO &info)
 
 void Device::init_queues()
 {
-    const struct {
-        QueueIndex index;
-        XGL_QUEUE_TYPE type;
-    } queue_mapping[] = {
-        { GRAPHICS, XGL_QUEUE_TYPE_GRAPHICS },
-        { COMPUTE, XGL_QUEUE_TYPE_COMPUTE },
-        { DMA, XGL_QUEUE_TYPE_DMA },
-    };
+    XGL_RESULT err;
+    size_t data_size;
+    uint32_t queue_node_count;
 
-    for (int i = 0; i < QUEUE_COUNT; i++) {
-        uint32_t idx = 0;
+    err = xglGetGpuInfo(gpu_.obj(), XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+                        &data_size, NULL);
+    EXPECT(err == XGL_SUCCESS);
 
-        while (true) {
-            XGL_QUEUE queue;
-            XGL_RESULT err = xglGetDeviceQueue(obj(), queue_mapping[i].type, idx++, &queue);
-            if (err != XGL_SUCCESS)
-                break;
-            queues_[queue_mapping[i].index].push_back(new Queue(queue));
+    queue_node_count = data_size / sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES);
+    EXPECT(queue_node_count >= 1);
+
+    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props[queue_node_count];
+
+    err = xglGetGpuInfo(gpu_.obj(), XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+                        &data_size, queue_props);
+    EXPECT(err == XGL_SUCCESS);
+
+    for (int i = 0; i < queue_node_count; i++) {
+        XGL_QUEUE queue;
+
+        for (int j = 0; j < queue_props[i].queueCount; j++) {
+            err = xglGetDeviceQueue(obj(), i, j, &queue);
+            EXPECT(err == XGL_SUCCESS);
+
+            if (queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+                queues_[GRAPHICS].push_back(new Queue(queue));
+            }
+
+            if (queue_props[i].queueFlags & XGL_QUEUE_COMPUTE_BIT) {
+                queues_[COMPUTE].push_back(new Queue(queue));
+            }
+
+            if (queue_props[i].queueFlags & XGL_QUEUE_DMA_BIT) {
+                queues_[DMA].push_back(new Queue(queue));
+            }
         }
     }
 

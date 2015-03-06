@@ -209,7 +209,7 @@ public:
     const std::vector<Queue *> &graphics_queues() { return queues_[GRAPHICS]; }
     const std::vector<Queue *> &compute_queues() { return queues_[COMPUTE]; }
     const std::vector<Queue *> &dma_queues() { return queues_[DMA]; }
-
+    uint32_t graphics_queue_node_index_;
 
     struct Format {
         XGL_FORMAT format;
@@ -599,7 +599,7 @@ public:
     void end();
     void reset();
 
-    static XGL_CMD_BUFFER_CREATE_INFO create_info(XGL_QUEUE_TYPE type);
+    static XGL_CMD_BUFFER_CREATE_INFO create_info(uint32_t queueNodeIndex);
 };
 
 inline const void *Object::map(XGL_FLAGS flags) const
@@ -866,11 +866,11 @@ inline XGL_UPDATE_AS_COPY DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32
     return info;
 }
 
-inline XGL_CMD_BUFFER_CREATE_INFO CmdBuffer::create_info(XGL_QUEUE_TYPE type)
+inline XGL_CMD_BUFFER_CREATE_INFO CmdBuffer::create_info(uint32_t queueNodeIndex)
 {
     XGL_CMD_BUFFER_CREATE_INFO info = {};
     info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    info.queueType = type;
+    info.queueNodeIndex = queueNodeIndex;
     return info;
 }
 

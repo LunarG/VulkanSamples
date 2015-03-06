@@ -446,7 +446,7 @@ char* xgl_print_xgl_cmd_buffer_create_info(const XGL_CMD_BUFFER_CREATE_INFO* pSt
         stp_strs[0] = "";
     len = strlen(stp_strs[0]) + sizeof(char)*1024;
     str = (char*)malloc(len);
-    snprintf(str, len, "%ssType = %s\n%spNext = addr\n%squeueType = %s\n%sflags = %u\n", prefix, string_XGL_STRUCTURE_TYPE(pStruct->sType), prefix, prefix, string_XGL_QUEUE_TYPE(pStruct->queueType), prefix, (pStruct->flags));
+    snprintf(str, len, "%ssType = %s\n%spNext = addr\n%squeueNodeIndex = %u\n%sflags = %u\n", prefix, string_XGL_STRUCTURE_TYPE(pStruct->sType), prefix, prefix, (pStruct->queueNodeIndex), prefix, (pStruct->flags));
     for (int32_t stp_index = 0; stp_index >= 0; stp_index--) {
         if (0 < strlen(stp_strs[stp_index])) {
             strncat(str, stp_strs[stp_index], strlen(stp_strs[stp_index]));

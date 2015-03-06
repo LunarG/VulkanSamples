@@ -86,7 +86,7 @@ XGL_RESULT( XGLAPI * real_xglEnumerateLayers)(
 
 XGL_RESULT( XGLAPI * real_xglGetDeviceQueue)(
     XGL_DEVICE device,
-    XGL_QUEUE_TYPE queueType,
+    uint32_t queueNodeIndex,
     uint32_t queueIndex,
     XGL_QUEUE* pQueue) = xglGetDeviceQueue;
 
@@ -1179,7 +1179,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetExtensionSupport(
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetDeviceQueue(
     XGL_DEVICE device,
-    XGL_QUEUE_TYPE queueType,
+    uint32_t queueNodeIndex,
     uint32_t queueIndex,
     XGL_QUEUE* pQueue)
 {
@@ -1187,10 +1187,10 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetDeviceQueue(
     XGL_RESULT result;
     struct_xglGetDeviceQueue* pPacket = NULL;
     CREATE_TRACE_PACKET(xglGetDeviceQueue, sizeof(XGL_QUEUE));
-    result = real_xglGetDeviceQueue(device, queueType, queueIndex, pQueue);
+    result = real_xglGetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
     pPacket = interpret_body_as_xglGetDeviceQueue(pHeader);
     pPacket->device = device;
-    pPacket->queueType = queueType;
+    pPacket->queueNodeIndex = queueNodeIndex;
     pPacket->queueIndex = queueIndex;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pQueue), sizeof(XGL_QUEUE), pQueue);
     pPacket->result = result;

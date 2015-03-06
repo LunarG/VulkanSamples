@@ -499,7 +499,7 @@ protected:
     XglCmdBlitTest() :
         dev_(environment->default_device()),
         queue_(*dev_.graphics_queues()[0]),
-        cmd_(dev_, xgl_testing::CmdBuffer::create_info(XGL_QUEUE_TYPE_GRAPHICS))
+        cmd_(dev_, xgl_testing::CmdBuffer::create_info(dev_.graphics_queue_node_index_))
     {
         // make sure every test uses a different pattern
         xgl_testing::ImageChecker::hash_salt_generate();

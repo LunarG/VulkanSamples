@@ -263,7 +263,7 @@ core = Extension(
 
         Proto("XGL_RESULT", "GetDeviceQueue",
             [Param("XGL_DEVICE", "device"),
-             Param("XGL_QUEUE_TYPE", "queueType"),
+             Param("uint32_t", "queueNodeIndex"),
              Param("uint32_t", "queueIndex"),
              Param("XGL_QUEUE*", "pQueue")]),
 

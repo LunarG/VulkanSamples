@@ -277,7 +277,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateDevice(XGL_PHYSICAL_GPU gpu
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglDestroyDevice(XGL_DEVICE device);
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName);
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, uint32_t queueIndex, XGL_QUEUE* pQueue);
+GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetDeviceQueue(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue);
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglQueueSetGlobalMemReferences(XGL_QUEUE queue, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs);
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglQueueWaitIdle(XGL_QUEUE queue);
@@ -428,7 +428,7 @@ extern XGL_RESULT( XGLAPI * real_xglEnumerateLayers)(
 
 extern XGL_RESULT( XGLAPI * real_xglGetDeviceQueue)(
     XGL_DEVICE device,
-    XGL_QUEUE_TYPE queueType,
+    uint32_t queueNodeIndex,
     uint32_t queueIndex,
     XGL_QUEUE* pQueue);
 

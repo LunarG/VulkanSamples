@@ -84,10 +84,12 @@ protected:
     uint32_t m_device_id;
     xgl_testing::Device *m_device;
     XGL_PHYSICAL_GPU_PROPERTIES props;
-    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
+    std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props;
+    uint32_t graphics_queue_node_index;
 
     virtual void SetUp() {
         XGL_RESULT err;
+        int i;
 
         this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -109,8 +111,15 @@ protected:
         this->m_device->init();
 
         props = m_device->gpu().properties();
-        queue_props = m_device->gpu().queue_properties()[0];
 
+        queue_props = this->m_device->gpu().queue_properties();
+        for (i = 0; i < queue_props.size(); i++) {
+            if (queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+                graphics_queue_node_index = i;
+                break;
+            }
+        }
+        ASSERT_LT(i, queue_props.size()) << "Could not find a Queue with Graphics support";
     }
 
     virtual void TearDown() {
@@ -398,37 +407,44 @@ TEST_F(XglTest, Query) {
     ASSERT_XGL_SUCCESS(err);
 }
 
-void getQueue(xgl_testing::Device *device, XGL_QUEUE_TYPE qtype, const char *qname)
+void getQueue(xgl_testing::Device *device, uint32_t queue_node_index, const char *qname)
 {
     int que_idx;
     XGL_RESULT err;
     XGL_QUEUE queue;
 
-    const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES props = device->gpu().queue_properties()[0];
+    const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES props = device->gpu().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
-        err = xglGetDeviceQueue(device->obj(), qtype, que_idx, &queue);
+        err = xglGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
         ASSERT_EQ(XGL_SUCCESS, err) << "xglGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << xgl_result_string(err);
     }
 }
 
-TEST_F(XglTest, Queue)
+
+void print_queue_info(xgl_testing::Device *device, uint32_t queue_node_index)
 {
     uint32_t que_idx;
+    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
+    XGL_PHYSICAL_GPU_PROPERTIES props;
 
-    ASSERT_NE(0, queue_props.queueCount) << "No heaps available for GPU #" << m_device_id << ": " << props.gpuName;
+    props = device->gpu().properties();
+    queue_props = device->gpu().queue_properties()[queue_node_index];
+    ASSERT_NE(0, queue_props.queueCount) << "No Queues available at Node Index #" << queue_node_index << " GPU: " << props.gpuName;
 
 //            XGL_RESULT XGLAPI xglGetDeviceQueue(
 //                XGL_DEVICE                                  device,
-//                XGL_QUEUE_TYPE                              queueType,
+//                uint32_t                                    queueNodeIndex,
 //                uint32_t                                    queueIndex,
 //                XGL_QUEUE*                                  pQueue);
     /*
      * queue handles are retrieved from the device by calling
-     * xglGetDeviceQueue() with a queue type and a requested logical
-     * queue ID. The logical queue ID is a sequential number starting
-     * from zero and referencing up to the number of queues requested
-     * at device creation. Each queue type has its own sequence of IDs
-     * starting at zero.
+     * xglGetDeviceQueue() with a queue node index and a requested logical
+     * queue ID. The queue node index is the index into the array of
+     * XGL_PHYSICAL_GPU_QUEUE_PROPERTIES returned by GetGpuInfo. Each
+     * queue node index has different attributes specified by the XGL_QUEUE_FLAGS property.
+     * The logical queue ID is a sequential number starting from zero
+     * and referencing up to the number of queues supported of that node index
+     * at device creation.
      */
 
     for (que_idx = 0; que_idx < queue_props.queueCount; que_idx++) {
@@ -441,24 +457,16 @@ TEST_F(XglTest, Queue)
 //                    XGL_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
 //                } XGL_QUEUE_FLAGS;
 
-//                typedef enum _XGL_QUEUE_TYPE
-//                {
-//                    XGL_QUEUE_TYPE_GRAPHICS                                 = 0x1,
-//                    XGL_QUEUE_TYPE_COMPUTE                                  = 0x2,
-//                    XGL_QUEUE_TYPE_DMA                                      = 0x3,
-//                    XGL_MAX_ENUM(_XGL_QUEUE_TYPE)
-//                } XGL_QUEUE_TYPE;
-
         if (queue_props.queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
-            getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "Graphics");
+            getQueue(device, queue_node_index, "Graphics");
         }
 
         if (queue_props.queueFlags & XGL_QUEUE_COMPUTE_BIT) {
-            getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "Compute");
+            getQueue(device, queue_node_index, "Compute");
         }
 
         if (queue_props.queueFlags & XGL_QUEUE_DMA_BIT) {
-            getQueue(m_device, XGL_QUEUE_TYPE_GRAPHICS, "DMA");
+            getQueue(device, queue_node_index, "DMA");
         }
 
         // TODO: What do we do about EXTENDED_BIT?
@@ -471,6 +479,16 @@ TEST_F(XglTest, Queue)
          */
     }
 }
+
+TEST_F(XglTest, Queue)
+{
+    uint32_t i;
+
+    for (i = 0; i < m_device->gpu().queue_properties().size(); i++) {
+        print_queue_info(m_device, i);
+    }
+}
+
 
 void XglTest::CreateImageTest()
 {
@@ -714,7 +732,7 @@ void XglTest::CreateCommandBufferTest()
 //    } XGL_CMD_BUFFER_CREATE_INFO;
 
     info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    info.queueNodeIndex = graphics_queue_node_index;
     err = xglCreateCommandBuffer(device(), &info, &cmdBuffer);
     ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
 

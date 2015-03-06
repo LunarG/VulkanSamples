@@ -222,7 +222,7 @@ typedef enum _CB_STATE
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     XGL_CMD_BUFFER                  cmdBuffer;
-    XGL_QUEUE_TYPE                  queueType;
+    uint32_t	                    queueNodeIndex;
     XGL_FLAGS                       flags;
     XGL_FENCE                       fence;    // fence tracking this cmd buffer
     uint64_t                        numCmds;  // number of cmds in this CB

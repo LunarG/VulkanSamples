@@ -1198,7 +1198,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
-    XGL_QUEUE_TYPE                              queueType,
+    uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
     XGL_QUEUE*                                  pQueue)
 {

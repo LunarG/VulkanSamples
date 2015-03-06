@@ -343,23 +343,21 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
-    XGL_QUEUE_TYPE                              queueType,
+    uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
     XGL_QUEUE*                                  pQueue)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    switch (queueType) {
-    case XGL_QUEUE_TYPE_GRAPHICS:
-    case XGL_QUEUE_TYPE_COMPUTE:
-        if (queueIndex > 0)
-            return XGL_ERROR_UNAVAILABLE;
-        *pQueue = dev->queues[INTEL_GPU_ENGINE_3D];
-        return XGL_SUCCESS;
-    case XGL_QUEUE_TYPE_DMA:
-    default:
+    if (queueNodeIndex >= INTEL_GPU_ENGINE_COUNT) {
         return XGL_ERROR_UNAVAILABLE;
     }
+
+    if (queueIndex > 0)
+        return XGL_ERROR_UNAVAILABLE;
+
+    *pQueue = dev->queues[queueNodeIndex];
+    return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(

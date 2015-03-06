@@ -248,7 +248,7 @@ static const char *stringify_xgl_packet_id(const enum GLV_TRACE_PACKET_ID_XGL id
     case GLV_TPI_XGL_xglGetDeviceQueue:
     {
         struct_xglGetDeviceQueue* pPacket = (struct_xglGetDeviceQueue*)(pHeader->pBody);
-        snprintf(str, 1024, "xglGetDeviceQueue(device = %p, queueType = %s, queueIndex = %i, pQueue = %p)", (void*)(pPacket->device), string_XGL_QUEUE_TYPE(pPacket->queueType), pPacket->queueIndex, (void*)(pPacket->pQueue));
+        snprintf(str, 1024, "xglGetDeviceQueue(device = %p, queueNodeIndex = %i, queueIndex = %i, pQueue = %p)", (void*)(pPacket->device), pPacket->queueNodeIndex, pPacket->queueIndex, (void*)(pPacket->pQueue));
         return str;
     }
     case GLV_TPI_XGL_xglQueueSubmit:

@@ -1116,11 +1116,11 @@ static void resetCB(const XGL_CMD_BUFFER cb)
         // Reset CB state
         GLOBAL_CB_NODE* pSaveNext = pCB->pNextGlobalCBNode;
         XGL_FLAGS saveFlags = pCB->flags;
-        XGL_QUEUE_TYPE saveQT = pCB->queueType;
+        uint32_t saveQueueNodeIndex = pCB->queueNodeIndex;
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->cmdBuffer = cb;
         pCB->flags = saveFlags;
-        pCB->queueType = saveQT;
+        pCB->queueNodeIndex = saveQueueNodeIndex;
         pCB->pNextGlobalCBNode = pSaveNext;
         pCB->lastVtxBinding = MAX_BINDING;
     }
@@ -2022,7 +2022,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
         g_pCmdBufferHead = pCB;
         pCB->cmdBuffer = *pCmdBuffer;
         pCB->flags = pCreateInfo->flags;
-        pCB->queueType = pCreateInfo->queueType;
+        pCB->queueNodeIndex = pCreateInfo->queueNodeIndex;
         pCB->lastVtxBinding = MAX_BINDING;
         loader_platform_thread_unlock_mutex(&globalLock);
         updateCBTracking(*pCmdBuffer);

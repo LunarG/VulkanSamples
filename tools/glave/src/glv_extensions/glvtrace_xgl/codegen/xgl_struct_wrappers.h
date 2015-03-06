@@ -493,8 +493,8 @@ public:
     XGL_STRUCTURE_TYPE get_sType() { return m_struct.sType; }
     void set_sType(XGL_STRUCTURE_TYPE inValue) { m_struct.sType = inValue; }
     const void* get_pNext() { return m_struct.pNext; }
-    XGL_QUEUE_TYPE get_queueType() { return m_struct.queueType; }
-    void set_queueType(XGL_QUEUE_TYPE inValue) { m_struct.queueType = inValue; }
+    uint32_t get_queueNodeIndex() { return m_struct.queueNodeIndex; }
+    void set_queueNodeIndex(uint32_t inValue) { m_struct.queueNodeIndex = inValue; }
     XGL_FLAGS get_flags() { return m_struct.flags; }
     void set_flags(XGL_FLAGS inValue) { m_struct.flags = inValue; }
 

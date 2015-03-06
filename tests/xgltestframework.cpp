@@ -402,7 +402,7 @@ static xgl_testing::Environment *environment;
 TestFrameworkXglPresent::TestFrameworkXglPresent() :
 m_device(environment->default_device()),
 m_queue(*m_device.graphics_queues()[0]),
-m_cmdbuf(m_device, xgl_testing::CmdBuffer::create_info(XGL_QUEUE_TYPE_GRAPHICS))
+m_cmdbuf(m_device, xgl_testing::CmdBuffer::create_info(m_device.graphics_queue_node_index_))
 {
     m_quit = false;
     m_pause = false;

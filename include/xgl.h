@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 50, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 51, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -107,18 +107,6 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_RENDER_PASS, XGL_OBJECT)
 // ------------------------------------------------------------------------------------------------
 // Enumerations
 
-
-typedef enum _XGL_QUEUE_TYPE
-{
-    XGL_QUEUE_TYPE_GRAPHICS                                 = 0x1,
-    XGL_QUEUE_TYPE_COMPUTE                                  = 0x2,
-    XGL_QUEUE_TYPE_DMA                                      = 0x3,
-
-    XGL_QUEUE_TYPE_BEGIN_RANGE                              = XGL_QUEUE_TYPE_GRAPHICS,
-    XGL_QUEUE_TYPE_END_RANGE                                = XGL_QUEUE_TYPE_DMA,
-    XGL_NUM_QUEUE_TYPE                                      = (XGL_QUEUE_TYPE_END_RANGE - XGL_QUEUE_TYPE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_QUEUE_TYPE)
-} XGL_QUEUE_TYPE;
 
 typedef enum _XGL_MEMORY_PRIORITY
 {
@@ -2071,7 +2059,7 @@ typedef struct _XGL_CMD_BUFFER_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
-    XGL_QUEUE_TYPE                          queueType;
+    uint32_t                                queueNodeIndex;
     XGL_FLAGS                               flags;
 } XGL_CMD_BUFFER_CREATE_INFO;
 
@@ -2231,7 +2219,7 @@ typedef XGL_RESULT (XGLAPI *xglCreateDeviceType)(XGL_PHYSICAL_GPU gpu, const XGL
 typedef XGL_RESULT (XGLAPI *xglDestroyDeviceType)(XGL_DEVICE device);
 typedef XGL_RESULT (XGLAPI *xglGetExtensionSupportType)(XGL_PHYSICAL_GPU gpu, const char* pExtName);
 typedef XGL_RESULT (XGLAPI *xglEnumerateLayersType)(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
-typedef XGL_RESULT (XGLAPI *xglGetDeviceQueueType)(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, uint32_t queueIndex, XGL_QUEUE* pQueue);
+typedef XGL_RESULT (XGLAPI *xglGetDeviceQueueType)(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue);
 typedef XGL_RESULT (XGLAPI *xglQueueSubmitType)(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglQueueSetGlobalMemReferencesType)(XGL_QUEUE queue, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs);
 typedef XGL_RESULT (XGLAPI *xglQueueWaitIdleType)(XGL_QUEUE queue);
@@ -2394,7 +2382,7 @@ XGL_RESULT XGLAPI xglEnumerateLayers(
 
 XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
-    XGL_QUEUE_TYPE                              queueType,
+    uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
     XGL_QUEUE*                                  pQueue);
 

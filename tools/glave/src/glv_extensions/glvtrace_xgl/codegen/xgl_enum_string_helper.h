@@ -1405,22 +1405,6 @@ static inline const char* string_XGL_QUEUE_FLAGS(XGL_QUEUE_FLAGS input_value)
 }
 
 
-static inline const char* string_XGL_QUEUE_TYPE(XGL_QUEUE_TYPE input_value)
-{
-    switch ((XGL_QUEUE_TYPE)input_value)
-    {
-        case XGL_QUEUE_TYPE_COMPUTE:
-            return "XGL_QUEUE_TYPE_COMPUTE";
-        case XGL_QUEUE_TYPE_DMA:
-            return "XGL_QUEUE_TYPE_DMA";
-        case XGL_QUEUE_TYPE_GRAPHICS:
-            return "XGL_QUEUE_TYPE_GRAPHICS";
-        default:
-            return "Unhandled XGL_QUEUE_TYPE";
-    }
-}
-
-
 static inline const char* string_XGL_RESULT(XGL_RESULT input_value)
 {
     switch ((XGL_RESULT)input_value)

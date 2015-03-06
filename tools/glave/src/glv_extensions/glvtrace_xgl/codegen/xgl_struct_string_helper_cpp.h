@@ -393,7 +393,7 @@ string xgl_print_xgl_cmd_buffer_create_info(const XGL_CMD_BUFFER_CREATE_INFO* pS
     string final_str;
     string tmp_str;
     string extra_indent = "  " + prefix;
-    stringstream ss[2];
+    stringstream ss[3];
     string stp_strs[1];
     if (pStruct->pNext) {
         tmp_str = dynamic_display((void*)pStruct->pNext, prefix);
@@ -404,8 +404,9 @@ string xgl_print_xgl_cmd_buffer_create_info(const XGL_CMD_BUFFER_CREATE_INFO* pS
     else
         stp_strs[0] = "";
     ss[0] << pStruct->pNext;
-    ss[1] << pStruct->flags;
-    final_str = prefix + "sType = " + string_XGL_STRUCTURE_TYPE(pStruct->sType) + "\n" + prefix + "pNext = " + ss[0].str() + "\n" + prefix + "queueType = " + string_XGL_QUEUE_TYPE(pStruct->queueType) + "\n" + prefix + "flags = " + ss[1].str() + "\n" + stp_strs[0];
+    ss[1] << pStruct->queueNodeIndex;
+    ss[2] << pStruct->flags;
+    final_str = prefix + "sType = " + string_XGL_STRUCTURE_TYPE(pStruct->sType) + "\n" + prefix + "pNext = " + ss[0].str() + "\n" + prefix + "queueNodeIndex = " + ss[1].str() + "\n" + prefix + "flags = " + ss[2].str() + "\n" + stp_strs[0];
     return final_str;
 }
 string xgl_print_xgl_cmd_buffer_graphics_begin_info(const XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pStruct, const string prefix)
