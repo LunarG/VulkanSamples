@@ -221,16 +221,6 @@ static int view_type_to_surface_type(XGL_IMAGE_VIEW_TYPE type)
     }
 }
 
-static int winsys_tiling_to_surface_tiling(enum intel_tiling_mode tiling)
-{
-    switch (tiling) {
-    case INTEL_TILING_NONE: return GEN6_TILING_NONE;
-    case INTEL_TILING_X:    return GEN6_TILING_X;
-    case INTEL_TILING_Y:    return GEN6_TILING_Y;
-    default: assert(!"unknown tiling"); return GEN6_TILING_NONE;
-    }
-}
-
 static int channel_swizzle_to_scs(XGL_CHANNEL_SWIZZLE swizzle)
 {
     switch (swizzle) {
@@ -351,16 +341,17 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
     *
     *     "For linear surfaces, this field (X Offset) must be zero."
     */
-   if (img->layout.tiling == INTEL_TILING_NONE) {
+   if (img->layout.tiling == GEN6_TILING_NONE) {
       if (is_rt) {
          const int elem_size U_ASSERT_ONLY = icd_format_get_size(format);
          assert(pitch % elem_size == 0);
       }
    }
 
+   assert(img->layout.tiling != GEN8_TILING_W);
    dw[0] = surface_type << GEN7_SURFACE_DW0_TYPE__SHIFT |
            surface_format << GEN7_SURFACE_DW0_FORMAT__SHIFT |
-           winsys_tiling_to_surface_tiling(img->layout.tiling) << 13;
+           img->layout.tiling << 13;
 
    /*
     * From the Ivy Bridge PRM, volume 4 part 1, page 63:
@@ -688,7 +679,7 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
     *
     *     "For linear surfaces, this field (X Offset) must be zero"
     */
-   if (img->layout.tiling == INTEL_TILING_NONE) {
+   if (img->layout.tiling == GEN6_TILING_NONE) {
       if (is_rt) {
          const int elem_size U_ASSERT_ONLY = icd_format_get_size(format);
          assert(pitch % elem_size == 0);
@@ -713,9 +704,10 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
            (width - 1) << GEN6_SURFACE_DW2_WIDTH__SHIFT |
            lod << GEN6_SURFACE_DW2_MIP_COUNT_LOD__SHIFT;
 
+   assert(img->layout.tiling != GEN8_TILING_W);
    dw[3] = (depth - 1) << GEN6_SURFACE_DW3_DEPTH__SHIFT |
            (pitch - 1) << GEN6_SURFACE_DW3_PITCH__SHIFT |
-           winsys_tiling_to_surface_tiling(img->layout.tiling);
+           img->layout.tiling;
 
    dw[4] = first_level << GEN6_SURFACE_DW4_MIN_LOD__SHIFT |
            first_layer << 17 |

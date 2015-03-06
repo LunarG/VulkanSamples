@@ -228,14 +228,27 @@ static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
                                                   struct intel_mem *mem)
 {
     struct intel_winsys_handle export;
+    enum intel_tiling_mode tiling;
     xcb_pixmap_t pixmap;
 
+    switch (img->layout.tiling) {
+    case GEN6_TILING_X:
+        tiling = INTEL_TILING_X;
+        break;
+    case GEN6_TILING_Y:
+        tiling = INTEL_TILING_Y;
+        break;
+    default:
+        assert(img->layout.tiling == GEN6_TILING_NONE);
+        tiling = INTEL_TILING_NONE;
+        break;
+    }
+
     /* get prime fd of the bo first */
-    if (intel_bo_set_tiling(mem->bo, img->layout.tiling,
-                img->layout.bo_stride))
+    if (intel_bo_set_tiling(mem->bo, tiling, img->layout.bo_stride))
         return XGL_ERROR_UNKNOWN;
     export.type = INTEL_WINSYS_HANDLE_FD;
-    if (intel_winsys_export_handle(dev->winsys, mem->bo, img->layout.tiling,
+    if (intel_winsys_export_handle(dev->winsys, mem->bo, tiling,
                 img->layout.bo_stride, img->layout.bo_height, &export))
         return XGL_ERROR_UNKNOWN;
 

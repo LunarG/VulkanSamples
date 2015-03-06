@@ -155,6 +155,8 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
         s8_info = *info;
         s8_info.format = XGL_FMT_S8_UINT;
+        /* no stencil texturing */
+        s8_info.usage &= ~XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
         assert(icd_format_is_ds(info->format));
 
         intel_layout_init(img->s8_layout, dev, &s8_info, scanout);

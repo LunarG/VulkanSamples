@@ -28,7 +28,7 @@
 #ifndef LAYOUT_H
 #define LAYOUT_H
 
-#include "kmd/winsys.h"
+#include "genhw/genhw.h"
 #include "intel.h"
 
 #define INTEL_LAYOUT_MAX_LEVELS 16
@@ -100,7 +100,7 @@ struct intel_layout {
 
    /* bitmask of valid tiling modes */
    unsigned valid_tilings;
-   enum intel_tiling_mode tiling;
+   enum gen_surface_tiling tiling;
 
    /* mipmap alignments */
    unsigned align_i;
@@ -119,6 +119,7 @@ struct intel_layout {
    /* bitmask of levels that can use aux */
    unsigned aux_enables;
    unsigned aux_offsets[INTEL_LAYOUT_MAX_LEVELS];
+   unsigned aux_layer_height;
    unsigned aux_stride;
    unsigned aux_height;
 };
@@ -127,11 +128,6 @@ void intel_layout_init(struct intel_layout *layout,
                        struct intel_dev *dev,
                        const XGL_IMAGE_CREATE_INFO *info,
                        bool scanout);
-
-bool
-intel_layout_update_for_imported_bo(struct intel_layout *layout,
-                                    enum intel_tiling_mode tiling,
-                                    unsigned bo_stride);
 
 /**
  * Convert from pixel position to 2D memory offset.
@@ -169,23 +165,21 @@ intel_layout_mem_to_raw(const struct intel_layout *layout,
    unsigned tile_h;
 
    switch (layout->tiling) {
-   case INTEL_TILING_NONE:
-      if (layout->format == XGL_FMT_S8_UINT) {
-         /* W-tile */
-         tile_w = 64;
-         tile_h = 64;
-      } else {
-         tile_w = 1;
-         tile_h = 1;
-      }
+   case GEN6_TILING_NONE:
+      tile_w = 1;
+      tile_h = 1;
       break;
-   case INTEL_TILING_X:
+   case GEN6_TILING_X:
       tile_w = 512;
       tile_h = 8;
       break;
-   case INTEL_TILING_Y:
+   case GEN6_TILING_Y:
       tile_w = 128;
       tile_h = 32;
+      break;
+   case GEN8_TILING_W:
+      tile_w = 64;
+      tile_h = 64;
       break;
    default:
       assert(!"unknown tiling");

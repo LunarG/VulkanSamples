@@ -31,10 +31,10 @@
 #include "layout.h"
 
 enum {
-   LAYOUT_TILING_NONE = 1 << INTEL_TILING_NONE,
-   LAYOUT_TILING_X = 1 << INTEL_TILING_X,
-   LAYOUT_TILING_Y = 1 << INTEL_TILING_Y,
-   LAYOUT_TILING_W = 1 << (INTEL_TILING_Y + 1),
+   LAYOUT_TILING_NONE = 1 << GEN6_TILING_NONE,
+   LAYOUT_TILING_X = 1 << GEN6_TILING_X,
+   LAYOUT_TILING_Y = 1 << GEN6_TILING_Y,
+   LAYOUT_TILING_W = 1 << GEN8_TILING_W,
 
    LAYOUT_TILING_ALL = (LAYOUT_TILING_NONE |
                         LAYOUT_TILING_X |
@@ -429,13 +429,16 @@ layout_init_alignments(struct intel_layout *layout,
          }
       }
    } else {
-      const bool valign_4 = (info->samples > 1) ||
+      const bool valign_4 =
+         (info->samples > 1) ||
+         (intel_gpu_gen(params->gpu) >= INTEL_GEN(8)) ||
          (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
-          layout->tiling == INTEL_TILING_Y &&
+          layout->tiling == GEN6_TILING_Y &&
           (info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
 
-      if (valign_4)
-         assert(layout->block_size != 12);
+      if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
+          intel_gpu_gen(params->gpu) <= INTEL_GEN(7.5) && valign_4)
+         assert(layout->format != XGL_FMT_R32G32B32_SFLOAT);
 
       layout->align_i = 4;
       layout->align_j = (valign_4) ? 4 : 2;
@@ -506,8 +509,13 @@ layout_get_valid_tilings(const struct intel_layout *layout,
        *
        *     "NOTE: 128BPE Format Color buffer ( render target ) MUST be
        *      either TileX or Linear."
+       *
+       * From the Haswell PRM, volume 5, page 32:
+       *
+       *     "NOTE: 128 BPP format color buffer (render target) supports
+       *      Linear, TiledX and TiledY."
        */
-      if (layout->block_size == 16)
+      if (intel_gpu_gen(params->gpu) < INTEL_GEN(7.5) && layout->block_size == 16)
          valid_tilings &= ~LAYOUT_TILING_Y;
 
       /*
@@ -518,8 +526,17 @@ layout_get_valid_tilings(const struct intel_layout *layout,
        *
        *     "VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
        */
-      if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) && layout->block_size == 12)
+      if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
+          intel_gpu_gen(params->gpu) <= INTEL_GEN(7.5) &&
+          layout->format == XGL_FMT_R32G32B32_SFLOAT)
          valid_tilings &= ~LAYOUT_TILING_Y;
+
+      valid_tilings &= ~LAYOUT_TILING_W;
+   }
+
+   if (info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+      if (intel_gpu_gen(params->gpu) < INTEL_GEN(8))
+         valid_tilings &= ~LAYOUT_TILING_W;
    }
 
    /* no conflicting binding flags */
@@ -533,39 +550,43 @@ layout_init_tiling(struct intel_layout *layout,
                    struct intel_layout_params *params)
 {
    const XGL_IMAGE_CREATE_INFO *info = params->info;
-   unsigned valid_tilings = layout_get_valid_tilings(layout, params);
+   unsigned preferred_tilings;
 
-   /* no hardware support for W-tile */
-   if (valid_tilings & LAYOUT_TILING_W)
-      valid_tilings = (valid_tilings & ~LAYOUT_TILING_W) | LAYOUT_TILING_NONE;
+   layout->valid_tilings = layout_get_valid_tilings(layout, params);
 
-   layout->valid_tilings = valid_tilings;
+   preferred_tilings = layout->valid_tilings;
+
+   /* no fencing nor BLT support */
+   if (preferred_tilings & ~LAYOUT_TILING_W)
+      preferred_tilings &= ~LAYOUT_TILING_W;
 
    if (info->usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                       XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
-      if (layout->width0 < 64 && (valid_tilings & ~LAYOUT_TILING_X))
-         valid_tilings &= ~LAYOUT_TILING_X;
+      if (layout->width0 < 64 && (preferred_tilings & ~LAYOUT_TILING_X))
+         preferred_tilings &= ~LAYOUT_TILING_X;
 
       if ((layout->width0 < 32 || layout->height0 < 16) &&
           (layout->width0 < 16 || layout->height0 < 32) &&
-          (valid_tilings & ~LAYOUT_TILING_Y))
-         valid_tilings &= ~LAYOUT_TILING_Y;
+          (preferred_tilings & ~LAYOUT_TILING_Y))
+         preferred_tilings &= ~LAYOUT_TILING_Y;
    } else {
       /* force linear if we are not sure where the texture is bound to */
-      if (valid_tilings & LAYOUT_TILING_NONE)
-         valid_tilings &= LAYOUT_TILING_NONE;
+      if (preferred_tilings & LAYOUT_TILING_NONE)
+         preferred_tilings &= LAYOUT_TILING_NONE;
    }
 
    /* prefer tiled over linear */
-   if (valid_tilings & LAYOUT_TILING_Y)
-      layout->tiling = INTEL_TILING_Y;
-   else if (valid_tilings & LAYOUT_TILING_X)
-      layout->tiling = INTEL_TILING_X;
+   if (preferred_tilings & LAYOUT_TILING_Y)
+      layout->tiling = GEN6_TILING_Y;
+   else if (preferred_tilings & LAYOUT_TILING_X)
+      layout->tiling = GEN6_TILING_X;
+   else if (preferred_tilings & LAYOUT_TILING_W)
+      layout->tiling = GEN8_TILING_W;
    else
-      layout->tiling = INTEL_TILING_NONE;
+      layout->tiling = GEN6_TILING_NONE;
 }
 
 static void
@@ -675,17 +696,21 @@ layout_init_size_and_format(struct intel_layout *layout,
          require_separate_stencil = (layout->aux == INTEL_LAYOUT_AUX_HIZ);
    }
 
-   if (icd_format_is_ds(format)) {
-      switch (format) {
-      case XGL_FMT_D32_SFLOAT_S8_UINT:
-         if (require_separate_stencil) {
-            format = XGL_FMT_D32_SFLOAT;
-            layout->separate_stencil = true;
-         }
-         break;
-      default:
-         break;
+   switch (format) {
+   case XGL_FMT_D24_UNORM_S8_UINT:
+      if (require_separate_stencil) {
+         format = XGL_FMT_D24_UNORM;
+         layout->separate_stencil = true;
       }
+      break;
+   case XGL_FMT_D32_SFLOAT_S8_UINT:
+      if (require_separate_stencil) {
+         format = XGL_FMT_D32_SFLOAT;
+         layout->separate_stencil = true;
+      }
+      break;
+   default:
+      break;
    }
 
    layout->format = format;
@@ -721,8 +746,7 @@ layout_want_mcs(struct intel_layout *layout,
     *     "This field must be set to 0 for all SINT MSRTs when all RT channels
     *      are not written"
     */
-   if (info->samples > 1 && !layout->interleaved_samples &&
-       !icd_format_is_int(info->format)) {
+   if (info->samples > 1 && !icd_format_is_int(info->format)) {
       want_mcs = true;
    } else if (info->samples <= 1) {
       /*
@@ -739,7 +763,7 @@ layout_want_mcs(struct intel_layout *layout,
        *        32bpp, 64bpp and 128bpp.
        *      ..."
        */
-      if (layout->tiling != INTEL_TILING_NONE &&
+      if (layout->tiling != GEN6_TILING_NONE &&
           info->mipLevels == 1 && info->arraySize == 1) {
          switch (layout->block_size) {
          case 4:
@@ -888,10 +912,8 @@ layout_calculate_bo_size(struct intel_layout *layout,
        */
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7.5) &&
           (params->info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
-          layout->tiling == INTEL_TILING_NONE) {
-         layout->bo_height +=
-            (64 + layout->bo_stride - 1) / layout->bo_stride;
-      }
+          layout->tiling == GEN6_TILING_NONE)
+         h += (64 + layout->bo_stride - 1) / layout->bo_stride;
 
       /*
        * From the Sandy Bridge PRM, volume 4 part 1, page 81:
@@ -910,33 +932,30 @@ layout_calculate_bo_size(struct intel_layout *layout,
        * need to check layout->info->usage.
        */
       switch (layout->tiling) {
-      case INTEL_TILING_X:
+      case GEN6_TILING_X:
          align_w = 512;
          align_h = 8;
          break;
-      case INTEL_TILING_Y:
+      case GEN6_TILING_Y:
          align_w = 128;
          align_h = 32;
          break;
+      case GEN8_TILING_W:
+         /*
+          * From the Sandy Bridge PRM, volume 1 part 2, page 22:
+          *
+          *     "A 4KB tile is subdivided into 8-high by 8-wide array of
+          *      Blocks for W-Major Tiles (W Tiles). Each Block is 8 rows by 8
+          *      bytes."
+          */
+         align_w = 64;
+         align_h = 64;
+         break;
       default:
-         if (layout->format == XGL_FMT_S8_UINT) {
-            /*
-             * From the Sandy Bridge PRM, volume 1 part 2, page 22:
-             *
-             *     "A 4KB tile is subdivided into 8-high by 8-wide array of
-             *      Blocks for W-Major Tiles (W Tiles). Each Block is 8 rows by 8
-             *      bytes."
-             *
-             * Since we asked for INTEL_TILING_NONE instead of the non-existent
-             * INTEL_TILING_W, we want to align to W tiles here.
-             */
-            align_w = 64;
-            align_h = 64;
-         } else {
-            /* some good enough values */
-            align_w = 64;
-            align_h = 2;
-         }
+         assert(layout->tiling == GEN6_TILING_NONE);
+         /* some good enough values */
+         align_w = 64;
+         align_h = 2;
          break;
       }
 
@@ -944,7 +963,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
       h = u_align(h, align_h);
 
       /* make sure the bo is mappable */
-      if (layout->tiling != INTEL_TILING_NONE) {
+      if (layout->tiling != GEN6_TILING_NONE) {
          /*
           * Usually only the first 256MB of the GTT is mappable.
           *
@@ -958,7 +977,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
           */
          if (mappable_gtt_size / w / 4 < h) {
             if (layout->valid_tilings & LAYOUT_TILING_NONE) {
-               layout->tiling = INTEL_TILING_NONE;
+               layout->tiling = GEN6_TILING_NONE;
                /* MCS support for non-MSRTs is limited to tiled RTs */
                if (layout->aux == INTEL_LAYOUT_AUX_MCS &&
                    params->info->samples <= 1)
@@ -1073,6 +1092,8 @@ layout_calculate_hiz_size(struct intel_layout *layout,
          hz_height = hz_qpitch * info->arraySize / 2;
          if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
             hz_height = u_align(hz_height, 8);
+
+         layout->aux_layer_height = hz_qpitch;
       }
       break;
    case INTEL_LAYOUT_WALK_3D:
@@ -1228,11 +1249,11 @@ layout_calculate_mcs_size(struct intel_layout *layout,
        * hit out-of-bound access.
        */
       switch (layout->tiling) {
-      case INTEL_TILING_X:
+      case GEN6_TILING_X:
          downscale_x = 64 / layout->block_size;
          downscale_y = 2;
          break;
-      case INTEL_TILING_Y:
+      case GEN6_TILING_Y:
          downscale_x = 32 / layout->block_size;
          downscale_y = 4;
          break;
@@ -1307,27 +1328,6 @@ void intel_layout_init(struct intel_layout *layout,
 }
 
 /**
- * Update the tiling mode and bo stride (for imported resources).
- */
-bool
-intel_layout_update_for_imported_bo(struct intel_layout *layout,
-                                  enum intel_tiling_mode tiling,
-                                  unsigned bo_stride)
-{
-   if (!(layout->valid_tilings & (1 << tiling)))
-      return false;
-
-   if ((tiling == INTEL_TILING_X && bo_stride % 512) ||
-       (tiling == INTEL_TILING_Y && bo_stride % 128))
-      return false;
-
-   layout->tiling = tiling;
-   layout->bo_stride = bo_stride;
-
-   return true;
-}
-
-/**
  * Return the offset (in bytes) to a slice within the bo.
  *
  * The returned offset is aligned to tile size.  Since slices are not
@@ -1346,24 +1346,21 @@ intel_layout_get_slice_tile_offset(const struct intel_layout *layout,
    /* see the Sandy Bridge PRM, volume 1 part 2, page 24 */
 
    switch (layout->tiling) {
-   case INTEL_TILING_NONE:
-      /* W-tiled */
-      if (layout->format == XGL_FMT_S8_UINT) {
-         tile_w = 64;
-         tile_h = 64;
-      }
-      else {
-         tile_w = 1;
-         tile_h = 1;
-      }
+   case GEN6_TILING_NONE:
+       tile_w = 1;
+       tile_h = 1;
       break;
-   case INTEL_TILING_X:
+   case GEN6_TILING_X:
       tile_w = 512;
       tile_h = 8;
       break;
-   case INTEL_TILING_Y:
+   case GEN6_TILING_Y:
       tile_w = 128;
       tile_h = 32;
+      break;
+   case GEN8_TILING_W:
+      tile_w = 64;
+      tile_h = 64;
       break;
    default:
       assert(!"unknown tiling");
