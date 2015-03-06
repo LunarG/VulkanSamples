@@ -166,6 +166,12 @@ void XglRenderFramework::InitRenderTarget()
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     XGL_ATTACHMENT_LOAD_OP load_op = XGL_ATTACHMENT_LOAD_OP_LOAD;
     XGL_ATTACHMENT_STORE_OP store_op = XGL_ATTACHMENT_STORE_OP_STORE;
+    XGL_CLEAR_COLOR clear_color;
+    clear_color.color.rawColor[0] = 64;
+    clear_color.color.rawColor[1] = 64;
+    clear_color.color.rawColor[2] = 64;
+    clear_color.color.rawColor[3] = 0;
+    clear_color.useRawValue = XGL_TRUE;
     XGL_DEPTH_STENCIL_BIND_INFO *dsBinding;
     if (m_depthStencilBinding.view)
         dsBinding = &m_depthStencilBinding;
@@ -191,6 +197,7 @@ void XglRenderFramework::InitRenderTarget()
     rp_info.colorAttachmentCount = m_renderTargetCount;
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
+    rp_info.pColorLoadClearValues = &clear_color;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
     rp_info.depthStoreOp = XGL_ATTACHMENT_STORE_OP_STORE;
     rp_info.stencilLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
