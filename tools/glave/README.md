@@ -42,12 +42,12 @@ Based on xgl.h Version 47.1
 * xgl\_blit\_tests   -crashes due to improper handling of PipelineBarrier
 * xgl\_render\_tests -crashes
 
-##Using Glave###
+##Using Glave on Linux###
 Glave builds three binaries with associated XGL libraries: a tracer with XGL
 tracing library; a replayer with XGL replayer library; and a debugger  with
 XGL debugger and replayer libraries.
 
-###Running Glave tracer as standalone server###
+###Running Glave tracer as standalone server on Linux###
 The Glave tracer program can run as a server.  Then the app/game to be traced
 is launched separately with the Glave tracer library preloaded. To run
 GLave tracer as a server one should omit the "-p" option and use the -l<number>
@@ -83,7 +83,7 @@ Rather than giving command line options, one can instead put tracer options in
 a settings file: "glvtrace_settings.txt".
 
 
-###Running Glave tracer and launch app/game from tracer###
+###Running Glave tracer and launch app/game from tracer on Linux###
 The Glave tracer program launches the app/game you desire and then traces it.
 To launch app/game from Glave tracer one must use the "-p" option. Also the
 -l<number> option should be given for specifying the tracing library.
@@ -102,7 +102,7 @@ Trace file is in "glvtrace_cube.glv".
 Rather than giving command line options, can instead put tracer options in a
 settings file: "glvtrace_settings.txt".
 
-###Running replayer###
+###Running replayer on Linux###
 The Glave replayer takes  a trace file  and will launch an XGL session based
 on trace file.
 ```
@@ -115,7 +115,7 @@ export LIBXGL_DRIVERS_PATH=/home/jon/dbuild/icd/intel
 export LD_LIBRARY_PATH=/home/jon/dbuild/loader
 ./glvreplay64 -t glvtrace_cube.glv
 ```
-###Running debugger###
+###Running debugger on Linux###
 ```
 cd <xgl build dir>/tools/glave
 export LIBXGL_DRIVERS_PATH=/home/jon/dbuild/icd/intel
@@ -123,11 +123,64 @@ export LD_LIBRARY_PATH=/home/jon/dbuild/loader
 ./glvdebug64
 ```
 
+##Using Glave on Windows##
+Glave builds three binaries with associated XGL libraries: a tracer with XGL
+tracing library; a replayer with XGL replayer library; and a debugger  with
+XGL debugger and replayer libraries.
+
+
+###Running Glave tracer and launch app/game from tracer on Windows###
+The Glave tracer program launches the app/game you desire and then traces it.
+To launch app/game from Glave tracer one must use the "-p" option. Also the
+-l<number> option should be given for specifying the tracing library (zero for XGL).
+Also, you may need to copy the XGL.dll library into the directory of Glave,
+and of the app/game (while we continue to put Windows support into place).
+```
+cd <xgl build dir>\\tools\\glave
+./glvtrace64 -p <path-to-app-to-launch> -l0 <path-to-glvtrace_xgl-dll> -w <working-dir-path-of-app>  <more options>
+```
+Example to trace the spinning cube demo (Note: see other files for how to configure your ICD):
+```
+cd C:\\Users\developer\\GL-Next\\_out64\\tools\\glave\\Debug
+
+glvtrace64 -p C:\\Users\developer\\GL-Next\\_out64\\demos\\cube.exe
+           -l0 C:\\Users\developer\\GL-Next\\_out64\\tools\\glave\\Debug\\glvtrace_xgl64.dll
+           -w C:\\Users\developer\\GL-Next\\_out64\\demos
+           -o glvtrace_cube.glv
+```
+Trace file is in "glvtrace_cube.glv".
+
+Rather than giving command line options, can instead put tracer options in a
+settings file: "glvtrace_settings.txt".
+
+###Running replayer on Windows###
+The Glave replayer takes  a trace file  and will launch an XGL session based
+on trace file.
+```
+cd <xgl build dir>\\tools\\glave
+glvreplay64 <options> -t trace_filename
+```
+Example to replay trace file captured above
+```
+cd C:\\Users\developer\\GL-Next\\_out64\\tools\\glave\\Debug
+glvreplay64 -t glvtrace_cube.glv
+```
+###Running debugger on Windows###
+```
+cd <xgl build dir>\\tools\\glave
+glvdebug64
+```
+
 ##Building Glave##
 
 ###External dependencies###
-* Python 3.4  (Ubuntu package python3.4-dev)
-* Qt 5        (Ubuntu package qt5-default) (only needed for glave debugger)
+* Python 3.4
+  - Ubuntu package: python3.4-dev
+  - For Windows, download from: https://www.python.org/downloads.
+    You must select to install the optional sub-package to add Python to the system PATH environment variable.
+* Qt 5
+  - Ubuntu package: qt5-default (only needed for Glave debugger).
+  - For Windows, download from: http://www.qt.io/download/.  You must select "Qt 5.3" in the installer.  This is only needed for the Glave debugger.
 
 ###Building on Linux (make)###
 Glave is built as part of top level XGL Cmake for project. Follow the
