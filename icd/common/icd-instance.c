@@ -37,7 +37,7 @@ static void * XGLAPI default_alloc(void *user_data, size_t size,
 {
     if (alignment <= 1) {
         return malloc(size);
-    } else if (u_is_pow2(alignment)) {
+    } else if (u_is_pow2((unsigned int) alignment)) {
         if (alignment < sizeof(void *)) {
             assert(u_is_pow2(sizeof(void*)));
             alignment = sizeof(void *);
