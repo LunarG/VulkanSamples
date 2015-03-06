@@ -209,7 +209,7 @@ void glvdebug_xgl_QController::onReplayPaused(uint64_t packetIndex)
         m_pView->output_error("DOT not found, unable to generate state diagrams.");
     }
 #else
-    assert(!"DOT State Diagrams not supported on this platform");
+    m_pView->output_error("DOT not found, unable to generate state diagrams.");
 #endif
 
     if (QFile::exists("pipeline_dump.svg"))
