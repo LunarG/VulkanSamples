@@ -231,6 +231,9 @@ static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
     xcb_pixmap_t pixmap;
 
     /* get prime fd of the bo first */
+    if (intel_bo_set_tiling(mem->bo, img->layout.tiling,
+                img->layout.bo_stride))
+        return XGL_ERROR_UNKNOWN;
     export.type = INTEL_WINSYS_HANDLE_FD;
     if (intel_winsys_export_handle(dev->winsys, mem->bo, img->layout.tiling,
                 img->layout.bo_stride, img->layout.bo_height, &export))
