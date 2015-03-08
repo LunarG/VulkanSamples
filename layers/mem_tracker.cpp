@@ -1473,8 +1473,15 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage,
-    uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBlitImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcLayout,
+                                             XGL_IMAGE destImage, uint32_t regionCount, XGL_IMAGE_LAYOUT destLayout,
+                                             const XGL_IMAGE_BLIT* pRegions)
+{
+    // TODO : Each image will have mem mapping so track them
+    nextTable.CmdBlitImage(cmdBuffer, srcImage, srcLayout, destImage, destLayout, regionCount, pRegions);
+}
+
+XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
     // TODO : Track this
     loader_platform_thread_lock_mutex(&globalLock);

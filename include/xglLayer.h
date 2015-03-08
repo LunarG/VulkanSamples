@@ -116,6 +116,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdDispatchIndirectType CmdDispatchIndirect;
     xglCmdCopyBufferType CmdCopyBuffer;
     xglCmdCopyImageType CmdCopyImage;
+    xglCmdBlitImageType CmdBlitImage;
     xglCmdCopyBufferToImageType CmdCopyBufferToImage;
     xglCmdCopyImageToBufferType CmdCopyImageToBuffer;
     xglCmdCloneImageDataType CmdCloneImageData;

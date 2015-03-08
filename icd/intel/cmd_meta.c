@@ -552,6 +552,23 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
     }
 }
 
+ICD_EXPORT void XGLAPI xglCmdBlitImage(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcLayout,
+    XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destLayout,
+    uint32_t                                    regionCount,
+    const XGL_IMAGE_BLIT*                       pRegions)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    /*
+     * TODO: Implement actual blit function.
+     */
+    cmd_fail(cmd, XGL_ERROR_UNAVAILABLE);
+}
+
 ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  srcBuffer,

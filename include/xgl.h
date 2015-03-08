@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 57, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 57, 2)
 
 #ifdef __cplusplus
 extern "C"
@@ -196,7 +196,7 @@ typedef enum _XGL_ATTACHMENT_LOAD_OP
     XGL_ATTACHMENT_LOAD_OP_LOAD                             = 0x00000000,
     XGL_ATTACHMENT_LOAD_OP_CLEAR                            = 0x00000001,
     XGL_ATTACHMENT_LOAD_OP_DONT_CARE                        = 0x00000002,
-    
+
     XGL_ATTACHMENT_LOAD_OP_BEGIN_RANGE                      = XGL_ATTACHMENT_LOAD_OP_LOAD,
     XGL_ATTACHMENT_LOAD_OP_END_RANGE                        = XGL_ATTACHMENT_LOAD_OP_DONT_CARE,
     XGL_NUM_ATTACHMENT_LOAD_OP                              = (XGL_ATTACHMENT_LOAD_OP_END_RANGE - XGL_ATTACHMENT_LOAD_OP_BEGIN_RANGE + 1),
@@ -208,7 +208,7 @@ typedef enum _XGL_ATTACHMENT_STORE_OP
     XGL_ATTACHMENT_STORE_OP_STORE                           = 0x00000000,
     XGL_ATTACHMENT_STORE_OP_RESOLVE_MSAA                    = 0x00000001,
     XGL_ATTACHMENT_STORE_OP_DONT_CARE                       = 0x00000002,
-    
+
     XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE                     = XGL_ATTACHMENT_STORE_OP_STORE,
     XGL_ATTACHMENT_STORE_OP_END_RANGE                       = XGL_ATTACHMENT_STORE_OP_DONT_CARE,
     XGL_NUM_ATTACHMENT_STORE_OP                             = (XGL_ATTACHMENT_STORE_OP_END_RANGE - XGL_ATTACHMENT_STORE_OP_BEGIN_RANGE + 1),
@@ -1186,12 +1186,12 @@ typedef enum _XGL_IMAGE_USAGE_FLAGS
     XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,   // shader read (e.g. texture, image)
     XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,   // shader write (e.g. image)
     XGL_IMAGE_USAGE_SHADER_ACCESS_ATOMIC_BIT                = 0x00000004,   // shader atomic operations (e.g. image)
-    XGL_IMAGE_USAGE_TRANSFER_SOURCE_BIT                     = 0x00000008,   // used as a source for copies 
+    XGL_IMAGE_USAGE_TRANSFER_SOURCE_BIT                     = 0x00000008,   // used as a source for copies
     XGL_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                = 0x00000010,   // used as a destination for copies
     XGL_IMAGE_USAGE_TEXTURE_BIT                             = 0x00000020,   // opaque texture (2d, 3d, etc.)
     XGL_IMAGE_USAGE_IMAGE_BIT                               = 0x00000040,   // opaque image (2d, 3d, etc.)
     XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000080,   // framebuffer color attachment
-    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000100,   // framebuffer depth/stencil 
+    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000100,   // framebuffer depth/stencil
     XGL_MAX_ENUM(_XGL_IMAGE_USAGE_FLAGS)
 } XGL_IMAGE_USAGE_FLAGS;
 
@@ -1698,6 +1698,7 @@ typedef struct _XGL_PEER_IMAGE_OPEN_INFO
 {
     XGL_IMAGE                               originalImage;
 } XGL_PEER_IMAGE_OPEN_INFO;
+
 typedef struct _XGL_SUBRESOURCE_LAYOUT
 {
     XGL_GPU_SIZE                            offset;                 // Specified in bytes
@@ -1778,6 +1779,16 @@ typedef struct _XGL_IMAGE_COPY
     XGL_OFFSET3D                            destOffset;
     XGL_EXTENT3D                            extent;
 } XGL_IMAGE_COPY;
+
+typedef struct _XGL_IMAGE_BLIT
+{
+    XGL_IMAGE_SUBRESOURCE                   srcSubresource;
+    XGL_OFFSET3D                            srcOffset;
+    XGL_EXTENT3D                            srcExtent;
+    XGL_IMAGE_SUBRESOURCE                   destSubresource;
+    XGL_OFFSET3D                            destOffset;
+    XGL_EXTENT3D                            destExtent;
+} XGL_IMAGE_BLIT;
 
 typedef struct _XGL_BUFFER_IMAGE_COPY
 {
@@ -1865,11 +1876,6 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
     XGL_PIPELINE_SHADER                     cs;
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
     XGL_DESCRIPTOR_SET_LAYOUT               lastSetLayout;
-    // For local size fields zero is treated an invalid value
-    uint32_t                                localSizeX;
-    uint32_t                                localSizeY;
-    uint32_t                                localSizeZ;
-
 } XGL_COMPUTE_PIPELINE_CREATE_INFO;
 
 typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
@@ -2326,6 +2332,7 @@ typedef void       (XGLAPI *xglCmdDispatchType)(XGL_CMD_BUFFER cmdBuffer, uint32
 typedef void       (XGLAPI *xglCmdDispatchIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset);
 typedef void       (XGLAPI *xglCmdCopyBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_COPY* pRegions);
 typedef void       (XGLAPI *xglCmdCopyImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t regionCount, const XGL_IMAGE_COPY* pRegions);
+typedef void       (XGLAPI *xglCmdBlitImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destLayout, uint32_t regionCount, const XGL_IMAGE_BLIT* pRegions);
 typedef void       (XGLAPI *xglCmdCopyBufferToImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
 typedef void       (XGLAPI *xglCmdCopyImageToBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
 typedef void       (XGLAPI *xglCmdCloneImageDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout);
@@ -2858,6 +2865,15 @@ void XGLAPI xglCmdCopyImage(
     XGL_IMAGE                                   destImage,
     uint32_t                                    regionCount,
     const XGL_IMAGE_COPY*                       pRegions);
+
+void XGLAPI xglCmdBlitImage(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcLayout,
+    XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destLayout,
+    uint32_t                                    regionCount,
+    const XGL_IMAGE_BLIT*                       pRegions);
 
 void XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,

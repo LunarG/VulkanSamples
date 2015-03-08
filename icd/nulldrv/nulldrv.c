@@ -915,6 +915,18 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
     NULLDRV_LOG_FUNC;
 }
 
+ICD_EXPORT void XGLAPI xglCmdBlitImage(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcLayout,
+    XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destLayout,
+    uint32_t                                    regionCount,
+    const XGL_IMAGE_BLIT*                       pRegions)
+{
+    NULLDRV_LOG_FUNC;
+}
+
 ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  srcBuffer,

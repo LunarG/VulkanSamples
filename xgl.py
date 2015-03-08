@@ -676,6 +676,15 @@ core = Extension(
              Param("uint32_t", "regionCount"),
              Param("const XGL_IMAGE_COPY*", "pRegions")]),
 
+        Proto("void", "CmdBlitImage",
+            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
+             Param("XGL_IMAGE", "srcImage"),
+             Param("XGL_IMAGE_LAYOUT", "srcLayout"),
+             Param("XGL_IMAGE", "destImage"),
+             Param("XGL_IMAGE_LAYOUT", "destLayout"),
+             Param("uint32_t", "regionCount"),
+             Param("const XGL_IMAGE_BLIT*", "pRegions")]),
+
         Proto("void", "CmdCopyBufferToImage",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_BUFFER", "srcBuffer"),
