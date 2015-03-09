@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 57, 2)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 58, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1192,6 +1192,7 @@ typedef enum _XGL_IMAGE_USAGE_FLAGS
     XGL_IMAGE_USAGE_IMAGE_BIT                               = 0x00000040,   // opaque image (2d, 3d, etc.)
     XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000080,   // framebuffer color attachment
     XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000100,   // framebuffer depth/stencil
+    XGL_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                = 0x00000200,   // image data not needed outside of rendering.
     XGL_MAX_ENUM(_XGL_IMAGE_USAGE_FLAGS)
 } XGL_IMAGE_USAGE_FLAGS;
 
