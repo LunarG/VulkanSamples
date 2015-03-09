@@ -3051,7 +3051,7 @@ class Subcommand(object):
         cr_body = []
         cr_body.append('            XGL_RENDER_PASS_CREATE_INFO *pInfo = (XGL_RENDER_PASS_CREATE_INFO *) pPacket->pCreateInfo;')
         cr_body.append('            // remap framebuffer')
-        cr_body.append('            XGL_FRAMEBUFFER savedFB, *pFB = &(pInfo->framebuffer);')
+        cr_body.append('            XGL_FRAMEBUFFER savedFB = 0, *pFB = &(pInfo->framebuffer);')
         cr_body.append('            if (*pFB != NULL)')
         cr_body.append('            {')
         cr_body.append('                savedFB = pInfo->framebuffer;')
@@ -3059,7 +3059,8 @@ class Subcommand(object):
         cr_body.append('            }')
         cr_body.append('            XGL_RENDER_PASS local_renderpass;')
         cr_body.append('            replayResult = m_xglFuncs.real_xglCreateRenderPass(remap(pPacket->device), pPacket->pCreateInfo, &local_renderpass);')
-        cr_body.append('            pInfo->framebuffer = savedFB;')
+        cr_body.append('            if (*pFB != NULL)')
+        cr_body.append('                pInfo->framebuffer = savedFB;')
         cr_body.append('            if (replayResult == XGL_SUCCESS)')
         cr_body.append('            {')
         cr_body.append('                add_to_map(pPacket->pRenderPass, &local_renderpass);')
