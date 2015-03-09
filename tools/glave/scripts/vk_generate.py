@@ -509,7 +509,16 @@ class Subcommand(object):
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_FRAMEBUFFER));')
                     elif 'CreateRenderPass' == proto.name:
                         func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && (pCreateInfo->pColorLoadOps != NULL || pCreateInfo->pColorStoreOps != NULL || pCreateInfo->pColorLoadClearValues != NULL)) ? pCreateInfo->colorAttachmentCount : 0;')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_RENDER_PASS));')
+                        func_body.append('    size_t customSize;')
+                        func_body.append('    customSize = colorCount * ((pCreateInfo->pColorFormats != NULL) ? sizeof(XGL_FORMAT) : 0);')
+                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorLayouts != NULL) ? sizeof(XGL_IMAGE_LAYOUT) : 0);')
+                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorLoadOps != NULL) ? sizeof(XGL_ATTACHMENT_LOAD_OP) : 0);')
+                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorStoreOps != NULL) ? sizeof(XGL_ATTACHMENT_STORE_OP) : 0);')
+                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorLoadClearValues != NULL) ? sizeof(XGL_CLEAR_COLOR) : 0);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
+                    elif 'BeginCommandBuffer' == proto.name:
+                        func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglBeginCommandBuffer, sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + customSize);')
                     elif 'CreateDynamicViewportState' == proto.name:
                         func_body.append('    uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDynamicViewportState,  get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_DYNAMIC_VP_STATE_OBJECT));')
@@ -819,6 +828,8 @@ class Subcommand(object):
                                                     'pInfo->pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
                                                     'pInfo->pDepthStencilAttachment = (XGL_DEPTH_STENCIL_BIND_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
                              'CreateRenderPass' : {'param': 'pCreateInfo', 'txt': ['XGL_RENDER_PASS_CREATE_INFO* pInfo = (XGL_RENDER_PASS_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                                                   'pInfo->pColorFormats = (XGL_FORMAT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorFormats);\n',
+                                                   'pInfo->pColorLayouts = (XGL_IMAGE_LAYOUT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLayouts);\n',
                                                    'pInfo->pColorLoadOps = (XGL_ATTACHMENT_LOAD_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadOps);\n',
                                                    'pInfo->pColorStoreOps = (XGL_ATTACHMENT_STORE_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorStoreOps);\n',
                                                    'pInfo->pColorLoadClearValues = (XGL_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
@@ -1543,6 +1554,16 @@ class Subcommand(object):
         bcb_body.append('            returnValue = manually_handle_xglBeginCommandBuffer(pPacket);')
         return "\n".join(bcb_body)
 
+    def _gen_replay_begin_render_pass(self):
+        cbrp_body = []
+        cbrp_body.append('            XGL_RENDER_PASS_BEGIN savedRPB, *pRPB = (XGL_RENDER_PASS_BEGIN *) pPacket->pRenderPassBegin;')
+        cbrp_body.append('            savedRPB = *(pPacket->pRenderPassBegin);')
+        cbrp_body.append('            pRPB->renderPass = remap(savedRPB.renderPass);')
+        cbrp_body.append('            pRPB->framebuffer = remap(savedRPB.framebuffer);')
+        cbrp_body.append('            m_xglFuncs.real_xglCmdBeginRenderPass(remap(pPacket->cmdBuffer), pPacket->pRenderPassBegin);')
+        cbrp_body.append('            *pRPB = savedRPB;')
+        return "\n".join(cbrp_body)
+
     def _gen_replay_store_pipeline(self):
         sp_body = []
         sp_body.append('            returnValue = manually_handle_xglStorePipeline(pPacket);')
@@ -1647,6 +1668,7 @@ class Subcommand(object):
                             'CreateFramebuffer': self._gen_replay_create_framebuffer,
                             'CreateRenderPass': self._gen_replay_create_renderpass,
                             'BeginCommandBuffer': self._gen_replay_begin_command_buffer,
+                            'CmdBeginRenderPass': self._gen_replay_begin_render_pass,
                             'StorePipeline': self._gen_replay_store_pipeline,
                             'GetMultiGpuCompatibility': self._gen_replay_get_multi_gpu_compatibility,
                             'DestroyObject': self._gen_replay_destroy_object,
