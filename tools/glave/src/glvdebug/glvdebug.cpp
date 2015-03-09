@@ -623,10 +623,22 @@ bool glvdebug::open_trace_file(const std::string &filename)
                         //TODO processing code for all the above cases
                         default:
                         {
-                            glv_trace_packet_header* pHeader = m_pController->InterpretTracePacket(m_traceFileInfo.pPacketOffsets[i].pHeader);
-                            assert(pHeader != NULL);
+                            glv_trace_packet_header* pHeader = m_pController->InterpretTracePacket(pOffsets->pHeader);
+                            if (pHeader == NULL)
+                            {
+                                bOpened = false;
+                                glvdebug_output_error(QString("Unrecognized packet type: %1").arg(pOffsets->pHeader->packet_id));
+                                m_traceFileInfo.pPacketOffsets[i].pHeader = NULL;
+                                break;
+                            }
                             m_traceFileInfo.pPacketOffsets[i].pHeader = pHeader;
                         }
+                    }
+
+                    // break from loop if there is an error
+                    if (bOpened == false)
+                    {
+                        break;
                     }
                 }
             }
