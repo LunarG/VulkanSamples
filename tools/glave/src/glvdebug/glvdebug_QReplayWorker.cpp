@@ -36,6 +36,7 @@ glvdebug_QReplayWorker::glvdebug_QReplayWorker()
     : QObject(NULL),
       m_bPauseReplay(false),
       m_bStopReplay(false),
+      m_bReplayInProgress(false),
       m_pView(NULL),
       m_pTraceFileInfo(NULL),
       m_currentReplayPacketIndex(0),
@@ -243,6 +244,8 @@ void glvdebug_QReplayWorker::playCurrentTraceFile(uint64_t startPacketIndex)
     unsigned int res;
     glv_replay::glv_trace_packet_replay_library *replayer;
 
+    m_bReplayInProgress = true;
+
     for (uint64_t i = startPacketIndex; i < pTraceFileInfo->packetCount; i++)
     {
         m_currentReplayPacketIndex = i;
@@ -324,18 +327,20 @@ void glvdebug_QReplayWorker::playCurrentTraceFile(uint64_t startPacketIndex)
                 m_pauseAtPacketIndex = -1;
             }
 
+            m_bReplayInProgress = false;
             doReplayPaused(pCurPacket->pHeader->global_packet_index);
             return;
         }
 
         if (m_bStopReplay)
         {
+            m_bReplayInProgress = false;
             doReplayStopped(pCurPacket->pHeader->global_packet_index);
-            m_currentReplayPacketIndex = 0;
             return;
         }
     }
 
+    m_bReplayInProgress = false;
     doReplayFinished(pCurPacket->pHeader->global_packet_index);
 }
 
@@ -399,11 +404,22 @@ void glvdebug_QReplayWorker::ContinueReplay()
 
 void glvdebug_QReplayWorker::StopReplay()
 {
-    // Stopping the replay happens asycnronously.
-    // Set the stop flag and the replay will
-    // react to it as soon as it can. It will call
-    // doReplayStopped() when it has stopped.
-    m_bStopReplay = true;
+    if (m_bReplayInProgress)
+    {
+        // If a replay is in progress, then
+        // Stopping the replay happens asycnronously.
+        // Set the stop flag and the replay will
+        // react to it as soon as it can. It will call
+        // doReplayStopped() when it has stopped.
+        m_bStopReplay = true;
+    }
+    else
+    {
+        // Replay is not in progress means:
+        // 1) replay wasn't started (in which case stop button should be disabled and we can't get to this point),
+        // 2) replay is currently paused, so do same actions as if the replay detected that it should stop.
+        doReplayStopped(m_currentReplayPacketIndex);
+    }
 }
 
 void glvdebug_QReplayWorker::onSettingsUpdated(glv_SettingGroup* pGroups, unsigned int numGroups)
@@ -464,6 +480,9 @@ void glvdebug_QReplayWorker::doReplayPaused(uint64_t packetIndex)
 void glvdebug_QReplayWorker::doReplayStopped(uint64_t packetIndex)
 {
     emit ReplayStopped(packetIndex);
+
+    // Replay will start again from the beginning, so setup for that now.
+    m_currentReplayPacketIndex = 0;
 }
 
 void glvdebug_QReplayWorker::doReplayFinished(uint64_t packetIndex)

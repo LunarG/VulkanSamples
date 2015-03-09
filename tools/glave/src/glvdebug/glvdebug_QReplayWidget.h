@@ -112,7 +112,6 @@ public:
         connect(m_pWorker, SIGNAL(OutputMessage(const QString&)), this, SLOT(OnOutputMessage(const QString&)), Qt::QueuedConnection);
         connect(m_pWorker, SIGNAL(OutputError(const QString&)), this, SLOT(OnOutputError(const QString&)), Qt::QueuedConnection);
         connect(m_pWorker, SIGNAL(OutputWarning(const QString&)), this, SLOT(OnOutputWarning(const QString&)), Qt::QueuedConnection);
-
     }
 
     virtual ~glvdebug_QReplayWidget()
@@ -169,7 +168,7 @@ private slots:
         m_pStepButton->setEnabled(true);
         m_pPauseButton->setEnabled(false);
         m_pContinueButton->setEnabled(true);
-        m_pStopButton->setEnabled(false);
+        m_pStopButton->setEnabled(true);
         m_pDetachCheckBox->setEnabled(false);
 
         emit ReplayPaused(packetIndex);
@@ -241,7 +240,7 @@ public slots:
     {
         m_pPlayButton->setEnabled(false);
         m_pPauseButton->setEnabled(false);
-        m_pContinueButton->setEnabled(true);
+        m_pContinueButton->setEnabled(false);
         m_pStopButton->setEnabled(false);
 
         emit PauseButtonClicked();

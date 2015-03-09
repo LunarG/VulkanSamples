@@ -86,6 +86,7 @@ signals:
 private:
     volatile bool m_bPauseReplay;
     volatile bool m_bStopReplay;
+    volatile bool m_bReplayInProgress;
     glvdebug_view* m_pView;
     glvdebug_trace_file_info* m_pTraceFileInfo;
     uint64_t m_currentReplayPacketIndex;
