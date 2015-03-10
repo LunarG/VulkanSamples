@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
     if (g_settings.trace_file_to_open != NULL && strlen(g_settings.trace_file_to_open) > 0)
     {
-        w.pre_open_trace_file(g_settings.trace_file_to_open);
+        w.open_trace_file_threaded(QString(g_settings.trace_file_to_open));
     }
 
     int result = a.exec();

@@ -45,6 +45,7 @@
 #include "glvdebug_controller_factory.h"
 #include "glvdebug_qgeneratetracedialog.h"
 #include "glvdebug_qsettingsdialog.h"
+#include "glvdebug_qtracefileloader.h"
 
 #include "glvreplay_main.h"
 //----------------------------------------------------------------------------------------------------------------------
@@ -61,7 +62,8 @@ glvdebug::glvdebug(QWidget *parent)
       m_pGenerateTraceButton(NULL),
       m_pTimeline(NULL),
       m_pGenerateTraceDialog(NULL),
-      m_bDelayUpdateUIForContext(false)
+      m_bDelayUpdateUIForContext(false),
+      m_bGeneratingTrace(false)
 {
     ui->setupUi(this);
 
@@ -356,19 +358,12 @@ unsigned int glvdebug::get_global_settings(glv_SettingGroup** ppGroups)
     return g_numAllSettings;
 }
 
-glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
+bool glvdebug::prompt_load_new_trace(const QString& tracefile)
 {
     int ret = QMessageBox::warning(this, tr(g_PROJECT_NAME.toStdString().c_str()), tr("Would you like to load the new trace file?"),
                                   QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
 
-    Prompt_Result result = glvdebug_prompt_success;
-
-    if (ret != QMessageBox::Yes)
-    {
-        // user chose not to open the new trace
-        result = glvdebug_prompt_cancelled;
-    }
-    else
+    if (ret == QMessageBox::Yes)
     {
     //    // save current session if there is one
     //    if (m_openFilename.size() > 0 && m_pTraceReader != NULL && m_pApiCallTreeModel != NULL)
@@ -377,15 +372,11 @@ glvdebug::Prompt_Result glvdebug::prompt_load_new_trace(const char *tracefile)
     //    }
 
         // try to open the new file
-        if (pre_open_trace_file(tracefile) == false)
-        {
-            glvdebug_output_error("Could not open trace file.");
-            QMessageBox::critical(this, tr("Error"), tr("Could not open trace file."));
-            result = glvdebug_prompt_error;
-        }
+        open_trace_file_threaded(tracefile);
+        return true;
     }
 
-    return result;
+    return false;
 }
 
 void glvdebug::on_actionE_xit_triggered()
@@ -402,11 +393,86 @@ void glvdebug::on_action_Open_triggered()
 
     if (!fileName.isEmpty())
     {
-        if (pre_open_trace_file(fileName) == false)
+        open_trace_file_threaded(fileName);
+    }
+}
+
+void glvdebug::onTraceFileLoaded(bool bSuccess, glvdebug_trace_file_info fileInfo, const QString& controllerFilename)
+{
+    QApplication::restoreOverrideCursor();
+
+    if (fileInfo.packetCount == 0)
+    {
+        glvdebug_output_warning("The trace file has 0 packets.");
+    }
+    else if (fileInfo.pPacketOffsets == NULL)
+    {
+        glvdebug_output_error("No packet offsets read from trace file.");
+        bSuccess = false;
+    }
+
+    if (!bSuccess)
+    {
+        glvdebug_output_message("...FAILED!");
+        QMessageBox::critical(this, tr("Error"), tr("Could not open trace file."));
+        close_trace_file();
+
+        if (m_bGeneratingTrace)
         {
-            QMessageBox::critical(this, tr("Error"), tr("Could not open trace file."));
-            return;
+            // if the user was generating a trace file, but the trace failed to load,
+            // then re-spawn the generate trace dialog.
+            prompt_generate_trace();
         }
+    }
+    else
+    {
+        m_traceFileInfo = fileInfo;
+
+        setWindowTitle(QString(m_traceFileInfo.filename) + " - " + g_PROJECT_NAME);
+        glvdebug_output_message("...success!");
+
+        // update settings to reflect the currently open file
+        g_settings.trace_file_to_open = glv_allocate_and_copy(m_traceFileInfo.filename);
+        glvdebug_settings_updated();
+
+        if (!controllerFilename.isEmpty())
+        {
+            m_pController = glvdebug_controller_factory::Load(controllerFilename.toStdString().c_str());
+        }
+
+        if (m_pController != NULL)
+        {
+            // Merge in settings from the controller.
+            // This won't replace settings that may have already been loaded from disk.
+            glv_SettingGroup_merge(m_pController->GetSettings(), &g_pAllSettings, &g_numAllSettings);
+
+            // now update the controller with the loaded settings
+            m_pController->UpdateFromSettings(g_pAllSettings, g_numAllSettings);
+
+            //// trace file was loaded, now attempt to open additional session data
+            //if (load_or_create_session(filename.c_str(), m_pTraceReader) == false)
+            //{
+            //    // failing to load session data is not critical, but may result in unexpected behavior at times.
+            //    glvdebug_output_error("GLVDebug was unable to create a session folder to save debugging information. Functionality may be limited.");
+            //}
+
+            // Update the UI with the controller
+            m_pController->LoadTraceFile(&m_traceFileInfo, this);
+        }
+
+        // update toolbar
+        ui->searchTextBox->setEnabled(true);
+        ui->searchPrevButton->setEnabled(true);
+        ui->searchNextButton->setEnabled(true);
+
+        ui->action_Close->setEnabled(true);
+        ui->actionExport_API_Calls->setEnabled(true);
+
+        ui->prevDrawcallButton->setEnabled(true);
+        ui->nextDrawcallButton->setEnabled(true);
+
+        // reset flag indicating that the ui may have been generating a trace file.
+        m_bGeneratingTrace = false;
     }
 }
 
@@ -538,195 +604,35 @@ void glvdebug::on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int
     this->resize(g_settings.window_size_width, g_settings.window_size_height);
 }
 
-bool glvdebug::pre_open_trace_file(const QString& filename)
+void glvdebug::open_trace_file_threaded(const QString& filename)
 {
     // close any existing trace
     close_trace_file();
 
-    if (open_trace_file(filename.toStdString()))
-    {
-        //// trace file was loaded, now attempt to open additional session data
-        //if (load_or_create_session(filename.c_str(), m_pTraceReader) == false)
-        //{
-        //    // failing to load session data is not critical, but may result in unexpected behavior at times.
-        //    glvdebug_output_error("GLVDebug was unable to create a session folder to save debugging information. Functionality may be limited.");
-        //}
-
-        return true;
-    }
-
-    return false;
-}
-
-bool glvdebug::open_trace_file(const std::string &filename)
-{
     glvdebug_output_message("*********************");
     glvdebug_output_message("Opening trace file...");
-    glvdebug_output_message(filename.c_str());
+    glvdebug_output_message(filename);
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
-    // open trace file and read in header
-    memset(&m_traceFileInfo, 0, sizeof(glvdebug_trace_file_info));
-    m_traceFileInfo.pFile = fopen(filename.c_str(), "rb");
+    glvdebug_QTraceFileLoader* pTraceLoader = new glvdebug_QTraceFileLoader();
+    m_traceLoaderThread.setObjectName("TraceLoaderThread");
+    pTraceLoader->moveToThread(&m_traceLoaderThread);
 
-    bool bOpened = (m_traceFileInfo.pFile != NULL);
-    if (bOpened)
-    {
-        m_traceFileInfo.filename = glv_allocate_and_copy(filename.c_str());
-        if (glvdebug_populate_trace_file_info(&m_traceFileInfo) == FALSE)
-        {
-            glvdebug_output_error("Unable to populate trace file info from file.\n");
-            bOpened = false;
-        }
-        else
-        {
-            // Make sure trace file version is supported
-            if (m_traceFileInfo.header.trace_file_version < GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE)
-            {
-                glv_LogError("Trace file version %u is older than minimum compatible version (%u).\nYou'll need to make a new trace file, or use an older replayer.\n", m_traceFileInfo.header.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
-                bOpened = false;
-            }
+    connect(pTraceLoader, SIGNAL(OutputMessage(const QString&)), this, SLOT(on_message(const QString&)), Qt::QueuedConnection);
+    connect(pTraceLoader, SIGNAL(OutputWarning(const QString&)), this, SLOT(on_warning(const QString&)), Qt::QueuedConnection);
+    connect(pTraceLoader, SIGNAL(OutputError(const QString&)), this, SLOT(on_error(const QString&)), Qt::QueuedConnection);
 
-            if (!load_controllers(&m_traceFileInfo))
-            {
-                glvdebug_output_error("Failed to load necessary debug controllers.");
-                bOpened = false;
-            }
-            else if (bOpened)
-            {
-                // Merge in settings from the controller.
-                // This won't replace settings that may have already been loaded from disk.
-                glv_SettingGroup_merge(m_pController->GetSettings(), &g_pAllSettings, &g_numAllSettings);
+    connect(this, SIGNAL(LoadTraceFile(const QString&)), pTraceLoader, SLOT(loadTraceFile(QString)), Qt::QueuedConnection);
 
-                // now update the controller with the loaded settings
-                m_pController->UpdateFromSettings(g_pAllSettings, g_numAllSettings);
+    connect(pTraceLoader, SIGNAL(TraceFileLoaded(bool, glvdebug_trace_file_info, const QString&)), this, SLOT(onTraceFileLoaded(bool, glvdebug_trace_file_info, const QString&)));
+    connect(pTraceLoader, SIGNAL(Finished()), &m_traceLoaderThread, SLOT(quit()));
+    connect(pTraceLoader, SIGNAL(Finished()), pTraceLoader, SLOT(deleteLater()));
 
-                // interpret the trace file packets
-                for (unsigned int i = 0; i < m_traceFileInfo.packetCount; i++)
-                {
-                    glvdebug_trace_file_packet_offsets* pOffsets = &m_traceFileInfo.pPacketOffsets[i];
-                    switch (pOffsets->pHeader->packet_id) {
-                        case GLV_TPI_MESSAGE:
-                            m_traceFileInfo.pPacketOffsets[i].pHeader = glv_interpret_body_as_trace_packet_message(pOffsets->pHeader)->pHeader;
-                            break;
-                        case GLV_TPI_MARKER_CHECKPOINT:
-                            break;
-                        case GLV_TPI_MARKER_API_BOUNDARY:
-                            break;
-                        case GLV_TPI_MARKER_API_GROUP_BEGIN:
-                            break;
-                        case GLV_TPI_MARKER_API_GROUP_END:
-                            break;
-                        case GLV_TPI_MARKER_TERMINATE_PROCESS:
-                            break;
-                        //TODO processing code for all the above cases
-                        default:
-                        {
-                            glv_trace_packet_header* pHeader = m_pController->InterpretTracePacket(pOffsets->pHeader);
-                            if (pHeader == NULL)
-                            {
-                                bOpened = false;
-                                glvdebug_output_error(QString("Unrecognized packet type: %1").arg(pOffsets->pHeader->packet_id));
-                                m_traceFileInfo.pPacketOffsets[i].pHeader = NULL;
-                                break;
-                            }
-                            m_traceFileInfo.pPacketOffsets[i].pHeader = pHeader;
-                        }
-                    }
+    m_traceLoaderThread.start();
 
-                    // break from loop if there is an error
-                    if (bOpened == false)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            // populate the UI based on trace file info
-            if (bOpened)
-            {
-                bOpened = m_pController->LoadTraceFile(&m_traceFileInfo, this);
-            }
-        }
-
-        // TODO: We don't really want to close the trace file yet.
-        // I think we want to keep it open so that we can dynamically read from it. 
-        // BUT we definitely don't want it to get locked open, so we need a smart
-        // way to open / close from it when reading.
-        fclose(m_traceFileInfo.pFile);
-        m_traceFileInfo.pFile = NULL;
-    }
-
-    if (!bOpened)
-    {
-        glvdebug_output_message("...FAILED!");
-        close_trace_file();
-    }
-    else
-    {
-        setWindowTitle(QString(filename.c_str()) + " - " + g_PROJECT_NAME);
-        glvdebug_output_message("...success!");
-
-        // update toolbar
-        ui->searchTextBox->setEnabled(true);
-        ui->searchPrevButton->setEnabled(true);
-        ui->searchNextButton->setEnabled(true);
-
-        ui->action_Close->setEnabled(true);
-        ui->actionExport_API_Calls->setEnabled(true);
-
-        ui->prevDrawcallButton->setEnabled(true);
-        ui->nextDrawcallButton->setEnabled(true);
-
-        // update settings
-        g_settings.trace_file_to_open = glv_allocate_and_copy(filename.c_str());
-        glvdebug_settings_updated();
-    }
-
-    QApplication::restoreOverrideCursor();
-
-    return bOpened;
-}
-
-bool glvdebug::load_controllers(glvdebug_trace_file_info* pTraceFileInfo)
-{
-    if (pTraceFileInfo->header.tracer_count == 0)
-    {
-        glv_LogError("No API specified in tracefile for replaying.\n");
-        return false;
-    }
-
-    for (int i = 0; i < pTraceFileInfo->header.tracer_count; i++)
-    {
-        uint8_t tracerId = pTraceFileInfo->header.tracer_id_array[i].id;
-
-        const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
-
-        if (pReplayerInfo->tracerId != tracerId)
-        {
-            glv_LogError("Replayer info for TracerId (%d) failed consistency check.\n", tracerId);
-            assert(!"TracerId in GLV_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
-        }
-        else if (strlen(pReplayerInfo->debuggerLibraryname) != 0)
-        {
-            // Have our factory create the necessary controller
-            m_pController = glvdebug_controller_factory::Load(pReplayerInfo->debuggerLibraryname);
-
-            if (m_pController != NULL)
-            {
-                // Only one controller needs to be loaded, so break from loop
-                break;
-            }
-            else
-            {
-                // controller failed to be created
-                glv_LogError("Couldn't create controller for TracerId %d.\n", tracerId);
-            }
-        }
-    }
-
-    return m_pController != NULL;
+    // Signal the loader to start
+    emit LoadTraceFile(filename);
 }
 
 void glvdebug::reset_tracefile_ui()
@@ -1078,12 +984,15 @@ void glvdebug::on_contextComboBox_currentIndexChanged(int index)
 
 void glvdebug::prompt_generate_trace()
 {
+    m_bGeneratingTrace = true;
+
     bool bShowDialog = true;
     while (bShowDialog)
     {
         int code = m_pGenerateTraceDialog->exec();
         if (code != glvdebug_QGenerateTraceDialog::Succeeded)
         {
+            m_bGeneratingTrace = false;
             bShowDialog = false;
         }
         else
@@ -1092,11 +1001,11 @@ void glvdebug::prompt_generate_trace()
             if (code == glvdebug_QGenerateTraceDialog::Succeeded &&
                 fileInfo.exists())
             {
-                Prompt_Result result = prompt_load_new_trace(fileInfo.canonicalFilePath().toStdString().c_str());
-                if (result == glvdebug_prompt_success ||
-                        result == glvdebug_prompt_cancelled)
+                bShowDialog = false;
+                if (prompt_load_new_trace(fileInfo.canonicalFilePath()) == false)
                 {
-                    bShowDialog = false;
+                    // The user decided not to load the trace file, so clear the generatingTrace flag.
+                    m_bGeneratingTrace = false;
                 }
             }
             else
@@ -1110,11 +1019,15 @@ void glvdebug::prompt_generate_trace()
 
 void glvdebug::on_message(QString message)
 {
-    glvdebug_output_message(message.toStdString().c_str());
+    glvdebug_output_message(message);
+}
+
+void glvdebug::on_warning(QString warning)
+{
+    glvdebug_output_warning(warning);
 }
 
 void glvdebug::on_error(QString error)
 {
-    glvdebug_output_error(error.toStdString().c_str());
+    glvdebug_output_error(error);
 }
-

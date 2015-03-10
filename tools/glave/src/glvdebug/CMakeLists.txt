@@ -41,6 +41,7 @@ set(SRC_LIST
     glvdebug_qgeneratetracedialog.cpp
     glvdebug_qsettingsdialog.cpp
     glvdebug_qtimelineview.cpp
+    glvdebug_qtracefileloader.cpp
     glvdebug_QReplayWorker.cpp
     glvdebug_controller_factory.cpp
     ${SRC_DIR}/glvreplay/glvreplay_seq.cpp
@@ -59,6 +60,7 @@ set(UI_HEADER_LIST
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
     glvdebug_QTraceFileModel.h
+    glvdebug_qtracefileloader.h
    )
 
 # These is for all headers
@@ -75,6 +77,7 @@ set(HEADER_LIST
     glvdebug_qsvgviewer.h
     glvdebug_QReplayWidget.h
     glvdebug_QReplayWorker.h
+    glvdebug_qtracefileloader.h
     glvdebug_QTraceFileModel.h
     glvdebug_trace_file_utils.h
     glvdebug_view.h

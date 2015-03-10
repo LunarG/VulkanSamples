@@ -28,6 +28,7 @@
 
 #include <QMainWindow>
 #include <QString>
+#include <QThread>
 
 extern "C" {
 #include "glv_trace_packet_utils.h"
@@ -69,8 +70,7 @@ public:
     explicit glvdebug(QWidget *parent = 0);
     ~glvdebug();
 
-    // Opens the trace file and reads the UUID so that it can access associated session data from the user's app data folder
-    bool pre_open_trace_file(const QString& filename);
+    void open_trace_file_threaded(const QString &filename);
     void close_trace_file();
 
     // Implementation of glvdebug_view
@@ -95,6 +95,9 @@ protected:
     virtual void moveEvent(QMoveEvent *pEvent);
     virtual void resizeEvent(QResizeEvent *pEvent);
 
+signals:
+    void LoadTraceFile(const QString& filename);
+
 public slots:
 
 private slots:
@@ -105,6 +108,8 @@ private slots:
     void on_actionEdit_triggered();
 
     void on_settingsSaved(glv_SettingGroup* pUpdatedSettings, unsigned int numGroups);
+
+    void onTraceFileLoaded(bool bSuccess, glvdebug_trace_file_info fileInfo, const QString &controllerFilename);
 
     void on_treeView_clicked(const QModelIndex &index);
     void slot_timeline_clicked(const QModelIndex &index);
@@ -122,17 +127,16 @@ private slots:
     void prompt_generate_trace();
 
     void on_message(QString message);
+    void on_warning(QString warning);
     void on_error(QString error);
 
 private:
     Ui::glvdebug *ui;
+    QThread m_traceLoaderThread;
 
-    // Opens a trace file without looking for associated session data
-    bool open_trace_file(const std::string& filename);
-
-    bool load_controllers(glvdebug_trace_file_info* pTraceFileInfo);
-
-    Prompt_Result prompt_load_new_trace(const char *tracefile);
+    // Returns true if the user chose to load the file.
+    // Returns false if the user decided NOT to load the file.
+    bool prompt_load_new_trace(const QString &tracefile);
 
     void reset_tracefile_ui();
 
@@ -156,6 +160,7 @@ private:
 
     QColor m_searchTextboxBackgroundColor;
     bool m_bDelayUpdateUIForContext;
+    bool m_bGeneratingTrace;
 };
 
 #endif // GLVDEBUG_H

@@ -418,7 +418,8 @@ void glvdebug_QReplayWorker::StopReplay()
         // Replay is not in progress means:
         // 1) replay wasn't started (in which case stop button should be disabled and we can't get to this point),
         // 2) replay is currently paused, so do same actions as if the replay detected that it should stop.
-        doReplayStopped(m_currentReplayPacketIndex);
+        uint64_t packetIndex = this->m_pTraceFileInfo->pPacketOffsets[m_currentReplayPacketIndex].pHeader->global_packet_index;
+        doReplayStopped(packetIndex);
     }
 }
 
