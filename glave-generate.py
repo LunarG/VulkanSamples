@@ -344,64 +344,105 @@ class Subcommand(object):
         um_body.append('}\n')
         return "\n".join(um_body)
 
+    # Take a list of params and return a list of packet size elements
+    def _get_packet_size(self, params):
+        ps = []
+        skip_list = [] # store params that are already accounted for so we don't count them twice
+        # Dict of specific params with unique custom sizes
+        custom_size_dict = {'xgl_shader_create_info': '((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0) + sizeof(XGL_SHADER_CREATE_INFO)',
+                            'xgl_graphics_pipeline_create_info': '(calculate_pipeline_state_size(pCreateInfo->pNext)) + sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO)',
+                            'pUpdateChain': 'sizeof(XGL_DESCRIPTOR_SET) + (calculate_update_descriptors_size(pUpdateChain))',
+                            'pSetBindPoints': '(XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t))', # Accounting for largest possible array
+                            'xgl_descriptor_set_layout_create_info': '(calculate_create_ds_layout_size(pSetLayoutInfoList))',
+                            'xgl_cmd_buffer_begin_info': 'sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + (calculate_begin_cmdbuf_size(pBeginInfo->pNext))',
+                            'xgl_memory_alloc_info': 'sizeof(XGL_MEMORY_ALLOC_INFO) + calculate_alloc_memory_size(pAllocInfo->pNext)',
+                            'xgl_compute_pipeline_create_info': 'sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + calculate_pipeline_state_size(pCreateInfo->pNext)'}
+        for p in params:
+            #First handle custom cases
+            if p.ty.strip('*').replace('const ', '').lower() in custom_size_dict:
+                ps.append(custom_size_dict[p.ty.strip('*').replace('const ', '').lower()])
+                skip_list.append(p.name)
+            elif p.name in custom_size_dict:
+                ps.append(custom_size_dict[p.name])
+                skip_list.append(p.name)
+            # Skip any params already handled
+            if p.name in skip_list:
+                continue
+            # Now check to identify dynamic arrays which depend on two params
+            if 'count' in p.name.lower():
+                next_idx = params.index(p)+1
+                # If next element is a const *, then multiply count and array type
+                if next_idx < len(params) and '*' in params[next_idx].ty and 'const' in params[next_idx].ty.lower():
+                    if '*' in p.ty:
+                        ps.append('*%s*sizeof(%s)' % (p.name, params[next_idx].ty.strip('*').replace('const ', '')))
+                    else:
+                        ps.append('%s*sizeof(%s)' % (p.name, params[next_idx].ty.strip('*').replace('const ', '')))
+                    skip_list.append(params[next_idx].name)
+            elif '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
+                if 'pData' == p.name:
+                    if 'dataSize' == params[params.index(p)-1].name:
+                        ps.append('dataSize')
+                    elif 'counterCount' == params[params.index(p)-1].name:
+                        ps.append('sizeof(%s)' % p.ty.strip('*').replace('const ', ''))
+                    else:
+                        ps.append('((pDataSize != NULL && pData != NULL) ? *pDataSize : 0)')
+                elif '**' in p.ty and 'void' in p.ty:
+                    ps.append('sizeof(void*)')
+                elif 'void' in p.ty:
+                    ps.append('sizeof(%s)' % p.name)
+                elif 'char' in p.ty:
+                    ps.append('((%s != NULL) ? strlen(%s) + 1 : 0)' % (p.name, p.name))
+                elif 'DEVICE_CREATE_INFO' in p.ty:
+                    ps.append('calc_size_XGL_DEVICE_CREATE_INFO(pCreateInfo)')
+                elif 'pDataSize' in p.name:
+                    ps.append('((pDataSize != NULL) ? sizeof(size_t) : 0)')
+                elif 'IMAGE_SUBRESOURCE' in p.ty and 'pSubresource' == p.name:
+                    ps.append('((pSubresource != NULL) ? sizeof(XGL_IMAGE_SUBRESOURCE) : 0)')
+                else:
+                    ps.append('sizeof(%s)' % (p.ty.strip('*').replace('const ', '')))
+        return ps
+
     # Generate functions used to trace API calls and store the input and result data into a packet
+    # Here's the general flow of code insertion w/ option items flagged w/ "?"
+    # Result decl?
+    # Packet struct decl
+    # ?Special case : setup call to function first and do custom API call time tracking
+    # CREATE_PACKET
+    # Call (w/ result?)
+    # Assign packet values
+    # FINISH packet
+    # return result?
     def _generate_trace_funcs(self):
         func_body = []
         for proto in self.protos:
             if 'UnmapMemory' == proto.name:
                 func_body.append(self._gen_unmap_memory())
             elif 'Dbg' not in proto.name and 'Wsi' not in proto.name:
-                packet_update_txt = ''
+                raw_packet_update_list = [] # non-ptr elements placed directly into packet
                 return_txt = ''
-                packet_size = ''
+                packet_size = []
                 in_data_size = False # flag when we need to capture local input size variable for in/out size
                 buff_ptr_indices = []
                 func_body.append('GLVTRACER_EXPORT %s XGLAPI __HOOKED_xgl%s(' % (proto.ret, proto.name))
-                for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 is NULL
-                    if 'color' == p.name:
-                        func_body.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
+                for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 if NULL
+                    if '[' in p.ty: # Correctly declare static arrays in function parameters
+                        func_body.append('    %s %s[%s],' % (p.ty[:p.ty.find('[')], p.name, p.ty[p.ty.find('[')+1:p.ty.find(']')]))
                     else:
                         func_body.append('    %s %s,' % (p.ty, p.name))
-                    if '*' in p.ty and 'pSysMem' != p.name and 'pReserved' != p.name:
-                        if 'pData' == p.name:
-                            if 'dataSize' == proto.params[proto.params.index(p)-1].name:
-                                packet_size += 'dataSize + '
-                            elif 'counterCount' == proto.params[proto.params.index(p)-1].name:
-                                packet_size += 'sizeof(%s) + ' % p.ty.strip('*').replace('const ', '')
-                            else:
-                                packet_size += '((pDataSize != NULL && pData != NULL) ? *pDataSize : 0) + '
-                        elif '**' in p.ty and 'void' in p.ty:
-                            packet_size += 'sizeof(void*) + '
-                        elif 'void' in p.ty:
-                            packet_size += 'sizeof(%s) + ' % p.name
-                        elif 'char' in p.ty:
-                            packet_size += '((%s != NULL) ? strlen(%s) + 1 : 0) + ' % (p.name, p.name)
-                        elif 'DEVICE_CREATE_INFO' in p.ty:
-                            packet_size += 'calc_size_XGL_DEVICE_CREATE_INFO(pCreateInfo) + '
-                        elif 'pDataSize' in p.name:
-                            packet_size += '((pDataSize != NULL) ? sizeof(size_t) : 0) + '
+                    if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
+                        if 'pDataSize' in p.name:
                             in_data_size = True;
-                        elif 'IMAGE_SUBRESOURCE' in p.ty and 'pSubresource' == p.name:
-                            packet_size += '((pSubresource != NULL) ? sizeof(XGL_IMAGE_SUBRESOURCE) : 0) + '
-                        else:
-                            packet_size += 'sizeof(%s) + ' % p.ty.strip('*').replace('const ', '')
                         buff_ptr_indices.append(proto.params.index(p))
                     else:
-                        if 'color' == p.name:
+                        if '[' in p.ty:
                             array_str = p.ty[p.ty.find('[')+1:p.ty.find(']')]
-                            packet_update_txt += '    memcpy((void*)pPacket->color, color, %s * sizeof(%s));\n' % (array_str, p.ty.strip('*').replace('const ', '').replace('[%s]' % array_str, ''))
+                            raw_packet_update_list.append('    memcpy((void*)pPacket->color, color, %s * sizeof(%s));' % (array_str, p.ty.strip('*').replace('const ', '').replace('[%s]' % array_str, '')))
                         else:
-                            packet_update_txt += '    pPacket->%s = %s;\n' % (p.name, p.name)
-                    if 'Count' in p.name and proto.params[-1].name != p.name and p.name not in ['queryCount', 'vertexCount', 'indexCount', 'startCounter'] and proto.name not in ['CmdLoadAtomicCounters', 'CmdSaveAtomicCounters']:
-                        if '*' in p.ty:
-                            packet_size += '*%s*' % p.name
-                        else:
-                            packet_size += '%s*' % p.name
-                if '' == packet_size:
-                    packet_size = '0'
-                else:
-                    packet_size = packet_size.strip(' + ')
+                            raw_packet_update_list.append('    pPacket->%s = %s;' % (p.name, p.name))
+                # Get list of packet size modifiers due to ptr params
+                packet_size = self._get_packet_size(proto.params)
                 func_body[-1] = func_body[-1].replace(',', ')')
+                # End of function declaration portion, begin function body
                 func_body.append('{\n    glv_trace_packet_header* pHeader;')
                 if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    %s result;' % proto.ret)
@@ -410,7 +451,7 @@ class Subcommand(object):
                     func_body.append('    size_t _dataSize;')
                 func_body.append('    struct_xgl%s* pPacket = NULL;' % proto.name)
                 # functions that have non-standard sequence of  packet creation and calling real function
-                # NOTE: Anytime we call the function first, need to add custom code for correctly tracking API call time
+                # NOTE: Anytime we call the function before CREATE_TRACE_PACKET, need to add custom code for correctly tracking API call time
                 if 'CreateInstance' == proto.name:
                     func_body.append('    uint64_t startTime;')
                     func_body.append('    glv_platform_thread_once(&gInitOnce, InitTracer);')
@@ -454,25 +495,11 @@ class Subcommand(object):
                     func_body.append('    size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));')
                     func_body.append('    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));')
                     func_body.append('    pHeader->entrypoint_begin_time = startTime;')
-                elif proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateDynamicViewportState', 
-                                    'AllocMemory', 'CreateGraphicsPipeline', 'CreateComputePipeline', 'UpdateDescriptors', 'CreateDescriptorSetLayout',
+                elif proto.name in ['CreateFramebuffer', 'CreateRenderPass', 'CreateDynamicViewportState', 
                                     'CreateDescriptorRegion', 'CmdWaitEvents', 'CmdPipelineBarrier']:
                     # these are regular case as far as sequence of tracing but custom sizes
                     func_body.append('    size_t customSize;')
-                    if 'CreateShader' == proto.name:
-                        func_body.append('    customSize = (pCreateInfo != NULL) ? pCreateInfo->codeSize : 0;')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateShader, sizeof(XGL_SHADER_CREATE_INFO) + sizeof(XGL_SHADER) + customSize);')
-                    elif 'CreateGraphicsPipeline' == proto.name:
-                        func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateGraphicsPipeline, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize);')
-                    elif 'UpdateDescriptors' == proto.name:
-                        func_body.append('    customSize = calculate_update_descriptors_size(pUpdateChain);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglUpdateDescriptors, sizeof(XGL_DESCRIPTOR_SET) + customSize);')
-                    elif 'CreateDescriptorSetLayout' == proto.name:
-                        func_body.append('    customSize = calculate_create_ds_layout_size(pSetLayoutInfoList);')
-                        # NOTE : Just allocating enough packet size to account for largest array of uints
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorSetLayout, XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t) + sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize);')
-                    elif 'CreateFramebuffer' == proto.name:
+                    if 'CreateFramebuffer' == proto.name:
                         func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(XGL_DEPTH_STENCIL_BIND_INFO) : 0;')
                         func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
                         func_body.append('    customSize = colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) + dsSize;')
@@ -483,21 +510,15 @@ class Subcommand(object):
                         func_body.append('    customSize += colorCount * ((pCreateInfo->pColorStoreOps != NULL) ? sizeof(XGL_ATTACHMENT_STORE_OP) : 0);')
                         func_body.append('    customSize += colorCount * ((pCreateInfo->pColorLoadClearValues != NULL) ? sizeof(XGL_CLEAR_COLOR) : 0);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
-                    elif 'BeginCommandBuffer' == proto.name:
-                        func_body.append('    customSize = calculate_begin_cmdbuf_size(pBeginInfo->pNext);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglBeginCommandBuffer, sizeof(XGL_CMD_BUFFER_BEGIN_INFO) + customSize);')
                     elif 'CreateDynamicViewportState' == proto.name:
                         func_body.append('    uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;')
                         func_body.append('    customSize = vpsCount * sizeof(XGL_VIEWPORT) + vpsCount * sizeof(XGL_RECT);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDynamicViewportState,  sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO) + sizeof(XGL_DYNAMIC_VP_STATE_OBJECT) + customSize);')
-                    elif 'AllocMemory' == proto.name:
-                        func_body.append('    customSize = calculate_alloc_memory_size(pAllocInfo->pNext);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglAllocMemory,  sizeof(XGL_MEMORY_ALLOC_INFO) + sizeof(XGL_GPU_MEMORY) + customSize);')
                     elif 'CreateDescriptorRegion' == proto.name:
                         func_body.append('    uint32_t rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
                         func_body.append('    customSize = rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT);')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorRegion,  sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO) + sizeof(XGL_DESCRIPTOR_REGION) + customSize);')
-                    elif proto.name in ['CmdWaitEvents', 'CmdPipelineBarrier']:
+                    else: # ['CmdWaitEvents', 'CmdPipelineBarrier']:
                         event_array_type = 'XGL_EVENT'
                         if 'CmdPipelineBarrier' == proto.name:
                             event_array_type = 'XGL_SET_EVENT'
@@ -505,17 +526,17 @@ class Subcommand(object):
                         func_body.append('    uint32_t mbCount = (%s != NULL && %s->ppMemBarriers != NULL) ? %s->memBarrierCount : 0;' % (proto.params[-1].name, proto.params[-1].name, proto.params[-1].name))
                         func_body.append('    customSize = (eventCount * sizeof(%s)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, %s->ppMemBarriers);' % (event_array_type, proto.params[-1].name))
                         func_body.append('    CREATE_TRACE_PACKET(xgl%s, sizeof(%s) + customSize);' % (proto.name, proto.params[-1].ty.strip('*').replace('const ', '')))
-                    else: #'CreateComputePipeline'
-                        func_body.append('    customSize = calculate_pipeline_state_size(pCreateInfo->pNext);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateComputePipeline, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO) + sizeof(XGL_PIPELINE) + customSize + calculate_pipeline_shader_size(&pCreateInfo->cs));')
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                 else:
-                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, packet_size))
+                    if (0 == len(packet_size)):
+                        func_body.append('    CREATE_TRACE_PACKET(xgl%s, 0);' % (proto.name))
+                    else:
+                        func_body.append('    CREATE_TRACE_PACKET(xgl%s, %s);' % (proto.name, ' + '.join(packet_size)))
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                 if in_data_size:
                     func_body.append('    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;')
                 func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
-                func_body.append(packet_update_txt.strip('\n'))
+                func_body.append('\n'.join(raw_packet_update_list))
                 if 'MapMemory' == proto.name: # Custom code for MapMem case
                     func_body.append('    if (ppData != NULL)')
                     func_body.append('    {')
@@ -575,7 +596,7 @@ class Subcommand(object):
                                       'AllocMemory', 'UpdateDescriptors', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline', 'CreateComputePipeline',
                                       'CreateDescriptorRegion', 'CmdWaitEvents', 'CmdPipelineBarrier']:
                         if 'CreateShader' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), customSize, pCreateInfo->pCode);')
+                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode);')
                             func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
                         elif 'CreateFramebuffer' == proto.name:
                             func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO), pCreateInfo->pColorAttachments);')
@@ -1559,6 +1580,7 @@ class Subcommand(object):
         return "\n".join(pid_enum)
 
     # Interpret functions used on replay to read in packets and interpret their contents
+    #  This code gets generated into glvtrace_xgl_xgl_structs.h file
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
@@ -1837,6 +1859,8 @@ class Subcommand(object):
                             if_body.append('    pPacket->%s = interpret_XGL_DEVICE_CREATE_INFO(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
                         else:
                             if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
+                        # TODO : Generalize this custom code to kill dict data struct above.
+                        #  Really the point of this block is to catch params w/ embedded ptrs to structs and chains of structs
                         if proto.name in custom_case_dict and p.name == custom_case_dict[proto.name]['param']:
                             if_body.append('    if (pPacket->%s != NULL)' % custom_case_dict[proto.name]['param'])
                             if_body.append('    {')
