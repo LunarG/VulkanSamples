@@ -344,6 +344,73 @@ class Subcommand(object):
         um_body.append('}\n')
         return "\n".join(um_body)
 
+    # Take a list of params and return a list of dicts w/ ptr param details
+    def _get_packet_ptr_param_list(self, params):
+        ptr_param_list = []
+        # TODO : This is a slightly nicer way to handle custom cases than initial code, however
+        #   this can still be further generalized to eliminate more custom code
+        #   big case to handle is when ptrs to structs have embedded data that needs to be accounted for in packet
+        custom_ptr_dict = {'XGL_DEVICE_CREATE_INFO': {'add_txt': 'add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo)',
+                                                  'finalize_txt': ''},
+                           'XGL_APPLICATION_INFO': {'add_txt': 'add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo)',
+                                                'finalize_txt': ''},
+                           'XGL_PHYSICAL_GPU': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(XGL_PHYSICAL_GPU), pGpus)',
+                                                'finalize_txt': 'default'},
+                           'pDataSize': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize)',
+                                         'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize))'},
+                           'pData': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData)',
+                                     'finalize_txt': 'default'},
+                           'pName': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pName), ((pName != NULL) ? strlen(pName) + 1 : 0), pName)',
+                                     'finalize_txt': 'default'},
+                           'pExtName': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pExtName), ((pExtName != NULL) ? strlen(pExtName) + 1 : 0), pExtName)',
+                                        'finalize_txt': 'default'},
+                           'pDescriptorSets': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets)',
+                                               'finalize_txt': 'default'},
+                           'pUpdateChain': {'add_txt': 'add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain)',
+                                            'finalize_txt': 'default'},
+                           'XGL_SHADER_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_SHADER_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
+                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'XGL_FRAMEBUFFER_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_FRAMEBUFFER_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO), pCreateInfo->pColorAttachments);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
+                                                           'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'XGL_RENDER_PASS_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_RENDER_PASS_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(XGL_ATTACHMENT_LOAD_OP), pCreateInfo->pColorLoadOps);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(XGL_ATTACHMENT_STORE_OP), pCreateInfo->pColorStoreOps);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(XGL_CLEAR_COLOR), pCreateInfo->pColorLoadClearValues)',
+                                                          'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'XGL_CMD_BUFFER_BEGIN_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo), sizeof(XGL_CMD_BUFFER_BEGIN_INFO), pBeginInfo);\n    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext)',
+                                                         'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBeginInfo))'},
+                           'XGL_DYNAMIC_VP_STATE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(XGL_VIEWPORT), pCreateInfo->pViewports);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(XGL_RECT), pCreateInfo->pScissors)',
+                                                                'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'XGL_MEMORY_ALLOC_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(XGL_MEMORY_ALLOC_INFO), pAllocInfo);\n    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext)',
+                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
+                           'XGL_GRAPHICS_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext)',
+                                                                 'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList), sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), pSetLayoutInfoList);\n    if (pSetLayoutInfoList)\n        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext)',
+                                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayoutInfoList))'},
+                           'XGL_DESCRIPTOR_REGION_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount)',
+                                                                 'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'XGL_COMPUTE_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);\n    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs)',
+                                                                'finalize_txt': 'finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                                                  }
+        for p in params:
+            pp_dict = {}
+            if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
+                if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower():
+                    pp_dict['add_txt'] = 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-1].name, p.ty.strip('*').replace('const ', ''), p.name)
+                elif p.ty.strip('*').replace('const ', '') in custom_ptr_dict:
+                    pp_dict['add_txt'] = custom_ptr_dict[p.ty.strip('*').replace('const ', '')]['add_txt']
+                    pp_dict['finalize_txt'] = custom_ptr_dict[p.ty.strip('*').replace('const ', '')]['finalize_txt']
+                elif p.name in custom_ptr_dict:
+                    pp_dict['add_txt'] = custom_ptr_dict[p.name]['add_txt']
+                    pp_dict['finalize_txt'] = custom_ptr_dict[p.name]['finalize_txt']
+                    # TODO : This is custom hack to account for 2 pData items with dataSize param for sizing
+                    if 'pData' == p.name and 'dataSize' == params[params.index(p)-1].name:
+                        pp_dict['add_txt'] = pp_dict['add_txt'].replace('_dataSize', 'dataSize')
+                else:
+                    pp_dict['add_txt'] = 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s)' % (p.name, p.ty.strip('*').replace('const ', ''), p.name)
+                if 'finalize_txt' not in pp_dict or 'default' == pp_dict['finalize_txt']:
+                    pp_dict['finalize_txt'] = 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s))' % (p.name)
+                pp_dict['index'] = params.index(p)
+                ptr_param_list.append(pp_dict)
+        return ptr_param_list
+
     # Take a list of params and return a list of packet size elements
     def _get_packet_size(self, params):
         ps = []
@@ -419,10 +486,10 @@ class Subcommand(object):
                 func_body.append(self._gen_unmap_memory())
             elif 'Dbg' not in proto.name and 'Wsi' not in proto.name:
                 raw_packet_update_list = [] # non-ptr elements placed directly into packet
+                ptr_packet_update_list = [] # ptr elements to be updated into packet
                 return_txt = ''
                 packet_size = []
                 in_data_size = False # flag when we need to capture local input size variable for in/out size
-                buff_ptr_indices = []
                 func_body.append('GLVTRACER_EXPORT %s XGLAPI __HOOKED_xgl%s(' % (proto.ret, proto.name))
                 for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 if NULL
                     if '[' in p.ty: # Correctly declare static arrays in function parameters
@@ -432,7 +499,6 @@ class Subcommand(object):
                     if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
                         if 'pDataSize' in p.name:
                             in_data_size = True;
-                        buff_ptr_indices.append(proto.params.index(p))
                     else:
                         if '[' in p.ty:
                             array_str = p.ty[p.ty.find('[')+1:p.ty.find(']')]
@@ -441,6 +507,7 @@ class Subcommand(object):
                             raw_packet_update_list.append('    pPacket->%s = %s;' % (p.name, p.name))
                 # Get list of packet size modifiers due to ptr params
                 packet_size = self._get_packet_size(proto.params)
+                ptr_packet_update_list = self._get_packet_ptr_param_list(proto.params)
                 func_body[-1] = func_body[-1].replace(',', ')')
                 # End of function declaration portion, begin function body
                 func_body.append('{\n    glv_trace_packet_header* pHeader;')
@@ -561,112 +628,43 @@ class Subcommand(object):
                     func_body.append('    pPacket->result = result;')
                     func_body.append('    FINISH_TRACE_PACKET();')
                 else:
-                    # TODO : Clean this up.  Too much custom code and branching.
-                    for idx in buff_ptr_indices:
-                        if 'DEVICE_CREATE_INFO' in proto.params[idx].ty:
-                            func_body.append('    add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo);')
-                        elif 'APPLICATION_INFO' in proto.params[idx].ty:
-                            func_body.append('    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);')
-                        elif 'char' in proto.params[idx].ty:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), ((%s != NULL) ? strlen(%s) + 1 : 0), %s);' % (proto.params[idx].name, proto.params[idx].name, proto.params[idx].name, proto.params[idx].name))
-                        elif 'Count' in proto.params[idx-1].name and 'queryCount' != proto.params[idx-1].name:
-                            deref = ''
-                            if '*' in proto.params[idx-1].ty:
-                                deref = '*'
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s%s*sizeof(%s), %s);' % (proto.params[idx].name, deref, proto.params[idx-1].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
-                        elif 'dataSize' == proto.params[idx].name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
-                        elif 'pDataSize' == proto.params[idx].name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(size_t), &_dataSize);' % (proto.params[idx].name))
-                        elif 'pDescriptorSets' == proto.params[idx].name and 'AllocDescriptorSets' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets);')
-                        elif 'pData' == proto.params[idx].name:
-                            if 'dataSize' == proto.params[idx-1].name:
-                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
-                            elif in_data_size:
-                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), _dataSize, %s);' % (proto.params[idx].name, proto.params[idx].name))
-                            else:
-                                func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), (pDataSize != NULL && pData != NULL) ? *pDataSize : 0, %s);' % (proto.params[idx].name, proto.params[idx].name))
-                        elif 'pUpdateChain' == proto.params[idx].name:
-                            pass
-                        else:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s);' % (proto.params[idx].name, proto.params[idx].ty.strip('*').replace('const ', ''), proto.params[idx].name))
+                    for pp_dict in ptr_packet_update_list: #buff_ptr_indices:
+                        func_body.append('    %s;' % (pp_dict['add_txt']))
                     # Some custom add_* and finalize_* function calls for Create* API calls
-                    if proto.name in ['CreateShader', 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'CreateDynamicViewportState',
-                                      'AllocMemory', 'UpdateDescriptors', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline', 'CreateComputePipeline',
-                                      'CreateDescriptorRegion', 'CmdWaitEvents', 'CmdPipelineBarrier']:
-                        if 'CreateShader' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode);')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));')
-                        elif 'CreateFramebuffer' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO), pCreateInfo->pColorAttachments);')
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment);')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments));')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment));')
-                        elif 'CreateRenderPass' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(XGL_ATTACHMENT_LOAD_OP), pCreateInfo->pColorLoadOps);')
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(XGL_ATTACHMENT_STORE_OP), pCreateInfo->pColorStoreOps);')
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(XGL_CLEAR_COLOR), pCreateInfo->pColorLoadClearValues);')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps));')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));')
-                        elif 'BeginCommandBuffer' == proto.name:
-                            func_body.append('    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext);')
-                        elif 'CreateDynamicViewportState' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(XGL_VIEWPORT), pCreateInfo->pViewports);')
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(XGL_RECT), pCreateInfo->pScissors);')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));')
-                        elif 'AllocMemory' == proto.name:
-                            func_body.append('    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext);')
-                        elif 'CreateGraphicsPipeline' == proto.name:
-                            func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
-                        elif 'UpdateDescriptors' == proto.name:
-                            func_body.append('    add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain);')
-                        elif 'CreateDescriptorSetLayout' == proto.name:
-                            func_body.append('    if (pSetLayoutInfoList)')
-                            func_body.append('        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext);')
-                        elif 'CreateDescriptorRegion' == proto.name:
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount);')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));')
-                        elif proto.name in ['CmdWaitEvents', 'CmdPipelineBarrier']:
-                            event_array_type = 'XGL_EVENT'
-                            if 'CmdPipelineBarrier' == proto.name:
-                                event_array_type = 'XGL_SET_EVENT'
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->pEvents), eventCount * sizeof(%s), %s->pEvents);' % (proto.params[-1].name, event_array_type, proto.params[-1].name))
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->pEvents));' % (proto.params[-1].name))
-                            func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->ppMemBarriers), mbCount * sizeof(void*), %s->ppMemBarriers);' % (proto.params[-1].name, proto.params[-1].name))
-                            func_body.append('    uint32_t i, siz;')
-                            func_body.append('    for (i = 0; i < mbCount; i++) {')
-                            func_body.append('        XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) %s->ppMemBarriers[i];' % proto.params[-1].name)
-                            func_body.append('        switch (pNext->sType) {')
-                            func_body.append('            case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:')
-                            func_body.append('                siz = sizeof(XGL_MEMORY_BARRIER);')
-                            func_body.append('                break;')
-                            func_body.append('            case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:')
-                            func_body.append('                siz = sizeof(XGL_BUFFER_MEMORY_BARRIER);')
-                            func_body.append('                break;')
-                            func_body.append('            case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:')
-                            func_body.append('                siz = sizeof(XGL_IMAGE_MEMORY_BARRIER);')
-                            func_body.append('                break;')
-                            func_body.append('            default:')
-                            func_body.append('                assert(0);')
-                            func_body.append('                siz = 0;')
-                            func_body.append('                break;')
-                            func_body.append('        }')
-                            func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->ppMemBarriers[i]), siz, %s->ppMemBarriers[i]);' % (proto.params[-1].name, proto.params[-1].name))
-                            func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->ppMemBarriers[i]));' % (proto.params[-1].name))
-                            func_body.append('    }')
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->ppMemBarriers));' % (proto.params[-1].name))
-                        else:  #'CreateComputePipeline'
-                            func_body.append('    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);')
-                            func_body.append('    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs);')
-                            func_body.append('    finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);')
+                    if proto.name in ['CmdWaitEvents', 'CmdPipelineBarrier']:
+                        event_array_type = 'XGL_EVENT'
+                        if 'CmdPipelineBarrier' == proto.name:
+                            event_array_type = 'XGL_SET_EVENT'
+                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->pEvents), eventCount * sizeof(%s), %s->pEvents);' % (proto.params[-1].name, event_array_type, proto.params[-1].name))
+                        func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->pEvents));' % (proto.params[-1].name))
+                        func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->ppMemBarriers), mbCount * sizeof(void*), %s->ppMemBarriers);' % (proto.params[-1].name, proto.params[-1].name))
+                        func_body.append('    uint32_t i, siz;')
+                        func_body.append('    for (i = 0; i < mbCount; i++) {')
+                        func_body.append('        XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) %s->ppMemBarriers[i];' % proto.params[-1].name)
+                        func_body.append('        switch (pNext->sType) {')
+                        func_body.append('            case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:')
+                        func_body.append('                siz = sizeof(XGL_MEMORY_BARRIER);')
+                        func_body.append('                break;')
+                        func_body.append('            case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:')
+                        func_body.append('                siz = sizeof(XGL_BUFFER_MEMORY_BARRIER);')
+                        func_body.append('                break;')
+                        func_body.append('            case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:')
+                        func_body.append('                siz = sizeof(XGL_IMAGE_MEMORY_BARRIER);')
+                        func_body.append('                break;')
+                        func_body.append('            default:')
+                        func_body.append('                assert(0);')
+                        func_body.append('                siz = 0;')
+                        func_body.append('                break;')
+                        func_body.append('        }')
+                        func_body.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s->ppMemBarriers[i]), siz, %s->ppMemBarriers[i]);' % (proto.params[-1].name, proto.params[-1].name))
+                        func_body.append('        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->ppMemBarriers[i]));' % (proto.params[-1].name))
+                        func_body.append('    }')
+                        func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s->ppMemBarriers));' % (proto.params[-1].name))
                     if 'void' not in proto.ret or '*' in proto.ret:
                         func_body.append('    pPacket->result = result;')
-                    for idx in buff_ptr_indices:
-                        if ('DEVICE_CREATE_INFO' not in proto.params[idx].ty) and ('APPLICATION_INFO' not in proto.params[idx].ty) and ('pUpdateChain' != proto.params[idx].name):
-                            func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s));' % (proto.params[idx].name))
+                    for pp_dict in ptr_packet_update_list:
+                        if ('DEVICE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('pUpdateChain' != proto.params[pp_dict['index']].name):
+                            func_body.append('    %s;' % (pp_dict['finalize_txt']))
                     func_body.append('    FINISH_TRACE_PACKET();')
                     if 'AllocMemory' in proto.name:
                         func_body.append('    add_new_handle_to_mem_info(*pMem, pAllocInfo->allocationSize, NULL);')
