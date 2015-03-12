@@ -65,6 +65,7 @@ run_xgl_helper(gen_struct_wrappers
         xgl_struct_string_helper_cpp.h
 	xgl_struct_string_helper_no_addr.h
 	xgl_struct_string_helper_no_addr_cpp.h
+        xgl_struct_size_helper.h
 	xgl_struct_wrappers.h
 	xgl_struct_wrappers.cpp
 )
