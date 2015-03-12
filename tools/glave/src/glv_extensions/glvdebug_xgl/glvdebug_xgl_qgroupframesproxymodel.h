@@ -37,7 +37,7 @@ struct FrameInfo
 {
     int frameIndex;
     QPersistentModelIndex modelIndex;
-    QList<QPersistentModelIndex> children;
+    QList<int> mapChildRowToSourceRow;
 };
 
 class glvdebug_xgl_QGroupFramesProxyModel : public QAbstractProxyModel
@@ -46,10 +46,9 @@ class glvdebug_xgl_QGroupFramesProxyModel : public QAbstractProxyModel
 public:
     glvdebug_xgl_QGroupFramesProxyModel(QObject *parent = 0)
         : QAbstractProxyModel(parent),
-          m_curFrameCount(0),
-          m_pCurFrame(NULL)
+          m_curFrameCount(0)
     {
-        buildGroups(NULL);
+        buildGroups();
     }
 
     virtual ~glvdebug_xgl_QGroupFramesProxyModel()
@@ -59,13 +58,14 @@ public:
     //---------------------------------------------------------------------------------------------
     virtual void setSourceModel(QAbstractItemModel *sourceModel)
     {
-        QAbstractProxyModel::setSourceModel(sourceModel);
-
-        if (sourceModel->inherits("glvdebug_QTraceFileModel"))
+        if (sourceModel != NULL && !sourceModel->inherits("glvdebug_QTraceFileModel"))
         {
-            glvdebug_QTraceFileModel* pTFM = static_cast<glvdebug_QTraceFileModel*>(sourceModel);
-            buildGroups(pTFM);
+            assert(!"Setting QGroupFramesProxyModel to have a sourceModel that doesn't inherit from QTraceFileModel.");
+            sourceModel = NULL;
         }
+
+        QAbstractProxyModel::setSourceModel(sourceModel);
+        buildGroups();
     }
 
     //---------------------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ public:
         {
             // this is a frame.
             // A frame knows how many children it has!
-            return m_frameList[parent.row()].children.count();
+            return m_frameList[parent.row()].mapChildRowToSourceRow.count();
         }
         else
         {
@@ -99,7 +99,7 @@ public:
         }
         else if (isFrame(parent))
         {
-            return m_frameList[parent.row()].children.count() > 0;
+            return m_frameList[parent.row()].mapChildRowToSourceRow.count() > 0;
         }
         return false;
     }
@@ -114,40 +114,6 @@ public:
 
         if (!isFrame(index))
         {
-            if (index.column() == 0)
-            {
-                return mapToSource(index).data(role);
-            }
-            else
-            {
-                if (role == Qt::DisplayRole)
-                {
-                    QModelIndex firstResult = mapToSource(index);
-                    if (firstResult.isValid())
-                    {
-                        return firstResult.data(role);
-                    }
-                    //else
-                    //{
-                    //    // All of the below code is to figure out why the call above is not working correctly!
-                    //    qDebug() << QString("Searching for: %1 %2 %3").arg(index.row()).arg(index.column()).arg((qintptr)index.internalPointer());
-
-                    //    QMap<QPersistentModelIndex, QPersistentModelIndex> map = m_mapProxyToSrc[index.column()];
-                    //    QList<QPersistentModelIndex> keys = map.keys();
-                    //    for (int i = 0; i < keys.count() && i < 25; i++)
-                    //    {
-                    //        //if (keys[i].row() == 0 && keys[i].column() == 1)
-                    //        {
-                    //            qDebug() << QString("%1 %2 %3").arg(keys[i].row()).arg(keys[i].column()).arg((qintptr)keys[i].internalPointer());
-                    //        }
-                    //    }
-
-                    //    QModelIndex result = map.value(index);
-                    //    return QVariant(QString("%1 %2 %3").arg(result.row()).arg(result.column()).arg((qintptr)result.internalPointer()));
-                    //}
-                }
-            }
-
             return mapToSource(index).data(role);
         }
 
@@ -192,14 +158,7 @@ public:
             // if parent is not valid, then this row and column is referencing Frame data
             if (row < m_frameList.count())
             {
-                if (column == 0)
-                {
-                    return m_frameList[row].modelIndex;
-                }
-                else
-                {
-                    return createIndex(row, column, m_frameList[row].modelIndex.internalPointer());
-                }
+                return createIndex(row, column, (FrameInfo*)&m_frameList[row]);
             }
 
             return QModelIndex();
@@ -207,16 +166,9 @@ public:
         else if (isFrame(parent))
         {
             // the parent is a frame, so this row and column reference a source cell
-            if (column == 0)
-            {
-                // the column of
-                return m_frameList[parent.row()].children[row];
-            }
-            else
-            {
-                // TODO: Have I already created this modelIndex?
-                return createIndex(row, column, m_frameList[parent.row()].children[row].internalId());
-            }
+            const FrameInfo* pFrame = (const FrameInfo*)&m_frameList[parent.row()];
+            assert(pFrame->frameIndex == parent.row());
+            return createIndex(row, column, pFrame->frameIndex);
         }
 
         return QModelIndex();
@@ -225,32 +177,31 @@ public:
     //---------------------------------------------------------------------------------------------
     QModelIndex parent(const QModelIndex &child) const
     {
-        if (child.isValid())
-        {
-            if (!isFrame(child))
-            {
-                QModelIndex result = m_mapProxyToParent[child.column()].value(child);
-                if (result.isValid())
-                {
-                    return result;
-                }
-                else
-                {
-                    // parent is a frame
-                    int frameIndex = (int)child.internalId();
-                    if (frameIndex < m_frameList.count())
-                    {
-                        return createIndex(frameIndex, 0, (void*)&m_frameList[frameIndex]);
-                    }
-                    else
-                    {
-                        // This case has been hit in an unexpected scrolling bug.
-                    }
-                }
-            }
-        }
+        if (!child.isValid())
+            return QModelIndex();
 
-        return QModelIndex();
+        if (isFrame(child))
+        {
+            // frames don't have a parent (ie, they are at the root level)
+            return QModelIndex();
+        }
+        else
+        {
+            // The child is a proxy of the source model,
+            // so the parent is its frame's modelIndex.
+            quintptr frameIndex = child.internalId();
+            const FrameInfo* pFrame = (const FrameInfo*)&m_frameList[frameIndex];
+            return pFrame->modelIndex;
+        }
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // sibling(..) needed to be implemented here because the inherited implementation looks at the
+    // sourceModel to get the new index, which results in bugs because it returns a source model
+    // sibling of a proxy model index. The new implementation keeps everything in proxy model space.
+    QModelIndex sibling(int row, int column, const QModelIndex &idx) const
+    {
+        return index(row, column, parent(idx));
     }
 
     //---------------------------------------------------------------------------------------------
@@ -259,9 +210,32 @@ public:
         if (!proxyIndex.isValid())
             return QModelIndex();
 
-        QModelIndex result = m_mapProxyToSrc[proxyIndex.column()].value(proxyIndex);
+        if (isFrame(proxyIndex))
+        {
+            // frames can't get mapped to the source
+            return QModelIndex();
+        }
+        else
+        {
+            quintptr frameIndex = proxyIndex.internalId();
+            const FrameInfo* pFrame = (const FrameInfo*)&m_frameList[frameIndex];
+            assert(pFrame->frameIndex == (int)frameIndex);
+            if (proxyIndex.row() < pFrame->mapChildRowToSourceRow.count())
+            {
+                int srcRow = pFrame->mapChildRowToSourceRow[proxyIndex.row()];
+                int srcCol = proxyIndex.column();
 
-        return result;
+                // by using a default srcParent, we'll only get top-level indices.
+                // ie, we won't support hierarchical sourceModels.
+                return sourceModel()->index(srcRow, srcCol, QModelIndex());
+            }
+            else
+            {
+                // this unexpected case has happened when scrolling quickly.
+                // UPDATE: I think I fixed this issue, it was due to calling .next() too many times on an iterator.
+                return QModelIndex();
+            }
+        }
     }
 
     //---------------------------------------------------------------------------------------------
@@ -270,7 +244,23 @@ public:
         if (!sourceIndex.isValid())
             return QModelIndex();
 
-        return m_mapping.value(sourceIndex);
+        int srcRow = sourceIndex.row();
+        int proxyRow = m_mapSourceRowToProxyGroupRow[srcRow];
+
+        // figure out which frame has the srcRow as a child
+        const FrameInfo* pProxyGroup = NULL;
+        QListIterator<FrameInfo> frameIter(m_frameList);
+        while (frameIter.hasNext())
+        {
+            const FrameInfo* pFrame = &frameIter.next();
+            if (pFrame->mapChildRowToSourceRow.contains(srcRow))
+            {
+                pProxyGroup = pFrame;
+                break;
+            }
+        }
+
+        return createIndex(proxyRow, sourceIndex.column(), pProxyGroup->frameIndex);
     }
 
     //---------------------------------------------------------------------------------------------
@@ -289,20 +279,14 @@ public:
     //---------------------------------------------------------------------------------------------
 private:
     QList<FrameInfo> m_frameList;
-    QMap<QPersistentModelIndex, QPersistentModelIndex> m_mapping;
-
-    // column-based list of maps from proxy to source
-    QList< QMap<QPersistentModelIndex, QPersistentModelIndex> > m_mapProxyToSrc;
-
-    QList< QMap<QPersistentModelIndex, QPersistentModelIndex> > m_mapProxyToParent;
+    QList<int> m_mapSourceRowToProxyGroupRow;
     int m_curFrameCount;
-    FrameInfo* m_pCurFrame;
 
     //---------------------------------------------------------------------------------------------
     bool isFrame(const QModelIndex &proxyIndex) const
     {
-        // API Calls use the frame Id as the index's internalId
-        qintptr id = proxyIndex.internalId();
+        // API Calls use the frame number as the index's internalId
+        int id = (int)proxyIndex.internalId();
         if (id >= 0 && id < m_frameList.count())
         {
             // this is an api call
@@ -322,81 +306,53 @@ private:
     }
 
     //---------------------------------------------------------------------------------------------
-    void addNewFrame()
+    FrameInfo* addNewFrame()
     {
         // create frame info
         FrameInfo info;
         m_frameList.append(info);
-        m_pCurFrame = &m_frameList[m_curFrameCount];
+        FrameInfo* pFrame = &m_frameList[m_curFrameCount];
 
-        m_pCurFrame->frameIndex = m_curFrameCount;
+        pFrame->frameIndex = m_curFrameCount;
 
         // create proxy model index for frame node
-        m_pCurFrame->modelIndex = createIndex(m_curFrameCount, 0, m_pCurFrame);
+        pFrame->modelIndex = createIndex(m_curFrameCount, 0, pFrame);
 
         // increment frame count
         m_curFrameCount++;
+
+        return pFrame;
     }
 
     //---------------------------------------------------------------------------------------------
-    void buildGroups(glvdebug_QTraceFileModel* pTFM)
+    void buildGroups()
     {
-        m_mapping.clear();
-        m_mapProxyToSrc.clear();
-        m_mapProxyToParent.clear();
+        m_mapSourceRowToProxyGroupRow.clear();
         m_frameList.clear();
         m_curFrameCount = 0;
 
-        if (pTFM != NULL)
+        if (sourceModel() != NULL)
         {
-            // first reserve a few maps for each column in the table;
-            m_mapProxyToSrc.reserve(pTFM->columnCount());
-            m_mapProxyToParent.reserve(pTFM->columnCount());
-            for (int column = 0; column < pTFM->columnCount(); column++)
+            FrameInfo* pCurFrame = addNewFrame();
+            m_mapSourceRowToProxyGroupRow.reserve(sourceModel()->rowCount());
+            for (int srcRow = 0; srcRow < sourceModel()->rowCount(); srcRow++)
             {
-                // a new map to store our model indexes
-                QMap<QPersistentModelIndex, QPersistentModelIndex> tmpSource;
-                m_mapProxyToSrc.append(tmpSource);
-                QMap<QPersistentModelIndex, QPersistentModelIndex> tmpParents;
-                m_mapProxyToParent.append(tmpParents);
-            }
+                int proxyRow = pCurFrame->mapChildRowToSourceRow.count();
 
-            // now do scanline-like remapping of source cells to proxy cells
+                // map source row to it's corresponding row in the proxy group.
+                m_mapSourceRowToProxyGroupRow.append(proxyRow);
 
-            this->addNewFrame();
-            for (int row = 0; row < pTFM->rowCount(); row++)
-            {
-                int proxyRow = m_pCurFrame->children.count();
-                //int column = 0;
-                for (int column = 0; column < pTFM->columnCount(); column++)
-                {
-                    int proxyColumn = column;
-                    QPersistentModelIndex source = sourceModel()->index(row, column);
-
-
-                    // make a proxy for this source index
-                    QPersistentModelIndex proxySrc = createIndex(proxyRow, proxyColumn, m_curFrameCount-1);
-
-                    // update other references
-                    m_mapping.insert(source, proxySrc);
-                    m_mapProxyToSrc[proxyColumn].insert(proxySrc, source);
-                    m_mapProxyToParent[proxyColumn].insert(proxySrc, m_pCurFrame->modelIndex);
-
-                    if (column == 0)
-                    {
-                        // only add the first column as a child to the current frame
-                        m_pCurFrame->children.append(proxySrc);
-                    }
-                } // end for each source column
+                // add this src row to the current proxy group.
+                pCurFrame->mapChildRowToSourceRow.append(srcRow);
 
                 // Should a new frame be started based on the API call in the previous row?
                 // If source data is a frame boundary make a new frame
-                QModelIndex tmpIndex = sourceModel()->index(row, 0);
+                QModelIndex tmpIndex = sourceModel()->index(srcRow, 0);
                 assert(tmpIndex.isValid());
                 glv_trace_packet_header* pHeader = (glv_trace_packet_header*)tmpIndex.internalPointer();
                 if (pHeader != NULL && pHeader->tracer_id == GLV_TID_XGL && pHeader->packet_id == GLV_TPI_XGL_xglWsiX11QueuePresent)
                 {
-                    this->addNewFrame();
+                    pCurFrame = addNewFrame();
                 }
             } // end for each source row
         }
