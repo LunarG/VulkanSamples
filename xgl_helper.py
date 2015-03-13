@@ -65,7 +65,8 @@ enum_type_dict = {}
 #       |->['const'] = bool indicating if this member is const
 #       |->['struct'] = bool indicating if this member is a struct type
 #       |->['array'] = bool indicating if this member is an array
-#       '->['array_size'] = int indicating size of array members (0 by default)
+#       |->['dyn_array'] = bool indicating if member is a dynamically sized array
+#       '->['array_size'] = For dyn_array, member name used to size array, else int size for static array
 struct_dict = {}
 # typedef_fwd_dict stores mapping from orig_type_name -> new_type_name
 typedef_fwd_dict = {}
@@ -1006,7 +1007,7 @@ class StructWrapperGen:
                             if is_type(self.struct_dict[s][m]['type'], 'struct'):
                                 sh_funcs.append('%sstructSize += (sizeof(%s*) + %s(pStruct->%s[i]));' % (indent, self.struct_dict[s][m]['type'], self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
                             else:
-                                sh_funcs.append('%sstructSize += (sizeof(char) * strlen(pStruct->%s[i]));' % (indent, self.struct_dict[s][m]['name']))
+                                sh_funcs.append('%sstructSize += (sizeof(char*) + (sizeof(char) * (1 + strlen(pStruct->%s[i]))));' % (indent, self.struct_dict[s][m]['name']))
                             indent = '        '
                             sh_funcs.append('%s}' % (indent))
                     else:
@@ -1023,7 +1024,7 @@ class StructWrapperGen:
                             sh_funcs.append('%sstructSize += pStruct->%s*sizeof(%s);' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
                 elif self.struct_dict[s][m]['ptr'] and 'pNext' != self.struct_dict[s][m]['name']:
                     if 'char' in self.struct_dict[s][m]['type'].lower():
-                        sh_funcs.append('%sstructSize += sizeof(%s)*strlen(pStruct->%s);' % (indent, self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
+                        sh_funcs.append('%sstructSize += sizeof(%s)*(1+strlen(pStruct->%s));' % (indent, self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                     elif is_type(self.struct_dict[s][m]['type'], 'struct'):
                         sh_funcs.append('%sstructSize += %s(pStruct->%s);' % (indent, self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
                     else:
@@ -1050,6 +1051,7 @@ class StructWrapperGen:
                     sh_funcs.append('                break;')
                     sh_funcs.append('            }')
                 sh_funcs.append("            default:")
+                sh_funcs.append("                assert(0);")
                 sh_funcs.append("                structSize += 0;")
         sh_funcs.append('        }')
         sh_funcs.append('        pNext = (XGL_APPLICATION_INFO*)pNext->pNext;')

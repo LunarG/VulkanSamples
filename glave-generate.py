@@ -413,21 +413,15 @@ class Subcommand(object):
 
     # Take a list of params and return a list of packet size elements
     def _get_packet_size(self, params):
-        ps = []
+        ps = [] # List of elements to be added together to account for packet size for given params
         skip_list = [] # store params that are already accounted for so we don't count them twice
         # Dict of specific params with unique custom sizes
-        custom_size_dict = {'xgl_shader_create_info': 'get_struct_chain_size((void*)pCreateInfo)',
-                            'xgl_graphics_pipeline_create_info': 'get_struct_chain_size((void*)pCreateInfo)',
-                            'pUpdateChain': 'get_struct_chain_size(pUpdateChain)',
-                            'pSetBindPoints': '(XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t))', # Accounting for largest possible array
-                            'xgl_descriptor_set_layout_create_info': 'get_struct_chain_size((void*)pSetLayoutInfoList)',
-                            'xgl_cmd_buffer_begin_info': 'get_struct_chain_size((void*)pBeginInfo)',
-                            'xgl_memory_alloc_info': 'get_struct_chain_size((void*)pAllocInfo)',
-                            'xgl_compute_pipeline_create_info': 'get_struct_chain_size((void*)pCreateInfo)'}
+        custom_size_dict = {'pSetBindPoints': '(XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t))', # Accounting for largest possible array
+                            }
         for p in params:
             #First handle custom cases
-            if p.ty.strip('*').replace('const ', '').lower() in custom_size_dict:
-                ps.append(custom_size_dict[p.ty.strip('*').replace('const ', '').lower()])
+            if p.name in ['pCreateInfo', 'pUpdateChain', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocInfo']:
+                ps.append('get_struct_chain_size((void*)%s)' % p.name)
                 skip_list.append(p.name)
             elif p.name in custom_size_dict:
                 ps.append(custom_size_dict[p.name])
@@ -459,8 +453,6 @@ class Subcommand(object):
                     ps.append('sizeof(%s)' % p.name)
                 elif 'char' in p.ty:
                     ps.append('((%s != NULL) ? strlen(%s) + 1 : 0)' % (p.name, p.name))
-                elif 'DEVICE_CREATE_INFO' in p.ty:
-                    ps.append('calc_size_XGL_DEVICE_CREATE_INFO(pCreateInfo)')
                 elif 'pDataSize' in p.name:
                     ps.append('((pDataSize != NULL) ? sizeof(size_t) : 0)')
                 elif 'IMAGE_SUBRESOURCE' in p.ty and 'pSubresource' == p.name:
@@ -564,28 +556,22 @@ class Subcommand(object):
                     func_body.append('    pHeader->entrypoint_begin_time = startTime;')
                 elif proto.name in ['CreateFramebuffer', 'CreateRenderPass', 'CreateDynamicViewportState', 
                                     'CreateDescriptorRegion', 'CmdWaitEvents', 'CmdPipelineBarrier']:
-                    # these are regular case as far as sequence of tracing but custom sizes
-                    func_body.append('    size_t customSize;')
+                    # these are regular case as far as sequence of tracing but have some custom size element
                     if 'CreateFramebuffer' == proto.name:
                         func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(XGL_DEPTH_STENCIL_BIND_INFO) : 0;')
                         func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
-                        func_body.append('    customSize = colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) + dsSize;')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, sizeof(XGL_FRAMEBUFFER_CREATE_INFO) + sizeof(XGL_FRAMEBUFFER) + customSize);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateFramebuffer, get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_FRAMEBUFFER));')
                     elif 'CreateRenderPass' == proto.name:
                         func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && (pCreateInfo->pColorLoadOps != NULL || pCreateInfo->pColorStoreOps != NULL || pCreateInfo->pColorLoadClearValues != NULL)) ? pCreateInfo->colorAttachmentCount : 0;')
-                        func_body.append('    customSize = colorCount * ((pCreateInfo->pColorLoadOps != NULL) ? sizeof(XGL_ATTACHMENT_LOAD_OP) : 0);')
-                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorStoreOps != NULL) ? sizeof(XGL_ATTACHMENT_STORE_OP) : 0);')
-                        func_body.append('    customSize += colorCount * ((pCreateInfo->pColorLoadClearValues != NULL) ? sizeof(XGL_CLEAR_COLOR) : 0);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, sizeof(XGL_RENDER_PASS_CREATE_INFO) + sizeof(XGL_RENDER_PASS) + customSize);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateRenderPass, get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_RENDER_PASS));')
                     elif 'CreateDynamicViewportState' == proto.name:
                         func_body.append('    uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;')
-                        func_body.append('    customSize = vpsCount * sizeof(XGL_VIEWPORT) + vpsCount * sizeof(XGL_RECT);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDynamicViewportState,  sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO) + sizeof(XGL_DYNAMIC_VP_STATE_OBJECT) + customSize);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDynamicViewportState,  get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_DYNAMIC_VP_STATE_OBJECT));')
                     elif 'CreateDescriptorRegion' == proto.name:
                         func_body.append('    uint32_t rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
-                        func_body.append('    customSize = rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT);')
-                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorRegion,  sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO) + sizeof(XGL_DESCRIPTOR_REGION) + customSize);')
+                        func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorRegion,  get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_DESCRIPTOR_REGION));')
                     else: # ['CmdWaitEvents', 'CmdPipelineBarrier']:
+                        func_body.append('    size_t customSize;')
                         event_array_type = 'XGL_EVENT'
                         if 'CmdPipelineBarrier' == proto.name:
                             event_array_type = 'XGL_SET_EVENT'
@@ -1309,35 +1295,11 @@ class Subcommand(object):
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
         pid_enum.append('//=============================================================================\n')
-        pid_enum.append('static uint64_t calc_size_XGL_DEVICE_CREATE_INFO(const XGL_DEVICE_CREATE_INFO* pStruct)')
-        pid_enum.append('{')
-        pid_enum.append('    uint64_t total_size_ppEnabledExtensionNames = pStruct->extensionCount * sizeof(char *);')
-        pid_enum.append('    uint32_t i;')
-        pid_enum.append('    for (i = 0; i < pStruct->extensionCount; i++)')
-        pid_enum.append('    {')
-        pid_enum.append('        total_size_ppEnabledExtensionNames += strlen(pStruct->ppEnabledExtensionNames[i]) + 1;')
-        pid_enum.append('    }')
-        pid_enum.append('    uint64_t total_size_layers = 0;')
-        pid_enum.append('    XGL_LAYER_CREATE_INFO *pNext = ( XGL_LAYER_CREATE_INFO *) pStruct->pNext;')
-        pid_enum.append('    while (pNext != NULL)')
-        pid_enum.append('    {')
-        pid_enum.append('        if ((pNext->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pNext->layerCount > 0)')
-        pid_enum.append('        {')
-        pid_enum.append('            total_size_layers += sizeof(XGL_LAYER_CREATE_INFO);')
-        pid_enum.append('            for (i = 0; i < pNext->layerCount; i++)')
-        pid_enum.append('            {')
-        pid_enum.append('                total_size_layers += strlen(pNext->ppActiveLayerNames[i]) + 1;')
-        pid_enum.append('            }')
-        pid_enum.append('        }')
-        pid_enum.append('        pNext = ( XGL_LAYER_CREATE_INFO *) pNext->pNext;')
-        pid_enum.append('    }')
-        pid_enum.append('    return sizeof(XGL_DEVICE_CREATE_INFO) + (pStruct->queueRecordCount*sizeof(XGL_DEVICE_CREATE_INFO)) + total_size_ppEnabledExtensionNames + total_size_layers;')
-        pid_enum.append('}\n')
         pid_enum.append('static void add_XGL_DEVICE_CREATE_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_DEVICE_CREATE_INFO** ppStruct, const XGL_DEVICE_CREATE_INFO *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    uint32_t i;')
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_DEVICE_CREATE_INFO), pInStruct);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(XGL_DEVICE_CREATE_INFO), pInStruct->pRequestedQueues);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(XGL_DEVICE_QUEUE_CREATE_INFO), pInStruct->pRequestedQueues);')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
         pid_enum.append('    if (pInStruct->extensionCount > 0) ')
         pid_enum.append('    {')
