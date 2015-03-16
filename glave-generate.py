@@ -521,7 +521,7 @@ class Subcommand(object):
                     func_body.append('    }')
                     func_body.append('    startTime = glv_get_time();')
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
-                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, sizeof(XGL_INSTANCE) + calc_size_XGL_APPLICATION_INFO(pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS)));' % (proto.name))
+                    func_body.append('    CREATE_TRACE_PACKET(xgl%s, sizeof(XGL_INSTANCE) + get_struct_chain_size((void*)pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS)));' % (proto.name))
                     func_body.append('    pHeader->entrypoint_begin_time = startTime;')
                     func_body.append('    if (isHooked == FALSE) {')
                     func_body.append('        AttachHooks();')
@@ -1281,10 +1281,6 @@ class Subcommand(object):
     def _generate_struct_util_funcs(self):
         pid_enum = []
         pid_enum.append('//=============================================================================')
-        pid_enum.append('static uint64_t calc_size_XGL_APPLICATION_INFO(const XGL_APPLICATION_INFO* pStruct)')
-        pid_enum.append('{')
-        pid_enum.append('    return ((pStruct == NULL) ? 0 : sizeof(XGL_APPLICATION_INFO)) + strlen(pStruct->pAppName) + 1 + strlen(pStruct->pEngineName) + 1;')
-        pid_enum.append('}\n')
         pid_enum.append('static void add_XGL_APPLICATION_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_APPLICATION_INFO** ppStruct, const XGL_APPLICATION_INFO *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_APPLICATION_INFO), pInStruct);')
