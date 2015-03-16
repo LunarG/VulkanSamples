@@ -29,6 +29,7 @@
 #include "xgl_dispatch_table_helper.h"
 #include "xgl_struct_string_helper.h"
 #include "xgl_struct_graphviz_helper.h"
+#include "xgl_struct_size_helper.h"
 #include "draw_state.h"
 #include "layers_config.h"
 // The following is #included again to catch certain OS-specific functions
@@ -62,142 +63,6 @@ static uint32_t getTIDIndex() {
     g_tidMapping[g_maxTID++] = tid;
     assert(g_maxTID < MAX_TID);
     return retVal;
-}
-// Return the size of the underlying struct based on struct type
-static size_t sTypeStructSize(XGL_STRUCTURE_TYPE sType)
-{
-    switch (sType)
-    {
-        case XGL_STRUCTURE_TYPE_APPLICATION_INFO:
-            return sizeof(XGL_APPLICATION_INFO);
-        case XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO:
-            return sizeof(XGL_DEVICE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO:
-            return sizeof(XGL_MEMORY_ALLOC_INFO);
-        case XGL_STRUCTURE_TYPE_MEMORY_OPEN_INFO:
-            return sizeof(XGL_MEMORY_OPEN_INFO);
-        case XGL_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO:
-            return sizeof(XGL_PEER_MEMORY_OPEN_INFO);
-        case XGL_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO:
-            return sizeof(XGL_BUFFER_VIEW_ATTACH_INFO);
-        case XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO:
-            return sizeof(XGL_IMAGE_VIEW_ATTACH_INFO);
-        case XGL_STRUCTURE_TYPE_EVENT_WAIT_INFO:
-            return sizeof(XGL_EVENT_WAIT_INFO);
-        case XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO:
-            return sizeof(XGL_IMAGE_VIEW_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO:
-            return sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO:
-            return sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO:
-            return sizeof(XGL_SHADER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
-            return sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO:
-            return sizeof(XGL_SAMPLER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO:
-            return sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO:
-            return sizeof(XGL_CMD_BUFFER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO:
-            return sizeof(XGL_EVENT_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO:
-            return sizeof(XGL_FENCE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO:
-            return sizeof(XGL_QUEUE_SEMAPHORE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_OPEN_INFO:
-            return sizeof(XGL_QUEUE_SEMAPHORE_OPEN_INFO);
-        case XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO:
-            return sizeof(XGL_QUERY_POOL_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
-            return sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_VP_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_MS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
-            return sizeof(XGL_PIPELINE_DS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO:
-            return sizeof(XGL_IMAGE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO:
-            return sizeof(XGL_BUFFER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO:
-            return sizeof(XGL_BUFFER_VIEW_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO:
-            return sizeof(XGL_FRAMEBUFFER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
-            return sizeof(XGL_CMD_BUFFER_BEGIN_INFO);
-        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
-            return sizeof(XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO);
-        case XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO:
-            return sizeof(XGL_RENDER_PASS_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO:
-            return sizeof(XGL_LAYER_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_PIPELINE_BARRIER:
-            return sizeof(XGL_PIPELINE_BARRIER);
-        case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
-            return sizeof(XGL_MEMORY_BARRIER);
-        case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-            return sizeof(XGL_BUFFER_MEMORY_BARRIER);
-        case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-            return sizeof(XGL_IMAGE_MEMORY_BARRIER);
-        case XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO:
-            return sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return sizeof(XGL_UPDATE_SAMPLERS);
-        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return sizeof(XGL_UPDATE_SAMPLER_TEXTURES);
-        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return sizeof(XGL_UPDATE_IMAGES);
-        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return sizeof(XGL_UPDATE_BUFFERS);
-        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            return sizeof(XGL_UPDATE_AS_COPY);
-        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-            return sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
-        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-            return sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);
-        default:
-            return 0;
-    }
-}
-// Return the size of the underlying struct based on sType
-static size_t dynStateCreateInfoSize(XGL_STRUCTURE_TYPE sType)
-{
-    switch (sType)
-    {
-        case XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO);
-        case XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO:
-            return sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO);
-        default:
-            return 0;
-    }
 }
 // Return a string representation of CMD_TYPE enum
 static char* cmdTypeToString(CMD_TYPE cmd)
@@ -325,11 +190,11 @@ static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENER
     pStateNode->pNext = g_pDynamicStateHead[bindPoint];
     g_pDynamicStateHead[bindPoint] = pStateNode;
     pStateNode->stateObj = state;
-    pStateNode->pCreateInfo = (GENERIC_HEADER*)malloc(dynStateCreateInfoSize(pCreateInfo->sType));
+    pStateNode->pCreateInfo = (GENERIC_HEADER*)malloc(get_dynamic_struct_size(pCreateInfo));
 #if ALLOC_DEBUG
     printf("Alloc2 #%lu pStateNode->pCreateInfo addr(%p)\n", ++g_alloc_count, (void*)pStateNode->pCreateInfo);
 #endif
-    memcpy(pStateNode->pCreateInfo, pCreateInfo, dynStateCreateInfoSize(pCreateInfo->sType));
+    memcpy(pStateNode->pCreateInfo, pCreateInfo, get_dynamic_struct_size(pCreateInfo));
     // VP has embedded ptr so need to handle that as special case
     if (XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == pCreateInfo->sType) {
         XGL_DYNAMIC_VP_STATE_CREATE_INFO* pVPCI = (XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pStateNode->pCreateInfo;
@@ -559,12 +424,12 @@ static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_C
     GENERIC_HEADER *pTrav = (GENERIC_HEADER*)pCreateInfo->pNext;
     while (pTrav) {
         // Shadow the struct
-        pShadowTrav->pNext = (GENERIC_HEADER*)malloc(sTypeStructSize(pTrav->sType));
+        pShadowTrav->pNext = (GENERIC_HEADER*)malloc(get_dynamic_struct_size(pTrav));
 #if ALLOC_DEBUG
     printf("Alloc6 #%lu pShadowTrav->pNext addr(%p)\n", ++g_alloc_count, (void*)pShadowTrav->pNext);
 #endif
         // Typically pNext is const so have to cast to avoid warning when we modify it here
-        memcpy((void*)pShadowTrav->pNext, pTrav, sTypeStructSize(pTrav->sType));
+        memcpy((void*)pShadowTrav->pNext, pTrav, get_dynamic_struct_size(pTrav));
         pShadowTrav = (GENERIC_HEADER*)pShadowTrav->pNext;
         // Special copy of Vtx info as it has embedded array
         if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pTrav->sType) {
