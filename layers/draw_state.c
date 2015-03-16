@@ -1402,9 +1402,8 @@ static void dumpDotFile(const XGL_CMD_BUFFER cb, char *outFileName)
         }
     }
 }
-// Synch up currently bound pipeline settings with DS mappings
-// TODO : Update name. We don't really have to "synch" the descriptors anymore and "mapping" is outdated as well.
-static void synchDSMapping(const XGL_CMD_BUFFER cb)
+// Verify VB Buffer binding
+static void validateVBBinding(const XGL_CMD_BUFFER cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundPipeline) {
@@ -1509,7 +1508,6 @@ static void printCB(const XGL_CMD_BUFFER cb)
 
 static void synchAndPrintDSConfig(const XGL_CMD_BUFFER cb)
 {
-    synchDSMapping(cb);
     printDSConfig(cb);
     printPipeline(cb);
     printDynamicState(cb);
@@ -2191,6 +2189,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XG
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDVERTEXBUFFER);
         pCB->lastVtxBinding = binding;
+        validateVBBinding(cmdBuffer);
     }
     else {
         char str[1024];
