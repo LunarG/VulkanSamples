@@ -1100,31 +1100,33 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance,
     assert(loader.icds_scanned);
 
     for (inst = loader.instances; inst; inst = inst->next) {
-        for (icd = inst->icds; icd; icd = icd->next) {
-            for (uint32_t i = 0; i < icd->gpu_count; i++) {
-                res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(icd->scanned_icds->instance,
+        if (inst == instance)
+            break;
+    }
+
+    if (inst == XGL_NULL_HANDLE)
+        return XGL_ERROR_INVALID_HANDLE;
+
+    for (icd = inst->icds; icd; icd = icd->next) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
+            res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(icd->scanned_icds->instance,
                                                    pfnMsgCallback, pUserData);
-                if (res != XGL_SUCCESS) {
-                    gpu_idx = i;
-                    break;
-                }
-            }
-            if (res != XGL_SUCCESS)
+            if (res != XGL_SUCCESS) {
+                gpu_idx = i;
                 break;
+            }
         }
         if (res != XGL_SUCCESS)
             break;
     }
 
+
     /* roll back on errors */
     if (icd) {
-        for (struct loader_instance *tmp_inst = loader.instances;
-                        tmp_inst != inst; tmp_inst = tmp_inst->next) {
-            for (const struct loader_icd * tmp = tmp_inst->icds; tmp != icd;
+        for (const struct loader_icd *tmp = inst->icds; tmp != icd;
                                                       tmp = tmp->next) {
-                for (uint32_t i = 0; i < icd->gpu_count; i++)
-                    (tmp->loader_dispatch + i)->DbgUnregisterMsgCallback(tmp->scanned_icds->instance, pfnMsgCallback);
-            }
+            for (uint32_t i = 0; i < icd->gpu_count; i++)
+                (tmp->loader_dispatch + i)->DbgUnregisterMsgCallback(tmp->scanned_icds->instance, pfnMsgCallback);
         }
         /* and gpus on current icd */
         for (uint32_t i = 0; i < gpu_idx; i++)
@@ -1139,22 +1141,26 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance,
 LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     XGL_RESULT res = XGL_SUCCESS;
-
+    struct loader_instance *inst;
     if (instance == XGL_NULL_HANDLE)
         return XGL_ERROR_INVALID_HANDLE;
 
     assert(loader.icds_scanned);
 
-    for (struct loader_instance *inst = loader.instances; inst;
-                                                          inst = inst->next) {
-        for (const struct loader_icd * icd = inst->icds; icd;
-                                                            icd = icd->next) {
-            for (uint32_t i = 0; i < icd->gpu_count; i++) {
-                XGL_RESULT r;
-                r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(icd->scanned_icds->instance, pfnMsgCallback);
-                if (r != XGL_SUCCESS) {
-                    res = r;
-                }
+    for (inst = loader.instances; inst; inst = inst->next) {
+        if (inst == instance)
+            break;
+    }
+
+    if (inst == XGL_NULL_HANDLE)
+        return XGL_ERROR_INVALID_HANDLE;
+
+    for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
+            XGL_RESULT r;
+            r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(icd->scanned_icds->instance, pfnMsgCallback);
+            if (r != XGL_SUCCESS) {
+                res = r;
             }
         }
     }
@@ -1164,24 +1170,27 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instanc
 LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_INSTANCE instance, XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
     XGL_RESULT res = XGL_SUCCESS;
-
+    struct loader_instance *inst;
     if (instance == XGL_NULL_HANDLE)
         return XGL_ERROR_INVALID_HANDLE;
 
     assert(loader.icds_scanned);
 
-    for (struct loader_instance *inst = loader.instances; inst;
-                                                          inst = inst->next) {
-        for (const struct loader_icd * icd = inst->icds; icd;
-                                                          icd = icd->next) {
-            for (uint32_t i = 0; i < icd->gpu_count; i++) {
-                XGL_RESULT r;
-                r = (icd->loader_dispatch + i)->DbgSetGlobalOption(icd->scanned_icds->instance, dbgOption,
+    for (inst = loader.instances; inst; inst = inst->next) {
+        if (inst == instance)
+            break;
+    }
+
+    if (inst == XGL_NULL_HANDLE)
+        return XGL_ERROR_INVALID_HANDLE;
+    for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
+        for (uint32_t i = 0; i < icd->gpu_count; i++) {
+            XGL_RESULT r;
+            r = (icd->loader_dispatch + i)->DbgSetGlobalOption(icd->scanned_icds->instance, dbgOption,
                                                            dataSize, pData);
-                /* unfortunately we cannot roll back */
-                if (r != XGL_SUCCESS) {
-                   res = r;
-                }
+            /* unfortunately we cannot roll back */
+            if (r != XGL_SUCCESS) {
+               res = r;
             }
         }
     }
