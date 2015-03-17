@@ -98,7 +98,7 @@ public:
       // Explicitly mention the ones we want LunarGlass to decompose for us,
       // just for clarity, even though the above loop asks for decomposition
       // by default.
-      decompose[EDiClamp]       = 
+      decompose[EDiClamp]       = false;
       decompose[EDiFilterWidth] = true;
    }
    
