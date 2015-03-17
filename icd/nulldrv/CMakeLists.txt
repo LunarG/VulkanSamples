@@ -3,7 +3,7 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
 
 add_custom_command(OUTPUT nulldrv_gpa.c
-    COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > nulldrv_gpa.c
+    COMMAND python ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > nulldrv_gpa.c
     DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 set(sources

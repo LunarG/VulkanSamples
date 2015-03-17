@@ -1,10 +1,10 @@
 add_custom_command(OUTPUT dispatch.c
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py loader-entrypoints > dispatch.c
+	COMMAND python ${PROJECT_SOURCE_DIR}/xgl-generate.py loader-entrypoints > dispatch.c
 	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py
                 ${PROJECT_SOURCE_DIR}/include/xglIcd.h)
 
 add_custom_command(OUTPUT table_ops.h
-	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops loader > table_ops.h
+	COMMAND python ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops loader > table_ops.h
 	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 include_directories(
