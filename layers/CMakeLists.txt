@@ -2,14 +2,14 @@ cmake_minimum_required (VERSION 2.8.11)
 
 macro(run_xgl_helper subcmd)
 	add_custom_command(OUTPUT ${ARGN}
-		COMMAND python ${PROJECT_SOURCE_DIR}/xgl_helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl_helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
 		DEPENDS ${PROJECT_SOURCE_DIR}/xgl_helper.py ${PROJECT_SOURCE_DIR}/include/xgl.h
 	)
 endmacro()
 
 macro(run_xgl_layer_generate subcmd output)
 	add_custom_command(OUTPUT ${output}
-		COMMAND python ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h > ${output}
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${subcmd} ${PROJECT_SOURCE_DIR}/include/xgl.h > ${output}
 		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${PROJECT_SOURCE_DIR}/include/xgl.h ${PROJECT_SOURCE_DIR}/xgl.py
 	)
 endmacro()
@@ -17,7 +17,7 @@ endmacro()
 if (WIN32)
     macro(add_xgl_layer target)
 	add_custom_command(OUTPUT XGLLayer${target}.def
-		COMMAND python ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py ${target} > XGLLayer${target}.def
+		COMMAND ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py ${target} > XGLLayer${target}.def
 		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py
 	)
 	add_library(XGLLayer${target} SHARED ${ARGN} XGLLayer${target}.def)
@@ -52,11 +52,11 @@ if (NOT WIN32)
 endif()
 
 add_custom_command(OUTPUT xgl_dispatch_table_helper.h
-	COMMAND python ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops layer > xgl_dispatch_table_helper.h
+	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops layer > xgl_dispatch_table_helper.h
 	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 add_custom_command(OUTPUT xgl_generic_intercept_proc_helper.h
-	COMMAND python ${PROJECT_SOURCE_DIR}/xgl-generate.py layer-intercept-proc > xgl_generic_intercept_proc_helper.h
+	COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py layer-intercept-proc > xgl_generic_intercept_proc_helper.h
 	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
 run_xgl_helper(gen_enum_string_helper xgl_enum_string_helper.h)
