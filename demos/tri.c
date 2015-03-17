@@ -21,7 +21,7 @@
 #include <xglWsiX11Ext.h>
 #endif
 
-#include "icd-bil.h"
+#include "icd-spv.h"
 
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1

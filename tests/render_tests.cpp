@@ -72,7 +72,7 @@ using namespace std;
 #endif
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
-#include "icd-bil.h"
+#include "icd-spv.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"

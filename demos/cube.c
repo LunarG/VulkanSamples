@@ -10,7 +10,7 @@
 #include <xglDbg.h>
 #include <xglWsiX11Ext.h>
 
-#include "icd-bil.h"
+#include "icd-spv.h"
 
 #include "linmath.h"
 #if defined(__linux__)

@@ -42,7 +42,7 @@
 #include <xglIcd.h>
 
 #include "icd.h"
-#include "icd-bil.h"
+#include "icd-spv.h"
 #include "icd-format.h"
 #include "icd-instance.h"
 #include "icd-log.h"

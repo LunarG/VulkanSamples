@@ -63,7 +63,7 @@
 
 #include "xgltestbinding.h"
 #include "test_common.h"
-#include "icd-bil.h"
+#include "icd-spv.h"
 
 class XglTest : public ::testing::Test {
 public:

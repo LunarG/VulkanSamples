@@ -26,7 +26,7 @@
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "ShaderLang.h"
 #include "GLSL450Lib.h"
-#include "icd-bil.h"
+#include "icd-spv.h"
 #include "test_common.h"
 #include "xgltestbinding.h"
 #include "test_environment.h"

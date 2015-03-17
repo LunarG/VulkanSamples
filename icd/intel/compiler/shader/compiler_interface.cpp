@@ -25,7 +25,7 @@
  *   LunarG
  */
 
-#include "icd-bil.h"
+#include "icd-spv.h"
 #include "pipeline.h"
 #include "compiler_interface.h"
 #include "compiler/mesa-utils/src/glsl/ralloc.h"
