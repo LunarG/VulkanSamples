@@ -22,6 +22,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "xglLayer.h"
+#include <vector>
+
+using namespace std;
+
 // Draw State ERROR codes
 typedef enum _DRAW_STATE_ERROR
 {
@@ -60,7 +64,6 @@ typedef enum _DRAW_TYPE
 
 typedef struct _SHADER_DS_MAPPING {
     uint32_t slotCount;
-    // TODO : Need to understand this with new binding model, changed to LAYOUT_CI for now
     XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
 } SHADER_DS_MAPPING;
 
@@ -71,7 +74,6 @@ typedef struct _GENERIC_HEADER {
 
 typedef struct _PIPELINE_NODE {
     XGL_PIPELINE           pipeline;
-    struct _PIPELINE_NODE  *pNext;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
@@ -85,27 +87,30 @@ typedef struct _PIPELINE_NODE {
 typedef struct _SAMPLER_NODE {
     XGL_SAMPLER              sampler;
     XGL_SAMPLER_CREATE_INFO  createInfo;
-    struct _SAMPLER_NODE*    pNext;
 } SAMPLER_NODE;
 
 typedef struct _IMAGE_NODE {
     XGL_IMAGE_VIEW             image;
     XGL_IMAGE_VIEW_CREATE_INFO createInfo;
     XGL_IMAGE_VIEW_ATTACH_INFO attachInfo;
-    struct _IMAGE_NODE*        pNext;
 } IMAGE_NODE;
 
 typedef struct _BUFFER_NODE {
     XGL_BUFFER_VIEW             buffer;
     XGL_BUFFER_VIEW_CREATE_INFO createInfo;
     XGL_BUFFER_VIEW_ATTACH_INFO attachInfo;
-    struct _BUFFER_NODE*        pNext;
 } BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
-    XGL_DYNAMIC_STATE_OBJECT     stateObj;
-    GENERIC_HEADER   *pCreateInfo;
-    struct _DYNAMIC_STATE_NODE *pNext;
+    XGL_DYNAMIC_STATE_OBJECT    stateObj;
+    GENERIC_HEADER*             pCreateInfo;
+    union {
+        XGL_DYNAMIC_VP_STATE_CREATE_INFO vpci;
+        XGL_DYNAMIC_RS_STATE_CREATE_INFO rsci;
+        XGL_DYNAMIC_CB_STATE_CREATE_INFO cbci;
+        XGL_DYNAMIC_DS_STATE_CREATE_INFO dsci;
+    } create_info;
+    //struct _DYNAMIC_STATE_NODE* pNext;
 } DYNAMIC_STATE_NODE;
 // Descriptor Data structures
 // Layout Node has the core layout data
@@ -114,11 +119,10 @@ typedef struct _LAYOUT_NODE {
     XGL_FLAGS                                    stageFlags;
     uint32_t                                     shaderStageBindPoints[XGL_NUM_SHADER_STAGE];
     XGL_DESCRIPTOR_TYPE*                         pTypes; // Dynamic array that will be created to verify descriptor types
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfoList;
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*       pCreateInfoList;
     uint32_t                                     startIndex; // 1st index of this layout
     uint32_t                                     endIndex; // last index of this layout
     struct _LAYOUT_NODE*                         pPriorSetLayout; // Points to node w/ priorSetLayout
-    struct _LAYOUT_NODE*                         pNext; // Point to next layout in global LL chain of layouts
 } LAYOUT_NODE;
 typedef struct _SET_NODE {
     XGL_DESCRIPTOR_SET                           set;
@@ -137,9 +141,8 @@ typedef struct _REGION_NODE {
     XGL_DESCRIPTOR_REGION                        region;
     XGL_DESCRIPTOR_REGION_USAGE                  regionUsage;
     uint32_t                                     maxSets;
-    const XGL_DESCRIPTOR_REGION_CREATE_INFO      createInfo;
+    XGL_DESCRIPTOR_REGION_CREATE_INFO            createInfo;
     bool32_t                                     updateActive; // Track if Region is in an update block
-    struct _REGION_NODE*                         pNext;
     SET_NODE*                                    pSets; // Head of LL of sets for this Region
 } REGION_NODE;
 
@@ -187,7 +190,6 @@ typedef enum _CMD_TYPE
 } CMD_TYPE;
 // Data structure for holding sequence of cmds in cmd buffer
 typedef struct _CMD_NODE {
-    struct _CMD_NODE* pNext;
     CMD_TYPE          type;
     uint64_t          cmdNumber;
 } CMD_NODE;
@@ -198,9 +200,8 @@ typedef enum _CB_STATE
     CB_UPDATE_ACTIVE,  // BeginCB has been called on this CB
     CB_UPDATE_COMPLETE // EndCB has been called on this CB
 } CB_STATE;
-// Store a single LL of command buffers
+// Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
-    struct _GLOBAL_CB_NODE*         pNextGlobalCBNode;
     XGL_CMD_BUFFER                  cmdBuffer;
     XGL_QUEUE_TYPE                  queueType;
     XGL_FLAGS                       flags;
@@ -208,8 +209,7 @@ typedef struct _GLOBAL_CB_NODE {
     uint64_t                        numCmds;  // number of cmds in this CB
     uint64_t                        drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE                        state; // Track if cmd buffer update status
-    CMD_NODE*                       pCmds;
-    CMD_NODE*                       lastCmd;
+    vector<CMD_NODE*>               pCmds;
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state

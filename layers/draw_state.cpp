@@ -25,10 +25,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unordered_map>
+
 #include "loader_platform.h"
 #include "xgl_dispatch_table_helper.h"
-#include "xgl_struct_string_helper.h"
+#include "xgl_struct_string_helper_cpp.h"
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 #include "xgl_struct_graphviz_helper.h"
+#pragma GCC diagnostic warning "-Wwrite-strings"
 #include "xgl_struct_size_helper.h"
 #include "draw_state.h"
 #include "layers_config.h"
@@ -36,6 +40,16 @@
 // being used:
 #include "loader_platform.h"
 #include "layers_msg.h"
+
+unordered_map<XGL_SAMPLER, SAMPLER_NODE*> sampleMap;
+unordered_map<XGL_IMAGE_VIEW, IMAGE_NODE*> imageMap;
+unordered_map<XGL_BUFFER_VIEW, BUFFER_NODE*> bufferMap;
+unordered_map<XGL_DYNAMIC_STATE_OBJECT, DYNAMIC_STATE_NODE*> dynamicStateMap;
+unordered_map<XGL_PIPELINE, PIPELINE_NODE*> pipelineMap;
+unordered_map<XGL_DESCRIPTOR_REGION, REGION_NODE*> regionMap;
+unordered_map<XGL_DESCRIPTOR_SET, SET_NODE*> setMap;
+unordered_map<XGL_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*> layoutMap;
+unordered_map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*> cmdBufferMap;
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
@@ -66,7 +80,7 @@ static uint32_t getTIDIndex() {
     return retVal;
 }
 // Return a string representation of CMD_TYPE enum
-static char* cmdTypeToString(CMD_TYPE cmd)
+static string cmdTypeToString(CMD_TYPE cmd)
 {
     switch (cmd)
     {
@@ -161,11 +175,6 @@ static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
 // TODO : Should be tracking lastBound per cmdBuffer and when draws occur, report based on that cmd buffer lastBound
 //   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
 //   to that same cmd buffer by separate thread are not changing state from underneath us
-static PIPELINE_NODE*    g_pPipelineHead = NULL;
-static SAMPLER_NODE*     g_pSamplerHead = NULL;
-static IMAGE_NODE*       g_pImageHead = NULL;
-static BUFFER_NODE*      g_pBufferHead = NULL;
-static GLOBAL_CB_NODE*   g_pCmdBufferHead = NULL;
 // Track the last cmd buffer touched by this thread
 static XGL_CMD_BUFFER    g_lastCmdBuffer[MAX_TID] = {NULL};
 // Track the last group of CBs touched for displaying to dot file
@@ -178,159 +187,99 @@ static DYNAMIC_STATE_NODE*    g_lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT] 
 static XGL_DESCRIPTOR_SET     g_lastBoundDescriptorSet = NULL;
 #define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 
-static DYNAMIC_STATE_NODE* g_pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
+//static DYNAMIC_STATE_NODE* g_pDynamicStateHead[XGL_NUM_STATE_BIND_POINT] = {0};
 
 static void insertDynamicState(const XGL_DYNAMIC_STATE_OBJECT state, const GENERIC_HEADER* pCreateInfo, XGL_STATE_BIND_POINT bindPoint)
 {
+    XGL_DYNAMIC_VP_STATE_CREATE_INFO* pVPCI = NULL;
+    size_t scSize = 0;
+    size_t vpSize = 0;
     loader_platform_thread_lock_mutex(&globalLock);
-    // Insert new node at head of appropriate LL
-    DYNAMIC_STATE_NODE* pStateNode = (DYNAMIC_STATE_NODE*)malloc(sizeof(DYNAMIC_STATE_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc1 #%lu pStateNode addr(%p)\n", ++g_alloc_count, (void*)pStateNode);
-#endif
-    pStateNode->pNext = g_pDynamicStateHead[bindPoint];
-    g_pDynamicStateHead[bindPoint] = pStateNode;
+    DYNAMIC_STATE_NODE* pStateNode = new DYNAMIC_STATE_NODE;
     pStateNode->stateObj = state;
-    pStateNode->pCreateInfo = (GENERIC_HEADER*)malloc(get_dynamic_struct_size(pCreateInfo));
-#if ALLOC_DEBUG
-    printf("Alloc2 #%lu pStateNode->pCreateInfo addr(%p)\n", ++g_alloc_count, (void*)pStateNode->pCreateInfo);
-#endif
-    memcpy(pStateNode->pCreateInfo, pCreateInfo, get_dynamic_struct_size(pCreateInfo));
-    // VP has embedded ptr so need to handle that as special case
-    if (XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == pCreateInfo->sType) {
-        XGL_DYNAMIC_VP_STATE_CREATE_INFO* pVPCI = (XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pStateNode->pCreateInfo;
-        XGL_VIEWPORT** ppViewports = (XGL_VIEWPORT**)&pVPCI->pViewports;
-        size_t vpSize = sizeof(XGL_VIEWPORT) * pVPCI->viewportAndScissorCount;
-        if (vpSize) {
-            *ppViewports = (XGL_VIEWPORT*)malloc(vpSize);
-#if ALLOC_DEBUG
-            printf("Alloc3 #%lu *ppViewports addr(%p)\n", ++g_alloc_count, (void*)*ppViewports);
-#endif
-            memcpy(*ppViewports, ((XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pCreateInfo)->pViewports, vpSize);
-        }
-        XGL_RECT** ppScissors = (XGL_RECT**)&pVPCI->pScissors;
-        size_t scSize = sizeof(XGL_RECT) * pVPCI->viewportAndScissorCount;
-        if (scSize) {
-            *ppScissors = (XGL_RECT*)malloc(scSize);
-#if ALLOC_DEBUG
-            printf("Alloc4 #%lu *ppScissors addr(%p)\n", ++g_alloc_count, (void*)*ppScissors);
-#endif
-            memcpy(*ppScissors, ((XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pCreateInfo)->pScissors, scSize);
-        }
+    switch (pCreateInfo->sType) {
+        case XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO:
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO));
+            pVPCI = (XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pCreateInfo;
+            pStateNode->create_info.vpci.pScissors = new XGL_RECT[pStateNode->create_info.vpci.viewportAndScissorCount];
+            pStateNode->create_info.vpci.pViewports = new XGL_VIEWPORT[pStateNode->create_info.vpci.viewportAndScissorCount];
+            scSize = pVPCI->viewportAndScissorCount * sizeof(XGL_RECT);
+            vpSize = pVPCI->viewportAndScissorCount * sizeof(XGL_VIEWPORT);
+            memcpy((void*)pStateNode->create_info.vpci.pScissors, pVPCI->pScissors, scSize);
+            memcpy((void*)pStateNode->create_info.vpci.pViewports, pVPCI->pViewports, vpSize);
+            break;
+        case XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO:
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO));
+            break;
+        case XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO:
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO));
+            break;
+        case XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO:
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO));
+            break;
+        default:
+            assert(0);
+            break;
     }
+    pStateNode->pCreateInfo = (GENERIC_HEADER*)&pStateNode->create_info.cbci;
+    dynamicStateMap[state] = pStateNode;
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Free all allocated nodes for Dynamic State objs
 static void freeDynamicState()
 {
-    for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
-        DYNAMIC_STATE_NODE* pStateNode = g_pDynamicStateHead[i];
-        DYNAMIC_STATE_NODE* pFreeMe = pStateNode;
-        while (pStateNode) {
-            pFreeMe = pStateNode;
-            pStateNode = pStateNode->pNext;
-            assert(pFreeMe->pCreateInfo);
-            if (XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == pFreeMe->pCreateInfo->sType) {
-                XGL_DYNAMIC_VP_STATE_CREATE_INFO* pVPCI = (XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pFreeMe->pCreateInfo;
-                if (pVPCI->pViewports) {
-                    void** ppToFree = (void**)&pVPCI->pViewports;
-#if ALLOC_DEBUG
-                    printf("Free3 #%lu pViewports addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                    free(*ppToFree);
-                }
-                if (pVPCI->pScissors) {
-                    void** ppToFree = (void**)&pVPCI->pScissors;
-#if ALLOC_DEBUG
-                    printf("Free4 #%lu pScissors addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                    free(*ppToFree);
-                }
-            }
-#if ALLOC_DEBUG
-            printf("Free2 #%lu pStateNode->CreateInfo addr(%p)\n", ++g_free_count, (void*)pFreeMe->pCreateInfo);
-#endif
-            free(pFreeMe->pCreateInfo);
-#if ALLOC_DEBUG
-            printf("Free1 #%lu pStateNode addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-            free(pFreeMe);
+    for (unordered_map<XGL_DYNAMIC_STATE_OBJECT, DYNAMIC_STATE_NODE*>::iterator ii=dynamicStateMap.begin(); ii!=dynamicStateMap.end(); ++ii) {
+        if (XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == (*ii).second->create_info.vpci.sType) {
+            delete[] (*ii).second->create_info.vpci.pScissors;
+            delete[] (*ii).second->create_info.vpci.pViewports;
         }
-        g_pDynamicStateHead[i] = NULL;
+        delete (*ii).second;
     }
 }
 // Free all sampler nodes
 static void freeSamplers()
 {
-    SAMPLER_NODE* pSampler = g_pSamplerHead;
-    SAMPLER_NODE* pFreeMe = pSampler;
-    while (pSampler) {
-        pFreeMe = pSampler;
-        pSampler = pSampler->pNext;
-#if ALLOC_DEBUG
-        printf("Free25 #%lu pSampler addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-        free(pFreeMe);
+    for (unordered_map<XGL_SAMPLER, SAMPLER_NODE*>::iterator ii=sampleMap.begin(); ii!=sampleMap.end(); ++ii) {
+        delete (*ii).second;
     }
-    g_pSamplerHead = NULL;
 }
 static XGL_IMAGE_VIEW_CREATE_INFO* getImageViewCreateInfo(XGL_IMAGE_VIEW view)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    IMAGE_NODE* pTrav = g_pImageHead;
-    while (pTrav) {
-        if (view == pTrav->image) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return &pTrav->createInfo;
-        }
-        pTrav = pTrav->pNext;
+    if (imageMap.find(view) == imageMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    else {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return &imageMap[view]->createInfo;
+    }
 }
 // Free all image nodes
 static void freeImages()
 {
-    IMAGE_NODE* pImage = g_pImageHead;
-    IMAGE_NODE* pFreeMe = pImage;
-    while (pImage) {
-        pFreeMe = pImage;
-        pImage = pImage->pNext;
-#if ALLOC_DEBUG
-        printf("Free22 #%lu pImage addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-        free(pFreeMe);
+    for (unordered_map<XGL_IMAGE_VIEW, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
+        delete (*ii).second;
     }
-    g_pImageHead = NULL;
 }
 static XGL_BUFFER_VIEW_CREATE_INFO* getBufferViewCreateInfo(XGL_BUFFER_VIEW view)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    BUFFER_NODE* pTrav = g_pBufferHead;
-    while (pTrav) {
-        if (view == pTrav->buffer) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return &pTrav->createInfo;
-        }
-        pTrav = pTrav->pNext;
+    if (bufferMap.find(view) == bufferMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    else {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return &bufferMap[view]->createInfo;
+    }
 }
 // Free all buffer nodes
 static void freeBuffers()
 {
-    BUFFER_NODE* pBuffer = g_pBufferHead;
-    BUFFER_NODE* pFreeMe = pBuffer;
-    while (pBuffer) {
-        pFreeMe = pBuffer;
-        pBuffer = pBuffer->pNext;
-#if ALLOC_DEBUG
-    printf("Free21 #%lu pBuffer addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-        free(pFreeMe);
+    for (unordered_map<XGL_BUFFER_VIEW, BUFFER_NODE*>::iterator ii=bufferMap.begin(); ii!=bufferMap.end(); ++ii) {
+        delete (*ii).second;
     }
-    g_pBufferHead = NULL;
 }
 static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb);
 
@@ -361,13 +310,13 @@ static void printDynamicState(const XGL_CMD_BUFFER cb)
         char str[4*1024];
         for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
             if (pCB->lastBoundDynamicState[i]) {
-                sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_XGL_STATE_BIND_POINT(i), pCB->lastBoundDynamicState[i]->stateObj);
+                sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_XGL_STATE_BIND_POINT((XGL_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i]->stateObj);
                 layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pCB->lastBoundDynamicState[i]->pCreateInfo, "  "));
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pCB->lastBoundDynamicState[i]->pCreateInfo, "  ").c_str());
                 break;
             }
             else {
-                sprintf(str, "No dynamic state of type %s bound", string_XGL_STATE_BIND_POINT(i));
+                sprintf(str, "No dynamic state of type %s bound", string_XGL_STATE_BIND_POINT((XGL_STATE_BIND_POINT)i));
                 layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
             }
         }
@@ -380,187 +329,162 @@ static void printDynamicState(const XGL_CMD_BUFFER cb)
     }
 }
 // Retrieve pipeline node ptr for given pipeline object
-static PIPELINE_NODE *getPipeline(XGL_PIPELINE pipeline)
+static PIPELINE_NODE* getPipeline(XGL_PIPELINE pipeline)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE *pTrav = g_pPipelineHead;
-    while (pTrav) {
-        if (pTrav->pipeline == pipeline) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return pTrav;
-        }
-        pTrav = pTrav->pNext;
+    if (pipelineMap.find(pipeline) == pipelineMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    return pipelineMap[pipeline];
 }
 
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
 static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    SAMPLER_NODE *pTrav = g_pSamplerHead;
-    while (pTrav) {
-        if (sampler == pTrav->sampler) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return &pTrav->createInfo;
-        }
-        pTrav = pTrav->pNext;
+    if (sampleMap.find(sampler) == sampleMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    return &sampleMap[sampler]->createInfo;
 }
 
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
-static void initPipeline(PIPELINE_NODE *pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
+static void initPipeline(PIPELINE_NODE* pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
 {
     // First init create info, we'll shadow the structs as we go down the tree
-    pPipeline->pCreateTree = (XGL_GRAPHICS_PIPELINE_CREATE_INFO*)malloc(sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
-#if ALLOC_DEBUG
-    printf("Alloc5 #%lu pPipeline->pCreateTree addr(%p)\n", ++g_alloc_count, (void*)pPipeline->pCreateTree);
-#endif
+    pPipeline->pCreateTree = new XGL_GRAPHICS_PIPELINE_CREATE_INFO;
     memcpy(pPipeline->pCreateTree, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
-    GENERIC_HEADER *pShadowTrav = (GENERIC_HEADER*)pPipeline->pCreateTree;
-    GENERIC_HEADER *pTrav = (GENERIC_HEADER*)pCreateInfo->pNext;
+    GENERIC_HEADER* pShadowTrav = (GENERIC_HEADER*)pPipeline->pCreateTree;
+    GENERIC_HEADER* pTrav = (GENERIC_HEADER*)pCreateInfo->pNext;
+    size_t bufferSize = 0;
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO* pVICI = NULL;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO*     pCBCI = NULL;
     while (pTrav) {
-        // Shadow the struct
-        pShadowTrav->pNext = (GENERIC_HEADER*)malloc(get_dynamic_struct_size(pTrav));
-#if ALLOC_DEBUG
-    printf("Alloc6 #%lu pShadowTrav->pNext addr(%p)\n", ++g_alloc_count, (void*)pShadowTrav->pNext);
-#endif
-        // Typically pNext is const so have to cast to avoid warning when we modify it here
-        memcpy((void*)pShadowTrav->pNext, pTrav, get_dynamic_struct_size(pTrav));
+        switch (pTrav->sType) {
+            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_SHADER_STAGE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO));
+                // Copy embedded ptrs
+                pVICI = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav;
+                pPipeline->vtxBindingCount = pVICI->bindingCount;
+                if (pPipeline->vtxBindingCount) {
+                    pPipeline->pVertexBindingDescriptions = new XGL_VERTEX_INPUT_BINDING_DESCRIPTION[pPipeline->vtxBindingCount];
+                    bufferSize = pPipeline->vtxBindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION);
+                    memcpy((void*)pPipeline->pVertexBindingDescriptions, ((XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav)->pVertexAttributeDescriptions, bufferSize);
+                }
+                pPipeline->vtxAttributeCount = pVICI->attributeCount;
+                if (pPipeline->vtxAttributeCount) {
+                    pPipeline->pVertexAttributeDescriptions = new XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION[pPipeline->vtxAttributeCount];
+                    bufferSize = pPipeline->vtxAttributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION);
+                    memcpy((void*)pPipeline->pVertexAttributeDescriptions, ((XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav)->pVertexAttributeDescriptions, bufferSize);
+                }
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_IA_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO));
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_TESS_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO));
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_VP_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_VP_STATE_CREATE_INFO));
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_RS_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO));
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_MS_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_MS_STATE_CREATE_INFO));
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_CB_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO));
+                // Copy embedded ptrs
+                pCBCI = (XGL_PIPELINE_CB_STATE_CREATE_INFO*)pTrav;
+                pPipeline->attachmentCount = pCBCI->attachmentCount;
+                if (pPipeline->attachmentCount) {
+                    pPipeline->pAttachments = new XGL_PIPELINE_CB_ATTACHMENT_STATE[pPipeline->attachmentCount];
+                    bufferSize = pPipeline->attachmentCount * sizeof(XGL_PIPELINE_CB_ATTACHMENT_STATE);
+                    memcpy((void*)pPipeline->pAttachments, ((XGL_PIPELINE_CB_STATE_CREATE_INFO*)pTrav)->pAttachments, bufferSize);
+                }
+                break;
+            case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
+                pShadowTrav->pNext = new XGL_PIPELINE_DS_STATE_CREATE_INFO;
+                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_DS_STATE_CREATE_INFO));
+                break;
+            default:
+                assert(0);
+                break;
+        }
         pShadowTrav = (GENERIC_HEADER*)pShadowTrav->pNext;
-        // Special copy of Vtx info as it has embedded array
-        if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pTrav->sType) {
-            XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pVICI = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pShadowTrav;
-            pPipeline->vtxBindingCount = pVICI->bindingCount;
-            uint32_t allocSize = pPipeline->vtxBindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION);
-            if (allocSize) {
-                pPipeline->pVertexBindingDescriptions = (XGL_VERTEX_INPUT_BINDING_DESCRIPTION*)malloc(allocSize);
-#if ALLOC_DEBUG
-    printf("Alloc7 #%lu pPipeline->pVertexBindingDescriptions addr(%p)\n", ++g_alloc_count, (void*)pPipeline->pVertexBindingDescriptions);
-#endif
-                memcpy(pPipeline->pVertexBindingDescriptions, ((XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav)->pVertexAttributeDescriptions, allocSize);
-            }
-            pPipeline->vtxAttributeCount = pVICI->attributeCount;
-            allocSize = pPipeline->vtxAttributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION);
-            if (allocSize) {
-                pPipeline->pVertexAttributeDescriptions = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION*)malloc(allocSize);
-#if ALLOC_DEBUG
-    printf("Alloc8 #%lu pPipeline->pVertexAttributeDescriptions addr(%p)\n", ++g_alloc_count, (void*)pPipeline->pVertexAttributeDescriptions);
-#endif
-                memcpy(pPipeline->pVertexAttributeDescriptions, ((XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav)->pVertexAttributeDescriptions, allocSize);
-            }
-        }
-        else if (XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO == pTrav->sType) {
-            // Special copy of CB state as it has embedded array
-            XGL_PIPELINE_CB_STATE_CREATE_INFO *pCBCI = (XGL_PIPELINE_CB_STATE_CREATE_INFO*)pShadowTrav;
-            pPipeline->attachmentCount = pCBCI->attachmentCount;
-            uint32_t allocSize = pPipeline->attachmentCount * sizeof(XGL_PIPELINE_CB_ATTACHMENT_STATE);
-            if (allocSize) {
-                pPipeline->pAttachments = (XGL_PIPELINE_CB_ATTACHMENT_STATE*)malloc(allocSize);
-#if ALLOC_DEBUG
-    printf("Alloc9 #%lu pPipeline->pAttachments addr(%p)\n", ++g_alloc_count, (void*)pPipeline->pAttachments);
-#endif
-                XGL_PIPELINE_CB_ATTACHMENT_STATE** ppAttachments = (XGL_PIPELINE_CB_ATTACHMENT_STATE**)&pCBCI->pAttachments;
-                *ppAttachments = pPipeline->pAttachments;
-                memcpy(pPipeline->pAttachments, ((XGL_PIPELINE_CB_STATE_CREATE_INFO*)pTrav)->pAttachments, allocSize);
-            }
-        }
         pTrav = (GENERIC_HEADER*)pTrav->pNext;
     }
+    pipelineMap[pPipeline->pipeline] = pPipeline;
 }
 // Free the Pipeline nodes
 static void freePipelines()
 {
-    PIPELINE_NODE* pPipeline = g_pPipelineHead;
-    PIPELINE_NODE* pFreeMe = pPipeline;
-    while (pPipeline) {
-        pFreeMe = pPipeline;
-        GENERIC_HEADER* pShadowTrav = (GENERIC_HEADER*)pPipeline->pCreateTree;
+    for (unordered_map<XGL_PIPELINE, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
+        // Delete create tree
+        GENERIC_HEADER* pShadowTrav = (GENERIC_HEADER*)((*ii).second->pCreateTree);
         GENERIC_HEADER* pShadowFree = pShadowTrav;
         while (pShadowTrav) {
             pShadowFree = pShadowTrav;
             pShadowTrav = (GENERIC_HEADER*)pShadowTrav->pNext;
             if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pShadowFree->sType) {
-                // Free the vtx data shadowed directly into pPipeline node
-                if (pFreeMe->pVertexBindingDescriptions) {
-#if ALLOC_DEBUG
-                    printf("Free7 #%lu pVertexBindingDescriptions addr(%p)\n", ++g_free_count, (void*)pFreeMe->pVertexBindingDescriptions);
-#endif
-                    free(pFreeMe->pVertexBindingDescriptions);
+                if ((*ii).second->pVertexBindingDescriptions) {
+                    delete[] (*ii).second->pVertexBindingDescriptions;
                 }
-                if (pFreeMe->pVertexAttributeDescriptions) {
-#if ALLOC_DEBUG
-                    printf("Free8 #%lu pVertexAttributeDescriptions addr(%p)\n", ++g_free_count, (void*)pFreeMe->pVertexAttributeDescriptions);
-#endif
-                    free(pFreeMe->pVertexAttributeDescriptions);
+                if ((*ii).second->pVertexAttributeDescriptions) {
+                    delete[] (*ii).second->pVertexAttributeDescriptions;
                 }
             }
             else if (XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO == pShadowFree->sType) {
                 // Free attachment data shadowed into pPipeline node
-                if (pFreeMe->pAttachments) {
-#if ALLOC_DEBUG
-                    printf("Free9 #%lu pAttachments addr(%p)\n", ++g_free_count, (void*)pFreeMe->pAttachments);
-#endif
-                    free(pFreeMe->pAttachments);
+                if ((*ii).second->pAttachments) {
+                    delete[] (*ii).second->pAttachments;
                 }
             }
-#if ALLOC_DEBUG
-            printf("Free5 & Free6 #%lu pShadowNode addr(%p)\n", ++g_free_count, (void*)pShadowFree);
-#endif
-            free(pShadowFree);
+            delete pShadowFree;
         }
-        pPipeline = pPipeline->pNext;
-#if ALLOC_DEBUG
-        printf("Free23 & Free24 #%lu pPipeline addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-        free(pFreeMe);
+        delete (*ii).second;
     }
-    g_pPipelineHead = NULL;
 }
 // Block of code at start here specifically for managing/tracking DSs
-
-// ptr to HEAD of LL of DS Regions
-static REGION_NODE* g_pRegionHead = NULL;
-// ptr to HEAD of LL of top-level Layouts
-static LAYOUT_NODE* g_pLayoutHead = NULL;
 
 // Return Region node ptr for specified region or else NULL
 static REGION_NODE* getRegionNode(XGL_DESCRIPTOR_REGION region)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    REGION_NODE* pTrav = g_pRegionHead;
-    while (pTrav) {
-        if (pTrav->region == region) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return pTrav;
-        }
-        pTrav = pTrav->pNext;
+    if (regionMap.find(region) == regionMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    return regionMap[region];
 }
 // Return Set node ptr for specified set or else NULL
 static SET_NODE* getSetNode(XGL_DESCRIPTOR_SET set)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    REGION_NODE* pTrav = g_pRegionHead;
-    while (pTrav) {
-        SET_NODE* pSet = pTrav->pSets;
-        while (pSet) {
-            if (pSet->set == set) {
-                loader_platform_thread_unlock_mutex(&globalLock);
-                return pSet;
-            }
-            pSet = pSet->pNext;
-        }
-        pTrav = pTrav->pNext;
+    if (setMap.find(set) == setMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    return setMap[set];
 }
 
 // Return XGL_TRUE if DS Exists and is within an xglBeginDescriptorRegionUpdate() call sequence, otherwise XGL_FALSE
@@ -569,8 +493,7 @@ static bool32_t dsUpdateActive(XGL_DESCRIPTOR_SET ds)
     // Note, both "get" functions use global mutex so this guy does not
     SET_NODE* pTrav = getSetNode(ds);
     if (pTrav) {
-        REGION_NODE* pRegion = NULL;
-        pRegion = getRegionNode(pTrav->region);
+        REGION_NODE* pRegion = getRegionNode(pTrav->region);
         if (pRegion) {
             return pRegion->updateActive;
         }
@@ -580,16 +503,12 @@ static bool32_t dsUpdateActive(XGL_DESCRIPTOR_SET ds)
 
 static LAYOUT_NODE* getLayoutNode(XGL_DESCRIPTOR_SET_LAYOUT layout) {
     loader_platform_thread_lock_mutex(&globalLock);
-    LAYOUT_NODE* pTrav = g_pLayoutHead;
-    while (pTrav) {
-        if (pTrav->layout == layout) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return pTrav;
-        }
-        pTrav = pTrav->pNext;
+    if (layoutMap.find(layout) == layoutMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    return layoutMap[layout];
 }
 
 static uint32_t getUpdateIndex(GENERIC_HEADER* pUpdateStruct)
@@ -687,6 +606,8 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
     size_t baseBuffAddr = 0;
     XGL_UPDATE_BUFFERS* pUBCI;
     XGL_UPDATE_IMAGES* pUICI;
+    XGL_IMAGE_VIEW_ATTACH_INFO*** pppLocalImageViews = NULL;
+    XGL_BUFFER_VIEW_ATTACH_INFO*** pppLocalBufferViews = NULL;
     char str[1024];
     switch (pUpdate->sType)
     {
@@ -716,7 +637,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 #endif
             for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->count; i++) {
                 memcpy((XGL_SAMPLER_IMAGE_VIEW_INFO*)&((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews[i], &((XGL_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i], sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO));
-                ((XGL_SAMPLER_IMAGE_VIEW_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView = malloc(sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
+                ((XGL_SAMPLER_IMAGE_VIEW_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView = (XGL_IMAGE_VIEW_ATTACH_INFO*)malloc(sizeof(XGL_IMAGE_VIEW_ATTACH_INFO));
 #if ALLOC_DEBUG
                 printf("Alloc14 #%lu pSamplerImageViews)[%u].pImageView addr(%p)\n", ++g_alloc_count, i, (void*)((XGL_SAMPLER_IMAGE_VIEW_INFO*)((XGL_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView);
 #endif
@@ -732,7 +653,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_IMAGES));
             base_array_size = sizeof(XGL_IMAGE_VIEW_ATTACH_INFO*) * ((XGL_UPDATE_IMAGES*)pNewNode)->count;
             total_array_size = (sizeof(XGL_IMAGE_VIEW_ATTACH_INFO) * ((XGL_UPDATE_IMAGES*)pNewNode)->count) + base_array_size;
-            XGL_IMAGE_VIEW_ATTACH_INFO*** pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO***)&((XGL_UPDATE_IMAGES*)pNewNode)->pImageViews;
+            pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO***)&((XGL_UPDATE_IMAGES*)pNewNode)->pImageViews;
             *pppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)malloc(total_array_size);
 #if ALLOC_DEBUG
             printf("Alloc16 #%lu *pppLocalImageViews addr(%p)\n", ++g_alloc_count, (void*)*pppLocalImageViews);
@@ -752,7 +673,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             memcpy(pNewNode, pUpdate, sizeof(XGL_UPDATE_BUFFERS));
             base_array_size = sizeof(XGL_BUFFER_VIEW_ATTACH_INFO*) * pUBCI->count;
             total_array_size = (sizeof(XGL_BUFFER_VIEW_ATTACH_INFO) * pUBCI->count) + base_array_size;
-            XGL_BUFFER_VIEW_ATTACH_INFO*** pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO***)&((XGL_UPDATE_BUFFERS*)pNewNode)->pBufferViews;
+            pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO***)&((XGL_UPDATE_BUFFERS*)pNewNode)->pBufferViews;
             *pppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO**)malloc(total_array_size);
 #if ALLOC_DEBUG
             printf("Alloc18 #%lu *pppLocalBufferViews addr(%p)\n", ++g_alloc_count, (void*)*pppLocalBufferViews);
@@ -807,10 +728,9 @@ static void dsUpdate(XGL_DESCRIPTOR_SET ds, GENERIC_HEADER* pUpdateChain)
             if (!validateUpdateSize(pUpdates, pLayout->endIndex)) {
                 char str[48*1024]; // TODO : Keep count of layout CI structs and size this string dynamically based on that count
                 pLayoutCI = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pLayout->pCreateInfoList;
-                char* pDSstr = xgl_print_xgl_descriptor_set_layout_create_info(pLayoutCI, "{DS}    ");
-                sprintf(str, "Descriptor update type of %s is out of bounds for matching layout w/ CI:\n%s!", string_XGL_STRUCTURE_TYPE(pUpdates->sType), pDSstr);
+                string DSstr = xgl_print_xgl_descriptor_set_layout_create_info(pLayoutCI, "{DS}    ").c_str();
+                sprintf(str, "Descriptor update type of %s is out of bounds for matching layout w/ CI:\n%s!", string_XGL_STRUCTURE_TYPE(pUpdates->sType), DSstr.c_str());
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS", str);
-                free(pDSstr);
             }
             else { // TODO : should we skip update on a type mismatch or force it?
                 // We have the right layout section, now verify that update is of the right type
@@ -929,11 +849,8 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
 // NOTE : Calls to this function should be wrapped in mutex
 static void freeRegions()
 {
-    REGION_NODE* pRegion = g_pRegionHead;
-    REGION_NODE* pFreeMe = pRegion;
-    while (pRegion) {
-        pFreeMe = pRegion;
-        SET_NODE* pSet = pRegion->pSets;
+    for (unordered_map<XGL_DESCRIPTOR_REGION, REGION_NODE*>::iterator ii=regionMap.begin(); ii!=regionMap.end(); ++ii) {
+        SET_NODE* pSet = (*ii).second->pSets;
         SET_NODE* pFreeSet = pSet;
         while (pSet) {
             pFreeSet = pSet;
@@ -942,61 +859,33 @@ static void freeRegions()
             // Free Update shadow struct tree
             freeShadowUpdateTree(pFreeSet);
             if (pFreeSet->ppDescriptors) {
-#if ALLOC_DEBUG
-                printf("Free35 #%lu pSet->ppDescriptors addr(%p)\n", ++g_free_count, (void*)pFreeSet->ppDescriptors);
-#endif
-                free(pFreeSet->ppDescriptors);
+                delete pFreeSet->ppDescriptors;
             }
-#if ALLOC_DEBUG
-            printf("Free32 #%lu pSet addr(%p)\n", ++g_free_count, (void*)pFreeSet);
-#endif
-            free(pFreeSet);
+            delete pFreeSet;
         }
-        pRegion = pRegion->pNext;
-        if (pFreeMe->createInfo.pTypeCount) {
-            void** ppToFree = (void**)&pFreeMe->createInfo.pTypeCount;
-#if ALLOC_DEBUG
-    printf("Free31 #%lu pTypeCount addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-            free(*ppToFree);
+        if ((*ii).second->createInfo.pTypeCount) {
+            delete (*ii).second->createInfo.pTypeCount;
         }
-#if ALLOC_DEBUG
-    printf("Free30 #%lu pRegion addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-        free(pFreeMe);
+        delete (*ii).second;
     }
-    g_pRegionHead = NULL;
 }
 // WARN : Once freeLayouts() called, any layout ptrs in Region/Set data structure will be invalid
 // NOTE : Calls to this function should be wrapped in mutex
 static void freeLayouts()
 {
-    LAYOUT_NODE* pLayout = g_pLayoutHead;
-    LAYOUT_NODE* pFreeLayout = pLayout;
-    while (pLayout) {
-        pFreeLayout = pLayout;
+    for (unordered_map<XGL_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*>::iterator ii=layoutMap.begin(); ii!=layoutMap.end(); ++ii) {
+        LAYOUT_NODE* pLayout = (*ii).second;
         GENERIC_HEADER* pTrav = (GENERIC_HEADER*)pLayout->pCreateInfoList;
         while (pTrav) {
-            void* pToFree = (void*)pTrav;
+            GENERIC_HEADER* pToFree = pTrav;
             pTrav = (GENERIC_HEADER*)pTrav->pNext;
-#if ALLOC_DEBUG
-    printf("Free27 & Free28 #%lu pLayoutCITree addr(%p)\n", ++g_free_count, (void*)pToFree);
-#endif
-            free(pToFree);
+            delete pToFree;
         }
         if (pLayout->pTypes) {
-#if ALLOC_DEBUG
-    printf("Free29 #%lu pLayout->pTypes addr(%p)\n", ++g_free_count, (void*)pLayout->pTypes);
-#endif
-            free(pLayout->pTypes);
+            delete pLayout->pTypes;
         }
-        pLayout = pLayout->pNext;
-#if ALLOC_DEBUG
-    printf("Free26 #%lu pLayout addr(%p)\n", ++g_free_count, (void*)pFreeLayout);
-#endif
-        free(pFreeLayout);
+        delete pLayout;
     }
-    g_pLayoutHead = NULL;
 }
 // Currently clearing a set is removing all previous updates to that set
 //  TODO : Validate if this is correct clearing behavior
@@ -1035,63 +924,34 @@ static void clearDescriptorRegion(XGL_DESCRIPTOR_REGION region)
 static GLOBAL_CB_NODE* getCBNode(XGL_CMD_BUFFER cb)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    GLOBAL_CB_NODE* pCB = g_pCmdBufferHead;
-    while (pCB) {
-        if (cb == pCB->cmdBuffer) {
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return pCB;
-        }
-        pCB = pCB->pNextGlobalCBNode;
+    if (cmdBufferMap.find(cb) == cmdBufferMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return NULL;
+    return cmdBufferMap[cb];
 }
 // Free all CB Nodes
 // NOTE : Calls to this function should be wrapped in mutex
 static void freeCmdBuffers()
 {
-    GLOBAL_CB_NODE* pCB = g_pCmdBufferHead;
-    GLOBAL_CB_NODE* pFreeMe = pCB;
-    while (pCB) {
-        pFreeMe = pCB;
-        CMD_NODE* pCmd = pCB->pCmds;
-        CMD_NODE* pFreeCmd = pCmd;
-        while (pCmd) {
-            pFreeCmd = pCmd;
-            pCmd = pCmd->pNext;
-#if ALLOC_DEBUG
-    printf("Free20 #%lu pCmd addr(%p)\n", ++g_free_count, (void*)pFreeCmd);
-#endif
-            free(pFreeCmd);
+    for (unordered_map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*>::iterator ii=cmdBufferMap.begin(); ii!=cmdBufferMap.end(); ++ii) {
+        while (!(*ii).second->pCmds.empty()) {
+            delete (*ii).second->pCmds.back();
+            (*ii).second->pCmds.pop_back();
         }
-        pCB = pCB->pNextGlobalCBNode;
-#if ALLOC_DEBUG
-    printf("Free33 #%lu pCB addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-        free(pFreeMe);
+        delete (*ii).second;
     }
-    g_pCmdBufferHead = NULL;
 }
 static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
 {
-    CMD_NODE* pCmd = (CMD_NODE*)malloc(sizeof(CMD_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc20 #%lu pCmd addr(%p)\n", ++g_alloc_count, (void*)pCmd);
-#endif
+    CMD_NODE* pCmd = new CMD_NODE;
     if (pCmd) {
         // init cmd node and append to end of cmd LL
         memset(pCmd, 0, sizeof(CMD_NODE));
-        pCB->numCmds++;
-        pCmd->cmdNumber = pCB->numCmds;
+        pCmd->cmdNumber = ++pCB->numCmds;
         pCmd->type = cmd;
-        if (!pCB->pCmds) {
-            pCB->pCmds = pCmd;
-        }
-        else {
-            assert(pCB->pLastCmd);
-            pCB->pLastCmd->pNext = pCmd;
-        }
-        pCB->pLastCmd = pCmd;
+        pCB->pCmds.push_back(pCmd);
     }
     else {
         char str[1024];
@@ -1103,25 +963,17 @@ static void resetCB(const XGL_CMD_BUFFER cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
-        CMD_NODE* pCur = pCB->pCmds;
-        CMD_NODE* pFreeMe = pCur;
-        while (pCur) {
-            pFreeMe = pCur;
-            pCur = pCur->pNext;
-#if ALLOC_DEBUG
-            printf("Free20 #%lu pCmd addr(%p)\n", ++g_free_count, (void*)pFreeMe);
-#endif
-            free(pFreeMe);
+        while (!pCB->pCmds.empty()) {
+            delete pCB->pCmds.back();
+            pCB->pCmds.pop_back();
         }
         // Reset CB state
-        GLOBAL_CB_NODE* pSaveNext = pCB->pNextGlobalCBNode;
         XGL_FLAGS saveFlags = pCB->flags;
         XGL_QUEUE_TYPE saveQT = pCB->queueType;
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->cmdBuffer = cb;
         pCB->flags = saveFlags;
         pCB->queueType = saveQT;
-        pCB->pNextGlobalCBNode = pSaveNext;
         pCB->lastVtxBinding = MAX_BINDING;
     }
 }
@@ -1134,17 +986,15 @@ static void setLastBoundDynamicState(const XGL_CMD_BUFFER cmdBuffer, const XGL_D
         updateCBTracking(cmdBuffer);
         loader_platform_thread_lock_mutex(&globalLock);
         addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
-        DYNAMIC_STATE_NODE* pTrav = g_pDynamicStateHead[sType];
-        while (pTrav && (state != pTrav->stateObj)) {
-            pTrav = pTrav->pNext;
-        }
-        if (!pTrav) {
+        if (dynamicStateMap.find(state) == dynamicStateMap.end()) {
             char str[1024];
             sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
         }
-        pCB->lastBoundDynamicState[sType] = pTrav;
-        g_lastBoundDynamicState[sType] = pTrav;
+        else {
+            pCB->lastBoundDynamicState[sType] = dynamicStateMap[state];
+            g_lastBoundDynamicState[sType] = dynamicStateMap[state];
+        }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     else {
@@ -1163,9 +1013,8 @@ static void printPipeline(const XGL_CMD_BUFFER cb)
             // nothing to print
         }
         else {
-            char* pipeStr = xgl_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "{DS}");
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr);
-            free(pipeStr);
+            string pipeStr = xgl_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "{DS}").c_str();
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr.c_str());
         }
     }
 }
@@ -1191,7 +1040,7 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
             pGVstr = xgl_gv_print_xgl_descriptor_set_layout_create_info(pLayout->pCreateInfoList, tmp_str);
             fprintf(pOutFile, "%s", pGVstr);
             free(pGVstr);
-            pLayout = pLayout->pNext;
+            pLayout = pLayout->pPriorSetLayout;
             if (pLayout) {
                 fprintf(pOutFile, "\"%s\" -> \"LAYOUT%u\" [];\n", tmp_str, layout_index+1);
             }
@@ -1211,14 +1060,14 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
                 }
             }
 #define NUM_COLORS 7
-            char* edgeColors[NUM_COLORS];
-            edgeColors[0] = "0000ff";
-            edgeColors[1] = "ff00ff";
-            edgeColors[2] = "ffff00";
-            edgeColors[3] = "00ff00";
-            edgeColors[4] = "000000";
-            edgeColors[5] = "00ffff";
-            edgeColors[6] = "ff0000";
+            vector<string> edgeColors;
+            edgeColors.push_back("0000ff");
+            edgeColors.push_back("ff00ff");
+            edgeColors.push_back("ffff00");
+            edgeColors.push_back("00ff00");
+            edgeColors.push_back("000000");
+            edgeColors.push_back("00ffff");
+            edgeColors.push_back("ff0000");
             uint32_t colorIdx = 0;
             fprintf(pOutFile, "</TABLE>>\n];\n");
             // Now add the views that are mapped to active descriptors
@@ -1230,6 +1079,8 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
             XGL_SAMPLER_CREATE_INFO* pSCI = NULL;
             XGL_IMAGE_VIEW_CREATE_INFO* pIVCI = NULL;
             XGL_BUFFER_VIEW_CREATE_INFO* pBVCI = NULL;
+            void** ppNextPtr = NULL;
+            void* pSaveNext = NULL;
             for (i=0; i < pSet->descriptorCount; i++) {
                 if (pSet->ppDescriptors[i]) {
                     switch (pSet->ppDescriptors[i]->sType)
@@ -1240,7 +1091,7 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(pSCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
@@ -1249,13 +1100,13 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_sampler_create_info(pSCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             pIVCI = getImageViewCreateInfo(pUST->pSamplerImageViews[i-pUST->index].pImageView->view);
                             if (pIVCI) {
                                 sprintf(tmp_str, "IMAGE_VIEW%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_create_info(pIVCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
@@ -1264,7 +1115,7 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
                             if (pIVCI) {
                                 sprintf(tmp_str, "IMAGE_VIEW%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_image_view_create_info(pIVCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
@@ -1273,19 +1124,19 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
                             if (pBVCI) {
                                 sprintf(tmp_str, "BUFFER_VIEW%u", i);
                                 fprintf(pOutFile, "%s", xgl_gv_print_xgl_buffer_view_create_info(pBVCI, tmp_str));
-                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
+                                fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
                             pUAC = (XGL_UPDATE_AS_COPY*)pSet->ppDescriptors[i];
                             // TODO : Need to validate this code
                             // Save off pNext and set to NULL while printing this struct, then restore it
-                            void** ppNextPtr = (void*)&pUAC->pNext;
-                            void* pSaveNext = *ppNextPtr;
+                            ppNextPtr = (void**)&pUAC->pNext;
+                            pSaveNext = *ppNextPtr;
                             *ppNextPtr = NULL;
                             sprintf(tmp_str, "UPDATE_AS_COPY%u", i);
                             fprintf(pOutFile, "%s", xgl_gv_print_xgl_update_as_copy(pUAC, tmp_str));
-                            fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx]);
+                            fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             // Restore next ptr
                             *ppNextPtr = pSaveNext;
                             break;
@@ -1298,7 +1149,6 @@ static void dsCoreDumpDot(const XGL_DESCRIPTOR_SET ds, FILE* pOutFile)
         }
         fprintf(pOutFile, "}\n");
         fprintf(pOutFile, "}\n");
-        pRegion = pRegion->pNext;
     }
 }
 // Dump subgraph w/ DS info
@@ -1310,32 +1160,30 @@ static void dsDumpDot(const XGL_CMD_BUFFER cb, FILE* pOutFile)
     }
 }
 // Dump a GraphViz dot file showing the Cmd Buffers
-static void cbDumpDotFile(char *outFileName)
+static void cbDumpDotFile(string outFileName)
 {
     // Print CB Chain for each CB
     FILE* pOutFile;
-    pOutFile = fopen(outFileName, "w");
+    pOutFile = fopen(outFileName.c_str(), "w");
     fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
     fprintf(pOutFile, "subgraph cluster_cmdBuffers\n{\nlabel=\"Command Buffers\"\n");
-    GLOBAL_CB_NODE* pCB = g_pCmdBufferHead;
+    GLOBAL_CB_NODE* pCB = NULL;
     for (uint32_t i = 0; i < NUM_COMMAND_BUFFERS_TO_DISPLAY; i++) {
         pCB = g_pLastTouchedCB[i];
         if (pCB) {
             fprintf(pOutFile, "subgraph cluster_cmdBuffer%u\n{\nlabel=\"Command Buffer #%u\"\n", i, i);
-            CMD_NODE* pCmd = pCB->pCmds;
             uint32_t instNum = 0;
-            while (pCmd) {
+            for (vector<CMD_NODE*>::iterator ii=pCB->pCmds.begin(); ii!=pCB->pCmds.end(); ++ii) {
                 if (instNum) {
                     fprintf(pOutFile, "\"CB%pCMD%u\" -> \"CB%pCMD%u\" [];\n", (void*)pCB->cmdBuffer, instNum-1, (void*)pCB->cmdBuffer, instNum);
                 }
                 if (pCB == g_lastGlobalCB) {
-                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BGCOLOR=\"#00FF00\" BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString(pCmd->type));
+                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BGCOLOR=\"#00FF00\" BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString((*ii)->type).c_str());
                 }
                 else {
-                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString(pCmd->type));
+                    fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString((*ii)->type).c_str());
                 }
                 ++instNum;
-                pCmd = pCmd->pNext;
             }
             fprintf(pOutFile, "}\n");
         }
@@ -1356,7 +1204,7 @@ static void dumpGlobalDotFile(char *outFileName)
         char* pGVstr = NULL;
         for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
             if (g_lastBoundDynamicState[i] && g_lastBoundDynamicState[i]->pCreateInfo) {
-                pGVstr = dynamic_gv_display(g_lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i));
+                pGVstr = dynamic_gv_display(g_lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT((XGL_STATE_BIND_POINT)i));
                 fprintf(pOutFile, "%s", pGVstr);
                 free(pGVstr);
             }
@@ -1373,20 +1221,20 @@ static void dumpGlobalDotFile(char *outFileName)
     }
 }
 // Dump a GraphViz dot file showing the pipeline for a given CB
-static void dumpDotFile(const XGL_CMD_BUFFER cb, char *outFileName)
+static void dumpDotFile(const XGL_CMD_BUFFER cb, string outFileName)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
         PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
         if (pPipeTrav) {
             FILE* pOutFile;
-            pOutFile = fopen(outFileName, "w");
+            pOutFile = fopen(outFileName.c_str(), "w");
             fprintf(pOutFile, "digraph g {\ngraph [\nrankdir = \"TB\"\n];\nnode [\nfontsize = \"16\"\nshape = \"plaintext\"\n];\nedge [\n];\n");
             fprintf(pOutFile, "subgraph cluster_dynamicState\n{\nlabel=\"Dynamic State\"\n");
             char* pGVstr = NULL;
             for (uint32_t i = 0; i < XGL_NUM_STATE_BIND_POINT; i++) {
                 if (pCB->lastBoundDynamicState[i] && pCB->lastBoundDynamicState[i]->pCreateInfo) {
-                    pGVstr = dynamic_gv_display(pCB->lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT(i));
+                    pGVstr = dynamic_gv_display(pCB->lastBoundDynamicState[i]->pCreateInfo, string_XGL_STATE_BIND_POINT((XGL_STATE_BIND_POINT)i));
                     fprintf(pOutFile, "%s", pGVstr);
                     free(pGVstr);
                 }
@@ -1429,9 +1277,8 @@ static void validateVBBinding(const XGL_CMD_BUFFER cb)
                     }
                 }
                 else {
-                    char *tmpStr = xgl_print_xgl_vertex_input_binding_description(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ");
-                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr);
-                    free(tmpStr);
+                    string tmpStr = xgl_print_xgl_vertex_input_binding_description(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ").c_str();
+                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr.c_str());
                 }
             }
         }
@@ -1449,10 +1296,9 @@ static void printDSConfig(const XGL_CMD_BUFFER cb)
         // Print out region details
         sprintf(tmp_str, "Details for region %p.", (void*)pRegion->region);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
-        char* pRegionStr = xgl_print_xgl_descriptor_region_create_info(&pRegion->createInfo, " ");
-        sprintf(ds_config_str, "%s", pRegionStr);
+        string regionStr = xgl_print_xgl_descriptor_region_create_info(&pRegion->createInfo, " ");
+        sprintf(ds_config_str, "%s", regionStr.c_str());
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
-        free(pRegionStr);
         // Print out set details
         char prefix[10];
         uint32_t index = 0;
@@ -1464,10 +1310,9 @@ static void printDSConfig(const XGL_CMD_BUFFER cb)
             sprintf(tmp_str, "Layout #%u, (object %p) for DS %p.", index+1, (void*)pLayout->layout, (void*)pSet->set);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             sprintf(prefix, "  [L%u] ", index);
-            char* pDSLstr = xgl_print_xgl_descriptor_set_layout_create_info(&pLayout->pCreateInfoList[0], prefix);
-            sprintf(ds_config_str, "%s", pDSLstr);
+            string DSLstr = xgl_print_xgl_descriptor_set_layout_create_info(&pLayout->pCreateInfoList[0], prefix).c_str();
+            sprintf(ds_config_str, "%s", DSLstr.c_str());
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
-            free(pDSLstr);
             pLayout = pLayout->pPriorSetLayout;
             index++;
         }
@@ -1476,7 +1321,7 @@ static void printDSConfig(const XGL_CMD_BUFFER cb)
             sprintf(tmp_str, "Update Chain [UC] for descriptor set %p:", (void*)pSet->set);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             sprintf(prefix, "  [UC] ");
-            sprintf(ds_config_str, "%s", dynamic_display(pUpdate, prefix));
+            sprintf(ds_config_str, "%s", dynamic_display(pUpdate, prefix).c_str());
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
             // TODO : If there is a "view" associated with this update, print CI for that view
         }
@@ -1492,13 +1337,11 @@ static void printCB(const XGL_CMD_BUFFER cb)
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
         char str[1024];
-        CMD_NODE* pCmd = pCB->pCmds;
         sprintf(str, "Cmds in CB %p", (void*)cb);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
-        while (pCmd) {
-            sprintf(str, "  CMD#%lu: %s", pCmd->cmdNumber, cmdTypeToString(pCmd->type));
+        for (vector<CMD_NODE*>::iterator ii=pCB->pCmds.begin(); ii!=pCB->pCmds.end(); ++ii) {
+            sprintf(str, "  CMD#%lu: %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_NONE, "DS", str);
-            pCmd = pCmd->pNext;
         }
     }
     else {
@@ -1553,7 +1396,7 @@ static void initDrawState(void)
 
     layer_initialize_dispatch_table(&nextTable, fpNextGPA, (XGL_PHYSICAL_GPU) pCurObj->nextObject);
 
-    xglGetProcAddrType fpGetProcAddr = fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (char *) "xglGetProcAddr");
+    xglGetProcAddrType fpGetProcAddr = (xglGetProcAddrType)fpNextGPA((XGL_PHYSICAL_GPU) pCurObj->nextObject, (char *) "xglGetProcAddr");
     nextTable.GetProcAddr = fpGetProcAddr;
 
     if (!globalLockInitialized)
@@ -1635,14 +1478,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const 
     XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        BUFFER_NODE *pNewNode = (BUFFER_NODE*)malloc(sizeof(BUFFER_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc21 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
+        BUFFER_NODE* pNewNode = new BUFFER_NODE;
         pNewNode->buffer = *pView;
-        memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_BUFFER_VIEW_CREATE_INFO));
-        pNewNode->pNext = g_pBufferHead;
-        g_pBufferHead = pNewNode;
+        pNewNode->createInfo = *pCreateInfo;
+        bufferMap[*pView] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1653,14 +1492,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        IMAGE_NODE *pNewNode = (IMAGE_NODE*)malloc(sizeof(IMAGE_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc22 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
+        IMAGE_NODE *pNewNode = new IMAGE_NODE;
         pNewNode->image = *pView;
-        memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO));
-        pNewNode->pNext = g_pImageHead;
-        g_pImageHead = pNewNode;
+        pNewNode->createInfo = *pCreateInfo;
+        imageMap[*pView] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1672,28 +1507,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pPipeline, 0, DRAWSTATE_NONE, "DS", str);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, (XGL_BASE_OBJECT)pPipeline, 0, DRAWSTATE_NONE, "DS", str);
     loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE *pTrav = g_pPipelineHead;
-    if (pTrav) {
-        while (pTrav->pNext)
-            pTrav = pTrav->pNext;
-        pTrav->pNext = (PIPELINE_NODE*)malloc(sizeof(PIPELINE_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc23 #%lu pTrav->pNext addr(%p)\n", ++g_alloc_count, (void*)pTrav->pNext);
-#endif
-        pTrav = pTrav->pNext;
-    }
-    else {
-        pTrav = (PIPELINE_NODE*)malloc(sizeof(PIPELINE_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc24 #%lu pTrav addr(%p)\n", ++g_alloc_count, (void*)pTrav);
-#endif
-        g_pPipelineHead = pTrav;
-    }
-    memset((void*)pTrav, 0, sizeof(PIPELINE_NODE));
-    pTrav->pipeline = *pPipeline;
-    initPipeline(pTrav, pCreateInfo);
+    PIPELINE_NODE* pPipeNode = new PIPELINE_NODE;
+    memset((void*)pPipeNode, 0, sizeof(PIPELINE_NODE));
+    pPipeNode->pipeline = *pPipeline;
+    initPipeline(pPipeNode, pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1703,14 +1522,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        SAMPLER_NODE *pNewNode = (SAMPLER_NODE*)malloc(sizeof(SAMPLER_NODE));
-#if ALLOC_DEBUG
-        printf("Alloc25 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
+        SAMPLER_NODE* pNewNode = new SAMPLER_NODE;
         pNewNode->sampler = *pSampler;
-        memcpy(&pNewNode->createInfo, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO));
-        pNewNode->pNext = g_pSamplerHead;
-        g_pSamplerHead = pNewNode;
+        pNewNode->createInfo = *pCreateInfo;
+        sampleMap[*pSampler] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1720,10 +1535,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
 {
     XGL_RESULT result = nextTable.CreateDescriptorSetLayout(device, stageFlags, pSetBindPoints, priorSetLayout, pSetLayoutInfoList, pSetLayout);
     if (XGL_SUCCESS == result) {
-        LAYOUT_NODE* pNewNode = (LAYOUT_NODE*)malloc(sizeof(LAYOUT_NODE));
-#if ALLOC_DEBUG
-        printf("Alloc26 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
+        LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
             char str[1024];
             sprintf(str, "Out of memory while attempting to allocate LAYOUT_NODE in xglCreateDescriptorSetLayout()");
@@ -1731,10 +1543,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         }
         memset(pNewNode, 0, sizeof(LAYOUT_NODE));
         // TODO : API Currently missing a count here that we should multiply by struct size
-        pNewNode->pCreateInfoList = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
-#if ALLOC_DEBUG
-        printf("Alloc27 #%lu pNewNode->pCreateInfoList addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pCreateInfoList);
-#endif
+        pNewNode->pCreateInfoList = new XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         memset((void*)pNewNode->pCreateInfoList, 0, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
         void* pCITrav = NULL;
         uint32_t totalCount = 0;
@@ -1746,19 +1555,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         void** ppNext = (void**)&pNewNode->pCreateInfoList->pNext;
         while (pCITrav) {
             totalCount += ((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pCITrav)->count;
-            *ppNext = (void*)malloc(sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
-#if ALLOC_DEBUG
-            printf("Alloc28 #%lu *ppNext addr(%p)\n", ++g_alloc_count, (void*)*ppNext);
-#endif
+            *ppNext = new XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
             memcpy((void*)*ppNext, pCITrav, sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
             pCITrav = (void*)((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pCITrav)->pNext;
             ppNext = (void**)&((XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)*ppNext)->pNext;
         }
         if (totalCount > 0) {
-            pNewNode->pTypes = (XGL_DESCRIPTOR_TYPE*)malloc(totalCount*sizeof(XGL_DESCRIPTOR_TYPE));
-#if ALLOC_DEBUG
-            printf("Alloc29 #%lu pNewNode->pTypes addr(%p)\n", ++g_alloc_count, (void*)pNewNode->pTypes);
-#endif
+            pNewNode->pTypes = new XGL_DESCRIPTOR_TYPE[totalCount];
             XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLCI = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pSetLayoutInfoList;
             uint32_t offset = 0;
             uint32_t i = 0;
@@ -1796,8 +1599,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
         pNewNode->pPriorSetLayout = pPriorNode;
         // Put new node at Head of global Layer list
         loader_platform_thread_lock_mutex(&globalLock);
-        pNewNode->pNext = g_pLayoutHead;
-        g_pLayoutHead = pNewNode;
+        layoutMap[*pSetLayout] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1808,11 +1610,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(XGL_DEVICE dev
     XGL_RESULT result = nextTable.BeginDescriptorRegionUpdate(device, updateMode);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        REGION_NODE* pRegionNode = g_pRegionHead;
+        REGION_NODE* pRegionNode = regionMap.begin()->second;
         if (!pRegionNode) {
             char str[1024];
-            sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
+            sprintf(str, "Unable to find region node");
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
         }
         else {
             pRegionNode->updateActive = 1;
@@ -1827,21 +1629,22 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(XGL_DEVICE devic
     XGL_RESULT result = nextTable.EndDescriptorRegionUpdate(device, cmd);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        REGION_NODE* pRegionNode = g_pRegionHead;
+        REGION_NODE* pRegionNode = regionMap.begin()->second;
         if (!pRegionNode) {
             char str[1024];
-            sprintf(str, "Unable to find region node for global region head %p", (void*)g_pRegionHead);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
+            sprintf(str, "Unable to find region node");
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
         }
         else {
             if (!pRegionNode->updateActive) {
                 char str[1024];
                 sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglEndDescriptorRegionUpdate()!");
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
             }
             else {
                 pRegionNode->updateActive = 0;
             }
+            pRegionNode->updateActive = 0;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -1855,36 +1658,28 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, 
         // Insert this region into Global Region LL at head
         char str[1024];
         sprintf(str, "Created Descriptor Region %p", (void*)*pDescriptorRegion);
-        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDescriptorRegion, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, (XGL_BASE_OBJECT)pDescriptorRegion, 0, DRAWSTATE_NONE, "DS", str);
         loader_platform_thread_lock_mutex(&globalLock);
-        REGION_NODE* pNewNode = (REGION_NODE*)malloc(sizeof(REGION_NODE));
-#if ALLOC_DEBUG
-        printf("Alloc30 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
+        REGION_NODE* pNewNode = new REGION_NODE;
         if (NULL == pNewNode) {
             char str[1024];
             sprintf(str, "Out of memory while attempting to allocate REGION_NODE in xglCreateDescriptorRegion()");
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, *pDescriptorRegion, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, (XGL_BASE_OBJECT)*pDescriptorRegion, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
         }
         else {
             memset(pNewNode, 0, sizeof(REGION_NODE));
-            pNewNode->pNext = g_pRegionHead;
-            g_pRegionHead = pNewNode;
             XGL_DESCRIPTOR_REGION_CREATE_INFO* pCI = (XGL_DESCRIPTOR_REGION_CREATE_INFO*)&pNewNode->createInfo;
             memcpy((void*)pCI, pCreateInfo, sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO));
-            size_t typeCountSize = pNewNode->createInfo.count * sizeof(XGL_DESCRIPTOR_TYPE_COUNT);
-            if (typeCountSize) {
-                XGL_DESCRIPTOR_TYPE_COUNT** ppTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT**)&pNewNode->createInfo.pTypeCount;
-                *ppTypeCount = (XGL_DESCRIPTOR_TYPE_COUNT*)malloc(typeCountSize);
-#if ALLOC_DEBUG
-                printf("Alloc31 #%lu *ppTypeCount addr(%p)\n", ++g_alloc_count, (void*)*ppTypeCount);
-#endif
-                memcpy((void*)*ppTypeCount, pCreateInfo->pTypeCount, typeCountSize);
+            if (pNewNode->createInfo.count) {
+                size_t typeCountSize = pNewNode->createInfo.count * sizeof(XGL_DESCRIPTOR_TYPE_COUNT);
+                pNewNode->createInfo.pTypeCount = new XGL_DESCRIPTOR_TYPE_COUNT[typeCountSize];
+                memcpy((void*)pNewNode->createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
             }
             pNewNode->regionUsage  = regionUsage;
             pNewNode->updateActive = 0;
             pNewNode->maxSets      = maxSets;
             pNewNode->region       = *pDescriptorRegion;
+            regionMap[*pDescriptorRegion] = pNewNode;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -1919,10 +1714,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
                 sprintf(str, "Created Descriptor Set %p", (void*)pDescriptorSets[i]);
                 layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
                 // Create new set node and add to head of region nodes
-                SET_NODE* pNewNode = (SET_NODE*)malloc(sizeof(SET_NODE));
-#if ALLOC_DEBUG
-                printf("Alloc32 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
+                SET_NODE* pNewNode = new SET_NODE;
                 if (NULL == pNewNode) {
                     char str[1024];
                     sprintf(str, "Out of memory while attempting to allocate SET_NODE in xglAllocDescriptorSets()");
@@ -1944,12 +1736,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
                     pNewNode->set = pDescriptorSets[i];
                     pNewNode->setUsage = setUsage;
                     pNewNode->descriptorCount = pLayout->endIndex + 1;
-                    size_t descriptorArraySize = sizeof(GENERIC_HEADER*)*pNewNode->descriptorCount;
-                    pNewNode->ppDescriptors = (GENERIC_HEADER**)malloc(descriptorArraySize);
-#if ALLOC_DEBUG
-                    printf("Alloc35 #%lu pSet->ppDescriptors addr(%p)\n", ++g_alloc_count, (void*)pNewNode->ppDescriptors);
-#endif
-                    memset(pNewNode->ppDescriptors, 0, descriptorArraySize);
+                    if (pNewNode->descriptorCount) {
+                        size_t descriptorArraySize = sizeof(GENERIC_HEADER*)*pNewNode->descriptorCount;
+                        pNewNode->ppDescriptors = new GENERIC_HEADER*[descriptorArraySize];
+                        memset(pNewNode->ppDescriptors, 0, descriptorArraySize);
+                    }
+                    setMap[pDescriptorSets[i]] = pNewNode;
                 }
             }
         }
@@ -1967,10 +1759,11 @@ XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSets(XGL_DESCRIPTOR_REGION descri
 
 XGL_LAYER_EXPORT void XGLAPI xglUpdateDescriptors(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain)
 {
+    SET_NODE* pSet = getSetNode(descriptorSet);
     if (!dsUpdateActive(descriptorSet)) {
         char str[1024];
         sprintf(str, "You must call xglBeginDescriptorRegionUpdate() before this call to xglUpdateDescriptors()!");
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, g_pRegionHead->region, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pSet->region, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
     }
     else {
         // pUpdateChain is a Linked-list of XGL_UPDATE_* structures defining the mappings for the descriptors
@@ -2013,17 +1806,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        GLOBAL_CB_NODE* pCB = (GLOBAL_CB_NODE*)malloc(sizeof(GLOBAL_CB_NODE));
-#if ALLOC_DEBUG
-        printf("Alloc33 #%lu pCB addr(%p)\n", ++g_alloc_count, (void*)pCB);
-#endif
+        GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
-        pCB->pNextGlobalCBNode = g_pCmdBufferHead;
-        g_pCmdBufferHead = pCB;
         pCB->cmdBuffer = *pCmdBuffer;
         pCB->flags = pCreateInfo->flags;
         pCB->queueType = pCreateInfo->queueType;
         pCB->lastVtxBinding = MAX_BINDING;
+        cmdBufferMap[*pCmdBuffer] = pCB;
         loader_platform_thread_unlock_mutex(&globalLock);
         updateCBTracking(*pCmdBuffer);
     }
@@ -2714,7 +2503,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLB
         if (g_actionIsDefault)
             g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
         else
-            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;
+            g_debugAction = (XGL_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)XGL_DBG_LAYER_ACTION_CALLBACK));
     }
     XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
     return result;
@@ -2929,14 +2718,14 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
     if (!strcmp(funcName, "xglCmdDbgMarkerEnd"))
         return (void*) xglCmdDbgMarkerEnd;
     if (!strcmp("drawStateDumpDotFile", funcName))
-        return drawStateDumpDotFile;
+        return (void*) drawStateDumpDotFile;
     if (!strcmp("drawStateDumpCommandBufferDotFile", funcName))
-        return drawStateDumpCommandBufferDotFile;
+        return (void*) drawStateDumpCommandBufferDotFile;
     if (!strcmp("drawStateDumpPngFile", funcName))
-        return drawStateDumpPngFile;
+        return (void*) drawStateDumpPngFile;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA(gpuw->nextObject, funcName);
+        return gpuw->pGPA((XGL_PHYSICAL_GPU)gpuw->nextObject, funcName);
     }
 }

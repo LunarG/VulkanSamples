@@ -103,7 +103,7 @@ endif()
 
 add_xgl_layer(Basic basic.cpp)
 add_xgl_layer(Multi multi.cpp)
-add_xgl_layer(DrawState draw_state.c)
+add_xgl_layer(DrawState draw_state.cpp)
 add_xgl_layer(MemTracker mem_tracker.cpp)
 # generated
 add_xgl_layer(Generic generic_layer.c)
