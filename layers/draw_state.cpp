@@ -1603,7 +1603,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
     track_pipeline(pCreateInfo, pPipeline);
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
@@ -2755,6 +2754,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCreateImageView;
     if (!strcmp(funcName, "xglCreateGraphicsPipeline"))
         return (void*) xglCreateGraphicsPipeline;
+    if (!strcmp(funcName, "xglCreateGraphicsPipelineDerivative"))
+        return (void*) xglCreateGraphicsPipelineDerivative;
     if (!strcmp(funcName, "xglCreateSampler"))
         return (void*) xglCreateSampler;
     if (!strcmp(funcName, "xglCreateDescriptorSetLayout"))
