@@ -150,7 +150,18 @@ typedef struct _GLOBAL_CB_NODE {
     XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
     uint32_t                        colorAttachmentCount;
     XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
-    XGL_CMD_BUFFER cmdBuffer;
-    XGL_FENCE fence;                // fence tracking this cmd buffer
-    bool32_t localFlag;             // fence is internal to layer
+    XGL_CMD_BUFFER                  cmdBuffer;
+    uint64_t                        fenceId;
 } GLOBAL_CB_NODE;
+
+
+// Ordered list of Fences, oldest (by order of submission) first
+typedef struct _GLOBAL_FENCE_NODE {
+    struct _GLOBAL_FENCE_NODE* pNextGlobalFenceNode;
+    uint64_t                   fenceId;
+    XGL_FENCE                  fence;
+    bool32_t                   localFence;
+} GLOBAL_FENCE_NODE;
+
+
+

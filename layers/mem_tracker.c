@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,13 +47,17 @@ static loader_platform_thread_mutex globalLock;
 
 #define MAX_BINDING 0xFFFFFFFF
 
-static GLOBAL_CB_NODE* pGlobalCBHead = NULL;
+static GLOBAL_CB_NODE*      pGlobalCBHead     = NULL;
 static GLOBAL_MEM_OBJ_NODE* pGlobalMemObjHead = NULL;
-static GLOBAL_OBJECT_NODE* pGlobalObjectHead = NULL;
-static XGL_DEVICE globalDevice = NULL;
-static uint64_t numCBNodes = 0;
-static uint64_t numMemObjNodes = 0;
-static uint64_t numObjectNodes = 0;
+static GLOBAL_OBJECT_NODE*  pGlobalObjectHead = NULL;
+static GLOBAL_FENCE_NODE*   pGlobalFenceList  = NULL;
+// TODO : Add support for per-queue and per-device fence completion
+static uint64_t             g_currentFenceId  = 1;
+static uint64_t             g_lastRetiredId   = 0;
+static XGL_DEVICE           globalDevice      = NULL;
+static uint64_t             numCBNodes        = 0;
+static uint64_t             numMemObjNodes    = 0;
+static uint64_t             numObjectNodes    = 0;
 
 // Check list for data and if it's not included insert new node
 //    into HEAD of list pointed to by pHEAD & update pHEAD
@@ -130,20 +135,140 @@ static GLOBAL_CB_NODE* getGlobalCBNode(const XGL_CMD_BUFFER cb)
     }
     return pTrav;
 }
-// Set fence for given cb in global cb node
-static bool32_t setCBFence(const XGL_CMD_BUFFER cb, const XGL_FENCE fence, bool32_t localFlag)
-{
 
-    GLOBAL_CB_NODE* pTrav = getGlobalCBNode(cb);
-    if (!pTrav) {
-        char str[1024];
-        sprintf(str, "Unable to find node for CB %p in order to set fence to %p", (void*)cb, (void*)fence);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
-        return XGL_FALSE;
+// Add a fence, creating one if necessary to our list of fences/fenceIds
+// Linked list is FIFO: head = oldest, tail = newest
+static uint64_t addFenceNode(XGL_FENCE fence)
+{
+    // Create fence node
+    GLOBAL_FENCE_NODE* pFenceNode = (GLOBAL_FENCE_NODE*)malloc(sizeof(GLOBAL_FENCE_NODE));
+    memset(pFenceNode, 0, sizeof(GLOBAL_FENCE_NODE));
+    pFenceNode->fenceId = g_currentFenceId++;
+    // If no fence, create an internal fence to track the submissions
+    if (fence == NULL) {
+        XGL_FENCE_CREATE_INFO fci;
+        fci.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fci.pNext = NULL;
+        fci.flags = 0;
+        nextTable.CreateFence(globalDevice, &fci, &pFenceNode->fence);
+        pFenceNode->localFence = XGL_TRUE;
+    } else {
+        pFenceNode->localFence = XGL_FALSE;
+        pFenceNode->fence = fence;
     }
-    pTrav->fence = fence;
-    pTrav->localFlag = localFlag;
-    return XGL_TRUE;
+
+    // Add to END of fence list
+    if (pGlobalFenceList == NULL) {
+        pGlobalFenceList = pFenceNode;
+    } else {
+        GLOBAL_FENCE_NODE* pCurFenceNode = pGlobalFenceList;
+        while (pCurFenceNode && pCurFenceNode->pNextGlobalFenceNode != NULL) {
+            pCurFenceNode = pCurFenceNode->pNextGlobalFenceNode;
+        }
+        pCurFenceNode->pNextGlobalFenceNode = pFenceNode;
+    }
+
+    return pFenceNode->fenceId;
+}
+
+// Remove a node from our list of fences/fenceIds
+static void deleteFenceNode(uint64_t fenceId)
+{
+    if (fenceId != 0) {
+        // Search for a node with this fenceId
+        GLOBAL_FENCE_NODE* pCurFenceNode  = pGlobalFenceList;
+        GLOBAL_FENCE_NODE* pPrevFenceNode = pCurFenceNode;
+        while ((pCurFenceNode != NULL) && (pCurFenceNode->fenceId != fenceId)) {
+            pPrevFenceNode = pCurFenceNode;
+            pCurFenceNode  = pCurFenceNode->pNextGlobalFenceNode;
+        }
+        if (pCurFenceNode != NULL) {
+            // TODO:  Wait on this fence?
+            if (pCurFenceNode->localFence == XGL_TRUE) {
+                nextTable.DestroyObject(pCurFenceNode->fence);
+            }
+            // Remove links to this node
+            pPrevFenceNode->pNextGlobalFenceNode = pCurFenceNode->pNextGlobalFenceNode;
+            // Update head pointer if necessary
+            if (pCurFenceNode == pGlobalFenceList) {
+                pGlobalFenceList = pCurFenceNode->pNextGlobalFenceNode;
+            }
+            free(pCurFenceNode);
+        } else {
+            char str[1024];
+            sprintf(str, "FenceId %"PRIx64" node is missing from global fence list", fenceId);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_CB_MISSING_FENCE, "MEM", str);
+        }
+    }
+}
+
+// Search through list for this fence, deleting all nodes before it (with lower IDs) and updating lastRetiredId
+static void updateFenceTracking(XGL_FENCE fence)
+{
+    // Technically, we can delete all nodes until we hit this fence.  But for now, make sure they're in the list first.
+    GLOBAL_FENCE_NODE* pCurFenceNode  = pGlobalFenceList;
+    while ((pCurFenceNode != NULL) && (pCurFenceNode->fence != fence)) {
+        pCurFenceNode  = pCurFenceNode->pNextGlobalFenceNode;
+    }
+    if (pCurFenceNode != NULL) {
+        // Delete all nodes in front of this one and update the global last retired value
+        GLOBAL_FENCE_NODE* pDelNode = NULL;
+        g_lastRetiredId             = pCurFenceNode->fenceId;
+        pCurFenceNode               = pGlobalFenceList;
+        while ((pCurFenceNode != NULL) && (pCurFenceNode->fence != fence)) {
+            pDelNode = pCurFenceNode;
+            pCurFenceNode  = pCurFenceNode->pNextGlobalFenceNode;
+            deleteFenceNode(pDelNode->fenceId);
+        }
+    }
+}
+
+// Utility function that determines if a fenceId has been retired yet
+static bool32_t fenceRetired(uint64_t fenceId)
+{
+    bool32_t result = XGL_FALSE;
+    if (fenceId <= g_lastRetiredId) {
+        result = XGL_TRUE;
+    }
+    return result;
+}
+
+// Return the fence associated with a fenceId
+static XGL_FENCE getFenceFromId(uint64_t fenceId)
+{
+    XGL_FENCE fence = NULL;
+    if (fenceId != 0) {
+        // Search for a node with this fenceId
+        if (fenceId > g_lastRetiredId) {
+            GLOBAL_FENCE_NODE* pCurFenceNode  = pGlobalFenceList;
+            while ((pCurFenceNode != NULL) && (pCurFenceNode->fenceId != fenceId)) {
+                pCurFenceNode  = pCurFenceNode->pNextGlobalFenceNode;
+            }
+            if (pCurFenceNode != NULL) {
+                fence = pCurFenceNode->fence;
+            } else {
+                char str[1024];
+                sprintf(str, "Dangit, couldn't find fenceId %"PRIx64" in the list", fenceId);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_CB_MISSING_FENCE, "MEM", str);
+            }
+        }
+    }
+    return fence;
+}
+
+// Helper routine that updates the fence list to all-retired, as for Queue/DeviceWaitIdle
+static void retireAllFences(void)
+{
+    // In this case, we go throught the whole list, retiring each node and update the global retired ID until the list is empty
+    GLOBAL_FENCE_NODE* pCurFenceNode  = pGlobalFenceList;
+    GLOBAL_FENCE_NODE* pDelNode       = NULL;
+
+    while (pCurFenceNode != NULL) {
+        pDelNode        = pCurFenceNode;
+        pCurFenceNode   = pCurFenceNode->pNextGlobalFenceNode;
+        g_lastRetiredId = pDelNode->fenceId;
+        deleteFenceNode(pDelNode->fenceId);
+    }
 }
 
 static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs)
@@ -304,11 +429,9 @@ static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if ((pCBTrav->fence != NULL) && (pCBTrav->localFlag == XGL_TRUE)) {
-            nextTable.DestroyObject(pCBTrav->fence);
-            pCBTrav->localFlag = XGL_FALSE;
+        if (!fenceRetired(pCBTrav->fenceId)) {
+            deleteFenceNode(pCBTrav->fenceId);
         }
-        pCBTrav->fence = NULL;
         MINI_NODE* pMemTrav = pCBTrav->pMemObjList;
         MINI_NODE* pDeleteMe = NULL;
         // We traverse LL in order and free nodes as they're cleared
@@ -413,6 +536,7 @@ static void deleteGlobalMemNode(XGL_GPU_MEMORY mem)
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
     }
 }
+
 // Check if fence for given CB is completed
 static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
 {
@@ -424,30 +548,17 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if (pCBTrav->fence) {
-            if (XGL_SUCCESS != nextTable.GetFenceStatus(pCBTrav->fence)) {
+        if (!fenceRetired(pCBTrav->fenceId)) {
+            // Explicitly call the internal xglGetFenceStatus routine
+            if (XGL_SUCCESS != xglGetFenceStatus(getFenceFromId(pCBTrav->fenceId))) {
                 char str[1024];
-                sprintf(str, "Fence %p for CB %p has not completed", pCBTrav->fence, cb);
+                sprintf(str, "FenceId %"PRIx64", fence %p for CB %p has not completed", pCBTrav->fenceId, getFenceFromId(pCBTrav->fenceId), cb);
                 layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
                 result = XGL_FALSE;
             }
         }
     }
     return result;
-}
-
-static void clearCBFence(const XGL_FENCE fence)
-{
-    // TODO : This is slow and stupid
-    //  Ultimately would like a quick fence lookup w/ all of the CBs using that fence
-    //  We have to loop every CB for now b/c multiple CBs may use same fence
-    GLOBAL_CB_NODE* pCBTrav = pGlobalCBHead;
-    while (pCBTrav) {
-        if (pCBTrav->fence == fence) {
-            pCBTrav->fence = NULL;
-        }
-        pCBTrav = pCBTrav->pNextGlobalCBNode;
-    }
 }
 
 static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
@@ -752,7 +863,7 @@ static void printGlobalCB()
         sprintf(str, "Details of Global CB list w/ HEAD at %p:", (void*)pTrav);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         while (pTrav) {
-            sprintf(str, "    Global CB Node (%p) w/ pNextGlobalCBNode (%p) has CB %p, fence %p, and pMemObjList %p", (void*)pTrav, (void*)pTrav->pNextGlobalCBNode, (void*)pTrav->cmdBuffer, (void*)pTrav->fence, (void*)pTrav->pMemObjList);
+            sprintf(str, "    Global CB Node (%p) w/ pNextGlobalCBNode (%p) has CB %p, fenceId %"PRIx64", fence %p, and pMemObjList %p", (void*)pTrav, (void*)pTrav->pNextGlobalCBNode, (void*)pTrav->cmdBuffer, pTrav->fenceId, (void*)getFenceFromId(pTrav->fenceId), (void*)pTrav->pMemObjList);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
             MINI_NODE* pMemObjTrav = pTrav->pMemObjList;
             while (pMemObjTrav) {
@@ -763,17 +874,6 @@ static void printGlobalCB()
             pTrav = pTrav->pNextGlobalCBNode;
         }
     }
-}
-
-static XGL_FENCE createLocalFence()
-{
-    XGL_FENCE_CREATE_INFO fci;
-    fci.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fci.pNext = NULL;
-    fci.flags = 0;
-    XGL_FENCE fence;
-    nextTable.CreateFence(globalDevice, &fci, &fence);
-    return fence;
 }
 
 static void initMemTracker(void)
@@ -878,20 +978,17 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    bool32_t localFlag = XGL_FALSE;
     // TODO : Need to track fence and clear mem references when fence clears
-    XGL_FENCE localFence = fence;
-    if (XGL_NULL_HANDLE == fence) { // allocate our own fence to track cmd buffer
-        localFence = createLocalFence();
-        localFlag = XGL_TRUE;
-    }
-    char str[1024];
+    GLOBAL_CB_NODE* pCBNode = NULL;
+    uint64_t        fenceId = addFenceNode(fence);
+    char            str[1024];
     sprintf(str, "In xglQueueSubmit(), checking %u cmdBuffers with %u memRefs", cmdBufferCount, memRefCount);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
     printMemList();
     printGlobalCB();
     for (uint32_t i = 0; i < cmdBufferCount; i++) {
-        setCBFence(pCmdBuffers[i], localFence, localFlag);
+        pCBNode = getGlobalCBNode(pCmdBuffers[i]);
+        pCBNode->fenceId = fenceId;
         sprintf(str, "Verifying mem refs for CB %p", pCmdBuffers[i]);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
         if (XGL_FALSE == validateCBMemRef(pCmdBuffers[i], memRefCount, pMemRefs)) {
@@ -901,7 +998,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
     }
     printGlobalCB();
     loader_platform_thread_unlock_mutex(&globalLock);
-    XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, localFence);
+    XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, getFenceFromId(fenceId));
     return result;
 }
 
@@ -1035,9 +1132,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
                 clearObjectBinding(object);
             }
         }
-        if (XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO == pTrav->sType) {
-            clearCBFence((XGL_FENCE)object);
-        }
         if (pGlobalObjectHead == pTrav) // update HEAD if needed
             pGlobalObjectHead = pTrav->pNext;
         // Delete the obj node from global list
@@ -1089,9 +1183,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
     if (XGL_SUCCESS == result) {
-        // TODO : Properly we should add validation to make sure app is checking fence
-        //  on CB before Reset/Begin CB call is made
-        clearCBFence(fence);
+        loader_platform_thread_lock_mutex(&globalLock);
+        updateFenceTracking(fence);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -1099,21 +1193,43 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t fenceCount, const XGL_FENCE* pFences, bool32_t waitAll, uint64_t timeout)
 {
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    loader_platform_thread_lock_mutex(&globalLock);
     if (XGL_SUCCESS == result) {
-        // TODO : Properly we should add validation to make sure app is checking fence
-        //  on CB before Reset/Begin CB call is made
         if (waitAll) { // Clear all the fences
             for(uint32_t i = 0; i < fenceCount; i++) {
-                clearCBFence(pFences[i]);
+                updateFenceTracking(pFences[i]);
             }
         }
         else { // Clear only completed fences
             for(uint32_t i = 0; i < fenceCount; i++) {
                 if (XGL_SUCCESS == nextTable.GetFenceStatus(pFences[i])) {
-                    clearCBFence(pFences[i]);
+                    updateFenceTracking(pFences[i]);
                 }
             }
         }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
+{
+    XGL_RESULT result = nextTable.QueueWaitIdle(queue);
+    if (XGL_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        retireAllFences();
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
+{
+    XGL_RESULT result = nextTable.DeviceWaitIdle(device);
+    if (XGL_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        retireAllFences();
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -1305,7 +1421,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
 {
     // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
     GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
-    if (pCBTrav && pCBTrav->fence) {
+    if (pCBTrav && (!fenceRetired(pCBTrav->fenceId))) {
         bool32_t cbDone = checkCBCompleted(cmdBuffer);
         if (XGL_FALSE == cbDone) {
             char str[1024];
@@ -1331,7 +1447,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffe
 {
     // Verify that CB is complete (not in-flight)
     GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
-    if (pCBTrav && pCBTrav->fence) {
+    if (pCBTrav && (!fenceRetired(pCBTrav->fenceId))) {
         bool32_t cbDone = checkCBCompleted(cmdBuffer);
         if (XGL_FALSE == cbDone) {
             char str[1024];
@@ -1779,6 +1895,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE de
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO*  pPresentInfo, XGL_FENCE fence)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    addFenceNode(fence);
+    char            str[1024];
+    sprintf(str, "In xglWsiX11QueuePresent(), checking queue %p for fence %p", queue, fence);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
+    loader_platform_thread_unlock_mutex(&globalLock);
+    XGL_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+    return result;
+}
 #endif // WIN32
 
 XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)
@@ -1832,6 +1960,10 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglGetFenceStatus;
     if (!strcmp(funcName, "xglWaitForFences"))
         return (void*) xglWaitForFences;
+    if (!strcmp(funcName, "xglQueueWaitIdle"))
+        return (void*) xglQueueWaitIdle;
+    if (!strcmp(funcName, "xglDeviceWaitIdle"))
+        return (void*) xglDeviceWaitIdle;
     if (!strcmp(funcName, "xglCreateEvent"))
         return (void*) xglCreateEvent;
     if (!strcmp(funcName, "xglCreateQueryPool"))
@@ -1923,6 +2055,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
 #if !defined(WIN32)
     if (!strcmp(funcName, "xglWsiX11CreatePresentableImage"))
         return (void*) xglWsiX11CreatePresentableImage;
+    if (!strcmp(funcName, "xglWsiX11QueuePresent"))
+        return (void*) xglWsiX11QueuePresent;
 #endif
     else {
         if (gpuw->pGPA == NULL)
