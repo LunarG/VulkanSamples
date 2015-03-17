@@ -1238,7 +1238,7 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
     void *vertShaderCode;
     size_t size;
 
-    vertShaderCode = demo_read_bil("cube-vert.bil", &size);
+    vertShaderCode = demo_read_bil("cube-vert.spv", &size);
 
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
                                vertShaderCode, size);
@@ -1274,7 +1274,7 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
     void *fragShaderCode;
     size_t size;
 
-    fragShaderCode = demo_read_bil("cube-frag.bil", &size);
+    fragShaderCode = demo_read_bil("cube-frag.spv", &size);
 
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
                                fragShaderCode, size);

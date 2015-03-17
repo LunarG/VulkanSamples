@@ -24,15 +24,15 @@ if(WIN32)
 endif()
 if(NOT WIN32)
     set (LIBRARIES "XGL")
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -b ${PROJECT_SOURCE_DIR}/demos/cube.vert 
-       COMMAND mv vert.bil ${CMAKE_BINARY_DIR}/demos/cube-vert.bil
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
+       COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
        DEPENDS cube.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
 
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.bil
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -b ${PROJECT_SOURCE_DIR}/demos/cube.frag 
-       COMMAND mv frag.bil ${CMAKE_BINARY_DIR}/demos/cube-frag.bil
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag
+       COMMAND mv frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
        DEPENDS cube.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
 endif()
@@ -62,7 +62,7 @@ add_executable(tri tri.c)
 target_link_libraries(tri ${LIBRARIES})
 
 if(NOT WIN32)
-    add_executable(cube cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.bil ${CMAKE_BINARY_DIR}/demos/cube-frag.bil)
+    add_executable(cube cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
     target_link_libraries(cube ${LIBRARIES})
 else()
     if (CMAKE_CL_64)
