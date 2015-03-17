@@ -30,8 +30,8 @@
 #include "glslang/Include/ShHandle.h"
 #include "glslang/Public/ShaderLang.h"
 #include "Frontends/glslang/GlslangToTop.h"
-#include "Frontends/Bil/BilToTop.h"
-#include "BIL/GlslangToBil.h"
+#include "Frontends/SPIRV/SpvToTop.h"
+#include "SPIRV/GlslangToSpv.h"
 #include "glsl_glass_manager.h"
 #include "glsl_glass_backend_translator.h"
 
@@ -50,7 +50,7 @@ extern "C" {
 #include "ir_optimization.h"
 #include "loop_analysis.h"
 #include "threadpool.h"
-#include "BIL/Bil.h"
+#include "SPIRV/spirv.h"
 
 
 /**
@@ -1589,7 +1589,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    manager->options.optimizations.flattenHoistThreshold = 25;
    manager->options.optimizations.reassociate = ctx->Const.GlassEnableReassociation;
 
-   const bool useBIL = ((unsigned int *)shader->Source)[0] == glbil::MagicNumber;
+   const bool useBIL = ((unsigned int *)shader->Source)[0] == spv::MagicNumber;
 
    glslang::TShader*  glslang_shader = useBIL ? 0 : new glslang::TShader(glslang_stage);
    glslang::TProgram* glslang_program = useBIL ? 0 : new glslang::TProgram;
@@ -1636,14 +1636,14 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
            }
        } else {
            // Verify that the BIL really is BIL
-           if (((unsigned int *)shader->Source)[0] == glbil::MagicNumber) {
+           if (((unsigned int *)shader->Source)[0] == spv::MagicNumber) {
                std::vector<unsigned int> bil;
 
                bil.reserve(shader->Size);
                for (int x=0; x<shader->Size; ++x)
                    bil.push_back(((unsigned int *)shader->Source)[x]);
 
-               gla::BilToTop(bil, *manager);
+               gla::SpvToTop(bil, *manager);
            } else {
                state->error = true;
            }

@@ -66,7 +66,7 @@ SET(COMPILER_LINK_DIRS
     -L${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib
     -L${LUNARGLASS_PREFIX}/build/Core
     -L${LUNARGLASS_PREFIX}/build/Frontends/glslang
-    -L${LUNARGLASS_PREFIX}/build/Frontends/Bil
+    -L${LUNARGLASS_PREFIX}/build/Frontends/SPIRV
     -L${LUNARGLASS_PREFIX}/build/Core/Passes/Transforms
     -L${LUNARGLASS_PREFIX}/build/Core/Passes/Immutable
     -L${LUNARGLASS_PREFIX}/build/Core/Passes/Analysis
@@ -75,11 +75,11 @@ SET(COMPILER_LINK_DIRS
 
 SET(COMPILER_LIBS
    glslangFrontend
-   BilFrontend
+   SpvFrontend
    core
    LLVMipo
    glslang
-   BIL
+   SPIRV
    OGLCompiler
    ${LLVM_LIBS_ALL}
 )
@@ -97,18 +97,18 @@ foreach(LIB ${LLVM_LIBS})
     set_target_properties(${LIB} PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/lib${LIB}.a)
 endforeach(LIB)
 add_library(glslangFrontend STATIC IMPORTED)
-add_library(BilFrontend     STATIC IMPORTED)
+add_library(SpvFrontend     STATIC IMPORTED)
 add_library(core            STATIC IMPORTED)
 add_library(LLVMipo         STATIC IMPORTED)
 add_library(glslang         STATIC IMPORTED)
-add_library(BIL             STATIC IMPORTED)
+add_library(SPIRV           STATIC IMPORTED)
 add_library(OGLCompiler     STATIC IMPORTED)
 set_target_properties(glslangFrontend PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/glslang/libglslangFrontend.a)
-set_target_properties(BilFrontend     PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/Bil/libBilFrontend.a)
+set_target_properties(SpvFrontend     PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/SPIRV/libSpvFrontend.a)
 set_target_properties(core            PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Core/libcore.a)
 set_target_properties(LLVMipo         PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/libLLVMipo.a)
 set_target_properties(glslang         PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libglslang.a)
-set_target_properties(BIL             PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libBIL.a)
+set_target_properties(SPIRV           PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libSPIRV.a)
 set_target_properties(OGLCompiler     PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libOGLCompiler.a)
 
 SET(COMPILER_INCLUDE_DIRS

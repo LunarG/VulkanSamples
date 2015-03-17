@@ -24,7 +24,7 @@
 #include "xglrenderframework.h"
 #include "GL/freeglut_std.h"
 //#include "ShaderLang.h"
-#include "GlslangToBil.h"
+#include "GlslangToSpv.h"
 #include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
@@ -1179,7 +1179,7 @@ bool XglTestFramework::GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
         program.dumpReflection();
     }
 
-    glslang::GlslangToBil(*program.getIntermediate(stage), bil);
+    glslang::GlslangToSpv(*program.getIntermediate(stage), bil);
 
     return true;
 }

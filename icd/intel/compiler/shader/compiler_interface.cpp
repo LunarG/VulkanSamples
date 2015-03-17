@@ -36,7 +36,7 @@
 #include "compiler/shader/standalone_scaffolding.h"
 #include "compiler/pipeline/brw_wm.h"
 #include "compiler/pipeline/brw_shader.h"
-#include "BIL/Bil.h"
+#include "SPIRV/spirv.h"
 
 /**
  * Init vertex/fragment/geometry program limits.
@@ -396,16 +396,16 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         shader->Source = (const GLchar*)code;
         shader->Size   = size / sizeof(unsigned);  // size in BIL words
 
-        glbil::ExecutionModel executionModel = glbil::ModelVertex;
+        spv::ExecutionModel executionModel = spv::ModelVertex;
 
         unsigned bilWord = 5;
 
         while (bilWord < size) {
             const unsigned      opWord = ((unsigned int*)code)[bilWord];
-            const glbil::OpCode op     = glbil::OpCode((opWord & 0xffff));
+            const spv::OpCode   op     = spv::OpCode((opWord & 0xffff));
 
-            if (op == glbil::OpEntryPoint) {
-                executionModel = glbil::ExecutionModel(((unsigned int*)code)[bilWord+1]);
+            if (op == spv::OpEntryPoint) {
+                executionModel = spv::ExecutionModel(((unsigned int*)code)[bilWord+1]);
                 break;
             }
 
@@ -415,10 +415,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         // We should parse the glsl text out of bil right now, but
         // instead we are just plopping down our glsl
         switch(executionModel) {
-        case glbil::ModelVertex:
+        case spv::ModelVertex:
             shader->Type = GL_VERTEX_SHADER;
             break;
-        case glbil::ModelFragment:
+        case spv::ModelFragment:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
         default:

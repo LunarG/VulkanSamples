@@ -41,7 +41,7 @@ set(TEST_LIBRARIES
    glslang
    OGLCompiler
    OSDependent
-   BIL
+   SPIRV
    ${XCB_LIBRARIES}
    ${ImageMagick_LIBRARIES}
    )
@@ -51,7 +51,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/icd/common"
     "${GLSLANG_PREFIX}/glslang/Include"
     "${GLSLANG_PREFIX}/glslang/Public"
-    "${GLSLANG_PREFIX}/BIL"
+    "${GLSLANG_PREFIX}/SPIRV"
     ${XCB_INCLUDE_DIRS}
     ${ImageMagick_INCLUDE_DIRS}
     )
