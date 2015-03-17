@@ -1589,16 +1589,16 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    manager->options.optimizations.flattenHoistThreshold = 25;
    manager->options.optimizations.reassociate = ctx->Const.GlassEnableReassociation;
 
-   const bool useBIL = ((unsigned int *)shader->Source)[0] == spv::MagicNumber;
+   const bool useSPV = ((unsigned int *)shader->Source)[0] == spv::MagicNumber;
 
-   glslang::TShader*  glslang_shader = useBIL ? 0 : new glslang::TShader(glslang_stage);
-   glslang::TProgram* glslang_program = useBIL ? 0 : new glslang::TProgram;
+   glslang::TShader*  glslang_shader = useSPV ? 0 : new glslang::TShader(glslang_stage);
+   glslang::TProgram* glslang_program = useSPV ? 0 : new glslang::TProgram;
 
-   if (!useBIL && (glslang_shader == 0 || glslang_program == 0))
+   if (!useSPV && (glslang_shader == 0 || glslang_program == 0))
       state->error = true;
 
    // Set the shader source into the TShader object
-   if (!useBIL)
+   if (!useSPV)
        glslang_shader->setStrings(&shader->Source, 1);
 
    // glslang message reporting level
@@ -1610,24 +1610,24 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 
    const int defaultVersion = state->es_shader ? 100 : 110;
 
-   if (!useBIL && !state->error) {
+   if (!useSPV && !state->error) {
       if (!glslang_shader->parse(&resources, defaultVersion, false, messages)) {
          state->error = true;
          infoLog = glslang_shader->getInfoLog();
       }
    }
 
-   if (!useBIL && !state->error)
+   if (!useSPV && !state->error)
       glslang_program->addShader(glslang_shader);
 
    // Run glslang linking step
-   if (!useBIL && !state->error && !glslang_program->link(messages)) {
+   if (!useSPV && !state->error && !glslang_program->link(messages)) {
       state->error = true;
       infoLog = glslang_program->getInfoLog();
    }
 
    if (!state->error) {
-       if (!useBIL) {
+       if (!useSPV) {
            for (int stage = 0; stage < EShLangCount; ++stage) {
                glslang::TIntermediate* intermediate = glslang_program->getIntermediate((EShLanguage)stage);
                if (! intermediate)
@@ -1635,15 +1635,15 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                TranslateGlslangToTop(*intermediate, *manager);
            }
        } else {
-           // Verify that the BIL really is BIL
+           // Verify that the SPV really is SPV
            if (((unsigned int *)shader->Source)[0] == spv::MagicNumber) {
-               std::vector<unsigned int> bil;
+               std::vector<unsigned int> spv;
 
-               bil.reserve(shader->Size);
+               spv.reserve(shader->Size);
                for (int x=0; x<shader->Size; ++x)
-                   bil.push_back(((unsigned int *)shader->Source)[x]);
+                   spv.push_back(((unsigned int *)shader->Source)[x]);
 
-               gla::SpvToTop(bil, *manager);
+               gla::SpvToTop(spv, *manager);
            } else {
                state->error = true;
            }

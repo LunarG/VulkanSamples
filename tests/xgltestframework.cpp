@@ -43,7 +43,7 @@ enum TOptions {
     EOptionDumpReflection     = 0x100,
     EOptionSuppressWarnings   = 0x200,
     EOptionDumpVersions       = 0x400,
-    EOptionBil                = 0x800,
+    EOptionSpv                = 0x800,
     EOptionDefaultDesktop     = 0x1000,
 };
 
@@ -80,7 +80,7 @@ int fopen_s(
 // Must be done once per process
 void TestEnvironment::SetUp()
 {
-    // Initialize GLSL to BIL compiler utility
+    // Initialize GLSL to SPV compiler utility
     glslang::InitializeProcess();
 
     xgl_testing::set_error_callback(test_error_callback);
@@ -107,7 +107,7 @@ XglTestFramework::~XglTestFramework()
 bool XglTestFramework::m_show_images = false;
 bool XglTestFramework::m_save_images = false;
 bool XglTestFramework::m_compare_images = false;
-bool XglTestFramework::m_use_bil = true;
+bool XglTestFramework::m_use_spv = true;
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
 std::list<XglTestImageRecord> XglTestFramework::m_images;
@@ -128,13 +128,13 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
             continue;
         }
 
-        if (strncmp("--use-BIL", argv[i], 13) == 0) {
-            m_use_bil = true;
+        if (strncmp("--use-SPV", argv[i], 13) == 0) {
+            m_use_spv = true;
             continue;
         }
 
-        if (strncmp("--no-BIL", argv[i], 13) == 0) {
-            m_use_bil = false;
+        if (strncmp("--no-SPV", argv[i], 13) == 0) {
+            m_use_spv = false;
             continue;
         }
 
@@ -161,10 +161,10 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
                    "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can specify\n"
                    "\t\t\tdifferent directory for golden images\n"
                    "\t\tSignal test failure if different.\n");
-            printf("\t--use-BIL\n"
-                   "\t\tUse BIL code path (default).\n");
-            printf("\t--no-BIL\n"
-                   "\t\tUse built-in GLSL compiler rather than BIL code path.\n");
+            printf("\t--use-SPV\n"
+                   "\t\tUse SPV code path (default).\n");
+            printf("\t--no-SPV\n"
+                   "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
             exit(0);
         }
 
@@ -1122,12 +1122,12 @@ EShLanguage XglTestFramework::FindLanguage(const XGL_PIPELINE_SHADER_STAGE shade
 
 
 //
-// Compile a given string containing GLSL into BIL for use by XGL
+// Compile a given string containing GLSL into SPV for use by XGL
 // Return value of false means an error was encountered.
 //
-bool XglTestFramework::GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
+bool XglTestFramework::GLSLtoSPV(const XGL_PIPELINE_SHADER_STAGE shader_type,
                                  const char *pshader,
-                                 std::vector<unsigned int> &bil)
+                                 std::vector<unsigned int> &spv)
 {
     glslang::TProgram& program = *new glslang::TProgram;
     const char *shaderStrings[1];
@@ -1179,7 +1179,7 @@ bool XglTestFramework::GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
         program.dumpReflection();
     }
 
-    glslang::GlslangToSpv(*program.getIntermediate(stage), bil);
+    glslang::GlslangToSpv(*program.getIntermediate(stage), spv);
 
     return true;
 }

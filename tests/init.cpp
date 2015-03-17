@@ -729,19 +729,19 @@ void XglTest::CreateShader(XGL_SHADER *pshader)
 {
     void *code;
     uint32_t codeSize;
-    struct icd_bil_header *pBIL;
+    struct icd_spv_header *pSPV;
     XGL_RESULT err;
 
-    codeSize = sizeof(struct icd_bil_header) + 100;
+    codeSize = sizeof(struct icd_spv_header) + 100;
     code = malloc(codeSize);
     ASSERT_TRUE(NULL != code) << "malloc failed!";
 
     memset(code, 0, codeSize);
 
-    // Indicate that this is BIL data.
-    pBIL = (struct icd_bil_header *) code;
-    pBIL->magic = ICD_BIL_MAGIC;
-    pBIL->version = ICD_BIL_VERSION;
+    // Indicate that this is SPV data.
+    pSPV = (struct icd_spv_header *) code;
+    pSPV->magic = ICD_SPV_MAGIC;
+    pSPV->version = ICD_SPV_VERSION;
 
 //    typedef struct _XGL_SHADER_CREATE_INFO
 //    {

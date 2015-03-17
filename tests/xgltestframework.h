@@ -81,10 +81,10 @@ public:
     void Compare(const char *comment, XglImage *image);
     void RecordImage(XglImage *image);
     void RecordImage(XglImage *image, char *tag);
-    bool GLSLtoBIL(const XGL_PIPELINE_SHADER_STAGE shader_type,
+    bool GLSLtoSPV(const XGL_PIPELINE_SHADER_STAGE shader_type,
                    const char *pshader,
-                   std::vector<unsigned int> &bil);
-    static bool         m_use_bil;
+                   std::vector<unsigned int> &spv);
+    static bool         m_use_spv;
 
     char** ReadFileData(const char* fileName);
     void FreeFileData(char** data);

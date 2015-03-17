@@ -610,9 +610,9 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
     XGLTriangleTest(vertShaderText, fragShaderText, true);
 }
 
-TEST_F(XglRenderTest, BIL_XGLTriangle)
+TEST_F(XglRenderTest, SPV_XGLTriangle)
 {
-    bool saved_use_bil = XglTestFramework::m_use_bil;
+    bool saved_use_spv = XglTestFramework::m_use_spv;
 
     static const char *vertShaderText =
         "#version 140\n"
@@ -645,13 +645,13 @@ TEST_F(XglRenderTest, BIL_XGLTriangle)
         "   gl_FragColor = inColor;\n"
         "}\n";
 
-    TEST_DESCRIPTION("XGL-style shaders, but force test framework to compile shader to BIL and pass BIL to driver.");
+    TEST_DESCRIPTION("XGL-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
 
-    XglTestFramework::m_use_bil = true;
+    XglTestFramework::m_use_spv = true;
 
     XGLTriangleTest(vertShaderText, fragShaderText, true);
 
-    XglTestFramework::m_use_bil = saved_use_bil;
+    XglTestFramework::m_use_spv = saved_use_spv;
 }
 
 TEST_F(XglRenderTest, GreenTriangle)
@@ -677,9 +677,9 @@ TEST_F(XglRenderTest, GreenTriangle)
     XGLTriangleTest(vertShaderText, fragShaderText, false);
 }
 
-TEST_F(XglRenderTest, BIL_GreenTriangle)
+TEST_F(XglRenderTest, SPV_GreenTriangle)
 {
-    bool saved_use_bil = XglTestFramework::m_use_bil;
+    bool saved_use_spv = XglTestFramework::m_use_spv;
 
     static const char *vertShaderText =
             "#version 130\n"
@@ -697,11 +697,11 @@ TEST_F(XglRenderTest, BIL_GreenTriangle)
        "   gl_FragColor = vec4(0,1,0,1);\n"
        "}\n";
 
-    TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to BIL and gives BIL to driver.");
+    TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
 
-    XglTestFramework::m_use_bil = true;
+    XglTestFramework::m_use_spv = true;
     XGLTriangleTest(vertShaderText, fragShaderText, false);
-    XglTestFramework::m_use_bil = saved_use_bil;
+    XglTestFramework::m_use_spv = saved_use_spv;
 }
 
 TEST_F(XglRenderTest, YellowTriangle)

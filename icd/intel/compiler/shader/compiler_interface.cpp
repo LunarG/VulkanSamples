@@ -349,12 +349,12 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
     static mtx_t mutex = _MTX_INITIALIZER_NP;
     mtx_lock(&mutex);
 
-    struct icd_bil_header header;
+    struct icd_spv_header header;
     struct gl_context local_ctx;
     struct gl_context *ctx = &local_ctx;
 
     memcpy(&header, code, sizeof(header));
-    if (header.magic != ICD_BIL_MAGIC) {
+    if (header.magic != ICD_SPV_MAGIC) {
         mtx_unlock(&mutex);
         return NULL;
     }
@@ -394,25 +394,25 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
     } else {
 
         shader->Source = (const GLchar*)code;
-        shader->Size   = size / sizeof(unsigned);  // size in BIL words
+        shader->Size   = size / sizeof(unsigned);  // size in SPV words
 
         spv::ExecutionModel executionModel = spv::ModelVertex;
 
-        unsigned bilWord = 5;
+        unsigned spvWord = 5;
 
-        while (bilWord < size) {
-            const unsigned      opWord = ((unsigned int*)code)[bilWord];
-            const spv::OpCode   op     = spv::OpCode((opWord & 0xffff));
+        while (spvWord < size) {
+            const unsigned    opWord = ((unsigned int*)code)[spvWord];
+            const spv::OpCode op     = spv::OpCode((opWord & 0xffff));
 
             if (op == spv::OpEntryPoint) {
-                executionModel = spv::ExecutionModel(((unsigned int*)code)[bilWord+1]);
+                executionModel = spv::ExecutionModel(((unsigned int*)code)[spvWord+1]);
                 break;
             }
 
-            bilWord += (opWord & 0xffff0000) >> 16;
+            spvWord += (opWord & 0xffff0000) >> 16;
         }
 
-        // We should parse the glsl text out of bil right now, but
+        // We should parse the glsl text out of spv right now, but
         // instead we are just plopping down our glsl
         switch(executionModel) {
         case spv::ModelVertex:

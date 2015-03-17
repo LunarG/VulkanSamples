@@ -26,7 +26,7 @@
  * which may not be supported on all drivers
  */
 #if !defined(XCB_NVIDIA)
-#define EXTERNAL_BIL
+#define EXTERNAL_SPV
 #endif
 
 /*
@@ -1179,7 +1179,7 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-#ifdef EXTERNAL_BIL
+#ifdef EXTERNAL_SPV
     createInfo.codeSize = size;
     createInfo.pCode = code;
     createInfo.flags = 0;
@@ -1189,14 +1189,14 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
         free((void *) createInfo.pCode);
     }
 #else
-    // Create fake BIL structure to feed GLSL
+    // Create fake SPV structure to feed GLSL
     // to the driver "under the covers"
     createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
     createInfo.pCode = malloc(createInfo.codeSize);
     createInfo.flags = 0;
 
     /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
-    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+    ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
     ((uint32_t *) createInfo.pCode)[1] = 0;
     ((uint32_t *) createInfo.pCode)[2] = stage;
     memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
@@ -1211,7 +1211,7 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     return shader;
 }
 
-char *demo_read_bil(const char *filename, size_t *psize)
+char *demo_read_spv(const char *filename, size_t *psize)
 {
     long int size;
     void *shader_code;
@@ -1234,11 +1234,11 @@ char *demo_read_bil(const char *filename, size_t *psize)
 
 static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
-#ifdef EXTERNAL_BIL
+#ifdef EXTERNAL_SPV
     void *vertShaderCode;
     size_t size;
 
-    vertShaderCode = demo_read_bil("cube-vert.spv", &size);
+    vertShaderCode = demo_read_spv("cube-vert.spv", &size);
 
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_VERTEX,
                                vertShaderCode, size);
@@ -1270,11 +1270,11 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
-#ifdef EXTERNAL_BIL
+#ifdef EXTERNAL_SPV
     void *fragShaderCode;
     size_t size;
 
-    fragShaderCode = demo_read_bil("cube-frag.spv", &size);
+    fragShaderCode = demo_read_spv("cube-frag.spv", &size);
 
     return demo_prepare_shader(demo, XGL_SHADER_STAGE_FRAGMENT,
                                fragShaderCode, size);

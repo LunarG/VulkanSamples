@@ -26,18 +26,18 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ICD_BIL_H
-#define ICD_BIL_H
+#ifndef ICD_SPV_H
+#define ICD_SPV_H
 
 #include <stdint.h>
 
-#define ICD_BIL_MAGIC   0x07230203
-#define ICD_BIL_VERSION 99
+#define ICD_SPV_MAGIC   0x07230203
+#define ICD_SPV_VERSION 99
 
-struct icd_bil_header {
+struct icd_spv_header {
     uint32_t magic;
     uint32_t version;
     uint32_t gen_magic;  // Generator's magic number
 };
 
-#endif /* ICD_BIL_H */
+#endif /* ICD_SPV_H */

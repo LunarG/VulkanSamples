@@ -1094,8 +1094,8 @@ struct gl_shader
    // GLint RefCount;
    GLboolean DeletePending;
    GLboolean CompileStatus;
-   const GLchar *Source;  /**< BIL or GLSL source code */
-   GLuint Size;         /**< BIL size */
+   const GLchar *Source;  /**< SPV or GLSL source code */
+   GLuint Size;         /**< SPV size */
    GLuint SourceChecksum;       /**< for debug/logging purposes */
    struct gl_program *Program;  /**< Post-compile assembly code */
    GLchar *InfoLog;

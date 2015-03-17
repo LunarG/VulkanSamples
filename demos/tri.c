@@ -888,14 +888,14 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    // Create fake BIL structure to feed GLSL
+    // Create fake SPV structure to feed GLSL
     // to the driver "under the covers"
     createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
     createInfo.pCode = malloc(createInfo.codeSize);
     createInfo.flags = 0;
 
     /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
-    ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+    ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
     ((uint32_t *) createInfo.pCode)[1] = 0;
     ((uint32_t *) createInfo.pCode)[2] = stage;
     memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);

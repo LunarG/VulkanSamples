@@ -720,7 +720,7 @@ XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo()
 XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework)
 {
     XGL_RESULT err = XGL_SUCCESS;
-    std::vector<unsigned int> bil;
+    std::vector<unsigned int> spv;
     XGL_SHADER_CREATE_INFO createInfo;
     size_t shader_len;
 
@@ -730,7 +730,7 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
     createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    if (!framework->m_use_bil) {
+    if (!framework->m_use_spv) {
 
         shader_len = strlen(shader_code);
         createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
@@ -738,7 +738,7 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         createInfo.flags = 0;
 
         /* try version 0 first: XGL_PIPELINE_SHADER_STAGE followed by GLSL */
-        ((uint32_t *) createInfo.pCode)[0] = ICD_BIL_MAGIC;
+        ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
         ((uint32_t *) createInfo.pCode)[1] = 0;
         ((uint32_t *) createInfo.pCode)[2] = stage;
         memcpy(((uint32_t *) createInfo.pCode + 3), shader_code, shader_len + 1);
@@ -746,14 +746,14 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, XGL_PIPE
         err = init_try(*m_device, createInfo);
     }
 
-    if (framework->m_use_bil || err) {
-        std::vector<unsigned int> bil;
+    if (framework->m_use_spv || err) {
+        std::vector<unsigned int> spv;
         err = XGL_SUCCESS;
 
-        // Use Reference GLSL to BIL compiler
-        framework->GLSLtoBIL(stage, shader_code, bil);
-        createInfo.pCode = bil.data();
-        createInfo.codeSize = bil.size() * sizeof(unsigned int);
+        // Use Reference GLSL to SPV compiler
+        framework->GLSLtoSPV(stage, shader_code, spv);
+        createInfo.pCode = spv.data();
+        createInfo.codeSize = spv.size() * sizeof(unsigned int);
         createInfo.flags = 0;
 
         init(*m_device, createInfo);

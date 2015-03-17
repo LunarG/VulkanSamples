@@ -43,8 +43,8 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
                                 const XGL_SHADER_CREATE_INFO *info,
                                 struct intel_shader **sh_ret)
 {
-    const struct icd_bil_header *bil =
-        (const struct icd_bil_header *) info->pCode;
+    const struct icd_spv_header *spv =
+        (const struct icd_spv_header *) info->pCode;
     struct intel_shader *sh;
 
     sh = (struct intel_shader *) intel_base_create(&dev->base.handle,
@@ -52,9 +52,9 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     if (!sh)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    if (info->codeSize < sizeof(*bil))
+    if (info->codeSize < sizeof(*spv))
         return XGL_ERROR_INVALID_MEMORY_SIZE;
-    if (bil->magic != ICD_BIL_MAGIC)
+    if (spv->magic != ICD_SPV_MAGIC)
         return XGL_ERROR_BAD_SHADER_CODE;
 
     sh->ir = shader_create_ir(dev->gpu, info->pCode, info->codeSize);
