@@ -35,6 +35,11 @@ if (NOT WIN32)
     if(NOT EXISTS ${LUNARGLASS_PREFIX})
         message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${GLSLANG_PREFIX})
     endif()
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+        set(PYTHON_CMD "python3")
+    endif()
+else()
+        set(PYTHON_CMD "py")
 endif()
 
 # loader: Generic XGL ICD loader
