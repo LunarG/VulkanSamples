@@ -137,6 +137,7 @@ Windows 7+ with additional, software:
   - Tell the installer to "Add CMake to the system PATH" environment variable.
 - Python 3 (from https://www.python.org/downloads).  Notes:
   - Select to install the optional sub-package to add Python to the system PATH environment variable.
+  - Need python3.3 or later to get the Windows py.exe launcher that is used to get pyhton3 rather than python2 if both are installed on Windows
 - Optional Packages:
   - Qt 5.3 (from http://www.qt.io/download/).  Notes:
     - Qt 5.3 is required in order to build the Glave debugger (GUI).  The Glave trace and replay tools can be built without Qt, but the debugger/GUI is built on top of Qt 5.3.  Various dependencies, from the Qt package are copied to the directory where the Glave debugger and its libraries are built.  In order to copy and run the debugger in another directory, these libraries must also be copied.  Other notes:
@@ -170,7 +171,7 @@ To run XGL programs you must have an appropriate ICD (installable client driver)
 
 - Registry:
   - Root Key: HKEY_LOCAL_MACHINE
-  - Key: "System\XGL"
+  - Key: "SOFTWARE\XGL"
   - Value: "XGL_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
 - Environment Variable: "XGL_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
 
