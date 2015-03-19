@@ -92,24 +92,24 @@ static const float g_vertex_buffer_data[] = {
      1.0f,-1.0f,-1.0f,
 
     -1.0f,-1.0f,-1.0f,  // Vertex 3
-     1.0f, 1.0f,-1.0f,
     -1.0f, 1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,
 
     -1.0f,-1.0f,-1.0f,  // Vertex 4
-     1.0f,-1.0f, 1.0f,
      1.0f,-1.0f,-1.0f,
+     1.0f,-1.0f, 1.0f,
 
     -1.0f,-1.0f,-1.0f,  // Vertex 5
-    -1.0f,-1.0f, 1.0f,
      1.0f,-1.0f, 1.0f,
+    -1.0f,-1.0f, 1.0f,
 
     -1.0f, 1.0f,-1.0f,  // Vertex 6
     -1.0f, 1.0f, 1.0f,
      1.0f, 1.0f, 1.0f,
 
     -1.0f, 1.0f,-1.0f,  // Vertex 7
-     1.0f, 1.0f,-1.0f,
      1.0f, 1.0f, 1.0f,
+     1.0f, 1.0f,-1.0f,
 
      1.0f, 1.0f,-1.0f,  // Vertex 8
      1.0f, 1.0f, 1.0f,
@@ -120,8 +120,8 @@ static const float g_vertex_buffer_data[] = {
      1.0f, 1.0f,-1.0f,
 
     -1.0f, 1.0f, 1.0f,  // Vertex 10
-     1.0f, 1.0f, 1.0f,
     -1.0f,-1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
 
     -1.0f,-1.0f, 1.0f,  // Vertex 11
      1.0f,-1.0f, 1.0f,
@@ -150,24 +150,24 @@ static const float g_uv_buffer_data[] = {
     1.0f, 0.0f,
 
     0.0f, 0.0f,  // Vertex 3
-    1.0f, 1.0f,
     0.0f, 1.0f,
+    1.0f, 1.0f,
 
     0.0f, 1.0f,  // Vertex 4
-    1.0f, 0.0f,
     0.0f, 0.0f,
+    1.0f, 0.0f,
 
     0.0f, 1.0f,  // Vertex 5
-    1.0f, 1.0f,
     1.0f, 0.0f,
+    1.0f, 1.0f,
 
     0.0f, 1.0f,  // Vertex 6
     1.0f, 1.0f,
     1.0f, 0.0f,
 
     0.0f, 1.0f,  // Vertex 7
-    0.0f, 0.0f,
     1.0f, 0.0f,
+    0.0f, 0.0f,
 
     0.0f, 1.0f,  // Vertex 8
     1.0f, 1.0f,
@@ -178,8 +178,8 @@ static const float g_uv_buffer_data[] = {
     0.0f, 1.0f,
 
     1.0f, 1.0f,  // Vertex 10
-    0.0f, 1.0f,
     1.0f, 0.0f,
+    0.0f, 1.0f,
 
     1.0f, 0.0f,  // Vertex 11
     0.0f, 0.0f,
@@ -1320,7 +1320,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&rs, 0, sizeof(rs));
     rs.sType = XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
     rs.fillMode = XGL_FILL_SOLID;
-    rs.cullMode = XGL_CULL_NONE;
+    rs.cullMode = XGL_CULL_BACK;
     rs.frontFace = XGL_FRONT_FACE_CCW;
 
     memset(&cb, 0, sizeof(cb));
