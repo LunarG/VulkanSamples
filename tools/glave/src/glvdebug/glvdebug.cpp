@@ -656,7 +656,10 @@ void glvdebug::on_treeView_clicked(const QModelIndex &index)
     // make sure the index is visible in tree view
     QModelIndex srcIndex = mapTreeIndexToModel(index);
 
-    selectApicallModelIndex(srcIndex, true, true);
+    if (srcIndex.isValid())
+    {
+        selectApicallModelIndex(srcIndex, true, true);
+    }
 }
 
 void glvdebug::slot_timeline_clicked(const QModelIndex &index)
