@@ -1750,7 +1750,17 @@ class Subcommand(object):
         cd_body.append('typedef struct _XGLAllocInfo {')
         cd_body.append('    XGL_GPU_SIZE size;')
         cd_body.append('    void *pData;')
-        cd_body.append('} XGLAllocInfo;')
+        cd_body.append('} XGLAllocInfo;\n')
+        cd_body.append('class objMemory {')
+        cd_body.append('public:')
+        cd_body.append('    objMemory() : m_numAllocations(0), m_pMemReqs(NULL) {}')
+        cd_body.append('    ~objMemory() { free(m_pMemReqs);}')
+        cd_body.append('    void setCount(const uint32_t num);')
+        cd_body.append('    void setReqs(const XGL_MEMORY_REQUIREMENTS *pReqs, const uint32_t num);')
+        cd_body.append('private:')
+        cd_body.append('    uint32_t m_numAllocations;')
+        cd_body.append('    XGL_MEMORY_REQUIREMENTS *m_pMemReqs;')
+        cd_body.append('};\n')
         return "\n".join(cd_body)
 
     def _generate_replay_func_ptrs(self):
@@ -1777,18 +1787,18 @@ class Subcommand(object):
         txt = '    void add_to_map(%s* pTraceVal, %s* pReplayVal)\n    {\n' % (type1, type2)
         txt += '        assert(pTraceVal != NULL);\n'
         txt += '        assert(pReplayVal != NULL);\n'
-        txt += '        %s[*pTraceVal] = *pReplayVal;\n    }' % name
+        txt += '        %s[*pTraceVal] = *pReplayVal;\n    }\n' % name
         return txt
 
     def _rm_from_map_decl(self, ty, name):
         txt = '    void rm_from_map(const %s& key)\n    {\n' % (ty)
-        txt += '        %s.erase(key);\n    }' % name
+        txt += '        %s.erase(key);\n    }\n' % name
         return txt
 
     def _remap_decl(self, ty, name):
         txt = '    %s remap(const %s& value)\n    {\n' % (ty, ty)
         txt += '        std::map<%s, %s>::const_iterator q = %s.find(value);\n' % (ty, ty, name)
-        txt += '        return (q == %s.end()) ? XGL_NULL_HANDLE : q->second;\n    }' % name
+        txt += '        return (q == %s.end()) ? XGL_NULL_HANDLE : q->second;\n    }\n' % name
         return txt
 
     def _generate_replay_class(self):
@@ -1831,8 +1841,9 @@ class Subcommand(object):
         rc_body.append('    };')
         rc_body.append('    std::vector<struct validationMsg> m_validationMsgs;')
         rc_body.append('    std::vector<int> m_screenshotFrames;')
+        # Custom code for memory mapping functions for app writes into mapped memory
+        rc_body.append('    // memory mapping functions for app writes into mapped memory')
         rc_body.append(self._map_decl('XGL_GPU_MEMORY', 'XGLAllocInfo', 'm_mapData'))
-        # Custom code for 1-off memory mapping functions
         rc_body.append('    void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)')
         rc_body.append('    {')
         rc_body.append('        XGLAllocInfo info;')
@@ -1880,27 +1891,82 @@ class Subcommand(object):
         rc_body.append('        memcpy(info.pData, pData, info.size);')
         rc_body.append('        info.pData = NULL;')
         rc_body.append('    }\n')
-        rc_body.append('    /*std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU> m_gpus;')
-        rc_body.append('    void add_to_map(XGL_PHYSICAL_GPU* pTraceGpu, XGL_PHYSICAL_GPU* pReplayGpu)')
-        rc_body.append('    {')
-        rc_body.append('        assert(pTraceGpu != NULL);')
-        rc_body.append('        assert(pReplayGpu != NULL);')
-        rc_body.append('        m_gpus[*pTraceGpu] = *pReplayGpu;')
+        rc_body.append('    bool m_adjustForGPU; // true if replay adjusts behavior based on GPU')
+        # Code for memory objects for handling replay GPU != trace GPU object memory requirements
+        rc_body.append('    struct imageObj {')
+        rc_body.append('       objMemory imageMem;')
+        rc_body.append('       XGL_IMAGE replayImage;')
+        rc_body.append('    };\n')
+        rc_body.append('    struct bufferObj {')
+        rc_body.append('       objMemory bufferMem;')
+        rc_body.append('       XGL_BUFFER replayBuffer;')
+        rc_body.append('    };\n')
+        rc_body.append('    void init_objMemCount(const XGL_BASE_OBJECT& object, const uint32_t &num)\n    {')
+        rc_body.append('        XGL_IMAGE img = static_cast <XGL_IMAGE> (object);')
+        rc_body.append('        std::map<XGL_IMAGE, struct imageObj>::const_iterator it = m_images.find(img);')
+        rc_body.append('        if (it != m_images.end())')
+        rc_body.append('        {')
+        rc_body.append('            objMemory obj = it->second.imageMem;')
+        rc_body.append('            obj.setCount(num);')
+        rc_body.append('            return;')
+        rc_body.append('        }')
+        rc_body.append('        XGL_BUFFER buf = static_cast <XGL_BUFFER> (object);')
+        rc_body.append('        std::map<XGL_BUFFER, struct bufferObj>::const_iterator itb = m_buffers.find(buf);')
+        rc_body.append('        if (itb != m_buffers.end())')
+        rc_body.append('        {')
+        rc_body.append('            objMemory obj = itb->second.bufferMem;')
+        rc_body.append('            obj.setCount(num);')
+        rc_body.append('            return;')
+        rc_body.append('        }')
+        rc_body.append('        return;')
         rc_body.append('    }\n')
-        rc_body.append('    XGL_PHYSICAL_GPU remap(const XGL_PHYSICAL_GPU& gpu)')
-        rc_body.append('    {')
-        rc_body.append('        std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU>::const_iterator q = m_gpus.find(gpu);')
-        rc_body.append('        return (q == m_gpus.end()) ? XGL_NULL_HANDLE : q->second;')
-        rc_body.append('    }*/\n')
+        rc_body.append('    void init_objMemReqs(const XGL_BASE_OBJECT& object, const XGL_MEMORY_REQUIREMENTS *pMemReqs, const unsigned int num)\n    {')
+        rc_body.append('        XGL_IMAGE img = static_cast <XGL_IMAGE> (object);')
+        rc_body.append('        std::map<XGL_IMAGE, struct imageObj>::const_iterator it = m_images.find(img);')
+        rc_body.append('        if (it != m_images.end())')
+        rc_body.append('        {')
+        rc_body.append('            objMemory obj = it->second.imageMem;')
+        rc_body.append('            obj.setReqs(pMemReqs, num);')
+        rc_body.append('            return;')
+        rc_body.append('        }')
+        rc_body.append('        XGL_BUFFER buf = static_cast <XGL_BUFFER> (object);')
+        rc_body.append('        std::map<XGL_BUFFER, struct bufferObj>::const_iterator itb = m_buffers.find(buf);')
+        rc_body.append('        if (itb != m_buffers.end())')
+        rc_body.append('        {')
+        rc_body.append('            objMemory obj = itb->second.bufferMem;')
+        rc_body.append('            obj.setReqs(pMemReqs, num);')
+        rc_body.append('            return;')
+        rc_body.append('        }')
+        rc_body.append('        return;')
+        rc_body.append('    }\n')
         rc_body.append('    void clear_all_map_handles()\n    {')
         for var in sorted(obj_map_dict):
             rc_body.append('        %s.clear();' % var)
-        rc_body.append('    }')
+        rc_body.append('    }\n')
         for var in sorted(obj_map_dict):
-            rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
-            rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
-            rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
-            rc_body.append(self._remap_decl(obj_map_dict[var], var))
+            if obj_map_dict[var] == 'XGL_IMAGE':
+                rc_body.append(self._map_decl(obj_map_dict[var], 'struct imageObj', var))
+                rc_body.append(self._add_to_map_decl(obj_map_dict[var], 'struct imageObj', var))
+                rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
+                rc_body.append('    XGL_IMAGE remap(const XGL_IMAGE& value)')
+                rc_body.append('    {')
+                rc_body.append('        std::map<XGL_IMAGE, struct imageObj>::const_iterator q = m_images.find(value);')
+                rc_body.append('        return (q == m_images.end()) ? XGL_NULL_HANDLE : q->second.replayImage;')
+                rc_body.append('    }\n')
+            elif obj_map_dict[var] == 'XGL_BUFFER':
+                rc_body.append(self._map_decl(obj_map_dict[var], 'struct bufferObj', var))
+                rc_body.append(self._add_to_map_decl(obj_map_dict[var], 'struct bufferObj', var))
+                rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
+                rc_body.append('    XGL_BUFFER remap(const XGL_BUFFER& value)')
+                rc_body.append('    {')
+                rc_body.append('        std::map<XGL_BUFFER, struct bufferObj>::const_iterator q = m_buffers.find(value);')
+                rc_body.append('        return (q == m_buffers.end()) ? XGL_NULL_HANDLE : q->second.replayBuffer;')
+                rc_body.append('    }\n')
+            else:
+                rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
+                rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
+                rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
+                rc_body.append(self._remap_decl(obj_map_dict[var], var))
         # XGL_DYNAMIC_STATE_OBJECT code
         state_obj_remap_types = xgl.object_dynamic_state_list
         rc_body.append('    XGL_DYNAMIC_STATE_OBJECT remap(const XGL_DYNAMIC_STATE_OBJECT& state)\n    {')
@@ -1912,7 +1978,7 @@ class Subcommand(object):
         rc_body.append('    void rm_from_map(const XGL_DYNAMIC_STATE_OBJECT& state)\n    {')
         for t in state_obj_remap_types:
             rc_body.append('        rm_from_map(static_cast <%s> (state));' % t)
-        rc_body.append('    }')
+        rc_body.append('    }\n')
         # OBJECT code
         rc_body.append('    XGL_OBJECT remap(const XGL_OBJECT& object)\n    {')
         rc_body.append('        XGL_OBJECT obj;')
@@ -2191,8 +2257,31 @@ class Subcommand(object):
         dw_body.append('}\n')
         dw_body.append('void xglDisplay::process_event()')
         dw_body.append('{')
-        dw_body.append('}')
+        dw_body.append('}\n')
         return "\n".join(dw_body)
+
+    def _generate_replay_objMemory_funcs(self):
+        rof_body = []
+        rof_body.append('void objMemory::setCount(const uint32_t num)')
+        rof_body.append('{')
+        rof_body.append('    m_numAllocations = num;')
+        rof_body.append('}\n')
+        rof_body.append('void objMemory::setReqs(const XGL_MEMORY_REQUIREMENTS *pReqs, const uint32_t num)')
+        rof_body.append('{')
+        rof_body.append('    if (m_numAllocations != num && m_numAllocations != 0)')
+        rof_body.append('        glv_LogError("objMemory::setReqs, internal mismatch on number of allocations");')
+        rof_body.append('    if (m_pMemReqs == NULL && pReqs != NULL)')
+        rof_body.append('    {')
+        rof_body.append('        m_pMemReqs = (XGL_MEMORY_REQUIREMENTS *) glv_malloc(num * sizeof(XGL_MEMORY_REQUIREMENTS));')
+        rof_body.append('        if (m_pMemReqs == NULL)')
+        rof_body.append('        {')
+        rof_body.append('            glv_LogError("objMemory::setReqs out of memory");')
+        rof_body.append('            return;')
+        rof_body.append('        }')
+        rof_body.append('        memcpy(m_pMemReqs, pReqs, num);')
+        rof_body.append('    }')
+        rof_body.append('}\n')
+        return "\n".join(rof_body)
 
     def _generate_replay_structors(self):
         rs_body = []
@@ -2202,6 +2291,7 @@ class Subcommand(object):
         rs_body.append('    m_display = new xglDisplay();')
         rs_body.append('    m_pDSDump = NULL;')
         rs_body.append('    m_pCBDump = NULL;')
+        rs_body.append('    m_adjustForGPU = false;')
         rs_body.append('    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {')
         rs_body.append('        process_screenshot_list(g_pReplaySettings->screenshotList);')
         rs_body.append('    }')
@@ -2557,16 +2647,55 @@ class Subcommand(object):
         goi_body.append('                pData = glv_malloc(*pPacket->pDataSize);')
         goi_body.append('                memcpy(pData, pPacket->pData, *pPacket->pDataSize);')
         goi_body.append('            }')
+        goi_body.append('            // TODO only search for object once rather than at remap() and init_objMemXXX()')
         goi_body.append('            replayResult = m_xglFuncs.real_xglGetObjectInfo(remap(pPacket->object), pPacket->infoType, &size, pData);')
         goi_body.append('            if (replayResult == XGL_SUCCESS)')
         goi_body.append('            {')
         goi_body.append('                if (size != *pPacket->pDataSize && pData != NULL)')
         goi_body.append('                {')
         goi_body.append('                    glv_LogWarn("xglGetObjectInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\\n", size, *pPacket->pDataSize);')
-        goi_body.append('                }')
-        goi_body.append('                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)')
+        goi_body.append('                } else if (pData != NULL)')
         goi_body.append('                {')
-        goi_body.append('                    glv_LogWarn("xglGetObjectInfo returned differing data contents than the trace file contained.\\n");')
+        goi_body.append('                    switch (pPacket->infoType)')
+        goi_body.append('                    {')
+        goi_body.append('                        case XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT:')
+        goi_body.append('                        {')
+        goi_body.append('                            uint32_t traceCount = *((uint32_t *) pPacket->pData);')
+        goi_body.append('                            uint32_t replayCount = *((uint32_t *) pData);')
+        goi_body.append('                            if (traceCount != replayCount)')
+        goi_body.append('                                glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_ALLOCATION_COUNT) mismatch: trace count %u, replay count %u\\n", traceCount, replayCount);')
+        goi_body.append('                            if (m_adjustForGPU)')
+        goi_body.append('                                init_objMemCount(pPacket->object, replayCount);')
+        goi_body.append('                            break;')
+        goi_body.append('                        }')
+        goi_body.append('                        case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:')
+        goi_body.append('                        {')
+        goi_body.append('                            XGL_MEMORY_REQUIREMENTS *traceReqs = (XGL_MEMORY_REQUIREMENTS *) pPacket->pData;')
+        goi_body.append('                            XGL_MEMORY_REQUIREMENTS *replayReqs = (XGL_MEMORY_REQUIREMENTS *) pData;')
+        goi_body.append('                            unsigned int num = size / sizeof(XGL_MEMORY_REQUIREMENTS);')
+        goi_body.append('                            for (unsigned int i = 0; i < num; i++)')
+        goi_body.append('                            {')
+        goi_body.append('                                if (traceReqs->size != replayReqs->size)')
+        goi_body.append('                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace size %u, replay size %u\\n", traceReqs->size, replayReqs->size);')
+        goi_body.append('                                if (traceReqs->alignment != replayReqs->alignment)')
+        goi_body.append('                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace alignment %u, replay aligmnent %u\\n", traceReqs->alignment, replayReqs->alignment);')
+        goi_body.append('                                if (traceReqs->granularity != replayReqs->granularity)')
+        goi_body.append('                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace granularity %u, replay granularity %u\\n", traceReqs->granularity, replayReqs->granularity);')
+        goi_body.append('                                if (traceReqs->memProps != replayReqs->memProps)')
+        goi_body.append('                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace memProps %u, replay memProps %u\\n", traceReqs->memProps, replayReqs->memProps);')
+        goi_body.append('                                if (traceReqs->memType != replayReqs->memType)')
+        goi_body.append('                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace memType %u, replay memType %u\\n", traceReqs->memType, replayReqs->memType);')
+        goi_body.append('                                traceReqs++;')
+        goi_body.append('                                replayReqs++;')
+        goi_body.append('                            }')
+        goi_body.append('                            if (m_adjustForGPU)')
+        goi_body.append('                                init_objMemReqs(pPacket->object, replayReqs - num, num);')
+        goi_body.append('                            break;')
+        goi_body.append('                        }')
+        goi_body.append('                        default:')
+        goi_body.append('                            if (memcmp(pData, pPacket->pData, size) != 0)')
+        goi_body.append('                                glv_LogWarn("xglGetObjectInfo() mismatch on *pData: between trace and replay *pDataSize %u\\n", size);')
+        goi_body.append('                    }')
         goi_body.append('                }')
         goi_body.append('            }')
         goi_body.append('            glv_free(pData);')
@@ -2595,6 +2724,26 @@ class Subcommand(object):
         gfi_body.append('            }')
         gfi_body.append('            glv_free(pData);')
         return "\n".join(gfi_body)
+
+    def _gen_replay_create_image(self):
+        ci_body = []
+        ci_body.append('            struct imageObj local_imageObj;')
+        ci_body.append('            replayResult = m_xglFuncs.real_xglCreateImage(remap(pPacket->device), pPacket->pCreateInfo, &local_imageObj.replayImage);')
+        ci_body.append('            if (replayResult == XGL_SUCCESS)')
+        ci_body.append('            {')
+        ci_body.append('                add_to_map(pPacket->pImage, &local_imageObj);')
+        ci_body.append('            }')
+        return "\n".join(ci_body)
+
+    def _gen_replay_create_buffer(self):
+        cb_body = []
+        cb_body.append('            struct bufferObj local_bufferObj;')
+        cb_body.append('            replayResult = m_xglFuncs.real_xglCreateBuffer(remap(pPacket->device), pPacket->pCreateInfo, &local_bufferObj.replayBuffer);')
+        cb_body.append('            if (replayResult == XGL_SUCCESS)')
+        cb_body.append('            {')
+        cb_body.append('                add_to_map(pPacket->pBuffer, &local_bufferObj);')
+        cb_body.append('            }')
+        return "\n".join(cb_body)
 
     def _gen_replay_get_image_subresource_info(self):
         isi_body = []
@@ -3037,19 +3186,19 @@ class Subcommand(object):
     def _gen_replay_wsi_create_presentable_image(self):
         cpi_body = []
         cpi_body.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
-        cpi_body.append('            XGL_IMAGE img;')
-        cpi_body.append('            XGL_GPU_MEMORY mem;')
+        cpi_body.append('            struct imageObj local_imgObj;')
+        cpi_body.append('            XGL_GPU_MEMORY local_mem;')
         cpi_body.append('            m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);')
         cpi_body.append('            m_display->imageWidth.push_back(pPacket->pCreateInfo->extent.width);')
-        cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &img, &mem);')
+        cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &local_imgObj.replayImage, &local_mem);')
         cpi_body.append('            if (replayResult == XGL_SUCCESS)')
         cpi_body.append('            {')
         cpi_body.append('                if (pPacket->pImage != NULL)')
-        cpi_body.append('                    add_to_map(pPacket->pImage, &img);')
+        cpi_body.append('                    add_to_map(pPacket->pImage, &local_imgObj);')
         cpi_body.append('                if(pPacket->pMem != NULL)')
-        cpi_body.append('                    add_to_map(pPacket->pMem, &mem);')
-        cpi_body.append('                m_display->imageHandles.push_back(img);')
-        cpi_body.append('                m_display->imageMemory.push_back(mem);')
+        cpi_body.append('                    add_to_map(pPacket->pMem, &local_mem);')
+        cpi_body.append('                m_display->imageHandles.push_back(local_imgObj.replayImage);')
+        cpi_body.append('                m_display->imageMemory.push_back(local_mem);')
         cpi_body.append('            }')
         cpi_body.append('#elif defined(WIN32)')
         cpi_body.append('            //TBD')
@@ -3135,6 +3284,8 @@ class Subcommand(object):
                             'QueueSubmit': self._gen_replay_queue_submit,
                             'GetObjectInfo': self._gen_replay_get_object_info,
                             'GetFormatInfo': self._gen_replay_get_format_info,
+                            'CreateImage': self._gen_replay_create_image,
+                            'CreateBuffer': self._gen_replay_create_buffer,
                             'GetImageSubresourceInfo': self._gen_replay_get_image_subresource_info,
                             'CreateGraphicsPipeline': self._gen_replay_create_graphics_pipeline,
                             'CreateFramebuffer': self._gen_replay_create_framebuffer,
@@ -3596,6 +3747,7 @@ class GlaveReplayC(Subcommand):
                 self._generate_replay_display_init(),
                 self._generate_replay_display_structors(),
                 self._generate_replay_display_window(),
+                self._generate_replay_objMemory_funcs(),
                 self._generate_replay_structors(),
                 self._generate_replay_init(),
                 self._generate_replay_errors(),
