@@ -44,6 +44,11 @@ wget http://launchpadlibrarian.net/189418339/xserver-xorg-video-intel_2.99.914-1
 ```
 sudo dpkg -i xserver-xorg-video-intel_2.99.914-1~exp1ubuntu4.1_amd64.deb
 ```
+- Pin the package to prevent updates
+```
+sudo bash -c "echo $'Package: xserver-xorg-video-intel\nPin: version 2:2.99.914-1~exp1ubuntu4.1\nPin-Priority: 1001' > /etc/apt/preferences.d/xserver-xorg-video-intel"
+```
+
 - Either restart Ubuntu or just X11.  
   
 ## Clone the repository
