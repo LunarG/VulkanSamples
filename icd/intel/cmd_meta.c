@@ -577,7 +577,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     meta.samples = img->samples;
 
     format = cmd_meta_img_raw_format(cmd, img->layout.format);
-    block_width = icd_format_get_block_width(format);
+    block_width = icd_format_get_block_width(img->layout.format);
     cmd_meta_set_src_for_buf(cmd, buf, format, &meta);
 
     for (i = 0; i < regionCount; i++) {
