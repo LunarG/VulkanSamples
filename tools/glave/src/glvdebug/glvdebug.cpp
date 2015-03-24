@@ -303,7 +303,9 @@ void glvdebug::on_replay_state_changed(bool bReplayInProgress)
 
 unsigned long long glvdebug::get_current_packet_index()
 {
-    QModelIndex index = mapTreeIndexToModel(ui->treeView->currentIndex());
+    QModelIndex currentIndex = ui->treeView->currentIndex();
+    QModelIndex col0Index = currentIndex.sibling(currentIndex.row(), 0);
+    QModelIndex index = mapTreeIndexToModel(col0Index);
 
     unsigned long long packetIndex = 0;
     if (index.isValid())
