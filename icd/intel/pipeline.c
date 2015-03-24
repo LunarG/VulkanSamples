@@ -390,6 +390,7 @@ static XGL_RESULT pipeline_rs_state(struct intel_pipeline *pipeline,
 {
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
+    pipeline->use_rs_point_size = !rs_state->programPointSize;
 
     if (rs_state->provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
         pipeline->provoking_vertex_tri = 0;

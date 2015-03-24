@@ -377,7 +377,6 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_dynamic_rs *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
-    int point_width;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -421,16 +420,20 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
                  GEN7_SF_DW2_MSRASTMODE_OFF_PIXEL;
     }
 
-    /* in U8.3 */
-    point_width = (int) (raster->rs_info.pointSize * 8.0f + 0.5f);
-    point_width = U_CLAMP(point_width, 1, 2047);
-
     dw3 = pipeline->provoking_vertex_tri << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
           pipeline->provoking_vertex_line << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
           pipeline->provoking_vertex_trifan << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT |
-          GEN7_SF_DW3_SUBPIXEL_8BITS |
-          GEN7_SF_DW3_USE_POINT_WIDTH |
-          point_width;
+          GEN7_SF_DW3_SUBPIXEL_8BITS;
+
+    if (pipeline->use_rs_point_size) {
+        int point_width;
+
+        /* in U8.3 */
+        point_width = (int) (raster->rs_info.pointSize * 8.0f + 0.5f);
+        point_width = U_CLAMP(point_width, 1, 2047);
+
+        dw3 |= GEN7_SF_DW3_USE_POINT_WIDTH | point_width;
+    }
 
     body[0] = dw1;
     body[1] = dw2;
