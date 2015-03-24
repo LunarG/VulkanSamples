@@ -531,6 +531,18 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
         meta.width = region->extent.width;
         meta.height = region->extent.height;
 
+        if (raw_copy) {
+            const uint32_t block_width =
+                icd_format_get_block_width(raw_format);
+
+            meta.src.x /= block_width;
+            meta.src.y /= block_width;
+            meta.dst.x /= block_width;
+            meta.dst.y /= block_width;
+            meta.width /= block_width;
+            meta.height /= block_width;
+        }
+
         for (j = 0; j < region->extent.depth; j++) {
             cmd_meta_set_dst_for_img(cmd, dst,
                     (raw_copy) ? raw_format : dst->layout.format,
@@ -556,7 +568,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     struct intel_img *img = intel_img(destImage);
     struct intel_cmd_meta meta;
     XGL_FORMAT format;
-    uint32_t i;
+    uint32_t block_width, i;
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_FS_RECT;
@@ -565,6 +577,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     meta.samples = img->samples;
 
     format = cmd_meta_img_raw_format(cmd, img->layout.format);
+    block_width = icd_format_get_block_width(format);
     cmd_meta_set_src_for_buf(cmd, buf, format, &meta);
 
     for (i = 0; i < regionCount; i++) {
@@ -576,11 +589,11 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
         meta.dst.lod = region->imageSubresource.mipLevel;
         meta.dst.layer = region->imageSubresource.arraySlice +
             region->imageOffset.z;
-        meta.dst.x = region->imageOffset.x;
-        meta.dst.y = region->imageOffset.y;
+        meta.dst.x = region->imageOffset.x / block_width;
+        meta.dst.y = region->imageOffset.y / block_width;
 
-        meta.width = region->imageExtent.width;
-        meta.height = region->imageExtent.height;
+        meta.width = region->imageExtent.width / block_width;
+        meta.height = region->imageExtent.height / block_width;
 
         for (j = 0; j < region->imageExtent.depth; j++) {
             cmd_meta_set_dst_for_img(cmd, img, format,
@@ -606,12 +619,13 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
     struct intel_buf *buf = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
     XGL_FORMAT img_format, buf_format;
-    uint32_t i;
+    uint32_t block_width, i;
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_VS_POINTS;
 
     img_format = cmd_meta_img_raw_format(cmd, img->layout.format);
+    block_width = icd_format_get_block_width(img_format);
 
     /* buf_format is ignored by hw, but we derive stride from it */
     switch (img_format) {
@@ -665,12 +679,12 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
         meta.src.lod = region->imageSubresource.mipLevel;
         meta.src.layer = region->imageSubresource.arraySlice +
             region->imageOffset.z;
-        meta.src.x = region->imageOffset.x;
-        meta.src.y = region->imageOffset.y;
+        meta.src.x = region->imageOffset.x / block_width;
+        meta.src.y = region->imageOffset.y / block_width;
 
         meta.dst.x = region->bufferOffset / icd_format_get_size(img_format);
-        meta.width = region->imageExtent.width;
-        meta.height = region->imageExtent.height;
+        meta.width = region->imageExtent.width / block_width;
+        meta.height = region->imageExtent.height / block_width;
 
         for (j = 0; j < region->imageExtent.depth; j++) {
             cmd_draw_meta(cmd, &meta);
