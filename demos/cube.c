@@ -1336,7 +1336,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&vp, 0, sizeof(vp));
     vp.sType = XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
     vp.numViewports = 1;
-    vp.clipOrigin = XGL_COORDINATE_ORIGIN_UPPER_LEFT;
+    vp.clipOrigin = XGL_COORDINATE_ORIGIN_LOWER_LEFT;
 
     memset(&ds, 0, sizeof(ds));
     ds.sType = XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
