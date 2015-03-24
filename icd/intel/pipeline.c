@@ -806,7 +806,8 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
     }
 }
 
-static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
+static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
+                                        const struct intel_pipeline_create_info *info)
 {
     const struct intel_pipeline_shader *fs = &pipeline->fs;
     const struct intel_pipeline_shader *vs = &pipeline->vs;
@@ -860,6 +861,18 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
           vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT |
           vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
 
+    switch (info->rs.pointOrigin) {
+    case XGL_COORDINATE_ORIGIN_UPPER_LEFT:
+        body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_UPPERLEFT;
+        break;
+    case XGL_COORDINATE_ORIGIN_LOWER_LEFT:
+        body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_LOWERLEFT;
+        break;
+    default:
+        assert(!"unknown point origin");
+        break;
+    }
+
     uint16_t vs_slot[fs->in_count];
     int32_t fs_in = 0;
     int32_t vs_out = - (vue_offset * 2 - vs->outputs_offset);
@@ -910,7 +923,9 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline)
         body[2 + i] = hi << GEN8_SBE_SWIZ_HIGH__SHIFT | lo;
     }
 
-    body[10] = 0; /* point sprite enables */
+    if (info->ia.topology == XGL_TOPOLOGY_POINT_LIST)
+        body[10] = 0xffffffffu; /* point sprite enables */
+
     body[11] = 0; /* constant interpolation enables */
     body[12] = 0; /* WrapShortest enables */
     body[13] = 0;
@@ -1152,7 +1167,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
             sizeof(pipeline->vb[0]) * pipeline->vb_count);
 
     pipeline_build_vertex_elements(pipeline, info);
-    pipeline_build_fragment_SBE(pipeline);
+    pipeline_build_fragment_SBE(pipeline, info);
     pipeline_build_msaa(pipeline, info);
     pipeline_build_depth_stencil(pipeline, info);
 

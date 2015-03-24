@@ -777,6 +777,8 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
     m_rs_state.pNext = &m_ia_state;
     m_rs_state.depthClipEnable = XGL_FALSE;
     m_rs_state.rasterizerDiscardEnable = XGL_FALSE;
+    m_rs_state.programPointSize = XGL_FALSE;
+    m_rs_state.pointOrigin = XGL_COORDINATE_ORIGIN_UPPER_LEFT;
     m_rs_state.provokingVertex = XGL_PROVOKING_VERTEX_LAST;
     m_rs_state.fillMode = XGL_FILL_SOLID;
     m_rs_state.cullMode = XGL_CULL_NONE;
