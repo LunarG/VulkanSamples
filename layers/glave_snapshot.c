@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "loader_platform.h"
-#include "object_track.h"
+#include "glave_snapshot.h"
 
 #define LAYER_NAME_STR "GlaveSnapshot"
 #define LAYER_ABBREV_STR "GLVSnap"
