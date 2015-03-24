@@ -190,6 +190,8 @@ struct intel_pipeline {
     /* Depth Buffer format */
     XGL_FORMAT db_format;
 
+    bool depth_zero_to_one;
+
     XGL_PIPELINE_CB_STATE_CREATE_INFO cb_state;
 
     // XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state;

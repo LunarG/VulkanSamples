@@ -498,11 +498,15 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
 
     dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
           GEN6_CLIP_DW2_XY_TEST_ENABLE |
-          GEN6_CLIP_DW2_APIMODE_OGL |
           (vs->enable_user_clip ? 1 : 0) << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
           pipeline->provoking_vertex_tri << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
           pipeline->provoking_vertex_line << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
           pipeline->provoking_vertex_trifan << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
+
+    if (pipeline->depth_zero_to_one)
+        dw2 |= GEN6_CLIP_DW2_APIMODE_D3D;
+    else
+        dw2 |= GEN6_CLIP_DW2_APIMODE_OGL;
 
     if (pipeline->rasterizerDiscardEnable)
         dw2 |= GEN6_CLIP_DW2_CLIPMODE_REJECT_ALL;
