@@ -1901,6 +1901,10 @@ class Subcommand(object):
         rc_body.append('       objMemory bufferMem;')
         rc_body.append('       XGL_BUFFER replayBuffer;')
         rc_body.append('    };\n')
+        rc_body.append('    struct gpuMemObj {')
+        rc_body.append('       objMemory gpuMem;')
+        rc_body.append('       XGL_GPU_MEMORY replayGpuMem;')
+        rc_body.append('    };\n')
         rc_body.append('    void init_objMemCount(const XGL_BASE_OBJECT& object, const uint32_t &num)\n    {')
         rc_body.append('        XGL_IMAGE img = static_cast <XGL_IMAGE> (object);')
         rc_body.append('        std::map<XGL_IMAGE, struct imageObj>::const_iterator it = m_images.find(img);')
@@ -1961,6 +1965,15 @@ class Subcommand(object):
                 rc_body.append('    {')
                 rc_body.append('        std::map<XGL_BUFFER, struct bufferObj>::const_iterator q = m_buffers.find(value);')
                 rc_body.append('        return (q == m_buffers.end()) ? XGL_NULL_HANDLE : q->second.replayBuffer;')
+                rc_body.append('    }\n')
+            elif obj_map_dict[var] == 'XGL_GPU_MEMORY':
+                rc_body.append(self._map_decl(obj_map_dict[var], 'struct gpuMemObj', var))
+                rc_body.append(self._add_to_map_decl(obj_map_dict[var], 'struct gpuMemObj', var))
+                rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
+                rc_body.append('    XGL_GPU_MEMORY remap(const XGL_GPU_MEMORY& value)')
+                rc_body.append('    {')
+                rc_body.append('        std::map<XGL_GPU_MEMORY, struct gpuMemObj>::const_iterator q = m_gpuMemorys.find(value);')
+                rc_body.append('        return (q == m_gpuMemorys.end()) ? XGL_NULL_HANDLE : q->second.replayGpuMem;')
                 rc_body.append('    }\n')
             else:
                 rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
@@ -3187,10 +3200,10 @@ class Subcommand(object):
         cpi_body = []
         cpi_body.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
         cpi_body.append('            struct imageObj local_imgObj;')
-        cpi_body.append('            XGL_GPU_MEMORY local_mem;')
+        cpi_body.append('            struct gpuMemObj local_mem;')
         cpi_body.append('            m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);')
         cpi_body.append('            m_display->imageWidth.push_back(pPacket->pCreateInfo->extent.width);')
-        cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &local_imgObj.replayImage, &local_mem);')
+        cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &local_imgObj.replayImage, &local_mem.replayGpuMem);')
         cpi_body.append('            if (replayResult == XGL_SUCCESS)')
         cpi_body.append('            {')
         cpi_body.append('                if (pPacket->pImage != NULL)')
@@ -3198,7 +3211,7 @@ class Subcommand(object):
         cpi_body.append('                if(pPacket->pMem != NULL)')
         cpi_body.append('                    add_to_map(pPacket->pMem, &local_mem);')
         cpi_body.append('                m_display->imageHandles.push_back(local_imgObj.replayImage);')
-        cpi_body.append('                m_display->imageMemory.push_back(local_mem);')
+        cpi_body.append('                m_display->imageMemory.push_back(local_mem.replayGpuMem);')
         cpi_body.append('            }')
         cpi_body.append('#elif defined(WIN32)')
         cpi_body.append('            //TBD')
@@ -3238,33 +3251,51 @@ class Subcommand(object):
         wqp_body.append('            m_display->m_frameNumber++;')
         return "\n".join(wqp_body)
 
-    # I don't like making these 3 mem functions 'fully' custom, but just doing it for now to avoid being too cute
+    def _gen_replay_alloc_memory(self):
+        am_body = []
+        am_body.append('            struct gpuMemObj local_mem;')
+        am_body.append('            replayResult = m_xglFuncs.real_xglAllocMemory(remap(pPacket->device), pPacket->pAllocInfo, &local_mem.replayGpuMem);')
+        am_body.append('            if (replayResult == XGL_SUCCESS)')
+        am_body.append('            {')
+        am_body.append('                add_to_map(pPacket->pMem, &local_mem);')
+        am_body.append('                add_entry_to_mapData(local_mem.replayGpuMem, pPacket->pAllocInfo->allocationSize);')
+        am_body.append('            }')
+        return "\n".join(am_body)
+
     def _gen_replay_free_memory(self):
         fm_body = []
-        fm_body.append('            XGL_GPU_MEMORY handle = remap(pPacket->mem);')
-        fm_body.append('            replayResult = m_xglFuncs.real_xglFreeMemory(handle);')
+        fm_body.append('            XGL_GPU_MEMORY local_mem = remap(pPacket->mem);')
+        fm_body.append('            replayResult = m_xglFuncs.real_xglFreeMemory(local_mem);')
         fm_body.append('            if (replayResult == XGL_SUCCESS) ')
         fm_body.append('            {')
-        fm_body.append('                rm_entry_from_mapData(handle);')
+        fm_body.append('                rm_entry_from_mapData(local_mem);')
         fm_body.append('                rm_from_map(pPacket->mem);')
         fm_body.append('            }')
         return "\n".join(fm_body)
 
     def _gen_replay_map_memory(self):
         mm_body = []
-        mm_body.append('            XGL_GPU_MEMORY handle = remap(pPacket->mem);')
+        mm_body.append('            XGL_GPU_MEMORY local_mem = remap(pPacket->mem);')
         mm_body.append('            void* pData;')
-        mm_body.append('            replayResult = m_xglFuncs.real_xglMapMemory(handle, pPacket->flags, &pData);')
+        mm_body.append('            replayResult = m_xglFuncs.real_xglMapMemory(local_mem, pPacket->flags, &pData);')
         mm_body.append('            if (replayResult == XGL_SUCCESS)')
-        mm_body.append('                add_mapping_to_mapData(handle, pData);')
+        mm_body.append('                add_mapping_to_mapData(local_mem, pData);')
         return "\n".join(mm_body)
         
     def _gen_replay_unmap_memory(self):
         um_body = []
-        um_body.append('            XGL_GPU_MEMORY handle = remap(pPacket->mem);')
-        um_body.append('            rm_mapping_from_mapData(handle, pPacket->pData);  // copies data from packet into memory buffer')
-        um_body.append('            replayResult = m_xglFuncs.real_xglUnmapMemory(handle);')
+        um_body.append('            XGL_GPU_MEMORY local_mem = remap(pPacket->mem);')
+        um_body.append('            rm_mapping_from_mapData(local_mem, pPacket->pData);  // copies data from packet into memory buffer')
+        um_body.append('            replayResult = m_xglFuncs.real_xglUnmapMemory(local_mem);')
         return "\n".join(um_body)
+
+    def _gen_replay_pin_system_memory(self):
+        psm_body = []
+        psm_body.append('            struct gpuMemObj local_mem;')
+        psm_body.append('            replayResult = m_xglFuncs.real_xglPinSystemMemory(remap(pPacket->device), pPacket->pSysMem, pPacket->memSize, &local_mem.replayGpuMem);')
+        psm_body.append('            if (replayResult == XGL_SUCCESS)')
+        psm_body.append('                add_to_map(pPacket->pMem, &local_mem);')
+        return "\n".join(psm_body)
 
     def _gen_replay_bind_dynamic_memory_view(self):
         bdmv_body = []
@@ -3299,9 +3330,11 @@ class Subcommand(object):
                             'WsiX11GetMSC': self._gen_replay_wsi_get_msc,
                             'WsiX11CreatePresentableImage': self._gen_replay_wsi_create_presentable_image,
                             'WsiX11QueuePresent': self._gen_replay_wsi_queue_present,
+                            'AllocMemory': self._gen_replay_alloc_memory,
                             'FreeMemory': self._gen_replay_free_memory,
                             'MapMemory': self._gen_replay_map_memory,
                             'UnmapMemory': self._gen_replay_unmap_memory,
+                            'PinSystemMemory': self._gen_replay_pin_system_memory,
                             'CmdBindDynamicMemoryView': self._gen_replay_bind_dynamic_memory_view,
                             'UpdateDescriptors': self._gen_replay_update_descriptors,
                             'CreateDescriptorSetLayout': self._gen_replay_create_descriptor_set_layout,
@@ -3452,8 +3485,6 @@ class Subcommand(object):
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
                     rbody.append('            {')
                     rbody.append('                add_to_map(pPacket->%s, &local_%s);' % (proto.params[-1].name, proto.params[-1].name))
-                    if 'AllocMemory' == proto.name:
-                        rbody.append('                add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody[-1] = '    %s' % rbody[-1]
