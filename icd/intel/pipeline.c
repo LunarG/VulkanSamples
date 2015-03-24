@@ -385,9 +385,12 @@ static XGL_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT pipeline_rs_state(struct intel_pipeline *pipeline,
-                                    const XGL_PIPELINE_RS_STATE_CREATE_INFO* rs_state)
+static XGL_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
+                                          const struct intel_pipeline_create_info* info)
 {
+    const XGL_PIPELINE_RS_STATE_CREATE_INFO *rs_state = &info->rs;
+    bool ccw;
+
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
     pipeline->use_rs_point_size = !rs_state->programPointSize;
@@ -418,7 +421,12 @@ static XGL_RESULT pipeline_rs_state(struct intel_pipeline *pipeline,
         break;
     }
 
-    if (rs_state->frontFace == XGL_FRONT_FACE_CCW) {
+    ccw = (rs_state->frontFace == XGL_FRONT_FACE_CCW);
+    /* flip the winding order */
+    if (info->vp.clipOrigin == XGL_COORDINATE_ORIGIN_LOWER_LEFT)
+        ccw = !ccw;
+
+    if (ccw) {
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTWINDING_CCW;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_FRONTWINDING_CCW;
     }
@@ -1208,7 +1216,7 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
     ret = pipeline_build_ia(pipeline, info);
 
     if (ret == XGL_SUCCESS)
-        ret = pipeline_rs_state(pipeline, &info->rs);
+        ret = pipeline_build_rs_state(pipeline, info);
 
     if (ret == XGL_SUCCESS) {
         pipeline->db_format = info->db.format;
