@@ -1,7 +1,7 @@
 /*
  * XGL
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,7 +21,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#pragma once
 #include "xglLayer.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Mem Tracker ERROR codes
 typedef enum _MEM_TRACK_ERROR
 {
@@ -46,122 +52,88 @@ typedef enum _MEM_TRACK_ERROR
 
 /*
  * Data Structure overview
- *  There are 3 global Linked-Lists (LLs)
- *  pGlobalCBHead points to head of Command Buffer (CB) LL
- *    Off of each node in this LL there is a separate LL of
+ *  There are 4 global STL maps
+ *  cbMap -- map of command Buffer (CB) objects to GLOBAL_CB_NODE structures
+ *    Each GLOBAL_CB_NODE struct has an stl list container with
  *    memory objects that are referenced by this CB
- *  pGlobalMemObjHead points to head of Memory Object LL
- *    Off of each node in this LL there are 2 separate LL
- *    One is a list of all CBs referencing this mem obj
- *    Two is a list of all XGL Objects that are bound to this memory
- *  pGlobalObjHead point to head of XGL Objects w/ bound mem LL
- *    Each node of this LL contains a ptr to global Mem Obj node for bound mem
- *
- * The "Global" nodes are for the main LLs
- * The "mini" nodes are for ancillary LLs that are pointed to from global nodes
+ *  memObjMap -- map of Memory Objects to GLOBAL_MEM_OBJ_NODE structures
+ *    Each GLOBAL_MEM_OBJ_NODE has two stl list containers with:
+ *      -- all CBs referencing this mem obj
+ *      -- all XGL Objects that are bound to this memory
+ *  objectMap -- map of objects to GLOBAL_OBJECT_NODE structures
  *
  * Algorithm overview
  * These are the primary events that should happen related to different objects
  * 1. Command buffers
- *   CREATION - Add node to global LL
- *   CMD BIND - If mem associated, add mem reference to mini LL
- *   DESTROY - Remove from global LL, decrement (and report) mem references
+ *   CREATION - Add object,structure to map
+ *   CMD BIND - If mem associated, add mem reference to list container
+ *   DESTROY  - Remove from map, decrement (and report) mem references
  * 2. Mem Objects
- *   CREATION - Add node to global LL
- *   OBJ BIND - Add obj node to mini LL for that mem node
- *   CMB BIND - If mem-related add CB node to mini LL for that mem node
- *   DESTROY - Flag as errors any remaining refs and Remove from global LL
+ *   CREATION - Add object,structure to map
+ *   OBJ BIND - Add obj structure to list container for that mem node
+ *   CMB BIND - If mem-related add CB structure to list container for that mem node
+ *   DESTROY  - Flag as errors any remaining refs and remove from map
  * 3. Generic Objects
- *   MEM BIND - DESTROY any previous binding, Add global obj node w/ ref to global mem obj node, Add obj node to mini LL for that mem node
- *   DESTROY - If mem bound, remove reference from mini LL for that mem Node, remove global obj node
+ *   MEM BIND - DESTROY any previous binding, Add obj node w/ ref to map, add obj ref to list container for that mem node
+ *   DESTROY - If mem bound, remove reference list container for that mem Node, remove object ref from map
  */
 // TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
 
-// Generic data struct for various "mini" Linked-Lists
-//  This just wraps some type of XGL OBJ and a pNext ptr
-//  Used for xgl obj, cmd buffer, and mem obj wrapping
-typedef struct _MINI_NODE {
-    struct _MINI_NODE* pNext;
-    union { // different objects that can be wrapped
-        XGL_OBJECT object;
-        XGL_GPU_MEMORY mem;
-        XGL_CMD_BUFFER cmdBuffer;
-        XGL_BASE_OBJECT data;     // for generic handling of data
-    };
-} MINI_NODE;
-
 struct GLOBAL_MEM_OBJ_NODE;
 
 // Data struct for tracking memory object
-typedef struct _GLOBAL_MEM_OBJ_NODE {
-    struct _GLOBAL_MEM_OBJ_NODE *pNextGlobalNode;    // Ptr to next mem obj in global list of all objs
-    MINI_NODE                   *pObjBindings;       // Ptr to list of objects bound to this memory
-    MINI_NODE                   *pCmdBufferBindings; // Ptr to list of cmd buffers that reference this mem object
+struct GLOBAL_MEM_OBJ_NODE {
     uint32_t                     refCount;           // Count of references (obj bindings or CB use)
     XGL_GPU_MEMORY               mem;
     XGL_MEMORY_ALLOC_INFO        allocInfo;
-} GLOBAL_MEM_OBJ_NODE;
+    list<XGL_OBJECT>             pObjBindings;       // list container of objects bound to this memory
+    list<XGL_CMD_BUFFER>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
+};
 
-typedef struct _GLOBAL_OBJECT_NODE {
-    struct _GLOBAL_OBJECT_NODE* pNext;
-    GLOBAL_MEM_OBJ_NODE* pMemNode;
-    XGL_OBJECT object;
-    XGL_STRUCTURE_TYPE sType;
-    int ref_count;
+struct GLOBAL_OBJECT_NODE {
+    GLOBAL_MEM_OBJ_NODE*        pMemNode;
+    XGL_OBJECT                  object;
+    XGL_STRUCTURE_TYPE          sType;
+    uint32_t                    ref_count;
     // Capture all object types that may have memory bound. From prog guide:
     // The only objects that are guaranteed to have no external memory
     //   requirements are devices, queues, command buffers, shaders and memory objects.
     union {
-        XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO color_attachment_view_create_info;
-        XGL_DEPTH_STENCIL_VIEW_CREATE_INFO ds_view_create_info;
-        XGL_IMAGE_VIEW_CREATE_INFO image_view_create_info;
-        XGL_IMAGE_CREATE_INFO image_create_info;
-        XGL_GRAPHICS_PIPELINE_CREATE_INFO graphics_pipeline_create_info;
-        XGL_COMPUTE_PIPELINE_CREATE_INFO compute_pipeline_create_info;
-        XGL_SAMPLER_CREATE_INFO sampler_create_info;
-        XGL_FENCE_CREATE_INFO fence_create_info;
+        XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO     color_attachment_view_create_info;
+        XGL_DEPTH_STENCIL_VIEW_CREATE_INFO        ds_view_create_info;
+        XGL_IMAGE_VIEW_CREATE_INFO                image_view_create_info;
+        XGL_IMAGE_CREATE_INFO                     image_create_info;
+        XGL_GRAPHICS_PIPELINE_CREATE_INFO         graphics_pipeline_create_info;
+        XGL_COMPUTE_PIPELINE_CREATE_INFO          compute_pipeline_create_info;
+        XGL_SAMPLER_CREATE_INFO                   sampler_create_info;
+        XGL_FENCE_CREATE_INFO                     fence_create_info;
 #ifndef _WIN32
         XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
 #endif // _WIN32
     } create_info;
     char object_name[64];
-} GLOBAL_OBJECT_NODE;
+};
 
-/*
- * Track a Vertex or Index buffer binding
- */
-typedef struct _MEMORY_BINDING {
-    XGL_OBJECT      mem;
-    XGL_GPU_SIZE    offset;
-    uint32_t        binding;
-    XGL_BUFFER      buffer;
-    XGL_INDEX_TYPE  indexType;
-} MEMORY_BINDING;
-
-// Store a single LL of command buffers
-typedef struct _GLOBAL_CB_NODE {
-    struct _GLOBAL_CB_NODE* pNextGlobalCBNode;
+// Track all command buffers
+struct GLOBAL_CB_NODE {
     XGL_CMD_BUFFER_CREATE_INFO      createInfo;
-    MINI_NODE*                      pMemObjList; // LL of Mem objs referenced by this CB
-    MINI_NODE*                      pVertexBufList;
-    MINI_NODE*                      pIndexBufList;
     GLOBAL_OBJECT_NODE*             pDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
     uint32_t                        colorAttachmentCount;
     XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
     XGL_CMD_BUFFER                  cmdBuffer;
     uint64_t                        fenceId;
-} GLOBAL_CB_NODE;
+    // Order dependent, stl containers must be at end of struct
+    list<XGL_GPU_MEMORY>            pMemObjList; // List container of Mem objs referenced by this CB
+};
 
+//  Associate fenceId with a fence object
+struct GLOBAL_FENCE_NODE {
+    XGL_FENCE   fence;
+    bool32_t    localFence;
+};
 
-// Ordered list of Fences, oldest (by order of submission) first
-typedef struct _GLOBAL_FENCE_NODE {
-    struct _GLOBAL_FENCE_NODE* pNextGlobalFenceNode;
-    uint64_t                   fenceId;
-    XGL_FENCE                  fence;
-    bool32_t                   localFence;
-} GLOBAL_FENCE_NODE;
-
-
-
+#ifdef __cplusplus
+}
+#endif
