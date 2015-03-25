@@ -50,6 +50,7 @@ static uint32_t img_get_layout_ops(const struct intel_img *img,
     uint32_t ops;
 
     switch (layout) {
+    case XGL_IMAGE_LAYOUT_UNDEFINED:
     case XGL_IMAGE_LAYOUT_GENERAL:
         ops = READ_OP | WRITE_OP;
         break;

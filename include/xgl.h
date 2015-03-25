@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 59, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 59, 2)
 
 #ifdef __cplusplus
 extern "C"
@@ -125,16 +125,17 @@ typedef enum _XGL_MEMORY_PRIORITY
 
 typedef enum _XGL_IMAGE_LAYOUT
 {
-    XGL_IMAGE_LAYOUT_GENERAL                                = 0x00000000,   // General layout when image can be used for any kind of access
-    XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL               = 0x00000001,   // Optimal layout when image is only used for color attachment read/write
-    XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL       = 0x00000002,   // Optimal layout when image is only used for depth/stencil attachment read/write
-    XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL        = 0x00000003,   // Optimal layout when image is used for read only depth/stencil attachment and shader access
-    XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL               = 0x00000004,   // Optimal layout when image is used for read only shader access
-    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL                          = 0x00000005,   // Optimal layout when image is used only for clear operations
-    XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                = 0x00000006,   // Optimal layout when image is used only as source of transfer operations
-    XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL           = 0x00000007,   // Optimal layout when image is used only as destination of transfer operations
+    XGL_IMAGE_LAYOUT_UNDEFINED                              = 0x00000000,   // Implicit layout an image is when its contents are undefined due to various reasons (e.g. right after creation)
+    XGL_IMAGE_LAYOUT_GENERAL                                = 0x00000001,   // General layout when image can be used for any kind of access
+    XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL               = 0x00000002,   // Optimal layout when image is only used for color attachment read/write
+    XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL       = 0x00000003,   // Optimal layout when image is only used for depth/stencil attachment read/write
+    XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL        = 0x00000004,   // Optimal layout when image is used for read only depth/stencil attachment and shader access
+    XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL               = 0x00000005,   // Optimal layout when image is used for read only shader access
+    XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL                          = 0x00000006,   // Optimal layout when image is used only for clear operations
+    XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                = 0x00000007,   // Optimal layout when image is used only as source of transfer operations
+    XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL           = 0x00000008,   // Optimal layout when image is used only as destination of transfer operations
 
-    XGL_IMAGE_LAYOUT_BEGIN_RANGE                            = XGL_IMAGE_LAYOUT_GENERAL,
+    XGL_IMAGE_LAYOUT_BEGIN_RANGE                            = XGL_IMAGE_LAYOUT_UNDEFINED,
     XGL_IMAGE_LAYOUT_END_RANGE                              = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
     XGL_NUM_IMAGE_LAYOUT                                    = (XGL_IMAGE_LAYOUT_END_RANGE - XGL_IMAGE_LAYOUT_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_IMAGE_LAYOUT)
