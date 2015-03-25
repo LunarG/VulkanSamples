@@ -1075,14 +1075,6 @@ ICD_EXPORT void XGLAPI xglCmdBindPipeline(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void XGLAPI xglCmdBindPipelineDelta(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_PIPELINE_DELTA                          delta)
-{
-    NULLDRV_LOG_FUNC;
-}
-
 ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_STATE_BIND_POINT                        stateBindPoint,
@@ -1652,6 +1644,19 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
             (struct nulldrv_pipeline **) pPipeline);
 }
 
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
+    XGL_DEVICE                                  device,
+    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
+    XGL_PIPELINE                                basePipeline,
+    XGL_PIPELINE*                               pPipeline)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+
+    return graphics_pipeline_create(dev, pCreateInfo,
+            (struct nulldrv_pipeline **) pPipeline);
+}
+
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(
     XGL_DEVICE                                  device,
     const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
@@ -1672,7 +1677,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglStorePipeline(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
     XGL_DEVICE                                  device,
-    size_t                                    dataSize,
+    size_t                                    	dataSize,
     const void*                                 pData,
     XGL_PIPELINE*                               pPipeline)
 {
@@ -1680,11 +1685,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(
+ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipelineDerivative(
     XGL_DEVICE                                  device,
-    XGL_PIPELINE                                p1,
-    XGL_PIPELINE                                p2,
-    XGL_PIPELINE_DELTA*                         delta)
+    size_t                                    	dataSize,
+    const void*                                 pData,
+    XGL_PIPELINE				basePipeline,
+    XGL_PIPELINE*                               pPipeline)
 {
     NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;

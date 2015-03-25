@@ -3025,18 +3025,6 @@ static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
     cmd->bind.pipeline.compute = pipeline;
 }
 
-static void cmd_bind_graphics_delta(struct intel_cmd *cmd,
-                                    const struct intel_pipeline_delta *delta)
-{
-    cmd->bind.pipeline.graphics_delta = delta;
-}
-
-static void cmd_bind_compute_delta(struct intel_cmd *cmd,
-                                   const struct intel_pipeline_delta *delta)
-{
-    cmd->bind.pipeline.compute_delta = delta;
-}
-
 static void cmd_bind_graphics_dset(struct intel_cmd *cmd,
                                    const struct intel_desc_set *dset,
                                    const uint32_t *dynamic_offsets)
@@ -3326,26 +3314,6 @@ ICD_EXPORT void XGLAPI xglCmdBindPipeline(
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
         cmd_bind_graphics_pipeline(cmd, intel_pipeline(pipeline));
-        break;
-    default:
-        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
-        break;
-    }
-}
-
-ICD_EXPORT void XGLAPI xglCmdBindPipelineDelta(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_PIPELINE_DELTA                          delta)
-{
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    switch (pipelineBindPoint) {
-    case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd_bind_compute_delta(cmd, delta);
-        break;
-    case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd_bind_graphics_delta(cmd, delta);
         break;
     default:
         cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);

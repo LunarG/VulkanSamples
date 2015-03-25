@@ -478,19 +478,17 @@ class Pipeline : public DerivedObject<XGL_PIPELINE, Object> {
 public:
     // xglCreateGraphicsPipeline()
     void init(const Device &dev, const XGL_GRAPHICS_PIPELINE_CREATE_INFO &info);
+    // xglCreateGraphicsPipelineDerivative()
+    void init(const Device &dev, const XGL_GRAPHICS_PIPELINE_CREATE_INFO &info, const XGL_PIPELINE basePipeline);
     // xglCreateComputePipeline()
     void init(const Device &dev, const XGL_COMPUTE_PIPELINE_CREATE_INFO &info);
     // xglLoadPipeline()
     void init(const Device&dev, size_t size, const void *data);
+    // xglLoadPipelineDerivative()
+    void init(const Device&dev, size_t size, const void *data, XGL_PIPELINE basePipeline);
 
     // xglStorePipeline()
     size_t store(size_t size, void *data);
-};
-
-class PipelineDelta : public DerivedObject<XGL_PIPELINE_DELTA, Object> {
-public:
-    // xglCreatePipelineDelta()
-    void init(const Device &dev, const Pipeline &p1, const Pipeline &p2);
 };
 
 class Sampler : public DerivedObject<XGL_SAMPLER, Object> {

@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 59, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 60, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -69,7 +69,6 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_COLOR_ATTACHMENT_VIEW, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DEPTH_STENCIL_VIEW, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_SHADER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE, XGL_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE_DELTA, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_SAMPLER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET_LAYOUT, XGL_OBJECT)
@@ -1220,6 +1219,7 @@ typedef enum _XGL_DEPTH_STENCIL_VIEW_CREATE_FLAGS
 typedef enum _XGL_PIPELINE_CREATE_FLAGS
 {
     XGL_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT            = 0x00000001,
+    XGL_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT               = 0x00000002,
     XGL_MAX_ENUM(_XGL_PIPELINE_CREATE_FLAGS)
 } XGL_PIPELINE_CREATE_FLAGS;
 
@@ -2299,10 +2299,11 @@ typedef XGL_RESULT (XGLAPI *xglCreateColorAttachmentViewType)(XGL_DEVICE device,
 typedef XGL_RESULT (XGLAPI *xglCreateDepthStencilViewType)(XGL_DEVICE device, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, XGL_DEPTH_STENCIL_VIEW* pView);
 typedef XGL_RESULT (XGLAPI *xglCreateShaderType)(XGL_DEVICE device, const XGL_SHADER_CREATE_INFO* pCreateInfo, XGL_SHADER* pShader);
 typedef XGL_RESULT (XGLAPI *xglCreateGraphicsPipelineType)(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline);
+typedef XGL_RESULT (XGLAPI *xglCreateGraphicsPipelineDerivativeType)(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE basePipeline, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglCreateComputePipelineType)(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglStorePipelineType)(XGL_PIPELINE pipeline, size_t* pDataSize, void* pData);
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE* pPipeline);
-typedef XGL_RESULT (XGLAPI *xglCreatePipelineDeltaType)(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta);
+typedef XGL_RESULT (XGLAPI *xglLoadPipelineDerivativeType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE basePipeline, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglCreateSamplerType)(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler);
 typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
 typedef XGL_RESULT (XGLAPI *xglBeginDescriptorRegionUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
@@ -2321,7 +2322,6 @@ typedef XGL_RESULT (XGLAPI *xglBeginCommandBufferType)(XGL_CMD_BUFFER cmdBuffer,
 typedef XGL_RESULT (XGLAPI *xglEndCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef XGL_RESULT (XGLAPI *xglResetCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef void       (XGLAPI *xglCmdBindPipelineType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline);
-typedef void       (XGLAPI *xglCmdBindPipelineDeltaType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta);
 typedef void       (XGLAPI *xglCmdBindDynamicStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state);
 typedef void       (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData);
 typedef void       (XGLAPI *xglCmdBindIndexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
@@ -2666,6 +2666,12 @@ XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
     XGL_PIPELINE*                               pPipeline);
 
+XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
+    XGL_DEVICE                                  device,
+    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
+    XGL_PIPELINE                                basePipeline,
+    XGL_PIPELINE*                               pPipeline);
+
 XGL_RESULT XGLAPI xglCreateComputePipeline(
     XGL_DEVICE                                  device,
     const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
@@ -2682,11 +2688,12 @@ XGL_RESULT XGLAPI xglLoadPipeline(
     const void*                                 pData,
     XGL_PIPELINE*                               pPipeline);
 
-XGL_RESULT XGLAPI xglCreatePipelineDelta(
+XGL_RESULT XGLAPI xglLoadPipelineDerivative(
     XGL_DEVICE                                  device,
-    XGL_PIPELINE                                p1,
-    XGL_PIPELINE                                p2,
-    XGL_PIPELINE_DELTA*                         delta);
+    size_t                                      dataSize,
+    const void*                                 pData,
+    XGL_PIPELINE                                basePipeline,
+    XGL_PIPELINE*                               pPipeline);
 
 // Sampler functions
 
@@ -2785,11 +2792,6 @@ void XGLAPI xglCmdBindPipeline(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
     XGL_PIPELINE                                pipeline);
-
-void XGLAPI xglCmdBindPipelineDelta(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_PIPELINE_DELTA                          delta);
 
 void XGLAPI xglCmdBindDynamicStateObject(
     XGL_CMD_BUFFER                              cmdBuffer,

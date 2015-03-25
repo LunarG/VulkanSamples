@@ -198,7 +198,6 @@ core = Extension(
         "XGL_DEPTH_STENCIL_VIEW",
         "XGL_SHADER",
         "XGL_PIPELINE",
-        "XGL_PIPELINE_DELTA",
         "XGL_SAMPLER",
         "XGL_DESCRIPTOR_SET",
         "XGL_DESCRIPTOR_SET_LAYOUT",
@@ -484,6 +483,12 @@ core = Extension(
              Param("const XGL_GRAPHICS_PIPELINE_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_PIPELINE*", "pPipeline")]),
 
+        Proto("XGL_RESULT", "CreateGraphicsPipelineDerivative",
+            [Param("XGL_DEVICE", "device"),
+             Param("const XGL_GRAPHICS_PIPELINE_CREATE_INFO*", "pCreateInfo"),
+             Param("XGL_PIPELINE", "basePipeline"),
+             Param("XGL_PIPELINE*", "pPipeline")]),
+
         Proto("XGL_RESULT", "CreateComputePipeline",
             [Param("XGL_DEVICE", "device"),
              Param("const XGL_COMPUTE_PIPELINE_CREATE_INFO*", "pCreateInfo"),
@@ -500,11 +505,12 @@ core = Extension(
              Param("const void*", "pData"),
              Param("XGL_PIPELINE*", "pPipeline")]),
 
-        Proto("XGL_RESULT", "CreatePipelineDelta",
+        Proto("XGL_RESULT", "LoadPipelineDerivative",
             [Param("XGL_DEVICE", "device"),
-             Param("XGL_PIPELINE", "p1"),
-             Param("XGL_PIPELINE", "p2"),
-             Param("XGL_PIPELINE_DELTA*", "delta")]),
+             Param("size_t", "dataSize"),
+             Param("const void*", "pData"),
+             Param("XGL_PIPELINE", "basePipeline"),
+             Param("XGL_PIPELINE*", "pPipeline")]),
 
         Proto("XGL_RESULT", "CreateSampler",
             [Param("XGL_DEVICE", "device"),
@@ -593,11 +599,6 @@ core = Extension(
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_PIPELINE_BIND_POINT", "pipelineBindPoint"),
              Param("XGL_PIPELINE", "pipeline")]),
-
-        Proto("void", "CmdBindPipelineDelta",
-            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_PIPELINE_BIND_POINT", "pipelineBindPoint"),
-             Param("XGL_PIPELINE_DELTA", "delta")]),
 
         Proto("void", "CmdBindDynamicStateObject",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
@@ -928,7 +929,6 @@ object_list = [
     "XGL_DEPTH_STENCIL_VIEW",
     "XGL_SHADER",
     "XGL_PIPELINE",
-    "XGL_PIPELINE_DELTA",
     "XGL_SAMPLER",
     "XGL_DESCRIPTOR_SET",
     "XGL_DESCRIPTOR_SET_LAYOUT",

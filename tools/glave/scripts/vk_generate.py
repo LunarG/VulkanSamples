@@ -1055,6 +1055,62 @@ class Subcommand(object):
                                                                                          '    glv_LogError("CreateGraphicsPipeline must have CreateInfo stype of XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO.\\n");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
+                             'CreateGraphicsPipelineDerivative' : {'param': 'pCreateInfo', 'txt': ['if (pPacket->pCreateInfo->sType == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {\n',
+                                                                                         '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
+                                                                                         '    void** ppNextVoidPtr = (void**)&pPacket->pCreateInfo->pNext;\n',
+                                                                                         '    *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pNext);\n',
+                                                                                         '    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;\n',
+                                                                                         '    while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
+                                                                                         '        switch(pNext->sType)\n', '    {\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:\n',
+                                                                                         '            {\n',
+                                                                                         '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
+                                                                                         '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                break;\n',
+                                                                                         '            }\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:\n',
+                                                                                         '            {\n',
+                                                                                         '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
+                                                                                         '                XGL_PIPELINE_CB_STATE_CREATE_INFO *pCb = (XGL_PIPELINE_CB_STATE_CREATE_INFO *) pNext;\n',
+                                                                                         '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                pCb->pAttachments = (XGL_PIPELINE_CB_ATTACHMENT_STATE*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pCb->pAttachments);\n',
+                                                                                         '                break;\n',
+                                                                                         '            }\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:\n',
+                                                                                         '            {\n',
+                                                                                         '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
+                                                                                         '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                interpret_pipeline_shader(pHeader, &pNext->shader);\n',
+                                                                                         '                break;\n',
+                                                                                         '            }\n',
+                                                                                         '            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:\n',
+                                                                                         '            {\n',
+                                                                                         '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
+                                                                                         '                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pVi = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *) pNext;\n',
+                                                                                         '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                pVi->pVertexBindingDescriptions = (XGL_VERTEX_INPUT_BINDING_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexBindingDescriptions);\n',
+                                                                                         '                pVi->pVertexAttributeDescriptions = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexAttributeDescriptions);\n',
+                                                                                         '                break;\n',
+                                                                                         '            }\n',
+                                                                                         '            default:\n',
+                                                                                         '            {\n',
+                                                                                         '               glv_LogError("Encountered an unexpected type in pipeline state list.\\n");\n',
+                                                                                         '               pPacket->header = NULL;\n',
+                                                                                         '               pNext->pNext = NULL;\n',
+                                                                                         '            }\n',
+                                                                                         '        }\n',
+                                                                                         '        pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;\n',
+                                                                                         '    }\n',
+                                                                                         '} else {\n',
+                                                                                         '    // This is unexpected.\n',
+                                                                                         '    glv_LogError("CreateGraphicsPipelineDerivative must have CreateInfo stype of XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO.\\n");\n',
+                                                                                         '    pPacket->header = NULL;\n',
+                                                                                         '}']},
                              'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (XGL_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
         if_body = []
         if_body.append('typedef struct struct_xglApiVersion {')
@@ -1529,6 +1585,37 @@ class Subcommand(object):
         cgp_body.append('            returnValue = manually_handle_xglCreateGraphicsPipeline(pPacket);')
         return "\n".join(cgp_body)
 
+    def _gen_replay_create_graphics_pipeline_derivative(self):
+        cgp_body = []
+        cgp_body.append('            XGL_GRAPHICS_PIPELINE_CREATE_INFO createInfo;')
+        cgp_body.append('            struct shaderPair saveShader[10];')
+        cgp_body.append('            unsigned int idx = 0;')
+        cgp_body.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));')
+        cgp_body.append('            createInfo.lastSetLayout = remap(createInfo.lastSetLayout);')
+        cgp_body.append('            // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext')
+        cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;')
+        cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;')
+        cgp_body.append('            while (XGL_NULL_HANDLE != pPacketNext)')
+        cgp_body.append('            {')
+        cgp_body.append('                if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pNext->sType)')
+        cgp_body.append('                {')
+        cgp_body.append('                    saveShader[idx].val = pNext->shader.shader;')
+        cgp_body.append('                    saveShader[idx++].addr = &(pNext->shader.shader);')
+        cgp_body.append('                    pNext->shader.shader = remap(pPacketNext->shader.shader);')
+        cgp_body.append('                }')
+        cgp_body.append('                pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacketNext->pNext;')
+        cgp_body.append('                pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;')
+        cgp_body.append('            }')
+        cgp_body.append('            XGL_PIPELINE pipeline;')
+        cgp_body.append('            replayResult = m_xglFuncs.real_xglCreateGraphicsPipelineDerivative(remap(pPacket->device), &createInfo, remap(pPacket->basePipeline), &pipeline);')
+        cgp_body.append('            if (replayResult == XGL_SUCCESS)')
+        cgp_body.append('            {')
+        cgp_body.append('                add_to_map(pPacket->pPipeline, &pipeline);')
+        cgp_body.append('            }')
+        cgp_body.append('            for (unsigned int i = 0; i < idx; i++)')
+        cgp_body.append('                *(saveShader[i].addr) = saveShader[i].val;')
+        return "\n".join(cgp_body)
+
     def _gen_replay_cmd_wait_events(self):
         cwe_body = []
         cwe_body.append('            returnValue = manually_handle_xglCmdWaitEvents(pPacket);')
@@ -1665,6 +1752,7 @@ class Subcommand(object):
                             'CreateBuffer': self._gen_replay_create_buffer,
                             'GetImageSubresourceInfo': self._gen_replay_get_image_subresource_info,
                             'CreateGraphicsPipeline': self._gen_replay_create_graphics_pipeline,
+                            'CreateGraphicsPipelineDerivative': self._gen_replay_create_graphics_pipeline_derivative,
                             'CreateFramebuffer': self._gen_replay_create_framebuffer,
                             'CreateRenderPass': self._gen_replay_create_renderpass,
                             'BeginCommandBuffer': self._gen_replay_begin_command_buffer,
@@ -1702,7 +1790,7 @@ class Subcommand(object):
         # Functions that create views are unique from other create functions
         create_view_list = ['CreateBufferView', 'CreateImageView', 'CreateColorAttachmentView', 'CreateDepthStencilView', 'CreateComputePipeline']
         # Functions to treat as "Create' that don't have 'Create' in the name
-        special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
+        special_create_list = ['LoadPipeline', 'LoadPipelineDerivative', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
         # A couple funcs use do while loops
         do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == XGL_SUCCESS', 'GetEventStatus': '(pPacket->result == XGL_EVENT_SET || pPacket->result == XGL_EVENT_RESET) && replayResult != pPacket->result'}
         rbody = []

@@ -35,7 +35,6 @@
 
 struct intel_pipeline;
 struct intel_pipeline_shader;
-struct intel_pipeline_delta;
 struct intel_viewport_state;
 struct intel_raster_state;
 struct intel_msaa_state;
@@ -50,7 +49,7 @@ struct intel_cmd_meta;
 
 /*
  * We know what workarounds are needed for intel_pipeline.  These are mostly
- * for intel_pipeline_delta.
+ * for pipeline derivatives.
  */
 enum intel_cmd_wa_flags {
     /*
@@ -146,8 +145,6 @@ struct intel_cmd_bind {
     struct {
         const struct intel_pipeline *graphics;
         const struct intel_pipeline *compute;
-        const struct intel_pipeline_delta *graphics_delta;
-        const struct intel_pipeline_delta *compute_delta;
 
         uint32_t vs_offset;
         uint32_t tcs_offset;

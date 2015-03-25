@@ -1217,6 +1217,21 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
+        XGL_DEVICE device,
+        const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo,
+        XGL_PIPELINE basePipeline,
+        XGL_PIPELINE* pPipeline)
+{
+    XGL_RESULT result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    if (result == XGL_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        insertGlobalObjectNode(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
@@ -1828,6 +1843,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCreateShader;
     if (!strcmp(funcName, "xglCreateGraphicsPipeline"))
         return (void*) xglCreateGraphicsPipeline;
+    if (!strcmp(funcName, "xglCreateGraphicsPipelineDerivative"))
+        return (void*) xglCreateGraphicsPipelineDerivative;
     if (!strcmp(funcName, "xglCreateComputePipeline"))
         return (void*) xglCreateComputePipeline;
     if (!strcmp(funcName, "xglCreateSampler"))

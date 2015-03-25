@@ -1363,6 +1363,20 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
             (struct intel_pipeline **) pPipeline);
 }
 
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
+    XGL_DEVICE                                  device,
+    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
+    XGL_PIPELINE                                basePipeline,
+    XGL_PIPELINE*                               pPipeline)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    /* TODO: Use basePipeline to optimize creation of derivative */
+
+    return graphics_pipeline_create(dev, pCreateInfo,
+            (struct intel_pipeline **) pPipeline);
+}
+
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(
     XGL_DEVICE                                  device,
     const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
@@ -1388,11 +1402,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
     return XGL_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(
+ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipelineDerivative(
     XGL_DEVICE                                  device,
-    XGL_PIPELINE                                p1,
-    XGL_PIPELINE                                p2,
-    XGL_PIPELINE_DELTA*                         delta)
+    size_t                                      dataSize,
+    const void*                                 pData,
+    XGL_PIPELINE                                basePipeline,
+    XGL_PIPELINE*                               pPipeline)
 {
     return XGL_ERROR_UNAVAILABLE;
 }

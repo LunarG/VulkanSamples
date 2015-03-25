@@ -81,10 +81,11 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCreateDepthStencilViewType CreateDepthStencilView;
     xglCreateShaderType CreateShader;
     xglCreateGraphicsPipelineType CreateGraphicsPipeline;
+    xglCreateGraphicsPipelineDerivativeType CreateGraphicsPipelineDerivative;
     xglCreateComputePipelineType CreateComputePipeline;
     xglStorePipelineType StorePipeline;
     xglLoadPipelineType LoadPipeline;
-    xglCreatePipelineDeltaType CreatePipelineDelta;
+    xglLoadPipelineDerivativeType LoadPipelineDerivative;
     xglCreateSamplerType CreateSampler;
     xglCreateDescriptorSetLayoutType CreateDescriptorSetLayout;
     xglBeginDescriptorRegionUpdateType BeginDescriptorRegionUpdate;
@@ -103,7 +104,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglEndCommandBufferType EndCommandBuffer;
     xglResetCommandBufferType ResetCommandBuffer;
     xglCmdBindPipelineType CmdBindPipeline;
-    xglCmdBindPipelineDeltaType CmdBindPipelineDelta;
     xglCmdBindDynamicStateObjectType CmdBindDynamicStateObject;
     xglCmdBindDescriptorSetType CmdBindDescriptorSet;
     xglCmdBindVertexBufferType CmdBindVertexBuffer;

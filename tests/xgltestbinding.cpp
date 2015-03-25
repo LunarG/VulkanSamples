@@ -774,6 +774,15 @@ void Pipeline::init(const Device &dev, const XGL_GRAPHICS_PIPELINE_CREATE_INFO &
     alloc_memory(dev);
 }
 
+void Pipeline::init(
+        const Device &dev,
+        const XGL_GRAPHICS_PIPELINE_CREATE_INFO &info,
+        const XGL_PIPELINE basePipeline)
+{
+    DERIVED_OBJECT_INIT(xglCreateGraphicsPipelineDerivative, dev.obj(), &info, basePipeline);
+    alloc_memory(dev);
+}
+
 void Pipeline::init(const Device &dev, const XGL_COMPUTE_PIPELINE_CREATE_INFO &info)
 {
     DERIVED_OBJECT_INIT(xglCreateComputePipeline, dev.obj(), &info);
@@ -786,18 +795,22 @@ void Pipeline::init(const Device&dev, size_t size, const void *data)
     alloc_memory(dev);
 }
 
+void Pipeline::init(
+        const Device&dev,
+        size_t size,
+        const void *data,
+        const XGL_PIPELINE basePipeline)
+{
+    DERIVED_OBJECT_INIT(xglLoadPipelineDerivative, dev.obj(), size, data, basePipeline);
+    alloc_memory(dev);
+}
+
 size_t Pipeline::store(size_t size, void *data)
 {
     if (!EXPECT(xglStorePipeline(obj(), &size, data) == XGL_SUCCESS))
         size = 0;
 
     return size;
-}
-
-void PipelineDelta::init(const Device &dev, const Pipeline &p1, const Pipeline &p2)
-{
-    DERIVED_OBJECT_INIT(xglCreatePipelineDelta, dev.obj(), p1.obj(), p2.obj());
-    alloc_memory(dev);
 }
 
 void Sampler::init(const Device &dev, const XGL_SAMPLER_CREATE_INFO &info)
