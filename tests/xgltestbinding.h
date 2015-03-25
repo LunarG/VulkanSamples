@@ -40,7 +40,7 @@ class Device;
 class Queue;
 class GpuMemory;
 class Fence;
-class QueueSemaphore;
+class Semaphore;
 class Event;
 class QueryPool;
 class Buffer;
@@ -264,10 +264,10 @@ public:
     // xglQueueWaitIdle()
     void wait();
 
-    // xglSignalQueueSemaphore()
-    // xglWaitQueueSemaphore()
-    void signal_semaphore(QueueSemaphore &sem);
-    void wait_semaphore(QueueSemaphore &sem);
+    // xglQueueSignalSemaphore()
+    // xglQueueWaitSemaphore()
+    void signal_semaphore(Semaphore &sem);
+    void wait_semaphore(Semaphore &sem);
 };
 
 class GpuMemory : public DerivedObject<XGL_GPU_MEMORY, BaseObject> {
@@ -312,14 +312,14 @@ public:
     static XGL_FENCE_CREATE_INFO create_info(XGL_FLAGS flags);
 };
 
-class QueueSemaphore : public DerivedObject<XGL_QUEUE_SEMAPHORE, Object> {
+class Semaphore : public DerivedObject<XGL_SEMAPHORE, Object> {
 public:
-    // xglCreateQueueSemaphore()
-    void init(const Device &dev, const XGL_QUEUE_SEMAPHORE_CREATE_INFO &info);
-    // xglOpenSharedQueueSemaphore()
-    void init(const Device &dev, const XGL_QUEUE_SEMAPHORE_OPEN_INFO &info);
+    // xglCreateSemaphore()
+    void init(const Device &dev, const XGL_SEMAPHORE_CREATE_INFO &info);
+    // xglOpenSharedSemaphore()
+    void init(const Device &dev, const XGL_SEMAPHORE_OPEN_INFO &info);
 
-    static XGL_QUEUE_SEMAPHORE_CREATE_INFO create_info(uint32_t init_count, XGL_FLAGS flags);
+    static XGL_SEMAPHORE_CREATE_INFO create_info(uint32_t init_count, XGL_FLAGS flags);
 };
 
 class Event : public DerivedObject<XGL_EVENT, Object> {
@@ -648,10 +648,10 @@ inline XGL_FENCE_CREATE_INFO Fence::create_info(XGL_FLAGS flags)
     return info;
 }
 
-inline XGL_QUEUE_SEMAPHORE_CREATE_INFO QueueSemaphore::create_info(uint32_t init_count, XGL_FLAGS flags)
+inline XGL_SEMAPHORE_CREATE_INFO Semaphore::create_info(uint32_t init_count, XGL_FLAGS flags)
 {
-    XGL_QUEUE_SEMAPHORE_CREATE_INFO info = {};
-    info.sType = XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO;
+    XGL_SEMAPHORE_CREATE_INFO info = {};
+    info.sType = XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     info.initialCount = init_count;
     info.flags = flags;
     return info;

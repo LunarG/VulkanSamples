@@ -367,10 +367,10 @@ class StructWrapperGen:
                     if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
                         struct_name = 'XGL_PIPELINE_CB_STATE'
                     elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
+                        struct_name = 'XGL_SEMAPHORE_CREATE_INFO'
                         class_name = self.get_class_name(struct_name)
                     elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
-                        struct_name = 'XGL_QUEUE_SEMAPHORE_OPEN_INFO'
+                        struct_name = 'XGL_SEMAPHORE_OPEN_INFO'
                         class_name = self.get_class_name(struct_name)
                     instance_name = "swc%i" % class_num
                     dp_funcs.append("        case %s:\n        {" % (v))

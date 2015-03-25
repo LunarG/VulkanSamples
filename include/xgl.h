@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 62, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 63, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -80,7 +80,7 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_CB_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_DS_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_CMD_BUFFER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_FENCE, XGL_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_QUEUE_SEMAPHORE, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_SEMAPHORE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_EVENT, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_QUERY_POOL, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_FRAMEBUFFER, XGL_OBJECT)
@@ -1024,8 +1024,8 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO               = 20,
     XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO                    = 21,
     XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO                    = 22,
-    XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO          = 23,
-    XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_OPEN_INFO            = 24,
+    XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                = 23,
+    XGL_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO                  = 24,
     XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO               = 25,
     XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO    = 26,
     XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO        = 27,
@@ -2163,20 +2163,20 @@ typedef struct _XGL_FENCE_CREATE_INFO
     XGL_FLAGS                               flags;      // Reserved
 } XGL_FENCE_CREATE_INFO;
 
-typedef struct _XGL_QUEUE_SEMAPHORE_CREATE_INFO
+typedef struct _XGL_SEMAPHORE_CREATE_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_CREATE_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     uint32_t                                initialCount;
     XGL_FLAGS                               flags;      // XGL_SEMAPHORE_CREATE_FLAGS
-} XGL_QUEUE_SEMAPHORE_CREATE_INFO;
+} XGL_SEMAPHORE_CREATE_INFO;
 
-typedef struct _XGL_QUEUE_SEMAPHORE_OPEN_INFO
+typedef struct _XGL_SEMAPHORE_OPEN_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUEUE_SEMAPHORE_OPEN_INFO
+    XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
     const void*                             pNext;      // Pointer to next structure
-    XGL_QUEUE_SEMAPHORE                     sharedSemaphore;
-} XGL_QUEUE_SEMAPHORE_OPEN_INFO;
+    XGL_SEMAPHORE                           sharedSemaphore;
+} XGL_SEMAPHORE_OPEN_INFO;
 
 typedef struct _XGL_PIPELINE_STATISTICS_DATA
 {
@@ -2264,7 +2264,7 @@ typedef XGL_RESULT (XGLAPI *xglUnmapMemoryType)(XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglPinSystemMemoryType)(XGL_DEVICE device, const void* pSysMem, size_t memSize, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglGetMultiGpuCompatibilityType)(XGL_PHYSICAL_GPU gpu0, XGL_PHYSICAL_GPU gpu1, XGL_GPU_COMPATIBILITY_INFO* pInfo);
 typedef XGL_RESULT (XGLAPI *xglOpenSharedMemoryType)(XGL_DEVICE device, const XGL_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem);
-typedef XGL_RESULT (XGLAPI *xglOpenSharedQueueSemaphoreType)(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore);
+typedef XGL_RESULT (XGLAPI *xglOpenSharedSemaphoreType)(XGL_DEVICE device, const XGL_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_SEMAPHORE* pSemaphore);
 typedef XGL_RESULT (XGLAPI *xglOpenPeerMemoryType)(XGL_DEVICE device, const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglOpenPeerImageType)(XGL_DEVICE device, const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo, XGL_IMAGE* pImage, XGL_GPU_MEMORY* pMem);
 typedef XGL_RESULT (XGLAPI *xglDestroyObjectType)(XGL_OBJECT object);
@@ -2275,9 +2275,9 @@ typedef XGL_RESULT (XGLAPI *xglBindImageMemoryRangeType)(XGL_IMAGE image, uint32
 typedef XGL_RESULT (XGLAPI *xglCreateFenceType)(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence);
 typedef XGL_RESULT (XGLAPI *xglGetFenceStatusType)(XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglWaitForFencesType)(XGL_DEVICE device, uint32_t fenceCount, const XGL_FENCE* pFences, bool32_t waitAll, uint64_t timeout);
-typedef XGL_RESULT (XGLAPI *xglCreateQueueSemaphoreType)(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_QUEUE_SEMAPHORE* pSemaphore);
-typedef XGL_RESULT (XGLAPI *xglSignalQueueSemaphoreType)(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore);
-typedef XGL_RESULT (XGLAPI *xglWaitQueueSemaphoreType)(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore);
+typedef XGL_RESULT (XGLAPI *xglCreateSemaphoreType)(XGL_DEVICE device, const XGL_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_SEMAPHORE* pSemaphore);
+typedef XGL_RESULT (XGLAPI *xglQueueSignalSemaphoreType)(XGL_QUEUE queue, XGL_SEMAPHORE semaphore);
+typedef XGL_RESULT (XGLAPI *xglQueueWaitSemaphoreType)(XGL_QUEUE queue, XGL_SEMAPHORE semaphore);
 typedef XGL_RESULT (XGLAPI *xglCreateEventType)(XGL_DEVICE device, const XGL_EVENT_CREATE_INFO* pCreateInfo, XGL_EVENT* pEvent);
 typedef XGL_RESULT (XGLAPI *xglGetEventStatusType)(XGL_EVENT event);
 typedef XGL_RESULT (XGLAPI *xglSetEventType)(XGL_EVENT event);
@@ -2475,10 +2475,10 @@ XGL_RESULT XGLAPI xglOpenSharedMemory(
     const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
     XGL_GPU_MEMORY*                             pMem);
 
-XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(
+XGL_RESULT XGLAPI xglOpenSharedSemaphore(
     XGL_DEVICE                                  device,
-    const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
-    XGL_QUEUE_SEMAPHORE*                        pSemaphore);
+    const XGL_SEMAPHORE_OPEN_INFO*              pOpenInfo,
+    XGL_SEMAPHORE*                              pSemaphore);
 
 XGL_RESULT XGLAPI xglOpenPeerMemory(
     XGL_DEVICE                                  device,
@@ -2542,18 +2542,18 @@ XGL_RESULT XGLAPI xglWaitForFences(
 
 // Queue semaphore functions
 
-XGL_RESULT XGLAPI xglCreateQueueSemaphore(
+XGL_RESULT XGLAPI xglCreateSemaphore(
     XGL_DEVICE                                  device,
-    const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
-    XGL_QUEUE_SEMAPHORE*                        pSemaphore);
+    const XGL_SEMAPHORE_CREATE_INFO*            pCreateInfo,
+    XGL_SEMAPHORE*                              pSemaphore);
 
-XGL_RESULT XGLAPI xglSignalQueueSemaphore(
+XGL_RESULT XGLAPI xglQueueSignalSemaphore(
     XGL_QUEUE                                   queue,
-    XGL_QUEUE_SEMAPHORE                         semaphore);
+    XGL_SEMAPHORE                               semaphore);
 
-XGL_RESULT XGLAPI xglWaitQueueSemaphore(
+XGL_RESULT XGLAPI xglQueueWaitSemaphore(
     XGL_QUEUE                                   queue,
-    XGL_QUEUE_SEMAPHORE                         semaphore);
+    XGL_SEMAPHORE                               semaphore);
 
 // Event functions
 

@@ -708,12 +708,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(XGL_DEVICE device, const 
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglOpenSharedSemaphore(XGL_DEVICE device, const XGL_SEMAPHORE_OPEN_INFO* pOpenInfo, XGL_SEMAPHORE* pSemaphore)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.OpenSharedQueueSemaphore(device, pOpenInfo, pSemaphore);
+    XGL_RESULT result = nextTable.OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
     return result;
 }
 
@@ -815,12 +815,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t 
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_QUEUE_SEMAPHORE* pSemaphore)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSemaphore(XGL_DEVICE device, const XGL_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_SEMAPHORE* pSemaphore)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
+    XGL_RESULT result = nextTable.CreateSemaphore(device, pCreateInfo, pSemaphore);
     if (result == XGL_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -831,15 +831,15 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, co
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSignalSemaphore(XGL_QUEUE queue, XGL_SEMAPHORE semaphore)
 {
-    XGL_RESULT result = nextTable.SignalQueueSemaphore(queue, semaphore);
+    XGL_RESULT result = nextTable.QueueSignalSemaphore(queue, semaphore);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(XGL_QUEUE queue, XGL_QUEUE_SEMAPHORE semaphore)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitSemaphore(XGL_QUEUE queue, XGL_SEMAPHORE semaphore)
 {
-    XGL_RESULT result = nextTable.WaitQueueSemaphore(queue, semaphore);
+    XGL_RESULT result = nextTable.QueueWaitSemaphore(queue, semaphore);
     return result;
 }
 

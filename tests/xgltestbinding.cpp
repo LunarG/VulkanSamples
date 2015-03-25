@@ -540,14 +540,14 @@ void Queue::wait()
     EXPECT(xglQueueWaitIdle(obj()) == XGL_SUCCESS);
 }
 
-void Queue::signal_semaphore(QueueSemaphore &sem)
+void Queue::signal_semaphore(Semaphore &sem)
 {
-    EXPECT(xglSignalQueueSemaphore(obj(), sem.obj()) == XGL_SUCCESS);
+    EXPECT(xglQueueSignalSemaphore(obj(), sem.obj()) == XGL_SUCCESS);
 }
 
-void Queue::wait_semaphore(QueueSemaphore &sem)
+void Queue::wait_semaphore(Semaphore &sem)
 {
-    EXPECT(xglWaitQueueSemaphore(obj(), sem.obj()) == XGL_SUCCESS);
+    EXPECT(xglQueueWaitSemaphore(obj(), sem.obj()) == XGL_SUCCESS);
 }
 
 GpuMemory::~GpuMemory()
@@ -610,15 +610,15 @@ void Fence::init(const Device &dev, const XGL_FENCE_CREATE_INFO &info)
     alloc_memory(dev);
 }
 
-void QueueSemaphore::init(const Device &dev, const XGL_QUEUE_SEMAPHORE_CREATE_INFO &info)
+void Semaphore::init(const Device &dev, const XGL_SEMAPHORE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateQueueSemaphore, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(xglCreateSemaphore, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void QueueSemaphore::init(const Device &dev, const XGL_QUEUE_SEMAPHORE_OPEN_INFO &info)
+void Semaphore::init(const Device &dev, const XGL_SEMAPHORE_OPEN_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglOpenSharedQueueSemaphore, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(xglOpenSharedSemaphore, dev.obj(), &info);
 }
 
 void Event::init(const Device &dev, const XGL_EVENT_CREATE_INFO &info)

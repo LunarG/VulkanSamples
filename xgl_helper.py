@@ -1502,10 +1502,10 @@ class GraphVizGen:
                     #if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
                     #    struct_name = 'XGL_PIPELINE_CB_STATE'
                     if 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_QUEUE_SEMAPHORE_CREATE_INFO'
+                        struct_name = 'XGL_SEMAPHORE_CREATE_INFO'
                         print_func_name = self._get_gv_func_name(struct_name)
                     elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
-                        struct_name = 'XGL_QUEUE_SEMAPHORE_OPEN_INFO'
+                        struct_name = 'XGL_SEMAPHORE_OPEN_INFO'
                         print_func_name = self._get_gv_func_name(struct_name)
                     gv_funcs.append('        case %s:\n' % (v))
                     gv_funcs.append('            return %s((%s*)pStruct, nodeName);\n' % (print_func_name, struct_name))

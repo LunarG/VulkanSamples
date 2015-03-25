@@ -1728,35 +1728,35 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
    return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedSemaphore(
     XGL_DEVICE                                  device,
-    const XGL_QUEUE_SEMAPHORE_OPEN_INFO*        pOpenInfo,
-    XGL_QUEUE_SEMAPHORE*                        pSemaphore)
+    const XGL_SEMAPHORE_OPEN_INFO*              pOpenInfo,
+    XGL_SEMAPHORE*                              pSemaphore)
 {
     NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateSemaphore(
     XGL_DEVICE                                  device,
-    const XGL_QUEUE_SEMAPHORE_CREATE_INFO*      pCreateInfo,
-    XGL_QUEUE_SEMAPHORE*                        pSemaphore)
+    const XGL_SEMAPHORE_CREATE_INFO*            pCreateInfo,
+    XGL_SEMAPHORE*                              pSemaphore)
 {
     NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglSignalQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueSignalSemaphore(
     XGL_QUEUE                                   queue,
-    XGL_QUEUE_SEMAPHORE                         semaphore)
+    XGL_SEMAPHORE                               semaphore)
 {
     NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglWaitQueueSemaphore(
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitSemaphore(
     XGL_QUEUE                                   queue,
-    XGL_QUEUE_SEMAPHORE                         semaphore)
+    XGL_SEMAPHORE                               semaphore)
 {
     NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;

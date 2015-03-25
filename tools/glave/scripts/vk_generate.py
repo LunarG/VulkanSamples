@@ -1784,7 +1784,7 @@ class Subcommand(object):
                                 'WsiX11AssociateConnection', 'WsiX11GetMSC', 'WsiX11CreatePresentableImage', 'WsiX11QueuePresent']
         # multi-gpu Open funcs w/ list of local params to create
         custom_open_params = {'OpenSharedMemory': (-1,),
-                              'OpenSharedQueueSemaphore': (-1,),
+                              'OpenSharedSemaphore': (-1,),
                               'OpenPeerMemory': (-1,),
                               'OpenPeerImage': (-1, -2,)}
         # Functions that create views are unique from other create functions

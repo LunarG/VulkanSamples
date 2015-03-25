@@ -49,7 +49,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglPinSystemMemoryType PinSystemMemory;
     xglGetMultiGpuCompatibilityType GetMultiGpuCompatibility;
     xglOpenSharedMemoryType OpenSharedMemory;
-    xglOpenSharedQueueSemaphoreType OpenSharedQueueSemaphore;
+    xglOpenSharedSemaphoreType OpenSharedSemaphore;
     xglOpenPeerMemoryType OpenPeerMemory;
     xglOpenPeerImageType OpenPeerImage;
     xglDestroyObjectType DestroyObject;
@@ -60,9 +60,9 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCreateFenceType CreateFence;
     xglGetFenceStatusType GetFenceStatus;
     xglWaitForFencesType WaitForFences;
-    xglCreateQueueSemaphoreType CreateQueueSemaphore;
-    xglSignalQueueSemaphoreType SignalQueueSemaphore;
-    xglWaitQueueSemaphoreType WaitQueueSemaphore;
+    xglCreateSemaphoreType CreateSemaphore;
+    xglQueueSignalSemaphoreType QueueSignalSemaphore;
+    xglQueueWaitSemaphoreType QueueWaitSemaphore;
     xglCreateEventType CreateEvent;
     xglGetEventStatusType GetEventStatus;
     xglSetEventType SetEvent;
