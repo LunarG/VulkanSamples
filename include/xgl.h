@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 59, 2)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 59, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -2333,16 +2333,16 @@ typedef void       (XGLAPI *xglCmdDrawIndexedIndirectType)(XGL_CMD_BUFFER cmdBuf
 typedef void       (XGLAPI *xglCmdDispatchType)(XGL_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z);
 typedef void       (XGLAPI *xglCmdDispatchIndirectType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset);
 typedef void       (XGLAPI *xglCmdCopyBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_COPY* pRegions);
-typedef void       (XGLAPI *xglCmdCopyImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t regionCount, const XGL_IMAGE_COPY* pRegions);
-typedef void       (XGLAPI *xglCmdBlitImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destLayout, uint32_t regionCount, const XGL_IMAGE_BLIT* pRegions);
-typedef void       (XGLAPI *xglCmdCopyBufferToImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
-typedef void       (XGLAPI *xglCmdCopyImageToBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
+typedef void       (XGLAPI *xglCmdCopyImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const XGL_IMAGE_COPY* pRegions);
+typedef void       (XGLAPI *xglCmdBlitImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const XGL_IMAGE_BLIT* pRegions);
+typedef void       (XGLAPI *xglCmdCopyBufferToImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
+typedef void       (XGLAPI *xglCmdCopyImageToBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_BUFFER destBuffer, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions);
 typedef void       (XGLAPI *xglCmdCloneImageDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout);
 typedef void       (XGLAPI *xglCmdUpdateBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData);
 typedef void       (XGLAPI *xglCmdFillBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data);
-typedef void       (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_CLEAR_COLOR color, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
-typedef void       (XGLAPI *xglCmdClearDepthStencilType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
-typedef void       (XGLAPI *xglCmdResolveImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t rectCount, const XGL_IMAGE_RESOLVE* pRects);
+typedef void       (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_IMAGE_LAYOUT imageLayout, XGL_CLEAR_COLOR color, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
+typedef void       (XGLAPI *xglCmdClearDepthStencilType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_IMAGE_LAYOUT imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
+typedef void       (XGLAPI *xglCmdResolveImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout, uint32_t rectCount, const XGL_IMAGE_RESOLVE* pRects);
 typedef void       (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_PIPE_EVENT pipeEvent);
 typedef void       (XGLAPI *xglCmdResetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_PIPE_EVENT pipeEvent);
 typedef void       (XGLAPI *xglCmdWaitEventsType)(XGL_CMD_BUFFER cmdBuffer, const XGL_EVENT_WAIT_INFO* pWaitInfo);
@@ -2864,16 +2864,18 @@ void XGLAPI xglCmdCopyBuffer(
 void XGLAPI xglCmdCopyImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
     const XGL_IMAGE_COPY*                       pRegions);
 
 void XGLAPI xglCmdBlitImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcLayout,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destLayout,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
     const XGL_IMAGE_BLIT*                       pRegions);
 
@@ -2881,12 +2883,14 @@ void XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  srcBuffer,
     XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
     const XGL_BUFFER_IMAGE_COPY*                pRegions);
 
 void XGLAPI xglCmdCopyImageToBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_BUFFER                                  destBuffer,
     uint32_t                                    regionCount,
     const XGL_BUFFER_IMAGE_COPY*                pRegions);
@@ -2915,6 +2919,7 @@ void XGLAPI xglCmdFillBuffer(
 void XGLAPI xglCmdClearColorImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
+    XGL_IMAGE_LAYOUT                            imageLayout,
     XGL_CLEAR_COLOR                             color,
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges);
@@ -2922,6 +2927,7 @@ void XGLAPI xglCmdClearColorImage(
 void XGLAPI xglCmdClearDepthStencil(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
+    XGL_IMAGE_LAYOUT                            imageLayout,
     float                                       depth,
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
@@ -2930,7 +2936,9 @@ void XGLAPI xglCmdClearDepthStencil(
 void XGLAPI xglCmdResolveImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    rectCount,
     const XGL_IMAGE_RESOLVE*                    pRects);
 

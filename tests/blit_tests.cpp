@@ -932,7 +932,8 @@ protected:
 
         // copy in and tile
         cmd_.begin();
-        xglCmdCopyBufferToImage(cmd_.obj(), in_buf.obj(), img.obj(),
+        xglCmdCopyBufferToImage(cmd_.obj(), in_buf.obj(),
+                img.obj(), XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -956,7 +957,9 @@ protected:
 
         // copy out and linearize
         cmd_.begin();
-        xglCmdCopyImageToBuffer(cmd_.obj(), img.obj(), out_buf.obj(),
+        xglCmdCopyImageToBuffer(cmd_.obj(),
+                img.obj(), XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                out_buf.obj(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -992,7 +995,9 @@ protected:
         add_memory_ref(img, 0);
 
         cmd_.begin();
-        xglCmdCopyBufferToImage(cmd_.obj(), buf.obj(), img.obj(),
+        xglCmdCopyBufferToImage(cmd_.obj(),
+                buf.obj(),
+                img.obj(), XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -1058,7 +1063,9 @@ protected:
         add_memory_ref(buf, 0);
 
         cmd_.begin();
-        xglCmdCopyImageToBuffer(cmd_.obj(), img.obj(), buf.obj(),
+        xglCmdCopyImageToBuffer(cmd_.obj(),
+                img.obj(), XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                buf.obj(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -1150,7 +1157,10 @@ protected:
         add_memory_ref(dst, 0);
 
         cmd_.begin();
-        xglCmdCopyImage(cmd_.obj(), src.obj(), dst.obj(), copies.size(), &copies[0]);
+        xglCmdCopyImage(cmd_.obj(),
+                        src.obj(), XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                        dst.obj(), XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                        copies.size(), &copies[0]);
         cmd_.end();
 
         submit_and_done();
@@ -1394,7 +1404,9 @@ protected:
         pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
-        xglCmdClearColorImage(cmd_.obj(), img.obj(), clear_color, ranges.size(), &ranges[0]);
+        xglCmdClearColorImage(cmd_.obj(),
+                              img.obj(), XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                              clear_color, ranges.size(), &ranges[0]);
 
         pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;
@@ -1623,7 +1635,10 @@ protected:
         pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
-        xglCmdClearDepthStencil(cmd_.obj(), img.obj(), depth, stencil, ranges.size(), &ranges[0]);
+        xglCmdClearDepthStencil(cmd_.obj(),
+                                img.obj(), XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                                depth, stencil,
+                                ranges.size(), &ranges[0]);
 
         pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;

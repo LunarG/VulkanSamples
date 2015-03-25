@@ -534,7 +534,10 @@ void TestFrameworkXglPresent::CreatePresentableImages()
         region.imageExtent.width = m_display_image->m_width;
         region.imageExtent.depth = 1;
 
-        xglCmdCopyBufferToImage(m_cmdbuf.obj(), buf.obj(), m_display_image->m_presentableImage, 1, &region);
+        xglCmdCopyBufferToImage(m_cmdbuf.obj(),
+                buf.obj(),
+                m_display_image->m_presentableImage, XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                1, &region);
         m_cmdbuf.end();
 
         uint32_t     numMemRefs=2;

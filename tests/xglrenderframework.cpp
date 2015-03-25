@@ -505,7 +505,7 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     copy_region.destOffset.z = 0;
     copy_region.extent = fromImage.extent();
 
-    xglCmdCopyImage(cmd_buf, fromImage.obj(), obj(), 1, &copy_region);
+    xglCmdCopyImage(cmd_buf, fromImage.obj(), fromImage.layout(), obj(), layout(), 1, &copy_region);
 
     XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {};
     image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1199,7 +1199,9 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float dep
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
-        xglCmdClearColorImage( obj(), m_renderTargets[i]->image(), clear_color, 1, &srRange );
+        xglCmdClearColorImage(obj(),
+               m_renderTargets[i]->image(), XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+               clear_color, 1, &srRange );
     }
 
     if (depthStencilImage)
@@ -1221,7 +1223,8 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float dep
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
         depthStencilBinding->layout = memory_barrier.newLayout;
 
-        xglCmdClearDepthStencil(obj(), depthStencilImage,
+        xglCmdClearDepthStencil(obj(),
+                                depthStencilImage, XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                                 depth_clear_color,  stencil_clear_color,
                                 1, &dsRange);
 

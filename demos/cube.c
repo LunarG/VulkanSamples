@@ -350,10 +350,12 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
     clear_range.arraySize = 1;
     xglCmdClearColorImage(cmd_buf,
             demo->buffers[demo->current_buffer].image,
+            XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
             clear_color, 1, &clear_range);
 
     clear_range.aspect = XGL_IMAGE_ASPECT_DEPTH;
     xglCmdClearDepthStencil(cmd_buf, demo->depth.image,
+            XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
             clear_depth, 0, 1, &clear_range);
 
     xglCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
@@ -929,7 +931,12 @@ static void demo_prepare_textures(struct demo *demo)
                 .destOffset = { 0, 0, 0 },
                 .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
             };
-            xglCmdCopyImage(staging_cmd_buf, staging_texture.image, demo->textures[i].image, 1, &copy_region);
+            xglCmdCopyImage(staging_cmd_buf,
+                            staging_texture.image,
+                            XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                            demo->textures[i].image,
+                            XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                            1, &copy_region);
 
             XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {
                 .sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,

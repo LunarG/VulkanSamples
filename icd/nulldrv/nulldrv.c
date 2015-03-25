@@ -908,7 +908,9 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
 ICD_EXPORT void XGLAPI xglCmdCopyImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
     const XGL_IMAGE_COPY*                       pRegions)
 {
@@ -918,9 +920,9 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
 ICD_EXPORT void XGLAPI xglCmdBlitImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcLayout,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destLayout,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
     const XGL_IMAGE_BLIT*                       pRegions)
 {
@@ -931,6 +933,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_BUFFER                                  srcBuffer,
     XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
     const XGL_BUFFER_IMAGE_COPY*                pRegions)
 {
@@ -940,6 +943,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
 ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_BUFFER                                  destBuffer,
     uint32_t                                    regionCount,
     const XGL_BUFFER_IMAGE_COPY*                pRegions)
@@ -980,6 +984,7 @@ ICD_EXPORT void XGLAPI xglCmdFillBuffer(
 ICD_EXPORT void XGLAPI xglCmdClearColorImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
+    XGL_IMAGE_LAYOUT                            imageLayout,
     XGL_CLEAR_COLOR                             color,
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
@@ -990,6 +995,7 @@ ICD_EXPORT void XGLAPI xglCmdClearColorImage(
 ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
+    XGL_IMAGE_LAYOUT                            imageLayout,
     float                                       depth,
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
@@ -1001,7 +1007,9 @@ ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
 ICD_EXPORT void XGLAPI xglCmdResolveImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   srcImage,
+    XGL_IMAGE_LAYOUT                            srcImageLayout,
     XGL_IMAGE                                   destImage,
+    XGL_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    rectCount,
     const XGL_IMAGE_RESOLVE*                    pRects)
 {
