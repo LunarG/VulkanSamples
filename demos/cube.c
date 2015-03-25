@@ -21,10 +21,12 @@
 /*
  * structure to track all objects related to a texture.
  */
-struct texture_objects {
+struct texture_object {
     XGL_SAMPLER sampler;
 
     XGL_IMAGE image;
+    XGL_IMAGE_LAYOUT imageLayout;
+
     uint32_t  num_mem;
     XGL_GPU_MEMORY *mem;
     XGL_IMAGE_VIEW view;
@@ -205,6 +207,7 @@ struct demo {
     XGL_DEVICE device;
     XGL_QUEUE queue;
     uint32_t graphics_queue_node_index;
+    XGL_PHYSICAL_GPU_PROPERTIES *gpu_props;
     XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
 
     XGL_FRAMEBUFFER framebuffer;
@@ -229,7 +232,7 @@ struct demo {
         XGL_DEPTH_STENCIL_VIEW view;
     } depth;
 
-    struct texture_objects textures[DEMO_TEXTURE_COUNT];
+    struct texture_object textures[DEMO_TEXTURE_COUNT];
 
     struct {
         XGL_BUFFER buf;
@@ -239,6 +242,9 @@ struct demo {
         XGL_BUFFER_VIEW_ATTACH_INFO attach;
     } uniform_data;
 
+    XGL_CMD_BUFFER cmd;  // Buffer for initialization commands
+    XGL_MEMORY_REF mem_refs[16];
+    int num_refs;
     XGL_DESCRIPTOR_SET_LAYOUT desc_layout;
     XGL_PIPELINE pipeline;
 
@@ -264,6 +270,108 @@ struct demo {
     bool quit;
     uint32_t current_buffer;
 };
+
+static void demo_flush_init_cmd(struct demo *demo)
+{
+    XGL_RESULT err;
+
+    if (demo->cmd == XGL_NULL_HANDLE)
+        return;
+
+    err = xglEndCommandBuffer(demo->cmd);
+    assert(!err);
+
+    const XGL_CMD_BUFFER cmd_bufs[] = { demo->cmd };
+
+    err = xglQueueSubmit(demo->queue, 1, cmd_bufs,
+                         demo->num_refs, demo->mem_refs, XGL_NULL_HANDLE);
+    assert(!err);
+
+    err = xglQueueWaitIdle(demo->queue);
+    assert(!err);
+
+    xglDestroyObject(demo->cmd);
+    demo->cmd = XGL_NULL_HANDLE;
+    demo->num_refs = 0;
+}
+
+static void demo_add_mem_refs(
+        struct demo *demo,
+        XGL_MEMORY_REF_FLAGS flags,
+        int num_refs, XGL_GPU_MEMORY *mem)
+{
+    for (int i = 0; i < num_refs; i++) {
+        demo->mem_refs[demo->num_refs].flags = flags;
+        demo->mem_refs[demo->num_refs].mem = mem[i];
+        demo->num_refs++;
+        assert(demo->num_refs < 16);
+    }
+}
+
+static void demo_set_image_layout(
+        struct demo *demo,
+        XGL_IMAGE image,
+        XGL_IMAGE_LAYOUT old_image_layout,
+        XGL_IMAGE_LAYOUT new_image_layout)
+{
+    XGL_RESULT err;
+
+    if (demo->cmd == XGL_NULL_HANDLE) {
+        const XGL_CMD_BUFFER_CREATE_INFO cmd = {
+            .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+            .pNext = NULL,
+            .queueNodeIndex = demo->graphics_queue_node_index,
+            .flags = 0,
+        };
+
+        err = xglCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
+        assert(!err);
+
+        XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
+            .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+            .pNext = NULL,
+            .flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+                XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+        };
+        err = xglBeginCommandBuffer(demo->cmd, &cmd_buf_info);
+    }
+
+    XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {
+        .sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = NULL,
+        .outputMask = 0,
+        .inputMask = 0,
+        .oldLayout = old_image_layout,
+        .newLayout = new_image_layout,
+        .image = image,
+        .subresourceRange = { XGL_IMAGE_ASPECT_COLOR, 0, 1, 0, 0 }
+    };
+
+    if (new_image_layout == XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
+        /* Make sure anything that was copying from this image has completed */
+        image_memory_barrier.inputMask = XGL_MEMORY_INPUT_COPY_BIT;
+    }
+
+    if (new_image_layout == XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        /* Make sure any Copy or CPU writes to image are flushed */
+        image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT | XGL_MEMORY_OUTPUT_CPU_WRITE_BIT;
+    }
+
+    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
+
+    XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_TOP_OF_PIPE };
+
+    XGL_PIPELINE_BARRIER pipeline_barrier;
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.pNext = NULL;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = set_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+    xglCmdPipelineBarrier(demo->cmd, &pipeline_barrier);
+}
 
 static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
 {
@@ -472,6 +580,10 @@ static void demo_prepare_buffers(struct demo *demo)
                 &demo->buffers[i].image, &demo->buffers[i].mem);
         assert(!err);
 
+        demo_set_image_layout(demo, demo->buffers[i].image,
+                               XGL_IMAGE_LAYOUT_UNDEFINED,
+                               XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
         color_attachment_view.image = demo->buffers[i].image;
 
         err = xglCreateColorAttachmentView(demo->device,
@@ -536,7 +648,6 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
-
     err = xglGetObjectInfo(demo->depth.image, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
@@ -566,6 +677,12 @@ static void demo_prepare_depth(struct demo *demo)
                 demo->depth.mem[i], 0);
         assert(!err);
     }
+
+    demo_set_image_layout(demo, demo->depth.image,
+                           XGL_IMAGE_LAYOUT_UNDEFINED,
+                           XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+    demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, num_allocations, demo->depth.mem);
 
     /* create image view */
     view.image = demo->depth.image;
@@ -724,7 +841,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
 
 static void demo_prepare_texture_image(struct demo *demo,
                                        const char *filename,
-                                       struct texture_objects *tex_objs,
+                                       struct texture_object *tex_obj,
                                        XGL_IMAGE_TILING tiling,
                                        XGL_FLAGS mem_props)
 {
@@ -736,8 +853,8 @@ static void demo_prepare_texture_image(struct demo *demo,
     err = loadTexture(filename, NULL, NULL, &tex_width, &tex_height);
     assert(err);
 
-    tex_objs->tex_width = tex_width;
-    tex_objs->tex_height = tex_height;
+    tex_obj->tex_width = tex_width;
+    tex_obj->tex_height = tex_height;
 
     const XGL_IMAGE_CREATE_INFO image_create_info = {
         .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -779,20 +896,20 @@ static void demo_prepare_texture_image(struct demo *demo,
     size_t num_alloc_size = sizeof(num_allocations);
 
     err = xglCreateImage(demo->device, &image_create_info,
-            &tex_objs->image);
+            &tex_obj->image);
     assert(!err);
 
-    err = xglGetObjectInfo(tex_objs->image,
+    err = xglGetObjectInfo(tex_obj->image,
                 XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                 &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-    tex_objs->mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
-    err = xglGetObjectInfo(tex_objs->image,
+    tex_obj->mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
+    err = xglGetObjectInfo(tex_obj->image,
                 XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-    err = xglGetObjectInfo(tex_objs->image,
+    err = xglGetObjectInfo(tex_obj->image,
                     XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
                     &img_reqs_size, &img_reqs);
     assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
@@ -805,7 +922,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         mem_alloc.allocationSize = mem_reqs[j].size;
 
         if (mem_alloc.memType == XGL_MEMORY_TYPE_BUFFER) {
-            err = xglGetObjectInfo(tex_objs->image,
+            err = xglGetObjectInfo(tex_obj->image,
                             XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS,
                             &buf_reqs_size, &buf_reqs);
             assert(!err && buf_reqs_size == sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS));
@@ -817,17 +934,17 @@ static void demo_prepare_texture_image(struct demo *demo,
 
         /* allocate memory */
         err = xglAllocMemory(demo->device, &mem_alloc,
-                    &(tex_objs->mem[j]));
+                    &(tex_obj->mem[j]));
         assert(!err);
 
         /* bind memory */
-        err = xglBindObjectMemory(tex_objs->image, j, tex_objs->mem[j], 0);
+        err = xglBindObjectMemory(tex_obj->image, j, tex_obj->mem[j], 0);
         assert(!err);
     }
     free(mem_reqs);
     mem_reqs = NULL;
 
-    tex_objs->num_mem = num_allocations;
+    tex_obj->num_mem = num_allocations;
 
     if (mem_props & XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT) {
         const XGL_IMAGE_SUBRESOURCE subres = {
@@ -839,26 +956,32 @@ static void demo_prepare_texture_image(struct demo *demo,
         size_t layout_size = sizeof(XGL_SUBRESOURCE_LAYOUT);
         void *data;
 
-        err = xglGetImageSubresourceInfo(tex_objs->image, &subres,
+        err = xglGetImageSubresourceInfo(tex_obj->image, &subres,
                                          XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
                                          &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
         /* Linear texture must be within a single memory object */
         assert(num_allocations == 1);
 
-        err = xglMapMemory(tex_objs->mem[0], 0, &data);
+        err = xglMapMemory(tex_obj->mem[0], 0, &data);
         assert(!err);
 
         if (!loadTexture(filename, data, &layout, &tex_width, &tex_height)) {
             fprintf(stderr, "Error loading texture: %s\n", filename);
         }
 
-        err = xglUnmapMemory(tex_objs->mem[0]);
+        err = xglUnmapMemory(tex_obj->mem[0]);
         assert(!err);
     }
+
+    tex_obj->imageLayout = XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    demo_set_image_layout(demo, tex_obj->image,
+                           XGL_IMAGE_LAYOUT_UNDEFINED,
+                           tex_obj->imageLayout);
+    /* setting the image layout does not reference the actual memory so no need to add a mem ref */
 }
 
-static void demo_destroy_texture_image(struct texture_objects *tex_objs)
+static void demo_destroy_texture_image(struct texture_object *tex_objs)
 {
     /* clean up staging resources */
     for (uint32_t j = 0; j < tex_objs->num_mem; j ++) {
@@ -889,9 +1012,9 @@ static void demo_prepare_textures(struct demo *demo)
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
                                        XGL_LINEAR_TILING, XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
-        } else if (props.optimalTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT){
+        } else if (props.optimalTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
             /* Must use staging buffer to copy linear texture to optimized */
-            struct texture_objects staging_texture;
+            struct texture_object staging_texture;
 
             memset(&staging_texture, 0, sizeof(staging_texture));
             demo_prepare_texture_image(demo, tex_files[i], &staging_texture,
@@ -900,29 +1023,13 @@ static void demo_prepare_textures(struct demo *demo)
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
                                        XGL_OPTIMAL_TILING, XGL_MEMORY_PROPERTY_GPU_ONLY);
 
-            XGL_CMD_BUFFER staging_cmd_buf;
-            XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {
-                .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
-                .pNext = NULL,
-                .queueNodeIndex = demo->graphics_queue_node_index,
-                .flags = 0
-            };
+            demo_set_image_layout(demo, staging_texture.image,
+                                   staging_texture.imageLayout,
+                                   XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
-            err = xglCreateCommandBuffer(demo->device, &cmd_buf_create_info, &staging_cmd_buf);
-            assert(!err);
-
-            /* Copy staging texture to usable texture */
-            XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_begin_info = {
-                .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-                .pNext = NULL,
-                .flags = 0
-            };
-
-            err = xglResetCommandBuffer(staging_cmd_buf);
-            assert(!err);
-
-            err = xglBeginCommandBuffer(staging_cmd_buf, &cmd_buf_begin_info);
-            assert(!err);
+            demo_set_image_layout(demo, demo->textures[i].image,
+                                   demo->textures[i].imageLayout,
+                                   XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
             XGL_IMAGE_COPY copy_region = {
                 .srcSubresource = { XGL_IMAGE_ASPECT_COLOR, 0, 0 },
@@ -931,69 +1038,21 @@ static void demo_prepare_textures(struct demo *demo)
                 .destOffset = { 0, 0, 0 },
                 .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
             };
-            xglCmdCopyImage(staging_cmd_buf,
-                            staging_texture.image,
-                            XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                            demo->textures[i].image,
-                            XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+            xglCmdCopyImage(demo->cmd,
+                            staging_texture.image, XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                            demo->textures[i].image, XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                             1, &copy_region);
 
-            XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {
-                .sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-                .pNext = NULL,
-                .outputMask = XGL_MEMORY_OUTPUT_COPY_BIT,
-                .inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT,
-                .oldLayout = XGL_IMAGE_LAYOUT_GENERAL,
-                .newLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                .image = staging_texture.image,
-                .subresourceRange = { XGL_IMAGE_ASPECT_COLOR, 0, 1, 0, 0 }
-            };
-            XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
+            demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, staging_texture.num_mem, staging_texture.mem);
+            demo_add_mem_refs(demo, 0, demo->textures[i].num_mem, demo->textures[i].mem);
 
-            XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-            XGL_PIPELINE_BARRIER pipeline_barrier;
-            pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
-            pipeline_barrier.pNext = NULL;
-            pipeline_barrier.eventCount = 1;
-            pipeline_barrier.pEvents = set_events;
-            pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
-            pipeline_barrier.memBarrierCount = 1;
-            pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+            demo_set_image_layout(demo, demo->textures[i].image,
+                                   XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                                   demo->textures[i].imageLayout);
 
-            // write barrier to the command buffer
-            xglCmdPipelineBarrier(staging_cmd_buf, &pipeline_barrier);
-
-            err = xglEndCommandBuffer(staging_cmd_buf);
-            assert(!err);
-
-            const XGL_CMD_BUFFER cmd_bufs[] = { staging_cmd_buf };
-            XGL_MEMORY_REF mem_refs[16];
-            uint32_t num_refs = 0;
-
-            for (uint32_t j = 0; j < staging_texture.num_mem; j++) {
-                mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
-                mem_refs[num_refs].mem = staging_texture.mem[j];
-                num_refs++;
-                assert(num_refs < 16);
-            }
-
-            for (uint32_t j = 0; j < demo->textures[i].num_mem; j++) {
-                mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
-                mem_refs[num_refs].mem = demo->textures[i].mem[j];
-                num_refs++;
-                assert(num_refs < 16);
-            }
-
-            err = xglQueueSubmit(demo->queue, 1, cmd_bufs,
-                                 num_refs, mem_refs, XGL_NULL_HANDLE);
-            assert(!err);
-
-            err = xglQueueWaitIdle(demo->queue);
-            assert(!err);
+            demo_flush_init_cmd(demo);
 
             demo_destroy_texture_image(&staging_texture);
-
-            xglDestroyObject(staging_cmd_buf);
         } else {
             /* Can't support XGL_FMT_B8G8R8A8_UNORM !? */
             assert(!"No support for tB8G8R8A8_UNORM as texture image format");
@@ -1562,6 +1621,12 @@ static void demo_prepare(struct demo *demo)
         demo_draw_build_cmd(demo, demo->buffers[i].cmd);
     }
 
+    /*
+     * Prepare functions above may generate pipeline commands
+     * that need to be flushed before beginning the render loop.
+     */
+    demo_flush_init_cmd(demo);
+
     demo->current_buffer = 0;
 }
 
@@ -1728,6 +1793,15 @@ static void demo_init_xgl(struct demo *demo)
     assert(!err);
 
     err = xglCreateDevice(demo->gpu, &device, &demo->device);
+    assert(!err);
+
+    err = xglGetGpuInfo(demo->gpu, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+                        &data_size, NULL);
+    assert(!err);
+
+    demo->gpu_props = (XGL_PHYSICAL_GPU_PROPERTIES *) malloc(data_size);
+    err = xglGetGpuInfo(demo->gpu, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+                        &data_size, demo->gpu_props);
     assert(!err);
 
     err = xglGetGpuInfo(demo->gpu, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
