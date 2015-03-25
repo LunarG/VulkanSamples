@@ -848,8 +848,6 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
     else
         body = pipeline->cmd_3dstate_sbe;
 
-    /* VS outputs VUE header and position additionally */
-    assert(vs->out_count >= fs->in_count + 2);
     assert(!fs->reads_user_clip || vs->enable_user_clip);
     attr_skip = vs->outputs_offset;
     if (vs->enable_user_clip != fs->reads_user_clip) {
