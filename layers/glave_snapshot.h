@@ -42,6 +42,7 @@ typedef enum _GLAVE_SNAPSHOT_ERROR
     GLVSNAPSHOT_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
     GLVSNAPSHOT_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
     GLVSNAPSHOT_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
+    GLVSNAPSHOT_SNAPSHOT_DATA,                     // Message being printed is actually snapshot data
 } GLAVE_SNAPSHOT_ERROR;
 
 // Object Status -- used to track state of individual objects

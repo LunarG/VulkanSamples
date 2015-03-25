@@ -59,18 +59,24 @@ static uint32_t maxMemRefsPerSubmission = 0;
 // Debug function to print global list and each individual object list
 static void ll_print_lists()
 {
+    char str[1024];
     objNode* pTrav = pGlobalHead;
-    printf("=====GLOBAL OBJECT LIST (%lu total objs):\n", numTotalObjs);
+    sprintf(str, "=====GLOBAL OBJECT LIST (%lu total objs):", numTotalObjs);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+
     while (pTrav) {
-        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextGlobal);
+        sprintf(str, "   ObjNode (%p) w/ %s obj %p has pNextGlobal %p", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextGlobal);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         pTrav = pTrav->pNextGlobal;
     }
     for (uint32_t i = 0; i < XGL_NUM_OBJECT_TYPE; i++) {
         pTrav = pObjectHead[i];
         if (pTrav) {
-            printf("=====%s OBJECT LIST (%lu objs):\n", string_XGL_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);
+            sprintf(str, "=====%s OBJECT LIST (%lu objs):", string_XGL_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             while (pTrav) {
-                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextObj);
+                sprintf(str, "   ObjNode (%p) w/ %s obj %p has pNextObj %p", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextObj);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
                 pTrav = pTrav->pNextObj;
             }
         }
@@ -131,9 +137,9 @@ static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
     while (pTrav) {
         if (pTrav->obj.pObj == pObj) {
             pTrav->obj.numUses++;
-            char str[1024];
-            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+//            char str[1024];
+//            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);
+//            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
             return;
         }
         pTrav = pTrav->pNextObj;
@@ -161,9 +167,9 @@ static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
                 pObjectHead[objType] = pTrav->pNextObj;
             assert(numObjs[objType] > 0);
             numObjs[objType]--;
-            char str[1024];
-            sprintf(str, "OBJ[%llu] : DESTROY %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+//            char str[1024];
+//            sprintf(str, "OBJ[%llu] : DESTROY %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
+//            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
             return;
         }
         pPrev = pTrav;
@@ -188,9 +194,9 @@ static void ll_destroy_obj(void* pObj) {
                 pGlobalHead = pTrav->pNextGlobal;
             assert(numTotalObjs > 0);
             numTotalObjs--;
-            char str[1024];
-            sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+//            char str[1024];
+//            sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));
+//            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
             free(pTrav);
             return;
         }
