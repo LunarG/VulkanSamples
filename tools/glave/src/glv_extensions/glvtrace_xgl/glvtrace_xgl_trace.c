@@ -285,13 +285,13 @@ GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdPipelineBarrier(
     size_t customSize;
     uint32_t eventCount = (pBarrier != NULL && pBarrier->pEvents != NULL) ? pBarrier->eventCount : 0;
     uint32_t mbCount = (pBarrier != NULL && pBarrier->ppMemBarriers != NULL) ? pBarrier->memBarrierCount : 0;
-    customSize = (eventCount * sizeof(XGL_SET_EVENT)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pBarrier->ppMemBarriers);
+    customSize = (eventCount * sizeof(XGL_PIPE_EVENT)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pBarrier->ppMemBarriers);
     CREATE_TRACE_PACKET(xglCmdPipelineBarrier, sizeof(XGL_PIPELINE_BARRIER) + customSize);
     real_xglCmdPipelineBarrier(cmdBuffer, pBarrier);
     pPacket = interpret_body_as_xglCmdPipelineBarrier(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier), sizeof(XGL_PIPELINE_BARRIER), pBarrier);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->pEvents), eventCount * sizeof(XGL_SET_EVENT), pBarrier->pEvents);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->pEvents), eventCount * sizeof(XGL_PIPE_EVENT), pBarrier->pEvents);
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBarrier->pEvents));
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->ppMemBarriers), mbCount * sizeof(void*), pBarrier->ppMemBarriers);
     uint32_t i, siz;

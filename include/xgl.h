@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 58, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 59, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -140,21 +140,21 @@ typedef enum _XGL_IMAGE_LAYOUT
     XGL_MAX_ENUM(_XGL_IMAGE_LAYOUT)
 } XGL_IMAGE_LAYOUT;
 
-typedef enum _XGL_SET_EVENT
+typedef enum _XGL_PIPE_EVENT
 {
-    XGL_SET_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Set event before the GPU starts processing subsequent command
-    XGL_SET_EVENT_VERTEX_PROCESSING_COMPLETE                = 0x00000002,   // Set event when all pending vertex processing is complete
-    XGL_SET_EVENT_FRAGMENT_PROCESSING_COMPLETE              = 0x00000003,   // Set event when all pending fragment shader executions are complete
-    XGL_SET_EVENT_GRAPHICS_PIPELINE_COMPLETE                = 0x00000004,   // Set event when all pending graphics operations are complete
-    XGL_SET_EVENT_COMPUTE_PIPELINE_COMPLETE                 = 0x00000005,   // Set event when all pending compute operations are complete
-    XGL_SET_EVENT_TRANSFER_COMPLETE                         = 0x00000006,   // Set event when all pending transfer operations are complete
-    XGL_SET_EVENT_GPU_COMMANDS_COMPLETE                     = 0x00000007,   // Set event when all pending GPU work is complete
+    XGL_PIPE_EVENT_TOP_OF_PIPE                              = 0x00000001,   // Set event before the GPU starts processing subsequent command
+    XGL_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE               = 0x00000002,   // Set event when all pending vertex processing is complete
+    XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE             = 0x00000003,   // Set event when all pending fragment shader executions are complete
+    XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE               = 0x00000004,   // Set event when all pending graphics operations are complete
+    XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE                = 0x00000005,   // Set event when all pending compute operations are complete
+    XGL_PIPE_EVENT_TRANSFER_COMPLETE                        = 0x00000006,   // Set event when all pending transfer operations are complete
+    XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE                    = 0x00000007,   // Set event when all pending GPU work is complete
 
-    XGL_SET_EVENT_BEGIN_RANGE                               = XGL_SET_EVENT_TOP_OF_PIPE,
-    XGL_SET_EVENT_END_RANGE                                 = XGL_SET_EVENT_GPU_COMMANDS_COMPLETE,
-    XGL_NUM_SET_EVENT                                       = (XGL_SET_EVENT_END_RANGE - XGL_SET_EVENT_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_SET_EVENT)
-} XGL_SET_EVENT;
+    XGL_PIPE_EVENT_BEGIN_RANGE                              = XGL_PIPE_EVENT_TOP_OF_PIPE,
+    XGL_PIPE_EVENT_END_RANGE                                = XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE,
+    XGL_NUM_PIPE_EVENT                                      = (XGL_PIPE_EVENT_END_RANGE - XGL_PIPE_EVENT_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_PIPE_EVENT)
+} XGL_PIPE_EVENT;
 
 typedef enum _XGL_WAIT_EVENT
 {
@@ -1633,7 +1633,7 @@ typedef struct _XGL_PIPELINE_BARRIER
     const void*                             pNext;                      // Pointer to next structure.
 
     uint32_t                                eventCount;                 // Number of events to wait on
-    const XGL_SET_EVENT*                    pEvents;                    // Array of pipeline events to wait on
+    const XGL_PIPE_EVENT*                   pEvents;                    // Array of pipeline events to wait on
 
     XGL_WAIT_EVENT                          waitEvent;                  // Pipeline event where the wait should happen
 
@@ -2342,8 +2342,8 @@ typedef void       (XGLAPI *xglCmdFillBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_
 typedef void       (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_CLEAR_COLOR color, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef void       (XGLAPI *xglCmdClearDepthStencilType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef void       (XGLAPI *xglCmdResolveImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t rectCount, const XGL_IMAGE_RESOLVE* pRects);
-typedef void       (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_SET_EVENT pipeEvent);
-typedef void       (XGLAPI *xglCmdResetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event);
+typedef void       (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_PIPE_EVENT pipeEvent);
+typedef void       (XGLAPI *xglCmdResetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_PIPE_EVENT pipeEvent);
 typedef void       (XGLAPI *xglCmdWaitEventsType)(XGL_CMD_BUFFER cmdBuffer, const XGL_EVENT_WAIT_INFO* pWaitInfo);
 typedef void       (XGLAPI *xglCmdPipelineBarrierType)(XGL_CMD_BUFFER cmdBuffer, const XGL_PIPELINE_BARRIER* pBarrier);
 typedef void       (XGLAPI *xglCmdBeginQueryType)(XGL_CMD_BUFFER cmdBuffer, XGL_QUERY_POOL queryPool, uint32_t slot, XGL_FLAGS flags);
@@ -2936,11 +2936,12 @@ void XGLAPI xglCmdResolveImage(
 void XGLAPI xglCmdSetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event,
-    XGL_SET_EVENT                               pipeEvent);
+    XGL_PIPE_EVENT                              pipeEvent);
 
 void XGLAPI xglCmdResetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event);
+    XGL_EVENT                                   event,
+    XGL_PIPE_EVENT                              pipeEvent);
 
 void XGLAPI xglCmdWaitEvents(
     XGL_CMD_BUFFER                              cmdBuffer,

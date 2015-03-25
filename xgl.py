@@ -745,11 +745,12 @@ core = Extension(
         Proto("void", "CmdSetEvent",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_EVENT", "event"),
-             Param("XGL_SET_EVENT", "pipeEvent")]),
+             Param("XGL_PIPE_EVENT", "pipeEvent")]),
 
         Proto("void", "CmdResetEvent",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_EVENT", "event")]),
+             Param("XGL_EVENT", "event"),
+             Param("XGL_PIPE_EVENT", "pipeEvent")]),
 
         Proto("void", "CmdWaitEvents",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),

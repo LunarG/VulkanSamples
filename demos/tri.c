@@ -589,7 +589,7 @@ static void demo_prepare_textures(struct demo *demo)
             };
             XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
 
-            XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+            XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
             XGL_PIPELINE_BARRIER pipeline_barrier;
             pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
             pipeline_barrier.pNext = NULL;

@@ -1037,14 +1037,15 @@ ICD_EXPORT void XGLAPI xglCmdResetQueryPool(
 ICD_EXPORT void XGLAPI xglCmdSetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_EVENT                                   event_,
-    XGL_SET_EVENT                               pipeEvent)
+    XGL_PIPE_EVENT                              pipeEvent)
 {
     NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void XGLAPI xglCmdResetEvent(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event_)
+    XGL_EVENT                                   event_,
+    XGL_PIPE_EVENT                              pipeEvent)
 {
     NULLDRV_LOG_FUNC;
 }

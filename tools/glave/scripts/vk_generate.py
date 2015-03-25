@@ -844,7 +844,7 @@ class Subcommand(object):
                                                                           '    *ppLocalMemBarriers = (void*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->ppMemBarriers[i]);\n',
                                                                           '}']},
                              'CmdPipelineBarrier' : {'param': 'pBarrier', 'txt': ['XGL_PIPELINE_BARRIER* pBarrier = (XGL_PIPELINE_BARRIER*)pPacket->pBarrier;\n',
-                                                                          'pBarrier->pEvents = (XGL_SET_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->pEvents);\n',
+                                                                          'pBarrier->pEvents = (XGL_PIPE_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->pEvents);\n',
                                                                           'pBarrier->ppMemBarriers = (const void**) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->ppMemBarriers);\n',
                                                                           'uint32_t i;\n',
                                                                           'for (i = 0; i < pBarrier->memBarrierCount; i++) {\n',
@@ -1558,9 +1558,9 @@ class Subcommand(object):
         cbrp_body = []
         cbrp_body.append('            XGL_RENDER_PASS_BEGIN savedRPB, *pRPB = (XGL_RENDER_PASS_BEGIN *) pPacket->pRenderPassBegin;')
         cbrp_body.append('            savedRPB = *(pPacket->pRenderPassBegin);')
-        cbrp_body.append('            pRPB->renderPass = remap(savedRPB.renderPass);')
-        cbrp_body.append('            pRPB->framebuffer = remap(savedRPB.framebuffer);')
-        cbrp_body.append('            m_xglFuncs.real_xglCmdBeginRenderPass(remap(pPacket->cmdBuffer), pPacket->pRenderPassBegin);')
+        cbrp_body.append('            pRPB->renderPass = m_objMapper.remap(savedRPB.renderPass);')
+        cbrp_body.append('            pRPB->framebuffer = m_objMapper.remap(savedRPB.framebuffer);')
+        cbrp_body.append('            m_xglFuncs.real_xglCmdBeginRenderPass(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pRenderPassBegin);')
         cbrp_body.append('            *pRPB = savedRPB;')
         return "\n".join(cbrp_body)
 

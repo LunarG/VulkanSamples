@@ -306,20 +306,20 @@ ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
      */
 
     /* Cache control is done with PIPE_CONTROL flags.
-     * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as XGL_SET_EVENT_TOP_OF_PIPE.
-     * All other pEvents values will behave as XGL_SET_EVENT_GPU_COMMANDS_COMPLETE.
+     * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as XGL_PIPE_EVENT_TOP_OF_PIPE.
+     * All other pEvents values will behave as XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
      */
     for (i = 0; i < pBarrier->eventCount; i++) {
         switch(pBarrier->pEvents[i])
         {
-        case XGL_SET_EVENT_TOP_OF_PIPE:
+        case XGL_PIPE_EVENT_TOP_OF_PIPE:
             break;
-        case XGL_SET_EVENT_VERTEX_PROCESSING_COMPLETE:
-        case XGL_SET_EVENT_FRAGMENT_PROCESSING_COMPLETE:
-        case XGL_SET_EVENT_GRAPHICS_PIPELINE_COMPLETE:
-        case XGL_SET_EVENT_COMPUTE_PIPELINE_COMPLETE:
-        case XGL_SET_EVENT_TRANSFER_COMPLETE:
-        case XGL_SET_EVENT_GPU_COMMANDS_COMPLETE:
+        case XGL_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
+        case XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
+        case XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
+        case XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
+        case XGL_PIPE_EVENT_TRANSFER_COMPLETE:
+        case XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
             pipe_control_flags |= GEN6_PIPE_CONTROL_CS_STALL;
             break;
         default:

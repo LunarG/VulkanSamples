@@ -822,7 +822,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
             XGL_MEMORY_OUTPUT_COPY_BIT, XGL_MEMORY_INPUT_COPY_BIT, 0, 4);
     XGL_BUFFER_MEMORY_BARRIER *pmemory_barrier = &memory_barrier;
 
-    XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_TRANSFER_COMPLETE };
+    XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_TRANSFER_COMPLETE };
     XGL_PIPELINE_BARRIER pipeline_barrier = {};
     pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
     pipeline_barrier.eventCount = 1;
@@ -852,7 +852,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     /* Use xglCmdSetEvent and xglCmdWaitEvents to test them.
      * This could be xglCmdPipelineBarrier.
      */
-    xglCmdSetEvent(cmd_.obj(), event, XGL_SET_EVENT_TRANSFER_COMPLETE);
+    xglCmdSetEvent(cmd_.obj(), event, XGL_PIPE_EVENT_TRANSFER_COMPLETE);
 
     // Additional commands could go into the buffer here before the wait.
 
@@ -1384,7 +1384,7 @@ protected:
 
         cmd_.begin();
 
-        XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+        XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
         XGL_PIPELINE_BARRIER pipeline_barrier = {};
         pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;
@@ -1613,7 +1613,7 @@ protected:
 
         cmd_.begin();
 
-        XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+        XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
         XGL_PIPELINE_BARRIER pipeline_barrier = {};
         pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;
