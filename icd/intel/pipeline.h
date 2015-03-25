@@ -133,6 +133,7 @@ struct intel_pipeline_shader {
     uint32_t offset_16;
 
     XGL_FLAGS barycentric_interps;
+    XGL_FLAGS point_sprite_enables;
 
     XGL_GPU_SIZE per_thread_scratch_size;
 

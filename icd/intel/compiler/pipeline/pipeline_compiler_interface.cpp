@@ -651,6 +651,9 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             // Ensure this is 1:1, or create a converter
             pipe_shader->barycentric_interps = data->barycentric_interp_modes;
 
+            if (data->urb_setup[VARYING_SLOT_PNTC] >= 0)
+                pipe_shader->point_sprite_enables = 1 << data->urb_setup[VARYING_SLOT_PNTC];
+
             struct brw_stage_state *stage_state = &brw->wm.base;
             pipe_shader->sampler_count = stage_state->sampler_count;
 

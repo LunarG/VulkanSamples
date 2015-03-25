@@ -944,7 +944,9 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
     }
 
     if (info->ia.topology == XGL_TOPOLOGY_POINT_LIST)
-        body[10] = 0xffffffffu; /* point sprite enables */
+        body[10] = fs->point_sprite_enables;
+    else
+        body[10] = 0;
 
     body[11] = 0; /* constant interpolation enables */
     body[12] = 0; /* WrapShortest enables */
