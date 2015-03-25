@@ -23,25 +23,26 @@
  */
 
 #include "xglLayer.h"
-// Object Tracker ERROR codes
-typedef enum _OBJECT_TRACK_ERROR
+
+// Glave Snapshot ERROR codes
+typedef enum _GLAVE_SNAPSHOT_ERROR
 {
-    OBJTRACK_NONE,                              // Used for INFO & other non-error messages
-    OBJTRACK_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
-    OBJTRACK_INTERNAL_ERROR,                    // Bug with data tracking within the layer
-    OBJTRACK_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
-    OBJTRACK_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
-    OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
-    OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
-    OBJTRACK_INVALID_FENCE,                     // Requested status of unsubmitted fence object
-    OBJTRACK_VIEWPORT_NOT_BOUND,                // Draw submitted with no viewport state object bound
-    OBJTRACK_RASTER_NOT_BOUND,                  // Draw submitted with no raster state object bound
-    OBJTRACK_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
-    OBJTRACK_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
-    OBJTRACK_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
-    OBJTRACK_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
-    OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
-} OBJECT_TRACK_ERROR;
+    GLVSNAPSHOT_NONE,                              // Used for INFO & other non-error messages
+    GLVSNAPSHOT_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
+    GLVSNAPSHOT_INTERNAL_ERROR,                    // Bug with data tracking within the layer
+    GLVSNAPSHOT_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
+    GLVSNAPSHOT_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
+    GLVSNAPSHOT_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
+    GLVSNAPSHOT_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
+    GLVSNAPSHOT_INVALID_FENCE,                     // Requested status of unsubmitted fence object
+    GLVSNAPSHOT_VIEWPORT_NOT_BOUND,                // Draw submitted with no viewport state object bound
+    GLVSNAPSHOT_RASTER_NOT_BOUND,                  // Draw submitted with no raster state object bound
+    GLVSNAPSHOT_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
+    GLVSNAPSHOT_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
+    GLVSNAPSHOT_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
+    GLVSNAPSHOT_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
+    GLVSNAPSHOT_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
+} GLAVE_SNAPSHOT_ERROR;
 
 // Object Status -- used to track state of individual objects
 typedef enum _OBJECT_STATUS
@@ -54,7 +55,7 @@ typedef enum _OBJECT_STATUS
     OBJSTATUS_DEPTH_STENCIL_BOUND               = 0x00000010, // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
 } OBJECT_STATUS;
-// TODO : Make this code-generated
+
 // Object type enum
 typedef enum _XGL_OBJECT_TYPE
 {
@@ -162,17 +163,19 @@ static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
     }
 }
 
-typedef struct _OBJTRACK_NODE {
+typedef struct _GLVSNAPSHOT_NODE {
     void            *pObj;
     XGL_OBJECT_TYPE objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
-} OBJTRACK_NODE;
+} GLVSNAPSHOT_NODE;
 
 // prototype for extension functions
-uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type);
-XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
+uint64_t glvSnapshotGetObjectCount(XGL_OBJECT_TYPE type);
+XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLVSNAPSHOT_NODE* pObjNodeArray);
+void glvSnapshotPrintObjects(void);
 
 // Func ptr typedefs
-typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
-typedef XGL_RESULT (*OBJ_TRACK_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, OBJTRACK_NODE*);
+typedef uint64_t (*GLVSNAPSHOT_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
+typedef XGL_RESULT (*GLVSNAPSHOT_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, GLVSNAPSHOT_NODE*);
+typedef void (*GLVSNAPSHOT_PRINT_OBJECTS)(void);

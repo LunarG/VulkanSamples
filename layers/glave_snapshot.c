@@ -46,7 +46,7 @@ static loader_platform_thread_mutex objLock;
 //  per-Object list which just links objects of a given type
 // The object node has both pointers so the actual nodes are shared between the two lists
 typedef struct _objNode {
-    OBJTRACK_NODE   obj;
+    GLVSNAPSHOT_NODE   obj;
     struct _objNode *pNextObj;
     struct _objNode *pNextGlobal;
 } objNode;
@@ -55,6 +55,7 @@ static objNode *pGlobalHead = NULL;
 static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};
 static uint64_t numTotalObjs = 0;
 static uint32_t maxMemRefsPerSubmission = 0;
+
 // Debug function to print global list and each individual object list
 static void ll_print_lists()
 {
@@ -75,10 +76,11 @@ static void ll_print_lists()
         }
     }
 }
+
 static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType) {
     char str[1024];
     sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
     objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));
     pNewObjNode->obj.pObj = pObj;
     pNewObjNode->obj.objType = objType;
@@ -96,6 +98,7 @@ static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType) {
     //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_XGL_OBJECT_TYPE(objType));
     if (0) ll_print_lists();
 }
+
 // Traverse global list and return type for given object
 static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
     objNode *pTrav = pGlobalHead;
@@ -106,9 +109,10 @@ static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
     }
     char str[1024];
     sprintf(str, "Attempting look-up on obj %p but it is NOT in the global list!", (void*)object);
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, OBJTRACK_MISSING_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_MISSING_OBJECT, LAYER_ABBREV_STR, str);
     return XGL_OBJECT_TYPE_UNKNOWN;
 }
+
 #if 0
 static uint64_t ll_get_obj_uses(void* pObj, XGL_OBJECT_TYPE objType) {
     objNode *pTrav = pObjectHead[objType];
@@ -121,6 +125,7 @@ static uint64_t ll_get_obj_uses(void* pObj, XGL_OBJECT_TYPE objType) {
     return 0;
 }
 #endif
+
 static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
     objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
@@ -128,7 +133,7 @@ static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
             pTrav->obj.numUses++;
             char str[1024];
             sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, LAYER_ABBREV_STR, str);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
             return;
         }
         pTrav = pTrav->pNextObj;
@@ -136,11 +141,12 @@ static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
     // If we do not find obj, insert it and then increment count
     char str[1024];
     sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_XGL_OBJECT_TYPE(objType));
-    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 
     ll_insert_obj(pObj, objType);
     ll_increment_use_count(pObj, objType);
 }
+
 // We usually do not know Obj type when we destroy it so have to fetch
 //  Type from global list w/ ll_destroy_obj()
 //   and then do the full removal from both lists w/ ll_remove_obj_type()
@@ -157,7 +163,7 @@ static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
             numObjs[objType]--;
             char str[1024];
             sprintf(str, "OBJ[%llu] : DESTROY %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, LAYER_ABBREV_STR, str);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
             return;
         }
         pPrev = pTrav;
@@ -165,8 +171,9 @@ static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
     }
     char str[1024];
     sprintf(str, "OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list", pObj, string_XGL_OBJECT_TYPE(objType));
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
 }
+
 // Parse global list to find obj type, then remove obj from obj type list, finally
 //   remove obj from global list
 static void ll_destroy_obj(void* pObj) {
@@ -183,7 +190,7 @@ static void ll_destroy_obj(void* pObj) {
             numTotalObjs--;
             char str[1024];
             sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs & %lu %s objs).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, LAYER_ABBREV_STR, str);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
             free(pTrav);
             return;
         }
@@ -192,8 +199,9 @@ static void ll_destroy_obj(void* pObj) {
     }
     char str[1024];
     sprintf(str, "Unable to remove obj %p. Was it created? Has it already been destroyed?", pObj);
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_DESTROY_OBJECT_FAILED, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_DESTROY_OBJECT_FAILED, LAYER_ABBREV_STR, str);
 }
+
 // Set selected flag state for an object node
 static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {
     if (pObj != NULL) {
@@ -208,7 +216,7 @@ static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status
         // If we do not find it print an error
         char str[1024];
         sprintf(str, "Unable to set status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
     }
 }
 
@@ -234,7 +242,7 @@ static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint)
     // If we do not find it print an error
     char str[1024];
     sprintf(str, "Unable to track status for non-existent Command Buffer object %p", pObj);
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 }
 
 // Reset selected flag state for an object node
@@ -250,11 +258,11 @@ static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS stat
     // If we do not find it print an error
     char str[1024];
     sprintf(str, "Unable to reset status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 }
 
 // Check object status for selected flag state
-static bool32_t validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {
+static bool32_t validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, GLAVE_SNAPSHOT_ERROR error_code, char* fail_msg) {
     objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
         if (pTrav->obj.pObj == pObj) {
@@ -272,16 +280,16 @@ static bool32_t validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STAT
         // If we do not find it print an error
         char str[1024];
         sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
     }
     return XGL_FALSE;
 }
 
 static void validate_draw_state_flags(void* pObj) {
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
+    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    GLVSNAPSHOT_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");
+    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    GLVSNAPSHOT_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");
+    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  GLVSNAPSHOT_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
+    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  GLVSNAPSHOT_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
 }
 
 static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint32_t numRefs) {
@@ -289,9 +297,9 @@ static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint3
     for (i = 0; i < numRefs; i++) {
         if(pMemRefs[i].mem) {
             // If mem reference is in presentable image memory list, skip the check of the GPU_MEMORY list
-            if (!validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, OBJTRACK_NONE, NULL) == XGL_TRUE)
+            if (!validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, GLVSNAPSHOT_NONE, NULL) == XGL_TRUE)
             {
-                validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");
+                validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, GLVSNAPSHOT_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");
             }
         }
     }
@@ -301,12 +309,12 @@ static void validate_mem_ref_count(uint32_t numRefs) {
     if (maxMemRefsPerSubmission == 0) {
         char str[1024];
         sprintf(str, "xglQueueSubmit called before calling xglGetGpuInfo");
-        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_GETGPUINFO_NOT_CALLED, LAYER_ABBREV_STR, str);
+        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_GETGPUINFO_NOT_CALLED, LAYER_ABBREV_STR, str);
     } else {
         if (numRefs > maxMemRefsPerSubmission) {
             char str[1024];
             sprintf(str, "xglQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemRefsPerSubmission);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_MEMREFCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
         }
     }
 }
@@ -316,11 +324,11 @@ static void setGpuInfoState(void *pData) {
 }
 
 #include "xgl_dispatch_table_helper.h"
-static void initObjectTracker(void)
+static void initGlaveSnapshot(void)
 {
 
     const char *strOpt;
-    // initialize ObjectTracker options
+    // initialize GlaveSnapshot options
     getLayerOptionEnum(LAYER_NAME_STR "ReportLevel", (uint32_t *) &g_reportingLevel);
     g_actionIsDefault = getLayerOptionEnum(LAYER_NAME_STR "DebugAction", (uint32_t *) &g_debugAction);
 
@@ -380,7 +388,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initObjectTracker);
+    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
     if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES) {
         if (pData != NULL) {
@@ -394,7 +402,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initObjectTracker);
+    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     loader_platform_thread_lock_mutex(&objLock);
     ll_insert_obj((void*)*pDevice, XGL_OBJECT_TYPE_DEVICE);
@@ -418,7 +426,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
         } else {
             char str[1024];
             sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, LAYER_ABBREV_STR, str);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, GLVSNAPSHOT_OBJECT_LEAK, LAYER_ABBREV_STR, str);
             pTrav = pTrav->pNextGlobal;
         }
     }
@@ -432,7 +440,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, 
     ll_increment_use_count((void*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initObjectTracker);
+    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
     return result;
 }
@@ -445,7 +453,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     ll_increment_use_count((void*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
         pCurObj = gpuw;
-        loader_platform_thread_once(&tabOnce, initObjectTracker);
+        loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
         XGL_RESULT result = nextTable.EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
             return result;
     } else {
@@ -563,7 +571,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(XGL_PHYSICAL_GPU 
     ll_increment_use_count((void*)gpu0, XGL_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initObjectTracker);
+    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.GetMultiGpuCompatibility((XGL_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
     return result;
 }
@@ -667,7 +675,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
     ll_increment_use_count((void*)fence, XGL_OBJECT_TYPE_FENCE);
     loader_platform_thread_unlock_mutex(&objLock);
     // Warn if submitted_flag is not set
-    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");
+    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, GLVSNAPSHOT_INVALID_FENCE, "Status Requested for Unsubmitted Fence");
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
     return result;
 }
@@ -1550,7 +1558,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(XGL_PHYSICAL_GPU
     ll_increment_use_count((void*)gpu, XGL_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initObjectTracker);
+    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.WsiX11AssociateConnection((XGL_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
     return result;
 }
@@ -1585,12 +1593,15 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
 
 #endif
 
-uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)
+//=============================================================================
+// Exported methods
+//=============================================================================
+uint64_t glvSnapshotGetObjectCount(XGL_OBJECT_TYPE type)
 {
     return (type == XGL_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];
 }
 
-XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)
+XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLVSNAPSHOT_NODE* pObjNodeArray)
 {
     // This bool flags if we're pulling all objs or just a single class of objs
     bool32_t bAllObjs = (type == XGL_OBJECT_TYPE_ANY);
@@ -1599,7 +1610,7 @@ XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_
     if (objCount > maxObjCount) {
         char str[1024];
         sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_XGL_OBJECT_TYPE(type));
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_OBJCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, GLVSNAPSHOT_OBJCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
         return XGL_ERROR_INVALID_VALUE;
     }
     objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];
@@ -1607,13 +1618,18 @@ XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_
         if (!pTrav) {
             char str[1024];
             sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_XGL_OBJECT_TYPE(type), maxObjCount, i, objCount);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
             return XGL_ERROR_UNKNOWN;
         }
-        memcpy(&pObjNodeArray[i], pTrav, sizeof(OBJTRACK_NODE));
+        memcpy(&pObjNodeArray[i], pTrav, sizeof(GLVSNAPSHOT_NODE));
         pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;
     }
     return XGL_SUCCESS;
+}
+
+void glvSnapshotPrintObjects(void)
+{
+    ll_print_lists();
 }
 
 #include "xgl_generic_intercept_proc_helper.h"
@@ -1624,15 +1640,17 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
     if (gpu == NULL)
         return NULL;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initObjectTracker);
+    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
 
     addr = layer_intercept_proc(funcName);
     if (addr)
         return addr;
-    else if (!strncmp("objTrackGetObjectCount", funcName, sizeof("objTrackGetObjectCount")))
-        return objTrackGetObjectCount;
-    else if (!strncmp("objTrackGetObjects", funcName, sizeof("objTrackGetObjects")))
-        return objTrackGetObjects;
+    else if (!strncmp("glvSnapshotGetObjectCount", funcName, sizeof("glvSnapshotGetObjectCount")))
+        return glvSnapshotGetObjectCount;
+    else if (!strncmp("glvSnapshotGetObjects", funcName, sizeof("glvSnapshotGetObjects")))
+        return glvSnapshotGetObjects;
+    else if (!strncmp("glvSnapshotPrintObjects", funcName, sizeof("glvSnapshotPrintObjects")))
+        return glvSnapshotPrintObjects;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
