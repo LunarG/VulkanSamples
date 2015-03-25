@@ -2538,7 +2538,7 @@ XGL_RESULT XGLAPI xglWaitForFences(
     uint32_t                                    fenceCount,
     const XGL_FENCE*                            pFences,
     bool32_t                                    waitAll,
-    uint64_t                                    timeout);
+    uint64_t                                    timeout); // timeout in nanoseconds
 
 // Queue semaphore functions
 

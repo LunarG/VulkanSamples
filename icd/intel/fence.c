@@ -138,11 +138,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWaitForFences(
         int64_t ns;
         XGL_RESULT r;
 
-        if (timeout <= (uint64_t) (INT64_MAX / 1000 / 1000 / 1000))
-            ns = timeout * 1000 * 1000 * 1000;
-        else
-            ns = -1;
-
+        /* timeout in nano seconds */
+        ns = (timeout <= (uint64_t) INT64_MAX) ? ns : -1;
         r = intel_fence_wait(fence, ns);
 
         if (!waitAll && r == XGL_SUCCESS)
