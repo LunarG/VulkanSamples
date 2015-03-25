@@ -812,7 +812,6 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, XGL_INDEX_TYPE index
     view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = obj();
     view_info.viewType = XGL_BUFFER_VIEW_TYPED;
-    view_info.stride = m_stride;
     view_info.format = viewFormat;
     view_info.offset = 0;
     view_info.range  = allocationSize;

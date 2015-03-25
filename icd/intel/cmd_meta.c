@@ -38,12 +38,12 @@ static XGL_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
                                            struct intel_buf_view **view)
 {
     XGL_BUFFER_VIEW_CREATE_INFO info;
+    XGL_GPU_SIZE stride;
 
     memset(&info, 0, sizeof(info));
     info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     info.buffer = buf;
     info.viewType = XGL_BUFFER_VIEW_TYPED;
-    info.stride = icd_format_get_size(format);
     info.format = format;
     info.range = range;
 
@@ -51,8 +51,9 @@ static XGL_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
      * We do not rely on the hardware to avoid out-of-bound access.  But we do
      * not want the hardware to ignore the last element either.
      */
-    if (info.range % info.stride)
-        info.range += info.stride - (info.range % info.stride);
+    stride = icd_format_get_size(format);
+    if (info.range % stride)
+        info.range += stride - (info.range % stride);
 
     return intel_buf_view_create(cmd->dev, &info, view);
 }

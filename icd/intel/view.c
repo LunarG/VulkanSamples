@@ -1099,7 +1099,7 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
         stride = 16;
     } else {
         format = info->format;
-        stride = info->stride;
+        stride = icd_format_get_size(format);
     }
     cmd = view->cmd;
 

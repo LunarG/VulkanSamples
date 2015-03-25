@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 61, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 62, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -1123,10 +1123,9 @@ typedef enum _XGL_BUFFER_USAGE_FLAGS
     XGL_BUFFER_USAGE_INDEX_FETCH_BIT                        = 0x00000040,   // Fixed function index fetch (index buffer)
     XGL_BUFFER_USAGE_VERTEX_FETCH_BIT                       = 0x00000080,   // Fixed function vertex fetch (VBO)
     XGL_BUFFER_USAGE_SHADER_STORAGE_BIT                     = 0x00000100,   // Shader storage buffer (SSBO)
-    XGL_BUFFER_USAGE_RAW_BUFFER_BIT                         = 0x00000200,   // used as a raw buffer
-    XGL_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT           = 0x00000400,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
-    XGL_BUFFER_USAGE_TEXTURE_BUFFER_BIT                     = 0x00000800,   // texture buffer (TBO)
-    XGL_BUFFER_USAGE_IMAGE_BUFFER_BIT                       = 0x00001000,   // image buffer (load/store)
+    XGL_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT           = 0x00000200,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
+    XGL_BUFFER_USAGE_TEXTURE_BUFFER_BIT                     = 0x00000400,   // texture buffer (TBO)
+    XGL_BUFFER_USAGE_IMAGE_BUFFER_BIT                       = 0x00000800,   // image buffer (load/store)
     XGL_MAX_ENUM(_XGL_BUFFER_USAGE_FLAGS)
 } XGL_BUFFER_USAGE_FLAGS;
 
@@ -1142,10 +1141,9 @@ typedef enum _XGL_BUFFER_VIEW_TYPE
 {
     XGL_BUFFER_VIEW_RAW                                     = 0x00000000,   // Raw buffer without special structure (e.g. UBO, SSBO, indirect and parameter buffers)
     XGL_BUFFER_VIEW_TYPED                                   = 0x00000001,   // Typed buffer, format and channels are used (TBO, image buffer)
-    XGL_BUFFER_VIEW_STRUCTURED                              = 0x00000002,   // Structured buffer, stride is used (VBO, DX-style structured buffer)
 
     XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE                        = XGL_BUFFER_VIEW_RAW,
-    XGL_BUFFER_VIEW_TYPE_END_RANGE                          = XGL_BUFFER_VIEW_STRUCTURED,
+    XGL_BUFFER_VIEW_TYPE_END_RANGE                          = XGL_BUFFER_VIEW_TYPED,
     XGL_NUM_BUFFER_VIEW_TYPE                                = (XGL_BUFFER_VIEW_TYPE_END_RANGE - XGL_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_BUFFER_VIEW_TYPE)
 } XGL_BUFFER_VIEW_TYPE;
@@ -1592,7 +1590,6 @@ typedef struct _XGL_BUFFER_VIEW_CREATE_INFO
     const void*                             pNext;                      // Pointer to next structure.
     XGL_BUFFER                              buffer;
     XGL_BUFFER_VIEW_TYPE                    viewType;
-    XGL_GPU_SIZE                            stride;                     // Optionally specifies stride between elements
     XGL_FORMAT                              format;                     // Optionally specifies format of elements
     XGL_GPU_SIZE                            offset;                     // Specified in bytes
     XGL_GPU_SIZE                            range;                      // View size specified in bytes
