@@ -478,7 +478,7 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
     return result;
 }
 
-static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem)
+static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem, bool internal)
 {
     bool32_t result = XGL_TRUE;
     // Parse global list to find info w/ mem
@@ -489,7 +489,7 @@ static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem)
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if (pInfo->allocInfo.allocationSize == 0) {
+        if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             char str[1024];
             sprintf(str, "Attempting to free memory associated with a Presentable Image, %p, this should not be explicitly freed\n", (void*)mem);
             layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
@@ -919,7 +919,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
      * all API objects referencing it and that it is not referenced by any queued command buffers
      */
     loader_platform_thread_lock_mutex(&globalLock);
-    if (XGL_FALSE == freeMemObjInfo(mem)) {
+    if (XGL_FALSE == freeMemObjInfo(mem, false)) {
         char str[1024];
         sprintf(str, "Issue while freeing mem obj %p", (void*)mem);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREE_MEM_ERROR, "MEM", str);
@@ -1008,8 +1008,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
             if (0 == pDelInfo->pMemObjInfo->allocInfo.allocationSize) { // Wsi allocated memory has NULL allocInfo w/ 0 size
                 XGL_GPU_MEMORY memToFree = pDelInfo->pMemObjInfo->mem;
                 clearObjectBinding(object);
-                freeMemObjInfo(memToFree);
-            } else {
+                freeMemObjInfo(memToFree, true);
+            }
+            else {
                 char str[1024];
                 sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE, 0)", object, (void*)pDelInfo->pMemObjInfo->mem, object);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
