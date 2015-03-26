@@ -25,8 +25,6 @@
 #ifndef GLVDEBUG_QGROUPTHREADSPROXYMODEL_H
 #define GLVDEBUG_QGROUPTHREADSPROXYMODEL_H
 
-#include "glvtrace_xgl_packet_id.h"
-
 #include "glvdebug_QTraceFileModel.h"
 #include <QAbstractProxyModel>
 #include <QStandardItem>
