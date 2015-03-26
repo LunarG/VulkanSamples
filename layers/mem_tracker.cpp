@@ -941,7 +941,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
                 freeMemNode(memToFree);
             } else {
                 char str[1024];
-                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE)", object, (void*)pDelNode->pMemNode->mem, object);
+                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE, 0)", object, (void*)pDelNode->pMemNode->mem, object);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
                 // From the spec : If an object has previous memory binding, it is required to unbind memory from an API object before it is destroyed.
                 clearObjectBinding(object);
