@@ -7,17 +7,25 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../..)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include ${SRC_DIR}/../../../layers ${SRC_DIR}/glv_extensions/glvreplay_xgl)
 
-# This file is shared between replayer and tracer and are generated to each dir.  Should generate them to common area
-add_custom_command(OUTPUT glvtrace_xgl_packet_id.h xgl_enum_string_helper.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg_structs.h glvreplay_xgl_replay.h glvreplay_xgl_replay.cpp
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-replay-h > glvreplay_xgl_replay.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-replay-c > glvreplay_xgl_replay.cpp
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-	           DEPENDS ${SRC_DIR}/../../../glave-generate.py
-	                   ${SRC_DIR}/../../../xgl_helper.py)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_packet_id.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_enum_string_helper.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xglwsix11ext_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_xgl_replay.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_xgl_replay.cpp
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-replay-h > glvreplay_xgl_replay.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-replay-c > glvreplay_xgl_replay.cpp
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
+                   DEPENDS ${SRC_DIR}/../scripts/vk-generate.py
+                           ${SRC_DIR}/../scripts/vk-helper.py
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXCB_NVIDIA")
@@ -40,21 +48,22 @@ set(SRC_LIST
     ${SRC_LIST}
     glvreplay_xgl.cpp
     glvreplay_xgl_settings.cpp
-    glvreplay_xgl_replay.cpp
+    codegen/glvreplay_xgl_replay.cpp
 )
 
 set (HDR_LIST
-    glvtrace_xgl_packet_id.h
-    glvtrace_xgl_xgl_structs.h
-    glvtrace_xgl_xglwsix11ext_structs.h
-    glvtrace_xgl_xgldbg_structs.h
-    xgl_enum_string_helper.h
+    codegen/glvtrace_xgl_packet_id.h
+    codegen/glvtrace_xgl_xgl_structs.h
+    codegen/glvtrace_xgl_xglwsix11ext_structs.h
+    codegen/glvtrace_xgl_xgldbg_structs.h
+    codegen/xgl_enum_string_helper.h
     glvreplay_xgl.h
     glvreplay_xgl_settings.h
-    glvreplay_xgl_replay.h
+    codegen/glvreplay_xgl_replay.h
 )
 
 include_directories(
+    codegen
     ${SRC_DIR}/glvreplay
     ${SRC_DIR}/glvcommon
     ${SRC_DIR}/thirdparty

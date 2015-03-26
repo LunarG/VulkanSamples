@@ -17,15 +17,22 @@ message(WARNING "WARNING: glvdebug_xgl will be excluded because Qt5 was not foun
 else()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
-# This file is shared between replayer and tracer and are generated to each dir.  Should generate them to common area
-add_custom_command(OUTPUT glvtrace_xgl_packet_id.h glvtrace_xgl_xgl_structs.h glvtrace_xgl_xglwsix11ext_structs.h glvtrace_xgl_xgldbg_structs.h xgl_enum_string_helper.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../glave-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ./
-	           DEPENDS ${SRC_DIR}/../../../glave-generate.py
-                           ${SRC_DIR}/../../../xgl_helper.py)
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_packet_id.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xglwsix11ext_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_enum_string_helper.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
+                   DEPENDS ${SRC_DIR}/../scripts/vk-generate.py
+                           ${SRC_DIR}/../scripts/vk-helper.py
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
@@ -66,22 +73,22 @@ set(UI_HEADER_LIST
 )
 
 set(HDR_LIST
-    glvtrace_xgl_packet_id.h
     glvdebug_xgl_settings.h
     glvdebug_xgl_qgroupframesproxymodel.h
-    glvtrace_xgl_xgl_structs.h
-    glvtrace_xgl_xglwsix11ext_structs.h
-    glvtrace_xgl_xgldbg_structs.h
+    codegen/glvtrace_xgl_packet_id.h
+    codegen/glvtrace_xgl_xgl_structs.h
+    codegen/glvtrace_xgl_xglwsix11ext_structs.h
+    codegen/glvtrace_xgl_xgldbg_structs.h
     ${SRC_DIR}/glvdebug/glvdebug_qgroupthreadsproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_controller.h
     ${SRC_DIR}/glvreplay/glvreplay_factory.h
 )
 
 include_directories(
+    codegen
     ${SRC_DIR}/glvcommon
     ${SRC_DIR}/glvdebug
     ${SRC_DIR}/glvreplay
-    ${SRC_DIR}/glv_extensions/glvtrace_xgl
     ${SRC_DIR}/thirdparty
     ${Qt5Widgets_INCLUDE_DIRS}
 )
