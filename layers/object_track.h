@@ -155,6 +155,8 @@ static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
             return "QUERY_POOL";
         case XGL_OBJECT_TYPE_DESCRIPTOR_REGION:
             return "DESCRIPTOR_REGION";
+        case XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY:
+            return "PRESENTABLE_IMAGE_MEMORY";
         default:
             return "UNKNOWN";
     }
