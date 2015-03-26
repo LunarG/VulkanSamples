@@ -56,69 +56,69 @@ struct intel_desc_sampler {
     const struct intel_sampler *sampler;
 };
 
-static bool desc_pool_init_desc_sizes(struct intel_desc_pool *pool,
-                                      const struct intel_gpu *gpu)
+static bool desc_region_init_desc_sizes(struct intel_desc_region *region,
+                                        const struct intel_gpu *gpu)
 {
-    pool->surface_desc_size = sizeof(struct intel_desc_surface);
-    pool->sampler_desc_size = sizeof(struct intel_desc_sampler);
+    region->surface_desc_size = sizeof(struct intel_desc_surface);
+    region->sampler_desc_size = sizeof(struct intel_desc_sampler);
 
     return true;
 }
 
-XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
-                                  struct intel_desc_pool **pool_ret)
+XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
+                                    struct intel_desc_region **region_ret)
 {
     const uint32_t surface_count = 16384;
     const uint32_t sampler_count = 16384;
-    struct intel_desc_pool *pool;
+    struct intel_desc_region *region;
 
-    pool = intel_alloc(dev, sizeof(*pool), 0, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!pool)
+    region = intel_alloc(dev, sizeof(*region), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!region)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    memset(pool, 0, sizeof(*pool));
+    memset(region, 0, sizeof(*region));
 
-    if (!desc_pool_init_desc_sizes(pool, dev->gpu)) {
-        intel_free(dev, pool);
+    if (!desc_region_init_desc_sizes(region, dev->gpu)) {
+        intel_free(dev, region);
         return XGL_ERROR_UNKNOWN;
     }
 
-    intel_desc_offset_set(&pool->size,
-            pool->surface_desc_size * surface_count,
-            pool->sampler_desc_size * sampler_count);
+    intel_desc_offset_set(&region->size,
+            region->surface_desc_size * surface_count,
+            region->sampler_desc_size * sampler_count);
 
-    pool->surfaces = intel_alloc(dev, pool->size.surface,
+    region->surfaces = intel_alloc(dev, region->size.surface,
             64, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!pool->surfaces) {
-        intel_free(dev, pool);
+    if (!region->surfaces) {
+        intel_free(dev, region);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    pool->samplers = intel_alloc(dev, pool->size.sampler,
+    region->samplers = intel_alloc(dev, region->size.sampler,
             64, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!pool->samplers) {
-        intel_free(dev, pool->surfaces);
-        intel_free(dev, pool);
+    if (!region->samplers) {
+        intel_free(dev, region->surfaces);
+        intel_free(dev, region);
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    *pool_ret = pool;
+    *region_ret = region;
 
     return XGL_SUCCESS;
 }
 
-void intel_desc_pool_destroy(struct intel_dev *dev,
-                             struct intel_desc_pool *pool)
+void intel_desc_region_destroy(struct intel_dev *dev,
+                               struct intel_desc_region *region)
 {
-    intel_free(dev, pool->samplers);
-    intel_free(dev, pool->surfaces);
-    intel_free(dev, pool);
+    intel_free(dev, region->samplers);
+    intel_free(dev, region->surfaces);
+    intel_free(dev, region);
 }
 
 /**
- * Get the size of a descriptor in the pool.
+ * Get the size of a descriptor in the region.
  */
-static XGL_RESULT desc_pool_get_desc_size(const struct intel_desc_pool *pool,
+static XGL_RESULT desc_region_get_desc_size(const struct intel_desc_region *region,
                                             XGL_DESCRIPTOR_TYPE type,
                                             struct intel_desc_offset *size)
 {
@@ -126,11 +126,11 @@ static XGL_RESULT desc_pool_get_desc_size(const struct intel_desc_pool *pool,
 
     switch (type) {
     case XGL_DESCRIPTOR_TYPE_SAMPLER:
-        sampler_size = pool->sampler_desc_size;
+        sampler_size = region->sampler_desc_size;
         break;
     case XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE:
-        surface_size = pool->surface_desc_size;
-        sampler_size = pool->sampler_desc_size;
+        surface_size = region->surface_desc_size;
+        sampler_size = region->sampler_desc_size;
         break;
     case XGL_DESCRIPTOR_TYPE_TEXTURE:
     case XGL_DESCRIPTOR_TYPE_TEXTURE_BUFFER:
@@ -142,7 +142,7 @@ static XGL_RESULT desc_pool_get_desc_size(const struct intel_desc_pool *pool,
     case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
     case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
     case XGL_DESCRIPTOR_TYPE_RAW_BUFFER_DYNAMIC:
-        surface_size = pool->surface_desc_size;
+        surface_size = region->surface_desc_size;
         break;
     default:
         assert(!"unknown descriptor type");
@@ -155,10 +155,10 @@ static XGL_RESULT desc_pool_get_desc_size(const struct intel_desc_pool *pool,
     return XGL_SUCCESS;
 }
 
-XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
-                                 const XGL_DESCRIPTOR_REGION_CREATE_INFO *info,
-                                 struct intel_desc_offset *begin,
-                                 struct intel_desc_offset *end)
+XGL_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
+                                   const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
+                                   struct intel_desc_offset *begin,
+                                   struct intel_desc_offset *end)
 {
     uint32_t surface_size = 0, sampler_size = 0;
     struct intel_desc_offset alloc;
@@ -170,7 +170,7 @@ XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
         struct intel_desc_offset size;
         XGL_RESULT ret;
 
-        ret = desc_pool_get_desc_size(pool, tc->type, &size);
+        ret = desc_region_get_desc_size(region, tc->type, &size);
         if (ret != XGL_SUCCESS)
             return ret;
 
@@ -180,100 +180,100 @@ XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
 
     intel_desc_offset_set(&alloc, surface_size, sampler_size);
 
-    *begin = pool->cur;
-    intel_desc_offset_add(end, &pool->cur, &alloc);
+    *begin = region->cur;
+    intel_desc_offset_add(end, &region->cur, &alloc);
 
-    if (!intel_desc_offset_within(end, &pool->size))
+    if (!intel_desc_offset_within(end, &region->size))
         return XGL_ERROR_OUT_OF_MEMORY;
 
     /* increment the writer pointer */
-    pool->cur = *end;
+    region->cur = *end;
 
     return XGL_SUCCESS;
 }
 
-static void desc_pool_validate_begin_end(const struct intel_desc_pool *pool,
-                                         const struct intel_desc_offset *begin,
-                                         const struct intel_desc_offset *end)
+static void desc_region_validate_begin_end(const struct intel_desc_region *region,
+                                           const struct intel_desc_offset *begin,
+                                           const struct intel_desc_offset *end)
 {
-    assert(begin->surface % pool->surface_desc_size == 0 &&
-           begin->sampler % pool->sampler_desc_size == 0);
-    assert(end->surface % pool->surface_desc_size == 0 &&
-           end->sampler % pool->sampler_desc_size == 0);
-    assert(intel_desc_offset_within(end, &pool->size));
+    assert(begin->surface % region->surface_desc_size == 0 &&
+           begin->sampler % region->sampler_desc_size == 0);
+    assert(end->surface % region->surface_desc_size == 0 &&
+           end->sampler % region->sampler_desc_size == 0);
+    assert(intel_desc_offset_within(end, &region->size));
 }
 
-void intel_desc_pool_free(struct intel_desc_pool *pool,
-                          const struct intel_desc_offset *begin,
-                          const struct intel_desc_offset *end)
+void intel_desc_region_free(struct intel_desc_region *region,
+                            const struct intel_desc_offset *begin,
+                            const struct intel_desc_offset *end)
 {
-    desc_pool_validate_begin_end(pool, begin, end);
+    desc_region_validate_begin_end(region, begin, end);
 
     /* is it ok not to reclaim? */
 }
 
-XGL_RESULT intel_desc_pool_begin_update(struct intel_desc_pool *pool,
-                                        XGL_DESCRIPTOR_UPDATE_MODE mode)
+XGL_RESULT intel_desc_region_begin_update(struct intel_desc_region *region,
+                                          XGL_DESCRIPTOR_UPDATE_MODE mode)
 {
     /* no-op */
     return XGL_SUCCESS;
 }
 
-XGL_RESULT intel_desc_pool_end_update(struct intel_desc_pool *pool,
-                                      struct intel_cmd *cmd)
+XGL_RESULT intel_desc_region_end_update(struct intel_desc_region *region,
+                                        struct intel_cmd *cmd)
 {
     /* No pipelined update.  cmd_draw() will do the work. */
     return XGL_SUCCESS;
 }
 
-void intel_desc_pool_clear(struct intel_desc_pool *pool,
-                           const struct intel_desc_offset *begin,
-                           const struct intel_desc_offset *end)
+void intel_desc_region_clear(struct intel_desc_region *region,
+                             const struct intel_desc_offset *begin,
+                             const struct intel_desc_offset *end)
 {
     uint32_t i;
 
-    desc_pool_validate_begin_end(pool, begin, end);
+    desc_region_validate_begin_end(region, begin, end);
 
-    for (i = begin->surface; i < end->surface; i += pool->surface_desc_size) {
+    for (i = begin->surface; i < end->surface; i += region->surface_desc_size) {
         struct intel_desc_surface *desc = (struct intel_desc_surface *)
-            ((char *) pool->surfaces + i);
+            ((char *) region->surfaces + i);
 
         desc->mem = NULL;
         desc->type = INTEL_DESC_SURFACE_UNUSED;
         desc->u.unused = NULL;
     }
 
-    for (i = begin->sampler; i < end->sampler; i += pool->sampler_desc_size) {
+    for (i = begin->sampler; i < end->sampler; i += region->sampler_desc_size) {
         struct intel_desc_sampler *desc = (struct intel_desc_sampler *)
-            ((char *) pool->samplers + i);
+            ((char *) region->samplers + i);
 
         desc->sampler = NULL;
     }
 }
 
-void intel_desc_pool_update(struct intel_desc_pool *pool,
-                            const struct intel_desc_offset *begin,
-                            const struct intel_desc_offset *end,
-                            const struct intel_desc_surface *surfaces,
-                            const struct intel_desc_sampler *samplers)
+void intel_desc_region_update(struct intel_desc_region *region,
+                              const struct intel_desc_offset *begin,
+                              const struct intel_desc_offset *end,
+                              const struct intel_desc_surface *surfaces,
+                              const struct intel_desc_sampler *samplers)
 {
-    desc_pool_validate_begin_end(pool, begin, end);
+    desc_region_validate_begin_end(region, begin, end);
 
     if (begin->surface < end->surface) {
-        memcpy((char *) pool->surfaces + begin->surface, surfaces,
+        memcpy((char *) region->surfaces + begin->surface, surfaces,
                 end->surface - begin->surface);
     }
 
     if (begin->sampler < end->sampler) {
-        memcpy((char *) pool->samplers + begin->sampler, samplers,
+        memcpy((char *) region->samplers + begin->sampler, samplers,
                 end->sampler - begin->sampler);
     }
 }
 
-void intel_desc_pool_copy(struct intel_desc_pool *pool,
-                          const struct intel_desc_offset *begin,
-                          const struct intel_desc_offset *end,
-                          const struct intel_desc_offset *src)
+void intel_desc_region_copy(struct intel_desc_region *region,
+                            const struct intel_desc_offset *begin,
+                            const struct intel_desc_offset *end,
+                            const struct intel_desc_offset *src)
 {
     struct intel_desc_offset src_end;
     const struct intel_desc_surface *surfaces;
@@ -283,88 +283,88 @@ void intel_desc_pool_copy(struct intel_desc_pool *pool,
     assert(intel_desc_offset_within(src, begin) ||
            intel_desc_offset_within(end, src));
 
-    /* no read past pool */
+    /* no read past region */
     intel_desc_offset_sub(&src_end, end, begin);
     intel_desc_offset_add(&src_end, src, &src_end);
-    assert(intel_desc_offset_within(&src_end, &pool->size));
+    assert(intel_desc_offset_within(&src_end, &region->size));
 
     surfaces = (const struct intel_desc_surface *)
-        ((const char *) pool->surfaces + src->surface);
+        ((const char *) region->surfaces + src->surface);
     samplers = (const struct intel_desc_sampler *)
-        ((const char *) pool->samplers + src->sampler);
+        ((const char *) region->samplers + src->sampler);
 
-    intel_desc_pool_update(pool, begin, end, surfaces, samplers);
+    intel_desc_region_update(region, begin, end, surfaces, samplers);
 }
 
-static void desc_region_destroy(struct intel_obj *obj)
+static void desc_pool_destroy(struct intel_obj *obj)
 {
-    struct intel_desc_region *region = intel_desc_region_from_obj(obj);
+    struct intel_desc_pool *pool = intel_desc_pool_from_obj(obj);
 
-    intel_desc_region_destroy(region);
+    intel_desc_pool_destroy(pool);
 }
 
-XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
-                                    XGL_DESCRIPTOR_REGION_USAGE usage,
-                                    uint32_t max_sets,
-                                    const XGL_DESCRIPTOR_REGION_CREATE_INFO *info,
-                                    struct intel_desc_region **region_ret)
+XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
+                                  XGL_DESCRIPTOR_POOL_USAGE usage,
+                                  uint32_t max_sets,
+                                  const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
+                                  struct intel_desc_pool **pool_ret)
 {
-    struct intel_desc_region *region;
+    struct intel_desc_pool *pool;
     XGL_RESULT ret;
 
-    region = (struct intel_desc_region *) intel_base_create(&dev->base.handle,
-            sizeof(*region), dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_REGION,
+    pool = (struct intel_desc_pool *) intel_base_create(&dev->base.handle,
+            sizeof(*pool), dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_POOL,
             info, 0);
-    if (!region)
+    if (!pool)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    region->dev = dev;
+    pool->dev = dev;
 
-    ret = intel_desc_pool_alloc(dev->desc_pool, info,
-            &region->pool_begin, &region->pool_end);
+    ret = intel_desc_region_alloc(dev->desc_region, info,
+            &pool->region_begin, &pool->region_end);
     if (ret != XGL_SUCCESS) {
-        intel_base_destroy(&region->obj.base);
+        intel_base_destroy(&pool->obj.base);
         return ret;
     }
 
     /* point to head */
-    region->cur = region->pool_begin;
+    pool->cur = pool->region_begin;
 
-    region->obj.destroy = desc_region_destroy;
+    pool->obj.destroy = desc_pool_destroy;
 
-    *region_ret = region;
+    *pool_ret = pool;
 
     return XGL_SUCCESS;
 }
 
-void intel_desc_region_destroy(struct intel_desc_region *region)
+void intel_desc_pool_destroy(struct intel_desc_pool *pool)
 {
-    intel_desc_pool_free(region->dev->desc_pool,
-            &region->pool_begin, &region->pool_end);
-    intel_base_destroy(&region->obj.base);
+    intel_desc_region_free(pool->dev->desc_region,
+            &pool->region_begin, &pool->region_end);
+    intel_base_destroy(&pool->obj.base);
 }
 
-XGL_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
-                                   const struct intel_desc_layout *layout,
-                                   struct intel_desc_offset *begin,
-                                   struct intel_desc_offset *end)
+XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
+                                 const struct intel_desc_layout *layout,
+                                 struct intel_desc_offset *begin,
+                                 struct intel_desc_offset *end)
 {
-    *begin = region->cur;
-    intel_desc_offset_add(end, &region->cur, &layout->pool_size);
+    *begin = pool->cur;
+    intel_desc_offset_add(end, &pool->cur, &layout->region_size);
 
-    if (!intel_desc_offset_within(end, &region->pool_end))
+    if (!intel_desc_offset_within(end, &pool->region_end))
         return XGL_ERROR_OUT_OF_MEMORY;
 
     /* increment the writer pointer */
-    region->cur = *end;
+    pool->cur = *end;
 
     return XGL_SUCCESS;
 }
 
-void intel_desc_region_free_all(struct intel_desc_region *region)
+void intel_desc_pool_free_all(struct intel_desc_pool *pool)
 {
     /* reset to head */
-    region->cur = region->pool_begin;
+    pool->cur = pool->region_begin;
 }
 
 static void desc_set_destroy(struct intel_obj *obj)
@@ -375,7 +375,7 @@ static void desc_set_destroy(struct intel_obj *obj)
 }
 
 XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
-                                 struct intel_desc_region *region,
+                                 struct intel_desc_pool *pool,
                                  XGL_DESCRIPTOR_SET_USAGE usage,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_set **set_ret)
@@ -389,9 +389,9 @@ XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
     if (!set)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    set->pool = dev->desc_pool;
-    ret = intel_desc_region_alloc(region, layout,
-            &set->pool_begin, &set->pool_end);
+    set->region = dev->desc_region;
+    ret = intel_desc_pool_alloc(pool, layout,
+            &set->region_begin, &set->region_end);
     if (ret != XGL_SUCCESS) {
         intel_base_destroy(&set->obj.base);
         return ret;
@@ -418,10 +418,10 @@ static void desc_set_update(struct intel_desc_set *set,
 {
     struct intel_desc_offset begin, end;
 
-    intel_desc_offset_add(&begin, &set->pool_begin, &iter->offset_begin);
-    intel_desc_offset_add(&end, &set->pool_begin, &iter->offset_end);
+    intel_desc_offset_add(&begin, &set->region_begin, &iter->offset_begin);
+    intel_desc_offset_add(&end, &set->region_begin, &iter->offset_end);
 
-    intel_desc_pool_update(set->pool, &begin, &end, surfaces, samplers);
+    intel_desc_region_update(set->region, &begin, &end, surfaces, samplers);
 }
 
 static bool desc_set_img_layout_read_only(XGL_IMAGE_LAYOUT layout)
@@ -490,13 +490,13 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
             if (immutable_sampler) {
                 struct intel_desc_offset begin, end;
 
-                intel_desc_offset_add(&begin, &set->pool_begin,
+                intel_desc_offset_add(&begin, &set->region_begin,
                         &iter.offset_begin);
                 intel_desc_offset_set(&end, begin.surface,
-                        begin.sampler + set->pool->sampler_desc_size);
+                        begin.sampler + set->region->sampler_desc_size);
 
                 sampler_desc.sampler = immutable_sampler;
-                intel_desc_pool_update(set->pool, &begin, &end,
+                intel_desc_region_update(set->region, &begin, &end,
                         NULL, &sampler_desc);
             }
         }
@@ -591,8 +591,8 @@ void intel_desc_set_update_as_copy(struct intel_desc_set *set,
                 update->descriptorIndex, &src_iter))
         return;
 
-    intel_desc_offset_add(&begin, &set->pool_begin, &iter.offset_begin);
-    intel_desc_offset_add(&src_begin, &src_set->pool_begin,
+    intel_desc_offset_add(&begin, &set->region_begin, &iter.offset_begin);
+    intel_desc_offset_add(&src_begin, &src_set->region_begin,
             &src_iter.offset_end);
 
     /* advance to end */
@@ -606,9 +606,9 @@ void intel_desc_set_update_as_copy(struct intel_desc_set *set,
     if (i < update->count)
         return;
 
-    intel_desc_offset_add(&end, &src_set->pool_begin, &iter.offset_end);
+    intel_desc_offset_add(&end, &src_set->region_begin, &iter.offset_end);
 
-    intel_desc_pool_copy(src_set->pool, &begin, &end, &src_begin);
+    intel_desc_region_copy(src_set->region, &begin, &end, &src_begin);
 }
 
 static void desc_set_read(const struct intel_desc_set *set,
@@ -618,25 +618,25 @@ static void desc_set_read(const struct intel_desc_set *set,
 {
     struct intel_desc_offset begin, end;
 
-    intel_desc_offset_add(&begin, &set->pool_begin, offset);
+    intel_desc_offset_add(&begin, &set->region_begin, offset);
     intel_desc_offset_set(&end, 0, 0);
 
     if (surface) {
         *surface = (const struct intel_desc_surface *)
-            ((const char *) set->pool->surfaces + begin.surface);
+            ((const char *) set->region->surfaces + begin.surface);
 
-        end.surface = set->pool->surface_desc_size;
+        end.surface = set->region->surface_desc_size;
     }
 
     if (sampler) {
         *sampler = (const struct intel_desc_sampler *)
-            ((const char *) set->pool->samplers + begin.sampler);
+            ((const char *) set->region->samplers + begin.sampler);
 
-        end.sampler = set->pool->sampler_desc_size;
+        end.sampler = set->region->sampler_desc_size;
     }
 
     intel_desc_offset_add(&end, &begin, &end);
-    desc_pool_validate_begin_end(set->pool, &begin, &end);
+    desc_region_validate_begin_end(set->region, &begin, &end);
 }
 
 void intel_desc_set_read_surface(const struct intel_desc_set *set,
@@ -690,7 +690,7 @@ static void desc_layout_destroy(struct intel_obj *obj)
 }
 
 static XGL_RESULT desc_layout_alloc_ranges(struct intel_desc_layout *layout,
-                                           const struct intel_desc_pool *pool,
+                                           const struct intel_desc_region *region,
                                            const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info)
 {
     /* calculate counts */
@@ -725,20 +725,20 @@ static XGL_RESULT desc_layout_alloc_ranges(struct intel_desc_layout *layout,
 }
 
 static XGL_RESULT desc_layout_init_ranges(struct intel_desc_layout *layout,
-                                          const struct intel_desc_pool *pool,
+                                          const struct intel_desc_region *region,
                                           const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info)
 {
     struct intel_desc_offset offset;
     uint32_t index, i;
     XGL_RESULT ret;
 
-    ret = desc_layout_alloc_ranges(layout, pool, info);
+    ret = desc_layout_alloc_ranges(layout, region, info);
     if (ret != XGL_SUCCESS)
         return ret;
 
     if (layout->prior_layout) {
         index = layout->prior_layout->end;
-        offset = layout->prior_layout->pool_size;
+        offset = layout->prior_layout->region_size;
     } else {
         index = 0;
         intel_desc_offset_set(&offset, 0, 0);
@@ -751,7 +751,7 @@ static XGL_RESULT desc_layout_init_ranges(struct intel_desc_layout *layout,
         struct intel_desc_layout_range *range = &layout->ranges[i];
         struct intel_desc_offset size;
 
-        ret = desc_pool_get_desc_size(pool, info->descriptorType, &size);
+        ret = desc_region_get_desc_size(region, info->descriptorType, &size);
         if (ret != XGL_SUCCESS)
             return ret;
 
@@ -780,7 +780,7 @@ static XGL_RESULT desc_layout_init_ranges(struct intel_desc_layout *layout,
     }
 
     layout->end = index;
-    layout->pool_size = offset;
+    layout->region_size = offset;
 
     return XGL_SUCCESS;
 }
@@ -839,7 +839,7 @@ XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
 
     ret = desc_layout_init_bind_points(layout, stage_flags, bind_points);
     if (ret == XGL_SUCCESS)
-        ret = desc_layout_init_ranges(layout, dev->desc_pool, info);
+        ret = desc_layout_init_ranges(layout, dev->desc_region, info);
     if (ret != XGL_SUCCESS) {
         intel_desc_layout_destroy(layout);
         return ret;
@@ -1004,60 +1004,60 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
+ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_UPDATE_MODE                   updateMode)
 {
     struct intel_dev *dev = intel_dev(device);
-    struct intel_desc_pool *pool = dev->desc_pool;
+    struct intel_desc_region *region = dev->desc_region;
 
-    return intel_desc_pool_begin_update(pool, updateMode);
+    return intel_desc_region_begin_update(region, updateMode);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
+ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
     XGL_CMD_BUFFER                               cmd_)
 {
     struct intel_dev *dev = intel_dev(device);
-    struct intel_desc_pool *pool = dev->desc_pool;
+    struct intel_desc_region *region = dev->desc_region;
     struct intel_cmd *cmd = intel_cmd(cmd_);
 
-    return intel_desc_pool_end_update(pool, cmd);
+    return intel_desc_region_end_update(region, cmd);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(
     XGL_DEVICE                                   device,
-    XGL_DESCRIPTOR_REGION_USAGE                  regionUsage,
+    XGL_DESCRIPTOR_POOL_USAGE                    poolUsage,
     uint32_t                                     maxSets,
-    const XGL_DESCRIPTOR_REGION_CREATE_INFO*     pCreateInfo,
-    XGL_DESCRIPTOR_REGION*                       pDescriptorRegion)
+    const XGL_DESCRIPTOR_POOL_CREATE_INFO*       pCreateInfo,
+    XGL_DESCRIPTOR_POOL*                         pDescriptorPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_desc_region_create(dev, regionUsage, maxSets, pCreateInfo,
-            (struct intel_desc_region **) pDescriptorRegion);
+    return intel_desc_pool_create(dev, poolUsage, maxSets, pCreateInfo,
+            (struct intel_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion)
+ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorPool(
+    XGL_DESCRIPTOR_POOL                          descriptorPool)
 {
-    struct intel_desc_region *region = intel_desc_region(descriptorRegion);
+    struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
 
-    intel_desc_region_free_all(region);
+    intel_desc_pool_free_all(pool);
 
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_POOL                          descriptorPool,
     XGL_DESCRIPTOR_SET_USAGE                     setUsage,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
     XGL_DESCRIPTOR_SET*                          pDescriptorSets,
     uint32_t*                                    pCount)
 {
-    struct intel_desc_region *region = intel_desc_region(descriptorRegion);
-    struct intel_dev *dev = region->dev;
+    struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
+    struct intel_dev *dev = pool->dev;
     XGL_RESULT ret = XGL_SUCCESS;
     uint32_t i;
 
@@ -1065,7 +1065,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
         const struct intel_desc_layout *layout =
             intel_desc_layout((XGL_DESCRIPTOR_SET_LAYOUT) pSetLayouts[i]);
 
-        ret = intel_desc_set_create(dev, region, setUsage, layout,
+        ret = intel_desc_set_create(dev, pool, setUsage, layout,
                 (struct intel_desc_set **) &pDescriptorSets[i]);
         if (ret != XGL_SUCCESS)
             break;
@@ -1078,7 +1078,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
 }
 
 ICD_EXPORT void XGLAPI xglClearDescriptorSets(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_POOL                          descriptorPool,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET*                    pDescriptorSets)
 {
@@ -1088,7 +1088,7 @@ ICD_EXPORT void XGLAPI xglClearDescriptorSets(
         struct intel_desc_set *set =
             intel_desc_set((XGL_DESCRIPTOR_SET) pDescriptorSets[i]);
 
-        intel_desc_pool_clear(set->pool, &set->pool_begin, &set->pool_end);
+        intel_desc_region_clear(set->region, &set->region_begin, &set->region_end);
     }
 }
 

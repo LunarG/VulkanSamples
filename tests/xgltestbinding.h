@@ -54,7 +54,7 @@ class Pipeline;
 class PipelineDelta;
 class Sampler;
 class DescriptorSetLayout;
-class DescriptorSetRegion;
+class DescriptorSetPool;
 class DescriptorSet;
 class DynamicVpStateObject;
 class DynamicRsStateObject;
@@ -227,10 +227,10 @@ public:
     XGL_RESULT wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
     XGL_RESULT wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
 
-    // xglBeginDescriptorRegionUpdate()
-    // xglEndDescriptorRegionUpdate()
-    void begin_descriptor_region_update(XGL_DESCRIPTOR_UPDATE_MODE mode);
-    void end_descriptor_region_update(CmdBuffer &cmd);
+    // xglBeginDescriptorPoolUpdate()
+    // xglEndDescriptorPoolUpdate()
+    void begin_descriptor_pool_update(XGL_DESCRIPTOR_UPDATE_MODE mode);
+    void end_descriptor_pool_update(CmdBuffer &cmd);
 
 private:
     enum QueueIndex {
@@ -511,13 +511,13 @@ public:
               const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info) { init(dev, bind_point, DescriptorSetLayout(), info); }
 };
 
-class DescriptorRegion : public DerivedObject<XGL_DESCRIPTOR_REGION, Object> {
+class DescriptorPool : public DerivedObject<XGL_DESCRIPTOR_POOL, Object> {
 public:
-    // xglCreateDescriptorRegion()
-    void init(const Device &dev, XGL_DESCRIPTOR_REGION_USAGE usage,
-              uint32_t max_sets, const XGL_DESCRIPTOR_REGION_CREATE_INFO &info);
+    // xglCreateDescriptorPool()
+    void init(const Device &dev, XGL_DESCRIPTOR_POOL_USAGE usage,
+              uint32_t max_sets, const XGL_DESCRIPTOR_POOL_CREATE_INFO &info);
 
-    // xglClearDescriptorRegion()
+    // xglClearDescriptorPool()
     void clear();
 
     // xglAllocDescriptorSets()

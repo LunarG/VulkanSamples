@@ -32,7 +32,7 @@
 #include "gpu.h"
 #include "obj.h"
 
-struct intel_desc_pool;
+struct intel_desc_region;
 struct intel_pipeline_shader;
 struct intel_queue;
 struct intel_winsys;
@@ -165,7 +165,7 @@ struct intel_dev {
     struct intel_bo *cmd_scratch_bo;
     struct intel_pipeline_shader *cmd_meta_shaders[INTEL_DEV_META_SHADER_COUNT];
 
-    struct intel_desc_pool *desc_pool;
+    struct intel_desc_region *desc_region;
 
     uint32_t sample_pattern_1x;
     uint32_t sample_pattern_2x;

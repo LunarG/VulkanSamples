@@ -72,7 +72,7 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_SAMPLER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET_LAYOUT, XGL_OBJECT)
-XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_REGION, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_POOL, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_STATE_OBJECT, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_VP_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_RS_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
@@ -299,16 +299,16 @@ typedef enum _XGL_DESCRIPTOR_TYPE
     XGL_MAX_ENUM(_XGL_DESCRIPTOR_TYPE)
 } XGL_DESCRIPTOR_TYPE;
 
-typedef enum _XGL_DESCRIPTOR_REGION_USAGE
+typedef enum _XGL_DESCRIPTOR_POOL_USAGE
 {
-    XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT                    = 0x00000000,
-    XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC                     = 0x00000001,
+    XGL_DESCRIPTOR_POOL_USAGE_ONE_SHOT                      = 0x00000000,
+    XGL_DESCRIPTOR_POOL_USAGE_DYNAMIC                       = 0x00000001,
 
-    XGL_DESCRIPTOR_REGION_USAGE_BEGIN_RANGE                 = XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT,
-    XGL_DESCRIPTOR_REGION_USAGE_END_RANGE                   = XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC,
-    XGL_NUM_DESCRIPTOR_REGION_USAGE                         = (XGL_DESCRIPTOR_REGION_USAGE_END_RANGE - XGL_DESCRIPTOR_REGION_USAGE_BEGIN_RANGE + 1),
-    XGL_MAX_ENUM(_XGL_DESCRIPTOR_REGION_USAGE)
-} XGL_DESCRIPTOR_REGION_USAGE;
+    XGL_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE                   = XGL_DESCRIPTOR_POOL_USAGE_ONE_SHOT,
+    XGL_DESCRIPTOR_POOL_USAGE_END_RANGE                     = XGL_DESCRIPTOR_POOL_USAGE_DYNAMIC,
+    XGL_NUM_DESCRIPTOR_POOL_USAGE                           = (XGL_DESCRIPTOR_POOL_USAGE_END_RANGE - XGL_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE + 1),
+    XGL_MAX_ENUM(_XGL_DESCRIPTOR_POOL_USAGE)
+} XGL_DESCRIPTOR_POOL_USAGE;
 
 typedef enum _XGL_DESCRIPTOR_UPDATE_MODE
 {
@@ -1049,7 +1049,7 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_MEMORY_BARRIER                       = 45,
     XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                = 46,
     XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                 = 47,
-    XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO        = 48,
+    XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO          = 48,
     XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS                      = 49,
     XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES              = 50,
     XGL_STRUCTURE_TYPE_UPDATE_IMAGES                        = 51,
@@ -1831,13 +1831,13 @@ typedef struct _XGL_DESCRIPTOR_TYPE_COUNT
     uint32_t                                count;
 } XGL_DESCRIPTOR_TYPE_COUNT;
 
-typedef struct _XGL_DESCRIPTOR_REGION_CREATE_INFO
+typedef struct _XGL_DESCRIPTOR_POOL_CREATE_INFO
 {
-    XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO
+    XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO
     const void*                             pNext;              // Pointer to next structure
     uint32_t                                count;
     const XGL_DESCRIPTOR_TYPE_COUNT*        pTypeCount;
-} XGL_DESCRIPTOR_REGION_CREATE_INFO;
+} XGL_DESCRIPTOR_POOL_CREATE_INFO;
 
 typedef struct _XGL_LINK_CONST_BUFFER
 {
@@ -2303,12 +2303,12 @@ typedef XGL_RESULT (XGLAPI *xglLoadPipelineType)(XGL_DEVICE device, size_t dataS
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineDerivativeType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE basePipeline, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglCreateSamplerType)(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler);
 typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
-typedef XGL_RESULT (XGLAPI *xglBeginDescriptorRegionUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
-typedef XGL_RESULT (XGLAPI *xglEndDescriptorRegionUpdateType)(XGL_DEVICE device, XGL_CMD_BUFFER cmd);
-typedef XGL_RESULT (XGLAPI *xglCreateDescriptorRegionType)(XGL_DEVICE device, XGL_DESCRIPTOR_REGION_USAGE regionUsage, uint32_t maxSets, const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_REGION* pDescriptorRegion);
-typedef XGL_RESULT (XGLAPI *xglClearDescriptorRegionType)(XGL_DESCRIPTOR_REGION descriptorRegion);
-typedef XGL_RESULT (XGLAPI *xglAllocDescriptorSetsType)(XGL_DESCRIPTOR_REGION descriptorRegion, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount);
-typedef void       (XGLAPI *xglClearDescriptorSetsType)(XGL_DESCRIPTOR_REGION descriptorRegion, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets);
+typedef XGL_RESULT (XGLAPI *xglBeginDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
+typedef XGL_RESULT (XGLAPI *xglEndDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_CMD_BUFFER cmd);
+typedef XGL_RESULT (XGLAPI *xglCreateDescriptorPoolType)(XGL_DEVICE device, XGL_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const XGL_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_POOL* pDescriptorPool);
+typedef XGL_RESULT (XGLAPI *xglClearDescriptorPoolType)(XGL_DESCRIPTOR_POOL descriptorPool);
+typedef XGL_RESULT (XGLAPI *xglAllocDescriptorSetsType)(XGL_DESCRIPTOR_POOL descriptorPool, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount);
+typedef void       (XGLAPI *xglClearDescriptorSetsType)(XGL_DESCRIPTOR_POOL descriptorPool, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets);
 typedef void       (XGLAPI *xglUpdateDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicViewportStateType)(XGL_DEVICE device, const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_VP_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicRasterStateType)(XGL_DEVICE device, const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_RS_STATE_OBJECT* pState);
@@ -2701,26 +2701,26 @@ XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout);
 
-XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
+XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_UPDATE_MODE                   updateMode);
 
-XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
+XGL_RESULT XGLAPI xglEndDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
     XGL_CMD_BUFFER                               cmd);
 
-XGL_RESULT XGLAPI xglCreateDescriptorRegion(
+XGL_RESULT XGLAPI xglCreateDescriptorPool(
     XGL_DEVICE                                   device,
-    XGL_DESCRIPTOR_REGION_USAGE                  regionUsage,
+    XGL_DESCRIPTOR_POOL_USAGE                    poolUsage,
     uint32_t                                     maxSets,
-    const XGL_DESCRIPTOR_REGION_CREATE_INFO*     pCreateInfo,
-    XGL_DESCRIPTOR_REGION*                       pDescriptorRegion);
+    const XGL_DESCRIPTOR_POOL_CREATE_INFO*       pCreateInfo,
+    XGL_DESCRIPTOR_POOL*                         pDescriptorPool);
 
-XGL_RESULT XGLAPI xglClearDescriptorRegion(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion);
+XGL_RESULT XGLAPI xglClearDescriptorPool(
+    XGL_DESCRIPTOR_POOL                          descriptorPool);
 
 XGL_RESULT XGLAPI xglAllocDescriptorSets(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_POOL                          descriptorPool,
     XGL_DESCRIPTOR_SET_USAGE                     setUsage,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
@@ -2728,7 +2728,7 @@ XGL_RESULT XGLAPI xglAllocDescriptorSets(
     uint32_t*                                    pCount);
 
 void XGLAPI xglClearDescriptorSets(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_POOL                          descriptorPool,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET*                    pDescriptorSets);
 

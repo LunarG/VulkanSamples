@@ -211,21 +211,21 @@ static enum nulldrv_ext_type nulldrv_gpu_lookup_extension(const struct nulldrv_g
     return type;
 }
 
-static XGL_RESULT nulldrv_desc_pool_create(struct nulldrv_dev *dev,
-                                  struct nulldrv_desc_pool **pool_ret)
+static XGL_RESULT nulldrv_desc_ooxx_create(struct nulldrv_dev *dev,
+                                  struct nulldrv_desc_ooxx **ooxx_ret)
 {
-    struct nulldrv_desc_pool *pool;
+    struct nulldrv_desc_ooxx *ooxx;
 
-    pool = malloc(sizeof(*pool));
-    if (!pool) 
+    ooxx = malloc(sizeof(*ooxx));
+    if (!ooxx) 
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    memset(pool, 0, sizeof(*pool));
+    memset(ooxx, 0, sizeof(*ooxx));
 
-    pool->surface_desc_size = 0;
-    pool->sampler_desc_size = 0;
+    ooxx->surface_desc_size = 0;
+    ooxx->sampler_desc_size = 0;
 
-    *pool_ret = pool; 
+    *ooxx_ret = ooxx; 
 
     return XGL_SUCCESS;
 }
@@ -253,7 +253,7 @@ static XGL_RESULT nulldrv_dev_create(struct nulldrv_gpu *gpu,
         dev->exts[ext] = true;
     }
 
-    ret = nulldrv_desc_pool_create(dev, &dev->desc_pool);
+    ret = nulldrv_desc_ooxx_create(dev, &dev->desc_ooxx);
     if (ret != XGL_SUCCESS) {
         return ret;
     }
@@ -697,29 +697,29 @@ static XGL_RESULT nulldrv_cmd_create(struct nulldrv_dev *dev,
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT nulldrv_desc_region_create(struct nulldrv_dev *dev,
-                                    XGL_DESCRIPTOR_REGION_USAGE usage,
+static XGL_RESULT nulldrv_desc_pool_create(struct nulldrv_dev *dev,
+                                    XGL_DESCRIPTOR_POOL_USAGE usage,
                                     uint32_t max_sets,
-                                    const XGL_DESCRIPTOR_REGION_CREATE_INFO *info,
-                                    struct nulldrv_desc_region **region_ret)
+                                    const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
+                                    struct nulldrv_desc_pool **pool_ret)
 {
-    struct nulldrv_desc_region *region;
+    struct nulldrv_desc_pool *pool;
 
-    region = (struct nulldrv_desc_region *)
-        nulldrv_base_create(dev, sizeof(*region),
-                XGL_DBG_OBJECT_DESCRIPTOR_REGION);
-    if (!region)
+    pool = (struct nulldrv_desc_pool *)
+        nulldrv_base_create(dev, sizeof(*pool),
+                XGL_DBG_OBJECT_DESCRIPTOR_POOL);
+    if (!pool)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    region->dev = dev;
+    pool->dev = dev;
 
-    *region_ret = region;
+    *pool_ret = pool;
 
     return XGL_SUCCESS;
 }
 
 static XGL_RESULT nulldrv_desc_set_create(struct nulldrv_dev *dev,
-                                 struct nulldrv_desc_region *region,
+                                 struct nulldrv_desc_pool *pool,
                                  XGL_DESCRIPTOR_SET_USAGE usage,
                                  const struct nulldrv_desc_layout *layout,
                                  struct nulldrv_desc_set **set_ret)
@@ -732,16 +732,16 @@ static XGL_RESULT nulldrv_desc_set_create(struct nulldrv_dev *dev,
     if (!set)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    set->pool = dev->desc_pool;
+    set->ooxx = dev->desc_ooxx;
     set->layout = layout;
     *set_ret = set;
 
     return XGL_SUCCESS;
 }
 
-static struct nulldrv_desc_region *nulldrv_desc_region(XGL_DESCRIPTOR_REGION region)
+static struct nulldrv_desc_pool *nulldrv_desc_pool(XGL_DESCRIPTOR_POOL pool)
 {
-    return (struct nulldrv_desc_region *) region;
+    return (struct nulldrv_desc_pool *) pool;
 }
 
 static XGL_RESULT nulldrv_fb_create(struct nulldrv_dev *dev,
@@ -1899,7 +1899,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
             (struct nulldrv_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
+ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
     XGL_DESCRIPTOR_UPDATE_MODE                   updateMode)
 {
@@ -1907,7 +1907,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
+ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
     XGL_CMD_BUFFER                               cmd_)
 {
@@ -1915,29 +1915,29 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(
     XGL_DEVICE                                   device,
-    XGL_DESCRIPTOR_REGION_USAGE                  regionUsage,
+    XGL_DESCRIPTOR_POOL_USAGE                  poolUsage,
     uint32_t                                     maxSets,
-    const XGL_DESCRIPTOR_REGION_CREATE_INFO*     pCreateInfo,
-    XGL_DESCRIPTOR_REGION*                       pDescriptorRegion)
+    const XGL_DESCRIPTOR_POOL_CREATE_INFO*     pCreateInfo,
+    XGL_DESCRIPTOR_POOL*                       pDescriptorPool)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_desc_region_create(dev, regionUsage, maxSets, pCreateInfo,
-            (struct nulldrv_desc_region **) pDescriptorRegion);
+    return nulldrv_desc_pool_create(dev, poolUsage, maxSets, pCreateInfo,
+            (struct nulldrv_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion)
+ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorPool(
+    XGL_DESCRIPTOR_POOL                        descriptorPool)
 {
     NULLDRV_LOG_FUNC;
     return XGL_SUCCESS;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_POOL                        descriptorPool,
     XGL_DESCRIPTOR_SET_USAGE                     setUsage,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
@@ -1945,8 +1945,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
     uint32_t*                                    pCount)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_desc_region *region = nulldrv_desc_region(descriptorRegion);
-    struct nulldrv_dev *dev = region->dev;
+    struct nulldrv_desc_pool *pool = nulldrv_desc_pool(descriptorPool);
+    struct nulldrv_dev *dev = pool->dev;
     XGL_RESULT ret = XGL_SUCCESS;
     uint32_t i;
 
@@ -1954,7 +1954,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
         const struct nulldrv_desc_layout *layout =
             nulldrv_desc_layout((XGL_DESCRIPTOR_SET_LAYOUT) pSetLayouts[i]);
 
-        ret = nulldrv_desc_set_create(dev, region, setUsage, layout,
+        ret = nulldrv_desc_set_create(dev, pool, setUsage, layout,
                 (struct nulldrv_desc_set **) &pDescriptorSets[i]);
         if (ret != XGL_SUCCESS)
             break;
@@ -1967,7 +1967,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
 }
 
 ICD_EXPORT void XGLAPI xglClearDescriptorSets(
-    XGL_DESCRIPTOR_REGION                        descriptorRegion,
+    XGL_DESCRIPTOR_POOL                        descriptorPool,
     uint32_t                                     count,
     const XGL_DESCRIPTOR_SET*                    pDescriptorSets)
 {

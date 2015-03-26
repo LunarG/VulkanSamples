@@ -184,9 +184,9 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         /* TODO */
         shallow_copy = sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) * 0;
         break;
-    case XGL_DBG_OBJECT_DESCRIPTOR_REGION:
-        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DESCRIPTOR_REGION_CREATE_INFO);
+    case XGL_DBG_OBJECT_DESCRIPTOR_POOL:
+        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
+        shallow_copy = sizeof(XGL_DESCRIPTOR_POOL_CREATE_INFO);
         break;
     default:
         assert(!"unknown dbg object type");

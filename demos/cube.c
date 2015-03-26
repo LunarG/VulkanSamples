@@ -261,7 +261,7 @@ struct demo {
     float spin_increment;
     bool pause;
 
-    XGL_DESCRIPTOR_REGION desc_region;
+    XGL_DESCRIPTOR_POOL desc_pool;
     XGL_DESCRIPTOR_SET desc_set;
 
     xcb_window_t window;
@@ -1512,7 +1512,7 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     assert(!err);
 }
 
-static void demo_prepare_descriptor_region(struct demo *demo)
+static void demo_prepare_descriptor_pool(struct demo *demo)
 {
     const XGL_DESCRIPTOR_TYPE_COUNT type_counts[2] = {
         [0] = {
@@ -1524,17 +1524,17 @@ static void demo_prepare_descriptor_region(struct demo *demo)
             .count = DEMO_TEXTURE_COUNT,
         },
     };
-    const XGL_DESCRIPTOR_REGION_CREATE_INFO descriptor_region = {
-        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO,
+    const XGL_DESCRIPTOR_POOL_CREATE_INFO descriptor_pool = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
         .count = 2,
         .pTypeCount = type_counts,
     };
     XGL_RESULT err;
 
-    err = xglCreateDescriptorRegion(demo->device,
-            XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT, 1,
-            &descriptor_region, &demo->desc_region);
+    err = xglCreateDescriptorPool(demo->device,
+            XGL_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
+            &descriptor_pool, &demo->desc_pool);
     assert(!err);
 }
 
@@ -1573,19 +1573,19 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     update_fs.count = DEMO_TEXTURE_COUNT;
     update_fs.pSamplerImageViews = combined_info;
 
-    err = xglAllocDescriptorSets(demo->desc_region,
+    err = xglAllocDescriptorSets(demo->desc_pool,
             XGL_DESCRIPTOR_SET_USAGE_STATIC,
             1, &demo->desc_layout,
             &demo->desc_set, &count);
     assert(!err && count == 1);
 
-    xglBeginDescriptorRegionUpdate(demo->device,
+    xglBeginDescriptorPoolUpdate(demo->device,
             XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
 
-    xglClearDescriptorSets(demo->desc_region, 1, &demo->desc_set);
+    xglClearDescriptorSets(demo->desc_pool, 1, &demo->desc_set);
     xglUpdateDescriptors(demo->desc_set, &update_vs);
 
-    xglEndDescriptorRegionUpdate(demo->device, demo->buffers[demo->current_buffer].cmd);
+    xglEndDescriptorPoolUpdate(demo->device, demo->buffers[demo->current_buffer].cmd);
 }
 
 static void demo_prepare(struct demo *demo)
@@ -1612,7 +1612,7 @@ static void demo_prepare(struct demo *demo)
         assert(!err);
     }
 
-    demo_prepare_descriptor_region(demo);
+    demo_prepare_descriptor_pool(demo);
     demo_prepare_descriptor_set(demo);
 
 
@@ -1883,7 +1883,7 @@ static void demo_cleanup(struct demo *demo)
     uint32_t i, j;
 
     xglDestroyObject(demo->desc_set);
-    xglDestroyObject(demo->desc_region);
+    xglDestroyObject(demo->desc_pool);
 
     xglDestroyObject(demo->viewport);
     xglDestroyObject(demo->raster);

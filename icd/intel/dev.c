@@ -148,7 +148,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    ret = intel_desc_pool_create(dev, &dev->desc_pool);
+    ret = intel_desc_region_create(dev, &dev->desc_region);
     if (ret != XGL_SUCCESS) {
         intel_dev_destroy(dev);
         return ret;
@@ -201,8 +201,8 @@ void intel_dev_destroy(struct intel_dev *dev)
             intel_queue_destroy(dev->queues[i]);
     }
 
-    if (dev->desc_pool)
-        intel_desc_pool_destroy(dev, dev->desc_pool);
+    if (dev->desc_region)
+        intel_desc_region_destroy(dev, dev->desc_region);
 
     dev_destroy_meta_shaders(dev);
 

@@ -503,14 +503,14 @@ XGL_RESULT Device::wait(const std::vector<const Fence *> &fences, bool wait_all,
     return err;
 }
 
-void Device::begin_descriptor_region_update(XGL_DESCRIPTOR_UPDATE_MODE mode)
+void Device::begin_descriptor_pool_update(XGL_DESCRIPTOR_UPDATE_MODE mode)
 {
-    EXPECT(xglBeginDescriptorRegionUpdate(obj(), mode) == XGL_SUCCESS);
+    EXPECT(xglBeginDescriptorPoolUpdate(obj(), mode) == XGL_SUCCESS);
 }
 
-void Device::end_descriptor_region_update(CmdBuffer &cmd)
+void Device::end_descriptor_pool_update(CmdBuffer &cmd)
 {
-    EXPECT(xglEndDescriptorRegionUpdate(obj(), cmd.obj()) == XGL_SUCCESS);
+    EXPECT(xglEndDescriptorPoolUpdate(obj(), cmd.obj()) == XGL_SUCCESS);
 }
 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence)
@@ -836,19 +836,19 @@ void DescriptorSetLayout::init(const Device &dev, uint32_t bind_point,
     init(dev, XGL_SHADER_STAGE_FLAGS_ALL, std::vector<uint32_t>(1, bind_point), prior_layout, info);
 }
 
-void DescriptorRegion::init(const Device &dev, XGL_DESCRIPTOR_REGION_USAGE usage,
-                            uint32_t max_sets, const XGL_DESCRIPTOR_REGION_CREATE_INFO &info)
+void DescriptorPool::init(const Device &dev, XGL_DESCRIPTOR_POOL_USAGE usage,
+                            uint32_t max_sets, const XGL_DESCRIPTOR_POOL_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDescriptorRegion, dev.obj(), usage, max_sets, &info);
+    DERIVED_OBJECT_INIT(xglCreateDescriptorPool, dev.obj(), usage, max_sets, &info);
     alloc_memory(dev);
 }
 
-void DescriptorRegion::clear()
+void DescriptorPool::clear()
 {
-    EXPECT(xglClearDescriptorRegion(obj()) == XGL_SUCCESS);
+    EXPECT(xglClearDescriptorPool(obj()) == XGL_SUCCESS);
 }
 
-std::vector<DescriptorSet *> DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)
 {
     const std::vector<XGL_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<XGL_DESCRIPTOR_SET_LAYOUT>(layouts);
 
@@ -871,18 +871,18 @@ std::vector<DescriptorSet *> DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USA
     return sets;
 }
 
-std::vector<DescriptorSet *> DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count)
 {
     return alloc_sets(usage, std::vector<const DescriptorSetLayout *>(count, &layout));
 }
 
-DescriptorSet *DescriptorRegion::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout)
+DescriptorSet *DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout)
 {
     std::vector<DescriptorSet *> set = alloc_sets(usage, layout, 1);
     return (set.empty()) ? NULL : set[0];
 }
 
-void DescriptorRegion::clear_sets(const std::vector<DescriptorSet *> &sets)
+void DescriptorPool::clear_sets(const std::vector<DescriptorSet *> &sets)
 {
     const std::vector<XGL_DESCRIPTOR_SET> set_objs = make_objects<XGL_DESCRIPTOR_SET>(sets);
     xglClearDescriptorSets(obj(), set_objs.size(), &set_objs[0]);

@@ -307,7 +307,7 @@ protected:
 
 };
 
-class XglDescriptorSetObj : public xgl_testing::DescriptorRegion
+class XglDescriptorSetObj : public xgl_testing::DescriptorPool
 {
 public:
     XglDescriptorSetObj(XglDevice *device);

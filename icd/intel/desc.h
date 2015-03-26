@@ -41,7 +41,7 @@ struct intel_desc_surface;
 struct intel_desc_sampler;
 
 /**
- * Descriptor pool offset (or size) in bytes.
+ * Descriptor region offset (or size) in bytes.
  */
 struct intel_desc_offset {
     uint32_t surface;
@@ -49,9 +49,9 @@ struct intel_desc_offset {
 };
 
 /**
- * Per-device descriptor pool.
+ * Per-device descriptor region.
  */
-struct intel_desc_pool {
+struct intel_desc_region {
     /* this is not an intel_obj */
 
     uint32_t surface_desc_size;
@@ -66,14 +66,14 @@ struct intel_desc_pool {
     struct intel_desc_offset cur;
 };
 
-struct intel_desc_region {
+struct intel_desc_pool {
     struct intel_obj obj;
 
     struct intel_dev *dev;
 
-    /* point to a continuous area in the device's pool */
-    struct intel_desc_offset pool_begin;
-    struct intel_desc_offset pool_end;
+    /* point to a continuous area in the device's region */
+    struct intel_desc_offset region_begin;
+    struct intel_desc_offset region_end;
 
     struct intel_desc_offset cur;
 };
@@ -83,10 +83,10 @@ struct intel_desc_layout;
 struct intel_desc_set {
     struct intel_obj obj;
 
-    /* suballocated from a region */
-    struct intel_desc_pool *pool;
-    struct intel_desc_offset pool_begin;
-    struct intel_desc_offset pool_end;
+    /* suballocated from a pool */
+    struct intel_desc_region *region;
+    struct intel_desc_offset region_begin;
+    struct intel_desc_offset region_end;
 
     const struct intel_desc_layout *layout;
 };
@@ -126,8 +126,8 @@ struct intel_desc_layout {
     /* count of _DYNAMIC descriptors */
     uint32_t dynamic_desc_count;
 
-    /* the size of the entire layout chain in the pool */
-    struct intel_desc_offset pool_size;
+    /* the size of the entire layout chain in the region */
+    struct intel_desc_offset region_size;
 };
 
 struct intel_desc_layout_iter {
@@ -141,14 +141,14 @@ struct intel_desc_layout_iter {
     struct intel_desc_offset offset_end;
 };
 
-static inline struct intel_desc_region *intel_desc_region(XGL_DESCRIPTOR_REGION region)
+static inline struct intel_desc_pool *intel_desc_pool(XGL_DESCRIPTOR_POOL pool)
 {
-    return (struct intel_desc_region *) region;
+    return (struct intel_desc_pool *) pool;
 }
 
-static inline struct intel_desc_region *intel_desc_region_from_obj(struct intel_obj *obj)
+static inline struct intel_desc_pool *intel_desc_pool_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_desc_region *) obj;
+    return (struct intel_desc_pool *) obj;
 }
 
 static inline struct intel_desc_set *intel_desc_set(XGL_DESCRIPTOR_SET set)
@@ -211,54 +211,54 @@ static inline bool intel_desc_offset_within(const struct intel_desc_offset *offs
             offset->sampler <= other->sampler);
 }
 
-XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
-                                  struct intel_desc_pool **pool_ret);
-void intel_desc_pool_destroy(struct intel_dev *dev,
-                             struct intel_desc_pool *pool);
-
-XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
-                                 const XGL_DESCRIPTOR_REGION_CREATE_INFO *info,
-                                 struct intel_desc_offset *begin,
-                                 struct intel_desc_offset *end);
-void intel_desc_pool_free(struct intel_desc_pool *pool,
-                          const struct intel_desc_offset *begin,
-                          const struct intel_desc_offset *end);
-
-XGL_RESULT intel_desc_pool_begin_update(struct intel_desc_pool *pool,
-                                        XGL_DESCRIPTOR_UPDATE_MODE mode);
-XGL_RESULT intel_desc_pool_end_update(struct intel_desc_pool *pool,
-                                      struct intel_cmd *cmd);
-
-void intel_desc_pool_clear(struct intel_desc_pool *pool,
-                           const struct intel_desc_offset *begin,
-                           const struct intel_desc_offset *end);
-
-void intel_desc_pool_update(struct intel_desc_pool *pool,
-                            const struct intel_desc_offset *begin,
-                            const struct intel_desc_offset *end,
-                            const struct intel_desc_surface *surfaces,
-                            const struct intel_desc_sampler *samplers);
-
-void intel_desc_pool_copy(struct intel_desc_pool *pool,
-                          const struct intel_desc_offset *begin,
-                          const struct intel_desc_offset *end,
-                          const struct intel_desc_offset *src);
-
 XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
-                                    XGL_DESCRIPTOR_REGION_USAGE usage,
-                                    uint32_t max_sets,
-                                    const XGL_DESCRIPTOR_REGION_CREATE_INFO *info,
                                     struct intel_desc_region **region_ret);
-void intel_desc_region_destroy(struct intel_desc_region *region);
+void intel_desc_region_destroy(struct intel_dev *dev,
+                               struct intel_desc_region *region);
 
 XGL_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
-                                   const struct intel_desc_layout *layout,
+                                   const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
                                    struct intel_desc_offset *begin,
                                    struct intel_desc_offset *end);
-void intel_desc_region_free_all(struct intel_desc_region *region);
+void intel_desc_region_free(struct intel_desc_region *region,
+                            const struct intel_desc_offset *begin,
+                            const struct intel_desc_offset *end);
+
+XGL_RESULT intel_desc_region_begin_update(struct intel_desc_region *region,
+                                          XGL_DESCRIPTOR_UPDATE_MODE mode);
+XGL_RESULT intel_desc_region_end_update(struct intel_desc_region *region,
+                                        struct intel_cmd *cmd);
+
+void intel_desc_region_clear(struct intel_desc_region *region,
+                             const struct intel_desc_offset *begin,
+                             const struct intel_desc_offset *end);
+
+void intel_desc_region_update(struct intel_desc_region *region,
+                              const struct intel_desc_offset *begin,
+                              const struct intel_desc_offset *end,
+                              const struct intel_desc_surface *surfaces,
+                              const struct intel_desc_sampler *samplers);
+
+void intel_desc_region_copy(struct intel_desc_region *region,
+                            const struct intel_desc_offset *begin,
+                            const struct intel_desc_offset *end,
+                            const struct intel_desc_offset *src);
+
+XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
+                                  XGL_DESCRIPTOR_POOL_USAGE usage,
+                                  uint32_t max_sets,
+                                  const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
+                                  struct intel_desc_pool **pool_ret);
+void intel_desc_pool_destroy(struct intel_desc_pool *pool);
+
+XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
+                                 const struct intel_desc_layout *layout,
+                                 struct intel_desc_offset *begin,
+                                 struct intel_desc_offset *end);
+void intel_desc_pool_free_all(struct intel_desc_pool *pool);
 
 XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
-                                 struct intel_desc_region *region,
+                                 struct intel_desc_pool *pool,
                                  XGL_DESCRIPTOR_SET_USAGE usage,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_set **set_ret);

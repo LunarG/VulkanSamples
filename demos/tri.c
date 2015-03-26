@@ -88,7 +88,7 @@ struct demo {
     XGL_DYNAMIC_CB_STATE_OBJECT color_blend;
     XGL_DYNAMIC_DS_STATE_OBJECT depth_stencil;
 
-    XGL_DESCRIPTOR_REGION desc_region;
+    XGL_DESCRIPTOR_POOL desc_pool;
     XGL_DESCRIPTOR_SET desc_set;
 
     xcb_window_t window;
@@ -1087,23 +1087,23 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     assert(!err);
 }
 
-static void demo_prepare_descriptor_region(struct demo *demo)
+static void demo_prepare_descriptor_pool(struct demo *demo)
 {
     const XGL_DESCRIPTOR_TYPE_COUNT type_count = {
         .type = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
         .count = DEMO_TEXTURE_COUNT,
     };
-    const XGL_DESCRIPTOR_REGION_CREATE_INFO descriptor_region = {
-        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO,
+    const XGL_DESCRIPTOR_POOL_CREATE_INFO descriptor_pool = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
         .count = 1,
         .pTypeCount = &type_count,
     };
     XGL_RESULT err;
 
-    err = xglCreateDescriptorRegion(demo->device,
-            XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT, 1,
-            &descriptor_region, &demo->desc_region);
+    err = xglCreateDescriptorPool(demo->device,
+            XGL_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
+            &descriptor_pool, &demo->desc_pool);
     assert(!err);
 }
 
@@ -1131,19 +1131,19 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     update.count = DEMO_TEXTURE_COUNT;
     update.pSamplerImageViews = combined_info;
 
-    err = xglAllocDescriptorSets(demo->desc_region,
+    err = xglAllocDescriptorSets(demo->desc_pool,
             XGL_DESCRIPTOR_SET_USAGE_STATIC,
             1, &demo->desc_layout,
             &demo->desc_set, &count);
     assert(!err && count == 1);
 
-    xglBeginDescriptorRegionUpdate(demo->device,
+    xglBeginDescriptorPoolUpdate(demo->device,
             XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
 
-    xglClearDescriptorSets(demo->desc_region, 1, &demo->desc_set);
+    xglClearDescriptorSets(demo->desc_pool, 1, &demo->desc_set);
     xglUpdateDescriptors(demo->desc_set, &update);
 
-    xglEndDescriptorRegionUpdate(demo->device, demo->cmd);
+    xglEndDescriptorPoolUpdate(demo->device, demo->cmd);
 }
 
 static void demo_prepare(struct demo *demo)
@@ -1167,7 +1167,7 @@ static void demo_prepare(struct demo *demo)
     err = xglCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
     assert(!err);
 
-    demo_prepare_descriptor_region(demo);
+    demo_prepare_descriptor_pool(demo);
     demo_prepare_descriptor_set(demo);
 }
 
@@ -1390,7 +1390,7 @@ static void demo_cleanup(struct demo *demo)
     uint32_t i, j;
 
     xglDestroyObject(demo->desc_set);
-    xglDestroyObject(demo->desc_region);
+    xglDestroyObject(demo->desc_pool);
 
     xglDestroyObject(demo->cmd);
 

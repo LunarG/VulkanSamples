@@ -201,7 +201,7 @@ core = Extension(
         "XGL_SAMPLER",
         "XGL_DESCRIPTOR_SET",
         "XGL_DESCRIPTOR_SET_LAYOUT",
-        "XGL_DESCRIPTOR_REGION",
+        "XGL_DESCRIPTOR_POOL",
         "XGL_DYNAMIC_STATE_OBJECT",
         "XGL_DYNAMIC_VP_STATE_OBJECT",
         "XGL_DYNAMIC_RS_STATE_OBJECT",
@@ -517,26 +517,26 @@ core = Extension(
              Param("const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*", "pSetLayoutInfoList"),
              Param("XGL_DESCRIPTOR_SET_LAYOUT*", "pSetLayout")]),
 
-        Proto("XGL_RESULT", "BeginDescriptorRegionUpdate",
+        Proto("XGL_RESULT", "BeginDescriptorPoolUpdate",
             [Param("XGL_DEVICE", "device"),
              Param("XGL_DESCRIPTOR_UPDATE_MODE", "updateMode")]),
 
-        Proto("XGL_RESULT", "EndDescriptorRegionUpdate",
+        Proto("XGL_RESULT", "EndDescriptorPoolUpdate",
             [Param("XGL_DEVICE", "device"),
              Param("XGL_CMD_BUFFER", "cmd")]),
 
-        Proto("XGL_RESULT", "CreateDescriptorRegion",
+        Proto("XGL_RESULT", "CreateDescriptorPool",
             [Param("XGL_DEVICE", "device"),
-             Param("XGL_DESCRIPTOR_REGION_USAGE", "regionUsage"),
+             Param("XGL_DESCRIPTOR_POOL_USAGE", "poolUsage"),
              Param("uint32_t", "maxSets"),
-             Param("const XGL_DESCRIPTOR_REGION_CREATE_INFO*", "pCreateInfo"),
-             Param("XGL_DESCRIPTOR_REGION*", "pDescriptorRegion")]),
+             Param("const XGL_DESCRIPTOR_POOL_CREATE_INFO*", "pCreateInfo"),
+             Param("XGL_DESCRIPTOR_POOL*", "pDescriptorPool")]),
 
-        Proto("XGL_RESULT", "ClearDescriptorRegion",
-            [Param("XGL_DESCRIPTOR_REGION", "descriptorRegion")]),
+        Proto("XGL_RESULT", "ClearDescriptorPool",
+            [Param("XGL_DESCRIPTOR_POOL", "descriptorPool")]),
 
         Proto("XGL_RESULT", "AllocDescriptorSets",
-            [Param("XGL_DESCRIPTOR_REGION", "descriptorRegion"),
+            [Param("XGL_DESCRIPTOR_POOL", "descriptorPool"),
              Param("XGL_DESCRIPTOR_SET_USAGE", "setUsage"),
              Param("uint32_t", "count"),
              Param("const XGL_DESCRIPTOR_SET_LAYOUT*", "pSetLayouts"),
@@ -544,7 +544,7 @@ core = Extension(
              Param("uint32_t*", "pCount")]),
 
         Proto("void", "ClearDescriptorSets",
-            [Param("XGL_DESCRIPTOR_REGION", "descriptorRegion"),
+            [Param("XGL_DESCRIPTOR_POOL", "descriptorPool"),
              Param("uint32_t", "count"),
              Param("const XGL_DESCRIPTOR_SET*", "pDescriptorSets")]),
 

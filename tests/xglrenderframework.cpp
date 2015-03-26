@@ -328,12 +328,12 @@ XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle()
 
 void XglDescriptorSetObj::CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer)
 {
-    // create XGL_DESCRIPTOR_REGION
-    XGL_DESCRIPTOR_REGION_CREATE_INFO region = {};
-    region.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_REGION_CREATE_INFO;
-    region.count = m_type_counts.size();
-    region.pTypeCount = &m_type_counts[0];
-    init(*m_device, XGL_DESCRIPTOR_REGION_USAGE_ONE_SHOT, 1, region);
+    // create XGL_DESCRIPTOR_POOL
+    XGL_DESCRIPTOR_POOL_CREATE_INFO pool = {};
+    pool.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool.count = m_type_counts.size();
+    pool.pTypeCount = &m_type_counts[0];
+    init(*m_device, XGL_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, pool);
 
     // create XGL_DESCRIPTOR_SET_LAYOUT
     vector<XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO> layout;
@@ -380,10 +380,10 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer)
                         NULL;
 
     // do the updates
-    m_device->begin_descriptor_region_update(XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
+    m_device->begin_descriptor_pool_update(XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
     clear_sets(*m_set);
     m_set->update(chain);
-    m_device->end_descriptor_region_update(*cmdBuffer);
+    m_device->end_descriptor_pool_update(*cmdBuffer);
 }
 
 XglImage::XglImage(XglDevice *dev)

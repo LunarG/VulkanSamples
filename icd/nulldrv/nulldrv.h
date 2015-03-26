@@ -75,11 +75,11 @@ struct nulldrv_gpu {
 struct nulldrv_dev {
      struct nulldrv_base base;
      bool exts[NULLDRV_EXT_COUNT];
-     struct nulldrv_desc_pool *desc_pool;
+     struct nulldrv_desc_ooxx *desc_ooxx;
      struct nulldrv_queue *queues[1];
 };
 
-struct nulldrv_desc_pool {
+struct nulldrv_desc_ooxx {
     uint32_t surface_desc_size;
     uint32_t sampler_desc_size;
 };
@@ -174,14 +174,14 @@ struct nulldrv_cmd {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_desc_region {
+struct nulldrv_desc_pool {
     struct nulldrv_obj obj;
     struct nulldrv_dev *dev;
 };
 
 struct nulldrv_desc_set {
     struct nulldrv_obj obj;
-    struct nulldrv_desc_pool *pool;
+    struct nulldrv_desc_ooxx *ooxx;
     const struct nulldrv_desc_layout *layout;
 };
 
