@@ -149,6 +149,7 @@ class XglConstantBufferObj : public xgl_testing::Buffer
 public:
     XglConstantBufferObj(XglDevice *device);
     XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data);
+    ~XglConstantBufferObj();
     void BufferMemoryBarrier(
         XGL_FLAGS outputMask =
             XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |

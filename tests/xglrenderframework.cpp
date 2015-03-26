@@ -661,6 +661,13 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
     memset(&m_bufferViewInfo,0,sizeof(m_bufferViewInfo));
 }
 
+XglConstantBufferObj::~XglConstantBufferObj()
+{
+    if (m_commandBuffer) {
+        delete m_commandBuffer;
+    }
+}
+
 XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data)
 {
     m_device = device;
