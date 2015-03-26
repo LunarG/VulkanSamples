@@ -875,6 +875,9 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
 
     err = xglDestroyObject(event);
     ASSERT_XGL_SUCCESS(err);
+
+    err = xglFreeMemory(event_mem);
+    ASSERT_XGL_SUCCESS(err);
 }
 
 class XglCmdBlitImageTest : public XglCmdBlitTest {

@@ -515,7 +515,7 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
         RecordImage(m_renderTargets[i]);
 
     if (rotate)
-            RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
+        RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
 
 #ifdef PRINT_OBJECTS
     //uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)

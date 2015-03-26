@@ -69,9 +69,18 @@ void XglRenderFramework::ShutdownFramework()
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
     if (m_stateRaster) xglDestroyObject(m_stateRaster);
     if (m_cmdBuffer) xglDestroyObject(m_cmdBuffer);
+    if (m_frameBuffer) xglDestroyObject(m_frameBuffer);
+    if (m_renderPass) xglDestroyObject(m_renderPass);
 
     if (m_stateViewport) {
         xglDestroyObject(m_stateViewport);
+    }
+    while (!m_renderTargets.empty()) {
+        xglDestroyObject(m_renderTargets.back()->targetView());
+        xglBindObjectMemory(m_renderTargets.back()->image(), 0, XGL_NULL_HANDLE, 0);
+        xglDestroyObject(m_renderTargets.back()->image());
+        xglFreeMemory(m_renderTargets.back()->memory());
+        m_renderTargets.pop_back();
     }
 
     // reset the driver
@@ -190,7 +199,8 @@ void XglRenderFramework::InitRenderTarget()
     };
     XGL_RENDER_PASS_CREATE_INFO rp_info;
     memset(&rp_info, 0 , sizeof(rp_info));
-    xglCreateFramebuffer(device(), &fb_info, &(rp_info.framebuffer));
+    xglCreateFramebuffer(device(), &fb_info, &(m_frameBuffer));
+    rp_info.framebuffer = m_frameBuffer;
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = m_width;
     rp_info.renderArea.extent.height = m_height;

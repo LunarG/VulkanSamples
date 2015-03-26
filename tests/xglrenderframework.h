@@ -71,6 +71,7 @@ protected:
     XglDevice                              *m_device;
     XGL_CMD_BUFFER                          m_cmdBuffer;
     XGL_RENDER_PASS                         m_renderPass;
+    XGL_FRAMEBUFFER                         m_frameBuffer;
     XGL_MEMORY_REF                          m_memRefs[5];
     XGL_DYNAMIC_RS_STATE_OBJECT             m_stateRaster;
     XGL_DYNAMIC_CB_STATE_OBJECT             m_colorBlend;
