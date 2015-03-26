@@ -1204,29 +1204,32 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
 
 static void demo_prepare_descriptor_layout(struct demo *demo)
 {
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout_fs = {
+    const XGL_DESCRIPTOR_SET_LAYOUT_BINDING layout_bindings[2] = {
+        [0] = {
+            .descriptorType = XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .count = 1,
+            .stageFlags = XGL_SHADER_STAGE_FLAGS_VERTEX_BIT,
+            .immutableSampler = XGL_NULL_HANDLE,
+        },
+        [1] = {
+            .descriptorType = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+            .count = DEMO_TEXTURE_COUNT,
+            .stageFlags = XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
+            .immutableSampler = XGL_NULL_HANDLE,
+        },
+    };
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout = {
         .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = NULL,
-        .descriptorType = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
-        .count = DEMO_TEXTURE_COUNT,
-        .stageFlags = XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
-        .immutableSampler = XGL_NULL_HANDLE,
+        .count = 2,
+        .pBinding = layout_bindings,
     };
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout_vs = {
-        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = &descriptor_layout_fs,
-        .descriptorType = XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count = 1,
-        .stageFlags = XGL_SHADER_STAGE_FLAGS_VERTEX_BIT,
-        .immutableSampler = XGL_NULL_HANDLE,
-    };
-
     const uint32_t bind_point = 0;
     XGL_RESULT err;
 
     err = xglCreateDescriptorSetLayout(demo->device,
             XGL_SHADER_STAGE_FLAGS_ALL, &bind_point,
-            XGL_NULL_HANDLE, &descriptor_layout_vs,
+            XGL_NULL_HANDLE, &descriptor_layout,
             &demo->desc_layout);
     assert(!err);
 }

@@ -514,7 +514,7 @@ core = Extension(
              Param("XGL_FLAGS", "stageFlags"),
              Param("const uint32_t*", "pSetBindPoints"),
              Param("XGL_DESCRIPTOR_SET_LAYOUT", "priorSetLayout"),
-             Param("const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*", "pSetLayoutInfoList"),
+             Param("const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_DESCRIPTOR_SET_LAYOUT*", "pSetLayout")]),
 
         Proto("XGL_RESULT", "BeginDescriptorPoolUpdate",

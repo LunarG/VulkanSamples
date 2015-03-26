@@ -1887,7 +1887,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_FLAGS                                    stageFlags,
     const uint32_t*                              pSetBindPoints,
     XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
 {
     NULLDRV_LOG_FUNC;
@@ -1895,7 +1895,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     struct nulldrv_desc_layout *prior_layout = nulldrv_desc_layout(priorSetLayout);
 
     return nulldrv_desc_layout_create(dev, stageFlags, pSetBindPoints,
-            prior_layout, pSetLayoutInfoList,
+            prior_layout, pCreateInfo,
             (struct nulldrv_desc_layout **) pSetLayout);
 }
 

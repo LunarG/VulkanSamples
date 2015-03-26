@@ -1815,14 +1815,20 @@ typedef struct _XGL_SHADER_CREATE_INFO
     XGL_FLAGS                               flags;              // Reserved
 } XGL_SHADER_CREATE_INFO;
 
-typedef struct _XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+typedef struct _XGL_DESCRIPTOR_SET_LAYOUT_BINDING
 {
-    XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
-    const void*                             pNext;              // Pointer to next structure
     XGL_DESCRIPTOR_TYPE                     descriptorType;
     uint32_t                                count;
     XGL_FLAGS                               stageFlags;         // XGL_SHADER_STAGE_FLAGS
     XGL_SAMPLER                             immutableSampler;
+} XGL_DESCRIPTOR_SET_LAYOUT_BINDING;
+
+typedef struct _XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                       sType;             // Must be XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+    const void*                              pNext;             // Pointer to next structure
+    uint32_t                                 count;             // Number of bindings in the descriptor set layout
+    const XGL_DESCRIPTOR_SET_LAYOUT_BINDING* pBinding;          // Array of descriptor set layout bindings
 } XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 
 typedef struct _XGL_DESCRIPTOR_TYPE_COUNT
@@ -2302,7 +2308,7 @@ typedef XGL_RESULT (XGLAPI *xglStorePipelineType)(XGL_PIPELINE pipeline, size_t*
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineDerivativeType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE basePipeline, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglCreateSamplerType)(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler);
-typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
+typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
 typedef XGL_RESULT (XGLAPI *xglBeginDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
 typedef XGL_RESULT (XGLAPI *xglEndDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_CMD_BUFFER cmd);
 typedef XGL_RESULT (XGLAPI *xglCreateDescriptorPoolType)(XGL_DEVICE device, XGL_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const XGL_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_POOL* pDescriptorPool);
@@ -2698,7 +2704,7 @@ XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_FLAGS                                    stageFlags,            // XGL_SHADER_STAGE_FLAGS
     const uint32_t*                              pSetBindPoints,
     XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout);
 
 XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(

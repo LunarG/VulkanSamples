@@ -336,22 +336,22 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer)
     init(*m_device, XGL_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, pool);
 
     // create XGL_DESCRIPTOR_SET_LAYOUT
-    vector<XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO> layout;
-    layout.resize(m_type_counts.size());
+    vector<XGL_DESCRIPTOR_SET_LAYOUT_BINDING> bindings;
+    bindings.resize(m_type_counts.size());
     for (int i = 0; i < m_type_counts.size(); i++) {
-        layout[i].sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layout[i].descriptorType = m_type_counts[i].type;
-        layout[i].count = m_type_counts[i].count;
-        layout[i].stageFlags = XGL_SHADER_STAGE_FLAGS_ALL;
-        layout[i].immutableSampler = XGL_NULL_HANDLE;
-
-        if (i < m_type_counts.size() - 1)
-            layout[i].pNext = &layout[i + 1];
-        else
-            layout[i].pNext = NULL;
+        bindings[i].descriptorType = m_type_counts[i].type;
+        bindings[i].count = m_type_counts[i].count;
+        bindings[i].stageFlags = XGL_SHADER_STAGE_FLAGS_ALL;
+        bindings[i].immutableSampler = XGL_NULL_HANDLE;
     }
 
-    m_layout.init(*m_device, 0, layout[0]);
+    // create XGL_DESCRIPTOR_SET_LAYOUT
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO layout = {};
+    layout.sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout.count = bindings.size();
+    layout.pBinding = &bindings[0];
+
+    m_layout.init(*m_device, 0, layout);
 
     // create XGL_DESCRIPTOR_SET
     m_set = alloc_sets(XGL_DESCRIPTOR_SET_USAGE_STATIC, m_layout);

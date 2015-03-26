@@ -110,8 +110,8 @@ struct intel_desc_layout {
     uint32_t begin;
     uint32_t end;
 
-    /* homogeneous ranges in this layout */
-    struct intel_desc_layout_range {
+    /* homogeneous bindings in this layout */
+    struct intel_desc_layout_binding {
         XGL_DESCRIPTOR_TYPE type;
         const struct intel_sampler *immutable_sampler;
 
@@ -120,8 +120,8 @@ struct intel_desc_layout {
         uint32_t end;
         struct intel_desc_offset offset;
         struct intel_desc_offset increment;
-    } *ranges;
-    uint32_t range_count;
+    } *bindings;
+    uint32_t binding_count;
 
     /* count of _DYNAMIC descriptors */
     uint32_t dynamic_desc_count;
@@ -133,7 +133,7 @@ struct intel_desc_layout {
 struct intel_desc_layout_iter {
     /* current position in the chain of layouts */
     const struct intel_desc_layout *sublayout;
-    const struct intel_desc_layout_range *range;
+    const struct intel_desc_layout_binding *binding;
     uint32_t index;
 
     XGL_DESCRIPTOR_TYPE type;

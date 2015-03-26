@@ -845,13 +845,17 @@ static void demo_prepare_vertices(struct demo *demo)
 
 static void demo_prepare_descriptor_layout(struct demo *demo)
 {
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout = {
-        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
+    const XGL_DESCRIPTOR_SET_LAYOUT_BINDING layout_binding = {
         .descriptorType = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
         .count = DEMO_TEXTURE_COUNT,
         .stageFlags = XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
         .immutableSampler = XGL_NULL_HANDLE,
+    };
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout = {
+        .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .count = 1,
+        .pBinding = &layout_binding,
     };
     const uint32_t bind_point = 0;
     XGL_RESULT err;
