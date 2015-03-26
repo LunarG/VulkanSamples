@@ -54,6 +54,7 @@ class Pipeline;
 class PipelineDelta;
 class Sampler;
 class DescriptorSetLayout;
+class DescriptorSetLayoutChain;
 class DescriptorSetPool;
 class DescriptorSet;
 class DynamicVpStateObject;
@@ -500,15 +501,13 @@ public:
 class DescriptorSetLayout : public DerivedObject<XGL_DESCRIPTOR_SET_LAYOUT, Object> {
 public:
     // xglCreateDescriptorSetLayout()
-    void init(const Device &dev, XGL_FLAGS stage_mask,
-              const std::vector<uint32_t> &bind_points,
-              const DescriptorSetLayout &prior_layout,
-              const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info);
-    void init(const Device &dev, uint32_t bind_point,
-              const DescriptorSetLayout &prior_layout,
-              const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info);
-    void init(const Device &dev, uint32_t bind_point,
-              const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info) { init(dev, bind_point, DescriptorSetLayout(), info); }
+    void init(const Device &dev, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info);
+};
+
+class DescriptorSetLayoutChain : public DerivedObject<XGL_DESCRIPTOR_SET_LAYOUT_CHAIN, Object> {
+public:
+    // xglCreateDescriptorSetLayoutChain()
+    void init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
 class DescriptorPool : public DerivedObject<XGL_DESCRIPTOR_POOL, Object> {
@@ -535,21 +534,21 @@ public:
     explicit DescriptorSet(XGL_DESCRIPTOR_SET set) : DerivedObject(set) {}
 
     // xglUpdateDescriptors()
-    void update(const void *update_chain);
+    void update(const std::vector<const void *> &update_array);
 
-    static XGL_UPDATE_SAMPLERS update(uint32_t index, uint32_t count, const XGL_SAMPLER *samplers);
-    static XGL_UPDATE_SAMPLERS update(uint32_t index, const std::vector<XGL_SAMPLER> &samplers);
+    static XGL_UPDATE_SAMPLERS update(uint32_t binding, uint32_t index, uint32_t count, const XGL_SAMPLER *samplers);
+    static XGL_UPDATE_SAMPLERS update(uint32_t binding, uint32_t index, const std::vector<XGL_SAMPLER> &samplers);
 
-    static XGL_UPDATE_SAMPLER_TEXTURES update(uint32_t index, uint32_t count, const XGL_SAMPLER_IMAGE_VIEW_INFO *textures);
-    static XGL_UPDATE_SAMPLER_TEXTURES update(uint32_t index, const std::vector<XGL_SAMPLER_IMAGE_VIEW_INFO> &textures);
+    static XGL_UPDATE_SAMPLER_TEXTURES update(uint32_t binding, uint32_t index, uint32_t count, const XGL_SAMPLER_IMAGE_VIEW_INFO *textures);
+    static XGL_UPDATE_SAMPLER_TEXTURES update(uint32_t binding, uint32_t index, const std::vector<XGL_SAMPLER_IMAGE_VIEW_INFO> &textures);
 
-    static XGL_UPDATE_IMAGES update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const XGL_IMAGE_VIEW_ATTACH_INFO * const *views);
-    static XGL_UPDATE_IMAGES update(XGL_DESCRIPTOR_TYPE type, uint32_t index, const std::vector<const XGL_IMAGE_VIEW_ATTACH_INFO *> &views);
+    static XGL_UPDATE_IMAGES update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const XGL_IMAGE_VIEW_ATTACH_INFO *views);
+    static XGL_UPDATE_IMAGES update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, const std::vector<XGL_IMAGE_VIEW_ATTACH_INFO> &views);
 
-    static XGL_UPDATE_BUFFERS update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const XGL_BUFFER_VIEW_ATTACH_INFO * const *views);
-    static XGL_UPDATE_BUFFERS update(XGL_DESCRIPTOR_TYPE type, uint32_t index, const std::vector<const XGL_BUFFER_VIEW_ATTACH_INFO *> &views);
+    static XGL_UPDATE_BUFFERS update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const XGL_BUFFER_VIEW_ATTACH_INFO *views);
+    static XGL_UPDATE_BUFFERS update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, const std::vector<XGL_BUFFER_VIEW_ATTACH_INFO> &views);
 
-    static XGL_UPDATE_AS_COPY update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const DescriptorSet &set);
+    static XGL_UPDATE_AS_COPY update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set);
 
     static XGL_BUFFER_VIEW_ATTACH_INFO attach_info(const BufferView &view);
     static XGL_IMAGE_VIEW_ATTACH_INFO attach_info(const ImageView &view, XGL_IMAGE_LAYOUT layout);
@@ -787,78 +786,83 @@ inline XGL_IMAGE_VIEW_ATTACH_INFO DescriptorSet::attach_info(const ImageView &vi
     return info;
 }
 
-inline XGL_UPDATE_SAMPLERS DescriptorSet::update(uint32_t index, uint32_t count, const XGL_SAMPLER *samplers)
+inline XGL_UPDATE_SAMPLERS DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const XGL_SAMPLER *samplers)
 {
     XGL_UPDATE_SAMPLERS info = {};
     info.sType = XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS;
-    info.index = index;
+    info.binding = binding;
+    info.arrayIndex = index;
     info.count = count;
     info.pSamplers = samplers;
     return info;
 }
 
-inline XGL_UPDATE_SAMPLERS DescriptorSet::update(uint32_t index, const std::vector<XGL_SAMPLER> &samplers)
+inline XGL_UPDATE_SAMPLERS DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<XGL_SAMPLER> &samplers)
 {
-    return update(index, samplers.size(), &samplers[0]);
+    return update(binding, index, samplers.size(), &samplers[0]);
 }
 
-inline XGL_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t index, uint32_t count, const XGL_SAMPLER_IMAGE_VIEW_INFO *textures)
+inline XGL_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const XGL_SAMPLER_IMAGE_VIEW_INFO *textures)
 {
     XGL_UPDATE_SAMPLER_TEXTURES info = {};
     info.sType = XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES;
-    info.index = index;
+    info.binding = binding;
+    info.arrayIndex = index;
     info.count = count;
     info.pSamplerImageViews = textures;
     return info;
 }
 
-inline XGL_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t index, const std::vector<XGL_SAMPLER_IMAGE_VIEW_INFO> &textures)
+inline XGL_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<XGL_SAMPLER_IMAGE_VIEW_INFO> &textures)
 {
-    return update(index, textures.size(), &textures[0]);
+    return update(binding, index, textures.size(), &textures[0]);
 }
 
-inline XGL_UPDATE_IMAGES DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count,
-                                               const XGL_IMAGE_VIEW_ATTACH_INFO * const *views)
+inline XGL_UPDATE_IMAGES DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count,
+                                               const XGL_IMAGE_VIEW_ATTACH_INFO *views)
 {
     XGL_UPDATE_IMAGES info = {};
     info.sType = XGL_STRUCTURE_TYPE_UPDATE_IMAGES;
     info.descriptorType = type;
-    info.index = index;
+    info.binding = binding;
+    info.arrayIndex = index;
     info.count = count;
     info.pImageViews = views;
     return info;
 }
 
-inline XGL_UPDATE_IMAGES DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index,
-                                               const std::vector<const XGL_IMAGE_VIEW_ATTACH_INFO *> &views)
+inline XGL_UPDATE_IMAGES DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index,
+                                               const std::vector<XGL_IMAGE_VIEW_ATTACH_INFO> &views)
 {
-    return update(type, index, views.size(), &views[0]);
+    return update(type, binding, index, views.size(), &views[0]);
 }
 
-inline XGL_UPDATE_BUFFERS DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count,
-                                                const XGL_BUFFER_VIEW_ATTACH_INFO * const *views)
+inline XGL_UPDATE_BUFFERS DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count,
+                                                const XGL_BUFFER_VIEW_ATTACH_INFO *views)
 {
     XGL_UPDATE_BUFFERS info = {};
     info.sType = XGL_STRUCTURE_TYPE_UPDATE_BUFFERS;
     info.descriptorType = type;
-    info.index = index;
+    info.binding = binding;
+    info.arrayIndex = index;
     info.count = count;
     info.pBufferViews = views;
     return info;
 }
 
-inline XGL_UPDATE_BUFFERS DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index,
-                                                const std::vector<const XGL_BUFFER_VIEW_ATTACH_INFO *> &views)
+inline XGL_UPDATE_BUFFERS DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index,
+                                                const std::vector<XGL_BUFFER_VIEW_ATTACH_INFO> &views)
 {
-    return update(type, index, views.size(), &views[0]);
+    return update(type, binding, index, views.size(), &views[0]);
 }
 
-inline XGL_UPDATE_AS_COPY DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t index, uint32_t count, const DescriptorSet &set)
+inline XGL_UPDATE_AS_COPY DescriptorSet::update(XGL_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set)
 {
     XGL_UPDATE_AS_COPY info = {};
     info.sType = XGL_STRUCTURE_TYPE_UPDATE_AS_COPY;
     info.descriptorType = type;
-    info.descriptorIndex = index; // whose index?
+    info.binding = binding;
+    info.arrayElement = index;
     info.count = count;
     info.descriptorSet = set.obj();
     return info;

@@ -288,12 +288,11 @@ static void rmap_destroy(const struct intel_gpu *gpu,
 }
 
 static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
-                                               XGL_PIPELINE_SHADER_STAGE stage,
-                                               const struct intel_desc_layout *layout,
+                                               const struct intel_desc_layout_chain *chain,
                                                const struct brw_binding_table *bt)
 {
     struct intel_pipeline_rmap *rmap;
-    struct intel_desc_layout_iter iter;
+    struct intel_desc_iter iter;
     uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
@@ -327,35 +326,43 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     for (i = bt->rt_start; i < bt->texture_start; i++) {
         rmap->slots[i].type = INTEL_PIPELINE_RMAP_RT;
-        rmap->slots[i].u.rt = i - bt->rt_start;
+        rmap->slots[i].index = i - bt->rt_start;
     }
 
     for (i = bt->texture_start; i < bt->ubo_start; i++) {
-        // use the set and binding data to find correct dset slot
-        intel_desc_layout_find_bind_point(layout, stage,
-                bt->sampler_set[i - bt->texture_start],
-                bt->sampler_binding[i - bt->texture_start],
-                &iter);
-
         rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
-        rmap->slots[i].u.surface.offset = iter.offset_begin;
+        rmap->slots[i].index = bt->sampler_set[i - bt->texture_start];
+
+        // use the set and binding data to find correct dset slot
+        // XXX validate both set and binding
+        // XXX no array support
+        intel_desc_iter_init_for_binding(&iter,
+                chain->layouts[rmap->slots[i].index],
+                bt->sampler_binding[i - bt->texture_start], 0);
+
+        rmap->slots[i].u.surface.offset = iter.begin;
         rmap->slots[i].u.surface.dynamic_offset_index = -1;
 
         rmap->slots[bt->count + i - bt->texture_start].type =
             INTEL_PIPELINE_RMAP_SAMPLER;
+        rmap->slots[bt->count + i - bt->texture_start].index =
+            rmap->slots[i].index;
         rmap->slots[bt->count + i - bt->texture_start].u.sampler =
-            iter.offset_begin;
+            iter.begin;
     }
 
     for (i = bt->ubo_start; i < bt->count; i++) {
-        // use the set and binding data to find correct dset slot
-        intel_desc_layout_find_bind_point(layout, stage,
-                bt->uniform_set[i - bt->ubo_start],
-                bt->uniform_binding[i - bt->ubo_start],
-                &iter);
-
         rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
-        rmap->slots[i].u.surface.offset = iter.offset_begin;
+        rmap->slots[i].index = bt->uniform_set[i - bt->ubo_start];
+
+        // use the set and binding data to find correct dset slot
+        // XXX validate both set and binding
+        // XXX no array support
+        intel_desc_iter_init_for_binding(&iter,
+                chain->layouts[rmap->slots[i].index],
+                bt->uniform_binding[i - bt->ubo_start], 0);
+
+        rmap->slots[i].u.surface.offset = iter.begin;
         rmap->slots[i].u.surface.dynamic_offset_index = -1;
     }
 
@@ -396,7 +403,7 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
 // invoke backend compiler to generate ISA and supporting data structures
 XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
-                                         const struct intel_desc_layout *layout,
+                                         const struct intel_desc_layout_chain *chain,
                                          const XGL_PIPELINE_SHADER *info)
 {
     const struct intel_ir *ir = intel_shader(info->shader)->ir;
@@ -688,7 +695,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
     }
 
     if (status == XGL_SUCCESS) {
-        pipe_shader->rmap = rmap_create(gpu, info->stage, layout, &bt);
+        pipe_shader->rmap = rmap_create(gpu, chain, &bt);
         if (!pipe_shader->rmap) {
             intel_pipeline_shader_cleanup(pipe_shader, gpu);
             status = XGL_ERROR_OUT_OF_MEMORY;

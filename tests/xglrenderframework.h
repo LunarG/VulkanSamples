@@ -319,20 +319,20 @@ public:
     void CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer);
 
     XGL_DESCRIPTOR_SET GetDescriptorSetHandle();
-    XGL_DESCRIPTOR_SET_LAYOUT GetLayout();
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN GetLayoutChain();
 
 protected:
     XglDevice                           *m_device;
     vector<XGL_DESCRIPTOR_TYPE_COUNT>    m_type_counts;
     int                                  m_nextSlot;
 
-    vector<const XGL_BUFFER_VIEW_ATTACH_INFO *> m_bufferInfo;
     vector<XGL_UPDATE_BUFFERS>           m_updateBuffers;
 
     vector<XGL_SAMPLER_IMAGE_VIEW_INFO>  m_samplerTextureInfo;
     vector<XGL_UPDATE_SAMPLER_TEXTURES>  m_updateSamplerTextures;
 
     xgl_testing::DescriptorSetLayout     m_layout;
+    xgl_testing::DescriptorSetLayoutChain m_layout_chain;
     xgl_testing::DescriptorSet          *m_set;
 };
 

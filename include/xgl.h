@@ -72,6 +72,7 @@ XGL_DEFINE_SUBCLASS_HANDLE(XGL_PIPELINE, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_SAMPLER, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET_LAYOUT, XGL_OBJECT)
+XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_SET_LAYOUT_CHAIN, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DESCRIPTOR_POOL, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_STATE_OBJECT, XGL_OBJECT)
 XGL_DEFINE_SUBCLASS_HANDLE(XGL_DYNAMIC_VP_STATE_OBJECT, XGL_DYNAMIC_STATE_OBJECT)
@@ -1523,24 +1524,26 @@ typedef struct _XGL_UPDATE_SAMPLERS
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS
     const void*                             pNext;                      // Pointer to next structure
-    uint32_t                                index;
-    uint32_t                                count;
+    uint32_t                                binding;                    // Binding of the sampler (array)
+    uint32_t                                arrayIndex;                 // First element of the array to update or zero otherwise
+    uint32_t                                count;                      // Number of elements to update
     const XGL_SAMPLER*                      pSamplers;
 } XGL_UPDATE_SAMPLERS;
 
 typedef struct _XGL_SAMPLER_IMAGE_VIEW_INFO
 {
-    XGL_SAMPLER                             pSampler;
+    XGL_SAMPLER                             sampler;
     const XGL_IMAGE_VIEW_ATTACH_INFO*       pImageView;
 } XGL_SAMPLER_IMAGE_VIEW_INFO;
 
 typedef struct _XGL_UPDATE_SAMPLER_TEXTURES
 {
-    XGL_STRUCTURE_TYPE                       sType;                     // Must be XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
-    const void*                              pNext;                     // Pointer to next structure
-    uint32_t                                 index;
-    uint32_t                                 count;
-    const XGL_SAMPLER_IMAGE_VIEW_INFO*       pSamplerImageViews;
+    XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
+    const void*                             pNext;                      // Pointer to next structure
+    uint32_t                                binding;                    // Binding of the combined texture sampler (array)
+    uint32_t                                arrayIndex;                 // First element of the array to update or zero otherwise
+    uint32_t                                count;                      // Number of elements to update
+    const XGL_SAMPLER_IMAGE_VIEW_INFO*      pSamplerImageViews;
 } XGL_UPDATE_SAMPLER_TEXTURES;
 
 typedef struct _XGL_UPDATE_IMAGES
@@ -1548,9 +1551,10 @@ typedef struct _XGL_UPDATE_IMAGES
     XGL_STRUCTURE_TYPE                       sType;                     // Must be XGL_STRUCTURE_TYPE_UPDATE_IMAGES
     const void*                              pNext;                     // Pointer to next structure
     XGL_DESCRIPTOR_TYPE                      descriptorType;
-    uint32_t                                 index;
-    uint32_t                                 count;
-    const XGL_IMAGE_VIEW_ATTACH_INFO* const* pImageViews;
+    uint32_t                                 binding;                   // Binding of the image (array)
+    uint32_t                                 arrayIndex;                // First element of the array to update or zero otherwise
+    uint32_t                                 count;                     // Number of elements to update
+    const XGL_IMAGE_VIEW_ATTACH_INFO*        pImageViews;
 } XGL_UPDATE_IMAGES;
 
 typedef struct _XGL_UPDATE_BUFFERS
@@ -1558,9 +1562,10 @@ typedef struct _XGL_UPDATE_BUFFERS
     XGL_STRUCTURE_TYPE                        sType;                    // Must be XGL_STRUCTURE_TYPE_UPDATE_BUFFERS
     const void*                               pNext;                    // Pointer to next structure
     XGL_DESCRIPTOR_TYPE                       descriptorType;
-    uint32_t                                  index;
-    uint32_t                                  count;
-    const XGL_BUFFER_VIEW_ATTACH_INFO* const* pBufferViews;
+    uint32_t                                  binding;                  // Binding of the buffer (array)
+    uint32_t                                  arrayIndex;               // First element of the array to update or zero otherwise
+    uint32_t                                  count;                    // Number of elements to update
+    const XGL_BUFFER_VIEW_ATTACH_INFO*        pBufferViews;
 } XGL_UPDATE_BUFFERS;
 
 typedef struct _XGL_UPDATE_AS_COPY
@@ -1569,7 +1574,8 @@ typedef struct _XGL_UPDATE_AS_COPY
     const void*                             pNext;                      // Pointer to next structure
     XGL_DESCRIPTOR_TYPE                     descriptorType;
     XGL_DESCRIPTOR_SET                      descriptorSet;
-    uint32_t                                descriptorIndex;
+    uint32_t                                binding;
+    uint32_t                                arrayElement;
     uint32_t                                count;
 } XGL_UPDATE_AS_COPY;
 
@@ -1878,7 +1884,12 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     XGL_PIPELINE_SHADER                     cs;
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
-    XGL_DESCRIPTOR_SET_LAYOUT               lastSetLayout;
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN         setLayoutChain;
+    // For local size fields zero is treated an invalid value
+    uint32_t                                localSizeX;
+    uint32_t                                localSizeY;
+    uint32_t                                localSizeZ;
+
 } XGL_COMPUTE_PIPELINE_CREATE_INFO;
 
 typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
@@ -2020,7 +2031,7 @@ typedef struct _XGL_GRAPHICS_PIPELINE_CREATE_INFO
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
-    XGL_DESCRIPTOR_SET_LAYOUT               lastSetLayout;
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN         pSetLayoutChain;
 } XGL_GRAPHICS_PIPELINE_CREATE_INFO;
 
 typedef struct _XGL_SAMPLER_CREATE_INFO
@@ -2306,14 +2317,15 @@ typedef XGL_RESULT (XGLAPI *xglStorePipelineType)(XGL_PIPELINE pipeline, size_t*
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglLoadPipelineDerivativeType)(XGL_DEVICE device, size_t dataSize, const void* pData, XGL_PIPELINE basePipeline, XGL_PIPELINE* pPipeline);
 typedef XGL_RESULT (XGLAPI *xglCreateSamplerType)(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler);
-typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
+typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
+typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutChainType)(XGL_DEVICE device, uint32_t setLayoutArrayCount, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayoutArray, XGL_DESCRIPTOR_SET_LAYOUT_CHAIN* pLayoutChain);
 typedef XGL_RESULT (XGLAPI *xglBeginDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
 typedef XGL_RESULT (XGLAPI *xglEndDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_CMD_BUFFER cmd);
 typedef XGL_RESULT (XGLAPI *xglCreateDescriptorPoolType)(XGL_DEVICE device, XGL_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const XGL_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_POOL* pDescriptorPool);
 typedef XGL_RESULT (XGLAPI *xglResetDescriptorPoolType)(XGL_DESCRIPTOR_POOL descriptorPool);
 typedef XGL_RESULT (XGLAPI *xglAllocDescriptorSetsType)(XGL_DESCRIPTOR_POOL descriptorPool, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount);
 typedef void       (XGLAPI *xglClearDescriptorSetsType)(XGL_DESCRIPTOR_POOL descriptorPool, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets);
-typedef void       (XGLAPI *xglUpdateDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain);
+typedef void       (XGLAPI *xglUpdateDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, uint32_t updateCount, const void** ppUpdateArray);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicViewportStateType)(XGL_DEVICE device, const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_VP_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicRasterStateType)(XGL_DEVICE device, const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_RS_STATE_OBJECT* pState);
 typedef XGL_RESULT (XGLAPI *xglCreateDynamicColorBlendStateType)(XGL_DEVICE device, const XGL_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_CB_STATE_OBJECT* pState);
@@ -2699,11 +2711,14 @@ XGL_RESULT XGLAPI xglCreateSampler(
 
 XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_DEVICE                                   device,
-    XGL_FLAGS                                    stageFlags,            // XGL_SHADER_STAGE_FLAGS
-    const uint32_t*                              pSetBindPoints,
-    XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout);
+
+XGL_RESULT XGLAPI xglCreateDescriptorSetLayoutChain(
+    XGL_DEVICE                                   device,
+    uint32_t                                     setLayoutArrayCount,
+    const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayoutArray,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN*             pLayoutChain);
 
 XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
     XGL_DEVICE                                   device,
@@ -2738,7 +2753,8 @@ void XGLAPI xglClearDescriptorSets(
 
 void XGLAPI xglUpdateDescriptors(
     XGL_DESCRIPTOR_SET                           descriptorSet,
-    const void*                                  pUpdateChain);
+    uint32_t                                     updateCount,
+    const void**                                 ppUpdateArray);
 
 // State object functions
 

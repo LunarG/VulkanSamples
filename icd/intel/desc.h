@@ -48,6 +48,16 @@ struct intel_desc_offset {
     uint32_t sampler;
 };
 
+struct intel_desc_iter {
+    XGL_DESCRIPTOR_TYPE type;
+    struct intel_desc_offset increment;
+    uint32_t size;
+
+    struct intel_desc_offset begin;
+    struct intel_desc_offset end;
+    uint32_t cur;
+};
+
 /**
  * Per-device descriptor region.
  */
@@ -94,30 +104,13 @@ struct intel_desc_set {
 struct intel_desc_layout {
     struct intel_obj obj;
 
-    /* a chain of layouts actually */
-    const struct intel_desc_layout *prior_layout;
-
-    /* where this layout binds to in shader stages */
-    XGL_FLAGS stage_flags;
-    uint32_t bind_point_vs;
-    uint32_t bind_point_tcs;
-    uint32_t bind_point_tes;
-    uint32_t bind_point_gs;
-    uint32_t bind_point_fs;
-    uint32_t bind_point_cs;
-
-    /* the continuous area in the descriptor set this layout is for */
-    uint32_t begin;
-    uint32_t end;
-
     /* homogeneous bindings in this layout */
     struct intel_desc_layout_binding {
         XGL_DESCRIPTOR_TYPE type;
+        uint32_t array_size;
         const struct intel_sampler *immutable_sampler;
 
-        /* to speed up intel_desc_layout_advance() */
-        uint32_t begin;
-        uint32_t end;
+        /* to initialize intel_desc_iter */
         struct intel_desc_offset offset;
         struct intel_desc_offset increment;
     } *bindings;
@@ -126,19 +119,15 @@ struct intel_desc_layout {
     /* count of _DYNAMIC descriptors */
     uint32_t dynamic_desc_count;
 
-    /* the size of the entire layout chain in the region */
+    /* the size of the layout in the region */
     struct intel_desc_offset region_size;
 };
 
-struct intel_desc_layout_iter {
-    /* current position in the chain of layouts */
-    const struct intel_desc_layout *sublayout;
-    const struct intel_desc_layout_binding *binding;
-    uint32_t index;
+struct intel_desc_layout_chain {
+    struct intel_obj obj;
 
-    XGL_DESCRIPTOR_TYPE type;
-    struct intel_desc_offset offset_begin;
-    struct intel_desc_offset offset_end;
+    struct intel_desc_layout **layouts;
+    uint32_t layout_count;
 };
 
 static inline struct intel_desc_pool *intel_desc_pool(XGL_DESCRIPTOR_POOL pool)
@@ -169,6 +158,16 @@ static inline struct intel_desc_layout *intel_desc_layout(XGL_DESCRIPTOR_SET_LAY
 static inline struct intel_desc_layout *intel_desc_layout_from_obj(struct intel_obj *obj)
 {
     return (struct intel_desc_layout *) obj;
+}
+
+static inline struct intel_desc_layout_chain *intel_desc_layout_chain(XGL_DESCRIPTOR_SET_LAYOUT_CHAIN chain)
+{
+    return (struct intel_desc_layout_chain *) chain;
+}
+
+static inline struct intel_desc_layout_chain *intel_desc_layout_chain_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_desc_layout_chain *) obj;
 }
 
 static inline void intel_desc_offset_set(struct intel_desc_offset *offset,
@@ -210,6 +209,12 @@ static inline bool intel_desc_offset_within(const struct intel_desc_offset *offs
     return (offset->surface <= other->surface &&
             offset->sampler <= other->sampler);
 }
+
+bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
+                                      const struct intel_desc_layout *layout,
+                                      uint32_t binding_index, uint32_t array_base);
+
+bool intel_desc_iter_advance(struct intel_desc_iter *iter);
 
 XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
                                     struct intel_desc_region **region_ret);
@@ -287,23 +292,14 @@ void intel_desc_set_read_sampler(const struct intel_desc_set *set,
                                  const struct intel_sampler **sampler);
 
 XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
-                                    XGL_FLAGS stage_flags,
-                                    const uint32_t *bind_points,
-                                    const struct intel_desc_layout *prior_layout,
                                     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,
                                     struct intel_desc_layout **layout_ret);
 void intel_desc_layout_destroy(struct intel_desc_layout *layout);
 
-bool intel_desc_layout_find_bind_point(const struct intel_desc_layout *layout,
-                                       XGL_PIPELINE_SHADER_STAGE stage,
-                                       uint32_t set, uint32_t binding,
-                                       struct intel_desc_layout_iter *iter);
-
-bool intel_desc_layout_find_index(const struct intel_desc_layout *layout,
-                                  uint32_t index,
-                                  struct intel_desc_layout_iter *iter);
-
-bool intel_desc_layout_advance_iter(const struct intel_desc_layout *layout,
-                                    struct intel_desc_layout_iter *iter);
+XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
+                                          const XGL_DESCRIPTOR_SET_LAYOUT *layouts,
+                                          uint32_t count,
+                                          struct intel_desc_layout_chain **chain_ret);
+void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain);
 
 #endif /* DESC_H */

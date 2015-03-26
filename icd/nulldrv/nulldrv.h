@@ -143,6 +143,10 @@ struct nulldrv_desc_layout {
     struct nulldrv_obj obj;
 };
 
+struct nulldrv_desc_layout_chain {
+    struct nulldrv_obj obj;
+};
+
 struct nulldrv_shader {
     struct nulldrv_obj obj;
 

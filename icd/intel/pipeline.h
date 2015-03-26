@@ -61,8 +61,8 @@ enum intel_pipeline_rmap_slot_type {
 struct intel_pipeline_rmap_slot {
     enum intel_pipeline_rmap_slot_type type;
 
+    uint32_t index; /* in the render target array or layout chain */
     union {
-        uint32_t rt;
         struct {
             struct intel_desc_offset offset;
             int dynamic_offset_index;

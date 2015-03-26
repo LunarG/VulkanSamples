@@ -559,9 +559,6 @@ static XGL_RESULT nulldrv_buf_create(struct nulldrv_dev *dev,
 }
 
 static XGL_RESULT nulldrv_desc_layout_create(struct nulldrv_dev *dev,
-                                    XGL_FLAGS stage_flags,
-                                    const uint32_t *bind_points,
-                                    const struct nulldrv_desc_layout *prior_layout,
                                     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,
                                     struct nulldrv_desc_layout **layout_ret)
 {
@@ -574,6 +571,24 @@ static XGL_RESULT nulldrv_desc_layout_create(struct nulldrv_dev *dev,
         return XGL_ERROR_OUT_OF_MEMORY;
 
     *layout_ret = layout;
+
+    return XGL_SUCCESS;
+}
+
+static XGL_RESULT nulldrv_desc_layout_chain_create(struct nulldrv_dev *dev,
+                                    uint32_t setLayoutArrayCount,
+                                    const XGL_DESCRIPTOR_SET_LAYOUT *pSetLayoutArray,
+                                    struct nulldrv_desc_layout_chain **chain_ret)
+{
+    struct nulldrv_desc_layout_chain *chain;
+
+    chain = (struct nulldrv_desc_layout_chain *)
+        nulldrv_base_create(dev, sizeof(*chain),
+                XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN);
+    if (!chain)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    *chain_ret = chain;
 
     return XGL_SUCCESS;
 }
@@ -1884,19 +1899,28 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_DEVICE                                   device,
-    XGL_FLAGS                                    stageFlags,
-    const uint32_t*                              pSetBindPoints,
-    XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
-    struct nulldrv_desc_layout *prior_layout = nulldrv_desc_layout(priorSetLayout);
 
-    return nulldrv_desc_layout_create(dev, stageFlags, pSetBindPoints,
-            prior_layout, pCreateInfo,
+    return nulldrv_desc_layout_create(dev, pCreateInfo,
             (struct nulldrv_desc_layout **) pSetLayout);
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayoutChain(
+    XGL_DEVICE                                   device,
+    uint32_t                                     setLayoutArrayCount,
+    const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayoutArray,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN*             pLayoutChain)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+
+    return nulldrv_desc_layout_chain_create(dev,
+            setLayoutArrayCount, pSetLayoutArray,
+            (struct nulldrv_desc_layout_chain **) pLayoutChain);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
@@ -1976,7 +2000,8 @@ ICD_EXPORT void XGLAPI xglClearDescriptorSets(
 
 ICD_EXPORT void XGLAPI xglUpdateDescriptors(
     XGL_DESCRIPTOR_SET                           descriptorSet,
-    const void*                                  pUpdateChain)
+    uint32_t                                     updateCount,
+    const void**                                 ppUpdateArray)
 {
     NULLDRV_LOG_FUNC;
 }

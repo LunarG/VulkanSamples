@@ -86,6 +86,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglLoadPipelineDerivativeType LoadPipelineDerivative;
     xglCreateSamplerType CreateSampler;
     xglCreateDescriptorSetLayoutType CreateDescriptorSetLayout;
+    xglCreateDescriptorSetLayoutChainType CreateDescriptorSetLayoutChain;
     xglBeginDescriptorPoolUpdateType BeginDescriptorPoolUpdate;
     xglEndDescriptorPoolUpdateType EndDescriptorPoolUpdate;
     xglCreateDescriptorPoolType CreateDescriptorPool;

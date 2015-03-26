@@ -56,6 +56,58 @@ struct intel_desc_sampler {
     const struct intel_sampler *sampler;
 };
 
+bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
+                                      const struct intel_desc_layout *layout,
+                                      uint32_t binding_index, uint32_t array_base)
+{
+    const struct intel_desc_layout_binding *binding;
+
+    if (binding_index >= layout->binding_count ||
+        array_base >= layout->bindings[binding_index].array_size)
+        return false;
+
+    binding = &layout->bindings[binding_index];
+
+    iter->type = binding->type;
+    iter->increment = binding->increment;
+    iter->size = binding->array_size;
+
+    intel_desc_offset_mad(&iter->begin, &binding->increment,
+            &binding->offset, array_base);
+    intel_desc_offset_add(&iter->end, &iter->begin, &binding->increment);
+    iter->cur = array_base;
+
+    return true;
+}
+
+static bool desc_iter_init_for_update(struct intel_desc_iter *iter,
+                                      const struct intel_desc_set *set,
+                                      XGL_DESCRIPTOR_TYPE type,
+                                      uint32_t binding_index, uint32_t array_base)
+{
+    if (!intel_desc_iter_init_for_binding(iter, set->layout,
+                binding_index, array_base) || iter->type != type)
+        return false;
+
+    intel_desc_offset_add(&iter->begin, &iter->begin, &set->region_begin);
+    intel_desc_offset_add(&iter->end, &iter->end, &set->region_begin);
+
+    return true;
+}
+
+bool intel_desc_iter_advance(struct intel_desc_iter *iter)
+{
+    if (iter->cur >= iter->size)
+        return false;
+
+    iter->cur++;
+
+    iter->begin = iter->end;
+    intel_desc_offset_add(&iter->end, &iter->end, &iter->increment);
+
+    return true;
+}
+
 static bool desc_region_init_desc_sizes(struct intel_desc_region *region,
                                         const struct intel_gpu *gpu)
 {
@@ -409,19 +461,6 @@ void intel_desc_set_destroy(struct intel_desc_set *set)
     intel_base_destroy(&set->obj.base);
 }
 
-static void desc_set_update(struct intel_desc_set *set,
-                            const struct intel_desc_layout_iter *iter,
-                            const struct intel_desc_surface *surfaces,
-                            const struct intel_desc_sampler *samplers)
-{
-    struct intel_desc_offset begin, end;
-
-    intel_desc_offset_add(&begin, &set->region_begin, &iter->offset_begin);
-    intel_desc_offset_add(&end, &set->region_begin, &iter->offset_end);
-
-    intel_desc_region_update(set->region, &begin, &end, surfaces, samplers);
-}
-
 static bool desc_set_img_layout_read_only(XGL_IMAGE_LAYOUT layout)
 {
     switch (layout) {
@@ -437,10 +476,11 @@ static bool desc_set_img_layout_read_only(XGL_IMAGE_LAYOUT layout)
 void intel_desc_set_update_samplers(struct intel_desc_set *set,
                                     const XGL_UPDATE_SAMPLERS *update)
 {
-    struct intel_desc_layout_iter iter;
+    struct intel_desc_iter iter;
     uint32_t i;
 
-    if (!intel_desc_layout_find_index(set->layout, update->index, &iter))
+    if (!desc_iter_init_for_update(&iter, set, XGL_DESCRIPTOR_TYPE_SAMPLER,
+                update->binding, update->arrayIndex))
         return;
 
     for (i = 0; i < update->count; i++) {
@@ -448,13 +488,11 @@ void intel_desc_set_update_samplers(struct intel_desc_set *set,
             intel_sampler((XGL_SAMPLER) update->pSamplers[i]);
         struct intel_desc_sampler desc;
 
-        if (iter.type != XGL_DESCRIPTOR_TYPE_SAMPLER)
-            break;
-
         desc.sampler = sampler;
-        desc_set_update(set, &iter, NULL, &desc);
+        intel_desc_region_update(set->region, &iter.begin, &iter.end,
+                NULL, &desc);
 
-        if (!intel_desc_layout_advance_iter(set->layout, &iter))
+        if (!intel_desc_iter_advance(&iter))
             break;
     }
 }
@@ -462,42 +500,37 @@ void intel_desc_set_update_samplers(struct intel_desc_set *set,
 void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
                                             const XGL_UPDATE_SAMPLER_TEXTURES *update)
 {
-    struct intel_desc_layout_iter iter;
-    const struct intel_sampler *immutable_sampler = NULL;
+    struct intel_desc_iter iter;
+    const struct intel_desc_layout_binding *binding;
     uint32_t i;
 
-    if (!intel_desc_layout_find_index(set->layout, update->index, &iter))
+    if (!desc_iter_init_for_update(&iter, set, XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+                update->binding, update->arrayIndex))
         return;
+
+    binding = &set->layout->bindings[update->binding];
+
+    if (binding->immutable_sampler) {
+        struct intel_desc_offset end;
+        struct intel_desc_sampler sampler_desc;
+
+        assert(!iter.increment.sampler);
+        intel_desc_offset_set(&end, iter.begin.surface,
+                iter.begin.sampler + set->region->sampler_desc_size);
+
+        sampler_desc.sampler = binding->immutable_sampler;
+        intel_desc_region_update(set->region, &iter.begin, &end,
+                NULL, &sampler_desc);
+    }
 
     for (i = 0; i < update->count; i++) {
         const struct intel_sampler *sampler =
-            intel_sampler(update->pSamplerImageViews[i].pSampler);
+            intel_sampler(update->pSamplerImageViews[i].sampler);
         const XGL_IMAGE_VIEW_ATTACH_INFO *info =
             update->pSamplerImageViews[i].pImageView;
         const struct intel_img_view *view = intel_img_view(info->view);
         struct intel_desc_surface view_desc;
         struct intel_desc_sampler sampler_desc;
-
-        if (iter.type != XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE)
-            return;
-
-        /* update every immutable sampler once */
-        if (immutable_sampler != iter.binding->immutable_sampler) {
-            immutable_sampler = iter.binding->immutable_sampler;
-
-            if (immutable_sampler) {
-                struct intel_desc_offset begin, end;
-
-                intel_desc_offset_add(&begin, &set->region_begin,
-                        &iter.offset_begin);
-                intel_desc_offset_set(&end, begin.surface,
-                        begin.sampler + set->region->sampler_desc_size);
-
-                sampler_desc.sampler = immutable_sampler;
-                intel_desc_region_update(set->region, &begin, &end,
-                        NULL, &sampler_desc);
-            }
-        }
 
         view_desc.mem = view->img->obj.mem;
         view_desc.read_only = desc_set_img_layout_read_only(info->layout);
@@ -506,9 +539,10 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
 
         sampler_desc.sampler = sampler;
 
-        desc_set_update(set, &iter, &view_desc, &sampler_desc);
+        intel_desc_region_update(set->region, &iter.begin, &iter.end,
+                &view_desc, &sampler_desc);
 
-        if (!intel_desc_layout_advance_iter(set->layout, &iter))
+        if (!intel_desc_iter_advance(&iter))
             break;
     }
 }
@@ -516,27 +550,26 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
 void intel_desc_set_update_images(struct intel_desc_set *set,
                                   const XGL_UPDATE_IMAGES *update)
 {
-    struct intel_desc_layout_iter iter;
+    struct intel_desc_iter iter;
     uint32_t i;
 
-    if (!intel_desc_layout_find_index(set->layout, update->index, &iter))
+    if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
+                update->binding, update->arrayIndex))
         return;
 
     for (i = 0; i < update->count; i++) {
-        const XGL_IMAGE_VIEW_ATTACH_INFO *info = update->pImageViews[i];
+        const XGL_IMAGE_VIEW_ATTACH_INFO *info = &update->pImageViews[i];
         const struct intel_img_view *view = intel_img_view(info->view);
         struct intel_desc_surface desc;
-
-        if (iter.type != update->descriptorType)
-            break;
 
         desc.mem = view->img->obj.mem;
         desc.read_only = desc_set_img_layout_read_only(info->layout);
         desc.type = INTEL_DESC_SURFACE_IMG;
         desc.u.img = view;
-        desc_set_update(set, &iter, &desc, NULL);
+        intel_desc_region_update(set->region, &iter.begin, &iter.end,
+                &desc, NULL);
 
-        if (!intel_desc_layout_advance_iter(set->layout, &iter))
+        if (!intel_desc_iter_advance(&iter))
             break;
     }
 }
@@ -544,27 +577,26 @@ void intel_desc_set_update_images(struct intel_desc_set *set,
 void intel_desc_set_update_buffers(struct intel_desc_set *set,
                                    const XGL_UPDATE_BUFFERS *update)
 {
-    struct intel_desc_layout_iter iter;
+    struct intel_desc_iter iter;
     uint32_t i;
 
-    if (!intel_desc_layout_find_index(set->layout, update->index, &iter))
+    if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
+                update->binding, update->arrayIndex))
         return;
 
     for (i = 0; i < update->count; i++) {
-        const XGL_BUFFER_VIEW_ATTACH_INFO *info = update->pBufferViews[i];
+        const XGL_BUFFER_VIEW_ATTACH_INFO *info = &update->pBufferViews[i];
         const struct intel_buf_view *view = intel_buf_view(info->view);
         struct intel_desc_surface desc;
-
-        if (iter.type != update->descriptorType)
-            break;
 
         desc.mem = view->buf->obj.mem;
         desc.read_only = false;
         desc.type = INTEL_DESC_SURFACE_BUF;
         desc.u.buf = view;
-        desc_set_update(set, &iter, &desc, NULL);
+        intel_desc_region_update(set->region, &iter.begin, &iter.end,
+                &desc, NULL);
 
-        if (!intel_desc_layout_advance_iter(set->layout, &iter))
+        if (!intel_desc_iter_advance(&iter))
             break;
     }
 }
@@ -574,39 +606,34 @@ void intel_desc_set_update_as_copy(struct intel_desc_set *set,
 {
     const struct intel_desc_set *src_set =
         intel_desc_set(update->descriptorSet);
-    struct intel_desc_layout_iter iter, src_iter;
-    struct intel_desc_offset begin, end, src_begin;
+    struct intel_desc_iter iter, src_iter;
+    struct intel_desc_offset begin, src_begin;
     uint32_t i;
 
     /* disallow combined sampler textures */
     if (update->descriptorType == XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE)
         return;
 
-    /* no update->index? */
-    if (!intel_desc_layout_find_index(set->layout, 0, &iter))
-        return;
-    if (!intel_desc_layout_find_index(src_set->layout,
-                update->descriptorIndex, &src_iter))
+    if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
+                update->binding, update->arrayElement) ||
+        !desc_iter_init_for_update(&src_iter, src_set, update->descriptorType,
+                update->binding, update->arrayElement))
         return;
 
-    intel_desc_offset_add(&begin, &set->region_begin, &iter.offset_begin);
-    intel_desc_offset_add(&src_begin, &src_set->region_begin,
-            &src_iter.offset_end);
+    /* save the begin offsets */
+    begin = iter.begin;
+    src_begin = src_iter.begin;
 
-    /* advance to end */
+    /* advance to the end */
     for (i = 0; i < update->count; i++) {
-        if (iter.type != update->descriptorType ||
-            src_iter.type != update->descriptorType ||
-            !intel_desc_layout_advance_iter(set->layout, &iter) ||
-            !intel_desc_layout_advance_iter(src_set->layout, &src_iter))
-            break;
+        if (!intel_desc_iter_advance(&iter) ||
+            !intel_desc_iter_advance(&src_iter)) {
+            /* out of bound */
+            return;
+        }
     }
-    if (i < update->count)
-        return;
 
-    intel_desc_offset_add(&end, &src_set->region_begin, &iter.offset_end);
-
-    intel_desc_region_copy(src_set->region, &begin, &end, &src_begin);
+    intel_desc_region_copy(set->region, &begin, &iter.end, &src_begin);
 }
 
 static void desc_set_read(const struct intel_desc_set *set,
@@ -692,18 +719,10 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
                                             const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info)
 {
     struct intel_desc_offset offset;
-    uint32_t index, i;
+    uint32_t i;
     XGL_RESULT ret;
 
-    if (layout->prior_layout) {
-        index = layout->prior_layout->end;
-        offset = layout->prior_layout->region_size;
-    } else {
-        index = 0;
-        intel_desc_offset_set(&offset, 0, 0);
-    }
-
-    layout->begin = index;
+    intel_desc_offset_set(&offset, 0, 0);
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
@@ -729,16 +748,15 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
             break;
         }
 
+        /* lb->stageFlags does not gain us anything */
+        binding->type = lb->descriptorType;
+        binding->array_size = lb->count;
+        binding->offset = offset;
+
         ret = desc_region_get_desc_size(region,
                 lb->descriptorType, &size);
         if (ret != XGL_SUCCESS)
             return ret;
-
-        /* lb->stageFlags does not gain us anything */
-        binding->type = lb->descriptorType;
-
-        binding->begin = index;
-        binding->offset = offset;
 
         if (lb->immutableSampler != XGL_NULL_HANDLE) {
             binding->immutable_sampler = intel_sampler(lb->immutableSampler);
@@ -749,59 +767,18 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
             binding->increment = size;
         }
 
-        /* increment index and offset */
-        index += lb->count;
+        /* increment offset */
         intel_desc_offset_mad(&size, &binding->increment, &size,
                 lb->count - 1);
         intel_desc_offset_add(&offset, &offset, &size);
-
-        binding->end = index;
     }
 
-    layout->end = index;
     layout->region_size = offset;
 
     return XGL_SUCCESS;
 }
 
-static XGL_RESULT desc_layout_init_bind_points(struct intel_desc_layout *layout,
-                                               XGL_FLAGS stage_flags,
-                                               const uint32_t *bind_points)
-{
-    if (!bind_points)
-        return XGL_ERROR_INVALID_POINTER;
-
-    layout->stage_flags = stage_flags;
-
-    if (stage_flags == XGL_SHADER_STAGE_FLAGS_ALL) {
-        layout->bind_point_vs = *bind_points;
-        layout->bind_point_tcs = *bind_points;
-        layout->bind_point_tes = *bind_points;
-        layout->bind_point_gs = *bind_points;
-        layout->bind_point_fs = *bind_points;
-        layout->bind_point_cs = *bind_points;
-    } else {
-        if (stage_flags & XGL_SHADER_STAGE_FLAGS_VERTEX_BIT)
-            layout->bind_point_vs = *bind_points++;
-        if (stage_flags & XGL_SHADER_STAGE_FLAGS_TESS_CONTROL_BIT)
-            layout->bind_point_tcs = *bind_points++;
-        if (stage_flags & XGL_SHADER_STAGE_FLAGS_TESS_EVALUATION_BIT)
-            layout->bind_point_tes = *bind_points++;
-        if (stage_flags & XGL_SHADER_STAGE_FLAGS_GEOMETRY_BIT)
-            layout->bind_point_gs = *bind_points++;
-        if (stage_flags & XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT)
-            layout->bind_point_fs = *bind_points++;
-        if (stage_flags & XGL_SHADER_STAGE_FLAGS_COMPUTE_BIT)
-            layout->bind_point_cs = *bind_points++;
-    }
-
-    return XGL_SUCCESS;
-}
-
 XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
-                                    XGL_FLAGS stage_flags,
-                                    const uint32_t *bind_points,
-                                    const struct intel_desc_layout *prior_layout,
                                     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,
                                     struct intel_desc_layout **layout_ret)
 {
@@ -814,11 +791,7 @@ XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
     if (!layout)
         return XGL_ERROR_OUT_OF_MEMORY;
 
-    layout->prior_layout = prior_layout;
-
-    ret = desc_layout_init_bind_points(layout, stage_flags, bind_points);
-    if (ret == XGL_SUCCESS)
-        ret = desc_layout_init_bindings(layout, dev->desc_region, info);
+    ret = desc_layout_init_bindings(layout, dev->desc_region, info);
     if (ret != XGL_SUCCESS) {
         intel_desc_layout_destroy(layout);
         return ret;
@@ -837,150 +810,76 @@ void intel_desc_layout_destroy(struct intel_desc_layout *layout)
     intel_base_destroy(&layout->obj.base);
 }
 
-static void desc_layout_init_iter(const struct intel_desc_layout *sublayout,
-                                  uint32_t index,
-                                  struct intel_desc_layout_iter *iter)
+static void desc_layout_chain_destroy(struct intel_obj *obj)
 {
-    const struct intel_desc_layout_binding *binding;
+    struct intel_desc_layout_chain *chain =
+        intel_desc_layout_chain_from_obj(obj);
 
-    assert(index >= sublayout->begin && index < sublayout->end);
-
-    /* find the binding the index is in */
-    for (binding = sublayout->bindings;; binding++) {
-        assert(binding < sublayout->bindings + sublayout->binding_count);
-        if (index < binding->end)
-            break;
-    }
-
-    /* current position */
-    iter->sublayout = sublayout;
-    iter->binding = binding;
-    iter->index = index;
-
-    iter->type = iter->binding->type;
-    intel_desc_offset_mad(&iter->offset_begin, &binding->increment,
-            &binding->offset, iter->index - binding->begin);
-    intel_desc_offset_add(&iter->offset_end, &iter->offset_begin,
-            &binding->increment);
+    intel_desc_layout_chain_destroy(chain);
 }
 
-bool intel_desc_layout_find_bind_point(const struct intel_desc_layout *layout,
-                                       XGL_PIPELINE_SHADER_STAGE stage,
-                                       uint32_t set, uint32_t binding,
-                                       struct intel_desc_layout_iter *iter)
+XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
+                                          const XGL_DESCRIPTOR_SET_LAYOUT *layouts,
+                                          uint32_t count,
+                                          struct intel_desc_layout_chain **chain_ret)
 {
-    /* find the layout at the bind point */
-    switch (stage) {
-#define CASE(stage, s)                                              \
-    case XGL_SHADER_STAGE_ ##stage:                                 \
-        while (layout) {                                            \
-            if ((layout->stage_flags &                              \
-                        XGL_SHADER_STAGE_FLAGS_ ##stage## _BIT) &&  \
-                layout->bind_point_ ##s == set)                     \
-                break;                                              \
-            layout = layout->prior_layout;                          \
-        }                                                           \
-        break
-    CASE(VERTEX, vs);
-    CASE(TESS_CONTROL, tcs);
-    CASE(TESS_EVALUATION, tes);
-    CASE(GEOMETRY, gs);
-    CASE(FRAGMENT, fs);
-    CASE(COMPUTE, cs);
-#undef CASE
-    default:
-        assert(!"unknown shader stage");
-        layout = NULL;
-        break;
+    struct intel_desc_layout_chain *chain;
+    uint32_t i;
+
+    chain = (struct intel_desc_layout_chain *)
+        intel_base_create(&dev->base.handle, sizeof(*chain), dev->base.dbg,
+                XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN, NULL, 0);
+    if (!chain)
+        return XGL_ERROR_OUT_OF_MEMORY;
+
+    chain->layouts = intel_alloc(chain, sizeof(chain->layouts[0]) * count,
+            0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!chain) {
+        intel_desc_layout_chain_destroy(chain);
+        return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    if (!layout || layout->begin + binding >= layout->end) {
-        memset(iter, 0, sizeof(*iter));
-        return false;
-    }
+    for (i = 0; i < count; i++)
+        chain->layouts[i] = intel_desc_layout(layouts[i]);
 
-    desc_layout_init_iter(layout, layout->begin + binding, iter);
+    chain->layout_count = count;
 
-    return true;
+    chain->obj.destroy = desc_layout_chain_destroy;
+
+    *chain_ret = chain;
+
+    return XGL_SUCCESS;
 }
 
-bool intel_desc_layout_find_index(const struct intel_desc_layout *layout,
-                                  uint32_t index,
-                                  struct intel_desc_layout_iter *iter)
+void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain)
 {
-    if (index >= layout->begin) {
-        /* out of bound */
-        if (index >= layout->end)
-            layout = NULL;
-    } else {
-        while (true) {
-            layout = layout->prior_layout;
-            if (index >= layout->begin) {
-                assert(index < layout->end);
-                break;
-            }
-        }
-    }
-
-    if (!layout) {
-        memset(iter, 0, sizeof(*iter));
-        return false;
-    }
-
-    desc_layout_init_iter(layout, index, iter);
-
-    return true;
-}
-
-bool intel_desc_layout_advance_iter(const struct intel_desc_layout *layout,
-                                    struct intel_desc_layout_iter *iter)
-{
-    /* all descriptors traversed */
-    if (!iter->sublayout)
-        return false;
-
-    iter->index++;
-    if (iter->index >= iter->binding->end) {
-        /* move to the next binding */
-        iter->binding++;
-
-        if (iter->binding >= iter->sublayout->bindings +
-                           iter->sublayout->binding_count) {
-            /* find again as the chain is not doubly-linked */
-            const bool ret = intel_desc_layout_find_index(layout,
-                    iter->index, iter);
-            if (!ret) {
-                iter->sublayout = NULL;
-                iter->binding = NULL;
-            }
-
-            return ret;
-        }
-
-        iter->type = iter->binding->type;
-    }
-
-    iter->offset_begin = iter->offset_end;
-    intel_desc_offset_add(&iter->offset_end, &iter->offset_end,
-            &iter->binding->increment);
-
-    return true;
+    if (chain->layouts)
+        intel_free(chain, chain->layouts);
+    intel_base_destroy(&chain->obj.base);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
     XGL_DEVICE                                   device,
-    XGL_FLAGS                                    stageFlags,
-    const uint32_t*                              pSetBindPoints,
-    XGL_DESCRIPTOR_SET_LAYOUT                    priorSetLayout,
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
     XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
 {
     struct intel_dev *dev = intel_dev(device);
-    struct intel_desc_layout *prior_layout = intel_desc_layout(priorSetLayout);
 
-    return intel_desc_layout_create(dev, stageFlags, pSetBindPoints,
-            prior_layout, pCreateInfo,
+    return intel_desc_layout_create(dev, pCreateInfo,
             (struct intel_desc_layout **) pSetLayout);
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayoutChain(
+    XGL_DEVICE                                   device,
+    uint32_t                                     setLayoutArrayCount,
+    const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayoutArray,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN*             pLayoutChain)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_desc_layout_chain_create(dev,
+            pSetLayoutArray, setLayoutArrayCount,
+            (struct intel_desc_layout_chain **) pLayoutChain);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
@@ -1073,23 +972,26 @@ ICD_EXPORT void XGLAPI xglClearDescriptorSets(
 
 ICD_EXPORT void XGLAPI xglUpdateDescriptors(
     XGL_DESCRIPTOR_SET                           descriptorSet,
-    const void*                                  pUpdateChain)
+    uint32_t                                     updateCount,
+    const void**                                 ppUpdateArray)
 {
     struct intel_desc_set *set = intel_desc_set(descriptorSet);
-    const union {
-        struct {
-            XGL_STRUCTURE_TYPE                      sType;
-            const void*                             pNext;
-        } common;
+    uint32_t i;
 
-        XGL_UPDATE_SAMPLERS samplers;
-        XGL_UPDATE_SAMPLER_TEXTURES sampler_textures;
-        XGL_UPDATE_IMAGES images;
-        XGL_UPDATE_BUFFERS buffers;
-        XGL_UPDATE_AS_COPY as_copy;
-    } *u = pUpdateChain;
+    for (i = 0; i < updateCount; i++) {
+        const union {
+            struct {
+                XGL_STRUCTURE_TYPE                      sType;
+                const void*                             pNext;
+            } common;
 
-    while (u) {
+            XGL_UPDATE_SAMPLERS samplers;
+            XGL_UPDATE_SAMPLER_TEXTURES sampler_textures;
+            XGL_UPDATE_IMAGES images;
+            XGL_UPDATE_BUFFERS buffers;
+            XGL_UPDATE_AS_COPY as_copy;
+        } *u = ppUpdateArray[i];
+
         switch (u->common.sType) {
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
             intel_desc_set_update_samplers(set, &u->samplers);
@@ -1110,7 +1012,5 @@ ICD_EXPORT void XGLAPI xglUpdateDescriptors(
             assert(!"unknown descriptor update");
             break;
         }
-
-        u = u->common.pNext;
     }
 }

@@ -819,25 +819,22 @@ void Sampler::init(const Device &dev, const XGL_SAMPLER_CREATE_INFO &info)
     alloc_memory(dev);
 }
 
-void DescriptorSetLayout::init(const Device &dev, XGL_FLAGS stage_mask,
-                               const std::vector<uint32_t> &bind_points,
-                               const DescriptorSetLayout &prior_layout,
-                               const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
+void DescriptorSetLayout::init(const Device &dev, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDescriptorSetLayout, dev.obj(), stage_mask,
-            &bind_points[0], prior_layout.obj(), &info);
+    DERIVED_OBJECT_INIT(xglCreateDescriptorSetLayout, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DescriptorSetLayout::init(const Device &dev, uint32_t bind_point,
-                               const DescriptorSetLayout &prior_layout,
-                               const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
+void DescriptorSetLayoutChain::init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    init(dev, XGL_SHADER_STAGE_FLAGS_ALL, std::vector<uint32_t>(1, bind_point), prior_layout, info);
+    const std::vector<XGL_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<XGL_DESCRIPTOR_SET_LAYOUT>(layouts);
+
+    DERIVED_OBJECT_INIT(xglCreateDescriptorSetLayoutChain, dev.obj(), layout_objs.size(), &layout_objs[0]);
+    alloc_memory(dev);
 }
 
 void DescriptorPool::init(const Device &dev, XGL_DESCRIPTOR_POOL_USAGE usage,
-                            uint32_t max_sets, const XGL_DESCRIPTOR_POOL_CREATE_INFO &info)
+                          uint32_t max_sets, const XGL_DESCRIPTOR_POOL_CREATE_INFO &info)
 {
     DERIVED_OBJECT_INIT(xglCreateDescriptorPool, dev.obj(), usage, max_sets, &info);
     alloc_memory(dev);
@@ -888,9 +885,9 @@ void DescriptorPool::clear_sets(const std::vector<DescriptorSet *> &sets)
     xglClearDescriptorSets(obj(), set_objs.size(), &set_objs[0]);
 }
 
-void DescriptorSet::update(const void *update_chain)
+void DescriptorSet::update(const std::vector<const void *> &update_array)
 {
-    xglUpdateDescriptors(obj(), update_chain);
+    xglUpdateDescriptors(obj(), update_array.size(), const_cast<const void **>(&update_array[0]));
 }
 
 void DynamicVpStateObject::init(const Device &dev, const XGL_DYNAMIC_VP_STATE_CREATE_INFO &info)

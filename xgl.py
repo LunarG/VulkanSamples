@@ -201,6 +201,7 @@ core = Extension(
         "XGL_SAMPLER",
         "XGL_DESCRIPTOR_SET",
         "XGL_DESCRIPTOR_SET_LAYOUT",
+        "XGL_DESCRIPTOR_SET_LAYOUT_CHAIN",
         "XGL_DESCRIPTOR_POOL",
         "XGL_DYNAMIC_STATE_OBJECT",
         "XGL_DYNAMIC_VP_STATE_OBJECT",
@@ -511,11 +512,14 @@ core = Extension(
 
         Proto("XGL_RESULT", "CreateDescriptorSetLayout",
             [Param("XGL_DEVICE", "device"),
-             Param("XGL_FLAGS", "stageFlags"),
-             Param("const uint32_t*", "pSetBindPoints"),
-             Param("XGL_DESCRIPTOR_SET_LAYOUT", "priorSetLayout"),
              Param("const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_DESCRIPTOR_SET_LAYOUT*", "pSetLayout")]),
+
+        Proto("XGL_RESULT", "CreateDescriptorSetLayoutChain",
+            [Param("XGL_DEVICE", "device"),
+             Param("uint32_t", "setLayoutArrayCount"),
+             Param("const XGL_DESCRIPTOR_SET_LAYOUT*", "pSetLayoutArray"),
+             Param("XGL_DESCRIPTOR_SET_LAYOUT_CHAIN*", "pLayoutChain")]),
 
         Proto("XGL_RESULT", "BeginDescriptorPoolUpdate",
             [Param("XGL_DEVICE", "device"),
@@ -550,7 +554,8 @@ core = Extension(
 
         Proto("void", "UpdateDescriptors",
             [Param("XGL_DESCRIPTOR_SET", "descriptorSet"),
-             Param("const void*", "pUpdateChain")]),
+             Param("uint32_t", "updateCount"),
+             Param("const void**", "ppUpdateArray")]),
 
         Proto("XGL_RESULT", "CreateDynamicViewportState",
             [Param("XGL_DEVICE", "device"),

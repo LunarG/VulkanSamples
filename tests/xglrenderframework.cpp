@@ -290,10 +290,8 @@ int XglDescriptorSetObj::AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBuffe
     tc.count = 1;
     m_type_counts.push_back(tc);
 
-    m_bufferInfo.push_back(&constantBuffer->m_bufferViewInfo);
-
-    m_updateBuffers.push_back(xgl_testing::DescriptorSet::update(type, m_nextSlot, 1,
-                (const XGL_BUFFER_VIEW_ATTACH_INFO **) NULL));
+    m_updateBuffers.push_back(xgl_testing::DescriptorSet::update(type,
+                m_nextSlot, 0, 1, &constantBuffer->m_bufferViewInfo));
 
     return m_nextSlot++;
 }
@@ -306,19 +304,19 @@ int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextur
     m_type_counts.push_back(tc);
 
     XGL_SAMPLER_IMAGE_VIEW_INFO tmp = {};
-    tmp.pSampler = sampler->obj();
+    tmp.sampler = sampler->obj();
     tmp.pImageView = &texture->m_textureViewInfo;
     m_samplerTextureInfo.push_back(tmp);
 
-    m_updateSamplerTextures.push_back(xgl_testing::DescriptorSet::update(m_nextSlot, 1,
+    m_updateSamplerTextures.push_back(xgl_testing::DescriptorSet::update(m_nextSlot, 0, 1,
                 (const XGL_SAMPLER_IMAGE_VIEW_INFO *) NULL));
 
     return m_nextSlot++;
 }
 
-XGL_DESCRIPTOR_SET_LAYOUT XglDescriptorSetObj::GetLayout()
+XGL_DESCRIPTOR_SET_LAYOUT_CHAIN XglDescriptorSetObj::GetLayoutChain()
 {
-    return m_layout.obj();
+    return m_layout_chain.obj();
 }
 
 XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle()
@@ -351,38 +349,30 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer)
     layout.count = bindings.size();
     layout.pBinding = &bindings[0];
 
-    m_layout.init(*m_device, 0, layout);
+    m_layout.init(*m_device, layout);
+
+    vector<const xgl_testing::DescriptorSetLayout *> layouts;
+    layouts.push_back(&m_layout);
+    m_layout_chain.init(*m_device, layouts);
 
     // create XGL_DESCRIPTOR_SET
     m_set = alloc_sets(XGL_DESCRIPTOR_SET_USAGE_STATIC, m_layout);
 
-    // build the update chain
-    for (int i = 0; i < m_updateBuffers.size(); i++) {
-        m_updateBuffers[i].pBufferViews = &m_bufferInfo[i];
+    // build the update array
+    vector<const void *> update_array;
 
-        if (i < m_updateBuffers.size() - 1)
-            m_updateBuffers[i].pNext = &m_updateBuffers[i + 1];
-        else if (m_updateSamplerTextures.empty())
-            m_updateBuffers[i].pNext = NULL;
-        else
-            m_updateBuffers[i].pNext = &m_updateSamplerTextures[0];
+    for (int i = 0; i < m_updateBuffers.size(); i++) {
+        update_array.push_back(&m_updateBuffers[i]);
     }
     for (int i = 0; i < m_updateSamplerTextures.size(); i++) {
         m_updateSamplerTextures[i].pSamplerImageViews = &m_samplerTextureInfo[i];
-
-        if (i < m_updateSamplerTextures.size() - 1)
-            m_updateSamplerTextures[i].pNext = &m_updateSamplerTextures[i + 1];
-        else
-            m_updateSamplerTextures[i].pNext = NULL;
+        update_array.push_back(&m_updateSamplerTextures[i]);
     }
-    const void *chain = (!m_updateBuffers.empty()) ? (const void *) &m_updateBuffers[0] :
-                        (!m_updateSamplerTextures.empty()) ? (const void *) &m_updateSamplerTextures[0] :
-                        NULL;
 
     // do the updates
     m_device->begin_descriptor_pool_update(XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
     clear_sets(*m_set);
-    m_set->update(chain);
+    m_set->update(update_array);
     m_device->end_descriptor_pool_update(*cmdBuffer);
 }
 
@@ -1106,7 +1096,7 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = head_ptr;
     info.flags = 0;
-    info.lastSetLayout = descriptorSet->GetLayout();
+    info.pSetLayoutChain = descriptorSet->GetLayoutChain();
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];
@@ -1143,7 +1133,7 @@ void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDe
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = head_ptr;
     info.flags = 0;
-    info.lastSetLayout = descriptorSet->GetLayout();
+    info.pSetLayoutChain = descriptorSet->GetLayoutChain();
 
     init(*m_device, info);
 

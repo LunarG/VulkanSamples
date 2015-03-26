@@ -80,6 +80,7 @@ struct demo {
     XGL_CMD_BUFFER cmd;  // Buffer for initialization commands
     XGL_MEMORY_REF mem_refs[16];
     int num_refs;
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN desc_layout_chain;
     XGL_DESCRIPTOR_SET_LAYOUT desc_layout;
     XGL_PIPELINE pipeline;
 
@@ -857,13 +858,14 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         .count = 1,
         .pBinding = &layout_binding,
     };
-    const uint32_t bind_point = 0;
     XGL_RESULT err;
 
     err = xglCreateDescriptorSetLayout(demo->device,
-            XGL_SHADER_STAGE_FLAGS_ALL, &bind_point,
-            XGL_NULL_HANDLE, &descriptor_layout,
-            &demo->desc_layout);
+            &descriptor_layout, &demo->desc_layout);
+    assert(!err);
+
+    err = xglCreateDescriptorSetLayoutChain(demo->device,
+            1, &demo->desc_layout, &demo->desc_layout_chain);
     assert(!err);
 }
 
@@ -952,7 +954,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline.lastSetLayout = demo->desc_layout;
+    pipeline.pSetLayoutChain = demo->desc_layout_chain;
 
     vi = demo->vertices.vi;
 
@@ -1116,6 +1118,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     XGL_IMAGE_VIEW_ATTACH_INFO view_info[DEMO_TEXTURE_COUNT];
     XGL_SAMPLER_IMAGE_VIEW_INFO combined_info[DEMO_TEXTURE_COUNT];
     XGL_UPDATE_SAMPLER_TEXTURES update;
+    const void *update_array[1] = { &update };
     XGL_RESULT err;
     uint32_t count;
     uint32_t i;
@@ -1126,7 +1129,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
         view_info[i].view = demo->textures[i].view,
         view_info[i].layout = XGL_IMAGE_LAYOUT_GENERAL;
 
-        combined_info[i].pSampler = demo->textures[i].sampler;
+        combined_info[i].sampler = demo->textures[i].sampler;
         combined_info[i].pImageView = &view_info[i];
     }
 
@@ -1145,7 +1148,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
             XGL_DESCRIPTOR_UPDATE_MODE_FASTEST);
 
     xglClearDescriptorSets(demo->desc_pool, 1, &demo->desc_set);
-    xglUpdateDescriptors(demo->desc_set, &update);
+    xglUpdateDescriptors(demo->desc_set, 1, update_array);
 
     xglEndDescriptorPoolUpdate(demo->device, demo->cmd);
 }
@@ -1404,6 +1407,7 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->depth_stencil);
 
     xglDestroyObject(demo->pipeline);
+    xglDestroyObject(demo->desc_layout_chain);
     xglDestroyObject(demo->desc_layout);
 
     xglBindObjectMemory(demo->vertices.buf, 0, XGL_NULL_HANDLE, 0);

@@ -1660,8 +1660,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         case INTEL_PIPELINE_RMAP_RT:
             {
                 const struct intel_rt_view *view =
-                    (slot->u.rt < cmd->bind.fb->rt_count) ?
-                    cmd->bind.fb->rt[slot->u.rt] : NULL;
+                    (slot->index < cmd->bind.fb->rt_count) ?
+                    cmd->bind.fb->rt[slot->index] : NULL;
 
                 if (view) {
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
