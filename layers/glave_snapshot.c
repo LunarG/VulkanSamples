@@ -33,10 +33,12 @@
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
+
 // The following is #included again to catch certain OS-specific functions being used:
 #include "loader_platform.h"
 #include "layers_config.h"
 #include "layers_msg.h"
+
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);
 static long long unsigned int object_track_index = 0;
 static int objLockInitialized = 0;
@@ -50,6 +52,7 @@ typedef struct _objNode {
     struct _objNode *pNextObj;
     struct _objNode *pNextGlobal;
 } objNode;
+
 static objNode *pObjectHead[XGL_NUM_OBJECT_TYPE] = {0};
 static objNode *pGlobalHead = NULL;
 static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};
@@ -267,64 +270,6 @@ static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS stat
     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 }
 
-// Check object status for selected flag state
-static bool32_t validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, GLAVE_SNAPSHOT_ERROR error_code, char* fail_msg) {
-    objNode *pTrav = pObjectHead[objType];
-    while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
-            if ((pTrav->obj.status & status_mask) != status_flag) {
-                char str[1024];
-                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_XGL_OBJECT_TYPE(objType), (void*)pObj, fail_msg);
-                layerCbMsg(error_level, XGL_VALIDATION_LEVEL_0, pObj, 0, error_code, LAYER_ABBREV_STR, str);
-                return XGL_FALSE;
-            }
-            return XGL_TRUE;
-        }
-        pTrav = pTrav->pNextObj;
-    }
-    if (objType != XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {
-        // If we do not find it print an error
-        char str[1024];
-        sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
-    }
-    return XGL_FALSE;
-}
-
-static void validate_draw_state_flags(void* pObj) {
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    GLVSNAPSHOT_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    GLVSNAPSHOT_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  GLVSNAPSHOT_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
-    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  GLVSNAPSHOT_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
-}
-
-static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint32_t numRefs) {
-    uint32_t i;
-    for (i = 0; i < numRefs; i++) {
-        if(pMemRefs[i].mem) {
-            // If mem reference is in presentable image memory list, skip the check of the GPU_MEMORY list
-            if (!validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, GLVSNAPSHOT_NONE, NULL) == XGL_TRUE)
-            {
-                validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, GLVSNAPSHOT_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");
-            }
-        }
-    }
-}
-
-static void validate_mem_ref_count(uint32_t numRefs) {
-    if (maxMemRefsPerSubmission == 0) {
-        char str[1024];
-        sprintf(str, "xglQueueSubmit called before calling xglGetGpuInfo");
-        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_GETGPUINFO_NOT_CALLED, LAYER_ABBREV_STR, str);
-    } else {
-        if (numRefs > maxMemRefsPerSubmission) {
-            char str[1024];
-            sprintf(str, "xglQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemRefsPerSubmission);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_MEMREFCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
-        }
-    }
-}
-
 static void setGpuInfoState(void *pData) {
     maxMemRefsPerSubmission = ((XGL_PHYSICAL_GPU_PROPERTIES *)pData)->maxMemRefsPerSubmission;
 }
@@ -362,7 +307,9 @@ static void initGlaveSnapshot(void)
     }
 }
 
-
+//=============================================================================
+// vulkan entrypoints
+//=============================================================================
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
 {
     XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
@@ -484,8 +431,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEU
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);
-    validate_memory_mapping_status(pMemRefs, memRefCount);
-    validate_mem_ref_count(memRefCount);
     XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, fence);
     return result;
 }
@@ -681,7 +626,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
     ll_increment_use_count((void*)fence, XGL_OBJECT_TYPE_FENCE);
     loader_platform_thread_unlock_mutex(&objLock);
     // Warn if submitted_flag is not set
-    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, GLVSNAPSHOT_INVALID_FENCE, "Status Requested for Unsubmitted Fence");
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
     return result;
 }
@@ -1191,7 +1135,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDraw(XGL_CMD_BUFFER cmdBuffer, uint32_t first
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    validate_draw_state_flags((void *)cmdBuffer);
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
@@ -1200,7 +1143,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexed(XGL_CMD_BUFFER cmdBuffer, uint32_
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    validate_draw_state_flags((void *)cmdBuffer);
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
@@ -1209,7 +1151,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndirect(XGL_CMD_BUFFER cmdBuffer, XGL_BU
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    validate_draw_state_flags((void *)cmdBuffer);
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
@@ -1218,7 +1159,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdDrawIndexedIndirect(XGL_CMD_BUFFER cmdBuffer,
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    validate_draw_state_flags((void *)cmdBuffer);
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
