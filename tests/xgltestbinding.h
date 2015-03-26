@@ -517,8 +517,8 @@ public:
     void init(const Device &dev, XGL_DESCRIPTOR_POOL_USAGE usage,
               uint32_t max_sets, const XGL_DESCRIPTOR_POOL_CREATE_INFO &info);
 
-    // xglClearDescriptorPool()
-    void clear();
+    // xglResetDescriptorPool()
+    void reset();
 
     // xglAllocDescriptorSets()
     std::vector<DescriptorSet *> alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts);

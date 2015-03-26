@@ -255,7 +255,7 @@ XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_offset *begin,
                                  struct intel_desc_offset *end);
-void intel_desc_pool_free_all(struct intel_desc_pool *pool);
+void intel_desc_pool_reset(struct intel_desc_pool *pool);
 
 XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
                                  struct intel_desc_pool *pool,

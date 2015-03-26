@@ -2312,7 +2312,7 @@ typedef XGL_RESULT (XGLAPI *xglCreateDescriptorSetLayoutType)(XGL_DEVICE device,
 typedef XGL_RESULT (XGLAPI *xglBeginDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode);
 typedef XGL_RESULT (XGLAPI *xglEndDescriptorPoolUpdateType)(XGL_DEVICE device, XGL_CMD_BUFFER cmd);
 typedef XGL_RESULT (XGLAPI *xglCreateDescriptorPoolType)(XGL_DEVICE device, XGL_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const XGL_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_POOL* pDescriptorPool);
-typedef XGL_RESULT (XGLAPI *xglClearDescriptorPoolType)(XGL_DESCRIPTOR_POOL descriptorPool);
+typedef XGL_RESULT (XGLAPI *xglResetDescriptorPoolType)(XGL_DESCRIPTOR_POOL descriptorPool);
 typedef XGL_RESULT (XGLAPI *xglAllocDescriptorSetsType)(XGL_DESCRIPTOR_POOL descriptorPool, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount);
 typedef void       (XGLAPI *xglClearDescriptorSetsType)(XGL_DESCRIPTOR_POOL descriptorPool, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets);
 typedef void       (XGLAPI *xglUpdateDescriptorsType)(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain);
@@ -2722,7 +2722,7 @@ XGL_RESULT XGLAPI xglCreateDescriptorPool(
     const XGL_DESCRIPTOR_POOL_CREATE_INFO*       pCreateInfo,
     XGL_DESCRIPTOR_POOL*                         pDescriptorPool);
 
-XGL_RESULT XGLAPI xglClearDescriptorPool(
+XGL_RESULT XGLAPI xglResetDescriptorPool(
     XGL_DESCRIPTOR_POOL                          descriptorPool);
 
 XGL_RESULT XGLAPI xglAllocDescriptorSets(

@@ -89,7 +89,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglBeginDescriptorPoolUpdateType BeginDescriptorPoolUpdate;
     xglEndDescriptorPoolUpdateType EndDescriptorPoolUpdate;
     xglCreateDescriptorPoolType CreateDescriptorPool;
-    xglClearDescriptorPoolType ClearDescriptorPool;
+    xglResetDescriptorPoolType ResetDescriptorPool;
     xglAllocDescriptorSetsType AllocDescriptorSets;
     xglClearDescriptorSetsType ClearDescriptorSets;
     xglUpdateDescriptorsType UpdateDescriptors;

@@ -843,9 +843,9 @@ void DescriptorPool::init(const Device &dev, XGL_DESCRIPTOR_POOL_USAGE usage,
     alloc_memory(dev);
 }
 
-void DescriptorPool::clear()
+void DescriptorPool::reset()
 {
-    EXPECT(xglClearDescriptorPool(obj()) == XGL_SUCCESS);
+    EXPECT(xglResetDescriptorPool(obj()) == XGL_SUCCESS);
 }
 
 std::vector<DescriptorSet *> DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)

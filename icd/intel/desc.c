@@ -361,7 +361,7 @@ XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
     return XGL_SUCCESS;
 }
 
-void intel_desc_pool_free_all(struct intel_desc_pool *pool)
+void intel_desc_pool_reset(struct intel_desc_pool *pool)
 {
     /* reset to head */
     pool->cur = pool->region_begin;
@@ -1020,12 +1020,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(
             (struct intel_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorPool(
+ICD_EXPORT XGL_RESULT XGLAPI xglResetDescriptorPool(
     XGL_DESCRIPTOR_POOL                          descriptorPool)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
 
-    intel_desc_pool_free_all(pool);
+    intel_desc_pool_reset(pool);
 
     return XGL_SUCCESS;
 }

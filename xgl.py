@@ -532,7 +532,7 @@ core = Extension(
              Param("const XGL_DESCRIPTOR_POOL_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_DESCRIPTOR_POOL*", "pDescriptorPool")]),
 
-        Proto("XGL_RESULT", "ClearDescriptorPool",
+        Proto("XGL_RESULT", "ResetDescriptorPool",
             [Param("XGL_DESCRIPTOR_POOL", "descriptorPool")]),
 
         Proto("XGL_RESULT", "AllocDescriptorSets",

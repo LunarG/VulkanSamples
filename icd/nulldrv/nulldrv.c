@@ -1929,7 +1929,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(
             (struct nulldrv_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglClearDescriptorPool(
+ICD_EXPORT XGL_RESULT XGLAPI xglResetDescriptorPool(
     XGL_DESCRIPTOR_POOL                        descriptorPool)
 {
     NULLDRV_LOG_FUNC;
