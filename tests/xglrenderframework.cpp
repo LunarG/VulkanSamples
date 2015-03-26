@@ -276,7 +276,7 @@ int XglDescriptorSetObj::AppendDummy()
 {
     /* request a descriptor but do not update it */
     XGL_DESCRIPTOR_TYPE_COUNT tc = {};
-    tc.type = XGL_DESCRIPTOR_TYPE_RAW_BUFFER;
+    tc.type = XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER;
     tc.count = 1;
     m_type_counts.push_back(tc);
 

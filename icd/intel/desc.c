@@ -138,10 +138,8 @@ static XGL_RESULT desc_region_get_desc_size(const struct intel_desc_region *regi
     case XGL_DESCRIPTOR_TYPE_IMAGE_BUFFER:
     case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
     case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER:
-    case XGL_DESCRIPTOR_TYPE_RAW_BUFFER:
     case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
     case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
-    case XGL_DESCRIPTOR_TYPE_RAW_BUFFER_DYNAMIC:
         surface_size = region->surface_desc_size;
         break;
     default:
@@ -725,7 +723,6 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
         switch (lb->descriptorType) {
         case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
-        case XGL_DESCRIPTOR_TYPE_RAW_BUFFER_DYNAMIC:
             layout->dynamic_desc_count += lb->count;
             break;
         default:
