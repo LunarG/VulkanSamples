@@ -48,6 +48,8 @@ endif()
 if(WIN32)
     include_directories (
        "${PROJECT_SOURCE_DIR}/icd/common"
+       "${PROJECT_SOURCE_DIR}/libs/libpng"
+       "${PROJECT_SOURCE_DIR}/libs/zlib"
        )
 
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXCB_NVIDIA -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
