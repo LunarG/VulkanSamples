@@ -25,13 +25,13 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_packe
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xglwsix11ext_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_enum_string_helper.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-packet-id > glvtrace_xgl_packet_id.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk-helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
-                   DEPENDS ${SRC_DIR}/../scripts/vk-generate.py
-                           ${SRC_DIR}/../scripts/vk-helper.py
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-packet-id > glvtrace_xgl_packet_id.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
+                   DEPENDS ${SRC_DIR}/../scripts/vk_generate.py
+                           ${SRC_DIR}/../../../xgl_helper.py
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")

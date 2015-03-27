@@ -23,7 +23,12 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import sys
+import os, sys
+
+# add main repo directory so xgl.py can be imported. This needs to be a complete path.
+glv_scripts_path = os.path.dirname(os.path.abspath(__file__))
+main_path = os.path.abspath(glv_scripts_path + "/../../../")
+sys.path.append(main_path)
 
 import xgl
 
