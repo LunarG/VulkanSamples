@@ -44,11 +44,14 @@ static long long unsigned int object_track_index = 0;
 static int objLockInitialized = 0;
 static loader_platform_thread_mutex objLock;
 
+//#define ENABLE_OBJ_NODES
+
+#ifdef ENABLE_OBJ_NODES
 // We maintain a "Global" list which links every object and a
 //  per-Object list which just links objects of a given type
 // The object node has both pointers so the actual nodes are shared between the two lists
 typedef struct _objNode {
-    GLVSNAPSHOT_NODE   obj;
+    GLV_VK_SNAPSHOT_OBJECT_NODE   obj;
     struct _objNode *pNextObj;
     struct _objNode *pNextGlobal;
 } objNode;
@@ -57,9 +60,20 @@ static objNode *pObjectHead[XGL_NUM_OBJECT_TYPE] = {0};
 static objNode *pGlobalHead = NULL;
 static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};
 static uint64_t numTotalObjs = 0;
+#endif
+
+// GPU Info state
 static uint32_t maxMemRefsPerSubmission = 0;
 
+
+// The 'masterSnapshot' which gets the delta merged into it when 'GetSnapshot()' is called.
+static GLV_VK_SNAPSHOT s_snapshot = {0};
+
+// The 'deltaSnapshot' which tracks all object creation and deletion.
+static GLV_VK_SNAPSHOT s_delta = {0};
+
 // Debug function to print global list and each individual object list
+#ifdef ENABLE_OBJ_NODES
 static void ll_print_lists()
 {
     char str[1024];
@@ -85,81 +99,76 @@ static void ll_print_lists()
         }
     }
 }
+#endif
 
-static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType) {
-    char str[1024];
-    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
-    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
-    objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));
+static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType)
+{
+#ifdef ENABLE_OBJ_NODES
+    {
+    //    char str[1024];
+    //    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
+    //    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+        objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));
+        pNewObjNode->obj.pObj = pObj;
+        pNewObjNode->obj.objType = objType;
+        pNewObjNode->obj.status  = OBJSTATUS_NONE;
+        pNewObjNode->obj.numUses = 0;
+        // insert at front of global list
+        pNewObjNode->pNextGlobal = pGlobalHead;
+        pGlobalHead = pNewObjNode;
+        // insert at front of object list
+        pNewObjNode->pNextObj = pObjectHead[objType];
+        pObjectHead[objType] = pNewObjNode;
+        // increment obj counts
+        numObjs[objType]++;
+        numTotalObjs++;
+        //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_XGL_OBJECT_TYPE(objType));
+        if (0) ll_print_lists();
+    }
+#else
+//    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
+//    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+    GLV_VK_SNAPSHOT_LL_NODE* pNewObjNode = (GLV_VK_SNAPSHOT_LL_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_LL_NODE));
     pNewObjNode->obj.pObj = pObj;
     pNewObjNode->obj.objType = objType;
     pNewObjNode->obj.status  = OBJSTATUS_NONE;
     pNewObjNode->obj.numUses = 0;
     // insert at front of global list
-    pNewObjNode->pNextGlobal = pGlobalHead;
-    pGlobalHead = pNewObjNode;
+    pNewObjNode->pNextGlobal = s_delta.pGlobalObjs;
+    s_delta.pGlobalObjs = pNewObjNode;
     // insert at front of object list
-    pNewObjNode->pNextObj = pObjectHead[objType];
-    pObjectHead[objType] = pNewObjNode;
+    pNewObjNode->pNextObj = s_delta.pObjectHead[objType];
+    s_delta.pObjectHead[objType] = pNewObjNode;
     // increment obj counts
-    numObjs[objType]++;
-    numTotalObjs++;
-    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_XGL_OBJECT_TYPE(objType));
-    if (0) ll_print_lists();
-}
-
-// Traverse global list and return type for given object
-static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
-    objNode *pTrav = pGlobalHead;
-    while (pTrav) {
-        if (pTrav->obj.pObj == object)
-            return pTrav->obj.objType;
-        pTrav = pTrav->pNextGlobal;
-    }
-    char str[1024];
-    sprintf(str, "Attempting look-up on obj %p but it is NOT in the global list!", (void*)object);
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_MISSING_OBJECT, LAYER_ABBREV_STR, str);
-    return XGL_OBJECT_TYPE_UNKNOWN;
-}
-
-#if 0
-static uint64_t ll_get_obj_uses(void* pObj, XGL_OBJECT_TYPE objType) {
-    objNode *pTrav = pObjectHead[objType];
-    while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
-            return pTrav->obj.numUses;
-        }
-        pTrav = pTrav->pNextObj;
-    }
-    return 0;
-}
+    s_delta.numObjs[objType]++;
+    s_delta.globalObjCount++;
 #endif
+}
 
-static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
-    objNode *pTrav = pObjectHead[objType];
-    while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
-            pTrav->obj.numUses++;
-//            char str[1024];
-//            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);
-//            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
-            return;
-        }
-        pTrav = pTrav->pNextObj;
-    }
-    // If we do not find obj, insert it and then increment count
-    char str[1024];
-    sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_XGL_OBJECT_TYPE(objType));
-    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
+{
+    ll_insert_obj(*pDevice, XGL_OBJECT_TYPE_DEVICE);
 
-    ll_insert_obj(pObj, objType);
-    ll_increment_use_count(pObj, objType);
+    GLV_VK_SNAPSHOT_DEVICE_NODE* pNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
+    memset(pNode, 0, sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
+    pNode->gpu = gpu;
+    pNode->pCreateInfo = (XGL_DEVICE_CREATE_INFO*)malloc(sizeof(XGL_DEVICE_CREATE_INFO));
+    memcpy(pNode->pCreateInfo, pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));
+    pNode->device = *pDevice;
+
+    // insert at front of device list
+    pNode->pNext = pSnapshot->pDevices;
+    pSnapshot->pDevices = pNode;
+
+    // increment count
+    pSnapshot->deviceCount++;
 }
 
 // We usually do not know Obj type when we destroy it so have to fetch
 //  Type from global list w/ ll_destroy_obj()
 //   and then do the full removal from both lists w/ ll_remove_obj_type()
 static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
+#ifdef ENABLE_OBJ_NODES
     objNode *pTrav = pObjectHead[objType];
     objNode *pPrev = pObjectHead[objType];
     while (pTrav) {
@@ -178,6 +187,23 @@ static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
         pPrev = pTrav;
         pTrav = pTrav->pNextObj;
     }
+#else
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+    GLV_VK_SNAPSHOT_LL_NODE *pPrev = s_delta.pObjectHead[objType];
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            pPrev->pNextObj = pTrav->pNextObj;
+            // update HEAD of Obj list as needed
+            if (s_delta.pObjectHead[objType] == pTrav)
+                s_delta.pObjectHead[objType] = pTrav->pNextObj;
+            assert(s_delta.numObjs[objType] > 0);
+            s_delta.numObjs[objType]--;
+            return;
+        }
+        pPrev = pTrav;
+        pTrav = pTrav->pNextObj;
+    }
+#endif
     char str[1024];
     sprintf(str, "OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list", pObj, string_XGL_OBJECT_TYPE(objType));
     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
@@ -186,6 +212,7 @@ static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
 // Parse global list to find obj type, then remove obj from obj type list, finally
 //   remove obj from global list
 static void ll_destroy_obj(void* pObj) {
+#ifdef ENABLE_OBJ_NODES
     objNode *pTrav = pGlobalHead;
     objNode *pPrev = pGlobalHead;
     while (pTrav) {
@@ -206,14 +233,150 @@ static void ll_destroy_obj(void* pObj) {
         pPrev = pTrav;
         pTrav = pTrav->pNextGlobal;
     }
+#else
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
+    GLV_VK_SNAPSHOT_LL_NODE *pPrev = s_delta.pGlobalObjs;
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            ll_remove_obj_type(pObj, pTrav->obj.objType);
+            pPrev->pNextGlobal = pTrav->pNextGlobal;
+            // update HEAD of global list if needed
+            if (s_delta.pGlobalObjs == pTrav)
+                s_delta.pGlobalObjs = pTrav->pNextGlobal;
+            assert(s_delta.globalObjCount > 0);
+            s_delta.globalObjCount--;
+            free(pTrav);
+            return;
+        }
+        pPrev = pTrav;
+        pTrav = pTrav->pNextGlobal;
+    }
+#endif
     char str[1024];
     sprintf(str, "Unable to remove obj %p. Was it created? Has it already been destroyed?", pObj);
     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_DESTROY_OBJECT_FAILED, LAYER_ABBREV_STR, str);
 }
 
+static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_DEVICE device)
+{
+    ll_destroy_obj((void*)device);
+
+    GLV_VK_SNAPSHOT_DEVICE_NODE *pTrav = pSnapshot->pDevices;
+    GLV_VK_SNAPSHOT_DEVICE_NODE *pPrev = pSnapshot->pDevices;
+    while (pTrav != NULL)
+    {
+        if (pTrav->device == device)
+        {
+            pPrev->pNext = pTrav->pNext;
+            // update HEAD of Obj list as needed
+            if (pSnapshot->pDevices == pTrav)
+                pSnapshot->pDevices = pTrav->pNext;
+
+            // delete the object
+            free(pTrav->pCreateInfo);
+            free(pTrav);
+
+            if (pSnapshot->deviceCount > 0)
+            {
+                pSnapshot->deviceCount--;
+            }
+            else
+            {
+                // TODO: Callback WARNING that too many devices were deleted
+                assert(!"DeviceCount <= 0 means that too many devices were deleted.");
+            }
+            return;
+        }
+        pPrev = pTrav;
+        pTrav = pTrav->pNext;
+    }
+
+    // If the code got here, then the device wasn't in the devices list.
+    // That means we should add this device to the delta deleted items list.
+    GLV_VK_SNAPSHOT_LL_NODE* pNode = (GLV_VK_SNAPSHOT_LL_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_LL_NODE));
+    pNode->obj.pObj = device;
+    pNode->obj.numUses = 0;
+    pNode->obj.objType = XGL_OBJECT_TYPE_DEVICE;
+    pNode->obj.status = OBJSTATUS_NONE;
+    // insert
+    pNode->pNextGlobal = NULL;
+    pNode->pNextObj = pSnapshot->pDeltaDeletedObjects;
+    pSnapshot->pDeltaDeletedObjects = pNode;
+    pSnapshot->deltaDeletedObjectCount++;
+}
+
+// Traverse global list and return type for given object
+static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
+#ifdef ENABLE_OBJ_NODES
+    objNode *pTrav = pGlobalHead;
+    while (pTrav) {
+        if (pTrav->obj.pObj == object)
+            return pTrav->obj.objType;
+        pTrav = pTrav->pNextGlobal;
+    }
+#else
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
+    while (pTrav) {
+        if (pTrav->obj.pObj == object)
+            return pTrav->obj.objType;
+        pTrav = pTrav->pNextGlobal;
+    }
+#endif
+    char str[1024];
+    sprintf(str, "Attempting look-up on obj %p but it is NOT in the global list!", (void*)object);
+    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_MISSING_OBJECT, LAYER_ABBREV_STR, str);
+    return XGL_OBJECT_TYPE_UNKNOWN;
+}
+
+#if 0
+static uint64_t ll_get_obj_uses(void* pObj, XGL_OBJECT_TYPE objType) {
+    objNode *pTrav = pObjectHead[objType];
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            return pTrav->obj.numUses;
+        }
+        pTrav = pTrav->pNextObj;
+    }
+    return 0;
+}
+#endif
+
+static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
+#ifdef ENABLE_OBJ_NODES
+    objNode *pTrav = pObjectHead[objType];
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            pTrav->obj.numUses++;
+//            char str[1024];
+//            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);
+//            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+            return;
+        }
+        pTrav = pTrav->pNextObj;
+    }
+#else
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            pTrav->obj.numUses++;
+            return;
+        }
+        pTrav = pTrav->pNextObj;
+    }
+#endif
+    // If we do not find obj, insert it and then increment count
+    char str[1024];
+    sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_XGL_OBJECT_TYPE(objType));
+    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+
+    ll_insert_obj(pObj, objType);
+    ll_increment_use_count(pObj, objType);
+}
+
 // Set selected flag state for an object node
 static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {
     if (pObj != NULL) {
+#ifdef ENABLE_OBJ_NODES
         objNode *pTrav = pObjectHead[objType];
         while (pTrav) {
             if (pTrav->obj.pObj == pObj) {
@@ -222,6 +385,17 @@ static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status
             }
             pTrav = pTrav->pNextObj;
         }
+#else
+        GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+        while (pTrav) {
+            if (pTrav->obj.pObj == pObj) {
+                pTrav->obj.status |= status_flag;
+                return;
+            }
+            pTrav = pTrav->pNextObj;
+        }
+#endif
+
         // If we do not find it print an error
         char str[1024];
         sprintf(str, "Unable to set status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));
@@ -231,6 +405,7 @@ static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status
 
 // Track selected state for an object node
 static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint) {
+#ifdef ENABLE_OBJ_NODES
     objNode *pTrav = pObjectHead[XGL_OBJECT_TYPE_CMD_BUFFER];
 
     while (pTrav) {
@@ -248,6 +423,25 @@ static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint)
         }
         pTrav = pTrav->pNextObj;
     }
+#else
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[XGL_OBJECT_TYPE_CMD_BUFFER];
+
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            if (stateBindPoint == XGL_STATE_BIND_VIEWPORT) {
+                pTrav->obj.status |= OBJSTATUS_VIEWPORT_BOUND;
+            } else if (stateBindPoint == XGL_STATE_BIND_RASTER) {
+                pTrav->obj.status |= OBJSTATUS_RASTER_BOUND;
+            } else if (stateBindPoint == XGL_STATE_BIND_COLOR_BLEND) {
+                pTrav->obj.status |= OBJSTATUS_COLOR_BLEND_BOUND;
+            } else if (stateBindPoint == XGL_STATE_BIND_DEPTH_STENCIL) {
+                pTrav->obj.status |= OBJSTATUS_DEPTH_STENCIL_BOUND;
+            }
+            return;
+        }
+        pTrav = pTrav->pNextObj;
+    }
+#endif
     // If we do not find it print an error
     char str[1024];
     sprintf(str, "Unable to track status for non-existent Command Buffer object %p", pObj);
@@ -256,6 +450,7 @@ static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint)
 
 // Reset selected flag state for an object node
 static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {
+#ifdef ENABLE_OBJ_NODES
     objNode *pTrav = pObjectHead[objType];
     while (pTrav) {
         if (pTrav->obj.pObj == pObj) {
@@ -264,6 +459,16 @@ static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS stat
         }
         pTrav = pTrav->pNextObj;
     }
+#else
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+    while (pTrav) {
+        if (pTrav->obj.pObj == pObj) {
+            pTrav->obj.status &= ~status_flag;
+            return;
+        }
+        pTrav = pTrav->pNextObj;
+    }
+#endif
     // If we do not find it print an error
     char str[1024];
     sprintf(str, "Unable to reset status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));
@@ -357,9 +562,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const X
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pDevice, XGL_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        snapshot_insert_device(&s_delta, gpu, pCreateInfo, pDevice);
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -367,8 +575,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
 {
     XGL_RESULT result = nextTable.DestroyDevice(device);
     loader_platform_thread_lock_mutex(&objLock);
-    ll_destroy_obj((void*)device);
+    snapshot_remove_device(&s_delta, device);
     loader_platform_thread_unlock_mutex(&objLock);
+
+#ifdef ENABLE_OBJ_NODES
     // Report any remaining objects in LL
     objNode *pTrav = pGlobalHead;
     while (pTrav) {
@@ -383,6 +593,24 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
             pTrav = pTrav->pNextGlobal;
         }
     }
+#else
+    // Report any remaining objects in LL
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
+    while (pTrav != NULL)
+    {
+        if (pTrav->obj.objType == XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY)
+        {
+            GLV_VK_SNAPSHOT_LL_NODE *pDel = pTrav;
+            pTrav = pTrav->pNextGlobal;
+            ll_destroy_obj((void*)(pDel->obj.pObj));
+        } else {
+            char str[1024];
+            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, GLVSNAPSHOT_OBJECT_LEAK, LAYER_ABBREV_STR, str);
+            pTrav = pTrav->pNextGlobal;
+        }
+    }
+#endif
     return result;
 }
 
@@ -1539,27 +1767,136 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const 
 
 #endif
 
-//=============================================================================
+//=================================================================================================
 // Exported methods
+//=================================================================================================
+void glvSnapshotStartTracking(void)
+{
+    assert(!"Not Implemented");
+}
+
+//=================================================================================================
+GLV_VK_SNAPSHOT glvSnapshotGetDelta(void)
+{
+    // copy the delta by merging it into an empty snapshot
+    GLV_VK_SNAPSHOT empty;
+    memset(&empty, 0, sizeof(GLV_VK_SNAPSHOT));
+
+    return glvSnapshotMerge(&s_delta, &empty);
+}
+
+//=================================================================================================
+GLV_VK_SNAPSHOT glvSnapshotGetSnapshot(void)
+{
+    // copy the master snapshot by merging it into an empty snapshot
+    GLV_VK_SNAPSHOT empty;
+    memset(&empty, 0, sizeof(GLV_VK_SNAPSHOT));
+
+    return glvSnapshotMerge(&s_snapshot, &empty);
+}
+
+//=================================================================================================
+void glvSnapshotPrintDelta()
+{
+    char str[1024];
+    GLV_VK_SNAPSHOT_LL_NODE* pTrav = s_delta.pGlobalObjs;
+    sprintf(str, "==== DELTA SNAPSHOT contains %lu objects, %lu devices, and %lu deleted objects", s_delta.globalObjCount, s_delta.deviceCount, s_delta.deltaDeletedObjectCount);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+
+    // print all objects
+    if (s_delta.globalObjCount > 0)
+    {
+        sprintf(str, "======== DELTA SNAPSHOT Created Objects:");
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        while (pTrav != NULL)
+        {
+            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            pTrav = pTrav->pNextGlobal;
+        }
+    }
+
+    // print devices
+    if (s_delta.deviceCount > 0)
+    {
+        GLV_VK_SNAPSHOT_DEVICE_NODE* pDeviceNode = s_delta.pDevices;
+        sprintf(str, "======== DELTA SNAPSHOT Devices:");
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        while (pDeviceNode != NULL)
+        {
+            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE_DEVICE), pDeviceNode->device);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDeviceNode->device, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            pDeviceNode = pDeviceNode->pNext;
+        }
+    }
+
+    // print deleted objects
+    if (s_delta.deltaDeletedObjectCount > 0)
+    {
+        GLV_VK_SNAPSHOT_LL_NODE* pDelObjNode = s_delta.pDeltaDeletedObjects;
+        sprintf(str, "======== DELTA SNAPSHOT Deleted Objects:");
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        while (pDelObjNode != NULL)
+        {
+            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pDelObjNode->obj.objType), pDelObjNode->obj.pObj);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDelObjNode->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            pDelObjNode = pDelObjNode->pNextGlobal;
+        }
+    }
+}
+
+void glvSnapshotStopTracking(void)
+{
+    assert(!"Not Implemented");
+}
+
+void glvSnapshotClear(void)
+{
+    assert(!"Not Implemented");
+}
+
+GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT* const pDelta, const GLV_VK_SNAPSHOT* const pSnapshot)
+{
+    assert(!"Not Implemented");
+}
+
+
+
+
+//=============================================================================
+// Old Exported methods
 //=============================================================================
 uint64_t glvSnapshotGetObjectCount(XGL_OBJECT_TYPE type)
 {
-    return (type == XGL_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];
+    uint64_t retVal = (type == XGL_OBJECT_TYPE_ANY) ? s_delta.globalObjCount : s_delta.numObjs[type];
+#ifdef ENABLE_OBJ_NODES
+    reVal = (type == XGL_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];
+#endif
+    return retVal;
 }
 
-XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLVSNAPSHOT_NODE* pObjNodeArray)
+XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE *pObjNodeArray)
 {
     // This bool flags if we're pulling all objs or just a single class of objs
     bool32_t bAllObjs = (type == XGL_OBJECT_TYPE_ANY);
     // Check the count first thing
-    uint64_t maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];
+    uint64_t maxObjCount = (bAllObjs) ? s_delta.globalObjCount : s_delta.numObjs[type];
+#ifdef ENABLE_OBJ_NODES
+    maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];
+#endif
     if (objCount > maxObjCount) {
         char str[1024];
         sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_XGL_OBJECT_TYPE(type));
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, GLVSNAPSHOT_OBJCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
         return XGL_ERROR_INVALID_VALUE;
     }
+
+#ifdef ENABLE_OBJ_NODES
     objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];
+#else
+    GLV_VK_SNAPSHOT_LL_NODE* pTrav = (bAllObjs) ? s_delta.pGlobalObjs : s_delta.pObjectHead[type];
+#endif
+
     for (uint64_t i = 0; i < objCount; i++) {
         if (!pTrav) {
             char str[1024];
@@ -1567,7 +1904,7 @@ XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLVSNA
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
             return XGL_ERROR_UNKNOWN;
         }
-        memcpy(&pObjNodeArray[i], pTrav, sizeof(GLVSNAPSHOT_NODE));
+        memcpy(&pObjNodeArray[i], pTrav, sizeof(GLV_VK_SNAPSHOT_OBJECT_NODE));
         pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;
     }
     return XGL_SUCCESS;
@@ -1575,7 +1912,11 @@ XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLVSNA
 
 void glvSnapshotPrintObjects(void)
 {
+#ifdef ENABLE_OBJ_NODES
     ll_print_lists();
+#else
+    glvSnapshotPrintDelta();
+#endif
 }
 
 #include "xgl_generic_intercept_proc_helper.h"
@@ -1597,6 +1938,20 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return glvSnapshotGetObjects;
     else if (!strncmp("glvSnapshotPrintObjects", funcName, sizeof("glvSnapshotPrintObjects")))
         return glvSnapshotPrintObjects;
+    else if (!strncmp("glvSnapshotStartTracking", funcName, sizeof("glvSnapshotStartTracking")))
+        return glvSnapshotStartTracking;
+    else if (!strncmp("glvSnapshotGetDelta", funcName, sizeof("glvSnapshotGetDelta")))
+        return glvSnapshotGetDelta;
+    else if (!strncmp("glvSnapshotGetSnapshot", funcName, sizeof("glvSnapshotGetSnapshot")))
+        return glvSnapshotGetSnapshot;
+    else if (!strncmp("glvSnapshotPrintDelta", funcName, sizeof("glvSnapshotPrintDelta")))
+        return glvSnapshotPrintDelta;
+    else if (!strncmp("glvSnapshotStopTracking", funcName, sizeof("glvSnapshotStopTracking")))
+        return glvSnapshotStopTracking;
+    else if (!strncmp("glvSnapshotClear", funcName, sizeof("glvSnapshotClear")))
+        return glvSnapshotClear;
+    else if (!strncmp("glvSnapshotMerge", funcName, sizeof("glvSnapshotMerge")))
+        return glvSnapshotMerge;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;

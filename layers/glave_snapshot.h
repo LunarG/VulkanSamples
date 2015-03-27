@@ -164,19 +164,117 @@ static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
     }
 }
 
-typedef struct _GLVSNAPSHOT_NODE {
+// Node that stores information about an object
+typedef struct _GLV_VK_SNAPSHOT_OBJECT_NODE {
     void            *pObj;
     XGL_OBJECT_TYPE objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
-} GLVSNAPSHOT_NODE;
+} GLV_VK_SNAPSHOT_OBJECT_NODE;
 
+// Node that stores information about an XGL_DEVICE
+typedef struct _GLV_VK_SNAPSHOT_DEVICE_NODE {
+    struct _GLV_VK_SNAPSHOT_DEVICE_NODE* pNext;
+
+    // This object
+    XGL_DEVICE device;
+
+    // CreateDevice parameters
+    XGL_PHYSICAL_GPU gpu;
+    XGL_DEVICE_CREATE_INFO* pCreateInfo;
+
+    // Other information a device needs to store.
+    // TODO: anything?
+} GLV_VK_SNAPSHOT_DEVICE_NODE;
+
+// Linked-List node that stores information about an object
+// We maintain a "Global" list which links every object and a
+//  per-Object list which just links objects of a given type
+// The object node has both pointers so the actual nodes are shared between the two lists
+typedef struct _GLV_VK_SNAPSHOT_LL_NODE {
+    struct _GLV_VK_SNAPSHOT_LL_NODE *pNextObj;
+    struct _GLV_VK_SNAPSHOT_LL_NODE *pNextGlobal;
+    GLV_VK_SNAPSHOT_OBJECT_NODE obj;
+} GLV_VK_SNAPSHOT_LL_NODE;
+
+//=============================================================================
+// Main structure for a GLAVE vulkan snapshot.
+//=============================================================================
+typedef struct _GLV_VK_SNAPSHOT {
+    // Stores a list of all the objects known by this snapshot.
+    // This may be used as a shortcut to more easily find objects.
+    uint64_t globalObjCount;
+    GLV_VK_SNAPSHOT_LL_NODE* pGlobalObjs;
+
+    // TEMPORARY: Keep track of all objects of each type
+    uint64_t numObjs[XGL_NUM_OBJECT_TYPE];
+    GLV_VK_SNAPSHOT_LL_NODE *pObjectHead[XGL_NUM_OBJECT_TYPE];
+
+
+    // List of created devices and [potentially] hierarchical tree of the objects on it.
+    // This is used to represent ownership of the objects
+    uint64_t deviceCount;
+    GLV_VK_SNAPSHOT_DEVICE_NODE* pDevices;
+
+    // This is used to support snapshot deltas.
+    uint64_t deltaDeletedObjectCount;
+    GLV_VK_SNAPSHOT_LL_NODE* pDeltaDeletedObjects;
+} GLV_VK_SNAPSHOT;
+
+
+//=============================================================================
 // prototype for extension functions
+//=============================================================================
+// The snapshot functionality should work similar to a stopwatch.
+// 1) 'StartTracking()' is like starting the stopwatch. This causes the snapshot
+//    to start tracking the creation of objects and state. In general, this
+//    should happen at the very beginning, to track all objects. During this
+//    tracking time, all creations and deletions are tracked on the
+//    'deltaSnapshot'.
+//    NOTE: This entrypoint currently does nothing, as tracking is implied
+//          by enabling the layer.
+// 2) 'GetDelta()' is analogous to looking at the stopwatch and seeing the
+//    current lap time - A copy of the 'deltaSnapshot' will be returned to the
+//    caller, but nothings changes within the snapshot layer. All creations
+//    and deletions continue to be applied to the 'deltaSnapshot'.
+//    NOTE: This will involve a deep copy of the delta, so there may be a
+//          performance hit.
+// 3) 'GetSnapshot()' is similar to hitting the 'Lap' button on a stopwatch.
+//    The 'deltaSnapshot' is merged into the 'masterSnapshot', the 'deltaSnapshot'
+//    is cleared, and the 'masterSnapshot' is returned. All creations and
+//    deletions continue to be applied to the 'deltaSnapshot'.
+//    NOTE: This will involve a deep copy of the snapshot, so there may be a
+//          performance hit.
+// 4) 'PrintDelta()' will cause the delta to be output by the layer's msgCallback.
+// 5) Steps 2, 3, and 4 can happen as often as needed.
+// 6) 'StopTracking()' is like stopping the stopwatch.
+//    NOTE: This entrypoint currently does nothing, as tracking is implied
+//          by disabling the layer.
+// 7) 'Clear()' will clear the 'deltaSnapshot' and the 'masterSnapshot'.
+//=============================================================================
+
+void glvSnapshotStartTracking(void);
+GLV_VK_SNAPSHOT glvSnapshotGetDelta(void);
+GLV_VK_SNAPSHOT glvSnapshotGetSnapshot(void);
+void glvSnapshotPrintDelta(void);
+void glvSnapshotStopTracking(void);
+void glvSnapshotClear(void);
+
+// utility
+// merge a delta into a snapshot and return the updated snapshot
+GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT * const pDelta, const GLV_VK_SNAPSHOT * const pSnapshot);
+
 uint64_t glvSnapshotGetObjectCount(XGL_OBJECT_TYPE type);
-XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLVSNAPSHOT_NODE* pObjNodeArray);
+XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
 void glvSnapshotPrintObjects(void);
 
 // Func ptr typedefs
 typedef uint64_t (*GLVSNAPSHOT_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
-typedef XGL_RESULT (*GLVSNAPSHOT_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, GLVSNAPSHOT_NODE*);
+typedef XGL_RESULT (*GLVSNAPSHOT_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, GLV_VK_SNAPSHOT_OBJECT_NODE*);
 typedef void (*GLVSNAPSHOT_PRINT_OBJECTS)(void);
+typedef void (*GLVSNAPSHOT_START_TRACKING)(void);
+typedef GLV_VK_SNAPSHOT (*GLVSNAPSHOT_GET_DELTA)(void);
+typedef GLV_VK_SNAPSHOT (*GLVSNAPSHOT_GET_SNAPSHOT)(void);
+typedef void (*GLVSNAPSHOT_PRINT_DELTA)(void);
+typedef void (*GLVSNAPSHOT_STOP_TRACKING)(void);
+typedef void (*GLVSNAPSHOT_CLEAR)(void);
