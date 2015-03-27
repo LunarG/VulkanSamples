@@ -11,26 +11,26 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl.c
-                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_packet_id.h
-                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_packet_id.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vk_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xglwsix11ext.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xglwsix11ext.c
-                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xglwsix11ext_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkwsix11ext_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg.c
-                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg_structs.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkdbg_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_struct_size_helper.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_enum_string_helper.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-trace-h > glvtrace_xgl_xgl.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-trace-c > glvtrace_xgl_xgl.c
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-packet-id > glvtrace_xgl_packet_id.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-core-structs > glvtrace_xgl_xgl_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-packet-id > glv_vk_packet_id.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-core-structs > glv_vk_vk_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-h > glvtrace_xgl_xglwsix11ext.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-c > glvtrace_xgl_xglwsix11ext.c
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-structs > glvtrace_xgl_xglwsix11ext_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-structs > glv_vk_vkwsix11ext_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-h > glvtrace_xgl_xgldbg.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-c > glvtrace_xgl_xgldbg.c
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-structs > glvtrace_xgl_xgldbg_structs.h
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-structs > glv_vk_vkdbg_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_struct_wrappers ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
                    DEPENDS ${SRC_DIR}/../../../xgl_helper.py
@@ -48,13 +48,13 @@ set(SRC_LIST
 set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE C)
 
 set (HDR_LIST
-    codegen/glvtrace_xgl_packet_id.h
+    codegen/glv_vk_packet_id.h
     codegen/glvtrace_xgl_xgl.h
-    codegen/glvtrace_xgl_xgl_structs.h
+    codegen/glv_vk_vk_structs.h
     codegen/glvtrace_xgl_xgldbg.h
-    codegen/glvtrace_xgl_xgldbg_structs.h
+    codegen/glv_vk_vkdbg_structs.h
     codegen/glvtrace_xgl_xglwsix11ext.h
-    codegen/glvtrace_xgl_xglwsix11ext_structs.h
+    codegen/glv_vk_vkwsix11ext_structs.h
     codegen/xgl_struct_size_helper.h
     codegen/xgl_enum_string_helper.h
 )

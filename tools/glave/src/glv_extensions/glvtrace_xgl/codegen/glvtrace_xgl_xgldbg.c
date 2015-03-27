@@ -28,8 +28,8 @@
 #include "glv_common.h"
 #include "glvtrace_xgl_xgl.h"
 #include "glvtrace_xgl_xgldbg.h"
-#include "glvtrace_xgl_xgldbg_structs.h"
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_vkdbg_structs.h"
+#include "glv_vk_packet_id.h"
 #ifdef WIN32
 #include "mhook/mhook-lib/mhook.h"
 #endif

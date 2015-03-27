@@ -29,9 +29,9 @@
 #include "glv_trace_packet_utils.h"
 #include "glv_trace_packet_identifiers.h"
 #include "glv_interconnect.h"
-#include "glvtrace_xgl_xgl_structs.h"
-#include "glvtrace_xgl_xgldbg_structs.h"
-#include "glvtrace_xgl_xglwsix11ext_structs.h"
+#include "glv_vk_vk_structs.h"
+#include "glv_vk_vkdbg_structs.h"
+#include "glv_vk_vkwsix11ext_structs.h"
 #include "xgl_enum_string_helper.h"
 #if defined(WIN32)
 #define snprintf _snprintf

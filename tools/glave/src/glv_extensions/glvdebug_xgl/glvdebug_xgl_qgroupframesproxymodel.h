@@ -25,7 +25,7 @@
 #ifndef GLVDEBUG_XGL_QGROUPFRAMESPROXYMODEL_H
 #define GLVDEBUG_XGL_QGROUPFRAMESPROXYMODEL_H
 
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_packet_id.h"
 
 #include "glvdebug_QTraceFileModel.h"
 #include <QAbstractProxyModel>

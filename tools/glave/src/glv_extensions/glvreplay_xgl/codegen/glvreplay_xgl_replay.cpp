@@ -36,10 +36,10 @@
 #include <queue>
 glvreplay_settings *g_pReplaySettings;
 extern "C" {
-#include "glvtrace_xgl_xgl_structs.h"
-#include "glvtrace_xgl_xgldbg_structs.h"
-#include "glvtrace_xgl_xglwsix11ext_structs.h"
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_vk_structs.h"
+#include "glv_vk_vkdbg_structs.h"
+#include "glv_vk_vkwsix11ext_structs.h"
+#include "glv_vk_packet_id.h"
 #include "xgl_enum_string_helper.h"
 }
 
@@ -295,6 +295,28 @@ void xglDisplay::resize_window(const unsigned int width, const unsigned int heig
 void xglDisplay::process_event()
 {
 }
+
+void objMemory::setCount(const uint32_t num)
+{
+    m_numAllocations = num;
+}
+
+void objMemory::setReqs(const XGL_MEMORY_REQUIREMENTS *pReqs, const uint32_t num)
+{
+    if (m_numAllocations != num && m_numAllocations != 0)
+        glv_LogError("objMemory::setReqs, internal mismatch on number of allocations");
+    if (m_pMemReqs == NULL && pReqs != NULL)
+    {
+        m_pMemReqs = (XGL_MEMORY_REQUIREMENTS *) glv_malloc(num * sizeof(XGL_MEMORY_REQUIREMENTS));
+        if (m_pMemReqs == NULL)
+        {
+            glv_LogError("objMemory::setReqs out of memory");
+            return;
+        }
+        memcpy(m_pMemReqs, pReqs, num);
+    }
+}
+
 xglReplay::xglReplay(glvreplay_settings *pReplaySettings)
 {
     g_pReplaySettings = pReplaySettings;
@@ -302,6 +324,7 @@ xglReplay::xglReplay(glvreplay_settings *pReplaySettings)
     m_pDSDump = NULL;
     m_pCBDump = NULL;
     m_pGlvSnapshotPrint = NULL;
+    m_adjustForGPU = false;
     if (g_pReplaySettings && g_pReplaySettings->screenshotList) {
         process_screenshot_list(g_pReplaySettings->screenshotList);
     }
@@ -856,12 +879,12 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglAllocMemory:
         {
             struct_xglAllocMemory* pPacket = (struct_xglAllocMemory*)(packet->pBody);
-            XGL_GPU_MEMORY local_pMem;
-            replayResult = m_xglFuncs.real_xglAllocMemory(remap(pPacket->device), pPacket->pAllocInfo, &local_pMem);
+            struct gpuMemObj local_mem;
+            replayResult = m_xglFuncs.real_xglAllocMemory(remap(pPacket->device), pPacket->pAllocInfo, &local_mem.replayGpuMem);
             if (replayResult == XGL_SUCCESS)
             {
-                add_to_map(pPacket->pMem, &local_pMem);
-                add_entry_to_mapData(local_pMem, pPacket->pAllocInfo->allocationSize);
+                add_to_map(pPacket->pMem, &local_mem);
+                add_entry_to_mapData(local_mem.replayGpuMem, pPacket->pAllocInfo->allocationSize);
             }
             CHECK_RETURN_VALUE(xglAllocMemory);
             break;
@@ -869,11 +892,11 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglFreeMemory:
         {
             struct_xglFreeMemory* pPacket = (struct_xglFreeMemory*)(packet->pBody);
-            XGL_GPU_MEMORY handle = remap(pPacket->mem);
-            replayResult = m_xglFuncs.real_xglFreeMemory(handle);
+            XGL_GPU_MEMORY local_mem = remap(pPacket->mem);
+            replayResult = m_xglFuncs.real_xglFreeMemory(local_mem);
             if (replayResult == XGL_SUCCESS) 
             {
-                rm_entry_from_mapData(handle);
+                rm_entry_from_mapData(local_mem);
                 rm_from_map(pPacket->mem);
             }
             CHECK_RETURN_VALUE(xglFreeMemory);
@@ -889,32 +912,30 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglMapMemory:
         {
             struct_xglMapMemory* pPacket = (struct_xglMapMemory*)(packet->pBody);
-            XGL_GPU_MEMORY handle = remap(pPacket->mem);
+            XGL_GPU_MEMORY local_mem = remap(pPacket->mem);
             void* pData;
-            replayResult = m_xglFuncs.real_xglMapMemory(handle, pPacket->flags, &pData);
+            replayResult = m_xglFuncs.real_xglMapMemory(local_mem, pPacket->flags, &pData);
             if (replayResult == XGL_SUCCESS)
-                add_mapping_to_mapData(handle, pData);
+                add_mapping_to_mapData(local_mem, pData);
             CHECK_RETURN_VALUE(xglMapMemory);
             break;
         }
         case GLV_TPI_XGL_xglUnmapMemory:
         {
             struct_xglUnmapMemory* pPacket = (struct_xglUnmapMemory*)(packet->pBody);
-            XGL_GPU_MEMORY handle = remap(pPacket->mem);
-            rm_mapping_from_mapData(handle, pPacket->pData);  // copies data from packet into memory buffer
-            replayResult = m_xglFuncs.real_xglUnmapMemory(handle);
+            XGL_GPU_MEMORY local_mem = remap(pPacket->mem);
+            rm_mapping_from_mapData(local_mem, pPacket->pData);  // copies data from packet into memory buffer
+            replayResult = m_xglFuncs.real_xglUnmapMemory(local_mem);
             CHECK_RETURN_VALUE(xglUnmapMemory);
             break;
         }
         case GLV_TPI_XGL_xglPinSystemMemory:
         {
             struct_xglPinSystemMemory* pPacket = (struct_xglPinSystemMemory*)(packet->pBody);
-            XGL_GPU_MEMORY local_pMem;
-            replayResult = m_xglFuncs.real_xglPinSystemMemory(remap(pPacket->device), pPacket->pSysMem, pPacket->memSize, &local_pMem);
+            struct gpuMemObj local_mem;
+            replayResult = m_xglFuncs.real_xglPinSystemMemory(remap(pPacket->device), pPacket->pSysMem, pPacket->memSize, &local_mem.replayGpuMem);
             if (replayResult == XGL_SUCCESS)
-            {
-                add_to_map(pPacket->pMem, &local_pMem);
-            }
+                add_to_map(pPacket->pMem, &local_mem);
             CHECK_RETURN_VALUE(xglPinSystemMemory);
             break;
         }
@@ -992,16 +1013,55 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
                 pData = glv_malloc(*pPacket->pDataSize);
                 memcpy(pData, pPacket->pData, *pPacket->pDataSize);
             }
+            // TODO only search for object once rather than at remap() and init_objMemXXX()
             replayResult = m_xglFuncs.real_xglGetObjectInfo(remap(pPacket->object), pPacket->infoType, &size, pData);
             if (replayResult == XGL_SUCCESS)
             {
                 if (size != *pPacket->pDataSize && pData != NULL)
                 {
                     glv_LogWarn("xglGetObjectInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\n", size, *pPacket->pDataSize);
-                }
-                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)
+                } else if (pData != NULL)
                 {
-                    glv_LogWarn("xglGetObjectInfo returned differing data contents than the trace file contained.\n");
+                    switch (pPacket->infoType)
+                    {
+                        case XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
+                        {
+                            uint32_t traceCount = *((uint32_t *) pPacket->pData);
+                            uint32_t replayCount = *((uint32_t *) pData);
+                            if (traceCount != replayCount)
+                                glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_ALLOCATION_COUNT) mismatch: trace count %u, replay count %u\n", traceCount, replayCount);
+                            if (m_adjustForGPU)
+                                init_objMemCount(pPacket->object, replayCount);
+                            break;
+                        }
+                        case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+                        {
+                            XGL_MEMORY_REQUIREMENTS *traceReqs = (XGL_MEMORY_REQUIREMENTS *) pPacket->pData;
+                            XGL_MEMORY_REQUIREMENTS *replayReqs = (XGL_MEMORY_REQUIREMENTS *) pData;
+                            unsigned int num = size / sizeof(XGL_MEMORY_REQUIREMENTS);
+                            for (unsigned int i = 0; i < num; i++)
+                            {
+                                if (traceReqs->size != replayReqs->size)
+                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace size %u, replay size %u\n", traceReqs->size, replayReqs->size);
+                                if (traceReqs->alignment != replayReqs->alignment)
+                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace alignment %u, replay aligmnent %u\n", traceReqs->alignment, replayReqs->alignment);
+                                if (traceReqs->granularity != replayReqs->granularity)
+                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace granularity %u, replay granularity %u\n", traceReqs->granularity, replayReqs->granularity);
+                                if (traceReqs->memProps != replayReqs->memProps)
+                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace memProps %u, replay memProps %u\n", traceReqs->memProps, replayReqs->memProps);
+                                if (traceReqs->memType != replayReqs->memType)
+                                    glv_LogWarn("xglGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace memType %u, replay memType %u\n", traceReqs->memType, replayReqs->memType);
+                                traceReqs++;
+                                replayReqs++;
+                            }
+                            if (m_adjustForGPU)
+                                init_objMemReqs(pPacket->object, replayReqs - num, num);
+                            break;
+                        }
+                        default:
+                            if (memcmp(pData, pPacket->pData, size) != 0)
+                                glv_LogWarn("xglGetObjectInfo() mismatch on *pData: between trace and replay *pDataSize %u\n", size);
+                    }
                 }
             }
             glv_free(pData);
@@ -1174,11 +1234,11 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCreateBuffer:
         {
             struct_xglCreateBuffer* pPacket = (struct_xglCreateBuffer*)(packet->pBody);
-            XGL_BUFFER local_pBuffer;
-            replayResult = m_xglFuncs.real_xglCreateBuffer(remap(pPacket->device), pPacket->pCreateInfo, &local_pBuffer);
+            struct bufferObj local_bufferObj;
+            replayResult = m_xglFuncs.real_xglCreateBuffer(remap(pPacket->device), pPacket->pCreateInfo, &local_bufferObj.replayBuffer);
             if (replayResult == XGL_SUCCESS)
             {
-                add_to_map(pPacket->pBuffer, &local_pBuffer);
+                add_to_map(pPacket->pBuffer, &local_bufferObj);
             }
             CHECK_RETURN_VALUE(xglCreateBuffer);
             break;
@@ -1201,11 +1261,11 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCreateImage:
         {
             struct_xglCreateImage* pPacket = (struct_xglCreateImage*)(packet->pBody);
-            XGL_IMAGE local_pImage;
-            replayResult = m_xglFuncs.real_xglCreateImage(remap(pPacket->device), pPacket->pCreateInfo, &local_pImage);
+            struct imageObj local_imageObj;
+            replayResult = m_xglFuncs.real_xglCreateImage(remap(pPacket->device), pPacket->pCreateInfo, &local_imageObj.replayImage);
             if (replayResult == XGL_SUCCESS)
             {
-                add_to_map(pPacket->pImage, &local_pImage);
+                add_to_map(pPacket->pImage, &local_imageObj);
             }
             CHECK_RETURN_VALUE(xglCreateImage);
             break;
@@ -2164,19 +2224,19 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         {
             struct_xglWsiX11CreatePresentableImage* pPacket = (struct_xglWsiX11CreatePresentableImage*)(packet->pBody);
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-            XGL_IMAGE img;
-            XGL_GPU_MEMORY mem;
+            struct imageObj local_imgObj;
+            struct gpuMemObj local_mem;
             m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);
             m_display->imageWidth.push_back(pPacket->pCreateInfo->extent.width);
-            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &img, &mem);
+            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &local_imgObj.replayImage, &local_mem.replayGpuMem);
             if (replayResult == XGL_SUCCESS)
             {
                 if (pPacket->pImage != NULL)
-                    add_to_map(pPacket->pImage, &img);
+                    add_to_map(pPacket->pImage, &local_imgObj);
                 if(pPacket->pMem != NULL)
-                    add_to_map(pPacket->pMem, &mem);
-                m_display->imageHandles.push_back(img);
-                m_display->imageMemory.push_back(mem);
+                    add_to_map(pPacket->pMem, &local_mem);
+                m_display->imageHandles.push_back(local_imgObj.replayImage);
+                m_display->imageMemory.push_back(local_mem.replayGpuMem);
             }
 #elif defined(WIN32)
             //TBD
