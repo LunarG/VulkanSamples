@@ -30,6 +30,7 @@
 
 #include "xgltestframework.h"
 
+
 class XglDevice : public xgl_testing::Device
 {
 public:
@@ -45,6 +46,21 @@ public:
     XGL_QUEUE m_queue;
 };
 
+class XglDepthStencilObj : public xgl_testing::Image
+{
+public:
+    XglDepthStencilObj();
+    void Init(XglDevice *device, int32_t width, int32_t height);
+    bool Initialized();
+    XGL_DEPTH_STENCIL_BIND_INFO* BindInfo();
+
+protected:
+    XglDevice                         *m_device;
+    bool                               m_initialized;
+    xgl_testing::DepthStencilView      m_depthStencilView;
+    XGL_FORMAT                         m_depth_stencil_fmt;
+    XGL_DEPTH_STENCIL_BIND_INFO        m_depthStencilBindInfo;
+};
 
 class XglRenderFramework : public XglTestFramework
 {
@@ -60,6 +76,8 @@ public:
     void InitViewport();
     void InitRenderTarget();
     void InitRenderTarget(uint32_t targets);
+    void InitRenderTarget(XGL_DEPTH_STENCIL_BIND_INFO *dsBinding);
+    void InitRenderTarget(uint32_t targets, XGL_DEPTH_STENCIL_BIND_INFO *dsBinding);
     void InitFramework();
     void ShutdownFramework();
     void InitState();
@@ -84,10 +102,10 @@ protected:
     XGL_FORMAT                              m_render_target_fmt;
     XGL_FORMAT                              m_depth_stencil_fmt;
     XGL_COLOR_ATTACHMENT_BIND_INFO          m_colorBindings[8];
-    XGL_DEPTH_STENCIL_BIND_INFO             m_depthStencilBinding;
     XGL_CLEAR_COLOR                         m_clear_color;
     float                                   m_depth_clear_color;
     uint32_t                                m_stencil_clear_color;
+    XglDepthStencilObj                     *m_depthStencil;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
@@ -364,8 +382,7 @@ protected:
 class XglMemoryRefManager{
 public:
     XglMemoryRefManager();
-    void AddMemoryRef(XglConstantBufferObj* constantBuffer);
-    void AddMemoryRef(XglTextureObj *texture);
+    void AddMemoryRef(xgl_testing::Object *xglObject);
     void AddMemoryRef(XGL_GPU_MEMORY *mem, uint32_t refCount);
     void AddRTMemoryRefs(vector<XglImage *>images, uint32_t rtCount);
     XGL_MEMORY_REF* GetMemoryRefList();

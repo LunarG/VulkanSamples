@@ -229,11 +229,6 @@ protected:
     XGL_GPU_MEMORY m_textureMem;
 
     XGL_SAMPLER m_sampler;
-
-    XGL_IMAGE                   m_depthStencilImage;
-    uint32_t                    m_num_mem;
-    XGL_GPU_MEMORY              *m_depthStencilMem;
-    XGL_DEPTH_STENCIL_VIEW      m_depthStencilView;
     XglMemoryRefManager         m_memoryRefManager;
 
 
@@ -249,7 +244,6 @@ protected:
 
         memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
         m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
-        memset(&m_depthStencilImage, 0, sizeof(m_depthStencilImage));
 
         InitFramework();
     }
@@ -291,8 +285,14 @@ XGL_RESULT XglRenderTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
 
 void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj *pipelineobj, XglDescriptorSetObj *descriptorSet)
 {
-    cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color,
-                               &m_depthStencilBinding, m_depthStencilImage);
+    if (m_depthStencil->Initialized()) {
+        cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color,
+                               m_depthStencil->BindInfo(), m_depthStencil->obj());
+    } else {
+        cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color,
+                               NULL, NULL);
+    }
+
     cmdBuffer->PrepareAttachments();
     cmdBuffer->BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
     cmdBuffer->BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
@@ -353,116 +353,6 @@ void dumpVec4(const char *note, glm::vec4 vector)
         printf("%f, %f, %f, %f\n", vector[0], vector[1], vector[2], vector[3]);
     printf("\n");
     fflush(stdout);
-}
-
-void XglRenderTest::InitDepthStencil()
-{
-    XGL_RESULT err;
-    XGL_IMAGE_CREATE_INFO image;
-    XGL_MEMORY_ALLOC_INFO mem_alloc;
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc;
-    XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view;
-    XGL_MEMORY_REQUIREMENTS *mem_reqs;
-    size_t mem_reqs_size=sizeof(XGL_MEMORY_REQUIREMENTS);
-    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
-
-    // Clean up default state created by framework
-    if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
-
-    m_depth_stencil_fmt = XGL_FMT_D16_UNORM;
-
-    image.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image.pNext = NULL;
-    image.imageType = XGL_IMAGE_2D;
-    image.format = m_depth_stencil_fmt;
-    image.extent.width = m_width;
-    image.extent.height = m_height;
-    image.extent.depth = 1;
-    image.mipLevels = 1;
-    image.arraySize = 1;
-    image.samples = 1;
-    image.tiling = XGL_OPTIMAL_TILING;
-    image.usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT;
-    image.flags = 0;
-
-    img_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
-    img_alloc.pNext = NULL;
-    mem_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_alloc.pNext = &img_alloc;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memProps = XGL_MEMORY_PROPERTY_GPU_ONLY;
-    mem_alloc.memType = XGL_MEMORY_TYPE_IMAGE;
-    mem_alloc.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-
-    /* create image */
-    err = xglCreateImage(device(), &image,
-                         &m_depthStencilImage);
-    ASSERT_XGL_SUCCESS(err);
-
-    err = xglGetObjectInfo(m_depthStencilImage,
-                    XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                    &num_alloc_size, &num_allocations);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(num_alloc_size, sizeof(num_allocations));
-    mem_reqs = (XGL_MEMORY_REQUIREMENTS *) malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-    m_depthStencilMem = (XGL_GPU_MEMORY *) malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
-    m_num_mem = num_allocations;
-    err = xglGetObjectInfo(m_depthStencilImage,
-                    XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, mem_reqs);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(mem_reqs_size, sizeof(*mem_reqs));
-    err = xglGetObjectInfo(m_depthStencilImage,
-                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                        &img_reqs_size, &img_reqs);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(img_reqs_size, sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
-    img_alloc.usage = img_reqs.usage;
-    img_alloc.formatClass = img_reqs.formatClass;
-    img_alloc.samples = img_reqs.samples;
-    for (uint32_t i = 0; i < num_allocations; i ++) {
-        mem_alloc.allocationSize = mem_reqs[i].size;
-
-        /* allocate memory */
-        err = xglAllocMemory(device(), &mem_alloc, &m_depthStencilMem[i]);
-        ASSERT_XGL_SUCCESS(err);
-
-        /* bind memory */
-        err = xglBindObjectMemory(m_depthStencilImage, i,
-                m_depthStencilMem[i], 0);
-        ASSERT_XGL_SUCCESS(err);
-    }
-
-    XGL_DYNAMIC_DS_STATE_CREATE_INFO depthStencil = {};
-    depthStencil.sType = XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
-
-    depthStencil.minDepth = 0.f;
-    depthStencil.maxDepth = 1.f;
-    depthStencil.stencilBackRef = 0;
-    depthStencil.stencilFrontRef = 0;
-    depthStencil.stencilReadMask = 0xff;
-    depthStencil.stencilWriteMask = 0xff;
-
-    err = xglCreateDynamicDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
-    ASSERT_XGL_SUCCESS( err );
-
-    /* create image view */
-    view.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
-    view.pNext = NULL;
-    view.image = XGL_NULL_HANDLE;
-    view.mipLevel = 0;
-    view.baseArraySlice = 0;
-    view.arraySize = 1;
-    view.flags = 0;
-    view.image = m_depthStencilImage;
-    err = xglCreateDepthStencilView(device(), &view, &m_depthStencilView);
-    ASSERT_XGL_SUCCESS(err);
-
-    m_depthStencilBinding.view = m_depthStencilView;
-    m_depthStencilBinding.layout = XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 }
 
 struct xgltriangle_vs_uniform {
@@ -1813,7 +1703,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
-    ASSERT_NO_FATAL_FAILURE(InitDepthStencil());
+    m_depthStencil->Init(m_device, m_width, m_height);
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
@@ -1847,7 +1737,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
     m_memoryRefManager.AddMemoryRef(&MVPBuffer);
-    m_memoryRefManager.AddMemoryRef(m_depthStencilMem, m_num_mem);
+    m_memoryRefManager.AddMemoryRef(m_depthStencil);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
             sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
@@ -1867,8 +1757,9 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
+
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
@@ -2619,7 +2510,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
-    ASSERT_NO_FATAL_FAILURE(InitDepthStencil());
+    m_depthStencil->Init(m_device, m_width, m_height);
 
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
@@ -2645,7 +2536,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
     m_memoryRefManager.AddMemoryRef(&mvpBuffer);
     m_memoryRefManager.AddMemoryRef(&texture);
-    m_memoryRefManager.AddMemoryRef(m_depthStencilMem, m_num_mem);
+    m_memoryRefManager.AddMemoryRef(m_depthStencil);
 
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
             sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
@@ -2679,7 +2570,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);

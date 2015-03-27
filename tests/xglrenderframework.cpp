@@ -40,14 +40,13 @@ XglRenderFramework::XglRenderFramework() :
     m_depth_clear_color( 1.0 ),
     m_stencil_clear_color( 0 )
 {
+
     // clear the back buffer to dark grey
     m_clear_color.color.rawColor[0] = 64;
     m_clear_color.color.rawColor[1] = 64;
     m_clear_color.color.rawColor[2] = 64;
     m_clear_color.color.rawColor[3] = 0;
     m_clear_color.useRawValue = true;
-
-    m_depthStencilBinding.view = XGL_NULL_HANDLE;
 }
 
 XglRenderFramework::~XglRenderFramework()
@@ -68,6 +67,8 @@ void XglRenderFramework::InitFramework()
 
     m_device = new XglDevice(0, objs[0]);
     m_device->get_device_queue();
+
+    m_depthStencil = new XglDepthStencilObj();
 }
 
 void XglRenderFramework::ShutdownFramework()
@@ -89,6 +90,8 @@ void XglRenderFramework::ShutdownFramework()
         xglFreeMemory(m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
     }
+
+    delete m_depthStencil;
 
     // reset the driver
     delete m_device;
@@ -166,17 +169,28 @@ void XglRenderFramework::InitViewport()
 {
     InitViewport(m_width, m_height);
 }
-
 void XglRenderFramework::InitRenderTarget()
 {
+
     InitRenderTarget(1);
 }
 
 void XglRenderFramework::InitRenderTarget(uint32_t targets)
 {
+    InitRenderTarget(targets, NULL);
+}
+
+void XglRenderFramework::InitRenderTarget(XGL_DEPTH_STENCIL_BIND_INFO *dsBinding)
+{
+    InitRenderTarget(1, dsBinding);
+}
+
+void XglRenderFramework::InitRenderTarget(uint32_t targets, XGL_DEPTH_STENCIL_BIND_INFO *dsBinding)
+{
     std::vector<XGL_ATTACHMENT_LOAD_OP> load_ops;
     std::vector<XGL_ATTACHMENT_STORE_OP> store_ops;
     std::vector<XGL_CLEAR_COLOR> clear_colors;
+
     uint32_t i;
 
     for (i = 0; i < targets; i++) {
@@ -192,11 +206,6 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets)
         clear_colors.push_back(m_clear_color);
     }
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
-    XGL_DEPTH_STENCIL_BIND_INFO *dsBinding;
-    if (m_depthStencilBinding.view)
-        dsBinding = &m_depthStencilBinding;
-    else
-        dsBinding = NULL;
     XGL_FRAMEBUFFER_CREATE_INFO fb_info = {};
     fb_info.sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
@@ -208,14 +217,13 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets)
     fb_info.height = (uint32_t)m_height;
     fb_info.layers = 1;
 
-    XGL_RENDER_PASS_CREATE_INFO rp_info;
-
-    memset(&rp_info, 0 , sizeof(rp_info));
     xglCreateFramebuffer(device(), &fb_info, &m_framebuffer);
 
+    XGL_RENDER_PASS_CREATE_INFO rp_info = {};
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = m_width;
     rp_info.renderArea.extent.height = m_height;
+
     rp_info.colorAttachmentCount = m_renderTargets.size();
     rp_info.pColorFormats = &m_render_target_fmt;
     rp_info.pColorLayouts = &m_colorBindings[0].layout;
@@ -223,7 +231,9 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets)
     rp_info.pColorStoreOps = &store_ops[0];
     rp_info.pColorLoadClearValues = &clear_colors[0];
     rp_info.depthStencilFormat = m_depth_stencil_fmt;
-    rp_info.depthStencilLayout = m_depthStencilBinding.layout;
+    if (dsBinding) {
+        rp_info.depthStencilLayout = dsBinding->layout;
+    }
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
     rp_info.depthLoadClearValue = m_depth_clear_color;
     rp_info.depthStoreOp = XGL_ATTACHMENT_STORE_OP_STORE;
@@ -490,6 +500,59 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     err = xglBeginCommandBuffer(cmd_buf, &cmd_buf_begin_info);
     assert(!err);
 
+    XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {};
+    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = NULL;
+    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
+    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+    image_memory_barrier.oldLayout = fromImage.layout();
+    image_memory_barrier.newLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
+    image_memory_barrier.image = fromImage.obj();
+    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.mipLevels = 1;
+    image_memory_barrier.subresourceRange.baseArraySlice = 0;
+    image_memory_barrier.subresourceRange.arraySize = 0;
+
+    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
+
+    XGL_PIPE_EVENT pipe_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
+    XGL_PIPELINE_BARRIER pipeline_barrier;
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.pNext = NULL;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = pipe_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+    // write barrier to the command buffer
+    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
+
+    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = NULL;
+    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
+    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+    image_memory_barrier.oldLayout = this->layout();
+    image_memory_barrier.newLayout = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
+    image_memory_barrier.image = this->obj();
+    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.mipLevels = 1;
+    image_memory_barrier.subresourceRange.baseArraySlice = 0;
+    image_memory_barrier.subresourceRange.arraySize = 0;
+
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.pNext = NULL;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = pipe_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+    // write barrier to the command buffer
+    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
+
     XGL_IMAGE_COPY copy_region = {};
     copy_region.srcSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
     copy_region.srcSubresource.arraySlice = 0;
@@ -505,15 +568,16 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     copy_region.destOffset.z = 0;
     copy_region.extent = fromImage.extent();
 
-    xglCmdCopyImage(cmd_buf, fromImage.obj(), fromImage.layout(), obj(), layout(), 1, &copy_region);
+    xglCmdCopyImage(cmd_buf, fromImage.obj(), fromImage.layout(),
+                    obj(), XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                    1, &copy_region);
 
-    XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {};
     image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     image_memory_barrier.pNext = NULL;
     image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
     image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
-    image_memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_GENERAL;
-    image_memory_barrier.newLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
+    image_memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
+    image_memory_barrier.newLayout = fromImage.layout();
     image_memory_barrier.image = fromImage.obj();
     image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
@@ -521,14 +585,34 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     image_memory_barrier.subresourceRange.baseArraySlice = 0;
     image_memory_barrier.subresourceRange.arraySize = 0;
 
-    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
-
-    XGL_PIPE_EVENT set_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-    XGL_PIPELINE_BARRIER pipeline_barrier;
     pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
     pipeline_barrier.pNext = NULL;
     pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
+    pipeline_barrier.pEvents = pipe_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+    // write barrier to the command buffer
+    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
+
+    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = NULL;
+    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
+    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+    image_memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
+    image_memory_barrier.newLayout = this->layout();
+    image_memory_barrier.image = this->obj();
+    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.mipLevels = 1;
+    image_memory_barrier.subresourceRange.baseArraySlice = 0;
+    image_memory_barrier.subresourceRange.arraySize = 0;
+
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.pNext = NULL;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = pipe_events;
     pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
     pipeline_barrier.memBarrierCount = 1;
     pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
@@ -1076,16 +1160,11 @@ XglMemoryRefManager::XglMemoryRefManager() {
 
 }
 
-void XglMemoryRefManager::AddMemoryRef(XglConstantBufferObj *constantBuffer) {
-    const std::vector<XGL_GPU_MEMORY> mems = constantBuffer->memories();
-    if (!mems.empty())
-        m_bufferObjs.push_back(mems[0]);
-}
-
-void XglMemoryRefManager::AddMemoryRef(XglTextureObj *texture) {
-    const std::vector<XGL_GPU_MEMORY> mems = texture->memories();
-    if (!mems.empty())
-        m_bufferObjs.push_back(mems[0]);
+void XglMemoryRefManager::AddMemoryRef(xgl_testing::Object *xglObject) {
+    const std::vector<XGL_GPU_MEMORY> mems = xglObject->memories();
+    for (size_t i = 0; i < mems.size(); i++) {
+        m_bufferObjs.push_back(mems[i]);
+    }
 }
 
 void XglMemoryRefManager::AddMemoryRef(XGL_GPU_MEMORY *mem, uint32_t refCount) {
@@ -1364,4 +1443,55 @@ void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32
 void XglCommandBufferObj::BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding)
 {
     xglCmdBindVertexBuffer(obj(), vertexBuffer->obj(), offset, binding);
+}
+XglDepthStencilObj::XglDepthStencilObj()
+{
+    m_initialized = false;
+}
+bool XglDepthStencilObj::Initialized()
+{
+    return m_initialized;
+}
+
+XGL_DEPTH_STENCIL_BIND_INFO* XglDepthStencilObj::BindInfo()
+{
+    return &m_depthStencilBindInfo;
+}
+
+void XglDepthStencilObj::Init(XglDevice *device, int32_t width, int32_t height)
+{
+    XGL_IMAGE_CREATE_INFO image_info;
+    XGL_DEPTH_STENCIL_VIEW_CREATE_INFO view_info;
+
+    m_device = device;
+    m_initialized = true;
+    m_depth_stencil_fmt = XGL_FMT_D16_UNORM;
+
+    image_info.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_info.pNext = NULL;
+    image_info.imageType = XGL_IMAGE_2D;
+    image_info.format = m_depth_stencil_fmt;
+    image_info.extent.width = width;
+    image_info.extent.height = height;
+    image_info.extent.depth = 1;
+    image_info.mipLevels = 1;
+    image_info.arraySize = 1;
+    image_info.samples = 1;
+    image_info.tiling = XGL_OPTIMAL_TILING;
+    image_info.usage = XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image_info.flags = 0;
+    init(*m_device, image_info);
+
+    view_info.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
+    view_info.pNext = NULL;
+    view_info.image = XGL_NULL_HANDLE;
+    view_info.mipLevel = 0;
+    view_info.baseArraySlice = 0;
+    view_info.arraySize = 1;
+    view_info.flags = 0;
+    view_info.image = obj();
+    m_depthStencilView.init(*m_device, view_info);
+
+    m_depthStencilBindInfo.view = m_depthStencilView.obj();
+    m_depthStencilBindInfo.layout = XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 }
