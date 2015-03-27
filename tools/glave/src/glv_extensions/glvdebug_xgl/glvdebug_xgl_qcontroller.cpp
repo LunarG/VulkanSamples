@@ -23,7 +23,7 @@
  *************************************************************************/
 extern "C" {
 #include "glv_trace_packet_utils.h"
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_packet_id.h"
 }
 
 #include "glvdebug_xgl_settings.h"

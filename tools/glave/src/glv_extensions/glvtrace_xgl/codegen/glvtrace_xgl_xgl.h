@@ -24,8 +24,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "glvtrace_xgl_xgl_structs.h"
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_vk_structs.h"
+#include "glv_vk_packet_id.h"
 
 void AttachHooks();
 void DetachHooks();

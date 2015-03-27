@@ -27,7 +27,7 @@
 
 extern "C"
 {
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_packet_id.h"
 }
 
 ApiReplay* g_pReplayer = NULL;

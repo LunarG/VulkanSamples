@@ -27,8 +27,8 @@
 #include "glv_platform.h"
 #include "glv_common.h"
 #include "glvtrace_xgl_xglwsix11ext.h"
-#include "glvtrace_xgl_xglwsix11ext_structs.h"
-#include "glvtrace_xgl_packet_id.h"
+#include "glv_vk_vkwsix11ext_structs.h"
+#include "glv_vk_packet_id.h"
 #ifdef WIN32
 #include "mhook/mhook-lib/mhook.h"
 #endif

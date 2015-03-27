@@ -1387,7 +1387,7 @@ class Subcommand(object):
         return "\n".join(pid_enum)
 
     # Interpret functions used on replay to read in packets and interpret their contents
-    #  This code gets generated into glvtrace_xgl_xgl_structs.h file
+    #  This code gets generated into glv_vk_vk_structs.h file
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
@@ -3575,8 +3575,8 @@ class Subcommand(object):
 class GlaveTraceHeader(Subcommand):
     def generate_header(self):
         header_txt = []
-        header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_packet_id.h"\n')
+        header_txt.append('#include "glv_vk_vk_structs.h"')
+        header_txt.append('#include "glv_vk_packet_id.h"\n')
         header_txt.append('void AttachHooks();')
         header_txt.append('void DetachHooks();')
         header_txt.append('void InitTracer(void);\n')
@@ -3623,9 +3623,9 @@ class GlavePacketID(Subcommand):
         header_txt.append('#include "glv_trace_packet_utils.h"')
         header_txt.append('#include "glv_trace_packet_identifiers.h"')
         header_txt.append('#include "glv_interconnect.h"')
-        header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
+        header_txt.append('#include "glv_vk_vk_structs.h"')
+        header_txt.append('#include "glv_vk_vkdbg_structs.h"')
+        header_txt.append('#include "glv_vk_vkwsix11ext_structs.h"')
         header_txt.append('#include "xgl_enum_string_helper.h"')
         header_txt.append('#if defined(WIN32)')
         header_txt.append('#define snprintf _snprintf')
@@ -3689,8 +3689,8 @@ class GlaveWsiC(Subcommand):
         header_txt.append('#include "glv_platform.h"')
         header_txt.append('#include "glv_common.h"')
         header_txt.append('#include "glvtrace_xgl_xglwsix11ext.h"')
-        header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_packet_id.h"')
+        header_txt.append('#include "glv_vk_vkwsix11ext_structs.h"')
+        header_txt.append('#include "glv_vk_packet_id.h"')
         header_txt.append('#ifdef WIN32')
         header_txt.append('#include "mhook/mhook-lib/mhook.h"')
         header_txt.append('#endif')
@@ -3744,8 +3744,8 @@ class GlaveDbgC(Subcommand):
         header_txt.append('#include "glv_common.h"')
         header_txt.append('#include "glvtrace_xgl_xgl.h"')
         header_txt.append('#include "glvtrace_xgl_xgldbg.h"')
-        header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_packet_id.h"')
+        header_txt.append('#include "glv_vk_vkdbg_structs.h"')
+        header_txt.append('#include "glv_vk_packet_id.h"')
         header_txt.append('#ifdef WIN32')
         header_txt.append('#include "mhook/mhook-lib/mhook.h"')
         header_txt.append('#endif')
@@ -3814,10 +3814,10 @@ class GlaveReplayC(Subcommand):
         header_txt.append('#include <queue>')
         header_txt.append('glvreplay_settings *g_pReplaySettings;')
         header_txt.append('extern "C" {')
-        header_txt.append('#include "glvtrace_xgl_xgl_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_xgldbg_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_xglwsix11ext_structs.h"')
-        header_txt.append('#include "glvtrace_xgl_packet_id.h"')
+        header_txt.append('#include "glv_vk_vk_structs.h"')
+        header_txt.append('#include "glv_vk_vkdbg_structs.h"')
+        header_txt.append('#include "glv_vk_vkwsix11ext_structs.h"')
+        header_txt.append('#include "glv_vk_packet_id.h"')
         header_txt.append('#include "xgl_enum_string_helper.h"\n}\n')
         header_txt.append('#define APP_NAME "glvreplay_xgl"')
         header_txt.append('#define IDI_ICON 101\n')
