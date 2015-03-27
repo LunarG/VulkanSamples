@@ -66,6 +66,8 @@ if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
     add_custom_target(binary-dir-symlinks ALL
         COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/golden
         COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests.sh
+        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests_with_layers.sh
+        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/layer_test_suite.py
         VERBATIM
         )
 endif()
