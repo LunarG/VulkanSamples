@@ -850,7 +850,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         .descriptorType = XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
         .count = DEMO_TEXTURE_COUNT,
         .stageFlags = XGL_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
-        .immutableSampler = XGL_NULL_HANDLE,
+        .pImmutableSamplers = NULL,
     };
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout = {
         .sType = XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,

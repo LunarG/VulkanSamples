@@ -1824,7 +1824,7 @@ typedef struct _XGL_DESCRIPTOR_SET_LAYOUT_BINDING
     XGL_DESCRIPTOR_TYPE                     descriptorType;
     uint32_t                                count;
     XGL_FLAGS                               stageFlags;         // XGL_SHADER_STAGE_FLAGS
-    XGL_SAMPLER                             immutableSampler;
+    const XGL_SAMPLER*                      pImmutableSamplers;
 } XGL_DESCRIPTOR_SET_LAYOUT_BINDING;
 
 typedef struct _XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO

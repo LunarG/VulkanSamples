@@ -510,7 +510,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
 
     binding = &set->layout->bindings[update->binding];
 
-    if (binding->immutable_sampler) {
+    if (binding->shared_immutable_sampler) {
         struct intel_desc_offset end;
         struct intel_desc_sampler sampler_desc;
 
@@ -518,13 +518,14 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
         intel_desc_offset_set(&end, iter.begin.surface,
                 iter.begin.sampler + set->region->sampler_desc_size);
 
-        sampler_desc.sampler = binding->immutable_sampler;
+        sampler_desc.sampler = binding->shared_immutable_sampler;
         intel_desc_region_update(set->region, &iter.begin, &end,
                 NULL, &sampler_desc);
     }
 
     for (i = 0; i < update->count; i++) {
-        const struct intel_sampler *sampler =
+        const struct intel_sampler *sampler = (binding->immutable_samplers) ?
+            binding->immutable_samplers[update->arrayIndex + i] :
             intel_sampler(update->pSamplerImageViews[i].sampler);
         const XGL_IMAGE_VIEW_ATTACH_INFO *info =
             update->pSamplerImageViews[i].pImageView;
@@ -758,13 +759,38 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
         if (ret != XGL_SUCCESS)
             return ret;
 
-        if (lb->immutableSampler != XGL_NULL_HANDLE) {
-            binding->immutable_sampler = intel_sampler(lb->immutableSampler);
-            /* do not increment sampler offset */
-            intel_desc_offset_set(&binding->increment, size.surface, 0);
-        } else {
-            binding->immutable_sampler = NULL;
-            binding->increment = size;
+        binding->increment = size;
+
+        /* copy immutable samplers */
+        if (lb->pImmutableSamplers) {
+            bool shared = true;
+            uint32_t j;
+
+            for (j = 1; j < lb->count; j++) {
+                if (lb->pImmutableSamplers[j] != lb->pImmutableSamplers[0]) {
+                    shared = false;
+                    break;
+                }
+            }
+
+            if (shared) {
+                binding->shared_immutable_sampler =
+                    intel_sampler((XGL_SAMPLER) lb->pImmutableSamplers[0]);
+                /* set sampler offset increment to 0 */
+                intel_desc_offset_set(&binding->increment,
+                        binding->increment.surface, 0);
+            } else {
+                binding->immutable_samplers = intel_alloc(layout,
+                        sizeof(binding->immutable_samplers[0]) * lb->count,
+                        0, XGL_SYSTEM_ALLOC_INTERNAL);
+                if (!binding->immutable_samplers)
+                    return XGL_ERROR_OUT_OF_MEMORY;
+
+                for (j = 0; j < lb->count; j++) {
+                    binding->immutable_samplers[j] =
+                        intel_sampler((XGL_SAMPLER) lb->pImmutableSamplers[j]);
+                }
+            }
         }
 
         /* increment offset */
@@ -806,6 +832,14 @@ XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
 
 void intel_desc_layout_destroy(struct intel_desc_layout *layout)
 {
+    uint32_t i;
+
+    for (i = 0; i < layout->binding_count; i++) {
+        struct intel_desc_layout_binding *binding = &layout->bindings[i];
+
+        if (binding->immutable_samplers)
+            intel_free(layout, binding->immutable_samplers);
+    }
     intel_free(layout, layout->bindings);
     intel_base_destroy(&layout->obj.base);
 }

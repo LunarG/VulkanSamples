@@ -108,7 +108,8 @@ struct intel_desc_layout {
     struct intel_desc_layout_binding {
         XGL_DESCRIPTOR_TYPE type;
         uint32_t array_size;
-        const struct intel_sampler *immutable_sampler;
+        const struct intel_sampler **immutable_samplers;
+        const struct intel_sampler *shared_immutable_sampler;
 
         /* to initialize intel_desc_iter */
         struct intel_desc_offset offset;

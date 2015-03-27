@@ -340,7 +340,7 @@ void XglDescriptorSetObj::CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer)
         bindings[i].descriptorType = m_type_counts[i].type;
         bindings[i].count = m_type_counts[i].count;
         bindings[i].stageFlags = XGL_SHADER_STAGE_FLAGS_ALL;
-        bindings[i].immutableSampler = XGL_NULL_HANDLE;
+        bindings[i].pImmutableSamplers = NULL;
     }
 
     // create XGL_DESCRIPTOR_SET_LAYOUT
