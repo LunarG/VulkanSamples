@@ -128,7 +128,10 @@ struct intel_desc_layout_chain {
     struct intel_obj obj;
 
     struct intel_desc_layout **layouts;
+    uint32_t *dynamic_desc_indices;
     uint32_t layout_count;
+
+    uint32_t total_dynamic_desc_count;
 };
 
 static inline struct intel_desc_pool *intel_desc_pool(XGL_DESCRIPTOR_POOL pool)
@@ -250,6 +253,17 @@ void intel_desc_region_copy(struct intel_desc_region *region,
                             const struct intel_desc_offset *end,
                             const struct intel_desc_offset *src);
 
+void intel_desc_region_read_surface(const struct intel_desc_region *region,
+                                    const struct intel_desc_offset *offset,
+                                    XGL_PIPELINE_SHADER_STAGE stage,
+                                    const struct intel_mem **mem,
+                                    bool *read_only,
+                                    const uint32_t **cmd,
+                                    uint32_t *cmd_len);
+void intel_desc_region_read_sampler(const struct intel_desc_region *region,
+                                    const struct intel_desc_offset *offset,
+                                    const struct intel_sampler **sampler);
+
 XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
                                   XGL_DESCRIPTOR_POOL_USAGE usage,
                                   uint32_t max_sets,
@@ -280,17 +294,6 @@ void intel_desc_set_update_buffers(struct intel_desc_set *set,
                                    const XGL_UPDATE_BUFFERS *update);
 void intel_desc_set_update_as_copy(struct intel_desc_set *set,
                                    const XGL_UPDATE_AS_COPY *update);
-
-void intel_desc_set_read_surface(const struct intel_desc_set *set,
-                                 const struct intel_desc_offset *offset,
-                                 XGL_PIPELINE_SHADER_STAGE stage,
-                                 const struct intel_mem **mem,
-                                 bool *read_only,
-                                 const uint32_t **cmd,
-                                 uint32_t *cmd_len);
-void intel_desc_set_read_sampler(const struct intel_desc_set *set,
-                                 const struct intel_desc_offset *offset,
-                                 const struct intel_sampler **sampler);
 
 XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
                                     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,

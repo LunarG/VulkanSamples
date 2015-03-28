@@ -104,7 +104,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglResetCommandBufferType ResetCommandBuffer;
     xglCmdBindPipelineType CmdBindPipeline;
     xglCmdBindDynamicStateObjectType CmdBindDynamicStateObject;
-    xglCmdBindDescriptorSetType CmdBindDescriptorSet;
+    xglCmdBindDescriptorSetsType CmdBindDescriptorSets;
     xglCmdBindVertexBufferType CmdBindVertexBuffer;
     xglCmdBindIndexBufferType CmdBindIndexBuffer;
     xglCmdDrawType CmdDraw;

@@ -346,6 +346,61 @@ void intel_desc_region_copy(struct intel_desc_region *region,
     intel_desc_region_update(region, begin, end, surfaces, samplers);
 }
 
+void intel_desc_region_read_surface(const struct intel_desc_region *region,
+                                    const struct intel_desc_offset *offset,
+                                    XGL_PIPELINE_SHADER_STAGE stage,
+                                    const struct intel_mem **mem,
+                                    bool *read_only,
+                                    const uint32_t **cmd,
+                                    uint32_t *cmd_len)
+{
+    const struct intel_desc_surface *desc;
+    struct intel_desc_offset end;
+
+    intel_desc_offset_set(&end,
+            offset->surface + region->surface_desc_size, offset->sampler);
+    desc_region_validate_begin_end(region, offset, &end);
+
+    desc = (const struct intel_desc_surface *)
+        ((const char *) region->surfaces + offset->surface);
+
+    *mem = desc->mem;
+    *read_only = desc->read_only;
+    switch (desc->type) {
+    case INTEL_DESC_SURFACE_BUF:
+        *cmd = (stage == XGL_SHADER_STAGE_FRAGMENT) ?
+            desc->u.buf->fs_cmd : desc->u.buf->cmd;
+        *cmd_len = desc->u.buf->cmd_len;
+        break;
+    case INTEL_DESC_SURFACE_IMG:
+        *cmd = desc->u.img->cmd;
+        *cmd_len = desc->u.img->cmd_len;
+        break;
+    case INTEL_DESC_SURFACE_UNUSED:
+    default:
+        *cmd = NULL;
+        *cmd_len = 0;
+        break;
+    }
+}
+
+void intel_desc_region_read_sampler(const struct intel_desc_region *region,
+                                    const struct intel_desc_offset *offset,
+                                    const struct intel_sampler **sampler)
+{
+    const struct intel_desc_sampler *desc;
+    struct intel_desc_offset end;
+
+    intel_desc_offset_set(&end,
+            offset->surface, offset->sampler + region->sampler_desc_size);
+    desc_region_validate_begin_end(region, offset, &end);
+
+    desc = (const struct intel_desc_sampler *)
+        ((const char *) region->samplers + offset->sampler);
+
+    *sampler = desc->sampler;
+}
+
 static void desc_pool_destroy(struct intel_obj *obj)
 {
     struct intel_desc_pool *pool = intel_desc_pool_from_obj(obj);
@@ -637,77 +692,6 @@ void intel_desc_set_update_as_copy(struct intel_desc_set *set,
     intel_desc_region_copy(set->region, &begin, &iter.end, &src_begin);
 }
 
-static void desc_set_read(const struct intel_desc_set *set,
-                          const struct intel_desc_offset *offset,
-                          const struct intel_desc_surface **surface,
-                          const struct intel_desc_sampler **sampler)
-{
-    struct intel_desc_offset begin, end;
-
-    intel_desc_offset_add(&begin, &set->region_begin, offset);
-    intel_desc_offset_set(&end, 0, 0);
-
-    if (surface) {
-        *surface = (const struct intel_desc_surface *)
-            ((const char *) set->region->surfaces + begin.surface);
-
-        end.surface = set->region->surface_desc_size;
-    }
-
-    if (sampler) {
-        *sampler = (const struct intel_desc_sampler *)
-            ((const char *) set->region->samplers + begin.sampler);
-
-        end.sampler = set->region->sampler_desc_size;
-    }
-
-    intel_desc_offset_add(&end, &begin, &end);
-    desc_region_validate_begin_end(set->region, &begin, &end);
-}
-
-void intel_desc_set_read_surface(const struct intel_desc_set *set,
-                                 const struct intel_desc_offset *offset,
-                                 XGL_PIPELINE_SHADER_STAGE stage,
-                                 const struct intel_mem **mem,
-                                 bool *read_only,
-                                 const uint32_t **cmd,
-                                 uint32_t *cmd_len)
-{
-    const struct intel_desc_surface *desc;
-
-    desc_set_read(set, offset, &desc, NULL);
-
-    *mem = desc->mem;
-    *read_only = desc->read_only;
-    switch (desc->type) {
-    case INTEL_DESC_SURFACE_BUF:
-        *cmd = (stage == XGL_SHADER_STAGE_FRAGMENT) ?
-            desc->u.buf->fs_cmd : desc->u.buf->cmd;
-        *cmd_len = desc->u.buf->cmd_len;
-        break;
-    case INTEL_DESC_SURFACE_IMG:
-        *cmd = desc->u.img->cmd;
-        *cmd_len = desc->u.img->cmd_len;
-        break;
-    case INTEL_DESC_SURFACE_UNUSED:
-    default:
-        *cmd = NULL;
-        *cmd_len = 0;
-        break;
-    }
-}
-
-void intel_desc_set_read_sampler(const struct intel_desc_set *set,
-                                 const struct intel_desc_offset *offset,
-                                 const struct intel_sampler **sampler)
-{
-    const struct intel_desc_sampler *desc;
-
-    desc_set_read(set, offset, NULL, &desc);
-
-    *sampler = desc->sampler;
-}
-
 static void desc_layout_destroy(struct intel_obj *obj)
 {
     struct intel_desc_layout *layout = intel_desc_layout_from_obj(obj);
@@ -873,8 +857,21 @@ XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
         return XGL_ERROR_OUT_OF_MEMORY;
     }
 
-    for (i = 0; i < count; i++)
+    chain->dynamic_desc_indices = intel_alloc(chain,
+            sizeof(chain->dynamic_desc_indices[0]) * count,
+            0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!chain->dynamic_desc_indices) {
+        intel_desc_layout_chain_destroy(chain);
+        return XGL_ERROR_OUT_OF_MEMORY;
+    }
+
+    for (i = 0; i < count; i++) {
         chain->layouts[i] = intel_desc_layout(layouts[i]);
+        chain->dynamic_desc_indices[i] = chain->total_dynamic_desc_count;
+
+        chain->total_dynamic_desc_count +=
+            chain->layouts[i]->dynamic_desc_count;
+    }
 
     chain->layout_count = count;
 
@@ -887,6 +884,8 @@ XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
 
 void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain)
 {
+    if (chain->dynamic_desc_indices)
+        intel_free(chain, chain->dynamic_desc_indices);
     if (chain->layouts)
         intel_free(chain, chain->layouts);
     intel_base_destroy(&chain->obj.base);

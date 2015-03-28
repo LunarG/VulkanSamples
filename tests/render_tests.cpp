@@ -301,7 +301,7 @@ void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPi
     descriptorSet->CreateXGLDescriptorSet(cmdBuffer);
     pipelineobj->CreateXGLPipeline(descriptorSet);
     cmdBuffer->BindPipeline(pipelineobj->GetPipelineHandle());
-    cmdBuffer->BindDescriptorSet(descriptorSet->GetDescriptorSetHandle());
+    cmdBuffer->BindDescriptorSet(descriptorSet);
 }
 
 void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,

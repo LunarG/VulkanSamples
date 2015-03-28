@@ -128,6 +128,7 @@ protected:
     }
 };
 
+class XglDescriptorSetObj;
 class XglIndexBufferObj;
 class XglConstantBufferObj;
 
@@ -146,7 +147,7 @@ public:
     void ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color, XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage);
     void PrepareAttachments();
     void BindPipeline(XGL_PIPELINE pipeline);
-    void BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet);
+    void BindDescriptorSet(const XglDescriptorSetObj *set);
     void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding);
     void BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject);
@@ -318,8 +319,8 @@ public:
     int AppendSamplerTexture(XglSamplerObj* sampler, XglTextureObj* texture);
     void CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer);
 
-    XGL_DESCRIPTOR_SET GetDescriptorSetHandle();
-    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN GetLayoutChain();
+    XGL_DESCRIPTOR_SET GetDescriptorSetHandle() const;
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN GetLayoutChain() const;
 
 protected:
     XglDevice                           *m_device;

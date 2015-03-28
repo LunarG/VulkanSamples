@@ -2336,7 +2336,7 @@ typedef XGL_RESULT (XGLAPI *xglEndCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef XGL_RESULT (XGLAPI *xglResetCommandBufferType)(XGL_CMD_BUFFER cmdBuffer);
 typedef void       (XGLAPI *xglCmdBindPipelineType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE pipeline);
 typedef void       (XGLAPI *xglCmdBindDynamicStateObjectType)(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state);
-typedef void       (XGLAPI *xglCmdBindDescriptorSetType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData);
+typedef void       (XGLAPI *xglCmdBindDescriptorSetsType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain, uint32_t layoutChainSlot, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets, const uint32_t* pUserData);
 typedef void       (XGLAPI *xglCmdBindIndexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, XGL_INDEX_TYPE indexType);
 typedef void       (XGLAPI *xglCmdBindVertexBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t binding);
 typedef void       (XGLAPI *xglCmdDrawType)(XGL_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
@@ -2807,10 +2807,13 @@ void XGLAPI xglCmdBindDynamicStateObject(
     XGL_STATE_BIND_POINT                        stateBindPoint,
     XGL_DYNAMIC_STATE_OBJECT                    dynamicState);
 
-void XGLAPI xglCmdBindDescriptorSet(
+void XGLAPI xglCmdBindDescriptorSets(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_DESCRIPTOR_SET                          descriptorSet,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
+    uint32_t                                    layoutChainSlot,
+    uint32_t                                    count,
+    const XGL_DESCRIPTOR_SET*                   pDescriptorSets,
     const uint32_t*                             pUserData);
 
 void XGLAPI xglCmdBindIndexBuffer(

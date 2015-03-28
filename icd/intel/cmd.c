@@ -234,10 +234,14 @@ static void cmd_reset(struct intel_cmd *cmd)
     if (cmd->bind.shader_cache.entries)
         intel_free(cmd, cmd->bind.shader_cache.entries);
 
-    if (cmd->bind.dset.graphics_dynamic_offsets)
-        intel_free(cmd, cmd->bind.dset.graphics_dynamic_offsets);
-    if (cmd->bind.dset.compute_dynamic_offsets)
-        intel_free(cmd, cmd->bind.dset.compute_dynamic_offsets);
+    if (cmd->bind.dset.graphics_data.set_offsets)
+        intel_free(cmd, cmd->bind.dset.graphics_data.set_offsets);
+    if (cmd->bind.dset.graphics_data.dynamic_offsets)
+        intel_free(cmd, cmd->bind.dset.graphics_data.dynamic_offsets);
+    if (cmd->bind.dset.compute_data.set_offsets)
+        intel_free(cmd, cmd->bind.dset.compute_data.set_offsets);
+    if (cmd->bind.dset.compute_data.dynamic_offsets)
+        intel_free(cmd, cmd->bind.dset.compute_data.dynamic_offsets);
 
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 

@@ -1098,10 +1098,13 @@ ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void XGLAPI xglCmdBindDescriptorSet(
+ICD_EXPORT void XGLAPI xglCmdBindDescriptorSets(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_DESCRIPTOR_SET                          descriptorSet,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
+    uint32_t                                    layoutChainSlot,
+    uint32_t                                    count,
+    const XGL_DESCRIPTOR_SET*                   pDescriptorSets,
     const uint32_t*                             pUserData)
 {
     NULLDRV_LOG_FUNC;

@@ -602,10 +602,13 @@ core = Extension(
              Param("XGL_STATE_BIND_POINT", "stateBindPoint"),
              Param("XGL_DYNAMIC_STATE_OBJECT", "state")]),
 
-        Proto("void", "CmdBindDescriptorSet",
+        Proto("void", "CmdBindDescriptorSets",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_PIPELINE_BIND_POINT", "pipelineBindPoint"),
-             Param("XGL_DESCRIPTOR_SET", "descriptorSet"),
+             Param("XGL_DESCRIPTOR_SET_LAYOUT_CHAIN", "layoutChain"),
+             Param("uint32_t", "layoutChainSlot"),
+             Param("uint32_t", "count"),
+             Param("const XGL_DESCRIPTOR_SET*", "pDescriptorSets"),
              Param("const uint32_t*", "pUserData")]),
 
         Proto("void", "CmdBindVertexBuffer",

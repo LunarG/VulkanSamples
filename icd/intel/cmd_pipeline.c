@@ -1562,10 +1562,11 @@ static void gen7_pcb(struct intel_cmd *cmd, int subop,
 static uint32_t emit_samplers(struct intel_cmd *cmd,
                               const struct intel_pipeline_rmap *rmap)
 {
+    const struct intel_desc_region *region = cmd->dev->desc_region;
+    const struct intel_cmd_dset_data *data = &cmd->bind.dset.graphics_data;
     const uint32_t border_len = (cmd_gen(cmd) >= INTEL_GEN(7)) ? 4 : 12;
     const uint32_t border_stride =
         u_align(border_len, GEN6_ALIGNMENT_SAMPLER_BORDER_COLOR_STATE / 4);
-    const struct intel_desc_set *set = cmd->bind.dset.graphics;
     uint32_t border_offset, *border_dw, sampler_offset, *sampler_dw;
     uint32_t surface_count;
     uint32_t i;
@@ -1595,11 +1596,14 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
     for (i = 0; i < rmap->sampler_count; i++) {
         const struct intel_pipeline_rmap_slot *slot =
             &rmap->slots[surface_count + i];
+        struct intel_desc_offset desc_offset;
         const struct intel_sampler *sampler;
 
         switch (slot->type) {
         case INTEL_PIPELINE_RMAP_SAMPLER:
-            intel_desc_set_read_sampler(set, &slot->u.sampler, &sampler);
+            intel_desc_offset_add(&desc_offset, &slot->u.sampler,
+                    &data->set_offsets[slot->index]);
+            intel_desc_region_read_sampler(region, &desc_offset, &sampler);
             break;
         case INTEL_PIPELINE_RMAP_UNUSED:
             sampler = NULL;
@@ -1636,9 +1640,10 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                                    const struct intel_pipeline_rmap *rmap,
                                    const XGL_PIPELINE_SHADER_STAGE stage)
 {
+    const struct intel_desc_region *region = cmd->dev->desc_region;
+    const struct intel_cmd_dset_data *data = &cmd->bind.dset.graphics_data;
     const uint32_t sba_offset =
         cmd->writers[INTEL_CMD_WRITER_SURFACE].sba_offset;
-    const struct intel_desc_set *set = cmd->bind.dset.graphics;
     uint32_t binding_table[256], offset;
     uint32_t surface_count, i;
 
@@ -1679,19 +1684,23 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         case INTEL_PIPELINE_RMAP_SURFACE:
             {
                 const int32_t dyn_idx = slot->u.surface.dynamic_offset_index;
+                struct intel_desc_offset desc_offset;
                 const struct intel_mem *mem;
                 bool read_only;
                 const uint32_t *cmd_data;
                 uint32_t cmd_len;
 
-                assert(dyn_idx < 0 ||
-                       dyn_idx < set->layout->dynamic_desc_count);
+                assert(dyn_idx < 0 || dyn_idx <
+                        cmd->bind.dset.graphics->total_dynamic_desc_count);
 
-                intel_desc_set_read_surface(set, &slot->u.surface.offset,
-                        stage, &mem, &read_only, &cmd_data, &cmd_len);
+                intel_desc_offset_add(&desc_offset, &slot->u.surface.offset,
+                        &data->set_offsets[slot->index]);
+
+                intel_desc_region_read_surface(region, &desc_offset, stage,
+                        &mem, &read_only, &cmd_data, &cmd_len);
                 if (mem) {
                     const uint32_t dynamic_offset = (dyn_idx >= 0) ?
-                        cmd->bind.dset.graphics_dynamic_offsets[dyn_idx] : 0;
+                        data->dynamic_offsets[dyn_idx] : 0;
                     const uint32_t reloc_flags =
                         (read_only) ? 0 : INTEL_RELOC_WRITE;
 
@@ -3025,54 +3034,65 @@ static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
     cmd->bind.pipeline.compute = pipeline;
 }
 
-static void cmd_bind_graphics_dset(struct intel_cmd *cmd,
-                                   const struct intel_desc_set *dset,
-                                   const uint32_t *dynamic_offsets)
+static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
+                                struct intel_cmd_dset_data *data,
+                                const struct intel_desc_layout_chain *chain)
 {
-    const uint32_t size = sizeof(*dynamic_offsets) *
-        dset->layout->dynamic_desc_count;
+    if (data->set_offset_count < chain->layout_count) {
+        if (data->set_offsets)
+            intel_free(cmd, data->set_offsets);
 
-    if (size > cmd->bind.dset.graphics_dynamic_offset_size) {
-        if (cmd->bind.dset.graphics_dynamic_offsets)
-            intel_free(cmd, cmd->bind.dset.graphics_dynamic_offsets);
-
-        cmd->bind.dset.graphics_dynamic_offsets = intel_alloc(cmd,
-                size, 4, XGL_SYSTEM_ALLOC_INTERNAL);
-        if (!cmd->bind.dset.graphics_dynamic_offsets) {
+        data->set_offsets = intel_alloc(cmd,
+                sizeof(data->set_offsets[0]) * chain->layout_count,
+                sizeof(data->set_offsets[0]), XGL_SYSTEM_ALLOC_INTERNAL);
+        if (!data->set_offsets) {
             cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
-            return;
+            data->set_offset_count = 0;
+            return false;
         }
 
-        cmd->bind.dset.graphics_dynamic_offset_size = size;
+        data->set_offset_count = chain->layout_count;
     }
 
-    cmd->bind.dset.graphics = dset;
-    memcpy(cmd->bind.dset.graphics_dynamic_offsets, dynamic_offsets, size);
+    if (data->dynamic_offset_count < chain->total_dynamic_desc_count) {
+        if (data->dynamic_offsets)
+            intel_free(cmd, data->dynamic_offsets);
+
+        data->dynamic_offsets = intel_alloc(cmd,
+                sizeof(data->dynamic_offsets[0]) * chain->total_dynamic_desc_count,
+                sizeof(data->dynamic_offsets[0]), XGL_SYSTEM_ALLOC_INTERNAL);
+        if (!data->dynamic_offsets) {
+            cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
+            data->dynamic_offset_count = 0;
+            return false;
+        }
+
+        data->dynamic_offset_count = chain->total_dynamic_desc_count;
+    }
+
+    return true;
 }
 
-static void cmd_bind_compute_dset(struct intel_cmd *cmd,
-                                  const struct intel_desc_set *dset,
-                                  const uint32_t *dynamic_offsets)
+static void cmd_copy_dset_data(struct intel_cmd *cmd,
+                               struct intel_cmd_dset_data *data,
+                               const struct intel_desc_layout_chain *chain,
+                               uint32_t index,
+                               const struct intel_desc_set *set,
+                               const uint32_t *dynamic_offsets)
 {
-    const uint32_t size = sizeof(*dynamic_offsets) *
-        dset->layout->dynamic_desc_count;
+    const struct intel_desc_layout *layout = chain->layouts[index];
 
-    if (size > cmd->bind.dset.compute_dynamic_offset_size) {
-        if (cmd->bind.dset.compute_dynamic_offsets)
-            intel_free(cmd, cmd->bind.dset.compute_dynamic_offsets);
+    assert(index < data->set_offset_count);
+    data->set_offsets[index] = set->region_begin;
 
-        cmd->bind.dset.compute_dynamic_offsets = intel_alloc(cmd,
-                size, 4, XGL_SYSTEM_ALLOC_INTERNAL);
-        if (!cmd->bind.dset.compute_dynamic_offsets) {
-            cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
-            return;
-        }
+    if (layout->dynamic_desc_count) {
+        assert(chain->dynamic_desc_indices[index] +
+                layout->dynamic_desc_count - 1 < data->dynamic_offset_count);
 
-        cmd->bind.dset.compute_dynamic_offset_size = size;
+        memcpy(&data->dynamic_offsets[chain->dynamic_desc_indices[index]],
+                dynamic_offsets,
+                sizeof(dynamic_offsets[0]) * layout->dynamic_desc_count);
     }
-
-    cmd->bind.dset.compute = dset;
-    memcpy(cmd->bind.dset.compute_dynamic_offsets, dynamic_offsets, size);
 }
 
 static void cmd_bind_vertex_data(struct intel_cmd *cmd,
@@ -3351,25 +3371,45 @@ ICD_EXPORT void XGLAPI xglCmdBindDynamicStateObject(
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdBindDescriptorSet(
+ICD_EXPORT void XGLAPI xglCmdBindDescriptorSets(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_DESCRIPTOR_SET                          descriptorSet,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
+    uint32_t                                    layoutChainSlot,
+    uint32_t                                    count,
+    const XGL_DESCRIPTOR_SET*                   pDescriptorSets,
     const uint32_t*                             pUserData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_desc_set *dset = intel_desc_set(descriptorSet);
+    struct intel_desc_layout_chain *chain =
+        intel_desc_layout_chain(layoutChain);
+    struct intel_cmd_dset_data *data;
+    uint32_t i;
 
     switch (pipelineBindPoint) {
     case XGL_PIPELINE_BIND_POINT_COMPUTE:
-        cmd_bind_compute_dset(cmd, dset, pUserData);
+        cmd->bind.dset.compute = chain;
+        data = &cmd->bind.dset.compute_data;
         break;
     case XGL_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd_bind_graphics_dset(cmd, dset, pUserData);
+        cmd->bind.dset.graphics = chain;
+        data = &cmd->bind.dset.graphics_data;
         break;
     default:
         cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
+        return;
         break;
+    }
+
+    if (!cmd_alloc_dset_data(cmd, data, chain))
+        return;
+
+    for (i = 0; i < count; i++) {
+        struct intel_desc_set *dset = intel_desc_set(pDescriptorSets[i]);
+
+        cmd_copy_dset_data(cmd, data, chain, layoutChainSlot + i,
+                dset, pUserData);
+        pUserData += chain->layouts[layoutChainSlot + i]->dynamic_desc_count;
     }
 }
 

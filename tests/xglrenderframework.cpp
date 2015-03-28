@@ -314,12 +314,12 @@ int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextur
     return m_nextSlot++;
 }
 
-XGL_DESCRIPTOR_SET_LAYOUT_CHAIN XglDescriptorSetObj::GetLayoutChain()
+XGL_DESCRIPTOR_SET_LAYOUT_CHAIN XglDescriptorSetObj::GetLayoutChain() const
 {
     return m_layout_chain.obj();
 }
 
-XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle()
+XGL_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle() const
 {
     return m_set->obj();
 }
@@ -1421,10 +1421,13 @@ void XglCommandBufferObj::BindPipeline(XGL_PIPELINE pipeline)
         xglCmdBindPipeline( obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 }
 
-void XglCommandBufferObj::BindDescriptorSet(XGL_DESCRIPTOR_SET descriptorSet)
+void XglCommandBufferObj::BindDescriptorSet(const XglDescriptorSetObj *set)
 {
+    XGL_DESCRIPTOR_SET set_obj = set->GetDescriptorSetHandle();
+
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
-    xglCmdBindDescriptorSet(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet, NULL );
+    xglCmdBindDescriptorSets(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS,
+            set->GetLayoutChain(), 0, 1, &set_obj, NULL );
 }
 void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset)
 {

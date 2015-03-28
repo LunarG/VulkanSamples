@@ -133,6 +133,14 @@ struct intel_cmd_shader_cache {
     uint32_t used;
 };
 
+struct intel_cmd_dset_data {
+    struct intel_desc_offset *set_offsets;
+    uint32_t set_offset_count;
+
+    uint32_t *dynamic_offsets;
+    uint32_t dynamic_offset_count;
+};
+
 /*
  * States bounded to the command buffer.  We want to write states directly to
  * the command buffer when possible, and reduce this struct.
@@ -162,12 +170,11 @@ struct intel_cmd_bind {
     } state;
 
     struct {
-        const struct intel_desc_set *graphics;
-        uint32_t *graphics_dynamic_offsets;
-        size_t graphics_dynamic_offset_size;
-        const struct intel_desc_set *compute;
-        uint32_t *compute_dynamic_offsets;
-        size_t compute_dynamic_offset_size;
+        const struct intel_desc_layout_chain *graphics;
+        struct intel_cmd_dset_data graphics_data;
+
+        const struct intel_desc_layout_chain *compute;
+        struct intel_cmd_dset_data compute_data;
     } dset;
 
     struct {

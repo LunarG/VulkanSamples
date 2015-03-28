@@ -441,8 +441,8 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
 
     xglCmdBindPipeline(cmd_buf, XGL_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
-    xglCmdBindDescriptorSet(cmd_buf, XGL_PIPELINE_BIND_POINT_GRAPHICS,
-            demo->desc_set, NULL);
+    xglCmdBindDescriptorSets(cmd_buf, XGL_PIPELINE_BIND_POINT_GRAPHICS,
+            demo->desc_layout_chain, 0, 1, &demo->desc_set, NULL);
 
     xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_VIEWPORT, demo->viewport);
     xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_RASTER, demo->raster);
