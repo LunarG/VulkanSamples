@@ -53,61 +53,45 @@ static GLV_VK_SNAPSHOT s_snapshot = {0};
 // The 'deltaSnapshot' which tracks all object creation and deletion.
 static GLV_VK_SNAPSHOT s_delta = {0};
 
-// Debug function to print global list and each individual object list
-
-static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType)
+// add a new node to the global and object lists, then return it so the caller can populate the object information.
+static GLV_VK_SNAPSHOT_LL_NODE* snapshot_insert_object(GLV_VK_SNAPSHOT* pSnapshot, void* pObject, XGL_OBJECT_TYPE type)
 {
-//    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);
-//    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_NONE, LAYER_ABBREV_STR, str);
+    // Create a new node
     GLV_VK_SNAPSHOT_LL_NODE* pNewObjNode = (GLV_VK_SNAPSHOT_LL_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_LL_NODE));
-    pNewObjNode->obj.pObj = pObj;
-    pNewObjNode->obj.objType = objType;
-    pNewObjNode->obj.status  = OBJSTATUS_NONE;
-    pNewObjNode->obj.numUses = 0;
+    memset(pNewObjNode, 0, sizeof(GLV_VK_SNAPSHOT_LL_NODE));
+    pNewObjNode->obj.pVkObject = pObject;
+    pNewObjNode->obj.objType = type;
+    pNewObjNode->obj.status = OBJSTATUS_NONE;
+
     // insert at front of global list
-    pNewObjNode->pNextGlobal = s_delta.pGlobalObjs;
-    s_delta.pGlobalObjs = pNewObjNode;
+    pNewObjNode->pNextGlobal = pSnapshot->pGlobalObjs;
+    pSnapshot->pGlobalObjs = pNewObjNode;
+
     // insert at front of object list
-    pNewObjNode->pNextObj = s_delta.pObjectHead[objType];
-    s_delta.pObjectHead[objType] = pNewObjNode;
-    // increment obj counts
-    s_delta.numObjs[objType]++;
-    s_delta.globalObjCount++;
-}
-
-static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
-{
-    ll_insert_obj(*pDevice, XGL_OBJECT_TYPE_DEVICE);
-
-    GLV_VK_SNAPSHOT_DEVICE_NODE* pNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
-    memset(pNode, 0, sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
-    pNode->gpu = gpu;
-    pNode->pCreateInfo = (XGL_DEVICE_CREATE_INFO*)malloc(sizeof(XGL_DEVICE_CREATE_INFO));
-    memcpy(pNode->pCreateInfo, pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));
-    pNode->device = *pDevice;
-
-    // insert at front of device list
-    pNode->pNext = pSnapshot->pDevices;
-    pSnapshot->pDevices = pNode;
+    pNewObjNode->pNextObj = pSnapshot->pObjectHead[type];
+    pSnapshot->pObjectHead[type] = pNewObjNode;
 
     // increment count
-    pSnapshot->deviceCount++;
+    pSnapshot->globalObjCount++;
+    pSnapshot->numObjs[type]++;
+
+    return pNewObjNode;
 }
 
-// We usually do not know Obj type when we destroy it so have to fetch
-//  Type from global list w/ ll_destroy_obj()
-//   and then do the full removal from both lists w/ ll_remove_obj_type()
-static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
-    GLV_VK_SNAPSHOT_LL_NODE *pPrev = s_delta.pObjectHead[objType];
+// This is just a helper function to snapshot_remove_object(..). It is not intended for this to be called directly.
+static void snapshot_remove_obj_type(GLV_VK_SNAPSHOT* pSnapshot, void* pObj, XGL_OBJECT_TYPE objType) {
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pObjectHead[objType];
+    GLV_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pObjectHead[objType];
     while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
+        if (pTrav->obj.pVkObject == pObj) {
             pPrev->pNextObj = pTrav->pNextObj;
             // update HEAD of Obj list as needed
-            if (s_delta.pObjectHead[objType] == pTrav)
-                s_delta.pObjectHead[objType] = pTrav->pNextObj;
-            assert(s_delta.numObjs[objType] > 0);
-            s_delta.numObjs[objType]--;
+            if (pSnapshot->pObjectHead[objType] == pTrav)
+            {
+                pSnapshot->pObjectHead[objType] = pTrav->pNextObj;
+            }
+            assert(pSnapshot->numObjs[objType] > 0);
+            pSnapshot->numObjs[objType]--;
             return;
         }
         pPrev = pTrav;
@@ -118,84 +102,132 @@ static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {
     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
 }
 
-// Parse global list to find obj type, then remove obj from obj type list, finally
-//   remove obj from global list
-static void ll_destroy_obj(void* pObj) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
-    GLV_VK_SNAPSHOT_LL_NODE *pPrev = s_delta.pGlobalObjs;
-    while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
-            ll_remove_obj_type(pObj, pTrav->obj.objType);
+// Search global list to find object,
+// if found:
+// remove object from obj_type list using snapshot_remove_obj_type()
+// remove object from global list,
+// return object.
+// else:
+// Report message that we didn't see it get created,
+// return NULL.
+static GLV_VK_SNAPSHOT_LL_NODE* snapshot_remove_object(GLV_VK_SNAPSHOT* pSnapshot, void* pObject)
+{
+    GLV_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pGlobalObjs;
+    GLV_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pGlobalObjs;
+    while (pTrav)
+    {
+        if (pTrav->obj.pVkObject == pObject)
+        {
+            snapshot_remove_obj_type(pSnapshot, pObject, pTrav->obj.objType);
             pPrev->pNextGlobal = pTrav->pNextGlobal;
             // update HEAD of global list if needed
-            if (s_delta.pGlobalObjs == pTrav)
-                s_delta.pGlobalObjs = pTrav->pNextGlobal;
-            assert(s_delta.globalObjCount > 0);
-            s_delta.globalObjCount--;
-            free(pTrav);
-            return;
+            if (pSnapshot->pGlobalObjs == pTrav)
+            {
+                pSnapshot->pGlobalObjs = pTrav->pNextGlobal;
+            }
+            assert(pSnapshot->globalObjCount > 0);
+            pSnapshot->globalObjCount--;
+            return pTrav;
         }
         pPrev = pTrav;
         pTrav = pTrav->pNextGlobal;
     }
+
+    // Object not found.
     char str[1024];
-    sprintf(str, "Unable to remove obj %p. Was it created? Has it already been destroyed?", pObj);
-    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_DESTROY_OBJECT_FAILED, LAYER_ABBREV_STR, str);
+    sprintf(str, "Object %p was not found in the created object list. It should be added as a deleted object.", pObject);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObject, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    return NULL;
+}
+
+// Add a new deleted object node to the list
+static void snapshot_insert_deleted_object(GLV_VK_SNAPSHOT* pSnapshot, void* pObject, XGL_OBJECT_TYPE type)
+{
+    // Create a new node
+    GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pNewObjNode = (GLV_VK_SNAPSHOT_DELETED_OBJ_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_DELETED_OBJ_NODE));
+    memset(pNewObjNode, 0, sizeof(GLV_VK_SNAPSHOT_DELETED_OBJ_NODE));
+    pNewObjNode->objType = type;
+    pNewObjNode->pVkObject = pObject;
+
+    // insert at front of list
+    pNewObjNode->pNextObj = pSnapshot->pDeltaDeletedObjects;
+    pSnapshot->pDeltaDeletedObjects = pNewObjNode;
+
+    // increment count
+    pSnapshot->deltaDeletedObjectCount++;
+}
+
+// Note: the parameters after pSnapshot match the order of vkCreateDevice(..)
+static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
+{
+    GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(pSnapshot, *pDevice, XGL_OBJECT_TYPE_DEVICE);
+    pNode->obj.pStruct = malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
+
+    GLV_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pNode->obj.pStruct;
+    pDevNode->device = *pDevice;
+    pDevNode->pCreateInfo = (XGL_DEVICE_CREATE_INFO*)malloc(sizeof(XGL_DEVICE_CREATE_INFO));
+    memcpy(pDevNode->pCreateInfo, pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));
+
+    // insert at front of device list
+    pNode->pNextObj = pSnapshot->pDevices;
+    pSnapshot->pDevices = pNode;
+
+    // increment count
+    pSnapshot->deviceCount++;
 }
 
 static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_DEVICE device)
 {
-    ll_destroy_obj((void*)device);
+    GLV_VK_SNAPSHOT_LL_NODE* pFoundObject = snapshot_remove_object(pSnapshot, device);
 
-    GLV_VK_SNAPSHOT_DEVICE_NODE *pTrav = pSnapshot->pDevices;
-    GLV_VK_SNAPSHOT_DEVICE_NODE *pPrev = pSnapshot->pDevices;
-    while (pTrav != NULL)
+    if (pFoundObject != NULL)
     {
-        if (pTrav->device == device)
+        GLV_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pDevices;
+        GLV_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pDevices;
+        while (pTrav != NULL)
         {
-            pPrev->pNext = pTrav->pNext;
-            // update HEAD of Obj list as needed
-            if (pSnapshot->pDevices == pTrav)
-                pSnapshot->pDevices = pTrav->pNext;
-
-            // delete the object
-            free(pTrav->pCreateInfo);
-            free(pTrav);
-
-            if (pSnapshot->deviceCount > 0)
+            if (pTrav->obj.pVkObject == device)
             {
-                pSnapshot->deviceCount--;
+                pPrev->pNextObj = pTrav->pNextObj;
+                // update HEAD of Obj list as needed
+                if (pSnapshot->pDevices == pTrav)
+                    pSnapshot->pDevices = pTrav->pNextObj;
+
+                // delete the object
+                if (pTrav->obj.pStruct != NULL)
+                {
+                    GLV_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pTrav->obj.pStruct;
+                    free(pDevNode->pCreateInfo);
+                    free(pDevNode);
+                }
+                free(pTrav);
+
+                if (pSnapshot->deviceCount > 0)
+                {
+                    pSnapshot->deviceCount--;
+                }
+                else
+                {
+                    // TODO: Callback WARNING that too many devices were deleted
+                    assert(!"DeviceCount <= 0 means that too many devices were deleted.");
+                }
+                return;
             }
-            else
-            {
-                // TODO: Callback WARNING that too many devices were deleted
-                assert(!"DeviceCount <= 0 means that too many devices were deleted.");
-            }
-            return;
+            pPrev = pTrav;
+            pTrav = pTrav->pNextObj;
         }
-        pPrev = pTrav;
-        pTrav = pTrav->pNext;
     }
 
     // If the code got here, then the device wasn't in the devices list.
-    // That means we should add this device to the delta deleted items list.
-    GLV_VK_SNAPSHOT_LL_NODE* pNode = (GLV_VK_SNAPSHOT_LL_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_LL_NODE));
-    pNode->obj.pObj = device;
-    pNode->obj.numUses = 0;
-    pNode->obj.objType = XGL_OBJECT_TYPE_DEVICE;
-    pNode->obj.status = OBJSTATUS_NONE;
-    // insert
-    pNode->pNextGlobal = NULL;
-    pNode->pNextObj = pSnapshot->pDeltaDeletedObjects;
-    pSnapshot->pDeltaDeletedObjects = pNode;
-    pSnapshot->deltaDeletedObjectCount++;
+    // That means we should add this device to the deleted items list.
+    snapshot_insert_deleted_object(&s_delta, device, XGL_OBJECT_TYPE_DEVICE);
 }
 
 // Traverse global list and return type for given object
 static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
     while (pTrav) {
-        if (pTrav->obj.pObj == object)
+        if (pTrav->obj.pVkObject == object)
             return pTrav->obj.objType;
         pTrav = pTrav->pNextGlobal;
     }
@@ -208,19 +240,23 @@ static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {
 static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
     while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
+        if (pTrav->obj.pVkObject == pObj) {
             pTrav->obj.numUses++;
             return;
         }
         pTrav = pTrav->pNextObj;
     }
+
     // If we do not find obj, insert it and then increment count
+    // TODO: we can't just create the object, because we don't know what it was created with.
+    // Instead, we need to make a list of referenced objects. When the delta is merged with a snapshot, we'll need
+    // to confirm that the referenced objects actually exist in the snapshot; otherwise I guess the merge should fail.
     char str[1024];
     sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_XGL_OBJECT_TYPE(objType));
     layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 
-    ll_insert_obj(pObj, objType);
-    ll_increment_use_count(pObj, objType);
+//    ll_insert_obj(pObj, objType);
+//    ll_increment_use_count(pObj, objType);
 }
 
 // Set selected flag state for an object node
@@ -228,7 +264,7 @@ static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status
     if (pObj != NULL) {
         GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
         while (pTrav) {
-            if (pTrav->obj.pObj == pObj) {
+            if (pTrav->obj.pVkObject == pObj) {
                 pTrav->obj.status |= status_flag;
                 return;
             }
@@ -247,7 +283,7 @@ static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint)
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[XGL_OBJECT_TYPE_CMD_BUFFER];
 
     while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
+        if (pTrav->obj.pVkObject == pObj) {
             if (stateBindPoint == XGL_STATE_BIND_VIEWPORT) {
                 pTrav->obj.status |= OBJSTATUS_VIEWPORT_BOUND;
             } else if (stateBindPoint == XGL_STATE_BIND_RASTER) {
@@ -272,7 +308,7 @@ static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint)
 static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
     while (pTrav) {
-        if (pTrav->obj.pObj == pObj) {
+        if (pTrav->obj.pVkObject == pObj) {
             pTrav->obj.status &= ~status_flag;
             return;
         }
@@ -292,7 +328,6 @@ static void setGpuInfoState(void *pData) {
 #include "xgl_dispatch_table_helper.h"
 static void initGlaveSnapshot(void)
 {
-
     const char *strOpt;
     // initialize GlaveSnapshot options
     getLayerOptionEnum(LAYER_NAME_STR "ReportLevel", (uint32_t *) &g_reportingLevel);
@@ -329,7 +364,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO*
 {
     XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
     loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pInstance, XGL_OBJECT_TYPE_INSTANCE);
+
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
@@ -338,7 +373,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(XGL_INSTANCE instance)
 {
     XGL_RESULT result = nextTable.DestroyInstance(instance);
     loader_platform_thread_lock_mutex(&objLock);
-    ll_destroy_obj((void*)instance);
+    snapshot_remove_object(&s_delta, (void*)instance);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
@@ -396,10 +431,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
         {
             GLV_VK_SNAPSHOT_LL_NODE *pDel = pTrav;
             pTrav = pTrav->pNextGlobal;
-            ll_destroy_obj((void*)(pDel->obj.pObj));
+            snapshot_remove_object(&s_delta, (void*)(pDel->obj.pVkObject));
         } else {
             char str[1024];
-            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);
+            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pVkObject, pTrav->obj.numUses);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, GLVSNAPSHOT_OBJECT_LEAK, LAYER_ABBREV_STR, str);
             pTrav = pTrav->pNextGlobal;
         }
@@ -484,9 +519,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_M
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pMem, XGL_OBJECT_TYPE_GPU_MEMORY);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pMem, XGL_OBJECT_TYPE_GPU_MEMORY);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -494,7 +533,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
 {
     XGL_RESULT result = nextTable.FreeMemory(mem);
     loader_platform_thread_lock_mutex(&objLock);
-    ll_destroy_obj((void*)mem);
+    snapshot_remove_object(&s_delta, (void*)mem);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
@@ -589,7 +628,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
 {
     XGL_RESULT result = nextTable.DestroyObject(object);
     loader_platform_thread_lock_mutex(&objLock);
-    ll_destroy_obj((void*)object);
+    snapshot_remove_object(&s_delta, (void*)object);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
@@ -636,9 +675,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_F
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pFence, XGL_OBJECT_TYPE_FENCE);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pFence, XGL_OBJECT_TYPE_FENCE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -667,9 +710,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueueSemaphore(XGL_DEVICE device, co
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateQueueSemaphore(device, pCreateInfo, pSemaphore);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pSemaphore, XGL_OBJECT_TYPE_QUEUE_SEMAPHORE);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSemaphore, XGL_OBJECT_TYPE_QUEUE_SEMAPHORE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -691,9 +738,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_E
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pEvent, XGL_OBJECT_TYPE_EVENT);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pEvent, XGL_OBJECT_TYPE_EVENT);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -730,9 +781,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const X
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pQueryPool, XGL_OBJECT_TYPE_QUERY_POOL);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pQueryPool, XGL_OBJECT_TYPE_QUERY_POOL);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -760,9 +815,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pBuffer, XGL_OBJECT_TYPE_BUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pBuffer, XGL_OBJECT_TYPE_BUFFER);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -772,9 +831,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const 
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pView, XGL_OBJECT_TYPE_BUFFER_VIEW);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, XGL_OBJECT_TYPE_BUFFER_VIEW);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -784,9 +847,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_I
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pImage, XGL_OBJECT_TYPE_IMAGE);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, XGL_OBJECT_TYPE_IMAGE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -823,9 +890,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pView, XGL_OBJECT_TYPE_IMAGE_VIEW);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, XGL_OBJECT_TYPE_IMAGE_VIEW);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -835,9 +906,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE devic
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pView, XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -847,9 +922,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, 
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pView, XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -859,9 +938,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateShader(XGL_DEVICE device, const XGL_
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pShader, XGL_OBJECT_TYPE_SHADER);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pShader, XGL_OBJECT_TYPE_SHADER);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -871,9 +954,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pPipeline, XGL_OBJECT_TYPE_PIPELINE);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pPipeline, XGL_OBJECT_TYPE_PIPELINE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -883,9 +970,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, c
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pPipeline, XGL_OBJECT_TYPE_PIPELINE);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pPipeline, XGL_OBJECT_TYPE_PIPELINE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -913,9 +1004,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreatePipelineDelta(device, p1, p2, delta);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*delta, XGL_OBJECT_TYPE_PIPELINE_DELTA);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *delta, XGL_OBJECT_TYPE_PIPELINE_DELTA);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -925,9 +1020,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pSampler, XGL_OBJECT_TYPE_SAMPLER);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSampler, XGL_OBJECT_TYPE_SAMPLER);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -937,9 +1036,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDescriptorSetLayout(device, stageFlags, pSetBindPoints, priorSetLayout, pSetLayoutInfoList, pSetLayout);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pSetLayout, XGL_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSetLayout, XGL_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -967,9 +1070,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, 
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDescriptorRegion(device, regionUsage, maxSets, pCreateInfo, pDescriptorRegion);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pDescriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pDescriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -988,10 +1095,14 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
     ll_increment_use_count((void*)descriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.AllocDescriptorSets(descriptorRegion, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
-    for (uint32_t i = 0; i < *pCount; i++) {
-        loader_platform_thread_lock_mutex(&objLock);
-        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);
-        loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        for (uint32_t i = 0; i < *pCount; i++) {
+            loader_platform_thread_lock_mutex(&objLock);
+            GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);
+            pNode->obj.pStruct = NULL;
+            loader_platform_thread_unlock_mutex(&objLock);
+        }
     }
     return result;
 }
@@ -1018,9 +1129,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(XGL_DEVICE devi
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pState, XGL_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, XGL_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1030,9 +1145,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(XGL_DEVICE device
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pState, XGL_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, XGL_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1042,9 +1161,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(XGL_DEVICE de
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pState, XGL_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, XGL_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1054,9 +1177,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE 
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pState, XGL_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, XGL_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1066,9 +1193,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pCmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pCmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1382,9 +1513,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(XGL_DEVICE device, const
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pFramebuffer, XGL_OBJECT_TYPE_FRAMEBUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pFramebuffer, XGL_OBJECT_TYPE_FRAMEBUFFER);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1394,9 +1529,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const 
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pRenderPass, XGL_OBJECT_TYPE_RENDER_PASS);
-    loader_platform_thread_unlock_mutex(&objLock);
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pRenderPass, XGL_OBJECT_TYPE_RENDER_PASS);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1546,10 +1685,19 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE de
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     XGL_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_insert_obj((void*)*pImage, XGL_OBJECT_TYPE_IMAGE);
-    ll_insert_obj((void*)*pMem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);
-    loader_platform_thread_unlock_mutex(&objLock);
+
+    if (result == XGL_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, XGL_OBJECT_TYPE_IMAGE);
+        pNode->obj.pStruct = NULL;
+
+        GLV_VK_SNAPSHOT_LL_NODE* pMemNode = snapshot_insert_object(&s_delta, *pMem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);
+        pMemNode->obj.pStruct = NULL;
+
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
     return result;
 }
 
@@ -1601,11 +1749,11 @@ void glvSnapshotPrintDelta()
     if (s_delta.globalObjCount > 0)
     {
         sprintf(str, "======== DELTA SNAPSHOT Created Objects:");
-        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pTrav != NULL)
         {
-            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pVkObject);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pTrav = pTrav->pNextGlobal;
         }
     }
@@ -1613,28 +1761,28 @@ void glvSnapshotPrintDelta()
     // print devices
     if (s_delta.deviceCount > 0)
     {
-        GLV_VK_SNAPSHOT_DEVICE_NODE* pDeviceNode = s_delta.pDevices;
+        GLV_VK_SNAPSHOT_LL_NODE* pDeviceNode = s_delta.pDevices;
         sprintf(str, "======== DELTA SNAPSHOT Devices:");
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pDeviceNode != NULL)
         {
-            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE_DEVICE), pDeviceNode->device);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDeviceNode->device, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
-            pDeviceNode = pDeviceNode->pNext;
+            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE_DEVICE), pDeviceNode->obj.pVkObject);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDeviceNode->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            pDeviceNode = pDeviceNode->pNextObj;
         }
     }
 
     // print deleted objects
     if (s_delta.deltaDeletedObjectCount > 0)
     {
-        GLV_VK_SNAPSHOT_LL_NODE* pDelObjNode = s_delta.pDeltaDeletedObjects;
+        GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pDelObjNode = s_delta.pDeltaDeletedObjects;
         sprintf(str, "======== DELTA SNAPSHOT Deleted Objects:");
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pDelObjNode != NULL)
         {
-            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pDelObjNode->obj.objType), pDelObjNode->obj.pObj);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDelObjNode->obj.pObj, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
-            pDelObjNode = pDelObjNode->pNextGlobal;
+            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pDelObjNode->objType), pDelObjNode->pVkObject);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDelObjNode->pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            pDelObjNode = pDelObjNode->pNextObj;
         }
     }
 }

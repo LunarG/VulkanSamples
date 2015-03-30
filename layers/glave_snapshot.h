@@ -60,6 +60,7 @@ typedef enum _OBJECT_STATUS
 // Object type enum
 typedef enum _XGL_OBJECT_TYPE
 {
+    XGL_OBJECT_TYPE_UNKNOWN,
     XGL_OBJECT_TYPE_SAMPLER,
     XGL_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT,
     XGL_OBJECT_TYPE_DESCRIPTOR_SET,
@@ -91,7 +92,6 @@ typedef enum _XGL_OBJECT_TYPE
     XGL_OBJECT_TYPE_CMD_BUFFER,
     XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY,
 
-    XGL_OBJECT_TYPE_UNKNOWN,
     XGL_NUM_OBJECT_TYPE,
     XGL_OBJECT_TYPE_ANY, // Allow global object list to be queried/retrieved
 } XGL_OBJECT_TYPE;
@@ -166,16 +166,15 @@ static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
 
 // Node that stores information about an object
 typedef struct _GLV_VK_SNAPSHOT_OBJECT_NODE {
-    void            *pObj;
+    void*           pVkObject;
     XGL_OBJECT_TYPE objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
+    void*           pStruct;    //< optionally points to a device-specific struct (ie, GLV_VK_SNAPSHOT_DEVICE_NODE)
 } GLV_VK_SNAPSHOT_OBJECT_NODE;
 
 // Node that stores information about an XGL_DEVICE
 typedef struct _GLV_VK_SNAPSHOT_DEVICE_NODE {
-    struct _GLV_VK_SNAPSHOT_DEVICE_NODE* pNext;
-
     // This object
     XGL_DEVICE device;
 
@@ -197,6 +196,14 @@ typedef struct _GLV_VK_SNAPSHOT_LL_NODE {
     GLV_VK_SNAPSHOT_OBJECT_NODE obj;
 } GLV_VK_SNAPSHOT_LL_NODE;
 
+// Linked-List node to identify an object that has been deleted,
+// but the delta snapshot never saw it get created.
+typedef struct _GLV_VK_SNAPSHOT_DELETED_OBJ_NODE {
+    struct _GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pNextObj;
+    void* pVkObject;
+    XGL_OBJECT_TYPE objType;
+} GLV_VK_SNAPSHOT_DELETED_OBJ_NODE;
+
 //=============================================================================
 // Main structure for a GLAVE vulkan snapshot.
 //=============================================================================
@@ -210,15 +217,14 @@ typedef struct _GLV_VK_SNAPSHOT {
     uint64_t numObjs[XGL_NUM_OBJECT_TYPE];
     GLV_VK_SNAPSHOT_LL_NODE *pObjectHead[XGL_NUM_OBJECT_TYPE];
 
-
     // List of created devices and [potentially] hierarchical tree of the objects on it.
     // This is used to represent ownership of the objects
     uint64_t deviceCount;
-    GLV_VK_SNAPSHOT_DEVICE_NODE* pDevices;
+    GLV_VK_SNAPSHOT_LL_NODE* pDevices;
 
     // This is used to support snapshot deltas.
     uint64_t deltaDeletedObjectCount;
-    GLV_VK_SNAPSHOT_LL_NODE* pDeltaDeletedObjects;
+    GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pDeltaDeletedObjects;
 } GLV_VK_SNAPSHOT;
 
 
