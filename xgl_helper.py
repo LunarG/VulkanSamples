@@ -441,7 +441,7 @@ class StructWrapperGen:
         class_def = []
         if 'xgl' == self.api: # Mantle doesn't have pNext to worry about
             class_def.append(self._generateDynamicPrintFunctions())
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             class_def.append("\n// %s class definition" % self.get_class_name(s))
             class_def.append(self._generateConstructorDefinitions(s))
             class_def.append(self._generateDestructorDefinitions(s))
@@ -567,7 +567,7 @@ class StructWrapperGen:
         sh_funcs.append('// work-around.')
         sh_funcs.append('#define snprintf _snprintf')
         sh_funcs.append('#endif // _WIN32\n')
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             p_out = ""
             p_args = ""
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
@@ -947,10 +947,10 @@ class StructWrapperGen:
     def _generateValidateHelperFunctions(self):
         sh_funcs = []
         # We do two passes, first pass just generates prototypes for all the functsions
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
             for m in sorted(self.struct_dict[s]):
                 # TODO : Need to handle arrays of enums like in XGL_RENDER_PASS_CREATE_INFO struct
@@ -979,10 +979,10 @@ class StructWrapperGen:
     def _generateSizeHelperFunctions(self):
         sh_funcs = []
         # We do two passes, first pass just generates prototypes for all the functsions
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             skip_list = [] # Used when struct elements need to be skipped b/c size already accounted for 
             sh_funcs.append('size_t %s(const %s* pStruct)\n{' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
             indent = '    '
@@ -1134,7 +1134,7 @@ class StructWrapperGen:
     
     def _generateClassDeclaration(self):
         class_decl = []
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             class_decl.append("\n//class declaration")
             class_decl.append("class %s\n{\npublic:" % self.get_class_name(s))
             class_decl.append(self._generateConstructorDeclarations(s))
@@ -1171,7 +1171,7 @@ class EnumCodeGen:
 
     def _generateVHBody(self):
         body = []
-        for bet in self.et_dict:
+        for bet in sorted(self.et_dict):
             fet = self.tf_dict[bet]
             body.append("static inline uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
@@ -1184,7 +1184,7 @@ class EnumCodeGen:
         body = []
 #        with open(self.out_file, "a") as hf:
             # bet == base_enum_type, fet == final_enum_type
-        for bet in self.et_dict:
+        for bet in sorted(self.et_dict):
             fet = self.tf_dict[bet]
             body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
             for e in sorted(self.et_dict[bet]):
@@ -1319,7 +1319,7 @@ class GraphVizGen:
         array_func_list.append('xgl_sampler_image_view_info')
         array_func_list.append('xgl_descriptor_type_count')
         # For first pass, generate prototype
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
             if s.lower().strip("_") in array_func_list:
                 if s.lower().strip("_") in ['xgl_buffer_view_attach_info', 'xgl_image_view_attach_info']:
@@ -1327,7 +1327,7 @@ class GraphVizGen:
                 else:
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
         gv_funcs.append('\n')
-        for s in self.struct_dict:
+        for s in sorted(self.struct_dict):
             p_out = ""
             p_args = ""
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
@@ -1480,7 +1480,7 @@ class GraphVizGen:
 #        
 #    def _generateBody(self):
 #        body = []
-#        for s in self.struc_dict:
+#        for s in sorted(self.struc_dict):
 #            field_num = 1
 #            body.append('"%s" [\nlabel = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">%s</TD></TR>' % (s, typedef_fwd_dict[s]))
 #            for m in sorted(self.struc_dict[s]):
