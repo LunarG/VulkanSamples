@@ -352,8 +352,6 @@ class Subcommand(object):
                                         'finalize_txt': 'default'},
                            'pDescriptorSets': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets)',
                                                'finalize_txt': 'default'},
-                           'pUpdateChain': {'add_txt': 'add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain)',
-                                            'finalize_txt': 'default'},
                            'XGL_SHADER_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_SHADER_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
                                                       'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'XGL_FRAMEBUFFER_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_FRAMEBUFFER_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO), pCreateInfo->pColorAttachments);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
@@ -368,8 +366,8 @@ class Subcommand(object):
                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
                            'XGL_GRAPHICS_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList), sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), pSetLayoutInfoList);\n    if (pSetLayoutInfoList)\n        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext)',
-                                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayoutInfoList))'},
+                           'XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'if (pCreateInfo)\n        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), pCreateInfo)',
+                                                                     'finalize_txt': '// pCreateInfo finalized in add_create_ds_layout_to_trace_packet'},
                            'XGL_DESCRIPTOR_POOL_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_DESCRIPTOR_POOL_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'XGL_COMPUTE_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);\n    add_pipeline_shader_to_trace_packet(pHeader, (XGL_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs)',
@@ -401,16 +399,10 @@ class Subcommand(object):
     def _get_packet_size(self, params):
         ps = [] # List of elements to be added together to account for packet size for given params
         skip_list = [] # store params that are already accounted for so we don't count them twice
-        # Dict of specific params with unique custom sizes
-        custom_size_dict = {'pSetBindPoints': '(XGL_SHADER_STAGE_COMPUTE * sizeof(uint32_t))', # Accounting for largest possible array
-                            }
         for p in params:
             #First handle custom cases
-            if p.name in ['pCreateInfo', 'pUpdateChain', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocInfo']:
+            if p.name in ['pCreateInfo', 'pBeginInfo', 'pAllocInfo']:
                 ps.append('get_struct_chain_size((void*)%s)' % p.name)
-                skip_list.append(p.name)
-            elif p.name in custom_size_dict:
-                ps.append(custom_size_dict[p.name])
                 skip_list.append(p.name)
             # Skip any params already handled
             if p.name in skip_list:
@@ -501,7 +493,7 @@ class Subcommand(object):
                 # functions that have non-standard sequence of  packet creation and calling real function
                 # NOTE: Anytime we call the function before CREATE_TRACE_PACKET, need to add custom code for correctly tracking API call time
                 if proto.name in ['CreateFramebuffer', 'CreateRenderPass', 'CreateDynamicViewportState',
-                                  'CreateDescriptorPool']:
+                                  'CreateDescriptorPool', 'UpdateDescriptors']:
                     # these are regular case as far as sequence of tracing but have some custom size element
                     if 'CreateFramebuffer' == proto.name:
                         func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(XGL_DEPTH_STENCIL_BIND_INFO) : 0;')
@@ -525,6 +517,15 @@ class Subcommand(object):
                     elif 'CreateDescriptorPool' == proto.name:
                         func_body.append('    uint32_t rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
                         func_body.append('    CREATE_TRACE_PACKET(xglCreateDescriptorPool,  get_struct_chain_size((void*)pCreateInfo) + sizeof(XGL_DESCRIPTOR_POOL));')
+                    elif 'UpdateDescriptors' == proto.name:
+                        func_body.append('    uint32_t i;')
+                        func_body.append('    size_t customSize=0;')
+                        func_body.append('    for (i = 0; i < updateCount; i++)')
+                        func_body.append('    {')
+                        func_body.append('        customSize += get_struct_chain_size(ppUpdateArray[i]);')
+                        func_body.append('        customSize += sizeof(intptr_t);')
+                        func_body.append('    }')
+                        func_body.append('    CREATE_TRACE_PACKET(xglUpdateDescriptors,  customSize);')
                     func_body.append('    %sreal_xgl%s;' % (return_txt, proto.c_call()))
                 else:
                     if (0 == len(packet_size)):
@@ -536,18 +537,26 @@ class Subcommand(object):
                     func_body.append('    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;')
                 func_body.append('    pPacket = interpret_body_as_xgl%s(pHeader);' % proto.name)
                 func_body.append('\n'.join(raw_packet_update_list))
-                for pp_dict in ptr_packet_update_list: #buff_ptr_indices:
-                    func_body.append('    %s;' % (pp_dict['add_txt']))
-                if 'void' not in proto.ret or '*' in proto.ret:
-                    func_body.append('    pPacket->result = result;')
-                for pp_dict in ptr_packet_update_list:
-                    if ('DEVICE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('pUpdateChain' != proto.params[pp_dict['index']].name):
-                        func_body.append('    %s;' % (pp_dict['finalize_txt']))
-                func_body.append('    FINISH_TRACE_PACKET();')
-                if 'AllocMemory' in proto.name:
-                    func_body.append('    add_new_handle_to_mem_info(*pMem, pAllocInfo->allocationSize, NULL);')
-                elif 'FreeMemory' in proto.name:
-                    func_body.append('    rm_handle_from_mem_info(mem);')
+                if 'UpdateDescriptors' == proto.name:
+                    func_body.append('    // add buffer which is an array of pointers')
+                    func_body.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->ppUpdateArray), updateCount * sizeof(intptr_t), ppUpdateArray);')
+                    func_body.append('    // add all the sub buffers with descriptor updates')
+                    func_body.append('    add_update_descriptors_to_trace_packet(pHeader, updateCount, (void ***) &pPacket->ppUpdateArray, ppUpdateArray);')
+                    func_body.append('    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->ppUpdateArray));')
+                    func_body.append('    FINISH_TRACE_PACKET();')
+                else:
+                    for pp_dict in ptr_packet_update_list: #buff_ptr_indices:
+                        func_body.append('    %s;' % (pp_dict['add_txt']))
+                    if 'void' not in proto.ret or '*' in proto.ret:
+                        func_body.append('    pPacket->result = result;')
+                    for pp_dict in ptr_packet_update_list:
+                        if ('DEVICE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('ppUpdateArray' != proto.params[pp_dict['index']].name):
+                            func_body.append('    %s;' % (pp_dict['finalize_txt']))
+                    func_body.append('    FINISH_TRACE_PACKET();')
+                    if 'AllocMemory' in proto.name:
+                        func_body.append('    add_new_handle_to_mem_info(*pMem, pAllocInfo->allocationSize, NULL);')
+                    elif 'FreeMemory' in proto.name:
+                        func_body.append('    rm_handle_from_mem_info(mem);')
                 if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    return result;')
                 func_body.append('}\n')
@@ -851,17 +860,17 @@ class Subcommand(object):
                                                                           '    void** ppLocalMemBarriers = (void**)&pBarrier->ppMemBarriers[i];\n',
                                                                           '    *ppLocalMemBarriers = (void*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pBarrier->ppMemBarriers[i]);\n',
                                                                           '}']},
-                             'CreateDescriptorSetLayout' : {'param': 'pSetLayoutInfoList', 'txt': ['if (pPacket->pSetLayoutInfoList->sType == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) {\n',
-                                                                                         '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
-                                                                                         '    void** ppNextVoidPtr = (void**)&(pPacket->pSetLayoutInfoList->pNext);\n',
-                                                                                         '    *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSetLayoutInfoList->pNext);\n',
-                                                                                         '    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pPacket->pSetLayoutInfoList->pNext;\n',
-                                                                                         '    while (NULL != pNext)\n', '    {\n',
+                             'CreateDescriptorSetLayout' : {'param': 'pCreateInfo', 'txt': ['if (pPacket->pCreateInfo->sType == XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) {\n',
+                                                                                         '    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                                                                                         '    do\n', '    {\n',
+                                                                                         '        // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
+                                                                                         '        void** ppNextVoidPtr = (void**)&(pNext->pNext);\n',
+                                                                                         '        *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '        switch(pNext->sType)\n', '        {\n',
                                                                                          '            case XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO:\n',
                                                                                          '            {\n' ,
-                                                                                         '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                XGL_DESCRIPTOR_SET_LAYOUT_BINDING** ppBinding = (XGL_DESCRIPTOR_SET_LAYOUT_BINDING**)&pNext->pBinding;\n',
+                                                                                         '                *ppBinding = (XGL_DESCRIPTOR_SET_LAYOUT_BINDING*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pBinding);\n',
                                                                                          '                break;\n',
                                                                                          '            }\n',
                                                                                          '            default:\n',
@@ -872,7 +881,7 @@ class Subcommand(object):
                                                                                          '            }\n',
                                                                                          '        }\n',
                                                                                          '        pNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pNext->pNext;\n',
-                                                                                         '     }\n',
+                                                                                         '     }  while (NULL != pNext);\n',
                                                                                          '} else {\n',
                                                                                          '     // This is unexpected.\n',
                                                                                          '     glv_LogError("CreateDescriptorSetLayout must have LayoutInfoList stype of XGL_STRCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO\\n");\n',

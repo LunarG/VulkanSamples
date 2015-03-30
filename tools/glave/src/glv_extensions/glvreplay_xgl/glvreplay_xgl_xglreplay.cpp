@@ -522,28 +522,33 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglUpdateDescriptors(st
     // We have to remap handles internal to the structures so save the handles prior to remap and then restore
     // Rather than doing a deep memcpy of the entire struct and fixing any intermediate pointers, do save and restores via STL queue
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    XGL_UPDATE_SAMPLERS* pUpdateChain = (XGL_UPDATE_SAMPLERS*)pPacket->pUpdateChain;
     std::queue<XGL_SAMPLER> saveSamplers;
     std::queue<XGL_BUFFER_VIEW> saveBufferViews;
     std::queue<XGL_IMAGE_VIEW> saveImageViews;
     std::queue<XGL_DESCRIPTOR_SET> saveDescSets;
-    while (pUpdateChain) {
-        switch(pUpdateChain->sType)
+    uint32_t j;
+    for (j = 0; j < pPacket->updateCount; j++)
+    {
+        XGL_UPDATE_SAMPLERS* pUpdateArray = (XGL_UPDATE_SAMPLERS*)pPacket->ppUpdateArray[j];
+        switch(pUpdateArray->sType)
         {
             case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLERS*)pUpdateChain)->count; i++) {
-                    XGL_SAMPLER* pLocalSampler = (XGL_SAMPLER*) &((XGL_UPDATE_SAMPLERS*)pUpdateChain)->pSamplers[i];
+            {
+                for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLERS*)pUpdateArray)->count; i++)
+                {
+                    XGL_SAMPLER* pLocalSampler = (XGL_SAMPLER*) &((XGL_UPDATE_SAMPLERS*)pUpdateArray)->pSamplers[i];
                     saveSamplers.push(*pLocalSampler);
-                    *pLocalSampler = m_objMapper.remap(((XGL_UPDATE_SAMPLERS*)pUpdateChain)->pSamplers[i]);
+                    *pLocalSampler = m_objMapper.remap(((XGL_UPDATE_SAMPLERS*)pUpdateArray)->pSamplers[i]);
                 }
                 break;
+            }
             case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
             {
-                XGL_UPDATE_SAMPLER_TEXTURES *pUST = (XGL_UPDATE_SAMPLER_TEXTURES *) pUpdateChain;
+                XGL_UPDATE_SAMPLER_TEXTURES *pUST = (XGL_UPDATE_SAMPLER_TEXTURES *) pUpdateArray;
                 for (uint32_t i = 0; i < pUST->count; i++) {
-                    XGL_SAMPLER *pLocalSampler = (XGL_SAMPLER *) &pUST->pSamplerImageViews[i].pSampler;
+                    XGL_SAMPLER *pLocalSampler = (XGL_SAMPLER *) &pUST->pSamplerImageViews[i].sampler;
                     saveSamplers.push(*pLocalSampler);
-                    *pLocalSampler = m_objMapper.remap(pUST->pSamplerImageViews[i].pSampler);
+                    *pLocalSampler = m_objMapper.remap(pUST->pSamplerImageViews[i].sampler);
                     XGL_IMAGE_VIEW *pLocalView = (XGL_IMAGE_VIEW *) &pUST->pSamplerImageViews[i].pImageView->view;
                     saveImageViews.push(*pLocalView);
                     *pLocalView = m_objMapper.remap(pUST->pSamplerImageViews[i].pImageView->view);
@@ -552,51 +557,56 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglUpdateDescriptors(st
             }
             case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
             {
-                XGL_UPDATE_IMAGES *pUI = (XGL_UPDATE_IMAGES*) pUpdateChain;
+                XGL_UPDATE_IMAGES *pUI = (XGL_UPDATE_IMAGES*) pUpdateArray;
                 for (uint32_t i = 0; i < pUI->count; i++) {
-                    XGL_IMAGE_VIEW* pLocalView = (XGL_IMAGE_VIEW*) &pUI->pImageViews[i]->view;
+                    XGL_IMAGE_VIEW* pLocalView = (XGL_IMAGE_VIEW*) &pUI->pImageViews[i].view;
                     saveImageViews.push(*pLocalView);
-                    *pLocalView = m_objMapper.remap(pUI->pImageViews[i]->view);
+                    *pLocalView = m_objMapper.remap(pUI->pImageViews[i].view);
                 }
                 break;
             }
             case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
             {
-                XGL_UPDATE_BUFFERS *pUB = (XGL_UPDATE_BUFFERS *) pUpdateChain;
+                XGL_UPDATE_BUFFERS *pUB = (XGL_UPDATE_BUFFERS *) pUpdateArray;
                 for (uint32_t i = 0; i < pUB->count; i++) {
-                    XGL_BUFFER_VIEW* pLocalView = (XGL_BUFFER_VIEW*) &pUB->pBufferViews[i]->view;
+                    XGL_BUFFER_VIEW* pLocalView = (XGL_BUFFER_VIEW*) &pUB->pBufferViews[i].view;
                     saveBufferViews.push(*pLocalView);
-                    *pLocalView = m_objMapper.remap(pUB->pBufferViews[i]->view);
+                    *pLocalView = m_objMapper.remap(pUB->pBufferViews[i].view);
                 }
                 break;
             }
             case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
-                saveDescSets.push(((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet);
-                ((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet = m_objMapper.remap(((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet);
+            {
+                saveDescSets.push(((XGL_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet);
+                ((XGL_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet = m_objMapper.remap(((XGL_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet);
                 break;
+            }
             default:
+            {
                 assert(0);
                 break;
+            }
         }
-        pUpdateChain = (XGL_UPDATE_SAMPLERS*) pUpdateChain->pNext;
+        pUpdateArray = (XGL_UPDATE_SAMPLERS*) pUpdateArray->pNext;
     }
-    m_xglFuncs.real_xglUpdateDescriptors(m_objMapper.remap(pPacket->descriptorSet), pPacket->pUpdateChain);
-    pUpdateChain = (XGL_UPDATE_SAMPLERS*) pPacket->pUpdateChain;
-    while (pUpdateChain) {
-        switch(pUpdateChain->sType)
+    m_xglFuncs.real_xglUpdateDescriptors(m_objMapper.remap(pPacket->descriptorSet), pPacket->updateCount, pPacket->ppUpdateArray);
+    for (j = 0; j < pPacket->updateCount; j++)
+    {
+        XGL_UPDATE_SAMPLERS* pUpdateArray = (XGL_UPDATE_SAMPLERS*)pPacket->ppUpdateArray[j];
+        switch(pUpdateArray->sType)
         {
             case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLERS*)pUpdateChain)->count; i++) {
-                    XGL_SAMPLER* pLocalSampler = (XGL_SAMPLER*) &((XGL_UPDATE_SAMPLERS*)pUpdateChain)->pSamplers[i];
+                for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLERS*)pUpdateArray)->count; i++) {
+                    XGL_SAMPLER* pLocalSampler = (XGL_SAMPLER*) &((XGL_UPDATE_SAMPLERS*)pUpdateArray)->pSamplers[i];
                     *pLocalSampler = saveSamplers.front();
                     saveSamplers.pop();
                 }
                 break;
             case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
             {
-                XGL_UPDATE_SAMPLER_TEXTURES *pUST = (XGL_UPDATE_SAMPLER_TEXTURES *) pUpdateChain;
+                XGL_UPDATE_SAMPLER_TEXTURES *pUST = (XGL_UPDATE_SAMPLER_TEXTURES *) pUpdateArray;
                 for (uint32_t i = 0; i < pUST->count; i++) {
-                    XGL_SAMPLER *plocalSampler = (XGL_SAMPLER *) &pUST->pSamplerImageViews[i].pSampler;
+                    XGL_SAMPLER *plocalSampler = (XGL_SAMPLER *) &pUST->pSamplerImageViews[i].sampler;
                     *plocalSampler = saveSamplers.front();
                     saveSamplers.pop();
                     XGL_IMAGE_VIEW *pLocalView = (XGL_IMAGE_VIEW *) &pUST->pSamplerImageViews[i].pImageView->view;
@@ -607,9 +617,9 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglUpdateDescriptors(st
             }
             case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
             {
-                XGL_UPDATE_IMAGES *pUI = (XGL_UPDATE_IMAGES*) pUpdateChain;
+                XGL_UPDATE_IMAGES *pUI = (XGL_UPDATE_IMAGES*) pUpdateArray;
                 for (uint32_t i = 0; i < pUI->count; i++) {
-                    XGL_IMAGE_VIEW* pLocalView = (XGL_IMAGE_VIEW*) &pUI->pImageViews[i]->view;
+                    XGL_IMAGE_VIEW* pLocalView = (XGL_IMAGE_VIEW*) &pUI->pImageViews[i].view;
                     *pLocalView = saveImageViews.front();
                     saveImageViews.pop();
                 }
@@ -617,26 +627,24 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglUpdateDescriptors(st
             }
             case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
             {
-                XGL_UPDATE_BUFFERS *pUB = (XGL_UPDATE_BUFFERS *) pUpdateChain;
+                XGL_UPDATE_BUFFERS *pUB = (XGL_UPDATE_BUFFERS *) pUpdateArray;
                 for (uint32_t i = 0; i < pUB->count; i++) {
-                    XGL_BUFFER_VIEW* pLocalView = (XGL_BUFFER_VIEW*) &pUB->pBufferViews[i]->view;
+                    XGL_BUFFER_VIEW* pLocalView = (XGL_BUFFER_VIEW*) &pUB->pBufferViews[i].view;
                     *pLocalView = saveBufferViews.front();
                     saveBufferViews.pop();
                 }
                 break;
             }
             case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
-                ((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet = saveDescSets.front();
+                ((XGL_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet = saveDescSets.front();
                 saveDescSets.pop();
-                //pFreeMe = (XGL_UPDATE_SAMPLERS*)pLocalUpdateChain;
                 //pLocalUpdateChain = (void*)((XGL_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;
-                //free(pFreeMe);
                 break;
             default:
                 assert(0);
                 break;
         }
-        pUpdateChain = (XGL_UPDATE_SAMPLERS*) pUpdateChain->pNext;
+        pUpdateArray = (XGL_UPDATE_SAMPLERS*) pUpdateArray->pNext;
     }
     return returnValue;
 }
@@ -645,21 +653,48 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglCreateDescriptorSetL
 {
     XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    XGL_SAMPLER saveSampler;
-    if (pPacket->pSetLayoutInfoList != NULL) {
-        XGL_SAMPLER *pSampler = (XGL_SAMPLER *) &pPacket->pSetLayoutInfoList->immutableSampler;
-        saveSampler = pPacket->pSetLayoutInfoList->immutableSampler;
-        *pSampler = m_objMapper.remap(saveSampler);
+    XGL_SAMPLER *pSaveSampler;
+    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *pInfo = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *) pPacket->pCreateInfo;
+    if (pInfo != NULL)
+    {
+        size_t bytesAlloc = 0;
+        for (unsigned int i = 0; i < pInfo->count; i++)
+        {
+            XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBind = (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) &pInfo->pBinding[i];
+            bytesAlloc += pLayoutBind->count * sizeof(XGL_SAMPLER);
+        }
+        pSaveSampler = (XGL_SAMPLER *) glv_malloc(bytesAlloc);
+        XGL_SAMPLER *pArray = pSaveSampler;
+        for (unsigned int i = 0; i < pInfo->count; i++)
+        {
+            XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBind = (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) &pInfo->pBinding[i];
+            for (unsigned int j = 0; j < pLayoutBind->count; j++)
+            {
+                XGL_SAMPLER *pOrigSampler = (XGL_SAMPLER *) pLayoutBind->pImmutableSamplers + j;
+                *pArray++ = *((XGL_SAMPLER *) pLayoutBind->pImmutableSamplers + j);
+                *pOrigSampler = m_objMapper.remap(*pOrigSampler);
+            }
+        }
     }
     XGL_DESCRIPTOR_SET_LAYOUT setLayout;
-    replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayout(m_objMapper.remap(pPacket->device), pPacket->stageFlags, pPacket->pSetBindPoints, m_objMapper.remap(pPacket->priorSetLayout), pPacket->pSetLayoutInfoList, &setLayout);
+    replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayout(m_objMapper.remap(pPacket->device), pPacket->pCreateInfo, &setLayout);
     if (replayResult == XGL_SUCCESS)
     {
         m_objMapper.add_to_map(pPacket->pSetLayout, &setLayout);
     }
-    if (pPacket->pSetLayoutInfoList != NULL) {
-        XGL_SAMPLER *pSampler = (XGL_SAMPLER *) &pPacket->pSetLayoutInfoList->immutableSampler;
-        *pSampler = saveSampler;
+    if (pPacket->pCreateInfo != NULL)
+    {
+        XGL_SAMPLER *pArray = pSaveSampler;
+        for (unsigned int i = 0; i < pInfo->count; i++)
+        {
+            XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBind = (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) &pInfo->pBinding[i];
+            for (unsigned int j = 0; j < pLayoutBind->count; j++)
+            {
+                XGL_SAMPLER *pOrigSampler = (XGL_SAMPLER *) pLayoutBind->pImmutableSamplers + j;
+                *pOrigSampler = *pArray++;
+            }
+        }
+        glv_free(pSaveSampler);
     }
     CHECK_RETURN_VALUE(xglCreateDescriptorSetLayout);
     return returnValue;
@@ -673,7 +708,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglCreateGraphicsPipeli
     struct shaderPair saveShader[10];
     unsigned int idx = 0;
     memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
-    createInfo.lastSetLayout = m_objMapper.remap(createInfo.lastSetLayout);
+    createInfo.pSetLayoutChain = m_objMapper.remap(createInfo.pSetLayoutChain);
     // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;
     XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;

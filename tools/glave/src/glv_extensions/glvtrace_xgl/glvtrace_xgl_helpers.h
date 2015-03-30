@@ -331,10 +331,20 @@ static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeade
     while (pInNow != NULL)
     {
         XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO** ppOutNow = ppOutNext;
+        size_t i;
         ppOutNext = NULL;
         glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), pInNow);
         ppOutNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO**)&(*ppOutNow)->pNext;
         glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
+        for (i = 0; i < pInNow->count; i++)
+        {
+            XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBinding =  (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) pInNow->pBinding + i;
+            XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pOutLayoutBinding =  (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) (*ppOutNow)->pBinding + i;
+            glv_add_buffer_to_trace_packet(pHeader, (void**) &pOutLayoutBinding, sizeof(XGL_SAMPLER) * pLayoutBinding->count, pLayoutBinding->pImmutableSamplers);
+            glv_finalize_buffer_address(pHeader, (void**) &pOutLayoutBinding);
+        }
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBinding), sizeof(XGL_DESCRIPTOR_SET_LAYOUT_BINDING) * pInNow->count, pInNow->pBinding);
+        glv_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBinding));
         pInNow = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pInNow->pNext;
     }
     return;
