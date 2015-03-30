@@ -983,8 +983,11 @@ ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
     meta.clear_val[0] = u_fui(depth);
     meta.clear_val[1] = stencil;
 
-    /* assume optimal DS until revision 59 */
-    meta.ds.optimal = true;
+    if (imageLayout == XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL ||
+        imageLayout == XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+        imageLayout == XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+        meta.ds.optimal = true;
+    }
 
     for (i = 0; i < rangeCount; i++) {
         const XGL_IMAGE_SUBRESOURCE_RANGE *range = &pRanges[i];
