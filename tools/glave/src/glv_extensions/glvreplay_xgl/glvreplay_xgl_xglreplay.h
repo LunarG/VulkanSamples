@@ -50,7 +50,6 @@ extern "C" {
 #else
 #include "xglWsiWinExt.h"
 #endif
-#include "draw_state.h"
 #include "glave_snapshot.h"
 #include "glvreplay_xgl_xgldisplay.h"
 #include "glvreplay_xgl_func_ptrs.h"
@@ -74,8 +73,8 @@ public:
 private:
     struct xglFuncs m_xglFuncs;
     xglReplayObjMapper m_objMapper;
-    DRAW_STATE_DUMP_DOT_FILE m_pDSDump;
-    DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE m_pCBDump;
+    void (*m_pDSDump) (char*);
+    void (*m_pCBDump) (char*);
     GLVSNAPSHOT_PRINT_OBJECTS m_pGlvSnapshotPrint;
     xglDisplay *m_display;
     struct shaderPair {

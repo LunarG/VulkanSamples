@@ -189,8 +189,8 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglCreateDevice(struct_
             pPacket->pCreateInfo = pCreateInfoSaved;
             release_enableLayer_list(layersStr);
 #if !defined(_WIN32)
-            m_pDSDump = (DRAW_STATE_DUMP_DOT_FILE) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "drawStateDumpDotFile");
-            m_pCBDump = (DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "drawStateDumpCommandBufferDotFile");
+            m_pDSDump = (void (*)(char*)) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "drawStateDumpDotFile");
+            m_pCBDump = (void (*)(char*)) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "drawStateDumpCommandBufferDotFile");
             m_pGlvSnapshotPrint = (GLVSNAPSHOT_PRINT_OBJECTS) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "glvSnapshotPrintObjects");
 #endif
         }
