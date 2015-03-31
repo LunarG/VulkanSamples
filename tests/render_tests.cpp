@@ -1589,6 +1589,115 @@ TEST_F(XglRenderTest, QuadVertFetchAndVertID)
         RecordImage(m_renderTargets[i]);
 }
 
+TEST_F(XglRenderTest, QuadSparseVertFetch)
+{
+    // This tests that attributes work in the presence of gl_VertexID
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            //XYZ1( -1, -1, -1 )
+            "layout (location = 1) in vec4 pos;\n"
+            "layout (location = 4) in vec4 inColor;\n"
+            //XYZ1( 0.f, 0.f, 0.f )
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   gl_Position = pos;\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "void main() {\n"
+            "   gl_FragColor = color;\n"
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    struct VDATA
+    {
+        float t1, t2, t3, t4;            // filler data
+        float posX, posY, posZ, posW;    // Position data
+        float r, g, b, a;                // Color
+    };
+    const struct VDATA vData[] =
+    {
+        { XYZ1(0, 0, 0), XYZ1( -1, -1, -1 ), XYZ1( 0.f, 0.f, 0.f ) },
+        { XYZ1(0, 0, 0), XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+        { XYZ1(0, 0, 0), XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+        { XYZ1(0, 0, 0), XYZ1( -1,  1, -1 ), XYZ1( 0.f, 1.f, 0.f ) },
+        { XYZ1(0, 0, 0), XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+        { XYZ1(0, 0, 0), XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
+    };
+
+    XglConstantBufferObj meshBuffer(m_device,sizeof(vData)/sizeof(vData[0]),sizeof(vData[0]), vData);
+    meshBuffer.BufferMemoryBarrier();
+
+    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+
+    XglPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
+
+    m_memoryRefManager.AddMemoryRef(&meshBuffer);
+
+#define MESH_BUF_ID 0
+    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+        MESH_BUF_ID,                            // Binding ID
+        sizeof(vData[0]),                       // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+    };
+
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    vi_attribs[0].binding = MESH_BUF_ID;                                        // binding ID
+    vi_attribs[0].location = 4;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;                         // format of source data
+    vi_attribs[0].offsetInBytes = sizeof(float) * 4 * 2;   // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BUF_ID;                                        // binding ID
+    vi_attribs[1].location = 1;
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;                         // format of source data
+    vi_attribs[1].offsetInBytes = sizeof(float) * 4 * 1;   // Offset of first element in bytes from base of vertex
+
+    pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
+    pipelineobj.AddVertexInputBindings(&vi_binding, 1);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
+    XglCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    GenericDrawPreparation(&cmdBuffer, &pipelineobj, &descriptorSet);
+
+    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, MESH_BUF_ID);
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest2.dot");
+#endif
+
+    // render two triangles
+    cmdBuffer.Draw(0, 6, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer(m_memoryRefManager.GetMemoryRefList(), m_memoryRefManager.GetNumRefs());
+
+    for (int i = 0; i < m_renderTargets.size(); i++)
+        RecordImage(m_renderTargets[i]);
+}
+
 TEST_F(XglRenderTest, TriVertFetchDeadAttr)
 {
     // This tests that attributes work in the presence of gl_VertexID
