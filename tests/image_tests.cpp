@@ -172,7 +172,15 @@ void XglImageTest::CreateImage(uint32_t w, uint32_t h)
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    if (image_fmt.linearTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
+        imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    }
+    else if (image_fmt.optimalTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
+        imageCreateInfo.tiling = XGL_OPTIMAL_TILING;
+    }
+    else {
+        ASSERT_TRUE(false) << "Cannot find supported tiling format - Exiting";
+    }
 
     // Image usage flags
     //    typedef enum _XGL_IMAGE_USAGE_FLAGS
