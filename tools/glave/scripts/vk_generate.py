@@ -1271,12 +1271,6 @@ class Subcommand(object):
         rc_body.append('    gpuMemory() : m_pendingAlloc(false) {m_allocInfo.allocationSize = 0;}')
         rc_body.append('    ~gpuMemory() {}')
         rc_body.append(self._generate_replay_objMemory_funcs())
-#        rc_body.append('    bool isPendingAlloc();')
-#        rc_body.append('    void setAllocInfo(const VK_MEMORY_ALLOC_INFO *info, const bool pending);')
-#        rc_body.append('    void setMemoryDataAddr(void* pBuf);')
-#        rc_body.append('    void setMemoryMapRange(void* pBuf, const size_t size, const size_t offset, const bool pending);')
-#        rc_body.append('    void copyMappingData(const void *pSrcData);')
-#        rc_body.append('    size_t getMemoryMapSize();')
         rc_body.append('private:')
         rc_body.append('    bool m_pendingAlloc;')
         rc_body.append('    struct MapRange {')
@@ -2082,7 +2076,6 @@ class GlaveReplayObjMapperHeader(Subcommand):
 
     def generate_body(self):
         body = [self._generate_replay_objmapper_class()]
-
         return "\n".join(body)
 
 class GlaveReplayC(Subcommand):
