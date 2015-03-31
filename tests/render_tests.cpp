@@ -969,7 +969,6 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
             "}\n";
 
     static const char *fragShaderText =
-            //"#version 140\n"
             "#version 330\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -1065,7 +1064,6 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
             "}\n";
 
     static const char *fragShaderText =
-            //"#version 140\n"
             "#version 330\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -1264,7 +1262,6 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
 
 
     static const char *fragShaderText =
-            //"#version 140\n"
             "#version 330\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
