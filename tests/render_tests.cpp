@@ -652,7 +652,7 @@ TEST_F(XglRenderTest, YellowTriangle)
     XGLTriangleTest(vertShaderText, fragShaderText, false);
 }
 
-TEST_F(XglRenderTest, TriangleWithVertexFetch)
+TEST_F(XglRenderTest, QuadWithVertexFetch)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1494,7 +1494,7 @@ TEST_F(XglRenderTest, MixTriangle)
         RecordImage(m_renderTargets[i]);
 }
 
-TEST_F(XglRenderTest, TriVertFetchAndVertID)
+TEST_F(XglRenderTest, QuadVertFetchAndVertID)
 {
     // This tests that attributes work in the presence of gl_VertexID
 
