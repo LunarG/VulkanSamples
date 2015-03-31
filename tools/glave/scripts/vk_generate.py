@@ -1701,15 +1701,6 @@ class Subcommand(object):
 
     def _generate_replay_class_decls(self):
         cd_body = []
-        cd_body.append('class ApiReplay {')
-        cd_body.append('public:')
-        cd_body.append('    virtual ~ApiReplay() { }')
-        cd_body.append('    virtual enum glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header * packet) = 0;')
-        cd_body.append('    virtual int init(glv_replay::Display & disp) = 0;')
-        cd_body.append('    virtual void push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char* pMsg) = 0;')
-        cd_body.append('    virtual glv_replay::GLV_REPLAY_RESULT pop_validation_msgs() = 0;')
-        cd_body.append('    virtual int dump_validation_data() = 0;')
-        cd_body.append('};\n')
         cd_body.append('class xglDisplay: public glv_replay::DisplayImp {')
         cd_body.append('friend class xglReplay;')
         cd_body.append('public:')
@@ -1807,7 +1798,7 @@ class Subcommand(object):
             mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
             obj_map_dict[mem_var] = ty
         rc_body = []
-        rc_body.append('class xglReplay : public ApiReplay {')
+        rc_body.append('class xglReplay {')
         rc_body.append('public:')
         rc_body.append('    ~xglReplay();')
         rc_body.append('    xglReplay(glvreplay_settings *pReplaySettings);\n')
@@ -1937,23 +1928,23 @@ class Subcommand(object):
         for t in base_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
-        rc_body.append('        return XGL_NULL_HANDLE;\n    }')
-        rc_body.append('void process_screenshot_list(const char *list)')
-        rc_body.append('{')
-        rc_body.append('    std::string spec(list), word;')
-        rc_body.append('    size_t start = 0, comma = 0;\n')
-        rc_body.append('    while (start < spec.size()) {')
-        rc_body.append('        comma = spec.find(\',\', start);\n')
-        rc_body.append('        if (comma == std::string::npos)')
-        rc_body.append('            word = std::string(spec, start);')
-        rc_body.append('        else')
-        rc_body.append('            word = std::string(spec, start, comma - start);\n')
-        rc_body.append('        m_screenshotFrames.push_back(atoi(word.c_str()));')
-        rc_body.append('        if (comma == std::string::npos)')
-        rc_body.append('            break;\n')
-        rc_body.append('        start = comma + 1;\n')
+        rc_body.append('        return XGL_NULL_HANDLE;\n    }\n')
+        rc_body.append('    void process_screenshot_list(const char *list)')
+        rc_body.append('    {')
+        rc_body.append('        std::string spec(list), word;')
+        rc_body.append('        size_t start = 0, comma = 0;\n')
+        rc_body.append('        while (start < spec.size()) {')
+        rc_body.append('            comma = spec.find(\',\', start);\n')
+        rc_body.append('            if (comma == std::string::npos)')
+        rc_body.append('                word = std::string(spec, start);')
+        rc_body.append('            else')
+        rc_body.append('                word = std::string(spec, start, comma - start);\n')
+        rc_body.append('            m_screenshotFrames.push_back(atoi(word.c_str()));')
+        rc_body.append('            if (comma == std::string::npos)')
+        rc_body.append('                break;\n')
+        rc_body.append('            start = comma + 1;\n')
+        rc_body.append('        }')
         rc_body.append('    }')
-        rc_body.append('}')
         rc_body.append('};')
         return "\n".join(rc_body)
 
@@ -3538,6 +3529,25 @@ class GlaveDbgStructs(Subcommand):
 
         return "\n".join(body)
 
+class GlaveReplayXglFuncPtrs(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#pragma once\n')
+        header_txt.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
+        header_txt.append('#include <xcb/xcb.h>\n')
+        header_txt.append('#endif')
+        header_txt.append('#include "xgl.h"')
+        header_txt.append('#include "xglDbg.h"')
+        header_txt.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
+        header_txt.append('#include "xglWsiX11Ext.h"')
+        header_txt.append('#else')
+        header_txt.append('#include "xglWsiWinExt.h"')
+        header_txt.append('#endif')
+
+    def generate_body(self):
+        body = [self._generate_replay_func_ptrs()]
+        return "\n".join(body)
+
 class GlaveReplayHeader(Subcommand):
     def generate_header(self):
         header_txt = []
@@ -3561,11 +3571,11 @@ class GlaveReplayHeader(Subcommand):
         header_txt.append('#endif')
         header_txt.append('#include "draw_state.h"')
         header_txt.append('#include "glave_snapshot.h"')
+        header_txt.append('#include "glvreplay_xgl_func_ptrs.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):
         body = [self._generate_replay_class_decls(),
-                self._generate_replay_func_ptrs(),
                 self._generate_replay_class()]
 
         return "\n".join(body)
@@ -3627,6 +3637,7 @@ def main():
             "glave-dbg-trace-h" : GlaveDbgHeader,
             "glave-dbg-trace-c" : GlaveDbgC,
             "glave-dbg-trace-structs" : GlaveDbgStructs,
+            "glave-replay-xgl-funcs" : GlaveReplayXglFuncPtrs,
             "glave-replay-h" : GlaveReplayHeader,
             "glave-replay-c" : GlaveReplayC,
     }

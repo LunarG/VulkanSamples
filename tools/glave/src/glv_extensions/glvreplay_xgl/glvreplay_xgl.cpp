@@ -30,7 +30,7 @@ extern "C"
 #include "glv_vk_packet_id.h"
 }
 
-ApiReplay* g_pReplayer = NULL;
+xglReplay* g_pReplayer = NULL;
 GLV_CRITICAL_SECTION g_handlerLock;
 XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
 glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION g_fpGlvCallback = NULL;
@@ -104,7 +104,7 @@ GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, g
 {
     try
     {
-        g_pReplayer = (ApiReplay*)new xglReplay(pReplaySettings);
+        g_pReplayer = new xglReplay(pReplaySettings);
     }
     catch (int e)
     {
