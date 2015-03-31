@@ -84,7 +84,7 @@ static void addCBInfo(const XGL_CMD_BUFFER cb)
     MT_CB_INFO* pInfo = new MT_CB_INFO;
     memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<XGL_GPU_MEMORY>)));
     pInfo->cmdBuffer = cb;
-    cbMap[cb]        = pInfo;
+    cbMap[cb] = pInfo;
 }
 
 // Return ptr to Info in CB map, or NULL if not found
@@ -129,7 +129,6 @@ static void deleteFenceInfo(uint64_t fenceId)
 {
     if (fenceId != 0) {
         if (fenceMap.find(fenceId) != fenceMap.end()) {
-            map<uint64_t, MT_FENCE_INFO*>::iterator item;
             MT_FENCE_INFO* pDelInfo = fenceMap[fenceId];
             if (pDelInfo != NULL) {
                 if (pDelInfo->localFence == XGL_TRUE) {
@@ -137,8 +136,8 @@ static void deleteFenceInfo(uint64_t fenceId)
                 }
                 delete pDelInfo;
             }
-            item = fenceMap.find(fenceId);
-            fenceMap.erase(item);
+            delete pDelInfo;
+            fenceMap.erase(fenceId);
         }
     }
 }
@@ -470,10 +469,13 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
         result = XGL_FALSE;
     } else {
         if (!fenceRetired(pCBInfo->fenceId)) {
-            char str[1024];
-            sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not been checked for completion", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-            result = XGL_FALSE;
+            // Explicitly call the internal xglGetFenceStatus routine
+            if (XGL_SUCCESS != xglGetFenceStatus(getFenceFromId(pCBInfo->fenceId))) {
+                char str[1024];
+                sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not completed", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
+                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+                result = XGL_FALSE;
+            }
         }
     }
     return result;
@@ -858,6 +860,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
         strncpy((char *) pOutLayers[0], "MemTracker", maxStringSize);
         return XGL_SUCCESS;
     }
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue)
+{
+    XGL_RESULT result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_FENCE fence)
@@ -1902,6 +1910,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglDbgRegisterMsgCallback;
     if (!strcmp(funcName, "xglDbgUnregisterMsgCallback"))
         return (void*) xglDbgUnregisterMsgCallback;
+    if (!strcmp(funcName, "xglGetDeviceQueue"))
+        return (void*) xglGetDeviceQueue;
 #if !defined(WIN32)
     if (!strcmp(funcName, "xglWsiX11CreatePresentableImage"))
         return (void*) xglWsiX11CreatePresentableImage;
