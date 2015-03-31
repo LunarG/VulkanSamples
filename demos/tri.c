@@ -19,6 +19,7 @@
 
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
+#define VERTEX_BUFFER_BIND_ID 0
 
 struct texture_object {
     XGL_SAMPLER sampler;
@@ -278,7 +279,7 @@ static void demo_draw_build_cmd(struct demo *demo)
                                      demo->depth_stencil);
 
 
-    xglCmdBindVertexBuffer(demo->cmd, demo->vertices.buf, 0, 0);
+    xglCmdBindVertexBuffer(demo->cmd, demo->vertices.buf, 0, VERTEX_BUFFER_BIND_ID);
 
     xglCmdBeginRenderPass(demo->cmd, &rp_begin);
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
@@ -827,14 +828,17 @@ static void demo_prepare_vertices(struct demo *demo)
     demo->vertices.vi.attributeCount = 2;
     demo->vertices.vi.pVertexAttributeDescriptions = demo->vertices.vi_attrs;
 
+    demo->vertices.vi_bindings[0].binding = VERTEX_BUFFER_BIND_ID;
     demo->vertices.vi_bindings[0].strideInBytes = sizeof(vb[0]);
     demo->vertices.vi_bindings[0].stepRate = XGL_VERTEX_INPUT_STEP_RATE_VERTEX;
 
-    demo->vertices.vi_attrs[0].binding = 0;
+    demo->vertices.vi_attrs[0].binding = VERTEX_BUFFER_BIND_ID;
+    demo->vertices.vi_attrs[0].location = 0;
     demo->vertices.vi_attrs[0].format = XGL_FMT_R32G32B32_SFLOAT;
     demo->vertices.vi_attrs[0].offsetInBytes = 0;
 
-    demo->vertices.vi_attrs[1].binding = 0;
+    demo->vertices.vi_attrs[1].binding = VERTEX_BUFFER_BIND_ID;
+    demo->vertices.vi_attrs[1].location = 1;
     demo->vertices.vi_attrs[1].format = XGL_FMT_R32G32_SFLOAT;
     demo->vertices.vi_attrs[1].offsetInBytes = sizeof(float) * 3;
 }
@@ -896,9 +900,10 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
     static const char *vertShaderText =
             "#version 140\n"
-            "#extension GL_ARB_explicit_attrib_location : require\n"
-            "layout(location = 0) in vec4 pos;\n"
-            "layout(location = 1) in vec2 attr;\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 pos;\n"
+            "layout (location = 1) in vec2 attr;\n"
             "out vec2 texcoord;\n"
             "void main() {\n"
             "   texcoord = attr;\n"
@@ -914,8 +919,10 @@ static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
     static const char *fragShaderText =
             "#version 140\n"
-            "uniform sampler2D tex;\n"
-            "in vec2 texcoord;\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (binding = 0) uniform sampler2D tex;\n"
+            "layout (location = 0) in vec2 texcoord;\n"
             "void main() {\n"
             "   gl_FragColor = texture(tex, texcoord);\n"
             "}\n";

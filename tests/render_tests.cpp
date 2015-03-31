@@ -655,12 +655,14 @@ TEST_F(XglRenderTest, YellowTriangle)
 TEST_F(XglRenderTest, TriangleWithVertexFetch)
 {
     static const char *vertShaderText =
-            "#version 130\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
             //XYZ1( -1, -1, -1 )
-            "in vec4 pos;\n"
+            "layout (location = 0) in vec4 pos;\n"
             //XYZ1( 0.f, 0.f, 0.f )
-            "in vec4 inColor;\n"
-            "out vec4 outColor;\n"
+            "layout (location = 1) in vec4 inColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = pos;\n"
@@ -671,7 +673,7 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            "in vec4 color;\n"
+            "layout (location = 0) in vec4 color;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = color;\n"
@@ -697,22 +699,26 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+        MESH_BIND_ID,                      // binding ID
          sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
          XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
     };
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
+    vi_attribs[0].location = 0;                         // location, position
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
+    vi_attribs[1].location = 1;                         // location, color
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].offsetInBytes = 1*sizeof(float)*4;     // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -740,8 +746,10 @@ TEST_F(XglRenderTest, TriangleWithVertexFetch)
 TEST_F(XglRenderTest, TriangleMRT)
 {
     static const char *vertShaderText =
-            "#version 130\n"
-            "in vec4 pos;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 pos;\n"
             "void main() {\n"
             "   gl_Position = pos;\n"
             "}\n";
@@ -771,19 +779,22 @@ TEST_F(XglRenderTest, TriangleMRT)
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
+#define MESH_BUF_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(vb_data[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BUF_ID,                            // Binding ID
+        sizeof(vb_data[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrib;
-    vi_attrib.binding = 0;                       // index into vertexBindingDescriptions
-    vi_attrib.format = XGL_FMT_R32G32_SFLOAT;            // format of source data
-    vi_attrib.offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
+    vi_attrib.binding = MESH_BUF_ID;            // index into vertexBindingDescriptions
+    vi_attrib.location = 0;
+    vi_attrib.format = XGL_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attrib.offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     XglDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
@@ -892,18 +903,22 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
     m_memoryRefManager.AddMemoryRef(&indexBuffer);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BIND_ID,                           // binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[0].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
+    vi_attribs[0].location = 0;                         // layout location of vertex attribute
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
+    vi_attribs[1].location = 1;                         // layout location of vertex attribute
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -921,7 +936,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, MESH_BIND_ID);
     cmdBuffer.BindIndexBuffer(&indexBuffer,0);
 
     // render two triangles
@@ -988,22 +1003,22 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BIND_ID,                           // binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
+    vi_attribs[0].location = 0;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -1084,22 +1099,22 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BIND_ID,                           // binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
+    vi_attribs[0].location = 0;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -1189,22 +1204,22 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BIND_ID,                           // binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
+    vi_attribs[0].location = 0;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -1285,22 +1300,22 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BIND_ID,                           // binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
+    vi_attribs[0].location = 0;
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -1530,22 +1545,26 @@ TEST_F(XglRenderTest, TriVertFetchAndVertID)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BUF_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BUF_ID,                            // Binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
+    vi_attribs[0].location = 0;
+    vi_attribs[0].format = XGL_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
+    vi_attribs[1].location = 1;
+    vi_attribs[1].format = XGL_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -1625,22 +1644,26 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
 
+#define MESH_BUF_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+        MESH_BUF_ID,                            // Binding ID
+        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
+    vi_attribs[0].location = 0;
     vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
+    vi_attribs[1].location = 1;
     vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
+    pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -1672,11 +1695,13 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
             "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140) uniform bufferVals {\n"
             "    mat4 mvp;\n"
             "} myBufferVals;\n"
-            "in vec4 pos;\n"
-            "in vec4 inColor;\n"
+            "layout (location = 0) in vec4 pos;\n"
+            "layout (location = 1) in vec4 inColor;\n"
             "out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
@@ -1739,23 +1764,26 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     m_memoryRefManager.AddMemoryRef(&MVPBuffer);
     m_memoryRefManager.AddMemoryRef(m_depthStencil);
 
+#define MESH_BUF_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-            sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-            XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
-        };
+        MESH_BUF_ID,                            // Binding ID
+        sizeof(g_vbData[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+    };
 
-    // this is the current description of g_vbData
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
+    vi_attribs[0].location = 0;
     vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
+    vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
+    vi_attribs[1].location = 1;
     vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
+    pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexInputAttribs(vi_attribs,2);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargets.size());
@@ -2538,23 +2566,26 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     m_memoryRefManager.AddMemoryRef(&texture);
     m_memoryRefManager.AddMemoryRef(m_depthStencil);
 
+#define MESH_BIND_ID 0
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
-            sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-            XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
-        };
+        MESH_BIND_ID,                      // binding ID
+        sizeof(g_vbData[0]),               // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        XGL_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
+    };
 
-    // this is the current description of g_vbData
     XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
-    vi_attribs[0].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                 // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = 0;                       // index into vertexBindingDescriptions
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                 // Offset of first element in bytes from base of vertex
+    vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
+    vi_attribs[0].location = 0;                         // location
+    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
+    vi_attribs[1].location = 1;                         // location
+    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
 
-    pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
+    pipelineobj.AddVertexInputBindings(&vi_binding,1);
+    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
     XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state;
     ds_state.depthTestEnable = XGL_TRUE;

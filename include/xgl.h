@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 63, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 64, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1879,6 +1879,7 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
 
 typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
 {
+    uint32_t                                binding;        // Vertex buffer binding id
     uint32_t                                strideInBytes;  // Distance between vertices in bytes (0 = no advancement)
 
     XGL_VERTEX_INPUT_STEP_RATE              stepRate;       // Rate at which binding is incremented
@@ -1886,7 +1887,8 @@ typedef struct _XGL_VERTEX_INPUT_BINDING_DESCRIPTION
 
 typedef struct _XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION
 {
-    uint32_t                                binding;        // index into vertexBindingDescriptions
+    uint32_t                                location;       // location of the shader vertex attrib
+    uint32_t                                binding;        // Vertex buffer binding id
 
     XGL_FORMAT                              format;         // format of source data
 

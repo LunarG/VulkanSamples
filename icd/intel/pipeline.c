@@ -721,12 +721,15 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
     const struct intel_pipeline_shader *vs = &pipeline->vs;
     uint8_t cmd_len;
     uint32_t *dw;
-    uint32_t i;
+    uint32_t i, j;
+    uint32_t attr_count;
+    uint32_t attrs_processed;
     int comps[4];
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    cmd_len = 1 + 2 * u_popcountll(vs->inputs_read);
+    attr_count = u_popcountll(vs->inputs_read);
+    cmd_len = 1 + 2 * attr_count;
     if (vs->uses & (INTEL_SHADER_USE_VID | INTEL_SHADER_USE_IID))
         cmd_len += 2;
 
@@ -740,11 +743,32 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
     dw++;
 
     /* VERTEX_ELEMENT_STATE */
-    for (i = 0; i < info->vi.attributeCount; i++) {
-        if (!(vs->inputs_read & (1L << i)))
+    for (i = 0, attrs_processed = 0; attrs_processed < attr_count; i++) {
+        XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr = NULL;
+
+        /*
+         * The compiler will pack the shader references and then
+         * indicate which locations are used via the bitmask in
+         * vs->inputs_read.
+         */
+        if (!(vs->inputs_read & (1L << i))) {
             continue;
-        const XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr =
-            &info->vi.pVertexAttributeDescriptions[i];
+        }
+
+        /*
+         * For each bit set in the vs->inputs_read we'll need
+         * to find the corresponding attribute record and then
+         * set up the next HW vertex element based on that attribute.
+         */
+        for (j = 0; j < info->vi.attributeCount; j++) {
+            if (info->vi.pVertexAttributeDescriptions[j].location == i) {
+                attr = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *) &info->vi.pVertexAttributeDescriptions[j];
+                attrs_processed++;
+                break;
+            }
+        }
+        assert(attr != NULL);
+
         const int format =
             intel_format_translate_color(pipeline->dev->gpu, attr->format);
 
