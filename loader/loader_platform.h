@@ -278,6 +278,11 @@ static void loader_platform_thread_delete_mutex(loader_platform_thread_mutex* pM
     DeleteCriticalSection(pMutex);
 }
 
+// Windows Registry:
+char *loader_get_registry_string(const HKEY hive,
+                                 const LPCTSTR sub_key,
+                                 const char *value);
+
 #else // defined(_WIN32)
 
 #error The "loader_platform.h" file must be modified for this OS.

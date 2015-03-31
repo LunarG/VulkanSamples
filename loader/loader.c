@@ -25,6 +25,7 @@
  *   Chia-I Wu <olv@lunarg.com>
  *   Jon Ashburn <jon@lunarg.com>
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
+ *   Ian Elliott <ian@lunarg.com>
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -112,6 +113,57 @@ static struct {
 
 
 #if defined(WIN32)
+char *loader_get_registry_string(const HKEY hive,
+                                 const LPCTSTR sub_key,
+                                 const char *value)
+{
+    DWORD access_flags = KEY_QUERY_VALUE;
+    DWORD value_type;
+    HKEY key;
+    LONG  rtn_value;
+    char *rtn_str = NULL;
+    size_t rtn_len = 0;
+    size_t allocated_len = 0;
+
+    rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
+    if (rtn_value != ERROR_SUCCESS) {
+        // We didn't find the key.  Try the 32-bit hive (where we've seen the
+        // key end up on some people's systems):
+        access_flags |= KEY_WOW64_32KEY;
+        rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
+        if (rtn_value != ERROR_SUCCESS) {
+            // We still couldn't find the key, so give up:
+            return NULL;
+        }
+    }
+
+    rtn_value = RegQueryValueEx(key, value, NULL, &value_type,
+                                (PVOID) rtn_str, &rtn_len);
+    if (rtn_value == ERROR_SUCCESS) {
+        // If we get to here, we found the key, and need to allocate memory
+        // large enough for rtn_str, and query again:
+        allocated_len = rtn_len + 4;
+        rtn_str = malloc(allocated_len);
+        rtn_value = RegQueryValueEx(key, value, NULL, &value_type,
+                                    (PVOID) rtn_str, &rtn_len);
+        if (rtn_value == ERROR_SUCCESS) {
+            // We added 4 extra bytes to rtn_str, so that we can ensure that
+            // the string is NULL-terminated (albeit, in a brute-force manner):
+            rtn_str[allocated_len-1] = '\0';
+        } else {
+            // This should never occur, but in case it does, clean up:
+            free(rtn_str);
+            rtn_str = NULL;
+        }
+    } // else - shouldn't happen, but if it does, return rtn_str, which is NULL
+
+    // Close the registry key that was opened:
+    RegCloseKey(key);
+
+    return rtn_str;
+}
+
+
 // For ICD developers, look in the registry, and look for an environment
 // variable for a path(s) where to find the ICD(s):
 static char *loader_get_registry_and_env(const char *env_var,
@@ -119,30 +171,15 @@ static char *loader_get_registry_and_env(const char *env_var,
 {
     char *env_str = getenv(env_var);
     size_t env_len = (env_str == NULL) ? 0 : strlen(env_str);
-#define INITIAL_STR_LEN 1024
-    char *registry_str = malloc(INITIAL_STR_LEN);
-    DWORD registry_len = INITIAL_STR_LEN;
-    DWORD registry_value_type;
-    LONG  registry_return_value;
+    char *registry_str = NULL;
+    DWORD registry_len = 0;
     char *rtn_str = NULL;
     size_t rtn_len;
 
-    registry_return_value = RegGetValue(HKEY_LOCAL_MACHINE, "Software\\XGL",
-                                        registry_value,
-                                        (RRF_RT_REG_SZ | RRF_ZEROONFAILURE),
-                                        &registry_value_type,
-                                        (PVOID) registry_str,
-                                        &registry_len);
-
-    if (registry_return_value == ERROR_MORE_DATA) {
-        registry_str = realloc(registry_str, registry_len);
-        registry_return_value = RegGetValue(HKEY_LOCAL_MACHINE, "Software\\XGL",
-                                            registry_value,
-                                            (RRF_RT_REG_SZ | RRF_ZEROONFAILURE),
-                                            &registry_value_type,
-                                            (PVOID) registry_str,
-                                            &registry_len);
-    }
+    registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
+                                              "Software\\XGL",
+                                              registry_value);
+    registry_len = strlen(registry_str);
 
     rtn_len = env_len + registry_len + 1;
     if (rtn_len <= 2) {
@@ -155,7 +192,7 @@ static char *loader_get_registry_and_env(const char *env_var,
         rtn_str = malloc(rtn_len);
     }
 
-    if (registry_return_value != ERROR_SUCCESS) {
+    if (registry_len == 0) {
         // We didn't find the desired registry value, and so we must have found
         // only the environment variable:
         _snprintf(rtn_str, rtn_len, "%s", env_str);

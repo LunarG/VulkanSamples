@@ -4,6 +4,60 @@
 
 #include <xgl.h>
 
+// COPIED FROM "loader.c" (not pointed to, because we're about to delete this
+// code).  Ian Elliott <ian@lunarg.com>.
+#include <windows.h>
+char *loader_get_registry_string(const HKEY hive,
+                                 const LPCTSTR sub_key,
+                                 const char *value)
+{
+    DWORD access_flags = KEY_QUERY_VALUE;
+    DWORD value_type;
+    HKEY key;
+    LONG  rtn_value;
+    char *rtn_str = NULL;
+    size_t rtn_len = 0;
+    size_t allocated_len = 0;
+
+    rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
+    if (rtn_value != ERROR_SUCCESS) {
+        // We didn't find the key.  Try the 32-bit hive (where we've seen the
+        // key end up on some people's systems):
+        access_flags |= KEY_WOW64_32KEY;
+        rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
+        if (rtn_value != ERROR_SUCCESS) {
+            // We still couldn't find the key, so give up:
+            return NULL;
+        }
+    }
+
+    rtn_value = RegQueryValueEx(key, value, NULL, &value_type,
+                                (LPBYTE) rtn_str, (LPDWORD) &rtn_len);
+    if (rtn_value == ERROR_SUCCESS) {
+        // If we get to here, we found the key, and need to allocate memory
+        // large enough for rtn_str, and query again:
+        allocated_len = rtn_len + 4;
+        rtn_str = (char*) malloc(allocated_len);
+        rtn_value = RegQueryValueEx(key, value, NULL, &value_type,
+                                    (LPBYTE) rtn_str, (LPDWORD) &rtn_len);
+        if (rtn_value == ERROR_SUCCESS) {
+            // We added 4 extra bytes to rtn_str, so that we can ensure that
+            // the string is NULL-terminated (albeit, in a brute-force manner):
+            rtn_str[allocated_len-1] = '\0';
+        } else {
+            // This should never occur, but in case it does, clean up:
+            free(rtn_str);
+            rtn_str = NULL;
+        }
+    } // else - shouldn't happen, but if it does, return rtn_str, which is NULL
+
+    // Close the registry key that was opened:
+    RegCloseKey(key);
+
+    return rtn_str;
+}
+
+
 typedef HWND (*xcbConnectType)();
 typedef void (*xcbCreateWindowType)(uint16_t width, uint16_t height);
 typedef void (*xcbDestroyWindowType)();
@@ -36,24 +90,23 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
     }
     if (!module) {
         // TODO: Adapted up the following code (copied from "loader.c"):
-#define INITIAL_STR_LEN 1024
-        char *registry_str = (char *) malloc(INITIAL_STR_LEN);
-        DWORD registry_len = INITIAL_STR_LEN;
+        char *registry_str = NULL;
+        DWORD registry_len = 0;
         DWORD registry_value_type;
         LONG  registry_return_value;
         char *rtn_str = NULL;
         size_t rtn_len;
 
-        registry_return_value = RegGetValue(HKEY_LOCAL_MACHINE, "Software\\XGL",
-                                            "XGL_DRIVERS_PATH",
-                                            (RRF_RT_REG_SZ | RRF_ZEROONFAILURE),
-                                            &registry_value_type,
-                                            (PVOID) registry_str,
-                                            &registry_len);
+        registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
+                                                  "Software\\XGL",
+                                                  "XGL_DRIVERS_PATH");
+        registry_len = strlen(registry_str);
         rtn_len = registry_len + 16;
         rtn_str = (char *) malloc(rtn_len);
         _snprintf(rtn_str, rtn_len, "%s\\%s", registry_str, "xgl_nvidia.dll");
         module = LoadLibrary(rtn_str);
+
+        free(rtn_str);
     }
     if (!module) {
         return 0;
