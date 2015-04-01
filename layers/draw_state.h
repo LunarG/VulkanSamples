@@ -48,7 +48,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
     DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
-    DRAWSTATE_INVALID_UPDATE_STRUCT             // Struct in DS Update tree is of invalid type
+    DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
+    DRAWSTATE_NUM_SAMPLES_MISMATCH              // Number of samples in bound PSO does not match number in FB of current RenderPass
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -217,6 +218,7 @@ typedef struct _GLOBAL_CB_NODE {
     uint32_t                        lastVtxBinding;
     DYNAMIC_STATE_NODE*             lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_DESCRIPTOR_SET              lastBoundDescriptorSet;
+    XGL_RENDER_PASS                 activeRenderPass;
 } GLOBAL_CB_NODE;
 
 //prototypes for extension functions

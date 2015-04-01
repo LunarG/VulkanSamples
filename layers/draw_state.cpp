@@ -50,6 +50,8 @@ unordered_map<XGL_DESCRIPTOR_REGION, REGION_NODE*> regionMap;
 unordered_map<XGL_DESCRIPTOR_SET, SET_NODE*> setMap;
 unordered_map<XGL_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*> layoutMap;
 unordered_map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*> cmdBufferMap;
+unordered_map<XGL_RENDER_PASS, XGL_RENDER_PASS_CREATE_INFO*> renderPassMap;
+unordered_map<XGL_FRAMEBUFFER, XGL_FRAMEBUFFER_CREATE_INFO*> frameBufferMap;
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
@@ -357,6 +359,7 @@ static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 static void initPipeline(PIPELINE_NODE* pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
 {
     // First init create info, we'll shadow the structs as we go down the tree
+    // TODO : Validate that no create info is incorrectly replicated
     pPipeline->pCreateTree = new XGL_GRAPHICS_PIPELINE_CREATE_INFO;
     memcpy(pPipeline->pCreateTree, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
     GENERIC_HEADER* pShadowTrav = (GENERIC_HEADER*)pPipeline->pCreateTree;
@@ -462,6 +465,47 @@ static void freePipelines()
         delete (*ii).second;
     }
 }
+// For given pipeline, return number of MSAA samples, or one if MSAA disabled
+static uint32_t getNumSamples(const XGL_PIPELINE pipeline)
+{
+    PIPELINE_NODE* pPipe = pipelineMap[pipeline];
+    GENERIC_HEADER* pTrav = (GENERIC_HEADER*)pPipe->pCreateTree;
+    XGL_PIPELINE_MS_STATE_CREATE_INFO* pMSCI = NULL;
+    while (pTrav) {
+        if (XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO == pTrav->sType) {
+            pMSCI = (XGL_PIPELINE_MS_STATE_CREATE_INFO*)pTrav;
+            if (pMSCI->multisampleEnable)
+                return pMSCI->samples;
+            break;
+        }
+        pTrav = (GENERIC_HEADER*)pTrav->pNext;
+    }
+    return 1;
+}
+// Validate state related to the PSO
+static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_PIPELINE pipeline)
+{
+    if (XGL_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+        // Verify that any MSAA request in PSO matches sample# in bound FB
+        uint32_t psoNumSamples = getNumSamples(pipeline);
+        if (pCB->activeRenderPass) {
+            XGL_RENDER_PASS_CREATE_INFO* pRPCI = renderPassMap[pCB->activeRenderPass];
+            XGL_FRAMEBUFFER_CREATE_INFO* pFBCI = frameBufferMap[pRPCI->framebuffer];
+            if (psoNumSamples != pFBCI->sampleCount) {
+                char str[1024];
+                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, (void*)pRPCI->framebuffer, pFBCI->sampleCount);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
+            }
+        } else {
+            // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
+            //   Verify and flag error as appropriate
+        }
+        // TODO : Add more checks here
+    } else {
+        // TODO : Validate non-gfx pipeline updates
+    }
+}
+
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Region node ptr for specified region or else NULL
@@ -1828,6 +1872,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
             if (CB_NEW != pCB->state)
                 resetCB(cmdBuffer);
             pCB->state = CB_UPDATE_ACTIVE;
+            if (pBeginInfo->pNext) {
+                XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pCbGfxBI = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pBeginInfo->pNext;
+                if (XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO == pCbGfxBI->sType) {
+                    pCB->activeRenderPass = pCbGfxBI->renderPass;
+                }
+            }
         }
         else {
             char str[1024];
@@ -1881,6 +1931,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
             loader_platform_thread_lock_mutex(&globalLock);
             g_lastBoundPipeline = pPN;
             loader_platform_thread_unlock_mutex(&globalLock);
+            validatePipelineState(pCB, pipelineBindPoint, pipeline);
         }
         else {
             char str[1024];
@@ -2429,12 +2480,56 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer)
+{
+    XGL_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    if (XGL_SUCCESS == result) {
+        // Shadow create info and store in map
+        XGL_FRAMEBUFFER_CREATE_INFO* localFBCI = new XGL_FRAMEBUFFER_CREATE_INFO(*pCreateInfo);
+        if (pCreateInfo->pColorAttachments) {
+            localFBCI->pColorAttachments = new XGL_COLOR_ATTACHMENT_BIND_INFO[localFBCI->colorAttachmentCount];
+            memcpy((void*)localFBCI->pColorAttachments, pCreateInfo->pColorAttachments, localFBCI->colorAttachmentCount*sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO));
+        }
+        if (pCreateInfo->pDepthStencilAttachment) {
+            localFBCI->pDepthStencilAttachment = new XGL_DEPTH_STENCIL_BIND_INFO[localFBCI->colorAttachmentCount];
+            memcpy((void*)localFBCI->pDepthStencilAttachment, pCreateInfo->pDepthStencilAttachment, localFBCI->colorAttachmentCount*sizeof(XGL_DEPTH_STENCIL_BIND_INFO));
+        }
+        frameBufferMap[*pFramebuffer] = localFBCI;
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass)
+{
+    XGL_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    if (XGL_SUCCESS == result) {
+        // Shadow create info and store in map
+        XGL_RENDER_PASS_CREATE_INFO* localRPCI = new XGL_RENDER_PASS_CREATE_INFO(*pCreateInfo);
+        if (pCreateInfo->pColorLoadOps) {
+            localRPCI->pColorLoadOps = new XGL_ATTACHMENT_LOAD_OP[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadOps, pCreateInfo->pColorLoadOps, localRPCI->colorAttachmentCount*sizeof(XGL_ATTACHMENT_LOAD_OP));
+        }
+        if (pCreateInfo->pColorStoreOps) {
+            localRPCI->pColorStoreOps = new XGL_ATTACHMENT_STORE_OP[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorStoreOps, pCreateInfo->pColorStoreOps, localRPCI->colorAttachmentCount*sizeof(XGL_ATTACHMENT_STORE_OP));
+        }
+        if (pCreateInfo->pColorLoadClearValues) {
+            localRPCI->pColorLoadClearValues = new XGL_CLEAR_COLOR[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(XGL_CLEAR_COLOR));
+        }
+        renderPassMap[*pRenderPass] = localRPCI;
+    }
+    return result;
+}
+
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BEGINRENDERPASS);
+        pCB->activeRenderPass = renderPass;
+        validatePipelineState(pCB, XGL_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
     }
     else {
         char str[1024];
@@ -2450,6 +2545,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_R
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_ENDRENDERPASS);
+        pCB->activeRenderPass = 0;
     }
     else {
         char str[1024];
@@ -2705,6 +2801,10 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCmdLoadAtomicCounters;
     if (!strcmp(funcName, "xglCmdSaveAtomicCounters"))
         return (void*) xglCmdSaveAtomicCounters;
+    if (!strcmp(funcName, "xglCreateFramebuffer"))
+        return (void*) xglCreateFramebuffer;
+    if (!strcmp(funcName, "xglCreateRenderPass"))
+        return (void*) xglCreateRenderPass;
     if (!strcmp(funcName, "xglCmdBeginRenderPass"))
         return (void*) xglCmdBeginRenderPass;
     if (!strcmp(funcName, "xglCmdEndRenderPass"))
