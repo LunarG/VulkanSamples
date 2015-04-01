@@ -75,7 +75,25 @@ typedef struct _GENERIC_HEADER {
 
 typedef struct _PIPELINE_NODE {
     XGL_PIPELINE           pipeline;
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
+
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO     graphicsPipelineCI;
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vertexInputCI;
+    XGL_PIPELINE_IA_STATE_CREATE_INFO     iaStateCI;
+    XGL_PIPELINE_TESS_STATE_CREATE_INFO   tessStateCI;
+    XGL_PIPELINE_VP_STATE_CREATE_INFO     vpStateCI;
+    XGL_PIPELINE_RS_STATE_CREATE_INFO     rsStateCI;
+    XGL_PIPELINE_MS_STATE_CREATE_INFO     msStateCI;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO     cbStateCI;
+    XGL_PIPELINE_DS_STATE_CREATE_INFO     dsStateCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vsCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO tcsCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO tesCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO gsCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fsCI;
+    // Compute shader is include in XGL_COMPUTE_PIPELINE_CREATE_INFO
+    XGL_COMPUTE_PIPELINE_CREATE_INFO      computePipelineCI;
+
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO*      pCreateTree; // Ptr to shadow of data in create tree
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
