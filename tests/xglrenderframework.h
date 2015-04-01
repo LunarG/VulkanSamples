@@ -210,7 +210,7 @@ public:
         return mems.empty() ? XGL_NULL_HANDLE : mems[0];
     }
 
-
+    XGL_RESULT CopyImage(XglImage &fromImage);
     XGL_IMAGE image() const
     {
         return obj();
@@ -243,7 +243,7 @@ protected:
     XGL_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
 };
 
-class XglTextureObj : public xgl_testing::Image
+class XglTextureObj : public XglImage
 {
 public:
     XglTextureObj(XglDevice *device, uint32_t *colors = NULL);

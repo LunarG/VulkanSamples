@@ -381,7 +381,6 @@ void XglImage::init(uint32_t w, uint32_t h,
                XGL_IMAGE_TILING requested_tiling)
 {
     uint32_t mipCount;
-
     XGL_FORMAT_PROPERTIES image_fmt;
     XGL_IMAGE_TILING tiling;
     XGL_RESULT err;
@@ -459,11 +458,125 @@ XGL_RESULT XglImage::UnmapMemory()
     return XGL_SUCCESS;
 }
 
+XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
+{
+    XGL_RESULT err;
+
+    XGL_CMD_BUFFER cmd_buf;
+    XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {};
+    cmd_buf_create_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    cmd_buf_create_info.pNext = NULL;
+    cmd_buf_create_info.queueType = XGL_QUEUE_TYPE_GRAPHICS;
+    cmd_buf_create_info.flags = 0;
+
+    err = xglCreateCommandBuffer(m_device->device(), &cmd_buf_create_info, &cmd_buf);
+    assert(!err);
+
+    /* Copy staging texture to usable texture */
+    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_begin_info = {};
+    cmd_buf_begin_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_begin_info.pNext = NULL;
+    cmd_buf_begin_info.flags = 0;
+
+    err = xglResetCommandBuffer(cmd_buf);
+    assert(!err);
+
+    err = xglBeginCommandBuffer(cmd_buf, &cmd_buf_begin_info);
+    assert(!err);
+
+    XGL_IMAGE_COPY copy_region = {};
+    copy_region.srcSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
+    copy_region.srcSubresource.arraySlice = 0;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcOffset.x = 0;
+    copy_region.srcOffset.y = 0;
+    copy_region.srcOffset.z = 0;
+    copy_region.destSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
+    copy_region.destSubresource.arraySlice = 0;
+    copy_region.destSubresource.mipLevel = 0;
+    copy_region.destOffset.x = 0;
+    copy_region.destOffset.y = 0;
+    copy_region.destOffset.z = 0;
+    copy_region.extent = fromImage.extent();
+
+    xglCmdCopyImage(cmd_buf, fromImage.obj(), obj(), 1, &copy_region);
+
+    XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {};
+    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = NULL;
+    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
+    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+    image_memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_GENERAL;
+    image_memory_barrier.newLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
+    image_memory_barrier.image = fromImage.obj();
+    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.mipLevels = 1;
+    image_memory_barrier.subresourceRange.baseArraySlice = 0;
+    image_memory_barrier.subresourceRange.arraySize = 0;
+
+    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
+
+    XGL_SET_EVENT set_events[] = { XGL_SET_EVENT_GPU_COMMANDS_COMPLETE };
+    XGL_PIPELINE_BARRIER pipeline_barrier;
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.pNext = NULL;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = set_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+    // write barrier to the command buffer
+    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
+
+    err = xglEndCommandBuffer(cmd_buf);
+    assert(!err);
+
+    const XGL_CMD_BUFFER cmd_bufs[] = { cmd_buf };
+    XGL_MEMORY_REF mem_refs[16];
+    uint32_t num_refs = 0;
+    const std::vector<XGL_GPU_MEMORY> from_mems = fromImage.memories();
+    const std::vector<XGL_GPU_MEMORY> to_mems = memories();
+
+    for (uint32_t j = 0; j < from_mems.size(); j++) {
+        mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
+        mem_refs[num_refs].mem = from_mems[j];
+        num_refs++;
+        assert(num_refs < 16);
+    }
+
+    for (uint32_t j = 0; j < to_mems.size(); j++) {
+        mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
+        mem_refs[num_refs].mem = to_mems[j];
+        num_refs++;
+        assert(num_refs < 16);
+    }
+
+    err = xglQueueSubmit(m_device->m_queue, 1, cmd_bufs,
+                         num_refs, mem_refs, XGL_NULL_HANDLE);
+    assert(!err);
+
+    err = xglQueueWaitIdle(m_device->m_queue);
+    assert(!err);
+
+    xglDestroyObject(cmd_buf);
+
+    return XGL_SUCCESS;
+}
+
 XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
+    :XglImage(device)
 {
     m_device = device;
     const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
     uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
+    void *data;
+    int32_t x, y;
+    XglImage stagingImage(device);
+
+    stagingImage.init(16, 16, tex_format, 0, XGL_LINEAR_TILING);
+    XGL_SUBRESOURCE_LAYOUT layout = stagingImage.subresource_layout(subresource(XGL_IMAGE_ASPECT_COLOR, 0, 0));
 
     if (colors == NULL)
         colors = tex_colors;
@@ -472,27 +585,12 @@ XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
 
     m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
 
-    XGL_IMAGE_CREATE_INFO image = {};
-    image.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image.pNext = NULL;
-    image.imageType = XGL_IMAGE_2D;
-    image.format = tex_format;
-    image.extent.width = 16;
-    image.extent.height = 16;
-    image.extent.depth = 1;
-    image.mipLevels = 1;
-    image.arraySize = 1;
-    image.samples = 1;
-    image.tiling = XGL_LINEAR_TILING;
-    image.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
-    image.flags = 0;
-
-    XGL_IMAGE_VIEW_CREATE_INFO view;
+    XGL_IMAGE_VIEW_CREATE_INFO view = {};
     view.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view.pNext = NULL;
     view.image = XGL_NULL_HANDLE;
     view.viewType = XGL_IMAGE_VIEW_2D;
-    view.format = image.format;
+    view.format = tex_format;
     view.channels.r = XGL_CHANNEL_SWIZZLE_R;
     view.channels.g = XGL_CHANNEL_SWIZZLE_G;
     view.channels.b = XGL_CHANNEL_SWIZZLE_B;
@@ -505,31 +603,22 @@ XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
     view.minLod = 0.0f;
 
     /* create image */
-    init(*m_device, image);
+    init(16, 16, tex_format, XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT, XGL_OPTIMAL_TILING);
 
     /* create image view */
     view.image = obj();
     m_textureView.init(*m_device, view);
+    m_textureViewInfo.view = m_textureView.obj();
 
-    XGL_SUBRESOURCE_LAYOUT layout =
-        subresource_layout(subresource(XGL_IMAGE_ASPECT_COLOR, 0, 0));
-    m_rowPitch = layout.rowPitch;
-
-    void *data;
-    int32_t x, y;
-
-    data = map();
+    data = stagingImage.map();
 
     for (y = 0; y < extent().height; y++) {
         uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
         for (x = 0; x < extent().width; x++)
             row[x] = colors[(x & 1) ^ (y & 1)];
     }
-
-    unmap();
-
-    m_textureViewInfo.view = m_textureView.obj();
-
+    stagingImage.unmap();
+    XglImage::CopyImage(stagingImage);
 }
 
 XglSamplerObj::XglSamplerObj(XglDevice *device)
