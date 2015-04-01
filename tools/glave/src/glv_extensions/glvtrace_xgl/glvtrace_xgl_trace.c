@@ -144,7 +144,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglEnumerateGpus(
 }
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglAllocDescriptorSets(
-    XGL_DESCRIPTOR_REGION descriptorRegion,
+    XGL_DESCRIPTOR_POOL descriptorPool,
     XGL_DESCRIPTOR_SET_USAGE setUsage,
     uint32_t count,
     const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts,
@@ -157,12 +157,12 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglAllocDescriptorSets(
     uint64_t startTime;
     SEND_ENTRYPOINT_ID(xglAllocDescriptorSets);
     startTime = glv_get_time();
-    result = real_xglAllocDescriptorSets(descriptorRegion, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    result = real_xglAllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));
     CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));
     pHeader->entrypoint_begin_time = startTime;
     pPacket = interpret_body_as_xglAllocDescriptorSets(pHeader);
-    pPacket->descriptorRegion = descriptorRegion;
+    pPacket->descriptorPool = descriptorPool;
     pPacket->setUsage = setUsage;
     pPacket->count = count;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count*sizeof(XGL_DESCRIPTOR_SET_LAYOUT), pSetLayouts);

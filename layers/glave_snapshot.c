@@ -1107,12 +1107,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE device, XGL_FLAGS stageFlags, const uint32_t* pSetBindPoints, XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout( XGL_DEVICE device, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.CreateDescriptorSetLayout(device, stageFlags, pSetBindPoints, priorSetLayout, pSetLayoutInfoList, pSetLayout);
+    XGL_RESULT result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     if (result == XGL_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1123,55 +1123,55 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(XGL_DEVICE devic
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorRegionUpdate(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(XGL_DEVICE device, XGL_DESCRIPTOR_UPDATE_MODE updateMode)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.BeginDescriptorRegionUpdate(device, updateMode);
+    XGL_RESULT result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndDescriptorRegionUpdate(XGL_DEVICE device, XGL_CMD_BUFFER cmd)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndDescriptorPoolUpdate(XGL_DEVICE device, XGL_CMD_BUFFER cmd)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.EndDescriptorRegionUpdate(device, cmd);
+    XGL_RESULT result = nextTable.EndDescriptorPoolUpdate(device, cmd);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorRegion(XGL_DEVICE device, XGL_DESCRIPTOR_REGION_USAGE regionUsage, uint32_t maxSets, const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_REGION* pDescriptorRegion)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(XGL_DEVICE device, XGL_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const XGL_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, XGL_DESCRIPTOR_POOL* pDescriptorPool)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.CreateDescriptorRegion(device, regionUsage, maxSets, pCreateInfo, pDescriptorRegion);
+    XGL_RESULT result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     if (result == XGL_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pDescriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pDescriptorPool, XGL_OBJECT_TYPE_DESCRIPTOR_POOL);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglClearDescriptorRegion(XGL_DESCRIPTOR_REGION descriptorRegion)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetDescriptorPool(XGL_DESCRIPTOR_POOL descriptorPool)
 {
     loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)descriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
+    ll_increment_use_count((void*)descriptorPool, XGL_OBJECT_TYPE_DESCRIPTOR_POOL);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.ClearDescriptorRegion(descriptorRegion);
+    XGL_RESULT result = nextTable.ResetDescriptorPool(descriptorPool);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION descriptorRegion, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_POOL descriptorPool, XGL_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts, XGL_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
 {
     loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)descriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
+    ll_increment_use_count((void*)descriptorPool, XGL_OBJECT_TYPE_DESCRIPTOR_POOL);
     loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.AllocDescriptorSets(descriptorRegion, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    XGL_RESULT result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     if (result == XGL_SUCCESS)
     {
         for (uint32_t i = 0; i < *pCount; i++) {
@@ -1184,20 +1184,20 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(XGL_DESCRIPTOR_REGION 
     return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSets(XGL_DESCRIPTOR_REGION descriptorRegion, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets)
+XGL_LAYER_EXPORT void XGLAPI xglClearDescriptorSets(XGL_DESCRIPTOR_POOL descriptorPool, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets)
 {
     loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)descriptorRegion, XGL_OBJECT_TYPE_DESCRIPTOR_REGION);
+    ll_increment_use_count((void*)descriptorPool, XGL_OBJECT_TYPE_DESCRIPTOR_POOL);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.ClearDescriptorSets(descriptorRegion, count, pDescriptorSets);
+    nextTable.ClearDescriptorSets(descriptorPool, count, pDescriptorSets);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglUpdateDescriptors(XGL_DESCRIPTOR_SET descriptorSet, const void* pUpdateChain)
+XGL_LAYER_EXPORT void XGLAPI xglUpdateDescriptors(XGL_DESCRIPTOR_SET descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)descriptorSet, XGL_OBJECT_TYPE_DESCRIPTOR_SET);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.UpdateDescriptors(descriptorSet, pUpdateChain);
+    nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(XGL_DEVICE device, const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, XGL_DYNAMIC_VP_STATE_OBJECT* pState)
@@ -1328,12 +1328,12 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuff
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSets(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain, uint32_t layoutChainSlot, uint32_t count, const XGL_DESCRIPTOR_SET* pDescriptorSets, const uint32_t* pUserData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, descriptorSet, pUserData);
+    nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t binding)

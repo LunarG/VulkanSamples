@@ -324,7 +324,7 @@ static void finalize_pipeline_shader_address(glv_trace_packet_header* pHeader, c
     }
 }
 
-static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
+static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeader, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO** ppOut, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pIn)
 {
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pInNow = pIn;
     XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO** ppOutNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO**)ppOut;
@@ -340,33 +340,33 @@ static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeade
         {
             XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBinding =  (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) pInNow->pBinding + i;
             XGL_DESCRIPTOR_SET_LAYOUT_BINDING *pOutLayoutBinding =  (XGL_DESCRIPTOR_SET_LAYOUT_BINDING *) (*ppOutNow)->pBinding + i;
-            glv_add_buffer_to_trace_packet(pHeader, (void**) &pOutLayoutBinding, sizeof(XGL_SAMPLER) * pLayoutBinding->count, pLayoutBinding->pImmutableSamplers);
-            glv_finalize_buffer_address(pHeader, (void**) &pOutLayoutBinding);
+            glv_add_buffer_to_trace_packet(pHeader, (void**) &pOutLayoutBinding->pImmutableSamplers, sizeof(XGL_SAMPLER) * pLayoutBinding->count, pLayoutBinding->pImmutableSamplers);
+            glv_finalize_buffer_address(pHeader, (void**) &pOutLayoutBinding->pImmutableSamplers);
         }
         glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBinding), sizeof(XGL_DESCRIPTOR_SET_LAYOUT_BINDING) * pInNow->count, pInNow->pBinding);
         glv_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBinding));
+        ppOutNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO**)&(*ppOutNow)->pNext;
         pInNow = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pInNow->pNext;
     }
     return;
 }
 
-static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
+static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHeader, const uint32_t count, void*** pppUpdateArrayOut, const void** ppUpdateArrayIn)
 {
-    const XGL_UPDATE_SAMPLERS* pInNow = pIn;
-    XGL_UPDATE_SAMPLERS** ppOutNext = (XGL_UPDATE_SAMPLERS**)ppOut;
-    while (pInNow != NULL)
+    uint32_t i;
+    for (i = 0; i < count; i++)
     {
-        XGL_UPDATE_SAMPLERS** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
+        const XGL_UPDATE_SAMPLERS* pInNow = (const XGL_UPDATE_SAMPLERS*)ppUpdateArrayIn[i];
+        XGL_UPDATE_SAMPLERS** ppOut = (XGL_UPDATE_SAMPLERS**)*pppUpdateArrayOut;
+        XGL_UPDATE_SAMPLERS** ppOutNow = &(ppOut[i]);
         switch (pInNow->sType)
         {
         case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
         {
             glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_SAMPLERS), pInNow);
             XGL_UPDATE_SAMPLERS* pPacket = (XGL_UPDATE_SAMPLERS*)*ppOutNow;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplers, ((XGL_UPDATE_SAMPLERS*)pInNow)->count * sizeof(XGL_SAMPLER), ((XGL_UPDATE_SAMPLERS*)pInNow)->pSamplers);
+            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplers, ((XGL_UPDATE_SAMPLERS*)pInNow)->count * sizeof(XGL_SAMPLER), pInNow->pSamplers);
             glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplers));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
             glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
             break;
         }
@@ -376,14 +376,13 @@ static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHea
             glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_SAMPLER_TEXTURES), pInNow);
             XGL_UPDATE_SAMPLER_TEXTURES* pPacket = (XGL_UPDATE_SAMPLER_TEXTURES*)*ppOutNow;
             glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews, ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count * sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews);
-// TODO : This is still broken. How to update the original XGL_SAMPLER_IMAGE_VIEW_INFO struct ptrs to have correct address for newly added XGL_IMAGE_VIEW_ATTACH_INFO blocks below?
-            uint32_t i;
-            for (i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count; i++) {
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[i].pImageView);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews[i].pImageView));
+// TODO : is the below correct? is pImageView a pointer to a single struct or not?
+            uint32_t j;
+            for (j = 0; j < ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count; j++) {
+                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[j].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[j].pImageView);
+                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews[j].pImageView));
             }
             glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
             glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
             break;
         }
@@ -391,14 +390,8 @@ static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHea
         {
             glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_IMAGES), pInNow);
             XGL_UPDATE_IMAGES* pPacket = (XGL_UPDATE_IMAGES*)*ppOutNow;
-            uint32_t i;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews, ((XGL_UPDATE_IMAGES*)pInNow)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO *), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews);
-            for (i = 0; i < ((XGL_UPDATE_IMAGES*)pInNow)->count; i++) {
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews[i]);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews[i]));
-            }
+            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews, ((XGL_UPDATE_IMAGES*)pInNow)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews);
             glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
             glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
             break;
         }
@@ -406,26 +399,21 @@ static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHea
         {
             glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_BUFFERS), pInNow);
             XGL_UPDATE_BUFFERS* pPacket = (XGL_UPDATE_BUFFERS*)*ppOutNow;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews, ((XGL_UPDATE_BUFFERS*)pInNow)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO *), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews);
-            uint32_t i;
-            for (i = 0; i < ((XGL_UPDATE_BUFFERS*)pInNow)->count; i++) {
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews[i]);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews[i]));
-            }
+            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews, ((XGL_UPDATE_BUFFERS*)pInNow)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews);
             glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
             glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
             break;
         }
         case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
         {
             glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_AS_COPY), pInNow);
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
             glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
             break;
         }
-            default:
-                assert(0);
+        default:
+        {
+            assert(0);
+        }
         }
         pInNow = (XGL_UPDATE_SAMPLERS*)pInNow->pNext;
     }

@@ -366,7 +366,7 @@ class Subcommand(object):
                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
                            'XGL_GRAPHICS_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'if (pCreateInfo)\n        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), pCreateInfo)',
+                           'XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'if (pCreateInfo)\n        add_create_ds_layout_to_trace_packet(pHeader, &(pPacket->pCreateInfo), pCreateInfo)',
                                                                      'finalize_txt': '// pCreateInfo finalized in add_create_ds_layout_to_trace_packet'},
                            'XGL_DESCRIPTOR_POOL_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(XGL_DESCRIPTOR_POOL_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(XGL_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
@@ -1591,9 +1591,9 @@ class Subcommand(object):
         cdslc_body.append('           for (i = 0; i < pPacket->setLayoutArrayCount && pPacket->pSetLayoutArray != NULL; i++)')
         cdslc_body.append('           {')
         cdslc_body.append('               saveSetLayoutArray[i] = pPacket->pSetLayoutArray[i];')
-        cdslc_body.append('               *pSetLayoutOrig++ = remap(pPacket->pSetLayoutArray[i]);')
+        cdslc_body.append('               *pSetLayoutOrig++ = m_objMapper.remap(pPacket->pSetLayoutArray[i]);')
         cdslc_body.append('           }')
-        cdslc_body.append('           replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayoutChain(remap(pPacket->device), pPacket->setLayoutArrayCount, pPacket->pSetLayoutArray, &local_pLayoutChain);')
+        cdslc_body.append('           replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayoutChain(m_objMapper.remap(pPacket->device), pPacket->setLayoutArrayCount, pPacket->pSetLayoutArray, &local_pLayoutChain);')
         cdslc_body.append('           pSetLayoutOrig = (XGL_DESCRIPTOR_SET_LAYOUT *) pPacket->pSetLayoutArray;')
         cdslc_body.append('           for (i = 0; i < pPacket->setLayoutArrayCount && pPacket->pSetLayoutArray != NULL; i++)')
         cdslc_body.append('           {')
@@ -1601,7 +1601,7 @@ class Subcommand(object):
         cdslc_body.append('           }')
         cdslc_body.append('           if (replayResult == XGL_SUCCESS)')
         cdslc_body.append('           {')
-        cdslc_body.append('               add_to_map(pPacket->pLayoutChain, &local_pLayoutChain);')
+        cdslc_body.append('               m_objMapper.add_to_map(pPacket->pLayoutChain, &local_pLayoutChain);')
         cdslc_body.append('           }')
         cdslc_body.append('           free(saveSetLayoutArray);')
         return "\n".join(cdslc_body)
@@ -1617,7 +1617,7 @@ class Subcommand(object):
         cgp_body.append('            struct shaderPair saveShader[10];')
         cgp_body.append('            unsigned int idx = 0;')
         cgp_body.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));')
-        cgp_body.append('            createInfo.lastSetLayout = m_objMapper.remap(createInfo.lastSetLayout);')
+        cgp_body.append('            createInfo.pSetLayoutChain = m_objMapper.remap(createInfo.pSetLayoutChain);')
         cgp_body.append('            // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext')
         cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;')
         cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;')
@@ -1658,9 +1658,9 @@ class Subcommand(object):
         cbds_body.append('            {')
         cbds_body.append('                XGL_DESCRIPTOR_SET *pSet = (XGL_DESCRIPTOR_SET *) &(pPacket->pDescriptorSets[idx]);')
         cbds_body.append('                pSaveSets[idx] = pPacket->pDescriptorSets[idx];')
-        cbds_body.append('                *pSet = remap(pPacket->pDescriptorSets[idx]);')
+        cbds_body.append('                *pSet = m_objMapper.remap(pPacket->pDescriptorSets[idx]);')
         cbds_body.append('            }')
-        cbds_body.append('            m_xglFuncs.real_xglCmdBindDescriptorSets(remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, remap(pPacket->layoutChain), pPacket->layoutChainSlot, pPacket->count, pPacket->pDescriptorSets, pPacket->pUserData);')
+        cbds_body.append('            m_xglFuncs.real_xglCmdBindDescriptorSets(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, m_objMapper.remap(pPacket->layoutChain), pPacket->layoutChainSlot, pPacket->count, pPacket->pDescriptorSets, pPacket->pUserData);')
         cbds_body.append('            for (uint32_t idx = 0; idx < pPacket->count && pPacket->pDescriptorSets != NULL; idx++)')
         cbds_body.append('            {')
         cbds_body.append('                XGL_DESCRIPTOR_SET *pSet = (XGL_DESCRIPTOR_SET *) &(pPacket->pDescriptorSets[idx]);')
