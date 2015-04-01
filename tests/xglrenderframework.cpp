@@ -459,11 +459,14 @@ XGL_RESULT XglImage::UnmapMemory()
     return XGL_SUCCESS;
 }
 
-XglTextureObj::XglTextureObj(XglDevice *device)
+XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
 {
     m_device = device;
     const XGL_FORMAT tex_format = XGL_FMT_B8G8R8A8_UNORM;
-    const uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
+    uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
+
+    if (colors == NULL)
+        colors = tex_colors;
 
     memset(&m_textureViewInfo,0,sizeof(m_textureViewInfo));
 
@@ -519,29 +522,13 @@ XglTextureObj::XglTextureObj(XglDevice *device)
     for (y = 0; y < extent().height; y++) {
         uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
         for (x = 0; x < extent().width; x++)
-            row[x] = tex_colors[(x & 1) ^ (y & 1)];
+            row[x] = colors[(x & 1) ^ (y & 1)];
     }
 
     unmap();
 
     m_textureViewInfo.view = m_textureView.obj();
 
-}
-
-void XglTextureObj::ChangeColors(uint32_t color1, uint32_t color2)
-{
-    const uint32_t tex_colors[2] = { color1, color2 };
-    void *data;
-
-    data = map();
-
-    for (int y = 0; y < extent().height; y++) {
-        uint32_t *row = (uint32_t *) ((char *) data + m_rowPitch * y);
-        for (int x = 0; x < extent().width; x++)
-            row[x] = tex_colors[(x & 1) ^ (y & 1)];
-    }
-
-    unmap();
 }
 
 XglSamplerObj::XglSamplerObj(XglDevice *device)

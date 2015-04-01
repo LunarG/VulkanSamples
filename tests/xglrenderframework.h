@@ -246,9 +246,9 @@ protected:
 class XglTextureObj : public xgl_testing::Image
 {
 public:
-    XglTextureObj(XglDevice *device);
-    void ChangeColors(uint32_t color1, uint32_t color2);
+    XglTextureObj(XglDevice *device, uint32_t *colors = NULL);
     XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
+
 
 protected:
     XglDevice                 *m_device;
