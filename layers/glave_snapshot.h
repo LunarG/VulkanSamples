@@ -164,6 +164,28 @@ static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
     }
 }
 
+//=============================================================================
+// Helper structure for a GLAVE vulkan snapshot.
+// These can probably be auto-generated at some point.
+//=============================================================================
+
+void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc);
+
+typedef struct _GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS
+{
+    XGL_PHYSICAL_GPU gpu;
+    XGL_DEVICE_CREATE_INFO* pCreateInfo;
+    XGL_DEVICE* pDevice;
+} GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS;
+
+XGL_DEVICE_CREATE_INFO* glv_deepcopy_xgl_device_create_info(const XGL_DEVICE_CREATE_INFO* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(XGL_DEVICE_CREATE_INFO* pCreateInfo);
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice);
+void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc);
+
+//=============================================================================
+// Glave Snapshot helper structs
+//=============================================================================
+
 // Node that stores information about an object
 typedef struct _GLV_VK_SNAPSHOT_OBJECT_NODE {
     void*           pVkObject;
@@ -179,8 +201,7 @@ typedef struct _GLV_VK_SNAPSHOT_DEVICE_NODE {
     XGL_DEVICE device;
 
     // CreateDevice parameters
-    XGL_PHYSICAL_GPU gpu;
-    XGL_DEVICE_CREATE_INFO* pCreateInfo;
+    GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS params;
 
     // Other information a device needs to store.
     // TODO: anything?
@@ -226,7 +247,6 @@ typedef struct _GLV_VK_SNAPSHOT {
     uint64_t deltaDeletedObjectCount;
     GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pDeltaDeletedObjects;
 } GLV_VK_SNAPSHOT;
-
 
 //=============================================================================
 // prototype for extension functions

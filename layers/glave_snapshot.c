@@ -27,6 +27,7 @@
 #include <string.h>
 #include "loader_platform.h"
 #include "glave_snapshot.h"
+#include "xgl_struct_string_helper.h"
 
 #define LAYER_NAME_STR "GlaveSnapshot"
 #define LAYER_ABBREV_STR "GLVSnap"
@@ -52,6 +53,118 @@ static GLV_VK_SNAPSHOT s_snapshot = {0};
 
 // The 'deltaSnapshot' which tracks all object creation and deletion.
 static GLV_VK_SNAPSHOT s_delta = {0};
+
+
+//=============================================================================
+// Helper structure for a GLAVE vulkan snapshot.
+// These can probably be auto-generated at some point.
+//=============================================================================
+
+void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc)
+{
+    *ppDest = malloc(size);
+    memcpy(*ppDest, pSrc, size);
+}
+
+XGL_DEVICE_CREATE_INFO* glv_deepcopy_xgl_device_create_info(const XGL_DEVICE_CREATE_INFO* pSrcCreateInfo)
+{
+    XGL_DEVICE_CREATE_INFO* pDestCreateInfo;
+
+    // NOTE: partially duplicated code from add_XGL_DEVICE_CREATE_INFO_to_packet(...)
+    {
+        uint32_t i;
+        glv_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO), pSrcCreateInfo);
+        glv_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->queueRecordCount*sizeof(XGL_DEVICE_QUEUE_CREATE_INFO), pSrcCreateInfo->pRequestedQueues);
+
+        if (pSrcCreateInfo->extensionCount > 0)
+        {
+            glv_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames, pSrcCreateInfo->extensionCount * sizeof(char *), pSrcCreateInfo->ppEnabledExtensionNames);
+            for (i = 0; i < pSrcCreateInfo->extensionCount; i++)
+            {
+                glv_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames[i], strlen(pSrcCreateInfo->ppEnabledExtensionNames[i]) + 1, pSrcCreateInfo->ppEnabledExtensionNames[i]);
+            }
+        }
+        XGL_LAYER_CREATE_INFO *pSrcNext = ( XGL_LAYER_CREATE_INFO *) pSrcCreateInfo->pNext;
+        XGL_LAYER_CREATE_INFO **ppDstNext = ( XGL_LAYER_CREATE_INFO **) &pDestCreateInfo->pNext;
+        while (pSrcNext != NULL)
+        {
+            if ((pSrcNext->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
+            {
+                glv_vk_malloc_and_copy((void**)ppDstNext, sizeof(XGL_LAYER_CREATE_INFO), pSrcNext);
+                glv_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames, pSrcNext->layerCount * sizeof(char*), pSrcNext->ppActiveLayerNames);
+                for (i = 0; i < pSrcNext->layerCount; i++)
+                {
+                    glv_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames[i], strlen(pSrcNext->ppActiveLayerNames[i]) + 1, pSrcNext->ppActiveLayerNames[i]);
+                }
+
+                ppDstNext = (XGL_LAYER_CREATE_INFO**) &(*ppDstNext)->pNext;
+            }
+            pSrcNext = (XGL_LAYER_CREATE_INFO*) pSrcNext->pNext;
+        }
+    }
+
+    return pDestCreateInfo;
+}
+
+void glv_deepfree_xgl_device_create_info(XGL_DEVICE_CREATE_INFO* pCreateInfo)
+{
+    uint32_t i;
+    if (pCreateInfo->pRequestedQueues != NULL)
+    {
+        free((void*)pCreateInfo->pRequestedQueues);
+    }
+
+    if (pCreateInfo->ppEnabledExtensionNames != NULL)
+    {
+        for (i = 0; i < pCreateInfo->extensionCount; i++)
+        {
+            free((void*)pCreateInfo->ppEnabledExtensionNames[i]);
+        }
+        free((void*)pCreateInfo->ppEnabledExtensionNames);
+    }
+
+    XGL_LAYER_CREATE_INFO *pSrcNext = (XGL_LAYER_CREATE_INFO*)pCreateInfo->pNext;
+    while (pSrcNext != NULL)
+    {
+        XGL_LAYER_CREATE_INFO* pTmp = (XGL_LAYER_CREATE_INFO*)pSrcNext->pNext;
+        if ((pSrcNext->sType == XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
+        {
+            for (i = 0; i < pSrcNext->layerCount; i++)
+            {
+                free((void*)pSrcNext->ppActiveLayerNames[i]);
+            }
+
+            free((void*)pSrcNext->ppActiveLayerNames);
+            free(pSrcNext);
+        }
+        pSrcNext = pTmp;
+    }
+
+    free(pCreateInfo);
+}
+
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
+{
+    pDest->gpu = gpu;
+
+    pDest->pCreateInfo = glv_deepcopy_xgl_device_create_info(pCreateInfo);
+
+    pDest->pDevice = (XGL_DEVICE*)malloc(sizeof(XGL_DEVICE));
+    *pDest->pDevice = *pDevice;
+}
+
+void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc)
+{
+    memset(&pSrc->gpu, 0, sizeof(XGL_PHYSICAL_GPU));
+
+    glv_deepfree_xgl_device_create_info(pSrc->pCreateInfo);
+    pSrc->pCreateInfo = NULL;
+
+    free(pSrc->pDevice);
+    pSrc->pDevice = NULL;
+}
+
+
 
 // add a new node to the global and object lists, then return it so the caller can populate the object information.
 static GLV_VK_SNAPSHOT_LL_NODE* snapshot_insert_object(GLV_VK_SNAPSHOT* pSnapshot, void* pObject, XGL_OBJECT_TYPE type)
@@ -164,9 +277,7 @@ static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_PHYSICAL_GPU 
     pNode->obj.pStruct = malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
 
     GLV_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pNode->obj.pStruct;
-    pDevNode->device = *pDevice;
-    pDevNode->pCreateInfo = (XGL_DEVICE_CREATE_INFO*)malloc(sizeof(XGL_DEVICE_CREATE_INFO));
-    memcpy(pDevNode->pCreateInfo, pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));
+    glv_vk_snapshot_copy_createdevice_params(&pDevNode->params, gpu, pCreateInfo, pDevice);
 
     // insert at front of device list
     pNode->pNextObj = pSnapshot->pDevices;
@@ -197,7 +308,7 @@ static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, XGL_DEVICE device
                 if (pTrav->obj.pStruct != NULL)
                 {
                     GLV_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pTrav->obj.pStruct;
-                    free(pDevNode->pCreateInfo);
+                    glv_vk_snapshot_destroy_createdevice_params(&pDevNode->params);
                     free(pDevNode);
                 }
                 free(pTrav);
@@ -1740,7 +1851,7 @@ GLV_VK_SNAPSHOT glvSnapshotGetSnapshot(void)
 //=================================================================================================
 void glvSnapshotPrintDelta()
 {
-    char str[1024];
+    char str[2048];
     GLV_VK_SNAPSHOT_LL_NODE* pTrav = s_delta.pGlobalObjs;
     sprintf(str, "==== DELTA SNAPSHOT contains %lu objects, %lu devices, and %lu deleted objects", s_delta.globalObjCount, s_delta.deviceCount, s_delta.deltaDeletedObjectCount);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
@@ -1752,7 +1863,7 @@ void glvSnapshotPrintDelta()
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pTrav != NULL)
         {
-            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pVkObject);
+            sprintf(str, "\t%s obj %p", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pVkObject);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pTrav = pTrav->pNextGlobal;
         }
@@ -1766,7 +1877,9 @@ void glvSnapshotPrintDelta()
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pDeviceNode != NULL)
         {
-            sprintf(str, "         %s obj %p", string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE_DEVICE), pDeviceNode->obj.pVkObject);
+            GLV_VK_SNAPSHOT_DEVICE_NODE* pDev = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pDeviceNode->obj.pStruct;
+            char * createInfoStr = xgl_print_xgl_device_create_info(pDev->params.pCreateInfo, "\t\t");
+            sprintf(str, "\t%s obj %p:\n%s", string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE_DEVICE), pDeviceNode->obj.pVkObject, createInfoStr);
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pDeviceNode->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pDeviceNode = pDeviceNode->pNextObj;
         }
