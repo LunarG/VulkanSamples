@@ -941,8 +941,11 @@ class Subcommand(object):
                                                                                          '    glv_LogError("AllocMemory must have AllocInfo stype of XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.\\n");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
-                             'UpdateDescriptors' : {'param': 'pUpdateChain', 'txt': ['XGL_UPDATE_SAMPLERS* pNext = (XGL_UPDATE_SAMPLERS*)pPacket->pUpdateChain;\n',
-                                                                                         'while ((NULL != pNext) && (XGL_NULL_HANDLE != pNext))\n', '{\n',
+                             'UpdateDescriptors' : {'param': 'ppUpdateArray', 'txt': ['size_t i;\n',
+                                                                                         'for (i = 0; i < pPacket->updateCount; i++)\n', '{\n',
+                                                                                         '    XGL_UPDATE_SAMPLERS** ppUpItem = (XGL_UPDATE_SAMPLERS**) &pPacket->ppUpdateArray[i];\n',
+                                                                                         '    *ppUpItem = (XGL_UPDATE_SAMPLERS *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t) pPacket->ppUpdateArray[i]);\n',
+                                                                                         '    XGL_UPDATE_SAMPLERS* pNext = *ppUpItem;\n',
                                                                                          '    switch(pNext->sType)\n', '    {\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:\n',
                                                                                          '        {\n',
@@ -978,11 +981,6 @@ class Subcommand(object):
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '            XGL_IMAGE_VIEW_ATTACH_INFO** ppLocalImageView = (XGL_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews;\n',
                                                                                          '            *ppLocalImageView = (XGL_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews);\n',
-                                                                                         '            uint32_t i;\n',
-                                                                                         '            for (i = 0; i < pUI->count; i++) {\n',
-                                                                                         '                XGL_IMAGE_VIEW_ATTACH_INFO** ppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews[i];\n',
-                                                                                         '                *ppLocalImageViews = (XGL_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews[i]);\n',
-                                                                                         '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:\n',
@@ -992,16 +990,11 @@ class Subcommand(object):
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '            XGL_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferView = (XGL_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews;\n',
                                                                                          '            *ppLocalBufferView = (XGL_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews);\n',
-                                                                                         '            uint32_t i;\n',
-                                                                                         '            for (i = 0; i < pUB->count; i++) {\n',
-                                                                                         '                XGL_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews[i];\n',
-                                                                                         '                *ppLocalBufferViews = (XGL_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews[i]);\n',
-                                                                                         '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        default:\n',
                                                                                          '        {\n',
-                                                                                         '           glv_LogError("Encountered an unexpected type in update descriptors pUpdateChain.\\n");\n',
+                                                                                         '           glv_LogError("Encountered an unexpected type in update descriptors ppUpdateArray.\\n");\n',
                                                                                          '           pPacket->header = NULL;\n',
                                                                                          '           pNext->pNext = NULL;\n',
                                                                                          '        }\n',
@@ -1589,6 +1582,30 @@ class Subcommand(object):
         cdsl_body.append('            returnValue = manually_handle_xglCreateDescriptorSetLayout(pPacket);')
         return "\n".join(cdsl_body)
 
+    def _gen_replay_create_descriptor_set_layout_chain(self):
+        cdslc_body = []
+        cdslc_body.append('           XGL_DESCRIPTOR_SET_LAYOUT_CHAIN local_pLayoutChain;')
+        cdslc_body.append('           XGL_DESCRIPTOR_SET_LAYOUT *saveSetLayoutArray = (XGL_DESCRIPTOR_SET_LAYOUT *) glv_malloc(pPacket->setLayoutArrayCount * sizeof(XGL_DESCRIPTOR_SET_LAYOUT));')
+        cdslc_body.append('           XGL_DESCRIPTOR_SET_LAYOUT *pSetLayoutOrig = (XGL_DESCRIPTOR_SET_LAYOUT *) pPacket->pSetLayoutArray;')
+        cdslc_body.append('           uint32_t i;')
+        cdslc_body.append('           for (i = 0; i < pPacket->setLayoutArrayCount && pPacket->pSetLayoutArray != NULL; i++)')
+        cdslc_body.append('           {')
+        cdslc_body.append('               saveSetLayoutArray[i] = pPacket->pSetLayoutArray[i];')
+        cdslc_body.append('               *pSetLayoutOrig++ = remap(pPacket->pSetLayoutArray[i]);')
+        cdslc_body.append('           }')
+        cdslc_body.append('           replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayoutChain(remap(pPacket->device), pPacket->setLayoutArrayCount, pPacket->pSetLayoutArray, &local_pLayoutChain);')
+        cdslc_body.append('           pSetLayoutOrig = (XGL_DESCRIPTOR_SET_LAYOUT *) pPacket->pSetLayoutArray;')
+        cdslc_body.append('           for (i = 0; i < pPacket->setLayoutArrayCount && pPacket->pSetLayoutArray != NULL; i++)')
+        cdslc_body.append('           {')
+        cdslc_body.append('               *pSetLayoutOrig++ = saveSetLayoutArray[i];')
+        cdslc_body.append('           }')
+        cdslc_body.append('           if (replayResult == XGL_SUCCESS)')
+        cdslc_body.append('           {')
+        cdslc_body.append('               add_to_map(pPacket->pLayoutChain, &local_pLayoutChain);')
+        cdslc_body.append('           }')
+        cdslc_body.append('           free(saveSetLayoutArray);')
+        return "\n".join(cdslc_body)
+
     def _gen_replay_create_graphics_pipeline(self):
         cgp_body = []
         cgp_body.append('            returnValue = manually_handle_xglCreateGraphicsPipeline(pPacket);')
@@ -1629,6 +1646,28 @@ class Subcommand(object):
         cwe_body = []
         cwe_body.append('            returnValue = manually_handle_xglCmdWaitEvents(pPacket);')
         return "\n".join(cwe_body)
+
+    def _gen_replay_cmd_bind_descriptor_sets(self):
+        cbds_body = []
+        cbds_body.append('            XGL_DESCRIPTOR_SET *pSaveSets = (XGL_DESCRIPTOR_SET *) glv_malloc(sizeof(XGL_DESCRIPTOR_SET) * pPacket->count);')
+        cbds_body.append('            if (pSaveSets == NULL)')
+        cbds_body.append('            {')
+        cbds_body.append('                glv_LogError("replay of CmdBindDescriptorSets out of memory\\n");')
+        cbds_body.append('            }')
+        cbds_body.append('            for (uint32_t idx = 0; idx < pPacket->count && pPacket->pDescriptorSets != NULL; idx++)')
+        cbds_body.append('            {')
+        cbds_body.append('                XGL_DESCRIPTOR_SET *pSet = (XGL_DESCRIPTOR_SET *) &(pPacket->pDescriptorSets[idx]);')
+        cbds_body.append('                pSaveSets[idx] = pPacket->pDescriptorSets[idx];')
+        cbds_body.append('                *pSet = remap(pPacket->pDescriptorSets[idx]);')
+        cbds_body.append('            }')
+        cbds_body.append('            m_xglFuncs.real_xglCmdBindDescriptorSets(remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, remap(pPacket->layoutChain), pPacket->layoutChainSlot, pPacket->count, pPacket->pDescriptorSets, pPacket->pUserData);')
+        cbds_body.append('            for (uint32_t idx = 0; idx < pPacket->count && pPacket->pDescriptorSets != NULL; idx++)')
+        cbds_body.append('            {')
+        cbds_body.append('                XGL_DESCRIPTOR_SET *pSet = (XGL_DESCRIPTOR_SET *) &(pPacket->pDescriptorSets[idx]);')
+        cbds_body.append('                *pSet = pSaveSets[idx];')
+        cbds_body.append('            }')
+        cbds_body.append('            glv_free(pSaveSets);')
+        return "\n".join(cbds_body)
 
     def _gen_replay_cmd_pipeline_barrier(self):
         cpb_body = []
@@ -1782,6 +1821,8 @@ class Subcommand(object):
                             'CmdBindDynamicMemoryView': self._gen_replay_bind_dynamic_memory_view,
                             'UpdateDescriptors': self._gen_replay_update_descriptors,
                             'CreateDescriptorSetLayout': self._gen_replay_create_descriptor_set_layout,
+                            'CreateDescriptorSetLayoutChain': self._gen_replay_create_descriptor_set_layout_chain,
+                            'CmdBindDescriptorSets': self._gen_replay_cmd_bind_descriptor_sets,
                             'CmdWaitEvents': self._gen_replay_cmd_wait_events,
                             'CmdPipelineBarrier': self._gen_replay_cmd_pipeline_barrier}
         # TODO : Need to guard CreateInstance with "if (!m_display->m_initedXGL)" check
@@ -1846,6 +1887,7 @@ class Subcommand(object):
                 elif create_func: # Declare local var to store created handle into
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                     if 'AllocDescriptorSets' == proto.name:
+                        # TODO should malloc and free here rather than fixed size array
                         rbody.append('            %s local_%s[100];' % (proto.params[-2].ty.strip('*').replace('const ', ''), proto.params[-2].name))
                         rbody.append('            XGL_DESCRIPTOR_SET_LAYOUT localDescSets[100];')
                         rbody.append('            assert(pPacket->count <= 100);')
@@ -1854,6 +1896,7 @@ class Subcommand(object):
                         rbody.append('                localDescSets[i] = m_objMapper.remap(pPacket->%s[i]);' % (proto.params[-3].name))
                         rbody.append('            }')
                 elif proto.name == 'ClearDescriptorSets':
+                    # TODO should malloc and free here rather than fixed size array
                     rbody.append('            XGL_DESCRIPTOR_SET localDescSets[100];')
                     rbody.append('            assert(pPacket->count <= 100);')
                     rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
