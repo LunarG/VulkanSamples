@@ -897,11 +897,11 @@ void CmdBuffer::begin(const XGL_CMD_BUFFER_BEGIN_INFO *info)
 void CmdBuffer::begin(XGL_RENDER_PASS renderpass_obj)
 {
     XGL_CMD_BUFFER_BEGIN_INFO info = {};
-    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
-        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
-        .pNext = NULL,
-        .renderPass = renderpass_obj,
-    };
+    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {};
+    graphics_cmd_buf_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
+    graphics_cmd_buf_info.pNext = NULL;
+    graphics_cmd_buf_info.renderPass = renderpass_obj;
+
     info.flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
           XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
     info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;

@@ -411,10 +411,9 @@ void  TestFrameworkXglPresent::Display()
 {
     XGL_RESULT err;
 
-    XGL_WSI_X11_PRESENT_INFO present = {
-        .destWindow = m_window,
-        .srcImage = m_display_image->m_presentableImage,
-    };
+    XGL_WSI_X11_PRESENT_INFO present = {};
+    present.destWindow = m_window;
+    present.srcImage = m_display_image->m_presentableImage;
 
     xcb_change_property (environment->m_connection,
                          XCB_PROP_MODE_REPLACE,
@@ -506,15 +505,12 @@ void TestFrameworkXglPresent::CreatePresentableImages()
 
     for (int x=0; x < m_images.size(); x++)
     {
-        const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {
-            .format = XGL_FMT_B8G8R8A8_UNORM,
-            .usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            .extent = {
-                .width = m_display_image->m_width,
-                .height = m_display_image->m_height,
-            },
-            .flags = 0,
-        };
+        XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {};
+        presentable_image_info.format = XGL_FMT_B8G8R8A8_UNORM;
+        presentable_image_info.usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        presentable_image_info.extent.width = m_display_image->m_width;
+        presentable_image_info.extent.height = m_display_image->m_height;
+        presentable_image_info.flags = 0;
 
         void *dest_ptr;
 

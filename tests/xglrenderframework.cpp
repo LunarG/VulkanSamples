@@ -186,17 +186,17 @@ void XglRenderFramework::InitRenderTarget()
         dsBinding = &m_depthStencilBinding;
     else
         dsBinding = NULL;
-    const XGL_FRAMEBUFFER_CREATE_INFO fb_info = {
-         .sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-         .pNext = NULL,
-         .colorAttachmentCount = m_renderTargetCount,
-         .pColorAttachments = m_colorBindings,
-         .pDepthStencilAttachment = dsBinding,
-         .sampleCount = 1,
-         .width = (uint32_t)m_width,
-         .height = (uint32_t)m_height,
-         .layers = 1,
-    };
+    XGL_FRAMEBUFFER_CREATE_INFO fb_info = {};
+    fb_info.sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fb_info.pNext = NULL;
+    fb_info.colorAttachmentCount = m_renderTargetCount;
+    fb_info.pColorAttachments = m_colorBindings;
+    fb_info.pDepthStencilAttachment = dsBinding;
+    fb_info.sampleCount = 1;
+    fb_info.width = (uint32_t)m_width;
+    fb_info.height = (uint32_t)m_height;
+    fb_info.layers = 1;
+
     XGL_RENDER_PASS_CREATE_INFO rp_info;
     memset(&rp_info, 0 , sizeof(rp_info));
     xglCreateFramebuffer(device(), &fb_info, &(m_frameBuffer));
@@ -472,36 +472,37 @@ XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
 
     m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
 
-    const XGL_IMAGE_CREATE_INFO image = {
-        .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = NULL,
-        .imageType = XGL_IMAGE_2D,
-        .format = tex_format,
-        .extent = { 16, 16, 1 },
-        .mipLevels = 1,
-        .arraySize = 1,
-        .samples = 1,
-        .tiling = XGL_LINEAR_TILING,
-        .usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT,
-        .flags = 0,
-    };
+    XGL_IMAGE_CREATE_INFO image = {};
+    image.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image.pNext = NULL;
+    image.imageType = XGL_IMAGE_2D;
+    image.format = tex_format;
+    image.extent.width = 16;
+    image.extent.height = 16;
+    image.extent.depth = 1;
+    image.mipLevels = 1;
+    image.arraySize = 1;
+    image.samples = 1;
+    image.tiling = XGL_LINEAR_TILING;
+    image.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
+    image.flags = 0;
 
     XGL_IMAGE_VIEW_CREATE_INFO view;
-        view.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        view.pNext = NULL;
-        view.image = XGL_NULL_HANDLE;
-        view.viewType = XGL_IMAGE_VIEW_2D;
-        view.format = image.format;
-        view.channels.r = XGL_CHANNEL_SWIZZLE_R;
-        view.channels.g = XGL_CHANNEL_SWIZZLE_G;
-        view.channels.b = XGL_CHANNEL_SWIZZLE_B;
-        view.channels.a = XGL_CHANNEL_SWIZZLE_A;
-        view.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-        view.subresourceRange.baseMipLevel = 0;
-        view.subresourceRange.mipLevels = 1;
-        view.subresourceRange.baseArraySlice = 0;
-        view.subresourceRange.arraySize = 1;
-        view.minLod = 0.0f;
+    view.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view.pNext = NULL;
+    view.image = XGL_NULL_HANDLE;
+    view.viewType = XGL_IMAGE_VIEW_2D;
+    view.format = image.format;
+    view.channels.r = XGL_CHANNEL_SWIZZLE_R;
+    view.channels.g = XGL_CHANNEL_SWIZZLE_G;
+    view.channels.b = XGL_CHANNEL_SWIZZLE_B;
+    view.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    view.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    view.subresourceRange.baseMipLevel = 0;
+    view.subresourceRange.mipLevels = 1;
+    view.subresourceRange.baseArraySlice = 0;
+    view.subresourceRange.arraySize = 1;
+    view.minLod = 0.0f;
 
     /* create image */
     init(*m_device, image);
@@ -633,11 +634,11 @@ void XglConstantBufferObj::BufferMemoryBarrier(
     }
 
     // open the command buffer
-    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
-        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
-        .flags = 0,
-    };
+    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {};
+    cmd_buf_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = 0;
+
     err = m_commandBuffer->BeginCommandBuffer(&cmd_buf_info);
     ASSERT_XGL_SUCCESS(err);
 

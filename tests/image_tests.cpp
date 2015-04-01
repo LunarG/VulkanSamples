@@ -205,10 +205,10 @@ void XglImageTest::CreateImage(uint32_t w, uint32_t h)
     size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
-        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = NULL,
-    };
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {};
+    img_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
+    img_alloc.pNext = NULL;
+
     XGL_MEMORY_ALLOC_INFO mem_info = {};
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = &img_alloc;
