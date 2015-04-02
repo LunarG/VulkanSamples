@@ -38,6 +38,7 @@ endif()
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/../loader
+	${CMAKE_CURRENT_SOURCE_DIR}/../../glslang
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
@@ -104,6 +105,7 @@ add_vk_layer(Multi multi.cpp)
 add_vk_layer(DrawState draw_state.cpp)
 add_vk_layer(MemTracker mem_tracker.cpp)
 #add_vk_layer(GlaveSnapshot glave_snapshot.c)
+add_vk_layer(ShaderChecker shader_checker.cpp)
 # generated
 add_vk_layer(Generic generic_layer.c)
 add_vk_layer(APIDump api_dump.cpp)
