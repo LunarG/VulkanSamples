@@ -187,7 +187,7 @@ class Subcommand(object):
         ur_body.append('        if (g_actionIsDefault)')
         ur_body.append('            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;')
         ur_body.append('        else')
-        ur_body.append('            g_debugAction &= ~VK_DBG_LAYER_ACTION_CALLBACK;')
+        ur_body.append('            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));')
         ur_body.append('    }')
         ur_body.append('    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
         ur_body.append('    return result;')
@@ -437,7 +437,7 @@ class Subcommand(object):
                          '{\n'
                          '    PFN_vkGetProcAddr fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
-                         '    assert(fpNextGPA);\n' % self.layer_name);
+                         '    assert(fpNextGPA);\n' % self.layer_name)
 
         func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);\n")
         func_body.append("    if (!printLockInitialized)")
@@ -1304,6 +1304,128 @@ class ObjectTrackerSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
+class ThreadingSubcommand(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('#include <stdio.h>')
+        header_txt.append('#include <stdlib.h>')
+        header_txt.append('#include <string.h>')
+        header_txt.append('#include <unordered_map>')
+        header_txt.append('#include "loader_platform.h"')
+        header_txt.append('#include "vkLayer.h"')
+        header_txt.append('#include "threading.h"')
+        header_txt.append('#include "layers_config.h"')
+        header_txt.append('#include "vk_enum_validate_helper.h"')
+        header_txt.append('#include "vk_struct_validate_helper.h"')
+        header_txt.append('//The following is #included again to catch certain OS-specific functions being used:')
+        header_txt.append('#include "loader_platform.h"\n')
+        header_txt.append('#include "layers_msg.h"\n')
+        header_txt.append('static VkLayerDispatchTable nextTable;')
+        header_txt.append('static VkBaseLayerObject *pCurObj;')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);\n')
+        header_txt.append('using namespace std;')
+        header_txt.append('static unordered_map<int, void*> proxy_objectsInUse;\n')
+        header_txt.append('static unordered_map<VkObject, loader_platform_thread_id> objectsInUse;\n')
+        header_txt.append('static int threadingLockInitialized = 0;')
+        header_txt.append('static loader_platform_thread_mutex threadingLock;')
+        header_txt.append('static int printLockInitialized = 0;')
+        header_txt.append('static loader_platform_thread_mutex printLock;\n')
+        header_txt.append('')
+        header_txt.append('static void useObject(VkObject object, const char* type)')
+        header_txt.append('{')
+        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
+        header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
+        header_txt.append('    if (objectsInUse.find(object) == objectsInUse.end()) {')
+        header_txt.append('        objectsInUse[object] = tid;')
+        header_txt.append('    } else {')
+        header_txt.append('        if (objectsInUse[object] == tid) {')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld", type, objectsInUse[object], tid);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING", str);')
+        header_txt.append('        } else {')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is recursively used in thread %ld", type, tid);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, THREADING_CHECKER_SINGLE_THREAD_REUSE, "THREADING", str);')
+        header_txt.append('        }')
+        header_txt.append('    }')
+        header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
+        header_txt.append('}')
+        header_txt.append('static void finishUsingObject(VkObject object)')
+        header_txt.append('{')
+        header_txt.append('    // Object is no longer in use')
+        header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
+        header_txt.append('    objectsInUse.erase(object);')
+        header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
+        header_txt.append('}')
+        return "\n".join(header_txt)
+
+    def generate_intercept(self, proto, qual):
+        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
+            # use default version
+            return None
+        decl = proto.c_func(prefix="vk", attr="VKAPI")
+        ret_val = ''
+        stmt = ''
+        funcs = []
+        if proto.ret != "void":
+            ret_val = "VkResult result = "
+            stmt = "    return result;\n"
+        if proto.name == "EnumerateLayers":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    char str[1024];\n'
+                     '    if (gpu != NULL) {\n'
+                     '        pCurObj = (VkBaseLayerObject *) %s;\n'
+                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        %snextTable.%s;\n'
+                     '        fflush(stdout);\n'
+                     '    %s'
+                     '    } else {\n'
+                     '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                     '            return VK_ERROR_INVALID_POINTER;\n'
+                     '        // This layer compatible with all GPUs\n'
+                     '        *pOutLayerCount = 1;\n'
+                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
+                     '        return VK_SUCCESS;\n'
+                     '    }\n'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt, self.layer_name))
+        # All functions that do a Get are thread safe
+        elif 'Get' in proto.name:
+            return None
+        # All Wsi functions are thread safe
+        elif 'WsiX11' in proto.name:
+            return None
+        # All functions that start with a device parameter are thread safe
+        elif proto.params[0].ty in { "VkDevice" }:
+            return None
+        # Only watch core objects passed as first parameter
+        elif proto.params[0].ty not in vulkan.core.objects:
+            return None
+        elif proto.params[0].ty != "VkPhysicalGpu":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    useObject((VkObject) %s, "%s");\n'
+                     '    %snextTable.%s;\n'
+                     '    finishUsingObject((VkObject) %s);\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, proto.c_call(), proto.params[0].name, stmt))
+        else:
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    pCurObj =  (VkBaseLayerObject *) %s;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt))
+        return "\n\n".join(funcs)
+
+    def generate_body(self):
+        self.layer_name = "Threading"
+        body = [self._generate_layer_initialization(True, lockname='threading'),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
+                self._generate_layer_gpa_function()]
+        return "\n\n".join(body)
+
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
@@ -1311,6 +1433,7 @@ def main():
             "Generic" : GenericLayerSubcommand,
             "APIDump" : APIDumpSubcommand,
             "ObjectTracker" : ObjectTrackerSubcommand,
+            "Threading" : ThreadingSubcommand,
     }
 
     if len(sys.argv) < 3 or sys.argv[1] not in subcommands or not os.path.exists(sys.argv[2]):

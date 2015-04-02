@@ -53,6 +53,9 @@ layer/mem\_tracker.c (name=MemTracker) - MemTracker functions mostly as a valida
 ### Check parameters
 <build dir>/layer/param_checker.c (name=ParamChecker) - Check the input parameters to API calls for validity. Currently this only checks ENUM params directly passed to API calls and ENUMs embedded in struct params. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
+### Check threading
+<build dir>/layer/threading.c (name=Threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+
 ## Using Layers
 
 1. Build VK loader  and i965 icd driver using normal steps (cmake and make)

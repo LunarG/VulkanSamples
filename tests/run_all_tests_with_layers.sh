@@ -3,7 +3,7 @@
 # Run all the regression tests with validation layers enabled
 
 # enable layers
-export LIBVK_LAYER_NAMES=DrawState:MemTracker:ParamChecker:ObjectTracker
+export LIBVK_LAYER_NAMES=DrawState:MemTracker:ParamChecker:ObjectTracker:Threading
 # Save any existing settings file
 RESTORE_SETTINGS="false"
 SETTINGS_NAME="vk_layer_settings.txt"
@@ -21,6 +21,7 @@ echo "MemTrackerReportLevel = $OUTPUT_LEVEL" > $SETTINGS_NAME
 echo "DrawStateReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 echo "ObjectTrackerReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 echo "ParamCheckerReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
+echo "ThreadingReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 
 # vkbase tests that basic VK calls are working (don't return an error).
 ./vkbase
