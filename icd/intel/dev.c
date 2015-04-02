@@ -120,10 +120,8 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
         const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
                 info->ppEnabledExtensionNames[i]);
 
-        if (ext == INTEL_EXT_INVALID)
-            return XGL_ERROR_INVALID_EXTENSION;
-
-        dev->exts[ext] = true;
+        if (ext != INTEL_EXT_INVALID)
+            dev->exts[ext] = true;
     }
 
     dev->gpu = gpu;
