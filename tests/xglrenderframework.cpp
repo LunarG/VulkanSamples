@@ -432,18 +432,6 @@ void XglImage::init(uint32_t w, uint32_t h,
     xgl_testing::Image::init(*m_device, imageCreateInfo);
 
     m_imageInfo.layout = XGL_IMAGE_LAYOUT_GENERAL;
-
-    XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
-        XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
-        XGL_NULL_HANDLE,
-        obj(),
-        XGL_FMT_B8G8R8A8_UNORM,
-        0,
-        0,
-        1
-    };
-
-    m_targetView.init(*m_device, createView);
 }
 
 XGL_RESULT XglImage::MapMemory(void** ptr)

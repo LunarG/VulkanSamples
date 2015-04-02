@@ -215,8 +215,21 @@ public:
     {
         return obj();
     }
-    XGL_COLOR_ATTACHMENT_VIEW targetView()const
+    XGL_COLOR_ATTACHMENT_VIEW targetView()
     {
+        if (!m_targetView.initialized())
+        {
+            XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
+                XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+                XGL_NULL_HANDLE,
+                obj(),
+                XGL_FMT_B8G8R8A8_UNORM,
+                0,
+                0,
+                1
+            };
+            m_targetView.init(*m_device, createView);
+        }
         return m_targetView.obj();
     }
 
