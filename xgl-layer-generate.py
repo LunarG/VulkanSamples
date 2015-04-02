@@ -201,6 +201,12 @@ class Subcommand(object):
         for proto in self.protos:
             if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
                 if "Generic" == layer:
+                    if 'DbgRegisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_register())
+                        continue
+                    if 'DbgUnregisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_unregister())
+                        continue
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
                     ret_val = ''
@@ -235,10 +241,6 @@ class Subcommand(object):
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
                                      '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt, layer_name))
-                    elif 'DbgRegisterMsgCallback' == proto.name:
-                        funcs.append(self._gen_layer_dbg_callback_register())
-                    elif 'DbgUnregisterMsgCallback' == proto.name:
-                        funcs.append(self._gen_layer_dbg_callback_unregister())
                     elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
@@ -585,6 +587,12 @@ class Subcommand(object):
                     if 'WsiX11QueuePresent' == proto.name:
                         funcs.append("#endif")
                 elif "ObjectTracker" == layer:
+                    if 'DbgRegisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_register())
+                        continue
+                    if 'DbgUnregisterMsgCallback' == proto.name:
+                        funcs.append(self._gen_layer_dbg_callback_unregister())
+                        continue
                     obj_type_mapping = {base_t : base_t.replace("XGL_", "XGL_OBJECT_TYPE_") for base_t in xgl.object_type_list}
                     # For the various "super-types" we have to use function to distinguish sub type
                     for obj_type in ["XGL_BASE_OBJECT", "XGL_OBJECT", "XGL_DYNAMIC_STATE_OBJECT"]:
@@ -595,42 +603,8 @@ class Subcommand(object):
                     p0_type = proto.params[0].ty.strip('*').strip('const ')
                     create_line = ''
                     destroy_line = ''
-                    if 'DbgRegisterMsgCallback' in proto.name:
-                        using_line =  '    // This layer intercepts callbacks\n'
-                        using_line += '    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));\n'
-                        using_line += '    if (!pNewDbgFuncNode)\n'
-                        using_line += '        return XGL_ERROR_OUT_OF_MEMORY;\n'
-                        using_line += '    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;\n'
-                        using_line += '    pNewDbgFuncNode->pUserData = pUserData;\n'
-                        using_line += '    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;\n'
-                        using_line += '    g_pDbgFunctionHead = pNewDbgFuncNode;\n'
-                        using_line += '    // force callbacks if DebugAction hasn\'t been set already other than initial value\n'
-                        using_line += '    if (g_actionIsDefault) {\n'
-                        using_line += '        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;\n'
-                        using_line += '    }'
-                    elif 'DbgUnregisterMsgCallback' in proto.name:
-                        using_line =  '    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;\n'
-                        using_line += '    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;\n'
-                        using_line += '    while (pTrav) {\n'
-                        using_line += '        if (pTrav->pfnMsgCallback == pfnMsgCallback) {\n'
-                        using_line += '            pPrev->pNext = pTrav->pNext;\n'
-                        using_line += '            if (g_pDbgFunctionHead == pTrav)\n'
-                        using_line += '                g_pDbgFunctionHead = pTrav->pNext;\n'
-                        using_line += '            free(pTrav);\n'
-                        using_line += '            break;\n'
-                        using_line += '        }\n'
-                        using_line += '        pPrev = pTrav;\n'
-                        using_line += '        pTrav = pTrav->pNext;\n'
-                        using_line += '    }\n'
-                        using_line += '    if (g_pDbgFunctionHead == NULL)\n'
-                        using_line += '    {\n'
-                        using_line += '        if (g_actionIsDefault)\n'
-                        using_line += '            g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;\n'
-                        using_line += '        else\n'
-                        using_line += '            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;\n'
-                        using_line += '    }\n'
                     # Special cases for API funcs that don't use an object as first arg
-                    elif True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
+                    if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
                         using_line = ''
                     else:
                         using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
