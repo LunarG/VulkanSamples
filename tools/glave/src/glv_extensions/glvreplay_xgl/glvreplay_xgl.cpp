@@ -23,7 +23,7 @@
  *
  **************************************************************************/
 #include "glvreplay_xgl.h"
-#include "glvreplay_xgl_replay.h"
+#include "glvreplay_xgl_xglreplay.h"
 
 extern "C"
 {

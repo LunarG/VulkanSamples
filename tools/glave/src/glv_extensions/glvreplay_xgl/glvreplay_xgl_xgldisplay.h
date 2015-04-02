@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "glvreplay_xgl_replay.h"
+#include "glvreplay_xgl_xglreplay.h"
 
 class xglDisplay: public glv_replay::DisplayImp {
 friend class xglReplay;

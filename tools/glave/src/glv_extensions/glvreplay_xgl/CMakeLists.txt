@@ -15,15 +15,15 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_packet_id.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkwsix11ext_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkdbg_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_xgl_func_ptrs.h
-                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_xgl_replay.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_xgl_replay_gen.cpp
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_xgl_objmapper.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-packet-id > glv_vk_packet_id.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-core-structs > glv_vk_vk_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-structs > glv_vk_vkwsix11ext_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-structs > glv_vk_vkdbg_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-replay-xgl-funcs > glvreplay_xgl_func_ptrs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-replay-h > glvreplay_xgl_replay.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-replay-c > glvreplay_xgl_replay_gen.cpp
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-replay-obj-mapper-h > glvreplay_xgl_objmapper.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
                    DEPENDS ${SRC_DIR}/../scripts/vk_generate.py
                            ${SRC_DIR}/../../../xgl_helper.py
@@ -64,8 +64,9 @@ set (HDR_LIST
     glvreplay_xgl.h
     glvreplay_xgl_settings.h
     glvreplay_xgl_xgldisplay.h
+    glvreplay_xgl_xglreplay.h
     codegen/glvreplay_xgl_func_ptrs.h
-    codegen/glvreplay_xgl_replay.h
+    codegen/glvreplay_xgl_objmapper.h
 )
 
 include_directories(

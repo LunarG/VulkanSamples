@@ -30,22 +30,6 @@
 #include <map>
 #include <vector>
 #include <string>
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-#include <xcb/xcb.h>
-
-#endif
-#include "glvreplay_window.h"
-#include "glvreplay_factory.h"
-#include "glv_trace_packet_identifiers.h"
-
-extern "C" {
-
-#include "glv_vk_vk_structs.h"
-
-#include "glv_vk_vkwsix11ext_structs.h"
-
-}
-
 #include "xgl.h"
 #include "xglDbg.h"
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
@@ -53,77 +37,17 @@ extern "C" {
 #else
 #include "xglWsiWinExt.h"
 #endif
-#include "draw_state.h"
-#include "glave_snapshot.h"
-#include "glvreplay_xgl_xgldisplay.h"
-#include "glvreplay_xgl_func_ptrs.h"
 
 typedef struct _XGLAllocInfo {
     XGL_GPU_SIZE size;
     void *pData;
 } XGLAllocInfo;
 
-#define CHECK_RETURN_VALUE(entrypoint) returnValue = handle_replay_errors(#entrypoint, replayResult, pPacket->result, returnValue);
-
-class xglReplay {
+class xglReplayObjMapper {
 public:
-    ~xglReplay();
-    xglReplay(glvreplay_settings *pReplaySettings);
+    xglReplayObjMapper() {}
+    ~xglReplayObjMapper() {}
 
-    int init(glv_replay::Display & disp);
-    xglDisplay * get_display() {return m_display;}
-    glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);
-    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);
-
-    void push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char* pMsg);
-    glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();
-    int dump_validation_data();
-private:
-    struct xglFuncs m_xglFuncs;
-    DRAW_STATE_DUMP_DOT_FILE m_pDSDump;
-    DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE m_pCBDump;
-    GLVSNAPSHOT_PRINT_OBJECTS m_pGlvSnapshotPrint;
-    xglDisplay *m_display;
-    struct shaderPair {
-        XGL_SHADER *addr;
-        XGL_SHADER val;
-    };
-    struct validationMsg {
-        XGL_VALIDATION_LEVEL validationLevel;
-        XGL_BASE_OBJECT srcObject;
-        size_t location;
-        int32_t msgCode;
-        char msg[256];
-    };
-    std::vector<struct validationMsg> m_validationMsgs;
-    std::vector<int> m_screenshotFrames;
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateDevice(struct_xglCreateDevice* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglEnumerateGpus(struct_xglEnumerateGpus* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetGpuInfo(struct_xglGetGpuInfo* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetExtensionSupport(struct_xglGetExtensionSupport* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglQueueSubmit(struct_xglQueueSubmit* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetObjectInfo(struct_xglGetObjectInfo* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetFormatInfo(struct_xglGetFormatInfo* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetImageSubresourceInfo(struct_xglGetImageSubresourceInfo* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUpdateDescriptors(struct_xglUpdateDescriptors* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateDescriptorSetLayout(struct_xglCreateDescriptorSetLayout* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateGraphicsPipeline(struct_xglCreateGraphicsPipeline* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCmdWaitEvents(struct_xglCmdWaitEvents* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCmdPipelineBarrier(struct_xglCmdPipelineBarrier* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateFramebuffer(struct_xglCreateFramebuffer* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateRenderPass(struct_xglCreateRenderPass* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglBeginCommandBuffer(struct_xglBeginCommandBuffer* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglStorePipeline(struct_xglStorePipeline* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetMultiGpuCompatibility(struct_xglGetMultiGpuCompatibility* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglDestroyObject(struct_xglDestroyObject* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWaitForFences(struct_xglWaitForFences* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglFreeMemory(struct_xglFreeMemory* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglMapMemory(struct_xglMapMemory* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUnmapMemory(struct_xglUnmapMemory* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11AssociateConnection(struct_xglWsiX11AssociateConnection* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11GetMSC(struct_xglWsiX11GetMSC* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11CreatePresentableImage(struct_xglWsiX11CreatePresentableImage* pPacket);
-    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11QueuePresent(struct_xglWsiX11QueuePresent* pPacket);
     std::map<XGL_GPU_MEMORY, XGLAllocInfo> m_mapData;
     void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)
     {
@@ -132,6 +56,7 @@ private:
         info.size = size;
         m_mapData.insert(std::pair<XGL_GPU_MEMORY, XGLAllocInfo>(handle, info));
     }
+
     void add_mapping_to_mapData(XGL_GPU_MEMORY handle, void *pData)
     {
         std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);
@@ -147,6 +72,7 @@ private:
             glv_LogWarn("add_mapping_to_mapData() adding NULL pointer\n");
         info.pData = pData;
     }
+
     void rm_entry_from_mapData(XGL_GPU_MEMORY handle)
     {
         std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);
@@ -154,6 +80,7 @@ private:
             return;
         m_mapData.erase(it);
     }
+
     void rm_mapping_from_mapData(XGL_GPU_MEMORY handle, void* pData)
     {
         std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);
@@ -220,6 +147,7 @@ private:
         m_samplers.clear();
         m_shaders.clear();
     }
+
     std::map<XGL_BUFFER_VIEW, XGL_BUFFER_VIEW> m_bufferViews;
     void add_to_map(XGL_BUFFER_VIEW* pTraceVal, XGL_BUFFER_VIEW* pReplayVal)
     {
@@ -236,6 +164,7 @@ private:
         std::map<XGL_BUFFER_VIEW, XGL_BUFFER_VIEW>::const_iterator q = m_bufferViews.find(value);
         return (q == m_bufferViews.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_BUFFER, XGL_BUFFER> m_buffers;
     void add_to_map(XGL_BUFFER* pTraceVal, XGL_BUFFER* pReplayVal)
     {
@@ -252,6 +181,7 @@ private:
         std::map<XGL_BUFFER, XGL_BUFFER>::const_iterator q = m_buffers.find(value);
         return (q == m_buffers.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_CMD_BUFFER, XGL_CMD_BUFFER> m_cmdBuffers;
     void add_to_map(XGL_CMD_BUFFER* pTraceVal, XGL_CMD_BUFFER* pReplayVal)
     {
@@ -268,6 +198,7 @@ private:
         std::map<XGL_CMD_BUFFER, XGL_CMD_BUFFER>::const_iterator q = m_cmdBuffers.find(value);
         return (q == m_cmdBuffers.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_COLOR_ATTACHMENT_VIEW, XGL_COLOR_ATTACHMENT_VIEW> m_colorAttachmentViews;
     void add_to_map(XGL_COLOR_ATTACHMENT_VIEW* pTraceVal, XGL_COLOR_ATTACHMENT_VIEW* pReplayVal)
     {
@@ -284,6 +215,7 @@ private:
         std::map<XGL_COLOR_ATTACHMENT_VIEW, XGL_COLOR_ATTACHMENT_VIEW>::const_iterator q = m_colorAttachmentViews.find(value);
         return (q == m_colorAttachmentViews.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DEPTH_STENCIL_VIEW, XGL_DEPTH_STENCIL_VIEW> m_depthStencilViews;
     void add_to_map(XGL_DEPTH_STENCIL_VIEW* pTraceVal, XGL_DEPTH_STENCIL_VIEW* pReplayVal)
     {
@@ -300,6 +232,7 @@ private:
         std::map<XGL_DEPTH_STENCIL_VIEW, XGL_DEPTH_STENCIL_VIEW>::const_iterator q = m_depthStencilViews.find(value);
         return (q == m_depthStencilViews.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DESCRIPTOR_REGION, XGL_DESCRIPTOR_REGION> m_descriptorRegions;
     void add_to_map(XGL_DESCRIPTOR_REGION* pTraceVal, XGL_DESCRIPTOR_REGION* pReplayVal)
     {
@@ -316,6 +249,7 @@ private:
         std::map<XGL_DESCRIPTOR_REGION, XGL_DESCRIPTOR_REGION>::const_iterator q = m_descriptorRegions.find(value);
         return (q == m_descriptorRegions.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DESCRIPTOR_SET_LAYOUT, XGL_DESCRIPTOR_SET_LAYOUT> m_descriptorSetLayouts;
     void add_to_map(XGL_DESCRIPTOR_SET_LAYOUT* pTraceVal, XGL_DESCRIPTOR_SET_LAYOUT* pReplayVal)
     {
@@ -332,6 +266,7 @@ private:
         std::map<XGL_DESCRIPTOR_SET_LAYOUT, XGL_DESCRIPTOR_SET_LAYOUT>::const_iterator q = m_descriptorSetLayouts.find(value);
         return (q == m_descriptorSetLayouts.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DESCRIPTOR_SET, XGL_DESCRIPTOR_SET> m_descriptorSets;
     void add_to_map(XGL_DESCRIPTOR_SET* pTraceVal, XGL_DESCRIPTOR_SET* pReplayVal)
     {
@@ -348,6 +283,7 @@ private:
         std::map<XGL_DESCRIPTOR_SET, XGL_DESCRIPTOR_SET>::const_iterator q = m_descriptorSets.find(value);
         return (q == m_descriptorSets.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DEVICE, XGL_DEVICE> m_devices;
     void add_to_map(XGL_DEVICE* pTraceVal, XGL_DEVICE* pReplayVal)
     {
@@ -364,6 +300,7 @@ private:
         std::map<XGL_DEVICE, XGL_DEVICE>::const_iterator q = m_devices.find(value);
         return (q == m_devices.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DYNAMIC_CB_STATE_OBJECT, XGL_DYNAMIC_CB_STATE_OBJECT> m_dynamicCbStateObjects;
     void add_to_map(XGL_DYNAMIC_CB_STATE_OBJECT* pTraceVal, XGL_DYNAMIC_CB_STATE_OBJECT* pReplayVal)
     {
@@ -380,6 +317,7 @@ private:
         std::map<XGL_DYNAMIC_CB_STATE_OBJECT, XGL_DYNAMIC_CB_STATE_OBJECT>::const_iterator q = m_dynamicCbStateObjects.find(value);
         return (q == m_dynamicCbStateObjects.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DYNAMIC_DS_STATE_OBJECT, XGL_DYNAMIC_DS_STATE_OBJECT> m_dynamicDsStateObjects;
     void add_to_map(XGL_DYNAMIC_DS_STATE_OBJECT* pTraceVal, XGL_DYNAMIC_DS_STATE_OBJECT* pReplayVal)
     {
@@ -396,6 +334,7 @@ private:
         std::map<XGL_DYNAMIC_DS_STATE_OBJECT, XGL_DYNAMIC_DS_STATE_OBJECT>::const_iterator q = m_dynamicDsStateObjects.find(value);
         return (q == m_dynamicDsStateObjects.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DYNAMIC_RS_STATE_OBJECT, XGL_DYNAMIC_RS_STATE_OBJECT> m_dynamicRsStateObjects;
     void add_to_map(XGL_DYNAMIC_RS_STATE_OBJECT* pTraceVal, XGL_DYNAMIC_RS_STATE_OBJECT* pReplayVal)
     {
@@ -412,6 +351,7 @@ private:
         std::map<XGL_DYNAMIC_RS_STATE_OBJECT, XGL_DYNAMIC_RS_STATE_OBJECT>::const_iterator q = m_dynamicRsStateObjects.find(value);
         return (q == m_dynamicRsStateObjects.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_DYNAMIC_VP_STATE_OBJECT, XGL_DYNAMIC_VP_STATE_OBJECT> m_dynamicVpStateObjects;
     void add_to_map(XGL_DYNAMIC_VP_STATE_OBJECT* pTraceVal, XGL_DYNAMIC_VP_STATE_OBJECT* pReplayVal)
     {
@@ -428,6 +368,7 @@ private:
         std::map<XGL_DYNAMIC_VP_STATE_OBJECT, XGL_DYNAMIC_VP_STATE_OBJECT>::const_iterator q = m_dynamicVpStateObjects.find(value);
         return (q == m_dynamicVpStateObjects.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_EVENT, XGL_EVENT> m_events;
     void add_to_map(XGL_EVENT* pTraceVal, XGL_EVENT* pReplayVal)
     {
@@ -444,6 +385,7 @@ private:
         std::map<XGL_EVENT, XGL_EVENT>::const_iterator q = m_events.find(value);
         return (q == m_events.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_FENCE, XGL_FENCE> m_fences;
     void add_to_map(XGL_FENCE* pTraceVal, XGL_FENCE* pReplayVal)
     {
@@ -460,6 +402,7 @@ private:
         std::map<XGL_FENCE, XGL_FENCE>::const_iterator q = m_fences.find(value);
         return (q == m_fences.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_FRAMEBUFFER, XGL_FRAMEBUFFER> m_framebuffers;
     void add_to_map(XGL_FRAMEBUFFER* pTraceVal, XGL_FRAMEBUFFER* pReplayVal)
     {
@@ -476,6 +419,7 @@ private:
         std::map<XGL_FRAMEBUFFER, XGL_FRAMEBUFFER>::const_iterator q = m_framebuffers.find(value);
         return (q == m_framebuffers.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_GPU_MEMORY, XGL_GPU_MEMORY> m_gpuMemorys;
     void add_to_map(XGL_GPU_MEMORY* pTraceVal, XGL_GPU_MEMORY* pReplayVal)
     {
@@ -492,6 +436,7 @@ private:
         std::map<XGL_GPU_MEMORY, XGL_GPU_MEMORY>::const_iterator q = m_gpuMemorys.find(value);
         return (q == m_gpuMemorys.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_IMAGE_VIEW, XGL_IMAGE_VIEW> m_imageViews;
     void add_to_map(XGL_IMAGE_VIEW* pTraceVal, XGL_IMAGE_VIEW* pReplayVal)
     {
@@ -508,6 +453,7 @@ private:
         std::map<XGL_IMAGE_VIEW, XGL_IMAGE_VIEW>::const_iterator q = m_imageViews.find(value);
         return (q == m_imageViews.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_IMAGE, XGL_IMAGE> m_images;
     void add_to_map(XGL_IMAGE* pTraceVal, XGL_IMAGE* pReplayVal)
     {
@@ -524,6 +470,7 @@ private:
         std::map<XGL_IMAGE, XGL_IMAGE>::const_iterator q = m_images.find(value);
         return (q == m_images.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_INSTANCE, XGL_INSTANCE> m_instances;
     void add_to_map(XGL_INSTANCE* pTraceVal, XGL_INSTANCE* pReplayVal)
     {
@@ -540,6 +487,7 @@ private:
         std::map<XGL_INSTANCE, XGL_INSTANCE>::const_iterator q = m_instances.find(value);
         return (q == m_instances.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU> m_physicalGpus;
     void add_to_map(XGL_PHYSICAL_GPU* pTraceVal, XGL_PHYSICAL_GPU* pReplayVal)
     {
@@ -556,6 +504,7 @@ private:
         std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU>::const_iterator q = m_physicalGpus.find(value);
         return (q == m_physicalGpus.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_PIPELINE_DELTA, XGL_PIPELINE_DELTA> m_pipelineDeltas;
     void add_to_map(XGL_PIPELINE_DELTA* pTraceVal, XGL_PIPELINE_DELTA* pReplayVal)
     {
@@ -572,6 +521,7 @@ private:
         std::map<XGL_PIPELINE_DELTA, XGL_PIPELINE_DELTA>::const_iterator q = m_pipelineDeltas.find(value);
         return (q == m_pipelineDeltas.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_PIPELINE, XGL_PIPELINE> m_pipelines;
     void add_to_map(XGL_PIPELINE* pTraceVal, XGL_PIPELINE* pReplayVal)
     {
@@ -588,6 +538,7 @@ private:
         std::map<XGL_PIPELINE, XGL_PIPELINE>::const_iterator q = m_pipelines.find(value);
         return (q == m_pipelines.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_QUERY_POOL, XGL_QUERY_POOL> m_queryPools;
     void add_to_map(XGL_QUERY_POOL* pTraceVal, XGL_QUERY_POOL* pReplayVal)
     {
@@ -604,6 +555,7 @@ private:
         std::map<XGL_QUERY_POOL, XGL_QUERY_POOL>::const_iterator q = m_queryPools.find(value);
         return (q == m_queryPools.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_QUEUE_SEMAPHORE, XGL_QUEUE_SEMAPHORE> m_queueSemaphores;
     void add_to_map(XGL_QUEUE_SEMAPHORE* pTraceVal, XGL_QUEUE_SEMAPHORE* pReplayVal)
     {
@@ -620,6 +572,7 @@ private:
         std::map<XGL_QUEUE_SEMAPHORE, XGL_QUEUE_SEMAPHORE>::const_iterator q = m_queueSemaphores.find(value);
         return (q == m_queueSemaphores.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_QUEUE, XGL_QUEUE> m_queues;
     void add_to_map(XGL_QUEUE* pTraceVal, XGL_QUEUE* pReplayVal)
     {
@@ -636,6 +589,7 @@ private:
         std::map<XGL_QUEUE, XGL_QUEUE>::const_iterator q = m_queues.find(value);
         return (q == m_queues.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_RENDER_PASS, XGL_RENDER_PASS> m_renderPasss;
     void add_to_map(XGL_RENDER_PASS* pTraceVal, XGL_RENDER_PASS* pReplayVal)
     {
@@ -652,6 +606,7 @@ private:
         std::map<XGL_RENDER_PASS, XGL_RENDER_PASS>::const_iterator q = m_renderPasss.find(value);
         return (q == m_renderPasss.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_SAMPLER, XGL_SAMPLER> m_samplers;
     void add_to_map(XGL_SAMPLER* pTraceVal, XGL_SAMPLER* pReplayVal)
     {
@@ -668,6 +623,7 @@ private:
         std::map<XGL_SAMPLER, XGL_SAMPLER>::const_iterator q = m_samplers.find(value);
         return (q == m_samplers.end()) ? XGL_NULL_HANDLE : q->second;
     }
+
     std::map<XGL_SHADER, XGL_SHADER> m_shaders;
     void add_to_map(XGL_SHADER* pTraceVal, XGL_SHADER* pReplayVal)
     {
@@ -704,6 +660,7 @@ private:
         rm_from_map(static_cast <XGL_DYNAMIC_CB_STATE_OBJECT> (state));
         rm_from_map(static_cast <XGL_DYNAMIC_DS_STATE_OBJECT> (state));
     }
+
     XGL_OBJECT remap(const XGL_OBJECT& object)
     {
         XGL_OBJECT obj;
@@ -789,25 +746,4 @@ private:
         return XGL_NULL_HANDLE;
     }
 
-    void process_screenshot_list(const char *list)
-    {
-        std::string spec(list), word;
-        size_t start = 0, comma = 0;
-
-        while (start < spec.size()) {
-            comma = spec.find(',', start);
-
-            if (comma == std::string::npos)
-                word = std::string(spec, start);
-            else
-                word = std::string(spec, start, comma - start);
-
-            m_screenshotFrames.push_back(atoi(word.c_str()));
-            if (comma == std::string::npos)
-                break;
-
-            start = comma + 1;
-
-        }
-    }
 };

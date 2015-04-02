@@ -1737,7 +1737,7 @@ class Subcommand(object):
         txt += '        return (q == %s.end()) ? XGL_NULL_HANDLE : q->second;\n    }' % name
         return txt
 
-    def _generate_replay_class(self):
+    def _generate_replay_objmapper_class(self):
         # Create dict mapping member var names to XGL type (i.e. 'm_imageViews' : 'XGL_IMAGE_VIEW')
         obj_map_dict = {}
         for ty in xgl.object_type_list:
@@ -1751,65 +1751,13 @@ class Subcommand(object):
         rc_body.append('typedef struct _XGLAllocInfo {')
         rc_body.append('    XGL_GPU_SIZE size;')
         rc_body.append('    void *pData;')
-        rc_body.append('} XGLAllocInfo;\n')
-        rc_body.append('#define CHECK_RETURN_VALUE(entrypoint) returnValue = handle_replay_errors(#entrypoint, replayResult, pPacket->result, returnValue);\n')
-        rc_body.append('class xglReplay {')
+        rc_body.append('} XGLAllocInfo;')
+        rc_body.append('')
+        rc_body.append('class xglReplayObjMapper {')
         rc_body.append('public:')
-        rc_body.append('    ~xglReplay();')
-        rc_body.append('    xglReplay(glvreplay_settings *pReplaySettings);\n')
-        rc_body.append('    int init(glv_replay::Display & disp);')
-        rc_body.append('    xglDisplay * get_display() {return m_display;}')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);\n')
-        rc_body.append('    void push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char* pMsg);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();')
-        rc_body.append('    int dump_validation_data();')
-        rc_body.append('private:')
-        rc_body.append('    struct xglFuncs m_xglFuncs;')
-        rc_body.append('    DRAW_STATE_DUMP_DOT_FILE m_pDSDump;')
-        rc_body.append('    DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE m_pCBDump;')
-        rc_body.append('    GLVSNAPSHOT_PRINT_OBJECTS m_pGlvSnapshotPrint;')
-        rc_body.append('    xglDisplay *m_display;')
-        rc_body.append('    struct shaderPair {')
-        rc_body.append('        XGL_SHADER *addr;')
-        rc_body.append('        XGL_SHADER val;')
-        rc_body.append('    };')
-        rc_body.append('    struct validationMsg {')
-        rc_body.append('        XGL_VALIDATION_LEVEL validationLevel;')
-        rc_body.append('        XGL_BASE_OBJECT srcObject;')
-        rc_body.append('        size_t location;')
-        rc_body.append('        int32_t msgCode;')
-        rc_body.append('        char msg[256];')
-        rc_body.append('    };')
-        rc_body.append('    std::vector<struct validationMsg> m_validationMsgs;')
-        rc_body.append('    std::vector<int> m_screenshotFrames;')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateDevice(struct_xglCreateDevice* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglEnumerateGpus(struct_xglEnumerateGpus* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetGpuInfo(struct_xglGetGpuInfo* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetExtensionSupport(struct_xglGetExtensionSupport* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglQueueSubmit(struct_xglQueueSubmit* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetObjectInfo(struct_xglGetObjectInfo* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetFormatInfo(struct_xglGetFormatInfo* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetImageSubresourceInfo(struct_xglGetImageSubresourceInfo* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUpdateDescriptors(struct_xglUpdateDescriptors* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateDescriptorSetLayout(struct_xglCreateDescriptorSetLayout* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateGraphicsPipeline(struct_xglCreateGraphicsPipeline* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCmdWaitEvents(struct_xglCmdWaitEvents* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCmdPipelineBarrier(struct_xglCmdPipelineBarrier* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateFramebuffer(struct_xglCreateFramebuffer* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateRenderPass(struct_xglCreateRenderPass* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglBeginCommandBuffer(struct_xglBeginCommandBuffer* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglStorePipeline(struct_xglStorePipeline* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetMultiGpuCompatibility(struct_xglGetMultiGpuCompatibility* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglDestroyObject(struct_xglDestroyObject* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWaitForFences(struct_xglWaitForFences* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglFreeMemory(struct_xglFreeMemory* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglMapMemory(struct_xglMapMemory* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUnmapMemory(struct_xglUnmapMemory* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11AssociateConnection(struct_xglWsiX11AssociateConnection* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11GetMSC(struct_xglWsiX11GetMSC* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11CreatePresentableImage(struct_xglWsiX11CreatePresentableImage* pPacket);')
-        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11QueuePresent(struct_xglWsiX11QueuePresent* pPacket);')
+        rc_body.append('    xglReplayObjMapper() {}')
+        rc_body.append('    ~xglReplayObjMapper() {}')
+        rc_body.append('')
         rc_body.append(self._map_decl('XGL_GPU_MEMORY', 'XGLAllocInfo', 'm_mapData'))
         # Custom code for 1-off memory mapping functions
         rc_body.append('    void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)')
@@ -1819,6 +1767,7 @@ class Subcommand(object):
         rc_body.append('        info.size = size;')
         rc_body.append('        m_mapData.insert(std::pair<XGL_GPU_MEMORY, XGLAllocInfo>(handle, info));')
         rc_body.append('    }')
+        rc_body.append('')
         rc_body.append('    void add_mapping_to_mapData(XGL_GPU_MEMORY handle, void *pData)')
         rc_body.append('    {')
         rc_body.append('        std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);')
@@ -1834,6 +1783,7 @@ class Subcommand(object):
         rc_body.append('            glv_LogWarn("add_mapping_to_mapData() adding NULL pointer\\n");')
         rc_body.append('        info.pData = pData;')
         rc_body.append('    }')
+        rc_body.append('')
         rc_body.append('    void rm_entry_from_mapData(XGL_GPU_MEMORY handle)')
         rc_body.append('    {')
         rc_body.append('        std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);')
@@ -1841,6 +1791,7 @@ class Subcommand(object):
         rc_body.append('            return;')
         rc_body.append('        m_mapData.erase(it);')
         rc_body.append('    }')
+        rc_body.append('')
         rc_body.append('    void rm_mapping_from_mapData(XGL_GPU_MEMORY handle, void* pData)')
         rc_body.append('    {')
         rc_body.append('        std::map<XGL_GPU_MEMORY,XGLAllocInfo>::iterator it = m_mapData.find(handle);')
@@ -1858,24 +1809,28 @@ class Subcommand(object):
         rc_body.append('        }')
         rc_body.append('        memcpy(info.pData, pData, info.size);')
         rc_body.append('        info.pData = NULL;')
-        rc_body.append('    }\n')
+        rc_body.append('    }')
+        rc_body.append('')
         rc_body.append('    /*std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU> m_gpus;')
         rc_body.append('    void add_to_map(XGL_PHYSICAL_GPU* pTraceGpu, XGL_PHYSICAL_GPU* pReplayGpu)')
         rc_body.append('    {')
         rc_body.append('        assert(pTraceGpu != NULL);')
         rc_body.append('        assert(pReplayGpu != NULL);')
         rc_body.append('        m_gpus[*pTraceGpu] = *pReplayGpu;')
-        rc_body.append('    }\n')
+        rc_body.append('    }')
+        rc_body.append('')
         rc_body.append('    XGL_PHYSICAL_GPU remap(const XGL_PHYSICAL_GPU& gpu)')
         rc_body.append('    {')
         rc_body.append('        std::map<XGL_PHYSICAL_GPU, XGL_PHYSICAL_GPU>::const_iterator q = m_gpus.find(gpu);')
         rc_body.append('        return (q == m_gpus.end()) ? XGL_NULL_HANDLE : q->second;')
-        rc_body.append('    }*/\n')
+        rc_body.append('    }*/')
+        rc_body.append('')
         rc_body.append('    void clear_all_map_handles()\n    {')
         for var in sorted(obj_map_dict):
             rc_body.append('        %s.clear();' % var)
         rc_body.append('    }')
         for var in sorted(obj_map_dict):
+            rc_body.append('')
             rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
             rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
             rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
@@ -1892,6 +1847,7 @@ class Subcommand(object):
         for t in state_obj_remap_types:
             rc_body.append('        rm_from_map(static_cast <%s> (state));' % t)
         rc_body.append('    }')
+        rc_body.append('')
         # OBJECT code
         rc_body.append('    XGL_OBJECT remap(const XGL_OBJECT& object)\n    {')
         rc_body.append('        XGL_OBJECT obj;')
@@ -1910,23 +1866,8 @@ class Subcommand(object):
         for t in base_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != XGL_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
-        rc_body.append('        return XGL_NULL_HANDLE;\n    }\n')
-        rc_body.append('    void process_screenshot_list(const char *list)')
-        rc_body.append('    {')
-        rc_body.append('        std::string spec(list), word;')
-        rc_body.append('        size_t start = 0, comma = 0;\n')
-        rc_body.append('        while (start < spec.size()) {')
-        rc_body.append('            comma = spec.find(\',\', start);\n')
-        rc_body.append('            if (comma == std::string::npos)')
-        rc_body.append('                word = std::string(spec, start);')
-        rc_body.append('            else')
-        rc_body.append('                word = std::string(spec, start, comma - start);\n')
-        rc_body.append('            m_screenshotFrames.push_back(atoi(word.c_str()));')
-        rc_body.append('            if (comma == std::string::npos)')
-        rc_body.append('                break;\n')
-        rc_body.append('            start = comma + 1;\n')
-        rc_body.append('        }')
-        rc_body.append('    }')
+        rc_body.append('        return XGL_NULL_HANDLE;')
+        rc_body.append('    }\n')
         rc_body.append('};')
         return "\n".join(rc_body)
 
@@ -1946,10 +1887,10 @@ class Subcommand(object):
         if t.strip('*').replace('const ', '') in remap_list and n not in param_exclude_list:
             if '*' in t:
                 if 'const ' not in t:
-                    return 'remap(*pPacket->%s)' % (n)
+                    return 'm_objMapper.remap(*pPacket->%s)' % (n)
                 else: # TODO : Don't remap array ptrs?
                     return 'pPacket->%s' % (n)
-            return 'remap(pPacket->%s)' % (n)
+            return 'm_objMapper.remap(pPacket->%s)' % (n)
         return 'pPacket->%s' % (n)
 
     def _gen_replay_enum_gpus(self):
@@ -2092,8 +2033,8 @@ class Subcommand(object):
         bdmv_body = []
         bdmv_body.append('            XGL_MEMORY_VIEW_ATTACH_INFO memView;')
         bdmv_body.append('            memcpy(&memView, pPacket->pMemView, sizeof(XGL_MEMORY_VIEW_ATTACH_INFO));')
-        bdmv_body.append('            memView.mem = remap(pPacket->pMemView->mem);')
-        bdmv_body.append('            m_xglFuncs.real_xglCmdBindDynamicMemoryView(remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, &memView);')
+        bdmv_body.append('            memView.mem = m_objMapper.remap(pPacket->pMemView->mem);')
+        bdmv_body.append('            m_xglFuncs.real_xglCmdBindDynamicMemoryView(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pipelineBindPoint, &memView);')
         return "\n".join(bdmv_body)
 
     # Generate main replay case statements where actual replay API call is dispatched based on input packet data
@@ -2175,16 +2116,16 @@ class Subcommand(object):
                     rbody.append('            XGL_DEVICE handle;')
                     for pidx in custom_open_params[proto.name]:
                         rbody.append('            %s local_%s;' % (proto.params[pidx].ty.replace('const ', '').strip('*'), proto.params[pidx].name))
-                    rbody.append('            handle = remap(pPacket->device);')
+                    rbody.append('            handle = m_objMapper.remap(pPacket->device);')
                 elif create_view:
                     rbody.append('            %s createInfo;' % (proto.params[1].ty.strip('*').replace('const ', '')))
                     rbody.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(%s));' % (proto.params[1].ty.strip('*').replace('const ', '')))
                     if 'CreateComputePipeline' == proto.name:
-                        rbody.append('            createInfo.cs.shader = remap(pPacket->pCreateInfo->cs.shader);')
+                        rbody.append('            createInfo.cs.shader = m_objMapper.remap(pPacket->pCreateInfo->cs.shader);')
                     elif 'CreateBufferView' == proto.name:
-                        rbody.append('            createInfo.buffer = remap(pPacket->pCreateInfo->buffer);')
+                        rbody.append('            createInfo.buffer = m_objMapper.remap(pPacket->pCreateInfo->buffer);')
                     else:
-                        rbody.append('            createInfo.image = remap(pPacket->pCreateInfo->image);')
+                        rbody.append('            createInfo.image = m_objMapper.remap(pPacket->pCreateInfo->image);')
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif create_func: # Declare local var to store created handle into
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
@@ -2194,14 +2135,14 @@ class Subcommand(object):
                         rbody.append('            assert(pPacket->count <= 100);')
                         rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
                         rbody.append('            {')
-                        rbody.append('                localDescSets[i] = remap(pPacket->%s[i]);' % (proto.params[-3].name))
+                        rbody.append('                localDescSets[i] = m_objMapper.remap(pPacket->%s[i]);' % (proto.params[-3].name))
                         rbody.append('            }')
                 elif proto.name == 'ClearDescriptorSets':
                     rbody.append('            XGL_DESCRIPTOR_SET localDescSets[100];')
                     rbody.append('            assert(pPacket->count <= 100);')
                     rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
                     rbody.append('            {')
-                    rbody.append('                localDescSets[i] = remap(pPacket->%s[i]);' % (proto.params[-1].name))
+                    rbody.append('                localDescSets[i] = m_objMapper.remap(pPacket->%s[i]);' % (proto.params[-1].name))
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody.append('            do {')
@@ -2230,7 +2171,7 @@ class Subcommand(object):
                 rr_string = '%s);' % rr_string[:-2]
                 if proto.name in custom_open_params:
                     rr_list = rr_string.split(', ')
-                    rr_list[0] = rr_list[0].replace('remap(pPacket->device)', 'handle')
+                    rr_list[0] = rr_list[0].replace('m_objMapper.remap(pPacket->device)', 'handle')
                     for pidx in custom_open_params[proto.name]:
                         rr_list[pidx] = '&local_%s' % proto.params[pidx].name
                     rr_string = ', '.join(rr_list)
@@ -2255,7 +2196,7 @@ class Subcommand(object):
                     rbody.append('                m_pCBDump = NULL;')
                     rbody.append('                m_pDSDump = NULL;')
                     rbody.append('                m_pGlvSnapshotPrint = NULL;')
-                    rbody.append('                rm_from_map(pPacket->device);')
+                    rbody.append('                m_objMapper.rm_from_map(pPacket->device);')
                     rbody.append('                m_display->m_initedXGL = false;')
                     rbody.append('            }')
                 if 'DestroyInstance' in proto.name:
@@ -2263,21 +2204,21 @@ class Subcommand(object):
                     rbody.append('            {')
                     rbody.append('                // TODO need to handle multiple instances and only clearing maps within an instance.')
                     rbody.append('                // TODO this only works with a single instance used at any given time.')
-                    rbody.append('                clear_all_map_handles();')
+                    rbody.append('                m_objMapper.clear_all_map_handles();')
                     rbody.append('            }')
                 elif 'AllocDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
                     rbody.append('            {')
                     rbody.append('                for (uint32_t i = 0; i < local_pCount; i++) {')
-                    rbody.append('                    add_to_map(&pPacket->%s[i], &local_%s[i]);' % (proto.params[-2].name, proto.params[-2].name))
+                    rbody.append('                    m_objMapper.add_to_map(&pPacket->%s[i], &local_%s[i]);' % (proto.params[-2].name, proto.params[-2].name))
                     rbody.append('                }')
                     rbody.append('            }')
                 elif create_func: # save handle mapping if create successful
                     rbody.append('            if (replayResult == XGL_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                add_to_map(pPacket->%s, &local_%s);' % (proto.params[-1].name, proto.params[-1].name))
+                    rbody.append('                m_objMapper.add_to_map(pPacket->%s, &local_%s);' % (proto.params[-1].name, proto.params[-1].name))
                     if 'AllocMemory' == proto.name:
-                        rbody.append('                add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
+                        rbody.append('                m_objMapper.add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody[-1] = '    %s' % rbody[-1]
@@ -2523,7 +2464,7 @@ class GlaveReplayXglFuncPtrs(Subcommand):
         body = [self._generate_replay_func_ptrs()]
         return "\n".join(body)
 
-class GlaveReplayHeader(Subcommand):
+class GlaveReplayObjMapperHeader(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -2531,16 +2472,6 @@ class GlaveReplayHeader(Subcommand):
         header_txt.append('#include <map>')
         header_txt.append('#include <vector>')
         header_txt.append('#include <string>')
-        header_txt.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
-        header_txt.append('#include <xcb/xcb.h>\n')
-        header_txt.append('#endif')
-        header_txt.append('#include "glvreplay_window.h"')
-        header_txt.append('#include "glvreplay_factory.h"')
-        header_txt.append('#include "glv_trace_packet_identifiers.h"\n')
-        header_txt.append('extern "C" {\n')
-        header_txt.append('#include "glv_vk_vk_structs.h"\n')
-        header_txt.append('#include "glv_vk_vkwsix11ext_structs.h"\n')
-        header_txt.append('}\n')
         header_txt.append('#include "xgl.h"')
         header_txt.append('#include "xglDbg.h"')
         header_txt.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
@@ -2548,21 +2479,17 @@ class GlaveReplayHeader(Subcommand):
         header_txt.append('#else')
         header_txt.append('#include "xglWsiWinExt.h"')
         header_txt.append('#endif')
-        header_txt.append('#include "draw_state.h"')
-        header_txt.append('#include "glave_snapshot.h"')
-        header_txt.append('#include "glvreplay_xgl_xgldisplay.h"')
-        header_txt.append('#include "glvreplay_xgl_func_ptrs.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_replay_class()]
+        body = [self._generate_replay_objmapper_class()]
 
         return "\n".join(body)
 
 class GlaveReplayC(Subcommand):
     def generate_header(self):
         header_txt = []
-        header_txt.append('#include "glvreplay_xgl_replay.h"\n')
+        header_txt.append('#include "glvreplay_xgl_xglreplay.h"\n')
         header_txt.append('#include "glvreplay_xgl.h"\n')
         header_txt.append('#include "glvreplay_main.h"\n')
         header_txt.append('#include <algorithm>')
@@ -2598,7 +2525,7 @@ def main():
             "glave-dbg-trace-c" : GlaveDbgC,
             "glave-dbg-trace-structs" : GlaveDbgStructs,
             "glave-replay-xgl-funcs" : GlaveReplayXglFuncPtrs,
-            "glave-replay-h" : GlaveReplayHeader,
+            "glave-replay-obj-mapper-h" : GlaveReplayObjMapperHeader,
             "glave-replay-c" : GlaveReplayC,
     }
 
