@@ -609,7 +609,7 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
 
     XGLTriangleTest(vertShaderText, fragShaderText, true);
 }
-
+#ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(XglRenderTest, SPV_XGLTriangle)
 {
     bool saved_use_spv = XglTestFramework::m_use_spv;
@@ -653,7 +653,7 @@ TEST_F(XglRenderTest, SPV_XGLTriangle)
 
     XglTestFramework::m_use_spv = saved_use_spv;
 }
-
+#endif
 TEST_F(XglRenderTest, GreenTriangle)
 {
     static const char *vertShaderText =
@@ -676,7 +676,7 @@ TEST_F(XglRenderTest, GreenTriangle)
 
     XGLTriangleTest(vertShaderText, fragShaderText, false);
 }
-
+#ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(XglRenderTest, SPV_GreenTriangle)
 {
     bool saved_use_spv = XglTestFramework::m_use_spv;
@@ -703,7 +703,7 @@ TEST_F(XglRenderTest, SPV_GreenTriangle)
     XGLTriangleTest(vertShaderText, fragShaderText, false);
     XglTestFramework::m_use_spv = saved_use_spv;
 }
-
+#endif
 TEST_F(XglRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =

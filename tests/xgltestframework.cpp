@@ -107,7 +107,11 @@ XglTestFramework::~XglTestFramework()
 bool XglTestFramework::m_show_images = false;
 bool XglTestFramework::m_save_images = false;
 bool XglTestFramework::m_compare_images = false;
+#ifdef _WIN32
+bool XglTestFramework::m_use_spv = false;
+#else
 bool XglTestFramework::m_use_spv = true;
+#endif
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
 std::list<XglTestImageRecord> XglTestFramework::m_images;
@@ -432,7 +436,7 @@ void  TestFrameworkXglPresent::Display()
 
 void  TestFrameworkXglPresent::HandleEvent(xcb_generic_event_t *event)
 {
-    u_int8_t event_code = event->response_type & 0x7f;
+    uint8_t event_code = event->response_type & 0x7f;
     switch (event_code) {
     case XCB_EXPOSE:
         Display();  // TODO: handle resize
