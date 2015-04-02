@@ -861,6 +861,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
 
     m_renderTargetCount = 2;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -959,6 +960,9 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &indexBuffer);
+
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
     m_memoryRefManager.AddMemoryRef(&indexBuffer);
@@ -1522,6 +1526,7 @@ TEST_F(XglRenderTest, MixTriangle)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
@@ -2588,6 +2593,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    // descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer); // TODO: Why does this break images??
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &mvpBuffer);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
