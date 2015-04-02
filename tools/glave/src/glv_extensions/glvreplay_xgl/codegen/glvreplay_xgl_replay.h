@@ -38,6 +38,12 @@
 #include "glvreplay_factory.h"
 #include "glv_trace_packet_identifiers.h"
 
+extern "C" {
+
+#include "glv_vk_vk_structs.h"
+
+}
+
 #include "xgl.h"
 #include "xglDbg.h"
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
@@ -47,55 +53,16 @@
 #endif
 #include "draw_state.h"
 #include "glave_snapshot.h"
+#include "glvreplay_xgl_xgldisplay.h"
 #include "glvreplay_xgl_func_ptrs.h"
-
-class xglDisplay: public glv_replay::DisplayImp {
-friend class xglReplay;
-public:
-    xglDisplay();
-    ~xglDisplay();
-    int init(const unsigned int gpu_idx);
-    int set_window(glv_window_handle hWindow, unsigned int width, unsigned int height);
-    int create_window(const unsigned int width, const unsigned int height);
-    void resize_window(const unsigned int width, const unsigned int height);
-    void process_event();
-    // XGL_DEVICE get_device() { return m_dev[m_gpuIdx];}
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    xcb_window_t get_window_handle() { return m_XcbWindow; }
-#elif defined(WIN32)
-    HWND get_window_handle() { return m_windowHandle; }
-#endif
-private:
-    XGL_RESULT init_xgl(const unsigned int gpu_idx);
-    bool m_initedXGL;
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    XGL_WSI_X11_CONNECTION_INFO m_WsiConnection;
-    xcb_screen_t *m_pXcbScreen;
-    xcb_window_t m_XcbWindow;
-#elif defined(WIN32)
-    HWND m_windowHandle;
-#endif
-    unsigned int m_windowWidth;
-    unsigned int m_windowHeight;
-    unsigned int m_frameNumber;
-    std::vector<uint32_t> imageWidth;
-    std::vector<uint32_t> imageHeight;
-    std::vector<XGL_IMAGE> imageHandles;
-    std::vector<XGL_GPU_MEMORY> imageMemory;
-#if 0
-    XGL_DEVICE m_dev[XGL_MAX_PHYSICAL_GPUS];
-    uint32_t m_gpuCount;
-    unsigned int m_gpuIdx;
-    XGL_PHYSICAL_GPU m_gpus[XGL_MAX_PHYSICAL_GPUS];
-    XGL_PHYSICAL_GPU_PROPERTIES m_gpuProps[XGL_MAX_PHYSICAL_GPUS];
-#endif
-    std::vector<char *>m_extensions;
-};
 
 typedef struct _XGLAllocInfo {
     XGL_GPU_SIZE size;
     void *pData;
 } XGLAllocInfo;
+
+#define CHECK_RETURN_VALUE(entrypoint) returnValue = handle_replay_errors(#entrypoint, replayResult, pPacket->result, returnValue);
+
 class xglReplay {
 public:
     ~xglReplay();
@@ -128,6 +95,29 @@ private:
     };
     std::vector<struct validationMsg> m_validationMsgs;
     std::vector<int> m_screenshotFrames;
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateDevice(struct_xglCreateDevice* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglEnumerateGpus(struct_xglEnumerateGpus* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetGpuInfo(struct_xglGetGpuInfo* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetExtensionSupport(struct_xglGetExtensionSupport* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglQueueSubmit(struct_xglQueueSubmit* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetObjectInfo(struct_xglGetObjectInfo* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetFormatInfo(struct_xglGetFormatInfo* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetImageSubresourceInfo(struct_xglGetImageSubresourceInfo* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUpdateDescriptors(struct_xglUpdateDescriptors* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateDescriptorSetLayout(struct_xglCreateDescriptorSetLayout* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateGraphicsPipeline(struct_xglCreateGraphicsPipeline* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCmdWaitEvents(struct_xglCmdWaitEvents* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCmdPipelineBarrier(struct_xglCmdPipelineBarrier* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateFramebuffer(struct_xglCreateFramebuffer* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglCreateRenderPass(struct_xglCreateRenderPass* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglBeginCommandBuffer(struct_xglBeginCommandBuffer* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglStorePipeline(struct_xglStorePipeline* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglGetMultiGpuCompatibility(struct_xglGetMultiGpuCompatibility* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglDestroyObject(struct_xglDestroyObject* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWaitForFences(struct_xglWaitForFences* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglFreeMemory(struct_xglFreeMemory* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglMapMemory(struct_xglMapMemory* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUnmapMemory(struct_xglUnmapMemory* pPacket);
     std::map<XGL_GPU_MEMORY, XGLAllocInfo> m_mapData;
     void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)
     {

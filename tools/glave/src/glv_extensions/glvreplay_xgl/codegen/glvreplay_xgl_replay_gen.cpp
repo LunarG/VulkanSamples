@@ -34,7 +34,8 @@
 
 #include <algorithm>
 #include <queue>
-glvreplay_settings *g_pReplaySettings;
+
+
 extern "C" {
 #include "glv_vk_vk_structs.h"
 #include "glv_vk_vkdbg_structs.h"
@@ -46,352 +47,7 @@ extern "C" {
 #define APP_NAME "glvreplay_xgl"
 #define IDI_ICON 101
 
-static const char* g_extensions[] =
-{
-        "XGL_WSI_WINDOWS",
-        "XGL_TIMER_QUEUE",
-        "XGL_GPU_TIMESTAMP_CALIBRATION",
-        "XGL_DMA_QUEUE",
-        "XGL_COMMAND_BUFFER_CONTROL_FLOW",
-        "XGL_COPY_OCCLUSION_QUERY_DATA",
-        "XGL_ADVANCED_MULTISAMPLING",
-        "XGL_BORDER_COLOR_PALETTE"
-};
 
-XGL_RESULT xglDisplay::init_xgl(unsigned int gpu_idx)
-{
-#if 0
-    XGL_APPLICATION_INFO appInfo = {};
-    appInfo.pAppName = APP_NAME;
-    appInfo.pEngineName = "";
-    appInfo.apiVersion = XGL_API_VERSION;
-    XGL_RESULT res = xglInitAndEnumerateGpus(&appInfo, NULL, XGL_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);
-    if ( res == XGL_SUCCESS ) {
-        // retrieve the GPU information for all GPUs
-        for( uint32_t gpu = 0; gpu < m_gpuCount; gpu++)
-        {
-            size_t gpuInfoSize = sizeof(m_gpuProps[0]);
-
-            // get the GPU physical properties:
-            res = xglGetGpuInfo( m_gpus[gpu], XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &gpuInfoSize, &m_gpuProps[gpu]);
-            if (res != XGL_SUCCESS)
-                glv_LogWarn("Failed to retrieve properties for gpu[%d] result %d\n", gpu, res);
-        }
-        res = XGL_SUCCESS;
-    } else if ((gpu_idx + 1) > m_gpuCount) {
-        glv_LogError("xglInitAndEnumerate number of gpus does not include requested index: num %d, requested %d\n", m_gpuCount, gpu_idx);
-        return -1;
-    } else {
-        glv_LogError("xglInitAndEnumerate failed\n");
-        return res;
-    }
-    // TODO add multi-gpu support always use gpu[gpu_idx] for now
-    // get all extensions supported by this device gpu[gpu_idx]
-    // first check if extensions are available and save a list of them
-    bool foundWSIExt = false;
-    for( int ext = 0; ext < sizeof( extensions ) / sizeof( extensions[0] ); ext++)
-    {
-        res = xglGetExtensionSupport( m_gpus[gpu_idx], extensions[ext] );
-        if (res == XGL_SUCCESS) {
-            m_extensions.push_back((char *) extensions[ext]);
-            if (!strcmp(extensions[ext], "XGL_WSI_WINDOWS"))
-                foundWSIExt = true;
-        }
-    }
-    if (!foundWSIExt) {
-        glv_LogError("XGL_WSI_WINDOWS extension not supported by gpu[%d]\n", gpu_idx);
-        return XGL_ERROR_INCOMPATIBLE_DEVICE;
-    }
-    // TODO generalize this: use one universal queue for now
-    XGL_DEVICE_QUEUE_CREATE_INFO dqci = {};
-    dqci.queueCount = 1;
-    dqci.queueType = XGL_QUEUE_UNIVERSAL;
-    // create the device enabling validation level 4
-    const char * const * extNames = &m_extensions[0];
-    XGL_DEVICE_CREATE_INFO info = {};
-    info.queueRecordCount = 1;
-    info.pRequestedQueues = &dqci;
-    info.extensionCount = static_cast <uint32_t> (m_extensions.size());
-    info.ppEnabledExtensionNames = extNames;
-    info.flags = XGL_DEVICE_CREATE_VALIDATION;
-    info.maxValidationLevel = XGL_VALIDATION_LEVEL_4;
-    bool32_t xglTrue = XGL_TRUE;
-    res = xglDbgSetGlobalOption( XGL_DBG_OPTION_BREAK_ON_ERROR, sizeof( xglTrue ), &xglTrue );
-    if (res != XGL_SUCCESS)
-        glv_LogWarn("Could not set debug option break on error\n");
-    res = xglCreateDevice( m_gpus[0], &info, &m_dev[gpu_idx]);
-    return res;
-#else
-    return XGL_ERROR_INITIALIZATION_FAILED;
-#endif
-}
-int xglDisplay::init(const unsigned int gpu_idx)
-{
-    //m_gpuIdx = gpu_idx;
-#if 0
-    XGL_RESULT result = init_xgl(gpu_idx);
-    if (result != XGL_SUCCESS) {
-        glv_LogError("could not init xgl library");
-        return -1;
-    } else {
-        m_initedXGL = true;
-    }
-#endif
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
-    int scr;
-    xcb_connection_t *pConnection;
-    pConnection = xcb_connect(NULL, &scr);
-    setup = xcb_get_setup(pConnection);
-    iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
-    m_pXcbScreen = iter.data;
-    m_WsiConnection.pConnection = pConnection;
-    m_WsiConnection.root = m_pXcbScreen->root;
-#endif
-    return 0;
-}
-xglDisplay::xglDisplay()
-    : m_initedXGL(false),
-    m_windowWidth(0),
-    m_windowHeight(0)
-{
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    m_WsiConnection.pConnection = NULL;
-    m_WsiConnection.root = 0;
-    m_WsiConnection.provider = 0;
-    m_pXcbScreen = NULL;
-    m_XcbWindow = 0;
-#elif defined(WIN32)
-    m_windowHandle = NULL;
-#endif
-}
-xglDisplay::~xglDisplay()
-{
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    if (m_XcbWindow != 0)
-    {
-        xcb_destroy_window(m_WsiConnection.pConnection, m_XcbWindow);
-    }
-    if (m_WsiConnection.pConnection != NULL)
-    {
-        xcb_disconnect(m_WsiConnection.pConnection);
-    }
-#endif
-}
-#if defined(WIN32)
-LRESULT WINAPI WindowProcXgl( HWND window, unsigned int msg, WPARAM wp, LPARAM lp)
-{
-    switch(msg)
-    {
-        case WM_CLOSE:
-            DestroyWindow( window);
-            // fall-thru
-        case WM_DESTROY:
-            PostQuitMessage(0) ;
-            return 0L ;
-        default:
-            return DefWindowProc( window, msg, wp, lp ) ;
-    }
-}
-#endif
-int xglDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsigned int height)
-{
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    m_XcbWindow = hWindow;
-#elif defined(WIN32)
-    m_windowHandle = hWindow;
-#endif
-    m_windowWidth = width;
-    m_windowHeight = height;
-    return 0;
-}
-
-int xglDisplay::create_window(const unsigned int width, const unsigned int height)
-{
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-
-    uint32_t value_mask, value_list[32];
-    m_XcbWindow = xcb_generate_id(m_WsiConnection.pConnection);
-
-    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    value_list[0] = m_pXcbScreen->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
-                    XCB_EVENT_MASK_EXPOSURE;
-
-    xcb_create_window(m_WsiConnection.pConnection,
-            XCB_COPY_FROM_PARENT,
-            m_XcbWindow, m_WsiConnection.root,
-            0, 0, width, height, 0,
-            XCB_WINDOW_CLASS_INPUT_OUTPUT,
-            m_pXcbScreen->root_visual,
-            value_mask, value_list);
-
-    xcb_map_window(m_WsiConnection.pConnection, m_XcbWindow);
-    xcb_flush(m_WsiConnection.pConnection);
-    return 0;
-#elif defined(WIN32)
-    // Register Window class
-    WNDCLASSEX wcex = {};
-    wcex.cbSize = sizeof( WNDCLASSEX);
-    wcex.style = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc = WindowProcXgl;
-    wcex.cbClsExtra = 0;
-    wcex.cbWndExtra = 0;
-    wcex.hInstance = GetModuleHandle(0);
-    wcex.hIcon = LoadIcon(wcex.hInstance, MAKEINTRESOURCE( IDI_ICON));
-    wcex.hCursor = LoadCursor( NULL, IDC_ARROW);
-    wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW + 1);
-    wcex.lpszMenuName = NULL;
-    wcex.lpszClassName = APP_NAME;
-    wcex.hIconSm = LoadIcon( wcex.hInstance, MAKEINTRESOURCE( IDI_ICON));
-    if( !RegisterClassEx( &wcex))
-    {
-        glv_LogError("Failed to register windows class\n");
-        return -1;
-    }
-
-    // create the window
-    m_windowHandle = CreateWindow(APP_NAME, APP_NAME, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0, 0,
-                          width, height, NULL, NULL, wcex.hInstance, NULL);
-
-    if (m_windowHandle)
-    {
-        ShowWindow( m_windowHandle, SW_SHOWDEFAULT);
-        m_windowWidth = width;
-        m_windowHeight = height;
-    } else {
-        glv_LogError("Failed to create window\n");
-        return -1;
-    }
-    return 0;
-#endif
-}
-
-void xglDisplay::resize_window(const unsigned int width, const unsigned int height)
-{
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    if (width != m_windowWidth || height != m_windowHeight)
-    {
-        uint32_t values[2];
-        values[0] = width;
-        values[1] = height;
-        xcb_configure_window(m_WsiConnection.pConnection, m_XcbWindow, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
-        m_windowWidth = width;
-        m_windowHeight = height;
-    }
-#elif defined(WIN32)
-    if (width != m_windowWidth || height != m_windowHeight)
-    {
-        SetWindowPos(get_window_handle(), HWND_TOP, 0, 0, width, height, SWP_NOMOVE);
-        m_windowWidth = width;
-        m_windowHeight = height;
-    }
-#endif
-}
-
-void xglDisplay::process_event()
-{
-}
-xglReplay::xglReplay(glvreplay_settings *pReplaySettings)
-{
-    g_pReplaySettings = pReplaySettings;
-    m_display = new xglDisplay();
-    m_pDSDump = NULL;
-    m_pCBDump = NULL;
-    m_pGlvSnapshotPrint = NULL;
-    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {
-        process_screenshot_list(g_pReplaySettings->screenshotList);
-    }
-}
-
-xglReplay::~xglReplay()
-{
-    delete m_display;
-    glv_platform_close_library(m_xglFuncs.m_libHandle);
-}
-int xglReplay::init(glv_replay::Display & disp)
-{
-    int err;
-#if defined PLATFORM_LINUX
-    void * handle = dlopen("libXGL.so", RTLD_LAZY);
-#else
-    HMODULE handle = LoadLibrary("xgl.dll" );
-#endif
-
-    if (handle == NULL) {
-        glv_LogError("Failed to open xgl library.\n");
-        return -1;
-    }
-    m_xglFuncs.init_funcs(handle);
-    disp.set_implementation(m_display);
-    if ((err = m_display->init(disp.get_gpu())) != 0) {
-        glv_LogError("Failed to init XGL display.\n");
-        return err;
-    }
-    if (disp.get_window_handle() == 0)
-    {
-        if ((err = m_display->create_window(disp.get_width(), disp.get_height())) != 0) {
-            glv_LogError("Failed to create Window\n");
-            return err;
-        }
-    }
-    else
-    {
-        if ((err = m_display->set_window(disp.get_window_handle(), disp.get_width(), disp.get_height())) != 0)
-        {
-            glv_LogError("Failed to set Window\n");
-            return err;
-        }
-    }
-    return 0;
-}
-glv_replay::GLV_REPLAY_RESULT xglReplay::handle_replay_errors(const char* entrypointName, const XGL_RESULT resCall, const XGL_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn)
-{
-    glv_replay::GLV_REPLAY_RESULT res = resIn;
-    if (resCall != resTrace) {
-        glv_LogWarn("Mismatched return from API call (%s) traced result %s, replay result %s\n", entrypointName,
-                string_XGL_RESULT((XGL_RESULT)resTrace), string_XGL_RESULT((XGL_RESULT)resCall));
-        res = glv_replay::GLV_REPLAY_BAD_RETURN;
-    }
-#if 0
-    if (resCall != XGL_SUCCESS) {
-        glv_LogWarn("API call (%s) returned failed result %s\n", entrypointName, string_XGL_RESULT(resCall));
-    }
-#endif
-    return res;
-}
-void xglReplay::push_validation_msg(XGL_VALIDATION_LEVEL validationLevel, XGL_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char * pMsg)
-{
-    struct validationMsg msgObj;
-    msgObj.validationLevel = validationLevel;
-    msgObj.srcObject = srcObject;
-    msgObj.location = location;
-    msgObj.msgCode = msgCode;
-    strncpy(msgObj.msg, pMsg, 256);
-    msgObj.msg[255] = '\0';
-    m_validationMsgs.push_back(msgObj);
-}
-
-glv_replay::GLV_REPLAY_RESULT xglReplay::pop_validation_msgs()
-{
-    if (m_validationMsgs.size() == 0)
-        return glv_replay::GLV_REPLAY_SUCCESS;
-    m_validationMsgs.clear();
-    return glv_replay::GLV_REPLAY_VALIDATION_ERROR;
-}
-int xglReplay::dump_validation_data()
-{
-   if  (m_pDSDump && m_pCBDump)
-   {
-      m_pDSDump((char *) "pipeline_dump.dot");
-      m_pCBDump((char *) "cb_dump.dot");
-   }
-   if (m_pGlvSnapshotPrint != NULL) { m_pGlvSnapshotPrint(); }
-   return 0;
-}
 void xglFuncs::init_funcs(void * handle)
 {
     m_libHandle = handle;
@@ -522,8 +178,6 @@ void xglFuncs::init_funcs(void * handle)
     real_xglWsiX11CreatePresentableImage = (type_xglWsiX11CreatePresentableImage)(glv_platform_get_library_entrypoint(handle, "xglWsiX11CreatePresentableImage"));
     real_xglWsiX11QueuePresent = (type_xglWsiX11QueuePresent)(glv_platform_get_library_entrypoint(handle, "xglWsiX11QueuePresent"));
 }
-#define CHECK_RETURN_VALUE(entrypoint) returnValue = handle_replay_errors(#entrypoint, replayResult, pPacket->result, returnValue);
-
 glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
 {
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
@@ -561,123 +215,13 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglEnumerateGpus:
         {
             struct_xglEnumerateGpus* pPacket = (struct_xglEnumerateGpus*)(packet->pBody);
-            if (!m_display->m_initedXGL)
-            {
-                uint32_t gpuCount;
-                XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
-                uint32_t maxGpus = (pPacket->maxGpus < XGL_MAX_PHYSICAL_GPUS) ? pPacket->maxGpus : XGL_MAX_PHYSICAL_GPUS;
-                replayResult = m_xglFuncs.real_xglEnumerateGpus(remap(pPacket->instance), maxGpus, &gpuCount, &gpus[0]);
-                CHECK_RETURN_VALUE(xglEnumerateGpus);
-                //TODO handle different number of gpus in trace versus replay
-                if (gpuCount != *(pPacket->pGpuCount))
-                {
-                    glv_LogWarn("number of gpus mismatched in replay %u versus trace %u\n", gpuCount, *(pPacket->pGpuCount));
-                }
-                else if (gpuCount == 0)
-                {
-                     glv_LogError("xglEnumerateGpus number of gpus is zero\n");
-                }
-                else
-                {
-                    glv_LogInfo("Enumerated %d GPUs in the system\n", gpuCount);
-                }
-                // TODO handle enumeration results in a different order from trace to replay
-                for (uint32_t i = 0; i < gpuCount; i++)
-                {
-                    if (pPacket->pGpus)
-                        add_to_map(&(pPacket->pGpus[i]), &(gpus[i]));
-                }
-            }
+            returnValue = manually_handle_xglEnumerateGpus(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglGetGpuInfo:
         {
             struct_xglGetGpuInfo* pPacket = (struct_xglGetGpuInfo*)(packet->pBody);
-            if (!m_display->m_initedXGL)
-            {
-                switch (pPacket->infoType) {
-                case XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
-                {
-                    XGL_PHYSICAL_GPU_PROPERTIES gpuProps;
-                    size_t dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
-                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &dataSize,
-                                    (pPacket->pData == NULL) ? NULL : &gpuProps);
-                    if (pPacket->pData != NULL)
-                    {
-                        glv_LogInfo("Replay Gpu Properties\n");
-                        glv_LogInfo("Vendor ID %x, Device ID %x, name %s\n",gpuProps.vendorId, gpuProps.deviceId, gpuProps.gpuName);
-                        glv_LogInfo("API version %u, Driver version %u, gpu Type %u\n",gpuProps.apiVersion, gpuProps.driverVersion, gpuProps.gpuType);
-                    }
-                    break;
-                }
-                case XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
-                {
-                    XGL_PHYSICAL_GPU_PERFORMANCE gpuPerfs;
-                    size_t dataSize = sizeof(XGL_PHYSICAL_GPU_PERFORMANCE);
-                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &dataSize,
-                                    (pPacket->pData == NULL) ? NULL : &gpuPerfs);
-                    if (pPacket->pData != NULL)
-                    {
-                        glv_LogInfo("Replay Gpu Performance\n");
-                        glv_LogInfo("Max GPU clock %f, max shader ALUs/clock %f, max texel fetches/clock %f\n",gpuPerfs.maxGpuClock, gpuPerfs.aluPerClock, gpuPerfs.texPerClock);
-                        glv_LogInfo("Max primitives/clock %f, Max pixels/clock %f\n",gpuPerfs.primsPerClock, gpuPerfs.pixelsPerClock);
-                    }
-                    break;
-                }
-                case XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:
-                {
-                    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *pGpuQueue, *pQ;
-                    size_t dataSize = sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES);
-                    size_t numQueues = 1;
-                    assert(pPacket->pDataSize);
-                    if ((*(pPacket->pDataSize) % dataSize) != 0)
-                        glv_LogWarn("xglGetGpuInfo() for GPU_QUEUE_PROPERTIES not an integral data size assuming 1\n");
-                    else
-                        numQueues = *(pPacket->pDataSize) / dataSize;
-                    dataSize = numQueues * dataSize;
-                    pQ = static_cast < XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *> (glv_malloc(dataSize));
-                    pGpuQueue = pQ;
-                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &dataSize,
-                                    (pPacket->pData == NULL) ? NULL : pGpuQueue);
-                    if (pPacket->pData != NULL)
-                    {
-                        for (unsigned int i = 0; i < numQueues; i++)
-                        {
-                            glv_LogInfo("Replay Gpu Queue Property for index %d, flags %u\n", i, pGpuQueue->queueFlags);
-                            glv_LogInfo("Max available count %u, max atomic counters %u, supports timestamps %u\n",pGpuQueue->queueCount, pGpuQueue->maxAtomicCounters, pGpuQueue->supportsTimestamps);
-                            pGpuQueue++;
-                        }
-                    }
-                    glv_free(pQ);
-                    break;
-                }
-                default:
-                {
-                    size_t size = 0;
-                    void* pData = NULL;
-                    if (pPacket->pData != NULL && pPacket->pDataSize != NULL)
-                    {
-                        size = *pPacket->pDataSize;
-                        pData = glv_malloc(*pPacket->pDataSize);
-                    }
-                    replayResult = m_xglFuncs.real_xglGetGpuInfo(remap(pPacket->gpu), pPacket->infoType, &size, pData);
-                    if (replayResult == XGL_SUCCESS)
-                    {
-                        if (size != *pPacket->pDataSize && pData != NULL)
-                        {
-                            glv_LogWarn("xglGetGpuInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\n", size, *pPacket->pDataSize);
-                        }
-                        else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)
-                        {
-                            glv_LogWarn("xglGetGpuInfo returned differing data contents than the trace file contained.\n");
-                        }
-                    }
-                    glv_free(pData);
-                    break;
-                }
-                };
-                CHECK_RETURN_VALUE(xglGetGpuInfo);
-            }
+            returnValue = manually_handle_xglGetGpuInfo(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglGetProcAddr:
@@ -689,53 +233,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCreateDevice:
         {
             struct_xglCreateDevice* pPacket = (struct_xglCreateDevice*)(packet->pBody);
-            if (!m_display->m_initedXGL)
-            {
-                XGL_DEVICE device;
-                if (g_xglReplaySettings.debugLevel > 0)
-                {
-                    XGL_DEVICE_CREATE_INFO cInfo, *ci, *pCreateInfoSaved;
-                    unsigned int numLayers = 0;
-                    char ** layersStr = get_enableLayers_list(&numLayers);
-                    apply_layerSettings_overrides();
-                    XGL_LAYER_CREATE_INFO layerInfo;
-                    pCreateInfoSaved = (XGL_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;
-                    ci = (XGL_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;
-                    if (layersStr != NULL && numLayers > 0)
-                    {
-                        while (ci->pNext != NULL)
-                            ci = (XGL_DEVICE_CREATE_INFO *) ci->pNext;
-                        ci->pNext = &layerInfo;
-                        layerInfo.sType = XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO;
-                        layerInfo.pNext = 0;
-                        layerInfo.layerCount = numLayers;
-                        layerInfo.ppActiveLayerNames = layersStr;
-                    }
-                    memcpy(&cInfo, pPacket->pCreateInfo, sizeof(XGL_DEVICE_CREATE_INFO));
-                    cInfo.flags = pPacket->pCreateInfo->flags | XGL_DEVICE_CREATE_VALIDATION_BIT;
-                    cInfo.maxValidationLevel = (XGL_VALIDATION_LEVEL)((g_xglReplaySettings.debugLevel <= 4) ? (unsigned int) XGL_VALIDATION_LEVEL_0 + g_xglReplaySettings.debugLevel : (unsigned int) XGL_VALIDATION_LEVEL_0);
-                    pPacket->pCreateInfo = &cInfo;
-                    replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);
-                    // restore the packet for next replay
-                    ci->pNext = NULL;
-                    pPacket->pCreateInfo = pCreateInfoSaved;
-                    release_enableLayer_list(layersStr);
-                    if (xglDbgRegisterMsgCallback(g_fpDbgMsgCallback, NULL) != XGL_SUCCESS)
-                        glv_LogError("Failed to register xgl callback for replayer error handling\n");
-#if !defined(_WIN32)
-                    m_pDSDump = (DRAW_STATE_DUMP_DOT_FILE) m_xglFuncs.real_xglGetProcAddr(remap(pPacket->gpu), "drawStateDumpDotFile");
-                    m_pCBDump = (DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE) m_xglFuncs.real_xglGetProcAddr(remap(pPacket->gpu), "drawStateDumpCommandBufferDotFile");
-                    m_pGlvSnapshotPrint = (GLVSNAPSHOT_PRINT_OBJECTS) m_xglFuncs.real_xglGetProcAddr(remap(pPacket->gpu), "glvSnapshotPrintObjects");
-#endif
-                }
-                else 
-                    replayResult = m_xglFuncs.real_xglCreateDevice(remap(pPacket->gpu), pPacket->pCreateInfo, &device);
-                CHECK_RETURN_VALUE(xglCreateDevice);
-                if (replayResult == XGL_SUCCESS)
-                {
-                    add_to_map(pPacket->pDevice, &device);
-                }
-            }
+            returnValue = manually_handle_xglCreateDevice(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglDestroyDevice:
@@ -756,26 +254,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglGetExtensionSupport:
         {
             struct_xglGetExtensionSupport* pPacket = (struct_xglGetExtensionSupport*)(packet->pBody);
-            if (!m_display->m_initedXGL) {
-                replayResult = m_xglFuncs.real_xglGetExtensionSupport(remap(pPacket->gpu), pPacket->pExtName);
-                CHECK_RETURN_VALUE(xglGetExtensionSupport);
-                if (replayResult == XGL_SUCCESS) {
-                    for (unsigned int ext = 0; ext < sizeof(g_extensions) / sizeof(g_extensions[0]); ext++)
-                    {
-                        if (!strncmp(g_extensions[ext], pPacket->pExtName, strlen(g_extensions[ext]))) {
-                            bool extInList = false;
-                            for (unsigned int j = 0; j < m_display->m_extensions.size(); ++j) {
-                                if (!strncmp(m_display->m_extensions[j], g_extensions[ext], strlen(g_extensions[ext])))
-                                    extInList = true;
-                                break;
-                            }
-                            if (!extInList)
-                                m_display->m_extensions.push_back((char *) g_extensions[ext]);
-                            break;
-                        }
-                    }
-                }
-            }
+            returnValue = manually_handle_xglGetExtensionSupport(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglEnumerateLayers:
@@ -806,30 +285,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglQueueSubmit:
         {
             struct_xglQueueSubmit* pPacket = (struct_xglQueueSubmit*)(packet->pBody);
-            XGL_CMD_BUFFER *remappedBuffers = NULL;
-            if (pPacket->pCmdBuffers != NULL)
-            {
-                remappedBuffers = GLV_NEW_ARRAY( XGL_CMD_BUFFER, pPacket->cmdBufferCount);
-                for (uint32_t i = 0; i < pPacket->cmdBufferCount; i++)
-                {
-                    *(remappedBuffers + i) = remap(*(pPacket->pCmdBuffers + i));
-                }
-            }
-            XGL_MEMORY_REF* memRefs = NULL;
-            if (pPacket->pMemRefs != NULL)
-            {
-                memRefs = GLV_NEW_ARRAY(XGL_MEMORY_REF, pPacket->memRefCount);
-                memcpy(memRefs, pPacket->pMemRefs, sizeof(XGL_MEMORY_REF) * pPacket->memRefCount);
-                for (uint32_t i = 0; i < pPacket->memRefCount; i++)
-                {
-                    memRefs[i].mem = remap(pPacket->pMemRefs[i].mem);
-                }
-            }
-            replayResult = m_xglFuncs.real_xglQueueSubmit(remap(pPacket->queue), pPacket->cmdBufferCount, remappedBuffers, pPacket->memRefCount,
-                memRefs, remap(pPacket->fence));
-            GLV_DELETE(remappedBuffers);
-            GLV_DELETE(memRefs);
-            CHECK_RETURN_VALUE(xglQueueSubmit);
+            returnValue = manually_handle_xglQueueSubmit(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglQueueSetGlobalMemReferences:
@@ -869,14 +325,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglFreeMemory:
         {
             struct_xglFreeMemory* pPacket = (struct_xglFreeMemory*)(packet->pBody);
-            XGL_GPU_MEMORY handle = remap(pPacket->mem);
-            replayResult = m_xglFuncs.real_xglFreeMemory(handle);
-            if (replayResult == XGL_SUCCESS) 
-            {
-                rm_entry_from_mapData(handle);
-                rm_from_map(pPacket->mem);
-            }
-            CHECK_RETURN_VALUE(xglFreeMemory);
+            returnValue = manually_handle_xglFreeMemory(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglSetMemoryPriority:
@@ -889,21 +338,13 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglMapMemory:
         {
             struct_xglMapMemory* pPacket = (struct_xglMapMemory*)(packet->pBody);
-            XGL_GPU_MEMORY handle = remap(pPacket->mem);
-            void* pData;
-            replayResult = m_xglFuncs.real_xglMapMemory(handle, pPacket->flags, &pData);
-            if (replayResult == XGL_SUCCESS)
-                add_mapping_to_mapData(handle, pData);
-            CHECK_RETURN_VALUE(xglMapMemory);
+            returnValue = manually_handle_xglMapMemory(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglUnmapMemory:
         {
             struct_xglUnmapMemory* pPacket = (struct_xglUnmapMemory*)(packet->pBody);
-            XGL_GPU_MEMORY handle = remap(pPacket->mem);
-            rm_mapping_from_mapData(handle, pPacket->pData);  // copies data from packet into memory buffer
-            replayResult = m_xglFuncs.real_xglUnmapMemory(handle);
-            CHECK_RETURN_VALUE(xglUnmapMemory);
+            returnValue = manually_handle_xglUnmapMemory(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglPinSystemMemory:
@@ -921,12 +362,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglGetMultiGpuCompatibility:
         {
             struct_xglGetMultiGpuCompatibility* pPacket = (struct_xglGetMultiGpuCompatibility*)(packet->pBody);
-            XGL_GPU_COMPATIBILITY_INFO cInfo;
-            XGL_PHYSICAL_GPU handle0, handle1;
-            handle0 = remap(pPacket->gpu0);
-            handle1 = remap(pPacket->gpu1);
-            replayResult = m_xglFuncs.real_xglGetMultiGpuCompatibility(handle0, handle1, &cInfo);
-            CHECK_RETURN_VALUE(xglGetMultiGpuCompatibility);
+            returnValue = manually_handle_xglGetMultiGpuCompatibility(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglOpenSharedMemory:
@@ -973,39 +409,13 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglDestroyObject:
         {
             struct_xglDestroyObject* pPacket = (struct_xglDestroyObject*)(packet->pBody);
-            XGL_OBJECT object = remap(pPacket->object);
-            if (object != XGL_NULL_HANDLE)
-                replayResult = m_xglFuncs.real_xglDestroyObject(object);
-            if (replayResult == XGL_SUCCESS)
-                rm_from_map(pPacket->object);
-            CHECK_RETURN_VALUE(xglDestroyObject);
+            returnValue = manually_handle_xglDestroyObject(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglGetObjectInfo:
         {
             struct_xglGetObjectInfo* pPacket = (struct_xglGetObjectInfo*)(packet->pBody);
-            size_t size = 0;
-            void* pData = NULL;
-            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)
-            {
-                size = *pPacket->pDataSize;
-                pData = glv_malloc(*pPacket->pDataSize);
-                memcpy(pData, pPacket->pData, *pPacket->pDataSize);
-            }
-            replayResult = m_xglFuncs.real_xglGetObjectInfo(remap(pPacket->object), pPacket->infoType, &size, pData);
-            if (replayResult == XGL_SUCCESS)
-            {
-                if (size != *pPacket->pDataSize && pData != NULL)
-                {
-                    glv_LogWarn("xglGetObjectInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\n", size, *pPacket->pDataSize);
-                }
-                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)
-                {
-                    glv_LogWarn("xglGetObjectInfo returned differing data contents than the trace file contained.\n");
-                }
-            }
-            glv_free(pData);
-            CHECK_RETURN_VALUE(xglGetObjectInfo);
+            returnValue = manually_handle_xglGetObjectInfo(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglBindObjectMemory:
@@ -1054,14 +464,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglWaitForFences:
         {
             struct_xglWaitForFences* pPacket = (struct_xglWaitForFences*)(packet->pBody);
-            XGL_FENCE *pFence = GLV_NEW_ARRAY(XGL_FENCE, pPacket->fenceCount);
-            for (uint32_t i = 0; i < pPacket->fenceCount; i++)
-            {
-                *(pFence + i) = remap(*(pPacket->pFences + i));
-            }
-            replayResult = m_xglFuncs.real_xglWaitForFences(remap(pPacket->device), pPacket->fenceCount, pFence, pPacket->waitAll, pPacket->timeout);
-            GLV_DELETE(pFence);
-            CHECK_RETURN_VALUE(xglWaitForFences);
+            returnValue = manually_handle_xglWaitForFences(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCreateQueueSemaphore:
@@ -1148,27 +551,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglGetFormatInfo:
         {
             struct_xglGetFormatInfo* pPacket = (struct_xglGetFormatInfo*)(packet->pBody);
-            size_t size = 0;
-            void* pData = NULL;
-            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)
-            {
-                size = *pPacket->pDataSize;
-                pData = glv_malloc(*pPacket->pDataSize);
-            }
-            replayResult = m_xglFuncs.real_xglGetFormatInfo(remap(pPacket->device), pPacket->format, pPacket->infoType, &size, pData);
-            if (replayResult == XGL_SUCCESS)
-            {
-                if (size != *pPacket->pDataSize && pData != NULL)
-                {
-                    glv_LogWarn("xglGetFormatInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\n", size, *pPacket->pDataSize);
-                }
-                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)
-                {
-                    glv_LogWarn("xglGetFormatInfo returned differing data contents than the trace file contained.\n");
-                }
-            }
-            glv_free(pData);
-            CHECK_RETURN_VALUE(xglGetFormatInfo);
+            returnValue = manually_handle_xglGetFormatInfo(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCreateBuffer:
@@ -1227,27 +610,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglGetImageSubresourceInfo:
         {
             struct_xglGetImageSubresourceInfo* pPacket = (struct_xglGetImageSubresourceInfo*)(packet->pBody);
-            size_t size = 0;
-            void* pData = NULL;
-            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)
-            {
-                size = *pPacket->pDataSize;
-                pData = glv_malloc(*pPacket->pDataSize);
-            }
-            replayResult = m_xglFuncs.real_xglGetImageSubresourceInfo(remap(pPacket->image), pPacket->pSubresource, pPacket->infoType, &size, pData);
-            if (replayResult == XGL_SUCCESS)
-            {
-                if (size != *pPacket->pDataSize && pData != NULL)
-                {
-                    glv_LogWarn("xglGetImageSubresourceInfo returned a differing data size: replay (%d bytes) vs trace (%d bytes)\n", size, *pPacket->pDataSize);
-                }
-                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)
-                {
-                    glv_LogWarn("xglGetImageSubresourceInfo returned differing data contents than the trace file contained.\n");
-                }
-            }
-            glv_free(pData);
-            CHECK_RETURN_VALUE(xglGetImageSubresourceInfo);
+            returnValue = manually_handle_xglGetImageSubresourceInfo(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCreateImageView:
@@ -1310,34 +673,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCreateGraphicsPipeline:
         {
             struct_xglCreateGraphicsPipeline* pPacket = (struct_xglCreateGraphicsPipeline*)(packet->pBody);
-            XGL_GRAPHICS_PIPELINE_CREATE_INFO createInfo;
-            struct shaderPair saveShader[10];
-            unsigned int idx = 0;
-            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
-            createInfo.lastSetLayout = remap(createInfo.lastSetLayout);
-            // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext
-            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;
-            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;
-            while (XGL_NULL_HANDLE != pPacketNext)
-            {
-                if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pNext->sType)
-                {
-                    saveShader[idx].val = pNext->shader.shader;
-                    saveShader[idx++].addr = &(pNext->shader.shader);
-                    pNext->shader.shader = remap(pPacketNext->shader.shader);
-                }
-                pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacketNext->pNext;
-                pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;
-            }
-            XGL_PIPELINE pipeline;
-            replayResult = m_xglFuncs.real_xglCreateGraphicsPipeline(remap(pPacket->device), &createInfo, &pipeline);
-            if (replayResult == XGL_SUCCESS)
-            {
-                add_to_map(pPacket->pPipeline, &pipeline);
-            }
-            for (unsigned int i = 0; i < idx; i++)
-                *(saveShader[i].addr) = saveShader[i].val;
-            CHECK_RETURN_VALUE(xglCreateGraphicsPipeline);
+            returnValue = manually_handle_xglCreateGraphicsPipeline(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCreateComputePipeline:
@@ -1358,27 +694,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglStorePipeline:
         {
             struct_xglStorePipeline* pPacket = (struct_xglStorePipeline*)(packet->pBody);
-            size_t size = 0;
-            void* pData = NULL;
-            if (pPacket->pData != NULL && pPacket->pDataSize != NULL)
-            {
-                size = *pPacket->pDataSize;
-                pData = glv_malloc(*pPacket->pDataSize);
-            }
-            replayResult = m_xglFuncs.real_xglStorePipeline(remap(pPacket->pipeline), &size, pData);
-            if (replayResult == XGL_SUCCESS)
-            {
-                if (size != *pPacket->pDataSize && pData != NULL)
-                {
-                    glv_LogWarn("xglStorePipeline returned a differing data size: replay (%d bytes) vs trace (%d bytes)\n", size, *pPacket->pDataSize);
-                }
-                else if (pData != NULL && memcmp(pData, pPacket->pData, size) != 0)
-                {
-                    glv_LogWarn("xglStorePipeline returned differing data contents than the trace file contained.\n");
-                }
-            }
-            glv_free(pData);
-            CHECK_RETURN_VALUE(xglStorePipeline);
+            returnValue = manually_handle_xglStorePipeline(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglLoadPipeline:
@@ -1420,23 +736,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCreateDescriptorSetLayout:
         {
             struct_xglCreateDescriptorSetLayout* pPacket = (struct_xglCreateDescriptorSetLayout*)(packet->pBody);
-            XGL_SAMPLER saveSampler;
-            if (pPacket->pSetLayoutInfoList != NULL) {
-                XGL_SAMPLER *pSampler = (XGL_SAMPLER *) &pPacket->pSetLayoutInfoList->immutableSampler;
-                saveSampler = pPacket->pSetLayoutInfoList->immutableSampler;
-                *pSampler = remap(saveSampler);
-            }
-            XGL_DESCRIPTOR_SET_LAYOUT setLayout;
-            replayResult = m_xglFuncs.real_xglCreateDescriptorSetLayout(remap(pPacket->device), pPacket->stageFlags, pPacket->pSetBindPoints, remap(pPacket->priorSetLayout), pPacket->pSetLayoutInfoList, &setLayout);
-            if (replayResult == XGL_SUCCESS)
-            {
-                add_to_map(pPacket->pSetLayout, &setLayout);
-            }
-            if (pPacket->pSetLayoutInfoList != NULL) {
-                XGL_SAMPLER *pSampler = (XGL_SAMPLER *) &pPacket->pSetLayoutInfoList->immutableSampler;
-                *pSampler = saveSampler;
-            }
-            CHECK_RETURN_VALUE(xglCreateDescriptorSetLayout);
+            returnValue = manually_handle_xglCreateDescriptorSetLayout(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglBeginDescriptorRegionUpdate:
@@ -1508,122 +808,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglUpdateDescriptors:
         {
             struct_xglUpdateDescriptors* pPacket = (struct_xglUpdateDescriptors*)(packet->pBody);
-            XGL_UPDATE_SAMPLERS* pUpdateChain = (XGL_UPDATE_SAMPLERS*)pPacket->pUpdateChain;
-            std::queue<XGL_SAMPLER> saveSamplers;
-            std::queue<XGL_BUFFER_VIEW> saveBufferViews;
-            std::queue<XGL_IMAGE_VIEW> saveImageViews;
-            std::queue<XGL_DESCRIPTOR_SET> saveDescSets;
-            while (pUpdateChain) {
-                switch(pUpdateChain->sType)
-                {
-                    case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                        for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLERS*)pUpdateChain)->count; i++) {
-                            XGL_SAMPLER* pLocalSampler = (XGL_SAMPLER*) &((XGL_UPDATE_SAMPLERS*)pUpdateChain)->pSamplers[i];
-                            saveSamplers.push(*pLocalSampler);
-                            *pLocalSampler = remap(((XGL_UPDATE_SAMPLERS*)pUpdateChain)->pSamplers[i]);
-                        }
-                        break;
-                    case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-                    {
-                        XGL_UPDATE_SAMPLER_TEXTURES *pUST = (XGL_UPDATE_SAMPLER_TEXTURES *) pUpdateChain;
-                        for (uint32_t i = 0; i < pUST->count; i++) {
-                            XGL_SAMPLER *pLocalSampler = (XGL_SAMPLER *) &pUST->pSamplerImageViews[i].pSampler;
-                            saveSamplers.push(*pLocalSampler);
-                            *pLocalSampler = remap(pUST->pSamplerImageViews[i].pSampler);
-                            XGL_IMAGE_VIEW *pLocalView = (XGL_IMAGE_VIEW *) &pUST->pSamplerImageViews[i].pImageView->view;
-                            saveImageViews.push(*pLocalView);
-                            *pLocalView = remap(pUST->pSamplerImageViews[i].pImageView->view);
-                        }
-                        break;
-                    }
-                    case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
-                    {
-                        XGL_UPDATE_IMAGES *pUI = (XGL_UPDATE_IMAGES*) pUpdateChain;
-                        for (uint32_t i = 0; i < pUI->count; i++) {
-                            XGL_IMAGE_VIEW* pLocalView = (XGL_IMAGE_VIEW*) &pUI->pImageViews[i]->view;
-                            saveImageViews.push(*pLocalView);
-                            *pLocalView = remap(pUI->pImageViews[i]->view);
-                        }
-                        break;
-                    }
-                    case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
-                    {
-                        XGL_UPDATE_BUFFERS *pUB = (XGL_UPDATE_BUFFERS *) pUpdateChain;
-                        for (uint32_t i = 0; i < pUB->count; i++) {
-                            XGL_BUFFER_VIEW* pLocalView = (XGL_BUFFER_VIEW*) &pUB->pBufferViews[i]->view;
-                            saveBufferViews.push(*pLocalView);
-                            *pLocalView = remap(pUB->pBufferViews[i]->view);
-                        }
-                        break;
-                    }
-                    case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
-                        saveDescSets.push(((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet);
-                        ((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet = remap(((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet);
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
-                pUpdateChain = (XGL_UPDATE_SAMPLERS*) pUpdateChain->pNext;
-            }
-            m_xglFuncs.real_xglUpdateDescriptors(remap(pPacket->descriptorSet), pPacket->pUpdateChain);
-            pUpdateChain = (XGL_UPDATE_SAMPLERS*) pPacket->pUpdateChain;
-            while (pUpdateChain) {
-                switch(pUpdateChain->sType)
-                {
-                    case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                        for (uint32_t i = 0; i < ((XGL_UPDATE_SAMPLERS*)pUpdateChain)->count; i++) {
-                            XGL_SAMPLER* pLocalSampler = (XGL_SAMPLER*) &((XGL_UPDATE_SAMPLERS*)pUpdateChain)->pSamplers[i];
-                            *pLocalSampler = saveSamplers.front();
-                            saveSamplers.pop();
-                        }
-                        break;
-                    case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-                    {
-                        XGL_UPDATE_SAMPLER_TEXTURES *pUST = (XGL_UPDATE_SAMPLER_TEXTURES *) pUpdateChain;
-                        for (uint32_t i = 0; i < pUST->count; i++) {
-                            XGL_SAMPLER *plocalSampler = (XGL_SAMPLER *) &pUST->pSamplerImageViews[i].pSampler;
-                            *plocalSampler = saveSamplers.front();
-                            saveSamplers.pop();
-                            XGL_IMAGE_VIEW *pLocalView = (XGL_IMAGE_VIEW *) &pUST->pSamplerImageViews[i].pImageView->view;
-                            *pLocalView = saveImageViews.front();
-                            saveImageViews.pop();
-                        }
-                        break;
-                    }
-                    case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
-                    {
-                        XGL_UPDATE_IMAGES *pUI = (XGL_UPDATE_IMAGES*) pUpdateChain;
-                        for (uint32_t i = 0; i < pUI->count; i++) {
-                            XGL_IMAGE_VIEW* pLocalView = (XGL_IMAGE_VIEW*) &pUI->pImageViews[i]->view;
-                            *pLocalView = saveImageViews.front();
-                            saveImageViews.pop();
-                        }
-                        break;
-                    }
-                    case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
-                    {
-                        XGL_UPDATE_BUFFERS *pUB = (XGL_UPDATE_BUFFERS *) pUpdateChain;
-                        for (uint32_t i = 0; i < pUB->count; i++) {
-                            XGL_BUFFER_VIEW* pLocalView = (XGL_BUFFER_VIEW*) &pUB->pBufferViews[i]->view;
-                            *pLocalView = saveBufferViews.front();
-                            saveBufferViews.pop();
-                        }
-                        break;
-                    }
-                    case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
-                        ((XGL_UPDATE_AS_COPY*)pUpdateChain)->descriptorSet = saveDescSets.front();
-                        saveDescSets.pop();
-                        //pFreeMe = (XGL_UPDATE_SAMPLERS*)pLocalUpdateChain;
-                        //pLocalUpdateChain = (void*)((XGL_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;
-                        //free(pFreeMe);
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
-                pUpdateChain = (XGL_UPDATE_SAMPLERS*) pUpdateChain->pNext;
-            }
+            returnValue = manually_handle_xglUpdateDescriptors(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCreateDynamicViewportState:
@@ -1689,27 +874,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglBeginCommandBuffer:
         {
             struct_xglBeginCommandBuffer* pPacket = (struct_xglBeginCommandBuffer*)(packet->pBody);
-            XGL_CMD_BUFFER_BEGIN_INFO* pInfo = (XGL_CMD_BUFFER_BEGIN_INFO*)pPacket->pBeginInfo;
-            // assume only zero or one graphics_begin_info in the chain
-            XGL_RENDER_PASS savedRP, *pRP;
-            XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *pGInfo = NULL;
-            while (pInfo != NULL)
-            {
-
-                if (pInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO)
-                {
-                    pGInfo = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) pInfo;
-                    savedRP = pGInfo->renderPass;
-                    pRP = &(pGInfo->renderPass);
-                    *pRP = remap(pGInfo->renderPass);
-                    break;
-                }
-                pInfo = (XGL_CMD_BUFFER_BEGIN_INFO*) pInfo->pNext;
-            }
-            replayResult = m_xglFuncs.real_xglBeginCommandBuffer(remap(pPacket->cmdBuffer), pPacket->pBeginInfo);
-            if (pGInfo != NULL)
-                pGInfo->renderPass = savedRP;
-            CHECK_RETURN_VALUE(xglBeginCommandBuffer);
+            returnValue = manually_handle_xglBeginCommandBuffer(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglEndCommandBuffer:
@@ -1879,84 +1044,13 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCmdWaitEvents:
         {
             struct_xglCmdWaitEvents* pPacket = (struct_xglCmdWaitEvents*)(packet->pBody);
-            XGL_EVENT saveEvent[100];
-            uint32_t idx, numRemapBuf=0, numRemapImg=0;
-            assert(pPacket->pWaitInfo && pPacket->pWaitInfo->eventCount <= 100);
-            for (idx = 0; idx < pPacket->pWaitInfo->eventCount; idx++)
-            {
-                XGL_EVENT *pEvent = (XGL_EVENT *) &(pPacket->pWaitInfo->pEvents[idx]);
-                saveEvent[idx] = pPacket->pWaitInfo->pEvents[idx];
-                *pEvent = remap(pPacket->pWaitInfo->pEvents[idx]);
-            }
-
-            XGL_BUFFER saveBuf[100];
-            XGL_IMAGE saveImg[100];
-            for (idx = 0; idx < pPacket->pWaitInfo->memBarrierCount; idx++)
-            {
-                XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
-                assert(pNext);
-                if (pNext->sType == XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-                    XGL_BUFFER_MEMORY_BARRIER *pNextBuf = (XGL_BUFFER_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
-                    assert(numRemapBuf < 100);
-                    saveBuf[numRemapBuf++] = pNextBuf->buffer;
-                    pNextBuf->buffer = remap(pNextBuf->buffer);
-                } else if (pNext->sType == XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-                    XGL_IMAGE_MEMORY_BARRIER *pNextImg = (XGL_IMAGE_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
-                    assert(numRemapImg < 100);
-                    saveImg[numRemapImg++] = pNextImg->image;
-                    pNextImg->image = remap(pNextImg->image);
-                }
-            }
-            m_xglFuncs.real_xglCmdWaitEvents(remap(pPacket->cmdBuffer), pPacket->pWaitInfo);
-            for (idx = 0; idx < pPacket->pWaitInfo->memBarrierCount; idx++) {
-                XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
-                if (pNext->sType == XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-                    XGL_BUFFER_MEMORY_BARRIER *pNextBuf = (XGL_BUFFER_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
-                    pNextBuf->buffer = saveBuf[idx];
-                } else if (pNext->sType == XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-                    XGL_IMAGE_MEMORY_BARRIER *pNextImg = (XGL_IMAGE_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
-                    pNextImg->image = saveImg[idx];
-                }
-            }
-            for (idx = 0; idx < pPacket->pWaitInfo->eventCount; idx++) {
-                XGL_EVENT *pEvent = (XGL_EVENT *) &(pPacket->pWaitInfo->pEvents[idx]);
-                *pEvent = saveEvent[idx];
-            }
+            returnValue = manually_handle_xglCmdWaitEvents(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCmdPipelineBarrier:
         {
             struct_xglCmdPipelineBarrier* pPacket = (struct_xglCmdPipelineBarrier*)(packet->pBody);
-            uint32_t idx, numRemapBuf=0, numRemapImg=0;
-            XGL_BUFFER saveBuf[100];
-            XGL_IMAGE saveImg[100];
-            for (idx = 0; idx < pPacket->pBarrier->memBarrierCount; idx++)
-            {
-                XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
-                assert(pNext);
-                if (pNext->sType == XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-                    XGL_BUFFER_MEMORY_BARRIER *pNextBuf = (XGL_BUFFER_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
-                    assert(numRemapBuf < 100);
-                    saveBuf[numRemapBuf++] = pNextBuf->buffer;
-                    pNextBuf->buffer = remap(pNextBuf->buffer);
-                } else if (pNext->sType == XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-                    XGL_IMAGE_MEMORY_BARRIER *pNextImg = (XGL_IMAGE_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
-                    assert(numRemapImg < 100);
-                    saveImg[numRemapImg++] = pNextImg->image;
-                    pNextImg->image = remap(pNextImg->image);
-                }
-            }
-            m_xglFuncs.real_xglCmdPipelineBarrier(remap(pPacket->cmdBuffer), pPacket->pBarrier);
-            for (idx = 0; idx < pPacket->pBarrier->memBarrierCount; idx++) {
-                XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
-                if (pNext->sType == XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-                    XGL_BUFFER_MEMORY_BARRIER *pNextBuf = (XGL_BUFFER_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
-                    pNextBuf->buffer = saveBuf[idx];
-                } else if (pNext->sType == XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-                    XGL_IMAGE_MEMORY_BARRIER *pNextImg = (XGL_IMAGE_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
-                    pNextImg->image = saveImg[idx];
-                }
-            }
+            returnValue = manually_handle_xglCmdPipelineBarrier(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCmdBeginQuery:
@@ -2004,64 +1098,13 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::replay(glv_trace_packet_header *packet)
         case GLV_TPI_XGL_xglCreateFramebuffer:
         {
             struct_xglCreateFramebuffer* pPacket = (struct_xglCreateFramebuffer*)(packet->pBody);
-            XGL_FRAMEBUFFER_CREATE_INFO *pInfo = (XGL_FRAMEBUFFER_CREATE_INFO *) pPacket->pCreateInfo;
-            XGL_COLOR_ATTACHMENT_BIND_INFO *pColorAttachments, *pSavedColor = (XGL_COLOR_ATTACHMENT_BIND_INFO*)pInfo->pColorAttachments;
-            bool allocatedColorAttachments = false;
-            if (pSavedColor != NULL)
-            {
-                allocatedColorAttachments = true;
-                pColorAttachments = GLV_NEW_ARRAY(XGL_COLOR_ATTACHMENT_BIND_INFO, pInfo->colorAttachmentCount);
-                memcpy(pColorAttachments, pSavedColor, sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO) * pInfo->colorAttachmentCount);
-                for (uint32_t i = 0; i < pInfo->colorAttachmentCount; i++)
-                {
-                    pColorAttachments[i].view = remap(pInfo->pColorAttachments[i].view);
-                }
-                pInfo->pColorAttachments = pColorAttachments;
-            }
-            // remap depth stencil target
-            const XGL_DEPTH_STENCIL_BIND_INFO *pSavedDS = pInfo->pDepthStencilAttachment;
-            XGL_DEPTH_STENCIL_BIND_INFO depthTarget;
-            if (pSavedDS != NULL)
-            {
-                memcpy(&depthTarget, pSavedDS, sizeof(XGL_DEPTH_STENCIL_BIND_INFO));
-                depthTarget.view = remap(pSavedDS->view);
-                pInfo->pDepthStencilAttachment = &depthTarget;
-            }
-            XGL_FRAMEBUFFER local_framebuffer;
-            replayResult = m_xglFuncs.real_xglCreateFramebuffer(remap(pPacket->device), pPacket->pCreateInfo, &local_framebuffer);
-            pInfo->pColorAttachments = pSavedColor;
-            pInfo->pDepthStencilAttachment = pSavedDS;
-            if (replayResult == XGL_SUCCESS)
-            {
-                add_to_map(pPacket->pFramebuffer, &local_framebuffer);
-            }
-            if (allocatedColorAttachments)
-            {
-                GLV_DELETE((void*)pColorAttachments);
-            }
-            CHECK_RETURN_VALUE(xglCreateFramebuffer);
+            returnValue = manually_handle_xglCreateFramebuffer(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCreateRenderPass:
         {
             struct_xglCreateRenderPass* pPacket = (struct_xglCreateRenderPass*)(packet->pBody);
-            XGL_RENDER_PASS_CREATE_INFO *pInfo = (XGL_RENDER_PASS_CREATE_INFO *) pPacket->pCreateInfo;
-            // remap framebuffer
-            XGL_FRAMEBUFFER savedFB = 0, *pFB = &(pInfo->framebuffer);
-            if (*pFB != NULL)
-            {
-                savedFB = pInfo->framebuffer;
-                *pFB = remap(pInfo->framebuffer);
-            }
-            XGL_RENDER_PASS local_renderpass;
-            replayResult = m_xglFuncs.real_xglCreateRenderPass(remap(pPacket->device), pPacket->pCreateInfo, &local_renderpass);
-            if (*pFB != NULL)
-                pInfo->framebuffer = savedFB;
-            if (replayResult == XGL_SUCCESS)
-            {
-                add_to_map(pPacket->pRenderPass, &local_renderpass);
-            }
-            CHECK_RETURN_VALUE(xglCreateRenderPass);
+            returnValue = manually_handle_xglCreateRenderPass(pPacket);
             break;
         }
         case GLV_TPI_XGL_xglCmdBeginRenderPass:
