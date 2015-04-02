@@ -245,6 +245,10 @@ public:
     {
         return extent().height;
     }
+    XglDevice* device() const
+    {
+        return m_device;
+    }
 
     XGL_RESULT MapMemory(void** ptr);
     XGL_RESULT UnmapMemory();
