@@ -570,7 +570,7 @@ void  TestFrameworkXglPresent::InitPresentFramework(std::list<XglTestImageRecord
     m_images = imagesIn;
 }
 
-void  TestFrameworkXglPresent::CreateWindow()
+void  TestFrameworkXglPresent::CreateMyWindow()
 {
     uint32_t value_mask, value_list[32];
 
@@ -624,7 +624,7 @@ void XglTestFramework::Finish()
 
         xglPresent.InitPresentFramework(m_images);
         xglPresent.CreatePresentableImages();
-        xglPresent.CreateWindow();
+        xglPresent.CreateMyWindow();
         xglPresent.Run();
         xglPresent.TearDown();
     }
