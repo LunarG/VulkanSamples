@@ -338,30 +338,14 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
 
 }
 
-void XglTestFramework::RecordImage(XglImage *image, char *tag)
+void XglTestFramework::RecordImages(vector<XglImage *> images)
 {
-    const ::testing::TestInfo* const test_info =
-      ::testing::UnitTest::GetInstance()->current_test_info();
-    ostringstream filestream;
-    string filename;
-
-    filestream << test_info->name() << "-" << tag;
-    filename = filestream.str();
-    // ToDo - scrub string for bad characters
-
-    if (m_save_images || m_compare_images) {
-        WritePPM(filename.c_str(), image);
-        if (m_compare_images) {
-            Compare(filename.c_str(), image);
-        }
-    }
-
-    if (m_show_images) {
-        Show(test_info->name(), image);
+    for (int32_t i = 0; i < images.size(); i++) {
+        RecordImage(images[i]);
     }
 }
 
-void XglTestFramework::RecordImage(XglImage *image)
+void XglTestFramework::RecordImage(XglImage * image)
 {
     const ::testing::TestInfo* const test_info =
       ::testing::UnitTest::GetInstance()->current_test_info();
@@ -381,7 +365,6 @@ void XglTestFramework::RecordImage(XglImage *image)
         m_frameNum++;
         filename = filestream.str();
     }
-
 
     // ToDo - scrub string for bad characters
 

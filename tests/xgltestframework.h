@@ -79,8 +79,8 @@ public:
     void WritePPM( const char *basename, XglImage *image );
     void Show(const char *comment, XglImage *image);
     void Compare(const char *comment, XglImage *image);
-    void RecordImage(XglImage *image);
-    void RecordImage(XglImage *image, char *tag);
+    void RecordImage(XglImage * image);
+    void RecordImages(vector<XglImage *> image);
     bool GLSLtoSPV(const XGL_PIPELINE_SHADER_STAGE shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
