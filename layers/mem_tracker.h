@@ -48,6 +48,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
     MEMTRACK_INVALID_STATE                 = 15, // Memory not in the correct state
     MEMTRACK_RESET_CB_WHILE_IN_FLIGHT      = 16, // xglResetCommandBuffer() called on a CB that hasn't completed
+    MEMTRACK_INVALID_QUEUE                 = 17, // Unknown Queue object
 } MEM_TRACK_ERROR;
 
 /*
@@ -138,6 +139,14 @@ struct MT_QUEUE_INFO {
     uint64_t                      lastRetiredId;
     uint64_t                      lastSubmittedId;
     list<XGL_CMD_BUFFER>          pQueueCmdBuffers;
+};
+
+struct MT_QUEUE_NODE {
+    struct _MT_QUEUE_NODE*      pNextGlobalQueueNode;
+    XGL_QUEUE                       queue;
+    uint32_t                        numMemRefs;
+    uint32_t                        refListSize;
+    XGL_GPU_MEMORY                 *pMemRefList;
 };
 
 #ifdef __cplusplus

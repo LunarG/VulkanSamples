@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 64, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 65, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -2271,6 +2271,8 @@ typedef XGL_RESULT (XGLAPI *xglEnumerateLayersType)(XGL_PHYSICAL_GPU gpu, size_t
 typedef XGL_RESULT (XGLAPI *xglGetDeviceQueueType)(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue);
 typedef XGL_RESULT (XGLAPI *xglQueueSubmitType)(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglQueueSetGlobalMemReferencesType)(XGL_QUEUE queue, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs);
+typedef XGL_RESULT (XGLAPI *xglQueueAddMemReferenceType)(XGL_QUEUE queue, XGL_GPU_MEMORY mem);
+typedef XGL_RESULT (XGLAPI *xglQueueRemoveMemReferenceType)(XGL_QUEUE queue, XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglQueueWaitIdleType)(XGL_QUEUE queue);
 typedef XGL_RESULT (XGLAPI *xglDeviceWaitIdleType)(XGL_DEVICE device);
 typedef XGL_RESULT (XGLAPI *xglAllocMemoryType)(XGL_DEVICE device, const XGL_MEMORY_ALLOC_INFO* pAllocInfo, XGL_GPU_MEMORY* pMem);
@@ -2446,6 +2448,14 @@ XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     XGL_QUEUE                                   queue,
     uint32_t                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs);
+
+XGL_RESULT XGLAPI xglQueueAddMemReference(
+    XGL_QUEUE                                   queue,
+    XGL_GPU_MEMORY                              mem);
+
+XGL_RESULT XGLAPI xglQueueRemoveMemReference(
+    XGL_QUEUE                                   queue,
+    XGL_GPU_MEMORY                              mem);
 
 XGL_RESULT XGLAPI xglQueueWaitIdle(
     XGL_QUEUE                                   queue);

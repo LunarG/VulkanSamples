@@ -324,7 +324,29 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     const XGL_MEMORY_REF*                       pMemRefs)
 {
     /*
-     * The winwys maintains the list of memory references.  These are ignored
+     * The winsys maintains the list of memory references.  These are ignored
+     * until we move away from the winsys.
+     */
+    return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(
+    XGL_QUEUE                                   queue,
+    XGL_GPU_MEMORY                              mem)
+{
+    /*
+     * The winsys maintains the list of memory references.  These are ignored
+     * until we move away from the winsys.
+     */
+    return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(
+    XGL_QUEUE                                   queue,
+    XGL_GPU_MEMORY                              mem)
+{
+    /*
+     * The winsys maintains the list of memory references.  These are ignored
      * until we move away from the winsys.
      */
     return XGL_SUCCESS;

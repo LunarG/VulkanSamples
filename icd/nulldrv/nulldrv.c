@@ -1727,6 +1727,22 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
     return XGL_SUCCESS;
 }
 
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(
+    XGL_QUEUE                                   queue,
+    XGL_GPU_MEMORY                              mem)
+{
+    NULLDRV_LOG_FUNC;
+    return XGL_SUCCESS;
+}
+
+ICD_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(
+    XGL_QUEUE                                   queue,
+    XGL_GPU_MEMORY                              mem)
+{
+    NULLDRV_LOG_FUNC;
+    return XGL_SUCCESS;
+}
+
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(
     XGL_QUEUE                                   queue_)
 {

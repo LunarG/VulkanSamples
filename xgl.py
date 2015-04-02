@@ -280,6 +280,14 @@ core = Extension(
              Param("uint32_t", "memRefCount"),
              Param("const XGL_MEMORY_REF*", "pMemRefs")]),
 
+        Proto("XGL_RESULT", "QueueAddMemReference",
+            [Param("XGL_QUEUE", "queue"),
+             Param("XGL_GPU_MEMORY", "mem")]),
+
+        Proto("XGL_RESULT", "QueueRemoveMemReference",
+            [Param("XGL_QUEUE", "queue"),
+             Param("XGL_GPU_MEMORY", "mem")]),
+
         Proto("XGL_RESULT", "QueueWaitIdle",
             [Param("XGL_QUEUE", "queue")]),
 

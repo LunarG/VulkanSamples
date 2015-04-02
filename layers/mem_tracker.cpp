@@ -97,6 +97,70 @@ static MT_CB_INFO* getCBInfo(const XGL_CMD_BUFFER cb)
     return pCBInfo;
 }
 
+// Add new Queue node for this cb at end of global CB LL
+static void insertGlobalQueue(const XGL_QUEUE queue)
+{
+#if 0 // TODO: Add tracking of Queue's
+    MT_QUEUE_NODE* pTrav = pGlobalQueueHead;
+    if (!pTrav) {
+        pTrav = (MT_QUEUE_NODE*)malloc(sizeof(MT_QUEUE_NODE));
+        pGlobalQueueHead = pTrav;
+    }
+    else {
+        while (NULL != pTrav->pNextGlobalQueueNode)
+            pTrav = pTrav->pNextGlobalQueueNode;
+        pTrav->pNextGlobalQueueNode = (MT_QUEUE_NODE*)malloc(sizeof(MT_QUEUE_NODE));
+        pTrav = pTrav->pNextGlobalQueueNode;
+    }
+    if (!pTrav) {
+        char str[1024];
+        sprintf(str, "Malloc failed to alloc node for Queue %p", (void*)queue);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_OUT_OF_MEMORY_ERROR, "MEM", str);
+    }
+    else {
+        numQueueNodes++;
+        memset(pTrav, 0, sizeof(MT_QUEUE_NODE));
+        pTrav->queue = queue;
+    }
+#endif
+}
+
+// Return ptr to node in global LL containing cb, or NULL if not found
+static MT_QUEUE_NODE* getGlobalQueueNode(const XGL_QUEUE queue)
+{
+#if 0
+    MT_QUEUE_NODE* pTrav = pGlobalQueueHead;
+    while (pTrav && (pTrav->queue != queue)) {
+        pTrav = pTrav->pNextGlobalQueueNode;
+    }
+    return pTrav;
+#endif
+}
+
+static void insertQueueMemRef(MT_QUEUE_NODE *pQueueNode, XGL_GPU_MEMORY mem)
+{
+#if 0
+    if (pQueueNode->numMemRefs >= pQueueNode->refListSize) {
+        pQueueNode->refListSize += 16;
+        pQueueNode->pMemRefList = realloc(pQueueNode->pMemRefList, pQueueNode->refListSize);
+    }
+    pQueueNode->pMemRefList[pQueueNode->numMemRefs++] = mem;
+#endif
+}
+
+static void removeQueueMemRef(MT_QUEUE_NODE *pQueueNode, XGL_GPU_MEMORY mem)
+{
+    uint32_t idx;
+
+    for (idx = 0; idx < pQueueNode->numMemRefs; idx++) {
+        if (pQueueNode->pMemRefList[idx] == mem) {
+            pQueueNode->numMemRefs--;
+            memcpy(&pQueueNode->pMemRefList[idx], pQueueNode->pMemRefList[idx+1],
+                    pQueueNode->numMemRefs * sizeof(XGL_GPU_MEMORY));
+        }
+    }
+}
+
 // Add a fence, creating one if necessary to our list of fences/fenceIds
 static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
 {
@@ -859,13 +923,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     }
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue)
-{
-    XGL_RESULT result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
-    addQueueInfo(*pQueue);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers,
     uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
@@ -898,6 +955,76 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(XGL_QUEUE queu
 {
     // TODO : Use global mem references as part of list checked on QueueSubmit above
     XGL_RESULT result = nextTable.QueueSetGlobalMemReferences(queue, memRefCount, pMemRefs);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
+    XGL_DEVICE                                  device,
+    uint32_t                                    queueNodeIndex,
+    uint32_t                                    queueIndex,
+    XGL_QUEUE*                                  pQueue)
+{
+    XGL_RESULT result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    if (result == XGL_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        MT_QUEUE_NODE *pQueueNode = getGlobalQueueNode(*pQueue);
+        if (pQueueNode == NULL) {
+            addQueueInfo(*pQueue);
+            insertGlobalQueue(*pQueue);
+        }
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
+{
+    XGL_RESULT result = nextTable.QueueAddMemReference(queue, mem);
+    if (result == XGL_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        MT_QUEUE_NODE *pQueueNode = getGlobalQueueNode(queue);
+        if (pQueueNode == NULL) {
+            char str[1024];
+            sprintf(str, "Unknown Queue %p", queue);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
+        } else {
+            MT_MEM_OBJ_INFO *pMem = getMemObjInfo(mem);
+            if (pMem == NULL) {
+                char str[1024];
+                sprintf(str, "Unknown GPU Memory Object %p", mem);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            } else {
+                insertQueueMemRef(pQueueNode, mem);
+            }
+        }
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
+{
+    // TODO : Decrement ref count for this memory reference on this queue. Remove if ref count is zero.
+    XGL_RESULT result = nextTable.QueueRemoveMemReference(queue, mem);
+    if (result == XGL_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        MT_QUEUE_NODE *pQueueNode = getGlobalQueueNode(queue);
+        if (pQueueNode == NULL) {
+            char str[1024];
+            sprintf(str, "Unknown Queue %p", queue);
+            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
+        } else {
+            MT_MEM_OBJ_INFO *pMem = getMemObjInfo(mem);
+            if (pMem == NULL) {
+                char str[1024];
+                sprintf(str, "Unknown GPU Memory Object %p", mem);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            } else {
+                removeQueueMemRef(pQueueNode, mem);
+            }
+        }
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
     return result;
 }
 
@@ -1797,6 +1924,12 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglQueueSubmit;
     if (!strcmp(funcName, "xglQueueSetGlobalMemReferences"))
         return (void*) xglQueueSetGlobalMemReferences;
+    if (!strcmp(funcName, "xglGetDeviceQueue"))
+        return (void*) xglGetDeviceQueue;
+    if (!strcmp(funcName, "xglQueueAddMemReference"))
+        return (void*) xglQueueAddMemReference;
+    if (!strcmp(funcName, "xglQueueRemoveMemReference"))
+        return (void*) xglQueueRemoveMemReference;
     if (!strcmp(funcName, "xglAllocMemory"))
         return (void*) xglAllocMemory;
     if (!strcmp(funcName, "xglFreeMemory"))
@@ -1919,8 +2052,6 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglDbgRegisterMsgCallback;
     if (!strcmp(funcName, "xglDbgUnregisterMsgCallback"))
         return (void*) xglDbgUnregisterMsgCallback;
-    if (!strcmp(funcName, "xglGetDeviceQueue"))
-        return (void*) xglGetDeviceQueue;
 #if !defined(WIN32)
     if (!strcmp(funcName, "xglWsiX11CreatePresentableImage"))
         return (void*) xglWsiX11CreatePresentableImage;
