@@ -42,6 +42,8 @@ extern "C" {
 
 #include "glv_vk_vk_structs.h"
 
+#include "glv_vk_vkwsix11ext_structs.h"
+
 }
 
 #include "xgl.h"
@@ -118,6 +120,10 @@ private:
     glv_replay::GLV_REPLAY_RESULT manually_handle_xglFreeMemory(struct_xglFreeMemory* pPacket);
     glv_replay::GLV_REPLAY_RESULT manually_handle_xglMapMemory(struct_xglMapMemory* pPacket);
     glv_replay::GLV_REPLAY_RESULT manually_handle_xglUnmapMemory(struct_xglUnmapMemory* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11AssociateConnection(struct_xglWsiX11AssociateConnection* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11GetMSC(struct_xglWsiX11GetMSC* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11CreatePresentableImage(struct_xglWsiX11CreatePresentableImage* pPacket);
+    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11QueuePresent(struct_xglWsiX11QueuePresent* pPacket);
     std::map<XGL_GPU_MEMORY, XGLAllocInfo> m_mapData;
     void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)
     {

@@ -27,6 +27,7 @@
 #include "glvreplay_xgl_replay.h"
 #include "glvreplay_xgl.h"
 #include "glvreplay_xgl_settings.h"
+#include "glvreplay_xgl_write_ppm.h"
 
 #include <algorithm>
 #include <queue>
@@ -943,6 +944,100 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglUnmapMemory(struct_x
     rm_mapping_from_mapData(handle, pPacket->pData);  // copies data from packet into memory buffer
     replayResult = m_xglFuncs.real_xglUnmapMemory(handle);
     CHECK_RETURN_VALUE(xglUnmapMemory);
+    return returnValue;
+}
+
+glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglWsiX11AssociateConnection(struct_xglWsiX11AssociateConnection* pPacket)
+{
+    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;
+    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+    //associate with the replayers Wsi connection rather than tracers
+    replayResult = m_xglFuncs.real_xglWsiX11AssociateConnection(remap(pPacket->gpu), &(m_display->m_WsiConnection));
+#elif defined(WIN32)
+    //TBD
+    replayResult = XGL_SUCCESS;
+#endif
+    CHECK_RETURN_VALUE(xglWsiX11AssociateConnection);
+    return returnValue;
+}
+
+glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglWsiX11GetMSC(struct_xglWsiX11GetMSC* pPacket)
+{
+    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;
+    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+    xcb_window_t window = m_display->m_XcbWindow;
+    replayResult = m_xglFuncs.real_xglWsiX11GetMSC(remap(pPacket->device), window, pPacket->crtc, pPacket->pMsc);
+#elif defined(WIN32)
+    //TBD
+    replayResult = XGL_SUCCESS;
+#else
+#endif
+    CHECK_RETURN_VALUE(xglWsiX11GetMSC);
+    return returnValue;
+}
+
+glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglWsiX11CreatePresentableImage(struct_xglWsiX11CreatePresentableImage* pPacket)
+{
+    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;
+    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+    XGL_IMAGE img;
+    XGL_GPU_MEMORY mem;
+    m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);
+    m_display->imageWidth.push_back(pPacket->pCreateInfo->extent.width);
+    replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &img, &mem);
+    if (replayResult == XGL_SUCCESS)
+    {
+        if (pPacket->pImage != NULL)
+            add_to_map(pPacket->pImage, &img);
+        if(pPacket->pMem != NULL)
+            add_to_map(pPacket->pMem, &mem);
+        m_display->imageHandles.push_back(img);
+        m_display->imageMemory.push_back(mem);
+    }
+#elif defined(WIN32)
+    //TBD
+    replayResult = XGL_SUCCESS;
+#endif
+    CHECK_RETURN_VALUE(xglWsiX11CreatePresentableImage);
+    return returnValue;
+}
+
+glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglWsiX11QueuePresent(struct_xglWsiX11QueuePresent* pPacket)
+{
+    XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;
+    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
+#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+    XGL_WSI_X11_PRESENT_INFO pInfo;
+    std::vector<int>::iterator it;
+    memcpy(&pInfo, pPacket->pPresentInfo, sizeof(XGL_WSI_X11_PRESENT_INFO));
+    pInfo.srcImage = remap(pPacket->pPresentInfo->srcImage);
+    // use replayers Xcb window
+    pInfo.destWindow = m_display->m_XcbWindow;
+    replayResult = m_xglFuncs.real_xglWsiX11QueuePresent(remap(pPacket->queue), &pInfo, remap(pPacket->fence));
+    it = std::find(m_screenshotFrames.begin(), m_screenshotFrames.end(), m_display->m_frameNumber);
+    if (it != m_screenshotFrames.end())
+    {
+        for(unsigned int i=0; i<m_display->imageHandles.size(); i++)
+        {
+            if (m_display->imageHandles[i] == pInfo.srcImage)
+            {
+                char frameName[32];
+                sprintf(frameName, "%d",m_display->m_frameNumber);
+                glvWritePPM(frameName, m_display->imageWidth[i], m_display->imageHeight[i],
+                    m_display->imageHandles[i], m_display->imageMemory[i], &m_xglFuncs);
+                break;
+            }
+        }
+    }
+#elif defined(WIN32)
+    //TBD
+    replayResult = XGL_SUCCESS;
+#endif
+    m_display->m_frameNumber++;
+    CHECK_RETURN_VALUE(xglWsiX11QueuePresent);
     return returnValue;
 }
 

@@ -1806,6 +1806,10 @@ class Subcommand(object):
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglFreeMemory(struct_xglFreeMemory* pPacket);')
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglMapMemory(struct_xglMapMemory* pPacket);')
         rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglUnmapMemory(struct_xglUnmapMemory* pPacket);')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11AssociateConnection(struct_xglWsiX11AssociateConnection* pPacket);')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11GetMSC(struct_xglWsiX11GetMSC* pPacket);')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11CreatePresentableImage(struct_xglWsiX11CreatePresentableImage* pPacket);')
+        rc_body.append('    glv_replay::GLV_REPLAY_RESULT manually_handle_xglWsiX11QueuePresent(struct_xglWsiX11QueuePresent* pPacket);')
         rc_body.append(self._map_decl('XGL_GPU_MEMORY', 'XGLAllocInfo', 'm_mapData'))
         # Custom code for 1-off memory mapping functions
         rc_body.append('    void add_entry_to_mapData(XGL_GPU_MEMORY handle, XGL_GPU_SIZE size)')
@@ -2050,81 +2054,22 @@ class Subcommand(object):
 
     def _gen_replay_wsi_associate_connection(self):
         wac_body = []
-        wac_body.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
-        wac_body.append('            //associate with the replayers Wsi connection rather than tracers')
-        wac_body.append('            replayResult = m_xglFuncs.real_xglWsiX11AssociateConnection(remap(pPacket->gpu), &(m_display->m_WsiConnection));')
-        wac_body.append('#elif defined(WIN32)')
-        wac_body.append('            //TBD')
-        wac_body.append('            replayResult = XGL_SUCCESS;')
-        wac_body.append('#endif')
+        wac_body.append('            returnValue = manually_handle_xglWsiX11AssociateConnection(pPacket);')
         return "\n".join(wac_body)
 
     def _gen_replay_wsi_get_msc(self):
         wgm_body = []
-        wgm_body.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
-        wgm_body.append('            xcb_window_t window = m_display->m_XcbWindow;')
-        wgm_body.append('            replayResult = m_xglFuncs.real_xglWsiX11GetMSC(remap(pPacket->device), window, pPacket->crtc, pPacket->pMsc);')
-        wgm_body.append('#elif defined(WIN32)')
-        wgm_body.append('            //TBD')
-        wgm_body.append('            replayResult = XGL_SUCCESS;')
-        wgm_body.append('#else')
-        
-        wgm_body.append('#endif')
+        wgm_body.append('            returnValue = manually_handle_xglWsiX11GetMSC(pPacket);')
         return "\n".join(wgm_body)
 
     def _gen_replay_wsi_create_presentable_image(self):
         cpi_body = []
-        cpi_body.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
-        cpi_body.append('            XGL_IMAGE img;')
-        cpi_body.append('            XGL_GPU_MEMORY mem;')
-        cpi_body.append('            m_display->imageHeight.push_back(pPacket->pCreateInfo->extent.height);')
-        cpi_body.append('            m_display->imageWidth.push_back(pPacket->pCreateInfo->extent.width);')
-        cpi_body.append('            replayResult = m_xglFuncs.real_xglWsiX11CreatePresentableImage(remap(pPacket->device), pPacket->pCreateInfo, &img, &mem);')
-        cpi_body.append('            if (replayResult == XGL_SUCCESS)')
-        cpi_body.append('            {')
-        cpi_body.append('                if (pPacket->pImage != NULL)')
-        cpi_body.append('                    add_to_map(pPacket->pImage, &img);')
-        cpi_body.append('                if(pPacket->pMem != NULL)')
-        cpi_body.append('                    add_to_map(pPacket->pMem, &mem);')
-        cpi_body.append('                m_display->imageHandles.push_back(img);')
-        cpi_body.append('                m_display->imageMemory.push_back(mem);')
-        cpi_body.append('            }')
-        cpi_body.append('#elif defined(WIN32)')
-        cpi_body.append('            //TBD')
-        cpi_body.append('            replayResult = XGL_SUCCESS;')
-        cpi_body.append('#endif')
+        cpi_body.append('            returnValue = manually_handle_xglWsiX11CreatePresentableImage(pPacket);')
         return "\n".join(cpi_body)
 
     def _gen_replay_wsi_queue_present(self):
         wqp_body = []
-        wqp_body.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
-        wqp_body.append('            XGL_WSI_X11_PRESENT_INFO pInfo;')
-        wqp_body.append('            std::vector<int>::iterator it;')
-        wqp_body.append('            memcpy(&pInfo, pPacket->pPresentInfo, sizeof(XGL_WSI_X11_PRESENT_INFO));')
-        wqp_body.append('            pInfo.srcImage = remap(pPacket->pPresentInfo->srcImage);')
-        wqp_body.append('            // use replayers Xcb window')
-        wqp_body.append('            pInfo.destWindow = m_display->m_XcbWindow;')
-        wqp_body.append('            replayResult = m_xglFuncs.real_xglWsiX11QueuePresent(remap(pPacket->queue), &pInfo, remap(pPacket->fence));')
-        wqp_body.append('            it = std::find(m_screenshotFrames.begin(), m_screenshotFrames.end(), m_display->m_frameNumber);')
-        wqp_body.append('            if (it != m_screenshotFrames.end())')
-        wqp_body.append('            {')
-        wqp_body.append('                for(unsigned int i=0; i<m_display->imageHandles.size(); i++)')
-        wqp_body.append('                {')
-        wqp_body.append('                    if (m_display->imageHandles[i] == pInfo.srcImage)')
-        wqp_body.append('                    {')
-        wqp_body.append('                        char frameName[32];')
-        wqp_body.append('                        sprintf(frameName, "%d",m_display->m_frameNumber);')
-        wqp_body.append('                        glvWritePPM(frameName, m_display->imageWidth[i], m_display->imageHeight[i],')
-        wqp_body.append('                            m_display->imageHandles[i], m_display->imageMemory[i], &m_xglFuncs);')
-        wqp_body.append('                        break;')
-        wqp_body.append('                    }')
-        wqp_body.append('                }')
-        wqp_body.append('            }')
-        wqp_body.append('#elif defined(WIN32)')
-        wqp_body.append('            //TBD')
-        wqp_body.append('            replayResult = XGL_SUCCESS;')
-        wqp_body.append('#endif')
-        wqp_body.append('            m_display->m_frameNumber++;')
+        wqp_body.append('            returnValue = manually_handle_xglWsiX11QueuePresent(pPacket);')
         return "\n".join(wqp_body)
 
     def _gen_replay_free_memory(self):
@@ -2187,7 +2132,8 @@ class Subcommand(object):
         custom_check_ret_val = ['EnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport', 'QueueSubmit', 'GetObjectInfo',
                                 'GetFormatInfo', 'GetImageSubresourceInfo', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline',
                                 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'StorePipeline', 'GetMultiGpuCompatibility',
-                                'DestroyObject', 'WaitForFences', 'FreeMemory', 'MapMemory', 'UnmapMemory']
+                                'DestroyObject', 'WaitForFences', 'FreeMemory', 'MapMemory', 'UnmapMemory',
+                                'WsiX11AssociateConnection', 'WsiX11GetMSC', 'WsiX11CreatePresentableImage', 'WsiX11QueuePresent']
         # multi-gpu Open funcs w/ list of local params to create
         custom_open_params = {'OpenSharedMemory': (-1,),
                               'OpenSharedQueueSemaphore': (-1,),
@@ -2593,6 +2539,7 @@ class GlaveReplayHeader(Subcommand):
         header_txt.append('#include "glv_trace_packet_identifiers.h"\n')
         header_txt.append('extern "C" {\n')
         header_txt.append('#include "glv_vk_vk_structs.h"\n')
+        header_txt.append('#include "glv_vk_vkwsix11ext_structs.h"\n')
         header_txt.append('}\n')
         header_txt.append('#include "xgl.h"')
         header_txt.append('#include "xglDbg.h"')
@@ -2617,7 +2564,6 @@ class GlaveReplayC(Subcommand):
         header_txt = []
         header_txt.append('#include "glvreplay_xgl_replay.h"\n')
         header_txt.append('#include "glvreplay_xgl.h"\n')
-        header_txt.append('#include "glvreplay_xgl_write_ppm.h"\n')
         header_txt.append('#include "glvreplay_main.h"\n')
         header_txt.append('#include <algorithm>')
         header_txt.append('#include <queue>')
