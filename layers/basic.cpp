@@ -63,23 +63,33 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLayerExtension1(XGL_DEVICE device)
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)
 {
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
     XGL_RESULT result;
-    XGL_LAYER_DISPATCH_TABLE* pTable = initLayerTable(gpuw);
+    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
 
-    printf("At start of wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     if (!strncmp(pExtName, "xglLayerExtension1", strlen("xglLayerExtension1")))
+    {
         result = XGL_SUCCESS;
-    else
+    } else if (!strncmp(pExtName, "Basic", strlen("Basic")))
+    {
+        result = XGL_SUCCESS;
+    } else if (!tableMap.empty() && (tableMap.find(gpuw) != tableMap.end()))
+    {
+        printf("At start of wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
+        XGL_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
         result = pTable->GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
-    printf("Completed wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
+        printf("Completed wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
+    } else
+    {
+        result = XGL_ERROR_INVALID_EXTENSION;
+    }
     return result;
 }
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
 {
     XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    XGL_LAYER_DISPATCH_TABLE* pTable = initLayerTable(gpuw);
+    XGL_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
 
     printf("At start of wrapped xglCreateDevice() call w/ gpu: %p\n", (void*)gpu);
     XGL_RESULT result = pTable->CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);

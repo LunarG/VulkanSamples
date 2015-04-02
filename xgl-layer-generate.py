@@ -194,6 +194,28 @@ class Subcommand(object):
         ur_body.append('}')
         return "\n".join(ur_body)
 
+    def _gen_layer_get_extension_support(self, layer="Generic"):
+        ges_body = []
+        ges_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)')
+        ges_body.append('{')
+        ges_body.append('    XGL_RESULT result;')
+        ges_body.append('    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;')
+        ges_body.append('')
+        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
+        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
+        ges_body.append('    {')
+        ges_body.append('        result = XGL_SUCCESS;')
+        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
+        ges_body.append('    {')
+        ges_body.append('        result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);')
+        ges_body.append('    } else')
+        ges_body.append('    {')
+        ges_body.append('        result = XGL_ERROR_INVALID_EXTENSION;')
+        ges_body.append('    }')
+        ges_body.append('    return result;')
+        ges_body.append('}')
+        return "\n".join(ges_body)
+
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
@@ -207,8 +229,10 @@ class Subcommand(object):
                     # fill in default intercept for certain entrypoints
                     if 'DbgRegisterMsgCallback' == proto.name:
                         intercept = self._gen_layer_dbg_callback_register()
-                    if 'DbgUnregisterMsgCallback' == proto.name:
+                    elif 'DbgUnregisterMsgCallback' == proto.name:
                         intercept = self._gen_layer_dbg_callback_unregister()
+                    elif 'GetExtensionSupport' == proto.name:
+                        funcs.append(self._gen_layer_get_extension_support(self.layer_name))
                 if intercept is not None:
                     funcs.append(intercept)
                     intercepted.append(proto)
@@ -236,7 +260,6 @@ class Subcommand(object):
         body.append("    return NULL;")
         body.append("}")
         funcs.append("\n".join(body))
-
         return "\n\n".join(funcs)
 
 
@@ -374,7 +397,7 @@ class GenericLayerSubcommand(Subcommand):
         return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
+        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' , 'GetExtensionSupport']:
             # use default version
             return None
         decl = proto.c_func(prefix="xgl", attr="XGLAPI")
@@ -614,6 +637,26 @@ class ApiDumpSubcommand(Subcommand):
                      '        return XGL_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
+        elif 'GetExtensionSupport' == proto.name:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                         '    XGL_RESULT result;\n'
+                         '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
+                         '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
+                         '    {\n'
+                         '        result = XGL_SUCCESS;\n'
+                         '    } else if (nextTable.GetExtensionSupport != NULL)\n'
+                         '    {\n'
+                         '        result = nextTable.%s;\n'
+                         '        %s    %s        %s\n'
+                         '    } else\n'
+                         '    {\n'
+                         '        result = XGL_ERROR_INVALID_EXTENSION;\n'
+                         '    }\n'
+                         '%s'
+                         '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
         elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
@@ -823,6 +866,26 @@ class ApiDumpCppSubcommand(Subcommand):
                      '        return XGL_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
+        elif 'GetExtensionSupport' == proto.name:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                         '    XGL_RESULT result;\n'
+                         '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
+                         '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
+                         '    {\n'
+                         '        result = XGL_SUCCESS;\n'
+                         '    } else if (nextTable.GetExtensionSupport != NULL)\n'
+                         '    {\n'
+                         '        result = nextTable.%s;\n'
+                         '        %s    %s        %s\n'
+                         '    } else\n'
+                         '    {\n'
+                         '        result = XGL_ERROR_INVALID_EXTENSION;\n'
+                         '    }\n'
+                         '%s'
+                         '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
         elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
@@ -1378,6 +1441,28 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        return XGL_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, stmt, self.layer_name))
+        elif 'GetExtensionSupport' == proto.name:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    XGL_RESULT result;\n'
+                     '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
+                     '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
+                     '        !strncmp(pExtName, "objTrackGetObjectCount", strlen("objTrackGetObjectCount")) ||\n'
+                     '        !strncmp(pExtName, "objTrackGetObjects", strlen("objTrackGetObjects")))\n'
+                     '    {\n'
+                     '        result = XGL_SUCCESS;\n'
+                     '    } else if (nextTable.GetExtensionSupport != NULL)\n'
+                     '    {\n'
+                     '    %s'
+                     '        result = nextTable.%s;\n'
+                     '    } else\n'
+                     '    {\n'
+                     '        result = XGL_ERROR_INVALID_EXTENSION;\n'
+                     '    }\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, using_line, c_call,  stmt))
         elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'

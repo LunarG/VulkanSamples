@@ -132,6 +132,8 @@ XGL_LAYER_EXPORT void * XGLAPI multi1GetProcAddr(XGL_PHYSICAL_GPU gpu, const cha
         return (void *) multi1CreateGraphicsPipeline;
     else if (!strncmp("xglStorePipeline", pName, sizeof ("xglStorePipeline")))
         return (void *) multi1StorePipeline;
+    else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
+        return (void *) xglGetExtensionSupport;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
@@ -232,6 +234,8 @@ XGL_LAYER_EXPORT void * XGLAPI multi2GetProcAddr(XGL_PHYSICAL_GPU gpu, const cha
         return (void *) multi2CreateCommandBuffer;
     else if (!strncmp("xglBeginCommandBuffer", pName, sizeof ("xglBeginCommandBuffer")))
         return (void *) multi2BeginCommandBuffer;
+    else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
+        return (void *) xglGetExtensionSupport;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
@@ -253,6 +257,33 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     strncpy((char *) pOutLayers[0], "multi1", maxStringSize);
     strncpy((char *) pOutLayers[1], "multi2", maxStringSize);
     return XGL_SUCCESS;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)
+{
+    XGL_RESULT result;
+    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
+
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    if (!strncmp(pExtName, "multi1", strlen("multi1")))
+    {
+        result = XGL_SUCCESS;
+    } else if (!strncmp(pExtName, "multi2", strlen("multi2")))
+    {
+        result = XGL_SUCCESS;
+    } else if (!tableMap1.empty() && (tableMap1.find(gpuw) != tableMap1.end()))
+    {
+        XGL_LAYER_DISPATCH_TABLE* pTable = tableMap1[gpuw];
+        result = pTable->GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    } else if (!tableMap2.empty() && (tableMap2.find(gpuw) != tableMap2.end()))
+    {
+        XGL_LAYER_DISPATCH_TABLE* pTable = tableMap2[gpuw];
+        result = pTable->GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    } else
+    {
+        result = XGL_ERROR_INVALID_EXTENSION;
+    }
+    return result;
 }
 
 XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* pName)

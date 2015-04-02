@@ -865,6 +865,24 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)
+{
+    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
+    XGL_RESULT result;
+    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */
+    if (!strcmp(pExtName, "MemTracker"))
+    {
+        result = XGL_SUCCESS;
+    } else if (nextTable.GetExtensionSupport != NULL)
+    {
+        result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    } else
+    {
+        result = XGL_ERROR_INVALID_EXTENSION;
+    }
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount,
     size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
@@ -1900,6 +1918,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCreateDevice;
     if (!strcmp(funcName, "xglDestroyDevice"))
         return (void*) xglDestroyDevice;
+    if (!strcmp(funcName, "xglGetExtensionSupport"))
+        return (void*) xglGetExtensionSupport;
     if (!strcmp(funcName, "xglEnumerateLayers"))
         return (void*) xglEnumerateLayers;
     if (!strcmp(funcName, "xglQueueSubmit"))
