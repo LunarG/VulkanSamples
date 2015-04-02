@@ -306,6 +306,16 @@ static void demo_add_mem_refs(
         demo->mem_refs[demo->num_refs].mem = mem[i];
         demo->num_refs++;
         assert(demo->num_refs < 16);
+        xglQueueAddMemReference(demo->queue, mem[i]);
+    }
+}
+
+static void demo_remove_mem_refs(
+        struct demo *demo,
+        int num_refs, XGL_GPU_MEMORY *mem)
+{
+    for (int i = 0; i < num_refs; i++) {
+        xglQueueRemoveMemReference(demo->queue, mem[i]);
     }
 }
 
@@ -580,6 +590,8 @@ static void demo_prepare_buffers(struct demo *demo)
         err = xglWsiX11CreatePresentableImage(demo->device, &presentable_image,
                 &demo->buffers[i].image, &demo->buffers[i].mem);
         assert(!err);
+
+        demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, 1, &demo->buffers[i].mem);
 
         demo_set_image_layout(demo, demo->buffers[i].image,
                                XGL_IMAGE_LAYOUT_UNDEFINED,
@@ -1054,6 +1066,7 @@ static void demo_prepare_textures(struct demo *demo)
             demo_flush_init_cmd(demo);
 
             demo_destroy_texture_image(&staging_texture);
+            demo_remove_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
         } else {
             /* Can't support XGL_FMT_B8G8R8A8_UNORM !? */
             assert(!"No support for tB8G8R8A8_UNORM as texture image format");
@@ -1188,6 +1201,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
                     demo->uniform_data.mem[i], 0);
         assert(!err);
     }
+    demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, demo->uniform_data.num_mem, demo->uniform_data.mem);
 
     memset(&view_info, 0, sizeof(view_info));
     view_info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -1902,6 +1916,7 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->textures[i].view);
         xglBindObjectMemory(demo->textures[i].image, 0, XGL_NULL_HANDLE, 0);
         xglDestroyObject(demo->textures[i].image);
+        demo_remove_mem_refs(demo, demo->textures[i].num_mem, demo->textures[i].mem);
         for (j = 0; j < demo->textures[i].num_mem; j++)
             xglFreeMemory(demo->textures[i].mem[j]);
         xglDestroyObject(demo->textures[i].sampler);
@@ -1910,12 +1925,15 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyObject(demo->depth.view);
     xglBindObjectMemory(demo->depth.image, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->depth.image);
-    for (j = 0; j < demo->depth.num_mem; j++)
+    demo_remove_mem_refs(demo, demo->depth.num_mem, demo->depth.mem);
+    for (j = 0; j < demo->depth.num_mem; j++) {
         xglFreeMemory(demo->depth.mem[j]);
+    }
 
     xglDestroyObject(demo->uniform_data.view);
     xglBindObjectMemory(demo->uniform_data.buf, 0, XGL_NULL_HANDLE, 0);
     xglDestroyObject(demo->uniform_data.buf);
+    demo_remove_mem_refs(demo, demo->uniform_data.num_mem, demo->uniform_data.mem);
     for (j = 0; j < demo->uniform_data.num_mem; j++)
         xglFreeMemory(demo->uniform_data.mem[j]);
 
@@ -1924,6 +1942,7 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->buffers[i].view);
         xglDestroyObject(demo->buffers[i].image);
         xglDestroyObject(demo->buffers[i].cmd);
+        demo_remove_mem_refs(demo, 1, &demo->buffers[i].mem);
     }
 
     xglDestroyDevice(demo->device);
