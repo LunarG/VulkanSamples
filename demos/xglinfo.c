@@ -610,6 +610,7 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
     printf("\tqueueCount = %u\n",           props->queueCount);
     printf("\tmaxAtomicCounters = %u\n",    props->maxAtomicCounters);
     printf("\tsupportsTimestamps = %u\n",   props->supportsTimestamps);
+    printf("\tmaxMemReferences = %u\n",     props->maxMemReferences);
 }
 
 static void app_gpu_dump_memory_props(const struct app_gpu *gpu)

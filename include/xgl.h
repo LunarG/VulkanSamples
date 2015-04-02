@@ -1426,6 +1426,7 @@ typedef struct _XGL_PHYSICAL_GPU_QUEUE_PROPERTIES
     uint32_t                                queueCount;
     uint32_t                                maxAtomicCounters;
     bool32_t                                supportsTimestamps;
+    uint32_t                                maxMemReferences;           // Tells how many memory references can be active for the given queue
 } XGL_PHYSICAL_GPU_QUEUE_PROPERTIES;
 
 typedef struct _XGL_PHYSICAL_GPU_MEMORY_PROPERTIES

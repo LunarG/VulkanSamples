@@ -272,6 +272,7 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
         props->queueCount = 1;
         props->maxAtomicCounters = INTEL_QUEUE_ATOMIC_COUNTER_COUNT;
         props->supportsTimestamps = true;
+        props->maxMemReferences = gpu->batch_buffer_reloc_count;
         break;
     default:
         assert(!"unknown engine type");
