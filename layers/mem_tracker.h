@@ -126,11 +126,19 @@ struct MT_CB_INFO {
     list<XGL_GPU_MEMORY>            pMemObjList; // List container of Mem objs referenced by this CB
 };
 
-//  Associate fenceId with a fence object
+// Associate fenceId with a fence object
 struct MT_FENCE_INFO {
-    XGL_FENCE   fence;
-    bool32_t    localFence;
+    XGL_FENCE   fence;         // Handle to fence object
+    XGL_QUEUE   queue;         // Queue that this fence is submitted against
+    bool32_t    localFence;    // Is fence created by layer?
 };
+
+// Track Queue information
+struct MT_QUEUE_INFO {
+    uint64_t                      lastRetiredId;
+    list<XGL_CMD_BUFFER>          pQueueCmdBuffers;
+};
+
 
 #ifdef __cplusplus
 }

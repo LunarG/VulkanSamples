@@ -53,15 +53,33 @@ static loader_platform_thread_mutex globalLock;
 map<XGL_CMD_BUFFER, MT_CB_INFO*>      cbMap;
 map<XGL_GPU_MEMORY, MT_MEM_OBJ_INFO*> memObjMap;
 map<XGL_OBJECT,     MT_OBJ_INFO*>     objectMap;
-map<uint64_t,       MT_FENCE_INFO*>   fenceMap;    // Map fenceId to fence node
+map<uint64_t,       MT_FENCE_INFO*>   fenceMap;    // Map fenceId to fence info
+map<XGL_QUEUE,      MT_QUEUE_INFO*>   queueMap;
 
 // TODO : Add support for per-queue and per-device fence completion
 static uint64_t     g_currentFenceId  = 1;
-static uint64_t     g_lastRetiredId   = 0;
+//// LUGMAL -- becomes per-queue ////  static uint64_t     g_lastRetiredId   = 0;
 static XGL_DEVICE   globalDevice      = NULL;
 
-// Add new CB node for this cb to map container
-static void insertCBInfo(const XGL_CMD_BUFFER cb)
+// Add new queue for this device to map container
+static void addQueueInfo(const XGL_QUEUE queue)
+{
+    MT_QUEUE_INFO* pInfo = new MT_QUEUE_INFO;
+    pInfo->lastRetiredId = 0;
+    queueMap[queue] = pInfo;
+}
+
+static void deleteQueueInfoList(void)
+{
+    // Process queue list, cleaning up each entry before deleting
+    for (map<XGL_QUEUE, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
+        (*ii).second->pQueueCmdBuffers.clear();
+    }
+    queueMap.clear();
+}
+
+// Add new CBInfo for this cb to map container
+static void addCBInfo(const XGL_CMD_BUFFER cb)
 {
     MT_CB_INFO* pInfo = new MT_CB_INFO;
     memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<XGL_GPU_MEMORY>)));
@@ -69,7 +87,7 @@ static void insertCBInfo(const XGL_CMD_BUFFER cb)
     cbMap[cb] = pInfo;
 }
 
-// Return ptr to node in CB map, or NULL if not found
+// Return ptr to Info in CB map, or NULL if not found
 static MT_CB_INFO* getCBInfo(const XGL_CMD_BUFFER cb)
 {
     MT_CB_INFO* pCBInfo = NULL;
@@ -80,10 +98,11 @@ static MT_CB_INFO* getCBInfo(const XGL_CMD_BUFFER cb)
 }
 
 // Add a fence, creating one if necessary to our list of fences/fenceIds
-static uint64_t addFenceInfo(XGL_FENCE fence)
+static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
 {
-    // Create fence node
+    // Create fence object
     MT_FENCE_INFO* pFenceInfo = new MT_FENCE_INFO;
+    uint64_t       fenceId    = g_currentFenceId++;
     memset(pFenceInfo, 0, sizeof(MT_FENCE_INFO));
     // If no fence, create an internal fence to track the submissions
     if (fence == NULL) {
@@ -97,37 +116,44 @@ static uint64_t addFenceInfo(XGL_FENCE fence)
         pFenceInfo->localFence = XGL_FALSE;
         pFenceInfo->fence      = fence;
     }
-    uint64_t fenceId  = g_currentFenceId++;
+    pFenceInfo->queue = queue;
     fenceMap[fenceId] = pFenceInfo;
     return fenceId;
 }
 
-// Remove a node from our list of fences/fenceIds
+// Remove a fenceInfo from our list of fences/fenceIds
 static void deleteFenceInfo(uint64_t fenceId)
 {
     if (fenceId != 0) {
         if (fenceMap.find(fenceId) != fenceMap.end()) {
             MT_FENCE_INFO* pDelInfo = fenceMap[fenceId];
-            if (pDelInfo->localFence == XGL_TRUE) {
-                nextTable.DestroyObject(pDelInfo->fence);
+            if (pDelInfo != NULL) {
+                if (pDelInfo->localFence == XGL_TRUE) {
+                    nextTable.DestroyObject(pDelInfo->fence);
+                }
+                delete pDelInfo;
             }
-            delete pDelInfo;
             fenceMap.erase(fenceId);
         }
     }
 }
 
-// Search through list for this fence, deleting all nodes before it (with lower IDs) and updating lastRetiredId
+// Search through list for this fence, deleting all items before it (with lower IDs) and updating lastRetiredId
 static void updateFenceTracking(XGL_FENCE fence)
 {
     MT_FENCE_INFO *pCurFenceInfo = NULL;
     uint64_t       fenceId       = 0;
+    XGL_QUEUE      queue         = NULL;
 
     for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
-        if (fence == ((*ii).second)->fence) {
-            g_lastRetiredId = (*ii).first;
-        } else {
-            deleteFenceInfo((*ii).first);
+        if ((*ii).second != NULL) {
+            if (fence == ((*ii).second)->fence) {
+                queue = ((*ii).second)->queue;
+                MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+                pQueueInfo->lastRetiredId = (*ii).first;
+            } else {
+                deleteFenceInfo((*ii).first);
+            }
         }
     }
 }
@@ -136,8 +162,14 @@ static void updateFenceTracking(XGL_FENCE fence)
 static bool32_t fenceRetired(uint64_t fenceId)
 {
     bool32_t result = XGL_FALSE;
-    if (fenceId <= g_lastRetiredId) {
-        result = XGL_TRUE;
+    MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
+    if (pFenceInfo != 0) {
+        MT_QUEUE_INFO* pQueueInfo = queueMap[pFenceInfo->queue];
+        if (fenceId <= pQueueInfo->lastRetiredId) {
+            result = XGL_TRUE;
+        }
+    } else {
+       result = XGL_TRUE;
     }
     return result;
 }
@@ -147,24 +179,38 @@ static XGL_FENCE getFenceFromId(uint64_t fenceId)
 {
     XGL_FENCE fence = NULL;
     if (fenceId != 0) {
-        // Search for a node with this fenceId
-        if (fenceId > g_lastRetiredId) {
-            if (fenceMap.find(fenceId) != fenceMap.end()) {
-                fence = (fenceMap[fenceId])->fence;
+        // Search for an item with this fenceId
+        if (fenceMap.find(fenceId) != fenceMap.end()) {
+            MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
+            if (pFenceInfo != NULL) {
+                MT_QUEUE_INFO* pQueueInfo = queueMap[pFenceInfo->queue];
+                if (fenceId > pQueueInfo->lastRetiredId) {
+                    fence = pFenceInfo->fence;
+                }
             }
         }
     }
     return fence;
 }
 
-// Helper routine that updates the fence list to all-retired, as for Queue/DeviceWaitIdle
-static void retireAllFences(void)
+// Helper routine that updates the fence list for a specific queue to all-retired
+static void retireQueueFences(XGL_QUEUE queue)
 {
-    // In this case, we go throught the whole list, retiring each node and update the global retired ID until the list is empty
+    // Process entire list, retiring each item and update the queue's retiredID until the list is empty
     MT_FENCE_INFO* pDelInfo = NULL;
     for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
-        g_lastRetiredId = (*ii).first;
+        MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+        pQueueInfo->lastRetiredId = (*ii).first;
         deleteFenceInfo((*ii).first);
+    }
+}
+
+// Helper routine that updates fence list for all queues to all-retired
+static void retireAllFences(void)
+{
+    // Process each queue for device
+    for (map<XGL_QUEUE, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
+        retireQueueFences((*ii).first);
     }
 }
 
@@ -174,7 +220,7 @@ static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, 
     MT_CB_INFO* pInfo = getCBInfo(cb);
     if (!pInfo) {
         char str[1024];
-        sprintf(str, "Unable to find node for CB %p in order to check memory references", (void*)cb);
+        sprintf(str, "Unable to find info for CB %p in order to check memory references", (void*)cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
@@ -217,7 +263,7 @@ static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, 
     }
     return result;
 }
-// Return ptr to node in map container containing mem, or NULL if not found
+// Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
 static MT_MEM_OBJ_INFO* getMemObjInfo(const XGL_GPU_MEMORY mem)
 {
@@ -229,7 +275,7 @@ static MT_MEM_OBJ_INFO* getMemObjInfo(const XGL_GPU_MEMORY mem)
     return pMemObjInfo;
 }
 
-static void insertMemObjInfo(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo)
+static void addMemObjInfo(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo)
 {
     MT_MEM_OBJ_INFO* pInfo = new MT_MEM_OBJ_INFO;
     pInfo->refCount           = 0;
@@ -301,7 +347,7 @@ static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY me
 static void clearCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY mem)
 {
     MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
-    // TODO : Having this check is not ideal, really if mem node was deleted,
+    // TODO : Having this check is not ideal, really if memInfo was deleted,
     //   its CB bindings should be cleared and then freeCBBindings wouldn't call
     //   us here with stale mem objs
     if (pInfo) {
@@ -317,7 +363,7 @@ static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
     MT_CB_INFO* pCBInfo = getCBInfo(cb);
     if (!pCBInfo) {
         char str[1024];
-        sprintf(str, "Unable to find global CB node %p for deletion", cb);
+        sprintf(str, "Unable to find global CB info %p for deletion", cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
@@ -333,14 +379,14 @@ static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
     return result;
 }
 
-// Delete CBInfo from list along with all of it's mini MemObjInfo 
+// Delete CBInfo from list along with all of it's mini MemObjInfo
 //   and also clear mem references to CB
 // TODO : When should this be called?  There's no Destroy of CBs that I see
 static bool32_t deleteCBInfo(const XGL_CMD_BUFFER cb)
 {
     bool32_t result = XGL_TRUE;
     result = freeCBBindings(cb);
-    // Delete the CBInfo node
+    // Delete the CBInfo info
     if (result == XGL_TRUE) {
         if (cbMap.find(cb) != cbMap.end()) {
             MT_CB_INFO* pDelInfo = cbMap[cb];
@@ -362,7 +408,7 @@ static bool32_t deleteCBInfoList()
     return result;
 }
 
-// For given MemObj node, report Obj & CB bindings
+// For given MemObjInfo, report Obj & CB bindings
 static void reportMemReferences(const MT_MEM_OBJ_INFO* pMemObjInfo)
 {
     uint32_t refCount = 0; // Count found references
@@ -402,7 +448,7 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
     MT_CB_INFO* pCBInfo = getCBInfo(cb);
     if (!pCBInfo) {
         char str[1024];
-        sprintf(str, "Unable to find global CB node %p to check for completion", cb);
+        sprintf(str, "Unable to find global CB info %p to check for completion", cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
@@ -422,11 +468,11 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
 static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem)
 {
     bool32_t result = XGL_TRUE;
-    // Parse global list to find node w/ mem
+    // Parse global list to find info w/ mem
     MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
     if (!pInfo) {
         char str[1024];
-        sprintf(str, "Couldn't find mem node object for %p\n    Was %p never allocated or previously freed?", (void*)mem, (void*)mem);
+        sprintf(str, "Couldn't find mem info object for %p\n    Was %p never allocated or previously freed?", (void*)mem, (void*)mem);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         result = XGL_FALSE;
     } else {
@@ -461,14 +507,14 @@ static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem)
                 reportMemReferences(pInfo);
                 result = XGL_FALSE;
             }
-            // Delete global node
+            // Delete mem obj info 
             deleteMemObjInfo(mem);
         }
     }
     return result;
 }
 
-// Return object node for 'object' or return NULL if no node exists
+// Return object info for 'object' or return NULL if no info exists
 static MT_OBJ_INFO* getObjectInfo(const XGL_OBJECT object)
 {
     MT_OBJ_INFO* pObjInfo = NULL;
@@ -479,7 +525,7 @@ static MT_OBJ_INFO* getObjectInfo(const XGL_OBJECT object)
     return pObjInfo;
 }
 
-static MT_OBJ_INFO* insertObjectInfo(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, const char *name_prefix)
+static MT_OBJ_INFO* addObjectInfo(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, const char *name_prefix)
 {
     MT_OBJ_INFO* pInfo = new MT_OBJ_INFO;
     memset(pInfo, 0, sizeof(MT_OBJ_INFO));
@@ -533,8 +579,8 @@ static bool32_t clearObjectBinding(XGL_OBJECT object)
 // For NULL mem case, clear any previous binding Else...
 // Make sure given object is in global object map
 //  IF a previous binding existed, clear it
-//  Add reference from global object node to global memory node
-//  Add reference off of global obj node
+//  Add reference from objectInfo to memoryInfo
+//  Add reference off of objInfo
 // Return XGL_TRUE if addition is successful, XGL_FALSE otherwise
 static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
 {
@@ -554,7 +600,7 @@ static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
         if (!pInfo) {
-            sprintf(str, "While trying to bind mem for obj %p, couldn't find node for mem obj %p", (void*)object, (void*)mem);
+            sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         } else {
             // Search for object in memory object's binding list
@@ -769,6 +815,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
             layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
         }
     }
+
+    // Queues persist until device is destroyed
+    deleteQueueInfoList();
+
     loader_platform_thread_unlock_mutex(&globalLock);
     XGL_RESULT result = nextTable.DestroyDevice(device);
     return result;
@@ -799,6 +849,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, uint32_t queueIndex, XGL_QUEUE* pQueue)
 {
     XGL_RESULT result = nextTable.GetDeviceQueue(device, queueType, queueIndex, pQueue);
+    addQueueInfo(*pQueue);
     return result;
 }
 
@@ -808,7 +859,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
     loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Need to track fence and clear mem references when fence clears
     MT_CB_INFO* pCBInfo = NULL;
-    uint64_t    fenceId = addFenceInfo(fence);
+    uint64_t    fenceId = addFenceInfo(fence, queue);
     char        str[1024];
     sprintf(str, "In xglQueueSubmit(), checking %u cmdBuffers with %u memRefs", cmdBufferCount, memRefCount);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
@@ -842,7 +893,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_M
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
-    insertMemObjInfo(*pMem, pAllocInfo);
+    addMemObjInfo(*pMem, pAllocInfo);
     printMemList();
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
@@ -992,7 +1043,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_F
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pFence, pCreateInfo->sType, pCreateInfo, sizeof(XGL_FENCE_CREATE_INFO), "fence");
+        addObjectInfo(*pFence, pCreateInfo->sType, pCreateInfo, sizeof(XGL_FENCE_CREATE_INFO), "fence");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1036,7 +1087,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
     XGL_RESULT result = nextTable.QueueWaitIdle(queue);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        retireAllFences();
+        retireQueueFences(queue);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1058,7 +1109,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_E
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pEvent, pCreateInfo->sType, pCreateInfo, sizeof(XGL_EVENT_CREATE_INFO), "event");
+        addObjectInfo(*pEvent, pCreateInfo->sType, pCreateInfo, sizeof(XGL_EVENT_CREATE_INFO), "event");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1069,7 +1120,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const X
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pQueryPool, pCreateInfo->sType, pCreateInfo, sizeof(XGL_QUERY_POOL_CREATE_INFO), "query_pool");
+        addObjectInfo(*pQueryPool, pCreateInfo->sType, pCreateInfo, sizeof(XGL_QUERY_POOL_CREATE_INFO), "query_pool");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1080,7 +1131,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_
     XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_CREATE_INFO), "buffer");
+        addObjectInfo(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_CREATE_INFO), "buffer");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1091,7 +1142,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const 
     XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_VIEW_CREATE_INFO), "buffer_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_VIEW_CREATE_INFO), "buffer_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1102,7 +1153,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_I
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_CREATE_INFO), "image");
+        addObjectInfo(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_CREATE_INFO), "image");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1113,7 +1164,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO), "image_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO), "image_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1125,7 +1176,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE devic
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO), "color_attachment_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO), "color_attachment_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1136,7 +1187,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, 
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO), "ds_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO), "ds_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1153,7 +1204,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
+        addObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1164,7 +1215,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, c
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), "compute_pipeline");
+        addObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), "compute_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1175,7 +1226,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pSampler, pCreateInfo->sType, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO), "sampler");
+        addObjectInfo(*pSampler, pCreateInfo->sType, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO), "sampler");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1187,7 +1238,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(XGL_DEVICE devi
     XGL_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO), "viewport_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO), "viewport_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1199,7 +1250,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(XGL_DEVICE device
     XGL_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO), "raster_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO), "raster_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1211,7 +1262,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(XGL_DEVICE de
     XGL_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO), "cb_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO), "cb_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1223,7 +1274,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE 
     XGL_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO), "ds_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO), "ds_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1232,10 +1283,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer)
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
-    // At time of cmd buffer creation, create global cmd buffer node for the returned cmd buffer
+    // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
-        insertCBInfo(*pCmdBuffer);
+        addCBInfo(*pCmdBuffer);
     printCBList();
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
@@ -1662,8 +1713,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE de
     loader_platform_thread_lock_mutex(&globalLock);
     if (XGL_SUCCESS == result) {
         // Add image object, then insert the new Mem Object and then bind it to created image
-        insertObjectInfo(*pImage, _XGL_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
-        insertMemObjInfo(*pMem, NULL);
+        addObjectInfo(*pImage, _XGL_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
+        addMemObjInfo(*pMem, NULL);
         if (XGL_FALSE == updateObjectBinding(*pImage, *pMem)) {
             char str[1024];
             sprintf(str, "In xglWsiX11CreatePresentableImage(), unable to set image %p binding to mem obj %p", (void*)*pImage, (void*)*pMem);
@@ -1679,7 +1730,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE de
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO*  pPresentInfo, XGL_FENCE fence)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    addFenceInfo(fence);
+    addFenceInfo(fence, queue);
     char            str[1024];
     sprintf(str, "In xglWsiX11QueuePresent(), checking queue %p for fence %p", queue, fence);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
