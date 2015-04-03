@@ -1406,11 +1406,18 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuff
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSet(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint,
-    XGL_DESCRIPTOR_SET descriptorSet, const uint32_t* pUserData)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSets(
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
+    uint32_t                                    layoutChainSlot,
+    uint32_t                                    count,
+    const XGL_DESCRIPTOR_SET*                   pDescriptorSets,
+    const uint32_t*                             pUserData)
 {
+
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
-    nextTable.CmdBindDescriptorSet(cmdBuffer, pipelineBindPoint, descriptorSet, pUserData);
+    nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindVertexBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER buffer, XGL_GPU_SIZE offset, uint32_t binding)
@@ -1870,8 +1877,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCmdBindPipeline;
     if (!strcmp(funcName, "xglCmdBindDynamicStateObject"))
         return (void*) xglCmdBindDynamicStateObject;
-    if (!strcmp(funcName, "xglCmdBindDescriptorSet"))
-        return (void*) xglCmdBindDescriptorSet;
+    if (!strcmp(funcName, "xglCmdBindDescriptorSets"))
+        return (void*) xglCmdBindDescriptorSets;
     if (!strcmp(funcName, "xglCmdBindVertexBuffer"))
         return (void*) xglCmdBindVertexBuffer;
     if (!strcmp(funcName, "xglCmdBindIndexBuffer"))

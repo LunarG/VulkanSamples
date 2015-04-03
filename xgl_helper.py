@@ -642,7 +642,7 @@ class StructWrapperGen:
                         else:
                             if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
                                 # TODO : This is a quick hack to handle these arrays of ptrs
-                                sh_funcs.append('        tmpStr = %s(pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                                sh_funcs.append('        tmpStr = %s(&pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             else:
                                 sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             sh_funcs.append('        len = 256+strlen(tmpStr)+strlen(prefix);')
@@ -782,7 +782,7 @@ class StructWrapperGen:
                         else:
                             if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
                                 # TODO : This is a quick hack to handle these arrays of ptrs
-                                sh_funcs.append('        tmp_str = %s(pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
+                                sh_funcs.append('        tmp_str = %s(&pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             else:
                                 sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('        ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
