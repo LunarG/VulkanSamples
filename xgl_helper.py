@@ -757,8 +757,10 @@ class StructWrapperGen:
                         if not idx_ss_decl:
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
+                        sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
+                        indent += '    '
                         sh_funcs.append('%sfor (uint32_t i = 0; i < %s; i++) {' % (indent, array_count))
-                        indent = '        '
+                        indent += '    '
                         sh_funcs.append('%sindex_ss.str("");' % (indent))
                         sh_funcs.append('%sindex_ss << i;' % (indent))
                         if not is_type(stp_list[index]['type'], 'struct'):
@@ -772,8 +774,10 @@ class StructWrapperGen:
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (indent, index, stp_list[index]['name']))
                             else:
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
+                        indent = indent[4:]
+                        sh_funcs.append('%s}' % (indent))
                         sh_funcs.append('%sss[%u].str("");' % (indent, index))
-                        indent = '    '
+                        indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
                         sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
@@ -1414,7 +1418,7 @@ class GraphVizGen:
                             gv_funcs.append('        free(tmpStr);\n')
                         else:
                             gv_funcs.append('        sprintf(nodeName, "%s_%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                            if stp_list[index]['name'] in ['pTypeCount', 'pBufferViews', 'pImageViews', 'pSamplerImageViews']:
+                            if stp_list[index]['name'] in ['pTypeCount', 'pSamplerImageViews']:
                                 gv_funcs.append('        tmpStr = %s_array(pStruct->count, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             else:
                                 gv_funcs.append('        tmpStr = %s(pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
