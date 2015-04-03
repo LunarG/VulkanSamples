@@ -906,36 +906,7 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
 ICD_EXPORT void XGLAPI xglCmdClearColorImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
-    const float                                 color[4],
-    uint32_t                                    rangeCount,
-    const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
-{
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_img *img = intel_img(image);
-    struct intel_cmd_meta meta;
-    uint32_t i;
-
-    memset(&meta, 0, sizeof(meta));
-    meta.mode = INTEL_CMD_META_FS_RECT;
-
-    meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
-    meta.samples = img->samples;
-
-    meta.clear_val[0] = u_fui(color[0]);
-    meta.clear_val[1] = u_fui(color[1]);
-    meta.clear_val[2] = u_fui(color[2]);
-    meta.clear_val[3] = u_fui(color[3]);
-
-    for (i = 0; i < rangeCount; i++) {
-        cmd_meta_clear_image(cmd, img, img->layout.format,
-                &meta, &pRanges[i]);
-    }
-}
-
-ICD_EXPORT void XGLAPI xglCmdClearColorImageRaw(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   image,
-    const uint32_t                              color[4],
+    XGL_CLEAR_COLOR                             clearColor,
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {
@@ -951,11 +922,20 @@ ICD_EXPORT void XGLAPI xglCmdClearColorImageRaw(
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
     meta.samples = img->samples;
 
-    icd_format_get_raw_value(img->layout.format, color, meta.clear_val);
-    format = cmd_meta_img_raw_format(cmd, img->layout.format);
+    if (clearColor.useRawValue) {
+        icd_format_get_raw_value(img->layout.format, clearColor.color.rawColor, meta.clear_val);
+        format = cmd_meta_img_raw_format(cmd, img->layout.format);
+    } else {
+        meta.clear_val[0] = u_fui(clearColor.color.floatColor[0]);
+        meta.clear_val[1] = u_fui(clearColor.color.floatColor[1]);
+        meta.clear_val[2] = u_fui(clearColor.color.floatColor[2]);
+        meta.clear_val[3] = u_fui(clearColor.color.floatColor[3]);
+        format = img->layout.format;
+    }
 
-    for (i = 0; i < rangeCount; i++)
+    for (i = 0; i < rangeCount; i++) {
         cmd_meta_clear_image(cmd, img, format, &meta, &pRanges[i]);
+    }
 }
 
 ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(

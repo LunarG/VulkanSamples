@@ -1177,7 +1177,13 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
     pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
 
     // clear the back buffer to dark grey
-    uint32_t clearColor[4] = {64, 64, 64, 0};
+    XGL_CLEAR_COLOR clearColor = {};
+
+    clearColor.color.rawColor[0] = 64;
+    clearColor.color.rawColor[1] = 64;
+    clearColor.color.rawColor[2] = 64;
+    clearColor.color.rawColor[3] = 0;
+    clearColor.useRawValue = true;
 
     for (i = 0; i < m_renderTargetCount; i++) {
         memory_barrier.image = m_renderTargets[i]->image();
@@ -1185,7 +1191,7 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_DEPTH_STENCIL_BIND_INFO *depthSten
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
-        xglCmdClearColorImageRaw( obj(), m_renderTargets[i]->image(), clearColor, 1, &srRange );
+        xglCmdClearColorImage( obj(), m_renderTargets[i]->image(), clearColor, 1, &srRange );
     }
 
     if (depthStencilImage)

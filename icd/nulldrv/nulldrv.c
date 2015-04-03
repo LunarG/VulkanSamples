@@ -968,17 +968,7 @@ ICD_EXPORT void XGLAPI xglCmdFillBuffer(
 ICD_EXPORT void XGLAPI xglCmdClearColorImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
-    const float                                 color[4],
-    uint32_t                                    rangeCount,
-    const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT void XGLAPI xglCmdClearColorImageRaw(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   image,
-    const uint32_t                              color[4],
+    XGL_CLEAR_COLOR                             color,
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {

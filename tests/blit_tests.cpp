@@ -1332,16 +1332,16 @@ protected:
         return raw;
     }
 
-    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const Color &color)
+    std::vector<uint8_t> color_to_raw(XGL_FORMAT format, const XGL_CLEAR_COLOR &color)
     {
-        if (test_raw_)
-            return color_to_raw(format, color.raw);
+        if (color.useRawValue)
+            return color_to_raw(format, color.color.rawColor);
         else
-            return color_to_raw(format, color.color);
+            return color_to_raw(format, color.color.floatColor);
     }
 
     void test_clear_color_image(const XGL_IMAGE_CREATE_INFO &img_info,
-                                const Color &color,
+                                const XGL_CLEAR_COLOR &clear_color,
                                 const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
         xgl_testing::Image img;
@@ -1394,11 +1394,7 @@ protected:
         pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
         xglCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
-        if (test_raw_) {
-            xglCmdClearColorImageRaw(cmd_.obj(), img.obj(), color.raw, ranges.size(), &ranges[0]);
-        } else {
-            xglCmdClearColorImage(cmd_.obj(), img.obj(), color.color, ranges.size(), &ranges[0]);
-        }
+        xglCmdClearColorImage(cmd_.obj(), img.obj(), clear_color, ranges.size(), &ranges[0]);
 
         pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;
@@ -1418,7 +1414,7 @@ protected:
 
         xgl_testing::ImageChecker checker(img_info, ranges);
 
-        const std::vector<uint8_t> solid_pattern = color_to_raw(img_info.format, color);
+        const std::vector<uint8_t> solid_pattern = color_to_raw(img_info.format, clear_color);
         if (solid_pattern.empty())
             return;
 
@@ -1430,8 +1426,8 @@ protected:
                                 const float color[4],
                                 const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
-        Color c;
-        memcpy(c.color, color, sizeof(c.color));
+        XGL_CLEAR_COLOR c = {};
+        memcpy(c.color.floatColor, color, sizeof(c.color.floatColor));
         test_clear_color_image(img_info, c, ranges);
     }
 };
@@ -1465,8 +1461,9 @@ protected:
                                     const uint32_t color[4],
                                     const std::vector<XGL_IMAGE_SUBRESOURCE_RANGE> &ranges)
     {
-        Color c;
-        memcpy(c.raw, color, sizeof(c.raw));
+        XGL_CLEAR_COLOR c = {};
+        c.useRawValue = true;
+        memcpy(c.color.rawColor, color, sizeof(c.color.rawColor));
         test_clear_color_image(img_info, c, ranges);
     }
 };

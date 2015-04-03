@@ -274,7 +274,10 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
         .view = demo->depth.view,
         .layout = XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
-    const float clear_color[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
+    const XGL_CLEAR_COLOR clear_color = {
+        .color.floatColor = { 0.2f, 0.2f, 0.2f, 0.2f },
+        .useRawValue = false,
+    };
     const float clear_depth = 1.0f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
     XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
@@ -310,6 +313,7 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
     rp_info.renderArea.extent.width = demo->width;
     rp_info.renderArea.extent.height = demo->height;
     rp_info.colorAttachmentCount = 1;
+    rp_info.pColorLoadClearValues = &clear_color;
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;

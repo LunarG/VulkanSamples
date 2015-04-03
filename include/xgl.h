@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 53, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 54, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -2308,8 +2308,7 @@ typedef void       (XGLAPI *xglCmdCopyImageToBufferType)(XGL_CMD_BUFFER cmdBuffe
 typedef void       (XGLAPI *xglCmdCloneImageDataType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout, XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout);
 typedef void       (XGLAPI *xglCmdUpdateBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE dataSize, const uint32_t* pData);
 typedef void       (XGLAPI *xglCmdFillBufferType)(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset, XGL_GPU_SIZE fillSize, uint32_t data);
-typedef void       (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
-typedef void       (XGLAPI *xglCmdClearColorImageRawType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const uint32_t color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
+typedef void       (XGLAPI *xglCmdClearColorImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_CLEAR_COLOR color, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef void       (XGLAPI *xglCmdClearDepthStencilType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
 typedef void       (XGLAPI *xglCmdResolveImageType)(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE srcImage, XGL_IMAGE destImage, uint32_t rectCount, const XGL_IMAGE_RESOLVE* pRects);
 typedef void       (XGLAPI *xglCmdSetEventType)(XGL_CMD_BUFFER cmdBuffer, XGL_EVENT event, XGL_SET_EVENT pipeEvent);
@@ -2875,14 +2874,7 @@ void XGLAPI xglCmdFillBuffer(
 void XGLAPI xglCmdClearColorImage(
     XGL_CMD_BUFFER                              cmdBuffer,
     XGL_IMAGE                                   image,
-    const float                                 color[4],
-    uint32_t                                    rangeCount,
-    const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges);
-
-void XGLAPI xglCmdClearColorImageRaw(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   image,
-    const uint32_t                              color[4],
+    XGL_CLEAR_COLOR                             color,
     uint32_t                                    rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges);
 

@@ -72,7 +72,6 @@ bool glvdebug_xgl_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) con
         case GLV_TPI_XGL_xglCmdUpdateBuffer:
         case GLV_TPI_XGL_xglCmdFillBuffer:
         case GLV_TPI_XGL_xglCmdClearColorImage:
-        case GLV_TPI_XGL_xglCmdClearColorImageRaw:
         case GLV_TPI_XGL_xglCmdClearDepthStencil:
         case GLV_TPI_XGL_xglCmdResolveImage:
         {

@@ -122,7 +122,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCmdUpdateBufferType CmdUpdateBuffer;
     xglCmdFillBufferType CmdFillBuffer;
     xglCmdClearColorImageType CmdClearColorImage;
-    xglCmdClearColorImageRawType CmdClearColorImageRaw;
     xglCmdClearDepthStencilType CmdClearDepthStencil;
     xglCmdResolveImageType CmdResolveImage;
     xglCmdSetEventType CmdSetEvent;

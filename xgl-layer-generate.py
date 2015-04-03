@@ -134,6 +134,8 @@ class Subcommand(object):
             return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_XGL_CHANNEL_FORMAT(%s.channelFormat), string_XGL_NUM_FORMAT(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
+        if xgl_helper.is_type(xgl_type, 'struct') and '*' not in xgl_type:
+            return ("%p", "(void*)(&%s)" % name)
         return ("%p", "(void*)(%s)" % name)
 
     def _gen_layer_dbg_callback_register(self):
@@ -329,22 +331,27 @@ class Subcommand(object):
                         for sp_index in sp_param_dict:
                             if 'index' == sp_param_dict[sp_index]:
                                 cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                                log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                                log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
+                                var_name = proto.params[sp_index].name
+                                if proto.params[sp_index].name != 'color':
+                                    log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                                else:
+                                    var_name = '&%s' % (proto.params[sp_index].name)
+                                log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, var_name)
                                 if "File" in layer:
                                     if no_addr:
                                         log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                     else:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
                                 else:
                                     if no_addr:
                                         #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                         log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
                                     else:
                                         #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                        log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, var_name)
                                     #log_func += '\n        fflush(stdout);'
-                                log_func += '\n    }'
+                                if proto.params[sp_index].name != 'color':
+                                    log_func += '\n    }'
                             else: # We have a count value stored to iterate over an array
                                 print_cast = ''
                                 print_func = ''
@@ -493,20 +500,26 @@ class Subcommand(object):
                             # TODO : Clean this if/else block up, too much duplicated code
                             if 'index' == sp_param_dict[sp_index]:
                                 cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                                log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                                log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, proto.params[sp_index].name)
+                                var_name = proto.params[sp_index].name
+                                if proto.params[sp_index].name != 'color':
+                                    log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                                else:
+                                    var_name = "&%s" % proto.params[sp_index].name
+                                log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, var_name)
                                 if "File" in layer:
                                     if no_addr:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (var_name)
                                     else:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (var_name, var_name)
                                 else:
                                     if no_addr:
                                         log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                     else:
-                                        log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                                        log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
                                     log_func += '\n        fflush(stdout);'
-                                log_func += '\n        free(pTmpStr);\n    }'
+                                log_func += '\n        free(pTmpStr);'
+                                if proto.params[sp_index].name != 'color':
+                                    log_func += '\n    }'
                             else: # should have a count value stored to iterate over array
                                 if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
                                     cis_print_func = 'pTmpStr = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)

@@ -1563,8 +1563,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFF
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4],
-    uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
+XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_CLEAR_COLOR color, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
     // TODO : Verify memory is in XGL_IMAGE_STATE_CLEAR state
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1578,23 +1577,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL
     nextTable.CmdClearColorImage(cmdBuffer, image, color, rangeCount, pRanges);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const uint32_t color[4],
-    uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
-{
-    // TODO : Verify memory is in XGL_IMAGE_STATE_CLEAR state
-    loader_platform_thread_lock_mutex(&globalLock);
-    XGL_GPU_MEMORY mem = getMemBindingFromObject(image);
-    if (XGL_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In xglCmdClearColorImageRaw() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdClearColorImageRaw(cmdBuffer, image, color, rangeCount, pRanges);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth,
-   uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
+XGL_LAYER_EXPORT void XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
     // TODO : Verify memory is in XGL_IMAGE_STATE_CLEAR state
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1874,8 +1857,6 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCmdFillBuffer;
     if (!strcmp(funcName, "xglCmdClearColorImage"))
         return (void*) xglCmdClearColorImage;
-    if (!strcmp(funcName, "xglCmdClearColorImageRaw"))
-        return (void*) xglCmdClearColorImageRaw;
     if (!strcmp(funcName, "xglCmdClearDepthStencil"))
         return (void*) xglCmdClearDepthStencil;
     if (!strcmp(funcName, "xglCmdResolveImage"))

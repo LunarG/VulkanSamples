@@ -714,14 +714,7 @@ core = Extension(
         Proto("void", "CmdClearColorImage",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
              Param("XGL_IMAGE", "image"),
-             Param("const float[4]", "color"),
-             Param("uint32_t", "rangeCount"),
-             Param("const XGL_IMAGE_SUBRESOURCE_RANGE*", "pRanges")]),
-
-        Proto("void", "CmdClearColorImageRaw",
-            [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_IMAGE", "image"),
-             Param("const uint32_t[4]", "color"),
+	     Param("XGL_CLEAR_COLOR", "color"),
              Param("uint32_t", "rangeCount"),
              Param("const XGL_IMAGE_SUBRESOURCE_RANGE*", "pRanges")]),
 
