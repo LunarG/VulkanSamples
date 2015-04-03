@@ -56,17 +56,17 @@ map<XGL_OBJECT,     MT_OBJ_INFO*>     objectMap;
 map<uint64_t,       MT_FENCE_INFO*>   fenceMap;    // Map fenceId to fence info
 map<XGL_QUEUE,      MT_QUEUE_INFO*>   queueMap;
 
-// TODO : Add support for per-queue and per-device fence completion
+// TODO : Add per-device fence completion
 static uint64_t     g_currentFenceId  = 1;
-//// LUGMAL -- becomes per-queue ////  static uint64_t     g_lastRetiredId   = 0;
 static XGL_DEVICE   globalDevice      = NULL;
 
 // Add new queue for this device to map container
 static void addQueueInfo(const XGL_QUEUE queue)
 {
-    MT_QUEUE_INFO* pInfo = new MT_QUEUE_INFO;
-    pInfo->lastRetiredId = 0;
-    queueMap[queue] = pInfo;
+    MT_QUEUE_INFO* pInfo   = new MT_QUEUE_INFO;
+    pInfo->lastRetiredId   = 0;
+    pInfo->lastSubmittedId = 0;
+    queueMap[queue]        = pInfo;
 }
 
 static void deleteQueueInfoList(void)
@@ -84,7 +84,7 @@ static void addCBInfo(const XGL_CMD_BUFFER cb)
     MT_CB_INFO* pInfo = new MT_CB_INFO;
     memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<XGL_GPU_MEMORY>)));
     pInfo->cmdBuffer = cb;
-    cbMap[cb] = pInfo;
+    cbMap[cb]        = pInfo;
 }
 
 // Return ptr to Info in CB map, or NULL if not found
@@ -102,6 +102,7 @@ static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
 {
     // Create fence object
     MT_FENCE_INFO* pFenceInfo = new MT_FENCE_INFO;
+    MT_QUEUE_INFO* pQueueInfo = queueMap[queue];
     uint64_t       fenceId    = g_currentFenceId++;
     memset(pFenceInfo, 0, sizeof(MT_FENCE_INFO));
     // If no fence, create an internal fence to track the submissions
@@ -118,6 +119,8 @@ static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
     }
     pFenceInfo->queue = queue;
     fenceMap[fenceId] = pFenceInfo;
+    // Update most recently submitted fenceId for Queue
+    pQueueInfo->lastSubmittedId = fenceId;
     return fenceId;
 }
 
@@ -126,6 +129,7 @@ static void deleteFenceInfo(uint64_t fenceId)
 {
     if (fenceId != 0) {
         if (fenceMap.find(fenceId) != fenceMap.end()) {
+            map<uint64_t, MT_FENCE_INFO*>::iterator item;
             MT_FENCE_INFO* pDelInfo = fenceMap[fenceId];
             if (pDelInfo != NULL) {
                 if (pDelInfo->localFence == XGL_TRUE) {
@@ -133,7 +137,8 @@ static void deleteFenceInfo(uint64_t fenceId)
                 }
                 delete pDelInfo;
             }
-            fenceMap.erase(fenceId);
+            item = fenceMap.find(fenceId);
+            fenceMap.erase(item);
         }
     }
 }
@@ -162,13 +167,15 @@ static void updateFenceTracking(XGL_FENCE fence)
 static bool32_t fenceRetired(uint64_t fenceId)
 {
     bool32_t result = XGL_FALSE;
-    MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
-    if (pFenceInfo != 0) {
+    if (fenceId == 0) {      // Uninitialized fences will have IDs of zero, ignore
+        result = XGL_TRUE;
+    } else if (fenceMap.find(fenceId) != fenceMap.end()) {
+        MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
         MT_QUEUE_INFO* pQueueInfo = queueMap[pFenceInfo->queue];
         if (fenceId <= pQueueInfo->lastRetiredId) {
             result = XGL_TRUE;
         }
-    } else {
+    } else {                 // If not in list, fence has been retired and deleted
        result = XGL_TRUE;
     }
     return result;
@@ -196,19 +203,28 @@ static XGL_FENCE getFenceFromId(uint64_t fenceId)
 // Helper routine that updates the fence list for a specific queue to all-retired
 static void retireQueueFences(XGL_QUEUE queue)
 {
-    // Process entire list, retiring each item and update the queue's retiredID until the list is empty
-    MT_FENCE_INFO* pDelInfo = NULL;
-    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
-        MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-        pQueueInfo->lastRetiredId = (*ii).first;
-        deleteFenceInfo((*ii).first);
+    MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+    pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
+    // Set Queue's lastRetired to lastSubmitted, free items in queue's fence list
+    map<uint64_t, MT_FENCE_INFO*>::iterator it = fenceMap.begin();
+    map<uint64_t, MT_FENCE_INFO*>::iterator temp;
+    while (it != fenceMap.end()) {
+        if (((*it).second)->queue == queue) {
+            temp = it;
+            ++temp;
+            deleteFenceInfo((*it).first);
+            it = temp;
+        } else {
+            ++it;
+        }
     }
 }
 
 // Helper routine that updates fence list for all queues to all-retired
-static void retireAllFences(void)
+static void retireDeviceFences(XGL_DEVICE device)
 {
     // Process each queue for device
+    // TODO: Add multiple device support
     for (map<XGL_QUEUE, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
         retireQueueFences((*ii).first);
     }
@@ -453,13 +469,10 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
         result = XGL_FALSE;
     } else {
         if (!fenceRetired(pCBInfo->fenceId)) {
-            // Explicitly call the internal xglGetFenceStatus routine
-            if (XGL_SUCCESS != xglGetFenceStatus(getFenceFromId(pCBInfo->fenceId))) {
-                char str[1024];
-                sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not completed", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-                result = XGL_FALSE;
-            }
+            char str[1024];
+            sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not been checked for completion", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+            result = XGL_FALSE;
         }
     }
     return result;
@@ -507,7 +520,7 @@ static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem)
                 reportMemReferences(pInfo);
                 result = XGL_FALSE;
             }
-            // Delete mem obj info 
+            // Delete mem obj info
             deleteMemObjInfo(mem);
         }
     }
@@ -1064,17 +1077,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t 
 {
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
+
     if (XGL_SUCCESS == result) {
-        if (waitAll) { // Clear all the fences
+        if (waitAll || fenceCount == 1) { // Clear all the fences
             for(uint32_t i = 0; i < fenceCount; i++) {
                 updateFenceTracking(pFences[i]);
-            }
-        }
-        else { // Clear only completed fences
-            for(uint32_t i = 0; i < fenceCount; i++) {
-                if (XGL_SUCCESS == nextTable.GetFenceStatus(pFences[i])) {
-                    updateFenceTracking(pFences[i]);
-                }
             }
         }
     }
@@ -1098,7 +1105,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
     XGL_RESULT result = nextTable.DeviceWaitIdle(device);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        retireAllFences();
+        retireDeviceFences(device);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;

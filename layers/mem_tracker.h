@@ -136,9 +136,9 @@ struct MT_FENCE_INFO {
 // Track Queue information
 struct MT_QUEUE_INFO {
     uint64_t                      lastRetiredId;
+    uint64_t                      lastSubmittedId;
     list<XGL_CMD_BUFFER>          pQueueCmdBuffers;
 };
-
 
 #ifdef __cplusplus
 }
