@@ -738,7 +738,7 @@ static bool find_layer_name(struct loader_icd *icd, uint32_t gpu_index, const ch
             char * lib_str = malloc(strlen(*lib_name) + 1 + strlen(layer_name));
             //use default layer name
             snprintf(lib_str, strlen(*lib_name) + strlen(layer_name),
-                     XGL_DRIVER_LIBRARY_PREFIX "%s" XGL_LIBRARY_SUFFIX,
+                     XGL_LAYER_LIBRARY_PREFIX "%s" XGL_LIBRARY_SUFFIX,
                      layer_name);
             loader_platform_close_library(handle);
             if (!strcmp(*lib_name, lib_str)) {
