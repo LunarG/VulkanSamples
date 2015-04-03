@@ -20,6 +20,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgldbg.c
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkdbg_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_struct_size_helper.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_struct_size_helper.c
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_enum_string_helper.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-trace-h > glvtrace_xgl_xgl.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-trace-c > glvtrace_xgl_xgl.c
@@ -40,6 +41,8 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_xgl_xgl.h
 set(SRC_LIST
     ${SRC_LIST}
     glvtrace_xgl.c
+    glvtrace_xgl_trace.c
+    codegen/xgl_struct_size_helper.c
     codegen/glvtrace_xgl_xgl.c
     codegen/glvtrace_xgl_xgldbg.c
     codegen/glvtrace_xgl_xglwsix11ext.c
