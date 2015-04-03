@@ -194,338 +194,7 @@ class Subcommand(object):
         ur_body.append('}')
         return "\n".join(ur_body)
 
-    def _generate_dispatch_entrypoints(self, qual="", layer="Generic"):
-        if qual:
-            qual += " "
-
-        funcs = []
-        for proto in self.protos:
-            if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
-                if "APIDumpCpp" in layer:
-                    decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-                    param0_name = proto.params[0].name
-                    ret_val = ''
-                    stmt = ''
-                    sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
-                    create_params = 0 # Num of params at end of function that are created and returned as output values
-                    if 'WsiX11CreatePresentableImage' in proto.name or 'AllocDescriptorSets' in proto.name:
-                        create_params = -2
-                    elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
-                        create_params = -1
-                    if proto.ret != "void":
-                        ret_val = "XGL_RESULT result = "
-                        stmt = "    return result;\n"
-                    f_open = ''
-                    f_close = ''
-                    if "File" in layer:
-                        file_mode = "a"
-                        if 'CreateDevice' in proto.name:
-                            file_mode = "w"
-                        f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-                        log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
-                        f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
-                    else:
-                        f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-                        log_func = 'cout << "t{" << getTIDIndex() << "} xgl%s(' % proto.name
-                        f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
-                    pindex = 0
-                    prev_count_name = ''
-                    for p in proto.params:
-                        cp = False
-                        if 0 != create_params:
-                            # If this is any of the N last params of the func, treat as output
-                            for y in range(-1, create_params-1, -1):
-                                if p.name == proto.params[y].name:
-                                    cp = True
-                        (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
-                        if self.no_addr and "%p" == pft:
-                            (pft, pfi) = ("%s", '"addr"')
-                        log_func += '%s = " << %s << ", ' % (p.name, pfi)
-                        #print_vals += ', %s' % (pfi)
-                        if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
-                            sp_param_dict[pindex] = prev_count_name
-                        elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
-                            sp_param_dict[pindex] = '*pCount'
-                        elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
-                            sp_param_dict[pindex] = 'index'
-                        pindex += 1
-                        if p.name.endswith('Count'):
-                            if '*' in p.ty:
-                                prev_count_name = "*%s" % p.name
-                            else:
-                                prev_count_name = p.name
-                        else:
-                            prev_count_name = ''
-                    log_func = log_func.strip(', ')
-                    if proto.ret != "void":
-                        log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << endl'
-                        #print_vals += ', string_XGL_RESULT_CODE(result)'
-                    else:
-                        log_func += ')\\n"'
-                    log_func += ';'
-                    if len(sp_param_dict) > 0:
-                        i_decl = False
-                        log_func += '\n    string tmp_str;'
-                        for sp_index in sp_param_dict:
-                            if 'index' == sp_param_dict[sp_index]:
-                                cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                                var_name = proto.params[sp_index].name
-                                if proto.params[sp_index].name != 'color':
-                                    log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                                else:
-                                    var_name = '&%s' % (proto.params[sp_index].name)
-                                log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, var_name)
-                                if "File" in layer:
-                                    if self.no_addr:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                                    else:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
-                                else:
-                                    if self.no_addr:
-                                        #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                                        log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
-                                    else:
-                                        #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                        log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, var_name)
-                                    #log_func += '\n        fflush(stdout);'
-                                if proto.params[sp_index].name != 'color':
-                                    log_func += '\n    }'
-                            else: # We have a count value stored to iterate over an array
-                                print_cast = ''
-                                print_func = ''
-                                if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
-                                    print_cast = '&'
-                                    print_func = 'xgl_print_%s' % proto.params[sp_index].ty.strip('const ').strip('*').lower()
-                                    #cis_print_func = 'tmp_str = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
-# TODO : Need to display this address as a string
-                                else:
-                                    print_cast = '(void*)'
-                                    print_func = 'string_convert_helper'
-                                    #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
-                                cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
-#                                else:
-#                                    cis_print_func = ''
-                                if not i_decl:
-                                    log_func += '\n    uint32_t i;'
-                                    i_decl = True
-                                log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
-                                log_func += '\n        %s' % (cis_print_func)
-                                if "File" in layer:
-                                    if self.no_addr:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                                    else:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                else:
-                                    if self.no_addr:
-                                        #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                                        log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
-                                    else:
-                                        #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                        #log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (" << %s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                        log_func += '\n        cout << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, print_cast, proto.params[sp_index].name)
-                                    #log_func += '\n        fflush(stdout);'
-                                log_func += '\n    }'
-                    if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-                    if proto.name == "EnumerateLayers":
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    if (gpu != NULL) {\n'
-                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '        pCurObj = gpuw;\n'
-                                 '        loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '        %snextTable.%s;\n'
-                                 '        %s    %s    %s\n'
-                                 '    %s'
-                                 '    } else {\n'
-                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                                 '            return XGL_ERROR_INVALID_POINTER;\n'
-                                 '        // This layer compatible with all GPUs\n'
-                                 '        *pOutLayerCount = 1;\n'
-                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                                 '        return XGL_SUCCESS;\n'
-                                 '    }\n'
-                                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
-                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    %snextTable.%s;\n'
-                                 '    %s%s%s\n'
-                                 '%s'
-                                 '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
-                    else:
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '    pCurObj = gpuw;\n'
-                                 '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '    %snextTable.%s;\n'
-                                 '    %s%s%s\n'
-                                 '%s'
-                                 '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
-                    if 'WsiX11QueuePresent' == proto.name:
-                        funcs.append("#endif")
-                elif "APIDump" in layer:
-                    decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-                    param0_name = proto.params[0].name
-                    ret_val = ''
-                    stmt = ''
-                    sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
-                    create_params = 0 # Num of params at end of function that are created and returned as output values
-                    if 'WsiX11CreatePresentableImage' in proto.name:
-                        create_params = -2
-                    elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
-                        create_params = -1
-                    if proto.ret != "void":
-                        ret_val = "XGL_RESULT result = "
-                        stmt = "    return result;\n"
-                    f_open = ''
-                    f_close = ''
-                    if "File" in layer:
-                        file_mode = "a"
-                        if 'CreateDevice' in proto.name:
-                            file_mode = "w"
-                        f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-                        log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
-                        f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
-                    else:
-                        f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-                        log_func = 'printf("t{%%u} xgl%s(' % proto.name
-                        f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
-                    print_vals = ', getTIDIndex()'
-                    pindex = 0
-                    prev_count_name = ''
-                    for p in proto.params:
-                        cp = False
-                        if 0 != create_params:
-                            # If this is any of the N last params of the func, treat as output
-                            for y in range(-1, create_params-1, -1):
-                                if p.name == proto.params[y].name:
-                                    cp = True
-                        (pft, pfi) = self._get_printf_params(p.ty, p.name, cp)
-                        if self.no_addr and "%p" == pft:
-                            (pft, pfi) = ("%s", '"addr"')
-                        log_func += '%s = %s, ' % (p.name, pft)
-                        print_vals += ', %s' % (pfi)
-                        # Catch array inputs that are bound by a "Count" param
-                        if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
-                            sp_param_dict[pindex] = prev_count_name
-                        elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
-                            sp_param_dict[pindex] = '*pCount'
-                        elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
-                            sp_param_dict[pindex] = 'index'
-                        pindex += 1
-                        if p.name.endswith('Count'):
-                            if '*' in p.ty:
-                                prev_count_name = "*%s" % p.name
-                            else:
-                                prev_count_name = p.name
-                        else:
-                            prev_count_name = ''
-                    log_func = log_func.strip(', ')
-                    if proto.ret != "void":
-                        log_func += ') = %s\\n"'
-                        print_vals += ', string_XGL_RESULT(result)'
-                    else:
-                        log_func += ')\\n"'
-                    log_func = '%s%s);' % (log_func, print_vals)
-                    if len(sp_param_dict) > 0:
-                        i_decl = False
-                        log_func += '\n    char *pTmpStr = "";'
-                        for sp_index in sorted(sp_param_dict):
-                            # TODO : Clean this if/else block up, too much duplicated code
-                            if 'index' == sp_param_dict[sp_index]:
-                                cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                                var_name = proto.params[sp_index].name
-                                if proto.params[sp_index].name != 'color':
-                                    log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                                else:
-                                    var_name = "&%s" % proto.params[sp_index].name
-                                log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, var_name)
-                                if "File" in layer:
-                                    if self.no_addr:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (var_name)
-                                    else:
-                                        log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (var_name, var_name)
-                                else:
-                                    if self.no_addr:
-                                        log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                                    else:
-                                        log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
-                                    log_func += '\n        fflush(stdout);'
-                                log_func += '\n        free(pTmpStr);'
-                                if proto.params[sp_index].name != 'color':
-                                    log_func += '\n    }'
-                            else: # should have a count value stored to iterate over array
-                                if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
-                                    cis_print_func = 'pTmpStr = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
-                                else:
-                                    cis_print_func = 'pTmpStr = (char*)malloc(32);\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
-                                if not i_decl:
-                                    log_func += '\n    uint32_t i;'
-                                    i_decl = True
-                                log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
-                                log_func += '\n        %s' % (cis_print_func)
-                                if "File" in layer:
-                                    if self.no_addr:
-                                        log_func += '\n        fprintf(pOutFile, "   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
-                                    else:
-                                        log_func += '\n        fprintf(pOutFile, "   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                else:
-                                    if self.no_addr:
-                                        log_func += '\n        printf("   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
-                                    else:
-                                        log_func += '\n        printf("   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                                    log_func += '\n        fflush(stdout);'
-                                log_func += '\n        free(pTmpStr);\n    }'
-                    if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-                    if proto.name == "EnumerateLayers":
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    if (gpu != NULL) {\n'
-                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '        pCurObj = gpuw;\n'
-                                 '        loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '        %snextTable.%s;\n'
-                                 '        %s    %s    %s\n'
-                                 '    %s'
-                                 '    } else {\n'
-                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                                 '            return XGL_ERROR_INVALID_POINTER;\n'
-                                 '        // This layer compatible with all GPUs\n'
-                                 '        *pOutLayerCount = 1;\n'
-                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                                 '        return XGL_SUCCESS;\n'
-                                 '    }\n'
-                                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
-                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    %snextTable.%s;\n'
-                                 '    %s%s%s\n'
-                                 '%s'
-                                 '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
-                    else:
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '    pCurObj = gpuw;\n'
-                                 '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '    %snextTable.%s;\n'
-                                 '    %s%s%s\n'
-                                 '%s'
-                                 '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
-                    if 'WsiX11QueuePresent' == proto.name:
-                        funcs.append("#endif")
-
-        return "\n\n".join(funcs)
-
-    def _generate_dispatch_entrypoints_with_func(self, qual=""):
+    def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
 
@@ -606,11 +275,8 @@ class Subcommand(object):
 
         return "\n".join(exts)
 
-    def _generate_layer_gpa_function(self, extensions=[], no_header=False):
-        if no_header:
-            func_body = []
-        else:
-            func_body = ["#include \"xgl_generic_intercept_proc_helper.h\""]
+    def _generate_layer_gpa_function(self, extensions=[]):
+        func_body = []
         func_body.append("XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)\n"
                          "{\n"
                          "    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
@@ -775,8 +441,8 @@ class GenericLayerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "Generic"
         body = [self._generate_layer_initialization(True),
-                self._generate_dispatch_entrypoints_with_func("XGL_LAYER_EXPORT"),
-                self._generate_layer_gpa_function(no_header=True)]
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
@@ -812,10 +478,168 @@ class ApiDumpSubcommand(Subcommand):
         header_txt.append('}')
         return "\n".join(header_txt)
 
+    def generate_intercept(self, proto, qual):
+        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        param0_name = proto.params[0].name
+        ret_val = ''
+        stmt = ''
+        funcs = []
+        sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
+        create_params = 0 # Num of params at end of function that are created and returned as output values
+        if 'WsiX11CreatePresentableImage' in proto.name:
+            create_params = -2
+        elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
+            create_params = -1
+        if proto.ret != "void":
+            ret_val = "XGL_RESULT result = "
+            stmt = "    return result;\n"
+        f_open = ''
+        f_close = ''
+        if "File" in self.layer_name:
+            file_mode = "a"
+            if 'CreateDevice' in proto.name:
+                file_mode = "w"
+            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
+            log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
+            f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
+        else:
+            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
+            log_func = 'printf("t{%%u} xgl%s(' % proto.name
+            f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
+        print_vals = ', getTIDIndex()'
+        pindex = 0
+        prev_count_name = ''
+        for p in proto.params:
+            cp = False
+            if 0 != create_params:
+                # If this is any of the N last params of the func, treat as output
+                for y in range(-1, create_params-1, -1):
+                    if p.name == proto.params[y].name:
+                        cp = True
+            (pft, pfi) = self._get_printf_params(p.ty, p.name, cp)
+            if self.no_addr and "%p" == pft:
+                (pft, pfi) = ("%s", '"addr"')
+            log_func += '%s = %s, ' % (p.name, pft)
+            print_vals += ', %s' % (pfi)
+            # Catch array inputs that are bound by a "Count" param
+            if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
+                sp_param_dict[pindex] = prev_count_name
+            elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
+                sp_param_dict[pindex] = '*pCount'
+            elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+                sp_param_dict[pindex] = 'index'
+            pindex += 1
+            if p.name.endswith('Count'):
+                if '*' in p.ty:
+                    prev_count_name = "*%s" % p.name
+                else:
+                    prev_count_name = p.name
+            else:
+                prev_count_name = ''
+        log_func = log_func.strip(', ')
+        if proto.ret != "void":
+            log_func += ') = %s\\n"'
+            print_vals += ', string_XGL_RESULT(result)'
+        else:
+            log_func += ')\\n"'
+        log_func = '%s%s);' % (log_func, print_vals)
+        if len(sp_param_dict) > 0:
+            i_decl = False
+            log_func += '\n    char *pTmpStr = "";'
+            for sp_index in sorted(sp_param_dict):
+                # TODO : Clean this if/else block up, too much duplicated code
+                if 'index' == sp_param_dict[sp_index]:
+                    cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                    var_name = proto.params[sp_index].name
+                    if proto.params[sp_index].name != 'color':
+                        log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                    else:
+                        var_name = "&%s" % proto.params[sp_index].name
+                    log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, var_name)
+                    if "File" in self.layer_name:
+                        if self.no_addr:
+                            log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (var_name)
+                        else:
+                            log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (var_name, var_name)
+                    else:
+                        if self.no_addr:
+                            log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                        else:
+                            log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
+                        log_func += '\n        fflush(stdout);'
+                    log_func += '\n        free(pTmpStr);'
+                    if proto.params[sp_index].name != 'color':
+                        log_func += '\n    }'
+                else: # should have a count value stored to iterate over array
+                    if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                        cis_print_func = 'pTmpStr = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
+                    else:
+                        cis_print_func = 'pTmpStr = (char*)malloc(32);\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
+                    if not i_decl:
+                        log_func += '\n    uint32_t i;'
+                        i_decl = True
+                    log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
+                    log_func += '\n        %s' % (cis_print_func)
+                    if "File" in self.layer_name:
+                        if self.no_addr:
+                            log_func += '\n        fprintf(pOutFile, "   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
+                        else:
+                            log_func += '\n        fprintf(pOutFile, "   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                    else:
+                        if self.no_addr:
+                            log_func += '\n        printf("   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
+                        else:
+                            log_func += '\n        printf("   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                        log_func += '\n        fflush(stdout);'
+                    log_func += '\n        free(pTmpStr);\n    }'
+        if 'WsiX11AssociateConnection' == proto.name:
+            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+        if proto.name == "EnumerateLayers":
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    if (gpu != NULL) {\n'
+                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        pCurObj = gpuw;\n'
+                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        %snextTable.%s;\n'
+                     '        %s    %s    %s\n'
+                     '    %s'
+                     '    } else {\n'
+                     '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '        // This layer compatible with all GPUs\n'
+                     '        *pOutLayerCount = 1;\n'
+                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
+                     '        return XGL_SUCCESS;\n'
+                     '    }\n'
+                         '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
+        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    %snextTable.%s;\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+        else:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    pCurObj = gpuw;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
+        if 'WsiX11QueuePresent' == proto.name:
+            funcs.append("#endif")
+        return "\n\n".join(funcs)
+
     def generate_body(self):
         self.layer_name = "APIDump"
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -852,15 +676,185 @@ class ApiDumpCppSubcommand(Subcommand):
         header_txt.append('}')
         return "\n".join(header_txt)
 
+    def generate_intercept(self, proto, qual):
+        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        param0_name = proto.params[0].name
+        ret_val = ''
+        stmt = ''
+        funcs = []
+        sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
+        create_params = 0 # Num of params at end of function that are created and returned as output values
+        if 'WsiX11CreatePresentableImage' in proto.name or 'AllocDescriptorSets' in proto.name:
+            create_params = -2
+        elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
+            create_params = -1
+        if proto.ret != "void":
+            ret_val = "XGL_RESULT result = "
+            stmt = "    return result;\n"
+        f_open = ''
+        f_close = ''
+        if "File" in self.layer_name:
+            file_mode = "a"
+            if 'CreateDevice' in proto.name:
+                file_mode = "w"
+            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
+            log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
+            f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
+        else:
+            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
+            log_func = 'cout << "t{" << getTIDIndex() << "} xgl%s(' % proto.name
+            f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
+        pindex = 0
+        prev_count_name = ''
+        for p in proto.params:
+            cp = False
+            if 0 != create_params:
+                # If this is any of the N last params of the func, treat as output
+                for y in range(-1, create_params-1, -1):
+                    if p.name == proto.params[y].name:
+                        cp = True
+            (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
+            if self.no_addr and "%p" == pft:
+                (pft, pfi) = ("%s", '"addr"')
+            log_func += '%s = " << %s << ", ' % (p.name, pfi)
+            #print_vals += ', %s' % (pfi)
+            if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
+                sp_param_dict[pindex] = prev_count_name
+            elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
+                sp_param_dict[pindex] = '*pCount'
+            elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+                sp_param_dict[pindex] = 'index'
+            pindex += 1
+            if p.name.endswith('Count'):
+                if '*' in p.ty:
+                    prev_count_name = "*%s" % p.name
+                else:
+                    prev_count_name = p.name
+            else:
+                prev_count_name = ''
+        log_func = log_func.strip(', ')
+        if proto.ret != "void":
+            log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << endl'
+            #print_vals += ', string_XGL_RESULT_CODE(result)'
+        else:
+            log_func += ')\\n"'
+        log_func += ';'
+        if len(sp_param_dict) > 0:
+            i_decl = False
+            log_func += '\n    string tmp_str;'
+            for sp_index in sp_param_dict:
+                if 'index' == sp_param_dict[sp_index]:
+                    cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                    var_name = proto.params[sp_index].name
+                    if proto.params[sp_index].name != 'color':
+                        log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
+                    else:
+                        var_name = '&%s' % (proto.params[sp_index].name)
+                    log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, var_name)
+                    if "File" in self.layer_name:
+                        if self.no_addr:
+                            log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                        else:
+                            log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
+                    else:
+                        if self.no_addr:
+                            #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                            log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
+                        else:
+                            #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, var_name)
+                        #log_func += '\n        fflush(stdout);'
+                    if proto.params[sp_index].name != 'color':
+                        log_func += '\n    }'
+                else: # We have a count value stored to iterate over an array
+                    print_cast = ''
+                    print_func = ''
+                    if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                        print_cast = '&'
+                        print_func = 'xgl_print_%s' % proto.params[sp_index].ty.strip('const ').strip('*').lower()
+                        #cis_print_func = 'tmp_str = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
+# TODO : Need to display this address as a string
+                    else:
+                        print_cast = '(void*)'
+                        print_func = 'string_convert_helper'
+                        #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
+                    cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
+#                                else:
+#                                    cis_print_func = ''
+                    if not i_decl:
+                        log_func += '\n    uint32_t i;'
+                        i_decl = True
+                    log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
+                    log_func += '\n        %s' % (cis_print_func)
+                    if "File" in self.layer_name:
+                        if self.no_addr:
+                            log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                        else:
+                            log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                    else:
+                        if self.no_addr:
+                            #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
+                            log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
+                        else:
+                            #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            #log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (" << %s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
+                            log_func += '\n        cout << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, print_cast, proto.params[sp_index].name)
+                        #log_func += '\n        fflush(stdout);'
+                    log_func += '\n    }'
+        if 'WsiX11AssociateConnection' == proto.name:
+            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+        if proto.name == "EnumerateLayers":
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    if (gpu != NULL) {\n'
+                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        pCurObj = gpuw;\n'
+                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        %snextTable.%s;\n'
+                     '        %s    %s    %s\n'
+                     '    %s'
+                     '    } else {\n'
+                     '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '        // This layer compatible with all GPUs\n'
+                     '        *pOutLayerCount = 1;\n'
+                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
+                     '        return XGL_SUCCESS;\n'
+                     '    }\n'
+                         '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
+        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    %snextTable.%s;\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+        else:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    pCurObj = gpuw;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
+        if 'WsiX11QueuePresent' == proto.name:
+            funcs.append("#endif")
+        return "\n\n".join(funcs)
+
     def generate_body(self):
         self.layer_name = "APIDumpCpp"
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
-class ApiDumpFileSubcommand(Subcommand):
+# subclass from ApiDumpSubcommand instead of Subcommand
+class ApiDumpFileSubcommand(ApiDumpSubcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
@@ -896,12 +890,13 @@ class ApiDumpFileSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "APIDumpFile"
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpFile"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
-class ApiDumpNoAddrSubcommand(Subcommand):
+# subclass from ApiDumpSubcommand instead of Subcommand
+class ApiDumpNoAddrSubcommand(ApiDumpSubcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
@@ -937,12 +932,13 @@ class ApiDumpNoAddrSubcommand(Subcommand):
         self.layer_name = "APIDumpNoAddr"
         self.no_addr = True
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
-class ApiDumpNoAddrCppSubcommand(Subcommand):
+# subclass from ApiDumpCppSubcommand instead of Subcommand
+class ApiDumpNoAddrCppSubcommand(ApiDumpCppSubcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
@@ -978,7 +974,7 @@ class ApiDumpNoAddrCppSubcommand(Subcommand):
         self.layer_name = "APIDumpNoAddrCpp"
         self.no_addr = True
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -1416,9 +1412,9 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "ObjectTracker"
         body = [self._generate_layer_initialization(True, lockname='obj'),
-                self._generate_dispatch_entrypoints_with_func("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
                 self._generate_extensions(),
-                self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'], no_header=True)]
+                self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
 
         return "\n\n".join(body)
 
