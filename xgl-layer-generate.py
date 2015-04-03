@@ -40,6 +40,8 @@ class Subcommand(object):
         self.argv = argv
         self.headers = xgl.headers
         self.protos = xgl.protos
+        self.no_addr = False
+        self.layer_name = ""
 
     def run(self):
         print(self.generate())
@@ -192,15 +194,10 @@ class Subcommand(object):
         ur_body.append('}')
         return "\n".join(ur_body)
 
-    def _generate_dispatch_entrypoints(self, qual="", layer="Generic", no_addr=False):
+    def _generate_dispatch_entrypoints(self, qual="", layer="Generic"):
         if qual:
             qual += " "
 
-        layer_name = layer
-        if no_addr:
-            layer_name = "%sNoAddr" % layer
-            if 'Cpp' in layer_name:
-                layer_name = "APIDumpNoAddrCpp"
         funcs = []
         for proto in self.protos:
             if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
@@ -241,7 +238,7 @@ class Subcommand(object):
                                 if p.name == proto.params[y].name:
                                     cp = True
                         (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
-                        if no_addr and "%p" == pft:
+                        if self.no_addr and "%p" == pft:
                             (pft, pfi) = ("%s", '"addr"')
                         log_func += '%s = " << %s << ", ' % (p.name, pfi)
                         #print_vals += ', %s' % (pfi)
@@ -279,12 +276,12 @@ class Subcommand(object):
                                     var_name = '&%s' % (proto.params[sp_index].name)
                                 log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, var_name)
                                 if "File" in layer:
-                                    if no_addr:
+                                    if self.no_addr:
                                         log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                     else:
                                         log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
                                 else:
-                                    if no_addr:
+                                    if self.no_addr:
                                         #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                         log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
                                     else:
@@ -314,12 +311,12 @@ class Subcommand(object):
                                 log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
                                 log_func += '\n        %s' % (cis_print_func)
                                 if "File" in layer:
-                                    if no_addr:
+                                    if self.no_addr:
                                         log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                     else:
                                         log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                                 else:
-                                    if no_addr:
+                                    if self.no_addr:
                                         #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                         log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
                                     else:
@@ -349,7 +346,7 @@ class Subcommand(object):
                                  '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
-                                     '}' % (qual, decl, proto.params[0].name, layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, layer_name))
+                                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
                     elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
@@ -367,7 +364,7 @@ class Subcommand(object):
                                  '    %snextTable.%s;\n'
                                  '    %s%s%s\n'
                                  '%s'
-                                 '}' % (qual, decl, proto.params[0].name, layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
+                                 '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
                     if 'WsiX11QueuePresent' == proto.name:
                         funcs.append("#endif")
                 elif "APIDump" in layer:
@@ -408,7 +405,7 @@ class Subcommand(object):
                                 if p.name == proto.params[y].name:
                                     cp = True
                         (pft, pfi) = self._get_printf_params(p.ty, p.name, cp)
-                        if no_addr and "%p" == pft:
+                        if self.no_addr and "%p" == pft:
                             (pft, pfi) = ("%s", '"addr"')
                         log_func += '%s = %s, ' % (p.name, pft)
                         print_vals += ', %s' % (pfi)
@@ -448,12 +445,12 @@ class Subcommand(object):
                                     var_name = "&%s" % proto.params[sp_index].name
                                 log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, var_name)
                                 if "File" in layer:
-                                    if no_addr:
+                                    if self.no_addr:
                                         log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (var_name)
                                     else:
                                         log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (var_name, var_name)
                                 else:
-                                    if no_addr:
+                                    if self.no_addr:
                                         log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
                                     else:
                                         log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
@@ -472,12 +469,12 @@ class Subcommand(object):
                                 log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
                                 log_func += '\n        %s' % (cis_print_func)
                                 if "File" in layer:
-                                    if no_addr:
+                                    if self.no_addr:
                                         log_func += '\n        fprintf(pOutFile, "   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
                                     else:
                                         log_func += '\n        fprintf(pOutFile, "   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
                                 else:
-                                    if no_addr:
+                                    if self.no_addr:
                                         log_func += '\n        printf("   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
                                     else:
                                         log_func += '\n        printf("   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
@@ -504,7 +501,7 @@ class Subcommand(object):
                                  '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                                  '        return XGL_SUCCESS;\n'
                                  '    }\n'
-                                     '}' % (qual, decl, proto.params[0].name, layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, layer_name))
+                                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
                     elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
                         funcs.append('%s%s\n'
                                  '{\n'
@@ -522,26 +519,21 @@ class Subcommand(object):
                                  '    %snextTable.%s;\n'
                                  '    %s%s%s\n'
                                  '%s'
-                                 '}' % (qual, decl, proto.params[0].name, layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
+                                 '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
                     if 'WsiX11QueuePresent' == proto.name:
                         funcs.append("#endif")
 
         return "\n\n".join(funcs)
 
-    def _generate_dispatch_entrypoints_with_func(self, intercept_func, qual="", layer="Generic", no_addr=False):
+    def _generate_dispatch_entrypoints_with_func(self, qual=""):
         if qual:
             qual += " "
 
-        layer_name = layer
-        if no_addr:
-            layer_name = "%sNoAddr" % layer
-            if 'Cpp' in layer_name:
-                layer_name = "APIDumpNoAddrCpp"
         funcs = []
         intercepted = []
         for proto in self.protos:
             if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
-                intercept = intercept_func(proto, qual, layer_name, no_addr)
+                intercept = self.generate_intercept(proto, qual)
                 if intercept is None:
                     # fill in default intercept for certain entrypoints
                     if 'DbgRegisterMsgCallback' == proto.name:
@@ -614,7 +606,7 @@ class Subcommand(object):
 
         return "\n".join(exts)
 
-    def _generate_layer_gpa_function(self, layer, extensions=[], no_header=False):
+    def _generate_layer_gpa_function(self, extensions=[], no_header=False):
         if no_header:
             func_body = []
         else:
@@ -629,7 +621,7 @@ class Subcommand(object):
                          "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
                          "    addr = layer_intercept_proc(funcName);\n"
                          "    if (addr)\n"
-                         "        return addr;" % layer)
+                         "        return addr;" % self.layer_name)
 
         if 0 != len(extensions):
             for ext_name in extensions:
@@ -643,19 +635,19 @@ class Subcommand(object):
                          "}\n")
         return "\n".join(func_body)
 
-    def _generate_layer_initialization(self, name, init_opts=False, prefix='xgl', lockname=None):
+    def _generate_layer_initialization(self, init_opts=False, prefix='xgl', lockname=None):
         func_body = ["#include \"xgl_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
-                         '{\n' % name)
+                         '{\n' % self.layer_name)
         if init_opts:
             func_body.append('    const char *strOpt;')
-            func_body.append('    // initialize %s options' % name)
-            func_body.append('    getLayerOptionEnum("%sReportLevel", (uint32_t *) &g_reportingLevel);' % name)
-            func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", (uint32_t *) &g_debugAction);' % name)
+            func_body.append('    // initialize %s options' % self.layer_name)
+            func_body.append('    getLayerOptionEnum("%sReportLevel", (uint32_t *) &g_reportingLevel);' % self.layer_name)
+            func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", (uint32_t *) &g_debugAction);' % self.layer_name)
             func_body.append('')
             func_body.append('    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)')
             func_body.append('    {')
-            func_body.append('        strOpt = getLayerOption("%sLogFilename");' % name)
+            func_body.append('        strOpt = getLayerOption("%sLogFilename");' % self.layer_name)
             func_body.append('        if (strOpt)')
             func_body.append('        {')
             func_body.append('            g_logFile = fopen(strOpt, "w");')
@@ -679,13 +671,13 @@ class Subcommand(object):
         func_body.append("}\n")
         return "\n".join(func_body)
 
-    def _generate_layer_initialization_with_lock(self, layer, prefix='xgl'):
+    def _generate_layer_initialization_with_lock(self, prefix='xgl'):
         func_body = ["#include \"xgl_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
                          '{\n'
                          '    xglGetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
-                         '    assert(fpNextGPA);\n' % layer);
+                         '    assert(fpNextGPA);\n' % self.layer_name);
 
         func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (XGL_PHYSICAL_GPU) pCurObj->nextObject);\n")
         func_body.append("    if (!printLockInitialized)")
@@ -702,7 +694,7 @@ class LayerFuncsSubcommand(Subcommand):
         return '#include <xglLayer.h>\n#include "loader.h"'
 
     def generate_body(self):
-        return self._generate_dispatch_entrypoints("static", True)
+        return self._generate_dispatch_entrypoints("static")
 
 class LayerDispatchSubcommand(Subcommand):
     def generate_header(self):
@@ -715,7 +707,7 @@ class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
         return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
-    def generate_intercept(self, proto, qual, layer_name, no_addr):
+    def generate_intercept(self, proto, qual):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
             # use default version
             return None
@@ -753,7 +745,7 @@ class GenericLayerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return XGL_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt, layer_name))
+                         '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt, self.layer_name))
         elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
@@ -775,15 +767,16 @@ class GenericLayerSubcommand(Subcommand):
                      '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    fflush(stdout);\n'
                      '%s'
-                     '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt))
+                     '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt))
         if 'WsiX11QueuePresent' == proto.name:
             funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization("Generic", True),
-                self._generate_dispatch_entrypoints_with_func(self.generate_intercept, "XGL_LAYER_EXPORT", "Generic"),
-                self._generate_layer_gpa_function("Generic", no_header=True)]
+        self.layer_name = "Generic"
+        body = [self._generate_layer_initialization(True),
+                self._generate_dispatch_entrypoints_with_func("XGL_LAYER_EXPORT"),
+                self._generate_layer_gpa_function(no_header=True)]
 
         return "\n\n".join(body)
 
@@ -820,9 +813,10 @@ class ApiDumpSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization_with_lock("APIDump"),
+        self.layer_name = "APIDump"
+        body = [self._generate_layer_initialization_with_lock(),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump"),
-                self._generate_layer_gpa_function("APIDump")]
+                self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
@@ -859,9 +853,10 @@ class ApiDumpCppSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization_with_lock("APIDumpCpp"),
+        self.layer_name = "APIDumpCpp"
+        body = [self._generate_layer_initialization_with_lock(),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp"),
-                self._generate_layer_gpa_function("APIDumpCpp")]
+                self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
@@ -899,9 +894,10 @@ class ApiDumpFileSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization_with_lock("APIDumpFile"),
+        self.layer_name = "APIDumpFile"
+        body = [self._generate_layer_initialization_with_lock(),
                 self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpFile"),
-                self._generate_layer_gpa_function("APIDumpFile")]
+                self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
@@ -938,9 +934,11 @@ class ApiDumpNoAddrSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization_with_lock("APIDumpNoAddr"),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump", True),
-                self._generate_layer_gpa_function("APIDumpNoAddr")]
+        self.layer_name = "APIDumpNoAddr"
+        self.no_addr = True
+        body = [self._generate_layer_initialization_with_lock(),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDump"),
+                self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
@@ -977,9 +975,11 @@ class ApiDumpNoAddrCppSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization_with_lock("APIDumpNoAddrCpp"),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp", True),
-                self._generate_layer_gpa_function("APIDumpNoAddrCpp")]
+        self.layer_name = "APIDumpNoAddrCpp"
+        self.no_addr = True
+        body = [self._generate_layer_initialization_with_lock(),
+                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "APIDumpCpp"),
+                self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
 
@@ -1271,7 +1271,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         return "\n".join(header_txt)
 
-    def generate_intercept(self, proto, qual, layer_name, no_addr):
+    def generate_intercept(self, proto, qual):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
             # use default version
             return None
@@ -1380,7 +1380,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return XGL_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, proto.params[0].name, using_line, layer_name, ret_val, c_call, create_line, destroy_line, stmt, layer_name))
+                         '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, stmt, self.layer_name))
         elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
@@ -1408,16 +1408,17 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s%s'
                      '%s'
                      '%s'
-                     '}' % (qual, decl, proto.params[0].name, using_line, layer_name, ret_val, c_call, create_line, destroy_line, gpu_state, stmt))
+                     '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, gpu_state, stmt))
         if 'WsiX11QueuePresent' == proto.name:
             funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):
-        body = [self._generate_layer_initialization("ObjectTracker", True, lockname='obj'),
-                self._generate_dispatch_entrypoints_with_func(self.generate_intercept, "XGL_LAYER_EXPORT", "ObjectTracker"),
+        self.layer_name = "ObjectTracker"
+        body = [self._generate_layer_initialization(True, lockname='obj'),
+                self._generate_dispatch_entrypoints_with_func("XGL_LAYER_EXPORT"),
                 self._generate_extensions(),
-                self._generate_layer_gpa_function("ObjectTracker", extensions=['objTrackGetObjectCount', 'objTrackGetObjects'], no_header=True)]
+                self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'], no_header=True)]
 
         return "\n\n".join(body)
 
