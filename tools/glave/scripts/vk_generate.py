@@ -1647,6 +1647,37 @@ class Subcommand(object):
         cwe_body.append('            returnValue = manually_handle_xglCmdWaitEvents(pPacket);')
         return "\n".join(cwe_body)
 
+    def _gen_replay_create_graphics_pipeline_derivative(self):
+        cgp_body = []
+        cgp_body.append('            XGL_GRAPHICS_PIPELINE_CREATE_INFO createInfo;')
+        cgp_body.append('            struct shaderPair saveShader[10];')
+        cgp_body.append('            unsigned int idx = 0;')
+        cgp_body.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));')
+        cgp_body.append('            createInfo.pSetLayoutChain = m_objMapper.remap(createInfo.pSetLayoutChain);')
+        cgp_body.append('            // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext')
+        cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;')
+        cgp_body.append('            XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;')
+        cgp_body.append('            while (XGL_NULL_HANDLE != pPacketNext)')
+        cgp_body.append('            {')
+        cgp_body.append('                if (XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pNext->sType)')
+        cgp_body.append('                {')
+        cgp_body.append('                    saveShader[idx].val = pNext->shader.shader;')
+        cgp_body.append('                    saveShader[idx++].addr = &(pNext->shader.shader);')
+        cgp_body.append('                    pNext->shader.shader = m_objMapper.remap(pPacketNext->shader.shader);')
+        cgp_body.append('                }')
+        cgp_body.append('                pPacketNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacketNext->pNext;')
+        cgp_body.append('                pNext = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;')
+        cgp_body.append('            }')
+        cgp_body.append('            XGL_PIPELINE pipeline;')
+        cgp_body.append('            replayResult = m_xglFuncs.real_xglCreateGraphicsPipelineDerivative(m_objMapper.remap(pPacket->device), &createInfo, m_objMapper.remap(pPacket->basePipeline), &pipeline);')
+        cgp_body.append('            if (replayResult == XGL_SUCCESS)')
+        cgp_body.append('            {')
+        cgp_body.append('                m_objMapper.add_to_map(pPacket->pPipeline, &pipeline);')
+        cgp_body.append('            }')
+        cgp_body.append('            for (unsigned int i = 0; i < idx; i++)')
+        cgp_body.append('                *(saveShader[i].addr) = saveShader[i].val;')
+        return "\n".join(cgp_body)
+
     def _gen_replay_cmd_bind_descriptor_sets(self):
         cbds_body = []
         cbds_body.append('            XGL_DESCRIPTOR_SET *pSaveSets = (XGL_DESCRIPTOR_SET *) glv_malloc(sizeof(XGL_DESCRIPTOR_SET) * pPacket->count);')
