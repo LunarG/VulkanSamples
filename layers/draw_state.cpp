@@ -2199,6 +2199,24 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdCopyImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE
     nextTable.CmdCopyImage(cmdBuffer, srcImage, destImage, regionCount, pRegions);
 }
 
+XGL_LAYER_EXPORT void XGLAPI xglCmdBlitImage(XGL_CMD_BUFFER cmdBuffer,
+                                             XGL_IMAGE srcImage, XGL_IMAGE_LAYOUT srcImageLayout,
+                                             XGL_IMAGE destImage, XGL_IMAGE_LAYOUT destImageLayout,
+                                             uint32_t regionCount, const XGL_IMAGE_BLIT* pRegions)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        updateCBTracking(cmdBuffer);
+        addCmd(pCB, CMD_COPYIMAGE);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+    }
+    nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+}
+
 XGL_LAYER_EXPORT void XGLAPI xglCmdCopyBufferToImage(XGL_CMD_BUFFER cmdBuffer, XGL_BUFFER srcBuffer, XGL_IMAGE destImage, uint32_t regionCount, const XGL_BUFFER_IMAGE_COPY* pRegions)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
