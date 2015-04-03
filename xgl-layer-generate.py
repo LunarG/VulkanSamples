@@ -525,148 +525,6 @@ class Subcommand(object):
                                  '}' % (qual, decl, proto.params[0].name, layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
                     if 'WsiX11QueuePresent' == proto.name:
                         funcs.append("#endif")
-                elif "ObjectTracker" == layer:
-                    if 'DbgRegisterMsgCallback' == proto.name:
-                        funcs.append(self._gen_layer_dbg_callback_register())
-                        continue
-                    if 'DbgUnregisterMsgCallback' == proto.name:
-                        funcs.append(self._gen_layer_dbg_callback_unregister())
-                        continue
-                    obj_type_mapping = {base_t : base_t.replace("XGL_", "XGL_OBJECT_TYPE_") for base_t in xgl.object_type_list}
-                    # For the various "super-types" we have to use function to distinguish sub type
-                    for obj_type in ["XGL_BASE_OBJECT", "XGL_OBJECT", "XGL_DYNAMIC_STATE_OBJECT"]:
-                        obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
-
-                    decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-                    param0_name = proto.params[0].name
-                    p0_type = proto.params[0].ty.strip('*').strip('const ')
-                    create_line = ''
-                    destroy_line = ''
-                    # Special cases for API funcs that don't use an object as first arg
-                    if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
-                        using_line = ''
-                    else:
-                        using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                        using_line += '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
-                        using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                    if 'QueueSubmit' in proto.name:
-                        using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
-                        using_line += '    validate_memory_mapping_status(pMemRefs, memRefCount);\n'
-                        using_line += '    validate_mem_ref_count(memRefCount);\n'
-                    elif 'GetFenceStatus' in proto.name:
-                        using_line += '    // Warn if submitted_flag is not set\n'
-                        using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
-                    elif 'EndCommandBuffer' in proto.name:
-                        using_line += '    reset_status((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
-                        using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
-                        using_line += '                                                                OBJSTATUS_COLOR_BLEND_BOUND |\n'
-                        using_line += '                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
-                    elif 'CmdBindDynamicStateObject' in proto.name:
-                        using_line += '    track_object_status((void*)cmdBuffer, stateBindPoint);\n'
-                    elif 'CmdDraw' in proto.name:
-                        using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
-                    elif 'MapMemory' in proto.name:
-                        using_line += '    set_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
-                    elif 'UnmapMemory' in proto.name:
-                        using_line += '    reset_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
-                    if 'AllocDescriptor' in proto.name: # Allocates array of DSs
-                        create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
-                        create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
-                        create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
-                        create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
-                        create_line += '    }\n'
-                    elif 'CreatePresentableImage' in proto.name:
-                        create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                        create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').strip('const ')])
-                        create_line += '    ll_insert_obj((void*)*pMem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
-                        # create_line += '    ll_insert_obj((void*)*%s, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
-                        create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                    elif 'Create' in proto.name or 'Alloc' in proto.name:
-                        create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                        create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
-                        create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                    if 'DestroyObject' in proto.name:
-                        destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                        destroy_line += '    ll_destroy_obj((void*)%s);\n' % (param0_name)
-                        destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                        using_line = ''
-                    else:
-                        if 'Destroy' in proto.name or 'Free' in proto.name:
-                            destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                            destroy_line += '    ll_destroy_obj((void*)%s);\n' % (param0_name)
-                            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                            using_line = ''
-                        if 'DestroyDevice' in proto.name:
-                            destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                            destroy_line += '        if (pTrav->obj.objType == XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {\n'
-                            destroy_line += '            objNode *pDel = pTrav;\n'
-                            destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
-                            destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
-                            destroy_line += '        } else {\n'
-                            destroy_line += '            char str[1024];\n'
-                            destroy_line += '            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
-                            destroy_line += '            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
-                            destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
-                            destroy_line += '        }\n'
-                            destroy_line += '    }\n'
-                    ret_val = ''
-                    stmt = ''
-                    if proto.ret != "void":
-                        ret_val = "XGL_RESULT result = "
-                        stmt = "    return result;\n"
-                    if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-                    if proto.name == "EnumerateLayers":
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    if (gpu != NULL) {\n'
-                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '    %s'
-                                 '        pCurObj = gpuw;\n'
-                                 '        loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '        %snextTable.%s;\n'
-                                 '    %s%s'
-                                 '    %s'
-                                 '    } else {\n'
-                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                                 '            return XGL_ERROR_INVALID_POINTER;\n'
-                                 '        // This layer compatible with all GPUs\n'
-                                 '        *pOutLayerCount = 1;\n'
-                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                                 '        return XGL_SUCCESS;\n'
-                                 '    }\n'
-                                     '}' % (qual, decl, proto.params[0].name, using_line, layer_name, ret_val, c_call, create_line, destroy_line, stmt, layer_name))
-                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '%s'
-                                 '    %snextTable.%s;\n'
-                                 '%s%s'
-                                 '%s'
-                                 '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
-                    else:
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        gpu_state = ''
-                        if 'GetGpuInfo' in proto.name:
-                            gpu_state =  '    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES) {\n'
-                            gpu_state += '        if (pData != NULL) {\n'
-                            gpu_state += '            setGpuInfoState(pData);\n'
-                            gpu_state += '        }\n'
-                            gpu_state += '    }\n'
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '%s'
-                                 '    pCurObj = gpuw;\n'
-                                 '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '    %snextTable.%s;\n'
-                                 '%s%s'
-                                 '%s'
-                                 '%s'
-                                 '}' % (qual, decl, proto.params[0].name, using_line, layer_name, ret_val, c_call, create_line, destroy_line, gpu_state, stmt))
-                    if 'WsiX11QueuePresent' == proto.name:
-                        funcs.append("#endif")
 
         return "\n\n".join(funcs)
 
@@ -858,10 +716,9 @@ class GenericLayerSubcommand(Subcommand):
         return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_intercept(self, proto, qual, layer_name, no_addr):
-        if 'DbgRegisterMsgCallback' == proto.name:
-            return self._gen_layer_dbg_callback_register()
-        if 'DbgUnregisterMsgCallback' == proto.name:
-            return self._gen_layer_dbg_callback_unregister()
+        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
+            # use default version
+            return None
         decl = proto.c_func(prefix="xgl", attr="XGLAPI")
         param0_name = proto.params[0].name
         ret_val = ''
@@ -1414,11 +1271,153 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         return "\n".join(header_txt)
 
+    def generate_intercept(self, proto, qual, layer_name, no_addr):
+        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
+            # use default version
+            return None
+        obj_type_mapping = {base_t : base_t.replace("XGL_", "XGL_OBJECT_TYPE_") for base_t in xgl.object_type_list}
+        # For the various "super-types" we have to use function to distinguish sub type
+        for obj_type in ["XGL_BASE_OBJECT", "XGL_OBJECT", "XGL_DYNAMIC_STATE_OBJECT"]:
+            obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
+
+        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        param0_name = proto.params[0].name
+        p0_type = proto.params[0].ty.strip('*').strip('const ')
+        create_line = ''
+        destroy_line = ''
+        funcs = []
+        # Special cases for API funcs that don't use an object as first arg
+        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueSetGlobalMemReferences', 'QueueWaitIdle', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
+            using_line = ''
+        else:
+            using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        if 'QueueSubmit' in proto.name:
+            using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
+            using_line += '    validate_memory_mapping_status(pMemRefs, memRefCount);\n'
+            using_line += '    validate_mem_ref_count(memRefCount);\n'
+        elif 'GetFenceStatus' in proto.name:
+            using_line += '    // Warn if submitted_flag is not set\n'
+            using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+        elif 'EndCommandBuffer' in proto.name:
+            using_line += '    reset_status((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
+            using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
+            using_line += '                                                                OBJSTATUS_COLOR_BLEND_BOUND |\n'
+            using_line += '                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
+        elif 'CmdBindDynamicStateObject' in proto.name:
+            using_line += '    track_object_status((void*)cmdBuffer, stateBindPoint);\n'
+        elif 'CmdDraw' in proto.name:
+            using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
+        elif 'MapMemory' in proto.name:
+            using_line += '    set_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+        elif 'UnmapMemory' in proto.name:
+            using_line += '    reset_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+        if 'AllocDescriptor' in proto.name: # Allocates array of DSs
+            create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
+            create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
+            create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
+            create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
+            create_line += '    }\n'
+        elif 'CreatePresentableImage' in proto.name:
+            create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').strip('const ')])
+            create_line += '    ll_insert_obj((void*)*pMem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
+            # create_line += '    ll_insert_obj((void*)*%s, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+            create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'Create' in proto.name or 'Alloc' in proto.name:
+            create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+            create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        if 'DestroyObject' in proto.name:
+            destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '    ll_destroy_obj((void*)%s);\n' % (param0_name)
+            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            using_line = ''
+        else:
+            if 'Destroy' in proto.name or 'Free' in proto.name:
+                destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                destroy_line += '    ll_destroy_obj((void*)%s);\n' % (param0_name)
+                destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+                using_line = ''
+            if 'DestroyDevice' in proto.name:
+                destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
+                destroy_line += '        if (pTrav->obj.objType == XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {\n'
+                destroy_line += '            objNode *pDel = pTrav;\n'
+                destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
+                destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
+                destroy_line += '        } else {\n'
+                destroy_line += '            char str[1024];\n'
+                destroy_line += '            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
+                destroy_line += '            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
+                destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
+                destroy_line += '        }\n'
+                destroy_line += '    }\n'
+        ret_val = ''
+        stmt = ''
+        if proto.ret != "void":
+            ret_val = "XGL_RESULT result = "
+            stmt = "    return result;\n"
+        if 'WsiX11AssociateConnection' == proto.name:
+            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+        if proto.name == "EnumerateLayers":
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    if (gpu != NULL) {\n'
+                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    %s'
+                     '        pCurObj = gpuw;\n'
+                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        %snextTable.%s;\n'
+                     '    %s%s'
+                     '    %s'
+                     '    } else {\n'
+                     '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '        // This layer compatible with all GPUs\n'
+                     '        *pOutLayerCount = 1;\n'
+                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
+                     '        return XGL_SUCCESS;\n'
+                     '    }\n'
+                         '}' % (qual, decl, proto.params[0].name, using_line, layer_name, ret_val, c_call, create_line, destroy_line, stmt, layer_name))
+        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '%s'
+                     '    %snextTable.%s;\n'
+                     '%s%s'
+                     '%s'
+                     '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
+        else:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            gpu_state = ''
+            if 'GetGpuInfo' in proto.name:
+                gpu_state =  '    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES) {\n'
+                gpu_state += '        if (pData != NULL) {\n'
+                gpu_state += '            setGpuInfoState(pData);\n'
+                gpu_state += '        }\n'
+                gpu_state += '    }\n'
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '%s'
+                     '    pCurObj = gpuw;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '%s%s'
+                     '%s'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, using_line, layer_name, ret_val, c_call, create_line, destroy_line, gpu_state, stmt))
+        if 'WsiX11QueuePresent' == proto.name:
+            funcs.append("#endif")
+        return "\n\n".join(funcs)
+
     def generate_body(self):
         body = [self._generate_layer_initialization("ObjectTracker", True, lockname='obj'),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "ObjectTracker"),
+                self._generate_dispatch_entrypoints_with_func(self.generate_intercept, "XGL_LAYER_EXPORT", "ObjectTracker"),
                 self._generate_extensions(),
-                self._generate_layer_gpa_function("ObjectTracker", extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
+                self._generate_layer_gpa_function("ObjectTracker", extensions=['objTrackGetObjectCount', 'objTrackGetObjects'], no_header=True)]
 
         return "\n\n".join(body)
 
