@@ -1324,7 +1324,7 @@ static void demo_init_xgl(struct demo *demo)
     err = xglGetGpuInfo(demo->gpu, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &data_size, demo->queue_props);
     assert(!err);
-    queue_count = data_size / sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES);
+	queue_count = (uint32_t) (data_size / sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES));
     assert(queue_count >= 1);
 
     for (i = 0; i < queue_count; i++) {
