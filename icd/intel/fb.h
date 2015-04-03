@@ -46,8 +46,6 @@ struct intel_fb {
 
 struct intel_render_pass {
     struct intel_obj obj;
-
-    struct intel_fb *fb;
 };
 
 static inline struct intel_fb *intel_fb(XGL_FRAMEBUFFER fb)

@@ -1642,12 +1642,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const 
     return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, const XGL_RENDER_PASS_BEGIN *pRenderPassBegin)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdBeginRenderPass(cmdBuffer, renderPass);
+    nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)

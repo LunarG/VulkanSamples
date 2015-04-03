@@ -1995,7 +1995,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(
 
 ICD_EXPORT void XGLAPI xglCmdBeginRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_RENDER_PASS                             renderPass)
+    const XGL_RENDER_PASS_BEGIN*                pRenderPassBegin)
 {
     NULLDRV_LOG_FUNC;
 }

@@ -185,8 +185,9 @@ struct intel_cmd_bind {
     } index;
 
 
-    const struct intel_render_pass *render_pass;
     bool render_pass_changed;
+    const struct intel_render_pass *render_pass;
+    const struct intel_fb *fb;
 
     uint32_t draw_count;
     uint32_t wa_flags;

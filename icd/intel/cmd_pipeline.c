@@ -399,7 +399,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
             format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         default:
-            assert(!cmd->bind.render_pass->fb->ds); // Must have valid format if ds attached
+            assert(!cmd->bind.fb->ds); // Must have valid format if ds attached
             format = 0;
             break;
         }
@@ -526,7 +526,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
           (viewport->viewport_count - 1);
 
     /* TODO: framebuffer requests layer_count > 1 */
-    if (cmd->bind.render_pass->fb->array_size == 1) {
+    if (cmd->bind.fb->array_size == 1) {
         dw3 |= GEN6_CLIP_DW3_RTAINDEX_FORCED_ZERO;
     }
 
@@ -1660,8 +1660,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         case INTEL_PIPELINE_RMAP_RT:
             {
                 const struct intel_rt_view *view =
-                    (slot->u.rt < cmd->bind.render_pass->fb->rt_count) ?
-                    cmd->bind.render_pass->fb->rt[slot->u.rt] : NULL;
+                    (slot->u.rt < cmd->bind.fb->rt_count) ?
+                    cmd->bind.fb->rt[slot->u.rt] : NULL;
 
                 if (view) {
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
@@ -1931,7 +1931,7 @@ static void emit_shader_resources(struct intel_cmd *cmd)
 
 static void emit_msaa(struct intel_cmd *cmd)
 {
-    const struct intel_fb *fb = cmd->bind.render_pass->fb;
+    const struct intel_fb *fb = cmd->bind.fb;
 
     if (!cmd->bind.render_pass_changed)
         return;
@@ -1945,18 +1945,19 @@ static void emit_msaa(struct intel_cmd *cmd)
 
 static void emit_rt(struct intel_cmd *cmd)
 {
-    const struct intel_fb *fb = cmd->bind.render_pass->fb;
+    const struct intel_fb *fb = cmd->bind.fb;
 
     if (!cmd->bind.render_pass_changed)
         return;
 
     cmd_wa_gen6_pre_depth_stall_write(cmd);
-    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, fb->width, fb->height);
+    gen6_3DSTATE_DRAWING_RECTANGLE(cmd, fb->width,
+            fb->height);
 }
 
 static void emit_ds(struct intel_cmd *cmd)
 {
-    const struct intel_fb *fb = cmd->bind.render_pass->fb;
+    const struct intel_fb *fb = cmd->bind.fb;
     const struct intel_ds_view *ds = fb->ds;
 
     if (!cmd->bind.render_pass_changed)
@@ -3502,11 +3503,11 @@ ICD_EXPORT void XGLAPI xglCmdDispatchIndirect(
 
 ICD_EXPORT void XGLAPI xglCmdBeginRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_RENDER_PASS                             renderPass)
+    const XGL_RENDER_PASS_BEGIN*                pRenderPassBegin)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-   cmd_begin_render_pass(cmd, (struct intel_render_pass *) renderPass);
+   cmd_begin_render_pass(cmd, (struct intel_render_pass *) pRenderPassBegin->renderPass, pRenderPassBegin->framebuffer);
 }
 
 ICD_EXPORT void XGLAPI xglCmdEndRenderPass(

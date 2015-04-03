@@ -152,8 +152,6 @@ XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
 
     rp->obj.destroy = render_pass_destroy;
 
-    rp->fb = intel_fb(info->framebuffer);
-
     /* TODO add any clear color ops */
     for (i = 0; i < info->colorAttachmentCount; i++)
         assert(info->pColorLoadOps[i] != XGL_ATTACHMENT_LOAD_OP_CLEAR);
@@ -167,8 +165,6 @@ XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
 
 void intel_render_pass_destroy(struct intel_render_pass *rp)
 {
-    rp->fb = NULL;
-
     intel_base_destroy(&rp->obj.base);
 }
 

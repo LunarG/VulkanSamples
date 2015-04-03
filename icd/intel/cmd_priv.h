@@ -485,10 +485,12 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
 }
 
 static inline void cmd_begin_render_pass(struct intel_cmd *cmd,
-                                         const struct intel_render_pass *rp)
+                                         const struct intel_render_pass *rp,
+                                         const struct intel_fb *fb)
 {
     cmd->bind.render_pass = rp;
     cmd->bind.render_pass_changed = true;
+    cmd->bind.fb = fb;
 }
 
 static inline void cmd_end_render_pass(struct intel_cmd *cmd,
@@ -496,6 +498,7 @@ static inline void cmd_end_render_pass(struct intel_cmd *cmd,
 {
     //note what to do if rp != bound rp
     cmd->bind.render_pass = 0;
+    cmd->bind.fb = 0;
 }
 
 void cmd_batch_flush(struct intel_cmd *cmd, uint32_t pipe_control_dw0);

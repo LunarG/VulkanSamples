@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 56, 1)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 57, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -1698,7 +1698,6 @@ typedef struct _XGL_PEER_IMAGE_OPEN_INFO
 {
     XGL_IMAGE                               originalImage;
 } XGL_PEER_IMAGE_OPEN_INFO;
-
 typedef struct _XGL_SUBRESOURCE_LAYOUT
 {
     XGL_GPU_SIZE                            offset;                 // Specified in bytes
@@ -2087,12 +2086,18 @@ typedef struct _XGL_CMD_BUFFER_BEGIN_INFO
     XGL_FLAGS                               flags;      // XGL_CMD_BUFFER_BUILD_FLAGS
 } XGL_CMD_BUFFER_BEGIN_INFO;
 
+typedef struct _XGL_RENDER_PASS_BEGIN
+{
+    XGL_RENDER_PASS                         renderPass;
+    XGL_FRAMEBUFFER                         framebuffer;
+} XGL_RENDER_PASS_BEGIN;
+
 typedef struct _XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
     const void*                             pNext;      // Pointer to next structure
 
-    XGL_RENDER_PASS                         renderPass;
+    XGL_RENDER_PASS_BEGIN                   renderPassContinue;  // Only needed when a render pass is split across two command buffers
 } XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
 
 // Union allowing specification of floating point or raw color data. Actual value selected is based on image being cleared.
@@ -2114,11 +2119,17 @@ typedef struct _XGL_RENDER_PASS_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
 
     XGL_RECT                                renderArea;
-    XGL_FRAMEBUFFER                         framebuffer;
     uint32_t                                colorAttachmentCount;
-    const XGL_ATTACHMENT_LOAD_OP*           pColorLoadOps;               // Array of size equivalent to the number of attachments in the framebuffer
-    const XGL_ATTACHMENT_STORE_OP*          pColorStoreOps;              // Array of size equivalent to the number of attachments in the framebuffer
-    const XGL_CLEAR_COLOR*                  pColorLoadClearValues;       // Array of size equivalent to the number of attachments in the framebuffer
+    XGL_EXTENT2D                            extent;
+    uint32_t                                sampleCount;
+    uint32_t                                layers;
+    const XGL_FORMAT*                       pColorFormats;
+    const XGL_IMAGE_LAYOUT*                 pColorLayouts;
+    const XGL_ATTACHMENT_LOAD_OP*           pColorLoadOps;
+    const XGL_ATTACHMENT_STORE_OP*          pColorStoreOps;
+    const XGL_CLEAR_COLOR*                  pColorLoadClearValues;
+    XGL_FORMAT                              depthStencilFormat;
+    XGL_IMAGE_LAYOUT                        depthStencilLayout;
     XGL_ATTACHMENT_LOAD_OP                  depthLoadOp;
     float                                   depthLoadClearValue;
     XGL_ATTACHMENT_STORE_OP                 depthStoreOp;
@@ -2336,7 +2347,7 @@ typedef void       (XGLAPI *xglCmdLoadAtomicCountersType)(XGL_CMD_BUFFER cmdBuff
 typedef void       (XGLAPI *xglCmdSaveAtomicCountersType)(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, XGL_BUFFER destBuffer, XGL_GPU_SIZE destOffset);
 typedef XGL_RESULT (XGLAPI *xglCreateFramebufferType)(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer);
 typedef XGL_RESULT (XGLAPI *xglCreateRenderPassType)(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass);
-typedef void       (XGLAPI *xglCmdBeginRenderPassType)(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass);
+typedef void       (XGLAPI *xglCmdBeginRenderPassType)(XGL_CMD_BUFFER cmdBuffer, const XGL_RENDER_PASS_BEGIN* pRenderPassBegin);
 typedef void       (XGLAPI *xglCmdEndRenderPassType)(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass);
 
 #ifdef XGL_PROTOTYPES
@@ -2980,7 +2991,7 @@ XGL_RESULT XGLAPI xglCreateRenderPass(
 
 void XGLAPI xglCmdBeginRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_RENDER_PASS                             renderPass);
+    const XGL_RENDER_PASS_BEGIN*                pRenderPassBegin);
 
 void XGLAPI xglCmdEndRenderPass(
     XGL_CMD_BUFFER                              cmdBuffer,

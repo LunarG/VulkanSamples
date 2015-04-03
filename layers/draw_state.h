@@ -237,6 +237,7 @@ typedef struct _GLOBAL_CB_NODE {
     DYNAMIC_STATE_NODE*             lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_DESCRIPTOR_SET              lastBoundDescriptorSet;
     XGL_RENDER_PASS                 activeRenderPass;
+    XGL_FRAMEBUFFER                 framebuffer;
 } GLOBAL_CB_NODE;
 
 //prototypes for extension functions

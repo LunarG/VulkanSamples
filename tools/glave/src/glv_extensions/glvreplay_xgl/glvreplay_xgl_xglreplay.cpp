@@ -832,18 +832,8 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglCreateRenderPass(str
 {
     XGL_RESULT replayResult = XGL_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    XGL_RENDER_PASS_CREATE_INFO *pInfo = (XGL_RENDER_PASS_CREATE_INFO *) pPacket->pCreateInfo;
-    // remap framebuffer
-    XGL_FRAMEBUFFER savedFB = 0, *pFB = &(pInfo->framebuffer);
-    if (*pFB != NULL)
-    {
-        savedFB = pInfo->framebuffer;
-        *pFB = m_objMapper.remap(pInfo->framebuffer);
-    }
     XGL_RENDER_PASS local_renderpass;
     replayResult = m_xglFuncs.real_xglCreateRenderPass(m_objMapper.remap(pPacket->device), pPacket->pCreateInfo, &local_renderpass);
-    if (*pFB != NULL)
-        pInfo->framebuffer = savedFB;
     if (replayResult == XGL_SUCCESS)
     {
         m_objMapper.add_to_map(pPacket->pRenderPass, &local_renderpass);
@@ -858,7 +848,7 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglBeginCommandBuffer(s
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     XGL_CMD_BUFFER_BEGIN_INFO* pInfo = (XGL_CMD_BUFFER_BEGIN_INFO*)pPacket->pBeginInfo;
     // assume only zero or one graphics_begin_info in the chain
-    XGL_RENDER_PASS savedRP, *pRP;
+    XGL_RENDER_PASS_BEGIN savedRP, *pRP;
     XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *pGInfo = NULL;
     while (pInfo != NULL)
     {
@@ -866,16 +856,17 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglBeginCommandBuffer(s
         if (pInfo->sType == XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO)
         {
             pGInfo = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) pInfo;
-            savedRP = pGInfo->renderPass;
-            pRP = &(pGInfo->renderPass);
-            *pRP = m_objMapper.remap(pGInfo->renderPass);
+            savedRP = pGInfo->renderPassContinue;
+            pRP = &(pGInfo->renderPassContinue);
+            pRP->renderPass = m_objMapper.remap(savedRP.renderPass);
+            pRP->framebuffer = m_objMapper.remap(savedRP.framebuffer);
             break;
         }
         pInfo = (XGL_CMD_BUFFER_BEGIN_INFO*) pInfo->pNext;
     }
     replayResult = m_xglFuncs.real_xglBeginCommandBuffer(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pBeginInfo);
     if (pGInfo != NULL)
-        pGInfo->renderPass = savedRP;
+        pGInfo->renderPassContinue = savedRP;
     CHECK_RETURN_VALUE(xglBeginCommandBuffer);
     return returnValue;
 }

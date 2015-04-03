@@ -76,7 +76,7 @@ void XglRenderFramework::ShutdownFramework()
     if (m_stateDepthStencil) xglDestroyObject(m_stateDepthStencil);
     if (m_stateRaster) xglDestroyObject(m_stateRaster);
     if (m_cmdBuffer) xglDestroyObject(m_cmdBuffer);
-    if (m_frameBuffer) xglDestroyObject(m_frameBuffer);
+    if (m_framebuffer) xglDestroyObject(m_framebuffer);
     if (m_renderPass) xglDestroyObject(m_renderPass);
 
     if (m_stateViewport) {
@@ -174,6 +174,9 @@ void XglRenderFramework::InitRenderTarget()
 
 void XglRenderFramework::InitRenderTarget(uint32_t targets)
 {
+    std::vector<XGL_ATTACHMENT_LOAD_OP> load_ops;
+    std::vector<XGL_ATTACHMENT_STORE_OP> store_ops;
+    std::vector<XGL_CLEAR_COLOR> clear_colors;
     uint32_t i;
 
     for (i = 0; i < targets; i++) {
@@ -184,16 +187,11 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets)
         m_colorBindings[i].view  = img->targetView();
         m_colorBindings[i].layout = XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         m_renderTargets.push_back(img);
+        load_ops.push_back(XGL_ATTACHMENT_LOAD_OP_LOAD);
+        store_ops.push_back(XGL_ATTACHMENT_STORE_OP_STORE);
+        clear_colors.push_back(m_clear_color);
     }
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
-    XGL_ATTACHMENT_LOAD_OP load_op = XGL_ATTACHMENT_LOAD_OP_LOAD;
-    XGL_ATTACHMENT_STORE_OP store_op = XGL_ATTACHMENT_STORE_OP_STORE;
-    XGL_CLEAR_COLOR clear_color;
-    clear_color.color.rawColor[0] = 64;
-    clear_color.color.rawColor[1] = 64;
-    clear_color.color.rawColor[2] = 64;
-    clear_color.color.rawColor[3] = 0;
-    clear_color.useRawValue = XGL_TRUE;
     XGL_DEPTH_STENCIL_BIND_INFO *dsBinding;
     if (m_depthStencilBinding.view)
         dsBinding = &m_depthStencilBinding;
@@ -211,19 +209,26 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets)
     fb_info.layers = 1;
 
     XGL_RENDER_PASS_CREATE_INFO rp_info;
+
     memset(&rp_info, 0 , sizeof(rp_info));
-    xglCreateFramebuffer(device(), &fb_info, &(m_frameBuffer));
-    rp_info.framebuffer = m_frameBuffer;
+    xglCreateFramebuffer(device(), &fb_info, &m_framebuffer);
+
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = m_width;
     rp_info.renderArea.extent.height = m_height;
     rp_info.colorAttachmentCount = m_renderTargets.size();
-    rp_info.pColorLoadOps = &load_op;
-    rp_info.pColorStoreOps = &store_op;
-    rp_info.pColorLoadClearValues = &clear_color;
+    rp_info.pColorFormats = &m_render_target_fmt;
+    rp_info.pColorLayouts = &m_colorBindings[0].layout;
+    rp_info.pColorLoadOps = &load_ops[0];
+    rp_info.pColorStoreOps = &store_ops[0];
+    rp_info.pColorLoadClearValues = &clear_colors[0];
+    rp_info.depthStencilFormat = m_depth_stencil_fmt;
+    rp_info.depthStencilLayout = m_depthStencilBinding.layout;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
+    rp_info.depthLoadClearValue = m_depth_clear_color;
     rp_info.depthStoreOp = XGL_ATTACHMENT_STORE_OP_STORE;
     rp_info.stencilLoadOp = XGL_ATTACHMENT_LOAD_OP_LOAD;
+    rp_info.stencilLoadClearValue = m_stencil_clear_color;
     rp_info.stencilStoreOp = XGL_ATTACHMENT_STORE_OP_STORE;
     xglCreateRenderPass(device(), &rp_info, &m_renderPass);
 }
@@ -1128,9 +1133,9 @@ XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pI
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj)
+XGL_RESULT XglCommandBufferObj::BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj, XGL_FRAMEBUFFER framebuffer_obj)
 {
-    begin(renderpass_obj);
+    begin(renderpass_obj, framebuffer_obj);
     return XGL_SUCCESS;
 }
 
@@ -1281,6 +1286,21 @@ void XglCommandBufferObj::PrepareAttachments()
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
     }
+}
+
+void XglCommandBufferObj::BeginRenderPass(XGL_RENDER_PASS renderpass, XGL_FRAMEBUFFER framebuffer)
+{
+    XGL_RENDER_PASS_BEGIN rp_begin = {
+        renderpass,
+        framebuffer,
+    };
+
+    xglCmdBeginRenderPass( obj(), &rp_begin);
+}
+
+void XglCommandBufferObj::EndRenderPass(XGL_RENDER_PASS renderpass)
+{
+    xglCmdEndRenderPass( obj(), renderpass);
 }
 
 void XglCommandBufferObj::BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject)

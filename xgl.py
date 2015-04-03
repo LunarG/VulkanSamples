@@ -808,7 +808,7 @@ core = Extension(
 
         Proto("void", "CmdBeginRenderPass",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),
-             Param("XGL_RENDER_PASS", "renderPass")]),
+             Param("const XGL_RENDER_PASS_BEGIN*", "pRenderPassBegin")]),
 
         Proto("void", "CmdEndRenderPass",
             [Param("XGL_CMD_BUFFER", "cmdBuffer"),

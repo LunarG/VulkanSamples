@@ -207,6 +207,7 @@ struct demo {
     uint32_t graphics_queue_node_index;
     XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
 
+    XGL_FRAMEBUFFER framebuffer;
     int width, height;
     XGL_FORMAT format;
 
@@ -280,13 +281,9 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
     };
     const float clear_depth = 1.0f;
     XGL_IMAGE_SUBRESOURCE_RANGE clear_range;
-    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {
-        .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO,
-        .pNext = NULL,
-    };
     XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
         .sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext = &graphics_cmd_buf_info,
+        .pNext = NULL,
         .flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
             XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
@@ -305,22 +302,29 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
          .layers = 1,
     };
     XGL_RENDER_PASS_CREATE_INFO rp_info;
+    XGL_RENDER_PASS_BEGIN rp_begin;
 
     memset(&rp_info, 0 , sizeof(rp_info));
-    err = xglCreateFramebuffer(demo->device, &fb_info, &(rp_info.framebuffer));
+    err = xglCreateFramebuffer(demo->device, &fb_info, &rp_begin.framebuffer);
     assert(!err);
     rp_info.sType = XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.renderArea.extent.width = demo->width;
     rp_info.renderArea.extent.height = demo->height;
-    rp_info.colorAttachmentCount = 1;
-    rp_info.pColorLoadClearValues = &clear_color;
+    rp_info.colorAttachmentCount = fb_info.colorAttachmentCount;
+    rp_info.pColorFormats = &demo->format;
+    rp_info.pColorLayouts = &color_attachment.layout;
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
+    rp_info.pColorLoadClearValues = &clear_color;
+    rp_info.depthStencilFormat = XGL_FMT_D16_UNORM;
+    rp_info.depthStencilLayout = depth_stencil.layout;
     rp_info.depthLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
+    rp_info.depthLoadClearValue = clear_depth;
     rp_info.depthStoreOp = XGL_ATTACHMENT_STORE_OP_DONT_CARE;
     rp_info.stencilLoadOp = XGL_ATTACHMENT_LOAD_OP_DONT_CARE;
+    rp_info.stencilLoadClearValue = 0;
     rp_info.stencilStoreOp = XGL_ATTACHMENT_STORE_OP_DONT_CARE;
-    err = xglCreateRenderPass(demo->device, &rp_info, &(graphics_cmd_buf_info.renderPass));
+    err = xglCreateRenderPass(demo->device, &rp_info, &rp_begin.renderPass);
     assert(!err);
 
     err = xglBeginCommandBuffer(cmd_buf, &cmd_buf_info);
@@ -338,7 +342,7 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
     xglCmdBindDynamicStateObject(cmd_buf, XGL_STATE_BIND_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
-    xglCmdBeginRenderPass(cmd_buf, graphics_cmd_buf_info.renderPass);
+    xglCmdBeginRenderPass(cmd_buf, &rp_begin);
     clear_range.aspect = XGL_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
     clear_range.mipLevels = 1;
@@ -353,13 +357,13 @@ static void demo_draw_build_cmd(struct demo *demo, XGL_CMD_BUFFER cmd_buf)
             clear_depth, 0, 1, &clear_range);
 
     xglCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
-    xglCmdEndRenderPass(cmd_buf, graphics_cmd_buf_info.renderPass);
+    xglCmdEndRenderPass(cmd_buf, rp_begin.renderPass);
 
     err = xglEndCommandBuffer(cmd_buf);
     assert(!err);
 
-    xglDestroyObject(graphics_cmd_buf_info.renderPass);
-    xglDestroyObject(rp_info.framebuffer);
+    xglDestroyObject(rp_begin.renderPass);
+    xglDestroyObject(rp_begin.framebuffer);
 }
 
 

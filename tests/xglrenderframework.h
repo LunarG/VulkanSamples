@@ -55,6 +55,7 @@ public:
     XGL_DEVICE device() {return m_device->device();}
     XGL_PHYSICAL_GPU gpu() {return objs[0];}
     XGL_RENDER_PASS renderPass() {return m_renderPass;}
+    XGL_FRAMEBUFFER framebuffer() {return m_framebuffer;}
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();
@@ -72,7 +73,7 @@ protected:
     XglDevice                              *m_device;
     XGL_CMD_BUFFER                          m_cmdBuffer;
     XGL_RENDER_PASS                         m_renderPass;
-    XGL_FRAMEBUFFER                         m_frameBuffer;
+    XGL_FRAMEBUFFER                         m_framebuffer;
     XGL_MEMORY_REF                          m_memRefs[5];
     XGL_DYNAMIC_RS_STATE_OBJECT             m_stateRaster;
     XGL_DYNAMIC_CB_STATE_OBJECT             m_colorBlend;
@@ -118,7 +119,7 @@ public:
     XglCommandBufferObj(XglDevice *device);
     XGL_CMD_BUFFER GetBufferHandle();
     XGL_RESULT BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pInfo);
-    XGL_RESULT BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj);
+    XGL_RESULT BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj, XGL_FRAMEBUFFER framebuffer_obj);
     XGL_RESULT BeginCommandBuffer();
     XGL_RESULT EndCommandBuffer();
     void PipelineBarrier(XGL_PIPELINE_BARRIER *barrierPtr);
@@ -131,6 +132,8 @@ public:
     void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding);
     void BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject);
+    void BeginRenderPass(XGL_RENDER_PASS renderpass, XGL_FRAMEBUFFER framebuffer);
+    void EndRenderPass(XGL_RENDER_PASS renderpass);
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
     void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, uint32_t numMemRefs);

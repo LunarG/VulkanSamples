@@ -591,7 +591,7 @@ public:
 
     // xglBeginCommandBuffer()
     void begin(const XGL_CMD_BUFFER_BEGIN_INFO *info);
-    void begin(XGL_RENDER_PASS renderpass_obj);
+    void begin(XGL_RENDER_PASS renderpass_obj, XGL_FRAMEBUFFER framebuffer_obj);
     void begin();
 
     // xglEndCommandBuffer()

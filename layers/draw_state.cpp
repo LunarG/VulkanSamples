@@ -509,10 +509,10 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const XGL_PIPELINE_
         uint32_t psoNumSamples = getNumSamples(pipeline);
         if (pCB->activeRenderPass) {
             XGL_RENDER_PASS_CREATE_INFO* pRPCI = renderPassMap[pCB->activeRenderPass];
-            XGL_FRAMEBUFFER_CREATE_INFO* pFBCI = frameBufferMap[pRPCI->framebuffer];
+            XGL_FRAMEBUFFER_CREATE_INFO* pFBCI = frameBufferMap[pCB->framebuffer];
             if (psoNumSamples != pFBCI->sampleCount) {
                 char str[1024];
-                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, (void*)pRPCI->framebuffer, pFBCI->sampleCount);
+                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, (void*)pCB->framebuffer, pFBCI->sampleCount);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
             }
         } else {
@@ -1894,7 +1894,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
             if (pBeginInfo->pNext) {
                 XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pCbGfxBI = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pBeginInfo->pNext;
                 if (XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO == pCbGfxBI->sType) {
-                    pCB->activeRenderPass = pCbGfxBI->renderPass;
+                    pCB->activeRenderPass = pCbGfxBI->renderPassContinue.renderPass;
                 }
             }
         }
@@ -2526,21 +2526,21 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const 
     return result;
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
+XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, const XGL_RENDER_PASS_BEGIN *pRenderPassBegin)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BEGINRENDERPASS);
-        pCB->activeRenderPass = renderPass;
+        pCB->activeRenderPass = pRenderPassBegin->renderPass;
+        pCB->framebuffer = pRenderPassBegin->framebuffer;
         validatePipelineState(pCB, XGL_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
-    }
-    else {
+    } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBeginRenderPass(cmdBuffer, renderPass);
+    nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
