@@ -50,6 +50,8 @@ unordered_map<XGL_DESCRIPTOR_REGION, REGION_NODE*> regionMap;
 unordered_map<XGL_DESCRIPTOR_SET, SET_NODE*> setMap;
 unordered_map<XGL_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*> layoutMap;
 unordered_map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*> cmdBufferMap;
+unordered_map<XGL_RENDER_PASS, XGL_RENDER_PASS_CREATE_INFO*> renderPassMap;
+unordered_map<XGL_FRAMEBUFFER, XGL_FRAMEBUFFER_CREATE_INFO*> frameBufferMap;
 
 static XGL_LAYER_DISPATCH_TABLE nextTable;
 static XGL_BASE_LAYER_OBJECT *pCurObj;
@@ -357,22 +359,56 @@ static XGL_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const XGL_SAMPLER sampler)
 static void initPipeline(PIPELINE_NODE* pPipeline, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
 {
     // First init create info, we'll shadow the structs as we go down the tree
-    pPipeline->pCreateTree = new XGL_GRAPHICS_PIPELINE_CREATE_INFO;
-    memcpy(pPipeline->pCreateTree, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
-    GENERIC_HEADER* pShadowTrav = (GENERIC_HEADER*)pPipeline->pCreateTree;
+    // TODO : Validate that no create info is incorrectly replicated
+    memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO));
     GENERIC_HEADER* pTrav = (GENERIC_HEADER*)pCreateInfo->pNext;
+    GENERIC_HEADER* pPrev = (GENERIC_HEADER*)&pPipeline->graphicsPipelineCI; // Hold prev ptr to tie chain of structs together
     size_t bufferSize = 0;
     XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO* pVICI = NULL;
     XGL_PIPELINE_CB_STATE_CREATE_INFO*     pCBCI = NULL;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pTmpPSSCI = NULL;
     while (pTrav) {
         switch (pTrav->sType) {
             case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                pTmpPSSCI = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
+                switch (pTmpPSSCI->shader.stage) {
+                    case XGL_SHADER_STAGE_VERTEX:
+                        pPrev->pNext = &pPipeline->vsCI;
+                        pPrev = (GENERIC_HEADER*)&pPipeline->vsCI;
+                        memcpy(&pPipeline->vsCI, pTmpPSSCI, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        break;
+                    case XGL_SHADER_STAGE_TESS_CONTROL:
+                        pPrev->pNext = &pPipeline->tcsCI;
+                        pPrev = (GENERIC_HEADER*)&pPipeline->tcsCI;
+                        memcpy(&pPipeline->tcsCI, pTmpPSSCI, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        break;
+                    case XGL_SHADER_STAGE_TESS_EVALUATION:
+                        pPrev->pNext = &pPipeline->tesCI;
+                        pPrev = (GENERIC_HEADER*)&pPipeline->tesCI;
+                        memcpy(&pPipeline->tesCI, pTmpPSSCI, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        break;
+                    case XGL_SHADER_STAGE_GEOMETRY:
+                        pPrev->pNext = &pPipeline->gsCI;
+                        pPrev = (GENERIC_HEADER*)&pPipeline->gsCI;
+                        memcpy(&pPipeline->gsCI, pTmpPSSCI, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        break;
+                    case XGL_SHADER_STAGE_FRAGMENT:
+                        pPrev->pNext = &pPipeline->fsCI;
+                        pPrev = (GENERIC_HEADER*)&pPipeline->fsCI;
+                        memcpy(&pPipeline->fsCI, pTmpPSSCI, sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        break;
+                    case XGL_SHADER_STAGE_COMPUTE:
+                        // TODO : Flag error, CS is specified through XGL_COMPUTE_PIPELINE_CREATE_INFO
+                        break;
+                    default:
+                        // TODO : Flag error
+                        break;
+                }
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO));
+                pPrev->pNext = &pPipeline->vertexInputCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->vertexInputCI;
+                memcpy((void*)&pPipeline->vertexInputCI, pTrav, sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO));
                 // Copy embedded ptrs
                 pVICI = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav;
                 pPipeline->vtxBindingCount = pVICI->bindingCount;
@@ -389,28 +425,34 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const XGL_GRAPHICS_PIPELINE_C
                 }
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_IA_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->iaStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->iaStateCI;
+                memcpy((void*)&pPipeline->iaStateCI, pTrav, sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO));
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_TESS_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->tessStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->tessStateCI;
+                memcpy((void*)&pPipeline->tessStateCI, pTrav, sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO));
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_VP_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_VP_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->vpStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->vpStateCI;
+                memcpy((void*)&pPipeline->vpStateCI, pTrav, sizeof(XGL_PIPELINE_VP_STATE_CREATE_INFO));
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_RS_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->rsStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->rsStateCI;
+                memcpy((void*)&pPipeline->rsStateCI, pTrav, sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO));
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_MS_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_MS_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->msStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->msStateCI;
+                memcpy((void*)&pPipeline->msStateCI, pTrav, sizeof(XGL_PIPELINE_MS_STATE_CREATE_INFO));
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_CB_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->cbStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->cbStateCI;
+                memcpy((void*)&pPipeline->cbStateCI, pTrav, sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO));
                 // Copy embedded ptrs
                 pCBCI = (XGL_PIPELINE_CB_STATE_CREATE_INFO*)pTrav;
                 pPipeline->attachmentCount = pCBCI->attachmentCount;
@@ -421,14 +463,14 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const XGL_GRAPHICS_PIPELINE_C
                 }
                 break;
             case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
-                pShadowTrav->pNext = new XGL_PIPELINE_DS_STATE_CREATE_INFO;
-                memcpy((void*)pShadowTrav->pNext, pTrav, sizeof(XGL_PIPELINE_DS_STATE_CREATE_INFO));
+                pPrev->pNext = &pPipeline->dsStateCI;
+                pPrev = (GENERIC_HEADER*)&pPipeline->dsStateCI;
+                memcpy((void*)&pPipeline->dsStateCI, pTrav, sizeof(XGL_PIPELINE_DS_STATE_CREATE_INFO));
                 break;
             default:
                 assert(0);
                 break;
         }
-        pShadowTrav = (GENERIC_HEADER*)pShadowTrav->pNext;
         pTrav = (GENERIC_HEADER*)pTrav->pNext;
     }
     pipelineMap[pPipeline->pipeline] = pPipeline;
@@ -437,31 +479,52 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const XGL_GRAPHICS_PIPELINE_C
 static void freePipelines()
 {
     for (unordered_map<XGL_PIPELINE, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
-        // Delete create tree
-        GENERIC_HEADER* pShadowTrav = (GENERIC_HEADER*)((*ii).second->pCreateTree);
-        GENERIC_HEADER* pShadowFree = pShadowTrav;
-        while (pShadowTrav) {
-            pShadowFree = pShadowTrav;
-            pShadowTrav = (GENERIC_HEADER*)pShadowTrav->pNext;
-            if (XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO == pShadowFree->sType) {
-                if ((*ii).second->pVertexBindingDescriptions) {
-                    delete[] (*ii).second->pVertexBindingDescriptions;
-                }
-                if ((*ii).second->pVertexAttributeDescriptions) {
-                    delete[] (*ii).second->pVertexAttributeDescriptions;
-                }
-            }
-            else if (XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO == pShadowFree->sType) {
-                // Free attachment data shadowed into pPipeline node
-                if ((*ii).second->pAttachments) {
-                    delete[] (*ii).second->pAttachments;
-                }
-            }
-            delete pShadowFree;
+        if ((*ii).second->pVertexBindingDescriptions) {
+            delete[] (*ii).second->pVertexBindingDescriptions;
+        }
+        if ((*ii).second->pVertexAttributeDescriptions) {
+            delete[] (*ii).second->pVertexAttributeDescriptions;
+        }
+        if ((*ii).second->pAttachments) {
+            delete[] (*ii).second->pAttachments;
         }
         delete (*ii).second;
     }
 }
+// For given pipeline, return number of MSAA samples, or one if MSAA disabled
+static uint32_t getNumSamples(const XGL_PIPELINE pipeline)
+{
+    PIPELINE_NODE* pPipe = pipelineMap[pipeline];
+    if (XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
+        if (pPipe->msStateCI.multisampleEnable)
+            return pPipe->msStateCI.samples;
+    }
+    return 1;
+}
+// Validate state related to the PSO
+static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const XGL_PIPELINE_BIND_POINT pipelineBindPoint, const XGL_PIPELINE pipeline)
+{
+    if (XGL_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+        // Verify that any MSAA request in PSO matches sample# in bound FB
+        uint32_t psoNumSamples = getNumSamples(pipeline);
+        if (pCB->activeRenderPass) {
+            XGL_RENDER_PASS_CREATE_INFO* pRPCI = renderPassMap[pCB->activeRenderPass];
+            XGL_FRAMEBUFFER_CREATE_INFO* pFBCI = frameBufferMap[pRPCI->framebuffer];
+            if (psoNumSamples != pFBCI->sampleCount) {
+                char str[1024];
+                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, (void*)pRPCI->framebuffer, pFBCI->sampleCount);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
+            }
+        } else {
+            // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
+            //   Verify and flag error as appropriate
+        }
+        // TODO : Add more checks here
+    } else {
+        // TODO : Validate non-gfx pipeline updates
+    }
+}
+
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Region node ptr for specified region or else NULL
@@ -1013,7 +1076,7 @@ static void printPipeline(const XGL_CMD_BUFFER cb)
             // nothing to print
         }
         else {
-            string pipeStr = xgl_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "{DS}").c_str();
+            string pipeStr = xgl_print_xgl_graphics_pipeline_create_info(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str();
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr.c_str());
         }
     }
@@ -1211,7 +1274,7 @@ static void dumpGlobalDotFile(char *outFileName)
         }
         fprintf(pOutFile, "}\n"); // close dynamicState subgraph
         fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
-        pGVstr = xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD");
+        pGVstr = xgl_gv_print_xgl_graphics_pipeline_create_info(&pPipeTrav->graphicsPipelineCI, "PSO HEAD");
         fprintf(pOutFile, "%s", pGVstr);
         free(pGVstr);
         fprintf(pOutFile, "}\n");
@@ -1241,7 +1304,7 @@ static void dumpDotFile(const XGL_CMD_BUFFER cb, string outFileName)
             }
             fprintf(pOutFile, "}\n"); // close dynamicState subgraph
             fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
-            pGVstr = xgl_gv_print_xgl_graphics_pipeline_create_info(pPipeTrav->pCreateTree, "PSO HEAD");
+            pGVstr = xgl_gv_print_xgl_graphics_pipeline_create_info(&pPipeTrav->graphicsPipelineCI, "PSO HEAD");
             fprintf(pOutFile, "%s", pGVstr);
             free(pGVstr);
             fprintf(pOutFile, "}\n");
@@ -1828,6 +1891,12 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffe
             if (CB_NEW != pCB->state)
                 resetCB(cmdBuffer);
             pCB->state = CB_UPDATE_ACTIVE;
+            if (pBeginInfo->pNext) {
+                XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pCbGfxBI = (XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pBeginInfo->pNext;
+                if (XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO == pCbGfxBI->sType) {
+                    pCB->activeRenderPass = pCbGfxBI->renderPass;
+                }
+            }
         }
         else {
             char str[1024];
@@ -1881,6 +1950,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
             loader_platform_thread_lock_mutex(&globalLock);
             g_lastBoundPipeline = pPN;
             loader_platform_thread_unlock_mutex(&globalLock);
+            validatePipelineState(pCB, pipelineBindPoint, pipeline);
         }
         else {
             char str[1024];
@@ -2429,12 +2499,56 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdSaveAtomicCounters(XGL_CMD_BUFFER cmdBuffer, 
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(XGL_DEVICE device, const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo, XGL_FRAMEBUFFER* pFramebuffer)
+{
+    XGL_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    if (XGL_SUCCESS == result) {
+        // Shadow create info and store in map
+        XGL_FRAMEBUFFER_CREATE_INFO* localFBCI = new XGL_FRAMEBUFFER_CREATE_INFO(*pCreateInfo);
+        if (pCreateInfo->pColorAttachments) {
+            localFBCI->pColorAttachments = new XGL_COLOR_ATTACHMENT_BIND_INFO[localFBCI->colorAttachmentCount];
+            memcpy((void*)localFBCI->pColorAttachments, pCreateInfo->pColorAttachments, localFBCI->colorAttachmentCount*sizeof(XGL_COLOR_ATTACHMENT_BIND_INFO));
+        }
+        if (pCreateInfo->pDepthStencilAttachment) {
+            localFBCI->pDepthStencilAttachment = new XGL_DEPTH_STENCIL_BIND_INFO[localFBCI->colorAttachmentCount];
+            memcpy((void*)localFBCI->pDepthStencilAttachment, pCreateInfo->pDepthStencilAttachment, localFBCI->colorAttachmentCount*sizeof(XGL_DEPTH_STENCIL_BIND_INFO));
+        }
+        frameBufferMap[*pFramebuffer] = localFBCI;
+    }
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass)
+{
+    XGL_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    if (XGL_SUCCESS == result) {
+        // Shadow create info and store in map
+        XGL_RENDER_PASS_CREATE_INFO* localRPCI = new XGL_RENDER_PASS_CREATE_INFO(*pCreateInfo);
+        if (pCreateInfo->pColorLoadOps) {
+            localRPCI->pColorLoadOps = new XGL_ATTACHMENT_LOAD_OP[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadOps, pCreateInfo->pColorLoadOps, localRPCI->colorAttachmentCount*sizeof(XGL_ATTACHMENT_LOAD_OP));
+        }
+        if (pCreateInfo->pColorStoreOps) {
+            localRPCI->pColorStoreOps = new XGL_ATTACHMENT_STORE_OP[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorStoreOps, pCreateInfo->pColorStoreOps, localRPCI->colorAttachmentCount*sizeof(XGL_ATTACHMENT_STORE_OP));
+        }
+        if (pCreateInfo->pColorLoadClearValues) {
+            localRPCI->pColorLoadClearValues = new XGL_CLEAR_COLOR[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(XGL_CLEAR_COLOR));
+        }
+        renderPassMap[*pRenderPass] = localRPCI;
+    }
+    return result;
+}
+
 XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BEGINRENDERPASS);
+        pCB->activeRenderPass = renderPass;
+        validatePipelineState(pCB, XGL_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
     }
     else {
         char str[1024];
@@ -2450,6 +2564,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_R
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_ENDRENDERPASS);
+        pCB->activeRenderPass = 0;
     }
     else {
         char str[1024];
@@ -2705,6 +2820,10 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCmdLoadAtomicCounters;
     if (!strcmp(funcName, "xglCmdSaveAtomicCounters"))
         return (void*) xglCmdSaveAtomicCounters;
+    if (!strcmp(funcName, "xglCreateFramebuffer"))
+        return (void*) xglCreateFramebuffer;
+    if (!strcmp(funcName, "xglCreateRenderPass"))
+        return (void*) xglCreateRenderPass;
     if (!strcmp(funcName, "xglCmdBeginRenderPass"))
         return (void*) xglCmdBeginRenderPass;
     if (!strcmp(funcName, "xglCmdEndRenderPass"))

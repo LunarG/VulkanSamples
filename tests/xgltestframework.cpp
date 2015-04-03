@@ -107,7 +107,11 @@ XglTestFramework::~XglTestFramework()
 bool XglTestFramework::m_show_images = false;
 bool XglTestFramework::m_save_images = false;
 bool XglTestFramework::m_compare_images = false;
+#ifdef _WIN32
+bool XglTestFramework::m_use_spv = false;
+#else
 bool XglTestFramework::m_use_spv = true;
+#endif
 int XglTestFramework::m_width = 0;
 int XglTestFramework::m_height = 0;
 std::list<XglTestImageRecord> XglTestFramework::m_images;
@@ -177,7 +181,11 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
 {
     string filename;
     XGL_RESULT err;
-        int x, y;
+    int x, y;
+    XglImage displayImage(image->device());
+
+    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, XGL_LINEAR_TILING);
+    displayImage.CopyImage(*image);
 
     filename.append(basename);
     filename.append(".ppm");
@@ -194,36 +202,33 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
     ASSERT_XGL_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
 
-    const char *ptr;
-
-    err = xglMapMemory( image->memory(), 0, (void **) &ptr );
-    ASSERT_XGL_SUCCESS( err );
-
+    char *ptr;
+    ptr = (char *) displayImage.map();
     ptr += sr_layout.offset;
 
     ofstream file (filename.c_str());
     ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
 
     file << "P6\n";
-    file << image->width() << "\n";
-    file << image->height() << "\n";
+    file << displayImage.width() << "\n";
+    file << displayImage.height() << "\n";
     file << 255 << "\n";
 
-    for (y = 0; y < image->height(); y++) {
+    for (y = 0; y < displayImage.height(); y++) {
         const int *row = (const int *) ptr;
         int swapped;
 
-        if (image->format() == XGL_FMT_B8G8R8A8_UNORM)
+        if (displayImage.format() == XGL_FMT_B8G8R8A8_UNORM)
         {
-            for (x = 0; x < image->width(); x++) {
+            for (x = 0; x < displayImage.width(); x++) {
                 swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
                 file.write((char *) &swapped, 3);
                 row++;
             }
         }
-        else if (image->format() == XGL_FMT_R8G8B8A8_UNORM)
+        else if (displayImage.format() == XGL_FMT_R8G8B8A8_UNORM)
         {
-            for (x = 0; x < image->width(); x++) {
+            for (x = 0; x < displayImage.width(); x++) {
                 file.write((char *) row, 3);
                 row++;
             }
@@ -237,9 +242,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
     }
 
     file.close();
-
-    err = xglUnmapMemory( image->memory() );
-    ASSERT_XGL_SUCCESS( err );
+    displayImage.unmap();
 }
 
 void XglTestFramework::Compare(const char *basename, XglImage *image )
@@ -411,10 +414,9 @@ void  TestFrameworkXglPresent::Display()
 {
     XGL_RESULT err;
 
-    XGL_WSI_X11_PRESENT_INFO present = {
-        .destWindow = m_window,
-        .srcImage = m_display_image->m_presentableImage,
-    };
+    XGL_WSI_X11_PRESENT_INFO present = {};
+    present.destWindow = m_window;
+    present.srcImage = m_display_image->m_presentableImage;
 
     xcb_change_property (environment->m_connection,
                          XCB_PROP_MODE_REPLACE,
@@ -434,7 +436,7 @@ void  TestFrameworkXglPresent::Display()
 
 void  TestFrameworkXglPresent::HandleEvent(xcb_generic_event_t *event)
 {
-    u_int8_t event_code = event->response_type & 0x7f;
+    uint8_t event_code = event->response_type & 0x7f;
     switch (event_code) {
     case XCB_EXPOSE:
         Display();  // TODO: handle resize
@@ -506,15 +508,12 @@ void TestFrameworkXglPresent::CreatePresentableImages()
 
     for (int x=0; x < m_images.size(); x++)
     {
-        const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {
-            .format = XGL_FMT_B8G8R8A8_UNORM,
-            .usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            .extent = {
-                .width = m_display_image->m_width,
-                .height = m_display_image->m_height,
-            },
-            .flags = 0,
-        };
+        XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {};
+        presentable_image_info.format = XGL_FMT_B8G8R8A8_UNORM;
+        presentable_image_info.usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        presentable_image_info.extent.width = m_display_image->m_width;
+        presentable_image_info.extent.height = m_display_image->m_height;
+        presentable_image_info.flags = 0;
 
         void *dest_ptr;
 
@@ -571,7 +570,7 @@ void  TestFrameworkXglPresent::InitPresentFramework(std::list<XglTestImageRecord
     m_images = imagesIn;
 }
 
-void  TestFrameworkXglPresent::CreateWindow()
+void  TestFrameworkXglPresent::CreateMyWindow()
 {
     uint32_t value_mask, value_list[32];
 
@@ -625,7 +624,7 @@ void XglTestFramework::Finish()
 
         xglPresent.InitPresentFramework(m_images);
         xglPresent.CreatePresentableImages();
-        xglPresent.CreateWindow();
+        xglPresent.CreateMyWindow();
         xglPresent.Run();
         xglPresent.TearDown();
     }

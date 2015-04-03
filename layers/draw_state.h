@@ -48,7 +48,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
     DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
-    DRAWSTATE_INVALID_UPDATE_STRUCT             // Struct in DS Update tree is of invalid type
+    DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
+    DRAWSTATE_NUM_SAMPLES_MISMATCH              // Number of samples in bound PSO does not match number in FB of current RenderPass
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -74,7 +75,25 @@ typedef struct _GENERIC_HEADER {
 
 typedef struct _PIPELINE_NODE {
     XGL_PIPELINE           pipeline;
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO     *pCreateTree; // Ptr to shadow of data in create tree
+
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO     graphicsPipelineCI;
+    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vertexInputCI;
+    XGL_PIPELINE_IA_STATE_CREATE_INFO     iaStateCI;
+    XGL_PIPELINE_TESS_STATE_CREATE_INFO   tessStateCI;
+    XGL_PIPELINE_VP_STATE_CREATE_INFO     vpStateCI;
+    XGL_PIPELINE_RS_STATE_CREATE_INFO     rsStateCI;
+    XGL_PIPELINE_MS_STATE_CREATE_INFO     msStateCI;
+    XGL_PIPELINE_CB_STATE_CREATE_INFO     cbStateCI;
+    XGL_PIPELINE_DS_STATE_CREATE_INFO     dsStateCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vsCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO tcsCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO tesCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO gsCI;
+    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fsCI;
+    // Compute shader is include in XGL_COMPUTE_PIPELINE_CREATE_INFO
+    XGL_COMPUTE_PIPELINE_CREATE_INFO      computePipelineCI;
+
+    XGL_GRAPHICS_PIPELINE_CREATE_INFO*      pCreateTree; // Ptr to shadow of data in create tree
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
     XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
@@ -217,6 +236,7 @@ typedef struct _GLOBAL_CB_NODE {
     uint32_t                        lastVtxBinding;
     DYNAMIC_STATE_NODE*             lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_DESCRIPTOR_SET              lastBoundDescriptorSet;
+    XGL_RENDER_PASS                 activeRenderPass;
 } GLOBAL_CB_NODE;
 
 //prototypes for extension functions

@@ -659,8 +659,14 @@ int main(int argc, char **argv)
     XGL_RESULT err;
 
     err = xglCreateInstance(&app_info, NULL, &inst);
-    if (err)
+    if (err == XGL_ERROR_INCOMPATIBLE_DRIVER) {
+        printf("Cannot find a compatible Vulkan installable client driver "
+               "(ICD).\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    } else if (err) {
         ERR_EXIT(err);
+    }
     err = xglEnumerateGpus(inst, MAX_GPUS, &gpu_count, objs);
     if (err)
         ERR_EXIT(err);

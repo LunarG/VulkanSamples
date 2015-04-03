@@ -609,7 +609,7 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
 
     XGLTriangleTest(vertShaderText, fragShaderText, true);
 }
-
+#ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(XglRenderTest, SPV_XGLTriangle)
 {
     bool saved_use_spv = XglTestFramework::m_use_spv;
@@ -653,7 +653,7 @@ TEST_F(XglRenderTest, SPV_XGLTriangle)
 
     XglTestFramework::m_use_spv = saved_use_spv;
 }
-
+#endif
 TEST_F(XglRenderTest, GreenTriangle)
 {
     static const char *vertShaderText =
@@ -676,7 +676,7 @@ TEST_F(XglRenderTest, GreenTriangle)
 
     XGLTriangleTest(vertShaderText, fragShaderText, false);
 }
-
+#ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(XglRenderTest, SPV_GreenTriangle)
 {
     bool saved_use_spv = XglTestFramework::m_use_spv;
@@ -703,7 +703,7 @@ TEST_F(XglRenderTest, SPV_GreenTriangle)
     XGLTriangleTest(vertShaderText, fragShaderText, false);
     XglTestFramework::m_use_spv = saved_use_spv;
 }
-
+#endif
 TEST_F(XglRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =
@@ -861,6 +861,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,0);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
 
     m_renderTargetCount = 2;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -959,6 +960,9 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer);
+    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &indexBuffer);
+
 
     m_memoryRefManager.AddMemoryRef(&meshBuffer);
     m_memoryRefManager.AddMemoryRef(&indexBuffer);
@@ -1522,6 +1526,7 @@ TEST_F(XglRenderTest, MixTriangle)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_memoryRefManager.AddRTMemoryRefs(m_renderTargets, m_renderTargetCount);
@@ -2192,12 +2197,12 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     XglSamplerObj sampler2(m_device);
     XglSamplerObj sampler3(m_device);
 
-    XglTextureObj texture1(m_device); // Red
-    texture1.ChangeColors(0xffff0000,0xffff0000);
-    XglTextureObj texture2(m_device); // Green
-    texture2.ChangeColors(0xff00ff00,0xff00ff00);
-    XglTextureObj texture3(m_device); // Blue
-    texture3.ChangeColors(0xff0000ff,0xff0000ff);
+    uint32_t tex_colors[2] = { 0xffff0000, 0xffff0000 };
+    XglTextureObj texture1(m_device, tex_colors); // Red
+    tex_colors[0] = 0xff00ff00; tex_colors[1] = 0xff00ff00;
+    XglTextureObj texture2(m_device, tex_colors); // Green
+    tex_colors[0] = 0xff0000ff; tex_colors[1] = 0xff0000ff;
+    XglTextureObj texture3(m_device, tex_colors); // Blue
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
@@ -2588,6 +2593,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
+    // descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &meshBuffer); // TODO: Why does this break images??
     descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &mvpBuffer);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
@@ -2714,21 +2720,21 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
     XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
+    uint32_t tex_colors[2] = { 0xff800000, 0xff800000 };
     XglSamplerObj sampler0(m_device);
-    XglTextureObj texture0(m_device); // Light Red
-    texture0.ChangeColors(0xff800000,0xff800000);
+    XglTextureObj texture0(m_device, tex_colors); // Light Red
+    tex_colors[0] = 0xff000080; tex_colors[1] = 0xff000080;
     XglSamplerObj sampler2(m_device);
-    XglTextureObj texture2(m_device); // Light Blue
-    texture2.ChangeColors(0xff000080,0xff000080);
+    XglTextureObj texture2(m_device, tex_colors); // Light Blue
+    tex_colors[0] = 0xff008000; tex_colors[1] = 0xff008000;
     XglSamplerObj sampler4(m_device);
-    XglTextureObj texture4(m_device); // Light Green
-    texture4.ChangeColors(0xff008000,0xff008000);
+    XglTextureObj texture4(m_device, tex_colors); // Light Green
 
     // NOTE:  Bindings 1,3,5,7,8,9,11,12,14,16 work for this sampler, but 6 does not!!!
     // TODO:  Get back here ASAP and understand why.
+    tex_colors[0] = 0xffff00ff; tex_colors[1] = 0xffff00ff;
     XglSamplerObj sampler7(m_device);
-    XglTextureObj texture7(m_device); // Red and Blue
-    texture7.ChangeColors(0xffff00ff,0xffff00ff);
+    XglTextureObj texture7(m_device, tex_colors); // Red and Blue
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
@@ -2834,19 +2840,18 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
     XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
+    uint32_t tex_colors[2] = { 0xff800000, 0xff800000 };
     XglSamplerObj sampler0(m_device);
-    XglTextureObj texture0(m_device); // Light Red
-    texture0.ChangeColors(0xff800000,0xff800000);
+    XglTextureObj texture0(m_device, tex_colors); // Light Red
+    tex_colors[0] = 0xff000080; tex_colors[1] = 0xff000080;
     XglSamplerObj sampler2(m_device);
-    XglTextureObj texture2(m_device); // Light Blue
-    texture2.ChangeColors(0xff000080,0xff000080);
+    XglTextureObj texture2(m_device, tex_colors); // Light Blue
+    tex_colors[0] = 0xff008000; tex_colors[1] = 0xff008000;
     XglSamplerObj sampler4(m_device);
-    XglTextureObj texture4(m_device); // Light Green
-    texture4.ChangeColors(0xff008000,0xff008000);
+    XglTextureObj texture4(m_device, tex_colors); // Light Green
+    tex_colors[0] = 0xffff00ff; tex_colors[1] = 0xffff00ff;
     XglSamplerObj sampler7(m_device);
-    XglTextureObj texture7(m_device); // Red and Blue
-    texture7.ChangeColors(0xffff00ff,0xffff00ff);
-
+    XglTextureObj texture7(m_device, tex_colors); // Red and Blue
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);

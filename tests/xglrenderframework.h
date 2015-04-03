@@ -210,13 +210,26 @@ public:
         return mems.empty() ? XGL_NULL_HANDLE : mems[0];
     }
 
-
+    XGL_RESULT CopyImage(XglImage &fromImage);
     XGL_IMAGE image() const
     {
         return obj();
     }
-    XGL_COLOR_ATTACHMENT_VIEW targetView()const
+    XGL_COLOR_ATTACHMENT_VIEW targetView()
     {
+        if (!m_targetView.initialized())
+        {
+            XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
+                XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+                XGL_NULL_HANDLE,
+                obj(),
+                XGL_FMT_B8G8R8A8_UNORM,
+                0,
+                0,
+                1
+            };
+            m_targetView.init(*m_device, createView);
+        }
         return m_targetView.obj();
     }
 
@@ -232,6 +245,10 @@ public:
     {
         return extent().height;
     }
+    XglDevice* device() const
+    {
+        return m_device;
+    }
 
     XGL_RESULT MapMemory(void** ptr);
     XGL_RESULT UnmapMemory();
@@ -243,12 +260,12 @@ protected:
     XGL_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
 };
 
-class XglTextureObj : public xgl_testing::Image
+class XglTextureObj : public XglImage
 {
 public:
-    XglTextureObj(XglDevice *device);
-    void ChangeColors(uint32_t color1, uint32_t color2);
+    XglTextureObj(XglDevice *device, uint32_t *colors = NULL);
     XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
+
 
 protected:
     XglDevice                 *m_device;

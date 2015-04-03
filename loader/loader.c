@@ -179,9 +179,7 @@ static char *loader_get_registry_and_env(const char *env_var,
     registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
                                               "Software\\XGL",
                                               registry_value);
-    if (registry_str) {
-        registry_len = strlen(registry_str);
-    }
+    registry_len = (registry_str) ? strlen(registry_str) : 0;
 
     rtn_len = env_len + registry_len + 1;
     if (rtn_len <= 2) {
@@ -207,7 +205,9 @@ static char *loader_get_registry_and_env(const char *env_var,
         _snprintf(rtn_str, rtn_len, "%s", registry_str);
     }
 
-    free(registry_str);
+    if (registry_str) {
+      free(registry_str);
+    }
 
     return(rtn_str);
 }

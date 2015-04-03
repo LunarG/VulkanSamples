@@ -172,7 +172,15 @@ void XglImageTest::CreateImage(uint32_t w, uint32_t h)
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    if (image_fmt.linearTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
+        imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    }
+    else if (image_fmt.optimalTilingFeatures & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
+        imageCreateInfo.tiling = XGL_OPTIMAL_TILING;
+    }
+    else {
+        ASSERT_TRUE(false) << "Cannot find supported tiling format - Exiting";
+    }
 
     // Image usage flags
     //    typedef enum _XGL_IMAGE_USAGE_FLAGS
@@ -197,10 +205,10 @@ void XglImageTest::CreateImage(uint32_t w, uint32_t h)
     size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
-        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = NULL,
-    };
+    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {};
+    img_alloc.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
+    img_alloc.pNext = NULL;
+
     XGL_MEMORY_ALLOC_INFO mem_info = {};
     mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = &img_alloc;

@@ -1323,7 +1323,14 @@ static void demo_init_xgl(struct demo *demo)
     uint32_t i;
 
     err = xglCreateInstance(&app, NULL, &demo->inst);
-    assert(!err);
+    if (err == XGL_ERROR_INCOMPATIBLE_DRIVER) {
+        printf("Cannot find a compatible Vulkan installable client driver "
+               "(ICD).\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    } else {
+        assert(!err);
+    }
     err = xglEnumerateGpus(demo->inst, 1, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 
@@ -1353,6 +1360,12 @@ static void demo_init_connection(struct demo *demo)
     int scr;
 
     demo->connection = xcb_connect(NULL, &scr);
+    if (demo->connection == NULL) {
+        printf("Cannot find a compatible Vulkan installable client driver "
+               "(ICD).\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
 
     setup = xcb_get_setup(demo->connection);
     iter = xcb_setup_roots_iterator(setup);

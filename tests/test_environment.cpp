@@ -92,11 +92,10 @@ void Environment::X11SetUp()
 
     m_screen = iter.data;
 
-    const XGL_WSI_X11_CONNECTION_INFO connection_info = {
-        .pConnection = m_connection,
-        .root = m_screen->root,
-        .provider = 0,
-    };
+    XGL_WSI_X11_CONNECTION_INFO connection_info = {};
+    connection_info.pConnection = m_connection;
+    connection_info.root = m_screen->root;
+    connection_info.provider = 0;
 
     err = xglWsiX11AssociateConnection(gpus[0], &connection_info);
     assert(!err);

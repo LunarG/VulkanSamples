@@ -124,7 +124,7 @@ public:
 
     void Run();
     void InitPresentFramework(std::list<XglTestImageRecord> &imagesIn);
-    void CreateWindow();
+    void CreateMyWindow();
     void CreatePresentableImages();
     void TearDown();
 
