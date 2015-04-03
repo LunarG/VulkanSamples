@@ -356,7 +356,9 @@ class StructWrapperGen:
         self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
         self.vhg = CommonFileGen(self.validate_helper_filename)
         self.size_helper_filename = os.path.join(out_dir, self.api+"_struct_size_helper.h")
+        self.size_helper_c_filename = os.path.join(out_dir, self.api+"_struct_size_helper.c")
         self.size_helper_gen = CommonFileGen(self.size_helper_filename)
+        self.size_helper_c_gen = CommonFileGen(self.size_helper_c_filename)
         #print(self.header_filename)
         self.header_txt = ""
         self.definition_txt = ""
@@ -428,8 +430,42 @@ class StructWrapperGen:
         self.size_helper_gen.setBody(self._generateSizeHelperFunctions())
         self.size_helper_gen.generate()
 
+    def generateSizeHelperC(self):
+        print("Generating struct size helper c")
+        self.size_helper_c_gen.setCopyright(self._generateCopyright())
+        self.size_helper_c_gen.setHeader(self._generateSizeHelperHeaderC())
+        self.size_helper_c_gen.setBody(self._generateSizeHelperFunctionsC())
+        self.size_helper_c_gen.generate()
+
     def _generateCopyright(self):
-        return "//This is the copyright\n"
+        copyright = []
+        copyright.append('/* THIS FILE IS GENERATED.  DO NOT EDIT. */');
+        copyright.append('');
+        copyright.append('/*');
+        copyright.append(' * XGL');
+        copyright.append(' *');
+        copyright.append(' * Copyright (C) 2014 LunarG, Inc.');
+        copyright.append(' *');
+        copyright.append(' * Permission is hereby granted, free of charge, to any person obtaining a');
+        copyright.append(' * copy of this software and associated documentation files (the "Software"),');
+        copyright.append(' * to deal in the Software without restriction, including without limitation');
+        copyright.append(' * the rights to use, copy, modify, merge, publish, distribute, sublicense,');
+        copyright.append(' * and/or sell copies of the Software, and to permit persons to whom the');
+        copyright.append(' * Software is furnished to do so, subject to the following conditions:');
+        copyright.append(' *');
+        copyright.append(' * The above copyright notice and this permission notice shall be included');
+        copyright.append(' * in all copies or substantial portions of the Software.');
+        copyright.append(' *');
+        copyright.append(' * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR');
+        copyright.append(' * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,');
+        copyright.append(' * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL');
+        copyright.append(' * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER');
+        copyright.append(' * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING');
+        copyright.append(' * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER');
+        copyright.append(' * DEALINGS IN THE SOFTWARE.');
+        copyright.append(' */');
+        copyright.append('');
+        return "\n".join(copyright)
 
     def _generateCppHeader(self):
         header = []
@@ -978,12 +1014,17 @@ class StructWrapperGen:
 
     def _generateSizeHelperFunctions(self):
         sh_funcs = []
-        # We do two passes, first pass just generates prototypes for all the functsions
+        # just generates prototypes for all the functions
         for s in sorted(self.struct_dict):
             sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
-        sh_funcs.append('\n')
+        return "\n".join(sh_funcs)
+
+
+    def _generateSizeHelperFunctionsC(self):
+        sh_funcs = []
+        # generate function definitions
         for s in sorted(self.struct_dict):
-            skip_list = [] # Used when struct elements need to be skipped b/c size already accounted for 
+            skip_list = [] # Used when struct elements need to be skipped b/c size already accounted for
             sh_funcs.append('size_t %s(const %s* pStruct)\n{' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
             indent = '    '
             sh_funcs.append('%ssize_t structSize = 0;' % (indent))
@@ -1088,6 +1129,15 @@ class StructWrapperGen:
         header.append("size_t get_struct_chain_size(const void* pStruct);\n")
         header.append("size_t get_dynamic_struct_size(const void* pStruct);\n")
         return "".join(header)
+
+    def _generateSizeHelperHeaderC(self):
+        header = []
+        header.append('#include "xgl_struct_size_helper.h"')
+        header.append('#include <string.h>')
+        header.append('#include <assert.h>')
+        header.append('\n// Function definitions\n')
+        return "\n".join(header)
+
 
     def _generateHeader(self):
         header = []
@@ -1547,8 +1597,9 @@ def main(argv=None):
         sw.generateStringHelperCpp()
         sw.set_no_addr(False)
         sw.generateStringHelperCpp()
-        sw.set_include_headers(["stdio.h", "stdlib.h"])
+        sw.set_include_headers(["stdio.h", "stdlib.h", "xgl.h"])
         sw.generateSizeHelper()
+        sw.generateSizeHelperC()
     if opts.gen_cmake:
         cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
         cmg.generate()
