@@ -913,8 +913,9 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
     static const char *vertShaderText =
             "#version 130\n"
-            "in vec4 pos;\n"
-            "in vec2 attr;\n"
+            "#extension GL_ARB_explicit_attrib_location : require\n"
+            "layout(location = 0) in vec4 pos;\n"
+            "layout(location = 1) in vec2 attr;\n"
             "out vec2 texcoord;\n"
             "void main() {\n"
             "   texcoord = attr;\n"
