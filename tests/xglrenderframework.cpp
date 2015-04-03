@@ -365,11 +365,27 @@ XglImage::XglImage(XglDevice *dev)
     m_imageInfo.layout = XGL_IMAGE_LAYOUT_GENERAL;
 }
 
+static bool IsCompatible(XGL_FLAGS usage, XGL_FLAGS features)
+{
+    if ((usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
+            !(features & XGL_FORMAT_IMAGE_SHADER_READ_BIT))
+        return false;
+    if ((usage & XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT) &&
+            !(features & XGL_FORMAT_IMAGE_SHADER_WRITE_BIT))
+        return false;
+    return true;
+}
+
 void XglImage::init(uint32_t w, uint32_t h,
                XGL_FORMAT fmt, XGL_FLAGS usage,
-               XGL_IMAGE_TILING tiling)
+               XGL_IMAGE_TILING requested_tiling)
 {
     uint32_t mipCount;
+
+    XGL_FORMAT_PROPERTIES image_fmt;
+    XGL_IMAGE_TILING tiling;
+    XGL_RESULT err;
+    size_t size;
 
     mipCount = 0;
 
@@ -380,6 +396,28 @@ void XglImage::init(uint32_t w, uint32_t h,
         _w >>= 1;
         _h >>= 1;
         mipCount++;
+    }
+
+    size = sizeof(image_fmt);
+    err = xglGetFormatInfo(m_device->obj(), fmt,
+        XGL_INFO_TYPE_FORMAT_PROPERTIES,
+        &size, &image_fmt);
+    ASSERT_XGL_SUCCESS(err);
+
+    if (requested_tiling == XGL_LINEAR_TILING) {
+        if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {
+            tiling = XGL_LINEAR_TILING;
+        } else if (IsCompatible(usage, image_fmt.optimalTilingFeatures)) {
+            tiling = XGL_OPTIMAL_TILING;
+        } else {
+            ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
+        }
+    } else if (IsCompatible(usage, image_fmt.optimalTilingFeatures)) {
+        tiling = XGL_OPTIMAL_TILING;
+    } else if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {
+        tiling = XGL_LINEAR_TILING;
+    } else {
+         ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
     }
 
     XGL_IMAGE_CREATE_INFO imageCreateInfo = xgl_testing::Image::create_info();
