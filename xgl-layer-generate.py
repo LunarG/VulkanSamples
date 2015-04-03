@@ -31,6 +31,10 @@ import os
 import xgl
 import xgl_helper
 
+def generate_get_proc_addr_check(name):
+    return "    if (!%s || %s[0] != 'x' || %s[1] != 'g' || %s[2] != 'l')\n" \
+           "        return NULL;" % ((name,) * 4)
+
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
@@ -200,72 +204,7 @@ class Subcommand(object):
         funcs = []
         for proto in self.protos:
             if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
-                if "Generic" == layer:
-                    if 'DbgRegisterMsgCallback' == proto.name:
-                        funcs.append(self._gen_layer_dbg_callback_register())
-                        continue
-                    if 'DbgUnregisterMsgCallback' == proto.name:
-                        funcs.append(self._gen_layer_dbg_callback_unregister())
-                        continue
-                    decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-                    param0_name = proto.params[0].name
-                    ret_val = ''
-                    stmt = ''
-                    if proto.ret != "void":
-                        ret_val = "XGL_RESULT result = "
-                        stmt = "    return result;\n"
-                    if 'WsiX11AssociateConnection' == proto.name:
-                        funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-                    if proto.name == "EnumerateLayers":
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    char str[1024];\n'
-                                 '    if (gpu != NULL) {\n'
-                                 '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '        sprintf(str, "At start of layered %s\\n");\n'
-                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                                 '        pCurObj = gpuw;\n'
-                                 '        loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '        %snextTable.%s;\n'
-                                 '        sprintf(str, "Completed layered %s\\n");\n'
-                                 '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                                 '        fflush(stdout);\n'
-                                 '    %s'
-                                 '    } else {\n'
-                                 '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                                 '            return XGL_ERROR_INVALID_POINTER;\n'
-                                 '        // This layer compatible with all GPUs\n'
-                                 '        *pOutLayerCount = 1;\n'
-                                 '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                                 '        return XGL_SUCCESS;\n'
-                                 '    }\n'
-                                     '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt, layer_name))
-                    elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    %snextTable.%s;\n'
-                                 '%s'
-                                 '}' % (qual, decl, ret_val, proto.c_call(), stmt))
-                    else:
-                        c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
-                        funcs.append('%s%s\n'
-                                 '{\n'
-                                 '    char str[1024];'
-                                 '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                                 '    sprintf(str, "At start of layered %s\\n");\n'
-                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                                 '    pCurObj = gpuw;\n'
-                                 '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                                 '    %snextTable.%s;\n'
-                                 '    sprintf(str, "Completed layered %s\\n");\n'
-                                 '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                                 '    fflush(stdout);\n'
-                                 '%s'
-                                 '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt))
-                    if 'WsiX11QueuePresent' == proto.name:
-                        funcs.append("#endif")
-                elif "APIDumpCpp" in layer:
+                if "APIDumpCpp" in layer:
                     decl = proto.c_func(prefix="xgl", attr="XGLAPI")
                     param0_name = proto.params[0].name
                     ret_val = ''
@@ -731,6 +670,57 @@ class Subcommand(object):
 
         return "\n\n".join(funcs)
 
+    def _generate_dispatch_entrypoints_with_func(self, intercept_func, qual="", layer="Generic", no_addr=False):
+        if qual:
+            qual += " "
+
+        layer_name = layer
+        if no_addr:
+            layer_name = "%sNoAddr" % layer
+            if 'Cpp' in layer_name:
+                layer_name = "APIDumpNoAddrCpp"
+        funcs = []
+        intercepted = []
+        for proto in self.protos:
+            if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
+                intercept = intercept_func(proto, qual, layer_name, no_addr)
+                if intercept is None:
+                    # fill in default intercept for certain entrypoints
+                    if 'DbgRegisterMsgCallback' == proto.name:
+                        intercept = self._gen_layer_dbg_callback_register()
+                    if 'DbgUnregisterMsgCallback' == proto.name:
+                        intercept = self._gen_layer_dbg_callback_unregister()
+                if intercept is not None:
+                    funcs.append(intercept)
+                    intercepted.append(proto)
+
+        prefix="xgl"
+        lookups = []
+        for proto in intercepted:
+            if 'WsiX11' in proto.name:
+                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+            lookups.append("    return (void*) %s%s;" %
+                    (prefix, proto.name))
+            if 'WsiX11' in proto.name:
+                lookups.append("#endif")
+
+        # add customized layer_intercept_proc
+        body = []
+        body.append("static inline void* layer_intercept_proc(const char *name)")
+        body.append("{")
+        body.append(generate_get_proc_addr_check("name"))
+        body.append("")
+        body.append("    name += 3;")
+        body.append("    %s" % "\n    ".join(lookups))
+        body.append("")
+        body.append("    return NULL;")
+        body.append("}")
+        funcs.append("\n".join(body))
+
+        return "\n\n".join(funcs)
+
+
     def _generate_extensions(self):
         exts = []
         exts.append('uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)')
@@ -766,8 +756,11 @@ class Subcommand(object):
 
         return "\n".join(exts)
 
-    def _generate_layer_gpa_function(self, layer, extensions=[]):
-        func_body = ["#include \"xgl_generic_intercept_proc_helper.h\""]
+    def _generate_layer_gpa_function(self, layer, extensions=[], no_header=False):
+        if no_header:
+            func_body = []
+        else:
+            func_body = ["#include \"xgl_generic_intercept_proc_helper.h\""]
         func_body.append("XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)\n"
                          "{\n"
                          "    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
@@ -864,10 +857,76 @@ class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
         return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
+    def generate_intercept(self, proto, qual, layer_name, no_addr):
+        if 'DbgRegisterMsgCallback' == proto.name:
+            return self._gen_layer_dbg_callback_register()
+        if 'DbgUnregisterMsgCallback' == proto.name:
+            return self._gen_layer_dbg_callback_unregister()
+        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        param0_name = proto.params[0].name
+        ret_val = ''
+        stmt = ''
+        funcs = []
+        if proto.ret != "void":
+            ret_val = "XGL_RESULT result = "
+            stmt = "    return result;\n"
+        if 'WsiX11AssociateConnection' == proto.name:
+            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+        if proto.name == "EnumerateLayers":
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    char str[1024];\n'
+                     '    if (gpu != NULL) {\n'
+                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        sprintf(str, "At start of layered %s\\n");\n'
+                     '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '        pCurObj = gpuw;\n'
+                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        %snextTable.%s;\n'
+                     '        sprintf(str, "Completed layered %s\\n");\n'
+                     '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '        fflush(stdout);\n'
+                     '    %s'
+                     '    } else {\n'
+                     '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
+                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '        // This layer compatible with all GPUs\n'
+                     '        *pOutLayerCount = 1;\n'
+                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
+                     '        return XGL_SUCCESS;\n'
+                     '    }\n'
+                         '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt, layer_name))
+        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    %snextTable.%s;\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
+        else:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    char str[1024];'
+                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    sprintf(str, "At start of layered %s\\n");\n'
+                     '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    pCurObj = gpuw;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '    sprintf(str, "Completed layered %s\\n");\n'
+                     '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    fflush(stdout);\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, proto.name, layer_name, ret_val, c_call, proto.name, stmt))
+        if 'WsiX11QueuePresent' == proto.name:
+            funcs.append("#endif")
+        return "\n\n".join(funcs)
+
     def generate_body(self):
         body = [self._generate_layer_initialization("Generic", True),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT", "Generic"),
-                self._generate_layer_gpa_function("Generic")]
+                self._generate_dispatch_entrypoints_with_func(self.generate_intercept, "XGL_LAYER_EXPORT", "Generic"),
+                self._generate_layer_gpa_function("Generic", no_header=True)]
 
         return "\n\n".join(body)
 
