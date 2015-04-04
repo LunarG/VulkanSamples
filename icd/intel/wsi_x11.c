@@ -42,8 +42,11 @@
 #include "queue.h"
 #include "wsi.h"
 
-struct intel_wsi_x11_window {
-    xcb_window_t window_id;
+struct intel_x11_swap_chain {
+    struct intel_handle handle;
+
+    xcb_connection_t *c;
+    xcb_window_t window;
 
     xcb_present_event_t present_special_event_id;
     xcb_special_event_t *present_special_event;
@@ -57,7 +60,7 @@ struct intel_wsi_x11_window {
         uint64_t msc;
     } remote;
 
-    struct intel_wsi_x11_window *next;
+    struct intel_x11_swap_chain *next;
 };
 
 struct intel_wsi_x11 {
@@ -73,7 +76,7 @@ struct intel_wsi_x11 {
 
     int fd;
 
-    struct intel_wsi_x11_window *windows;
+    struct intel_x11_swap_chain *swap_chains;
 };
 
 struct intel_x11_img_data {
@@ -83,8 +86,7 @@ struct intel_x11_img_data {
 };
 
 struct intel_x11_fence_data {
-    struct intel_wsi_x11 *x11;
-    struct intel_wsi_x11_window *win;
+    struct intel_x11_swap_chain *swap_chain;
     uint32_t serial;
 };
 
@@ -266,22 +268,21 @@ static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
 /**
  * Send a PresentSelectInput to select interested events.
  */
-static XGL_RESULT wsi_x11_present_select_input(struct intel_wsi_x11 *x11,
-                                               struct intel_wsi_x11_window *win)
+static XGL_RESULT x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
 {
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
 
     /* create the event queue */
-    win->present_special_event_id = xcb_generate_id(x11->c);
-    win->present_special_event = xcb_register_for_special_xge(x11->c,
-            &xcb_present_id, win->present_special_event_id, NULL);
+    sc->present_special_event_id = xcb_generate_id(sc->c);
+    sc->present_special_event = xcb_register_for_special_xge(sc->c,
+            &xcb_present_id, sc->present_special_event_id, NULL);
 
-    cookie = xcb_present_select_input_checked(x11->c,
-            win->present_special_event_id, win->window_id,
+    cookie = xcb_present_select_input_checked(sc->c,
+            sc->present_special_event_id, sc->window,
             XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY);
 
-    error = xcb_request_check(x11->c, cookie);
+    error = xcb_request_check(sc->c, cookie);
     if (error) {
         free(error);
         return XGL_ERROR_UNKNOWN;
@@ -293,9 +294,8 @@ static XGL_RESULT wsi_x11_present_select_input(struct intel_wsi_x11 *x11,
 /**
  * Send a PresentPixmap.
  */
-static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
-                                         struct intel_wsi_x11_window *win,
-                                         const XGL_WSI_X11_PRESENT_INFO *info)
+static XGL_RESULT x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
+                                                const XGL_WSI_X11_PRESENT_INFO *info)
 {
     struct intel_img *img = intel_img(info->srcImage);
     struct intel_x11_img_data *data =
@@ -309,10 +309,10 @@ static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
     if (!info->flip)
         options |= XCB_PRESENT_OPTION_COPY;
 
-    cookie = xcb_present_pixmap(x11->c,
-            win->window_id,
+    cookie = xcb_present_pixmap(sc->c,
+            sc->window,
             data->pixmap,
-            ++win->local.serial,
+            ++sc->local.serial,
             0, /* valid-area */
             0, /* update-area */
             0, /* x-off */
@@ -326,7 +326,7 @@ static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
             info->remainder,
             0, NULL);
 
-    err = xcb_request_check(x11->c, cookie);
+    err = xcb_request_check(sc->c, cookie);
     if (err) {
         free(err);
         return XGL_ERROR_UNKNOWN;
@@ -338,22 +338,19 @@ static XGL_RESULT wsi_x11_present_pixmap(struct intel_wsi_x11 *x11,
 /**
  * Send a PresentNotifyMSC for the current MSC.
  */
-static void wsi_x11_present_notify_msc(struct intel_wsi_x11 *x11,
-                                       struct intel_wsi_x11_window *win)
+static void x11_swap_chain_present_notify_msc(struct intel_x11_swap_chain *sc)
 {
     /* cannot specify CRTC? */
-    xcb_present_notify_msc(x11->c, win->window_id, ++win->local.serial,
-            0, 0, 0);
+    xcb_present_notify_msc(sc->c, sc->window, ++sc->local.serial, 0, 0, 0);
 
-    xcb_flush(x11->c);
+    xcb_flush(sc->c);
 }
 
 /**
  * Handle a Present event.
  */
-static void wsi_x11_present_event(struct intel_wsi_x11 *x11,
-                                  struct intel_wsi_x11_window *win,
-                                  const xcb_present_generic_event_t *ev)
+static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
+                                         const xcb_present_generic_event_t *ev)
 {
     union {
         const xcb_present_generic_event_t *ev;
@@ -362,91 +359,93 @@ static void wsi_x11_present_event(struct intel_wsi_x11 *x11,
 
     switch (u.ev->evtype) {
     case XCB_PRESENT_COMPLETE_NOTIFY:
-        win->remote.serial = u.complete->serial;
-        win->remote.msc = u.complete->msc;
+        sc->remote.serial = u.complete->serial;
+        sc->remote.msc = u.complete->msc;
         break;
     default:
         break;
     }
 }
 
-static struct intel_wsi_x11_window *wsi_x11_create_window(struct intel_wsi_x11 *x11,
-                                                          xcb_window_t win_id)
+static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
 {
-    struct intel_wsi_x11_window *win;
+    if (sc->present_special_event)
+        xcb_unregister_for_special_event(sc->c, sc->present_special_event);
 
-    win = intel_alloc(x11, sizeof(*win), 0, XGL_SYSTEM_ALLOC_INTERNAL);
-    if (!win)
+    intel_free(sc, sc);
+}
+
+static struct intel_x11_swap_chain *x11_swap_chain_create(struct intel_dev *dev,
+                                                          xcb_window_t window)
+{
+    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
+    struct intel_x11_swap_chain *sc;
+
+    sc = intel_alloc(dev, sizeof(*sc), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    if (!sc)
         return NULL;
 
-    memset(win, 0, sizeof(*win));
+    memset(sc, 0, sizeof(*sc));
+    /* there is no XGL_DBG_OBJECT_WSI_SWAP_CHAIN */
+    intel_handle_init(&sc->handle, XGL_DBG_OBJECT_UNKNOWN,
+            dev->base.handle.icd);
 
-    win->window_id = win_id;
+    sc->c = x11->c;
+    sc->window = window;
 
-    if (wsi_x11_present_select_input(x11, win) != XGL_SUCCESS) {
-        intel_free(x11, win);
+    if (x11_swap_chain_present_select_input(sc) != XGL_SUCCESS) {
+        intel_free(dev, sc);
         return NULL;
     }
 
-    return win;
+    return sc;
 }
 
-static void wsi_x11_destroy_window(struct intel_wsi_x11 *x11,
-                                   struct intel_wsi_x11_window *win)
+static struct intel_x11_swap_chain *x11_swap_chain_lookup(struct intel_dev *dev,
+                                                          xcb_window_t window)
 {
-    if (win->present_special_event)
-        xcb_unregister_for_special_event(x11->c, win->present_special_event);
+    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
+    struct intel_x11_swap_chain *sc = x11->swap_chains;
 
-    intel_free(x11, win);
-}
-
-static struct intel_wsi_x11_window *wsi_x11_lookup_window(struct intel_wsi_x11 *x11,
-                                                          xcb_window_t win_id)
-{
-    struct intel_wsi_x11_window *win = x11->windows;
-
-    while (win) {
-        if (win->window_id == win_id)
+    while (sc) {
+        if (sc->window == window)
             break;
-        win = win->next;
+        sc = sc->next;
     }
 
     /* lookup failed */
-    if (!win) {
-        win = wsi_x11_create_window(x11, win_id);
-        if (win) {
-            win->next = x11->windows;
-            x11->windows = win;
+    if (!sc) {
+        sc = x11_swap_chain_create(dev, window);
+        if (sc) {
+            sc->next = x11->swap_chains;
+            x11->swap_chains = sc;
         }
     }
 
-    return win;
+    return sc;
 }
 
-static XGL_RESULT wsi_x11_wait_window(struct intel_wsi_x11 *x11,
-                                      struct intel_wsi_x11_window *win,
+static XGL_RESULT x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
                                       uint32_t serial, int64_t timeout)
 {
     const bool wait = (timeout != 0);
 
-    while (win->remote.serial < serial) {
+    while (sc->remote.serial < serial) {
         xcb_present_generic_event_t *ev;
 
         if (wait) {
             ev = (xcb_present_generic_event_t *)
-                xcb_wait_for_special_event(x11->c,
-                        win->present_special_event);
+                xcb_wait_for_special_event(sc->c, sc->present_special_event);
             if (!ev)
                 return XGL_ERROR_UNKNOWN;
         } else {
             ev = (xcb_present_generic_event_t *)
-                xcb_poll_for_special_event(x11->c,
-                        win->present_special_event);
+                xcb_poll_for_special_event(sc->c, sc->present_special_event);
             if (!ev)
                 return XGL_NOT_READY;
         }
 
-        wsi_x11_present_event(x11, win, ev);
+        x11_swap_chain_present_event(sc, ev);
 
         free(ev);
     }
@@ -538,12 +537,12 @@ static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
 
 static void wsi_x11_destroy(struct intel_wsi_x11 *x11)
 {
-    struct intel_wsi_x11_window *win = x11->windows;
+    struct intel_x11_swap_chain *sc = x11->swap_chains;
 
-    while (win) {
-        struct intel_wsi_x11_window *next = win->next;
-        wsi_x11_destroy_window(x11, win);
-        win = next;
+    while (sc) {
+        struct intel_x11_swap_chain *next = sc->next;
+        x11_swap_chain_destroy(sc);
+        sc = next;
     }
 
     if (x11->fd >= 0)
@@ -674,11 +673,10 @@ XGL_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
     struct intel_x11_fence_data *data =
         (struct intel_x11_fence_data *) fence->wsi_data;
 
-    if (!data->win)
+    if (!data->swap_chain)
         return XGL_SUCCESS;
 
-    return wsi_x11_wait_window(data->x11,
-            data->win, data->serial, timeout_ns);
+    return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(
@@ -697,22 +695,21 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(
     uint64_t  *                                 pMsc)
 {
     struct intel_dev *dev = intel_dev(device);
-    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
-    struct intel_wsi_x11_window *win;
+    struct intel_x11_swap_chain *sc;
     XGL_RESULT ret;
 
-    win = wsi_x11_lookup_window(x11, window);
-    if (!win)
+    sc = x11_swap_chain_lookup(dev, window);
+    if (!sc)
         return XGL_ERROR_UNKNOWN;
 
-    wsi_x11_present_notify_msc(x11, win);
+    x11_swap_chain_present_notify_msc(sc);
 
     /* wait for the event */
-    ret = wsi_x11_wait_window(x11, win, win->local.serial, -1);
+    ret = x11_swap_chain_wait(sc, sc->local.serial, -1);
     if (ret != XGL_SUCCESS)
         return ret;
 
-    *pMsc = win->remote.msc;
+    *pMsc = sc->remote.msc;
 
     return XGL_SUCCESS;
 }
@@ -743,25 +740,23 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
     XGL_FENCE                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
-    struct intel_wsi_x11 *x11 =
-        (struct intel_wsi_x11 *) queue->dev->gpu->wsi_data;
+    struct intel_dev *dev = queue->dev;
     struct intel_x11_fence_data *data =
         (struct intel_x11_fence_data *) queue->fence->wsi_data;
     struct intel_img *img = intel_img(pPresentInfo->srcImage);
-    struct intel_wsi_x11_window *win;
+    struct intel_x11_swap_chain *sc;
     XGL_RESULT ret;
 
-    win = wsi_x11_lookup_window(x11, pPresentInfo->destWindow);
-    if (!win)
+    sc = x11_swap_chain_lookup(dev, pPresentInfo->destWindow);
+    if (!sc)
         return XGL_ERROR_UNKNOWN;
 
-    ret = wsi_x11_present_pixmap(x11, win, pPresentInfo);
+    ret = x11_swap_chain_present_pixmap(sc, pPresentInfo);
     if (ret != XGL_SUCCESS)
         return ret;
 
-    data->x11 = x11;
-    data->win = win;
-    data->serial = win->local.serial;
+    data->swap_chain = sc;
+    data->serial = sc->local.serial;
     intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
 
     if (fence_ != XGL_NULL_HANDLE) {
