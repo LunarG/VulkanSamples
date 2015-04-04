@@ -28,7 +28,7 @@
 #include "kmd/winsys.h"
 #include "cmd.h"
 #include "dev.h"
-#include "wsi_x11.h"
+#include "wsi.h"
 #include "fence.h"
 
 static void fence_destroy(struct intel_obj *obj)
@@ -49,6 +49,14 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
     if (!fence)
         return XGL_ERROR_OUT_OF_MEMORY;
 
+    if (dev->exts[INTEL_EXT_WSI_X11]) {
+        XGL_RESULT ret = intel_wsi_fence_init(fence);
+        if (ret != XGL_SUCCESS) {
+            intel_fence_destroy(fence);
+            return ret;
+        }
+    }
+
     fence->obj.destroy = fence_destroy;
 
     *fence_ret = fence;
@@ -58,6 +66,9 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
 
 void intel_fence_destroy(struct intel_fence *fence)
 {
+    if (fence->wsi_data)
+        intel_wsi_fence_cleanup(fence);
+
     intel_bo_unref(fence->seqno_bo);
 
     intel_base_destroy(&fence->obj.base);
@@ -66,43 +77,17 @@ void intel_fence_destroy(struct intel_fence *fence)
 void intel_fence_set_seqno(struct intel_fence *fence,
                            struct intel_bo *seqno_bo)
 {
-#ifdef ENABLE_WSI_X11
-    fence->x11 = NULL;
-#endif
-
-    intel_bo_unref(fence->seqno_bo);
-    fence->seqno_bo = intel_bo_ref(seqno_bo);
-}
-
-void intel_fence_set_x11(struct intel_fence *fence,
-                         struct intel_wsi_x11 *x11,
-                         struct intel_wsi_x11_window *win,
-                         uint32_t serial,
-                         struct intel_bo *seqno_bo)
-{
-#ifdef ENABLE_WSI_X11
-    fence->x11 = x11;
-    fence->x11_win = win;
-    fence->x11_serial = serial;
-#endif
-
     intel_bo_unref(fence->seqno_bo);
     fence->seqno_bo = intel_bo_ref(seqno_bo);
 }
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
-#ifdef ENABLE_WSI_X11
-    if (fence->x11) {
-        const bool wait = (timeout_ns != 0);
-        XGL_RESULT ret;
+    XGL_RESULT ret;
 
-        ret = intel_wsi_x11_wait(fence->x11, fence->x11_win,
-                fence->x11_serial, wait);
-        if (ret != XGL_SUCCESS)
-            return ret;
-    }
-#endif
+    ret = intel_wsi_fence_wait(fence, timeout_ns);
+    if (ret != XGL_SUCCESS)
+        return ret;
 
     if (fence->seqno_bo) {
         return (intel_bo_wait(fence->seqno_bo, timeout_ns)) ?

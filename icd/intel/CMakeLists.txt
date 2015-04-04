@@ -51,10 +51,11 @@ set(libraries
 
 find_package(XCB COMPONENTS xcb xcb-dri3 xcb-present)
 if(XCB_FOUND)
-    list(APPEND definitions -DENABLE_WSI_X11)
     list(APPEND include_dirs ${XCB_INCLUDE_DIRS})
     list(APPEND libraries ${XCB_LIBRARIES})
     list(APPEND sources wsi_x11.c)
+else()
+    list(APPEND sources wsi_null.c)
 endif()
 
 add_library(XGL_i965 SHARED ${sources})

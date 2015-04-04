@@ -50,7 +50,6 @@ enum intel_gpu_engine_type {
 
 struct intel_instance;
 struct intel_winsys;
-struct intel_wsi_x11;
 
 /*
  * intel_gpu is the only object that does not inherit from intel_base.
@@ -77,11 +76,9 @@ struct intel_gpu {
     int primary_fd_internal;
     int render_fd_internal;
 
-#ifdef ENABLE_WSI_X11
-    struct intel_wsi_x11 *x11;
-#endif
-
     struct intel_winsys *winsys;
+
+    void *wsi_data;
 };
 
 static inline struct intel_gpu *intel_gpu(XGL_PHYSICAL_GPU gpu)
@@ -116,11 +113,10 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
                               XGL_PIPELINE_SHADER_STAGE stage);
 
-void intel_gpu_associate_x11(struct intel_gpu *gpu,
-                             struct intel_wsi_x11 *x11,
-                             int fd);
-XGL_RESULT intel_gpu_open(struct intel_gpu *gpu);
-void intel_gpu_close(struct intel_gpu *gpu);
+int intel_gpu_get_primary_fd(struct intel_gpu *gpu);
+
+XGL_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu);
+void intel_gpu_cleanup_winsys(struct intel_gpu *gpu);
 
 enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
                                                const char *ext);

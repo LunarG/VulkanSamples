@@ -55,10 +55,7 @@ struct intel_img {
     float clear_color[4];
     float clear_depth;
 
-#ifdef ENABLE_WSI_X11
-    int x11_prime_fd;
-    uint32_t x11_pixmap;
-#endif
+    void *wsi_data;
 };
 
 static inline struct intel_img *intel_img(XGL_IMAGE image)

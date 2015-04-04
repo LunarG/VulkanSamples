@@ -1,7 +1,7 @@
 /*
  * XGL
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,37 +25,28 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef WSI_X11_H
-#define WSI_X11_H
+#ifndef WSI_H
+#define WSI_H
 
 #include "intel.h"
 
-struct intel_wsi_x11;
-struct intel_wsi_x11_window;
+struct intel_fence;
+struct intel_gpu;
+struct intel_img;
 
-#ifdef ENABLE_WSI_X11
+XGL_RESULT intel_wsi_gpu_get_info(struct intel_gpu *gpu,
+                                  XGL_PHYSICAL_GPU_INFO_TYPE type,
+                                  size_t *size, void *data);
+void intel_wsi_gpu_cleanup(struct intel_gpu *gpu);
 
-XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
-                              struct intel_wsi_x11_window *win,
-                              uint32_t serial, bool wait);
+XGL_RESULT intel_wsi_img_init(struct intel_img *img);
+void intel_wsi_img_cleanup(struct intel_img *img);
 
-void intel_wsi_x11_destroy(const struct intel_gpu *gpu,
-                           struct intel_wsi_x11 *x11);
+XGL_RESULT intel_wsi_fence_init(struct intel_fence *fence);
+void intel_wsi_fence_cleanup(struct intel_fence *fence);
+void intel_wsi_fence_copy(struct intel_fence *fence,
+                          const struct intel_fence *src);
+XGL_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
+                                int64_t timeout_ns);
 
-#else /* ENABLE_WSI_X11 */
-
-static inline XGL_RESULT intel_wsi_x11_wait(struct intel_wsi_x11 *x11,
-                                            struct intel_wsi_x11_window *win,
-                                            uint32_t serial, bool wait)
-{
-    return XGL_SUCCESS;
-}
-
-static inline void intel_wsi_x11_destroy(const struct intel_gpu *gpu,
-                                         struct intel_wsi_x11 *x11)
-{
-}
-
-#endif /* ENABLE_WSI_X11 */
-
-#endif /* WSI_X11_H */
+#endif /* WSI_H */

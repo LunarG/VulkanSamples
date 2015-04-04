@@ -128,7 +128,7 @@ XGL_RESULT intel_dev_create(struct intel_gpu *gpu,
 
     dev->gpu = gpu;
 
-    ret = intel_gpu_open(gpu);
+    ret = intel_gpu_init_winsys(gpu);
     if (ret != XGL_SUCCESS) {
         intel_dev_destroy(dev);
         return ret;
@@ -211,7 +211,7 @@ void intel_dev_destroy(struct intel_dev *dev)
     intel_base_destroy(&dev->base);
 
     if (gpu->winsys)
-        intel_gpu_close(gpu);
+        intel_gpu_cleanup_winsys(gpu);
 }
 
 XGL_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,

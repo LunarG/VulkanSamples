@@ -25,11 +25,10 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#include <unistd.h>
 #include "kmd/winsys.h"
 #include "dev.h"
 #include "gpu.h"
-#include "mem.h"
+#include "wsi.h"
 #include "img.h"
 
 /*
@@ -166,12 +165,16 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
             img->s8_layout->bo_stride * img->s8_layout->bo_height;
     }
 
+    if (scanout) {
+        XGL_RESULT ret = intel_wsi_img_init(img);
+        if (ret != XGL_SUCCESS) {
+            intel_img_destroy(img);
+            return ret;
+        }
+    }
+
     img->obj.destroy = img_destroy;
     img->obj.base.get_info = img_get_info;
-
-#ifdef ENABLE_WSI_X11
-    img->x11_prime_fd = -1;
-#endif
 
     *img_ret = img;
 
@@ -180,12 +183,8 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
 void intel_img_destroy(struct intel_img *img)
 {
-#ifdef ENABLE_WSI_X11
-    if (img->x11_prime_fd >= 0) {
-        close(img->x11_prime_fd);
-        intel_mem_free(img->obj.mem);
-    }
-#endif
+    if (img->wsi_data)
+        intel_wsi_img_cleanup(img);
 
     if (img->s8_layout)
         intel_free(img, img->s8_layout);

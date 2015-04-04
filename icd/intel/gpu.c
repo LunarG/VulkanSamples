@@ -36,24 +36,26 @@
 #include "queue.h"
 #include "gpu.h"
 #include "instance.h"
-#include "wsi_x11.h"
+#include "wsi.h"
 
 static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
-#ifdef ENABLE_WSI_X11
     [INTEL_EXT_WSI_X11] = "XGL_WSI_X11",
-#endif
 };
 
 static int gpu_open_primary_node(struct intel_gpu *gpu)
 {
-    /* cannot not open gpu->primary_node directly */
+    if (gpu->primary_fd_internal < 0)
+        gpu->primary_fd_internal = open(gpu->primary_node, O_RDWR);
+
     return gpu->primary_fd_internal;
 }
 
 static void gpu_close_primary_node(struct intel_gpu *gpu)
 {
-    if (gpu->primary_fd_internal >= 0)
+    if (gpu->primary_fd_internal >= 0) {
+        close(gpu->primary_fd_internal);
         gpu->primary_fd_internal = -1;
+    }
 }
 
 static int gpu_open_render_node(struct intel_gpu *gpu)
@@ -114,12 +116,10 @@ static const char *gpu_get_name(const struct intel_gpu *gpu)
 
 void intel_gpu_destroy(struct intel_gpu *gpu)
 {
-    intel_gpu_close(gpu);
+    if (gpu->wsi_data)
+        intel_wsi_gpu_cleanup(gpu);
 
-#ifdef ENABLE_WSI_X11
-    if (gpu->x11)
-        intel_wsi_x11_destroy(gpu, gpu->x11);
-#endif
+    intel_gpu_cleanup_winsys(gpu);
 
     intel_free(gpu, gpu->primary_node);
     intel_free(gpu, gpu);
@@ -339,25 +339,18 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
     }
 }
 
-void intel_gpu_associate_x11(struct intel_gpu *gpu,
-                             struct intel_wsi_x11 *x11,
-                             int fd)
+int intel_gpu_get_primary_fd(struct intel_gpu *gpu)
 {
-#ifdef ENABLE_WSI_X11
-    gpu->x11 = x11;
-    gpu->primary_fd_internal = fd;
-#endif
+    return gpu_open_primary_node(gpu);
 }
 
-XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
+XGL_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu)
 {
     int fd;
 
     assert(!gpu->winsys);
 
-    fd = gpu_open_primary_node(gpu);
-    if (fd < 0)
-        fd = gpu_open_render_node(gpu);
+    fd = gpu_open_render_node(gpu);
     if (fd < 0)
         return XGL_ERROR_UNKNOWN;
 
@@ -365,14 +358,14 @@ XGL_RESULT intel_gpu_open(struct intel_gpu *gpu)
     if (!gpu->winsys) {
         icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
                 0, 0, "failed to create GPU winsys");
-        intel_gpu_close(gpu);
+        gpu_close_render_node(gpu);
         return XGL_ERROR_UNKNOWN;
     }
 
     return XGL_SUCCESS;
 }
 
-void intel_gpu_close(struct intel_gpu *gpu)
+void intel_gpu_cleanup_winsys(struct intel_gpu *gpu)
 {
     if (gpu->winsys) {
         intel_winsys_destroy(gpu->winsys);
@@ -420,7 +413,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-    const struct intel_gpu *gpu = intel_gpu(gpu_);
+    struct intel_gpu *gpu = intel_gpu(gpu_);
     XGL_RESULT ret = XGL_SUCCESS;
 
     switch (infoType) {
@@ -470,7 +463,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
         break;
 
     default:
-        ret = XGL_ERROR_INVALID_VALUE;
+        ret = intel_wsi_gpu_get_info(gpu, infoType, pDataSize, pData);
+        break;
     }
 
     return ret;

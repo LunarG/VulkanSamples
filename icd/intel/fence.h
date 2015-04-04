@@ -33,18 +33,13 @@
 
 struct intel_bo;
 struct intel_dev;
-struct intel_wsi_x11;
 
 struct intel_fence {
     struct intel_obj obj;
 
     struct intel_bo *seqno_bo;
 
-#ifdef ENABLE_WSI_X11
-    struct intel_wsi_x11 *x11;
-    struct intel_wsi_x11_window *x11_win;
-    uint32_t x11_serial;
-#endif
+    void *wsi_data;
 };
 
 static inline struct intel_fence *intel_fence(XGL_FENCE fence)
@@ -66,11 +61,5 @@ XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
 
 void intel_fence_set_seqno(struct intel_fence *fence,
                            struct intel_bo *seqno_bo);
-
-void intel_fence_set_x11(struct intel_fence *fence,
-                         struct intel_wsi_x11 *x11,
-                         struct intel_wsi_x11_window *win,
-                         uint32_t serial,
-                         struct intel_bo *seqno_bo);
 
 #endif /* FENCE_H */
