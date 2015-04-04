@@ -858,9 +858,8 @@ extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
 }
 
 LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
-        const XGL_APPLICATION_INFO*                 pAppInfo,
-        const XGL_ALLOC_CALLBACKS*                  pAllocCb,
-        XGL_INSTANCE*                               pInstance)
+        const XGL_INSTANCE_CREATE_INFO*         pCreateInfo,
+        XGL_INSTANCE*                           pInstance)
 {
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
@@ -888,7 +887,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
     while (scanned_icds) {
         icd = loader_icd_add(ptr_instance, scanned_icds);
         if (icd) {
-            res = scanned_icds->CreateInstance(pAppInfo, pAllocCb,
+            res = scanned_icds->CreateInstance(pCreateInfo,
                                            &(scanned_icds->instance));
             if (res != XGL_SUCCESS)
             {

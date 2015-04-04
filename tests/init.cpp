@@ -98,8 +98,14 @@ protected:
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_API_VERSION;
-
-        err = xglCreateInstance(&app_info, NULL, &inst);
+        XGL_INSTANCE_CREATE_INFO inst_info = {};
+        inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        inst_info.pNext = NULL;
+        inst_info.pAppInfo = &app_info;
+        inst_info.pAllocCb = NULL;
+        inst_info.extensionCount = 0;
+        inst_info.ppEnabledExtensionNames = NULL;
+        err = xglCreateInstance(&inst_info, &inst);
         ASSERT_XGL_SUCCESS(err);
         err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &this->gpu_count,
                                objs);
@@ -137,7 +143,13 @@ TEST(Initialization, xglEnumerateGpus) {
     char *layers[16];
     size_t layer_count;
     char layer_buf[16][256];
-
+    XGL_INSTANCE_CREATE_INFO inst_info = {};
+    inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    inst_info.pNext = NULL;
+    inst_info.pAppInfo = &app_info;
+    inst_info.pAllocCb = NULL;
+    inst_info.extensionCount = 0;
+    inst_info.ppEnabledExtensionNames = NULL;
     app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
     app_info.pAppName = "base";
@@ -146,7 +158,7 @@ TEST(Initialization, xglEnumerateGpus) {
     app_info.engineVersion = 1;
     app_info.apiVersion = XGL_API_VERSION;
 
-    err = xglCreateInstance(&app_info, NULL, &inst);
+    err = xglCreateInstance(&inst_info, &inst);
     ASSERT_XGL_SUCCESS(err);
     err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &gpu_count, objs);
     ASSERT_XGL_SUCCESS(err);

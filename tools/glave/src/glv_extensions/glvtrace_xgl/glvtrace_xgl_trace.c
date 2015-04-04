@@ -43,8 +43,7 @@ GLV_CRITICAL_SECTION g_memInfoLock;
 XGLMemInfo g_memInfo = {0, NULL, NULL, 0};
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateInstance(
-    const XGL_APPLICATION_INFO* pAppInfo,
-    const XGL_ALLOC_CALLBACKS* pAllocCb,
+    const XGL_INSTANCE_CREATE_INFO* pCreateInfo,
     XGL_INSTANCE* pInstance)
 {
     glv_trace_packet_header* pHeader;
@@ -58,8 +57,8 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateInstance(
         glv_platform_get_next_lib_sym((void **) &real_xglCreateInstance,"xglCreateInstance");
     }
     startTime = glv_get_time();
-    result = real_xglCreateInstance(pAppInfo, pAllocCb, pInstance);
-    CREATE_TRACE_PACKET(xglCreateInstance, sizeof(XGL_INSTANCE) + get_struct_chain_size((void*)pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS)));
+    result = real_xglCreateInstance(pCreateInfo, pInstance);
+    CREATE_TRACE_PACKET(xglCreateInstance, sizeof(XGL_INSTANCE) + get_struct_chain_size((void*)pCreateInfo));
     pHeader->entrypoint_begin_time = startTime;
     if (isHooked == FALSE) {
         AttachHooks();
@@ -68,11 +67,9 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateInstance(
     }
     pPacket = interpret_body_as_xglCreateInstance(pHeader);
 
-    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pAllocCb);
+    add_XGL_INSTANCE_CREATE_INFO_to_packet(pHeader, (XGL_INSTANCE_CREATE_INFO**)&(pPacket->pCreateInfo), pCreateInfo);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(XGL_INSTANCE), pInstance);
     pPacket->result = result;
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocCb));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInstance));
     FINISH_TRACE_PACKET();
     return result;

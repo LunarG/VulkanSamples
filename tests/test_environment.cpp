@@ -51,8 +51,14 @@ void Environment::SetUp()
 
     uint32_t count;
     XGL_RESULT err;
-
-    err = xglCreateInstance(&app_, NULL, &inst);
+    XGL_INSTANCE_CREATE_INFO inst_info = {};
+    inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    inst_info.pNext = NULL;
+    inst_info.pAppInfo = &app_;
+    inst_info.pAllocCb = NULL;
+    inst_info.extensionCount = 0;
+    inst_info.ppEnabledExtensionNames = NULL;
+    err = xglCreateInstance(&inst_info, &inst);
     ASSERT_EQ(XGL_SUCCESS, err);
     err = xglEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
     ASSERT_EQ(XGL_SUCCESS, err);
@@ -76,8 +82,15 @@ void Environment::X11SetUp()
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
+    XGL_INSTANCE_CREATE_INFO instInfo = {};
+    instInfo.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instInfo.pNext = NULL;
+    instInfo.pAppInfo = &app_;
+    instInfo.pAllocCb = NULL;
+    instInfo.extensionCount = 0;
+    instInfo.ppEnabledExtensionNames = NULL;
 
-    err = xglCreateInstance(&app_, NULL, &inst);
+    err = xglCreateInstance(&instInfo, &inst);
     ASSERT_EQ(XGL_SUCCESS, err);
     err = xglEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
     ASSERT_EQ(XGL_SUCCESS, err);

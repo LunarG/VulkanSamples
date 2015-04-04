@@ -1731,6 +1731,14 @@ static void demo_init_xgl(struct demo *demo)
         .engineVersion = 0,
         .apiVersion = XGL_API_VERSION,
     };
+    const XGL_INSTANCE_CREATE_INFO inst_info = {
+        .sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = NULL,
+        .pAppInfo = &app,
+        .pAllocCb = NULL,
+        .extensionCount = 0,
+        .ppEnabledExtensionNames = NULL,
+    };
     const XGL_WSI_X11_CONNECTION_INFO connection = {
         .pConnection = demo->connection,
         .root = demo->screen->root,
@@ -1759,7 +1767,7 @@ static void demo_init_xgl(struct demo *demo)
     size_t data_size;
     uint32_t queue_count;
 
-    err = xglCreateInstance(&app, NULL, &demo->inst);
+    err = xglCreateInstance(&inst_info, &demo->inst);
     if (err == XGL_ERROR_INCOMPATIBLE_DRIVER) {
         printf("Cannot find a compatible Vulkan installable client driver "
                "(ICD).\nExiting ...\n");
@@ -1768,6 +1776,7 @@ static void demo_init_xgl(struct demo *demo)
     } else {
         assert(!err);
     }
+
     err = xglEnumerateGpus(demo->inst, 1, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 

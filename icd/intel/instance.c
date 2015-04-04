@@ -108,15 +108,15 @@ static void intel_instance_destroy(struct intel_instance *instance)
     icd_instance_destroy(icd);
 }
 
-static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *app_info,
-                                                    const XGL_ALLOC_CALLBACKS *alloc_cb)
+static struct intel_instance *intel_instance_create(const XGL_INSTANCE_CREATE_INFO* info)
 {
     struct intel_instance *instance;
     struct icd_instance *icd;
+    uint32_t i;
 
     intel_debug_init();
 
-    icd = icd_instance_create(app_info, alloc_cb);
+    icd = icd_instance_create(info->pAppInfo, info->pAllocCb);
     if (!icd)
         return NULL;
 
@@ -132,17 +132,23 @@ static struct intel_instance *intel_instance_create(const XGL_APPLICATION_INFO *
 
     instance->icd = icd;
 
+    for (i = 0; i < info->extensionCount; i++) {
+        const enum intel_ext_type ext = intel_gpu_lookup_extension(NULL,
+                info->ppEnabledExtensionNames[i]);
+
+        if (ext != INTEL_EXT_INVALID)
+            instance->exts[ext] = true;
+    }
     return instance;
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
-    const XGL_APPLICATION_INFO*                 pAppInfo,
-    const XGL_ALLOC_CALLBACKS*                  pAllocCb,
+    const XGL_INSTANCE_CREATE_INFO*             pCreateInfo,
     XGL_INSTANCE*                               pInstance)
 {
     struct intel_instance *instance;
 
-    instance = intel_instance_create(pAppInfo, pAllocCb);
+    instance = intel_instance_create(pCreateInfo);
     if (!instance)
         return XGL_ERROR_OUT_OF_MEMORY;
 

@@ -1492,8 +1492,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
-    const XGL_APPLICATION_INFO*                 pAppInfo,
-    const XGL_ALLOC_CALLBACKS*                  pAllocCb,
+    const XGL_INSTANCE_CREATE_INFO*             pCreateInfo,
     XGL_INSTANCE*                               pInstance)
 {
     NULLDRV_LOG_FUNC;

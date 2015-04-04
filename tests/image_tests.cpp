@@ -93,8 +93,14 @@ protected:
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = XGL_API_VERSION;
-
-        err = xglCreateInstance(&app_info, NULL, &this->inst);
+        XGL_INSTANCE_CREATE_INFO inst_info = {};
+        inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        inst_info.pNext = NULL;
+        inst_info.pAppInfo = &app_info;
+        inst_info.pAllocCb = NULL;
+        inst_info.extensionCount = 0;
+        inst_info.ppEnabledExtensionNames = NULL;
+        err = xglCreateInstance(&inst_info, &this->inst);
         ASSERT_XGL_SUCCESS(err);
         err = xglEnumerateGpus(this->inst, XGL_MAX_PHYSICAL_GPUS,
                                &this->gpu_count, objs);

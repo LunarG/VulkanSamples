@@ -463,11 +463,11 @@ static void initGlaveSnapshot(void)
 //=============================================================================
 // vulkan entrypoints
 //=============================================================================
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_INSTANCE_CREATE_INFO* pCreateInfo, XGL_INSTANCE* pInstance)
 {
-    XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
+    XGL_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
     loader_platform_thread_lock_mutex(&objLock);
-
+    snapshot_insert_object(&s_delta, *pInstance, XGL_OBJECT_TYPE_INSTANCE);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }

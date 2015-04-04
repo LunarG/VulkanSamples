@@ -218,8 +218,7 @@ core = Extension(
     ],
     protos=[
         Proto("XGL_RESULT", "CreateInstance",
-            [Param("const XGL_APPLICATION_INFO*", "pAppInfo"),
-             Param("const XGL_ALLOC_CALLBACKS*", "pAllocCb"),
+            [Param("const XGL_INSTANCE_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_INSTANCE*", "pInstance")]),
 
         Proto("XGL_RESULT", "DestroyInstance",

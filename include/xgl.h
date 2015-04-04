@@ -1056,9 +1056,9 @@ typedef enum _XGL_STRUCTURE_TYPE
     XGL_STRUCTURE_TYPE_UPDATE_AS_COPY                       = 53,
     XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO             = 54,
     XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO              = 55,
-
+    XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                 = 56,
     XGL_STRUCTURE_TYPE_BEGIN_RANGE                          = XGL_STRUCTURE_TYPE_APPLICATION_INFO,
-    XGL_STRUCTURE_TYPE_END_RANGE                            = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+    XGL_STRUCTURE_TYPE_END_RANGE                            = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     XGL_NUM_STRUCTURE_TYPE                                  = (XGL_STRUCTURE_TYPE_END_RANGE - XGL_STRUCTURE_TYPE_BEGIN_RANGE + 1),
     XGL_MAX_ENUM(_XGL_STRUCTURE_TYPE)
 } XGL_STRUCTURE_TYPE;
@@ -1411,6 +1411,17 @@ typedef struct _XGL_DEVICE_CREATE_INFO
     XGL_FLAGS                               flags;                      // XGL_DEVICE_CREATE_FLAGS
 } XGL_DEVICE_CREATE_INFO;
 
+typedef struct _XGL_INSTANCE_CREATE_INFO
+{
+    XGL_STRUCTURE_TYPE                      sType;                      // Should be XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+    const void*                             pNext;                      // Pointer to next structure
+    const XGL_APPLICATION_INFO*             pAppInfo;
+    const XGL_ALLOC_CALLBACKS*              pAllocCb;
+    uint32_t                                extensionCount;
+    const char*const*                       ppEnabledExtensionNames;    // layer or extension name to be enabled
+} XGL_INSTANCE_CREATE_INFO;
+
+// can be added to XGL_DEVICE_CREATE_INFO or XGL_INSTANCE_CREATE_INFO via pNext
 typedef struct _XGL_LAYER_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;                      // Should be XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO
@@ -2252,7 +2263,7 @@ typedef struct _XGL_DISPATCH_INDIRECT_CMD
 
 // ------------------------------------------------------------------------------------------------
 // API functions
-typedef XGL_RESULT (XGLAPI *xglCreateInstanceType)(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance);
+typedef XGL_RESULT (XGLAPI *xglCreateInstanceType)(const XGL_INSTANCE_CREATE_INFO* pCreateInfo, XGL_INSTANCE* pInstance);
 typedef XGL_RESULT (XGLAPI *xglDestroyInstanceType)(XGL_INSTANCE instance);
 typedef XGL_RESULT (XGLAPI *xglEnumerateGpusType)(XGL_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, XGL_PHYSICAL_GPU* pGpus);
 typedef XGL_RESULT (XGLAPI *xglGetGpuInfoType)(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData);
@@ -2372,8 +2383,7 @@ typedef void       (XGLAPI *xglCmdEndRenderPassType)(XGL_CMD_BUFFER cmdBuffer, X
 // GPU initialization
 
 XGL_RESULT XGLAPI xglCreateInstance(
-    const XGL_APPLICATION_INFO*                 pAppInfo,
-    const XGL_ALLOC_CALLBACKS*                  pAllocCb,
+    const XGL_INSTANCE_CREATE_INFO*             pCreateInfo,
     XGL_INSTANCE*                               pInstance);
 
 XGL_RESULT XGLAPI xglDestroyInstance(

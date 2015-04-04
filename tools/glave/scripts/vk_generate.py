@@ -338,7 +338,7 @@ class Subcommand(object):
         #   big case to handle is when ptrs to structs have embedded data that needs to be accounted for in packet
         custom_ptr_dict = {'XGL_DEVICE_CREATE_INFO': {'add_txt': 'add_XGL_DEVICE_CREATE_INFO_to_packet(pHeader, (XGL_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo)',
                                                   'finalize_txt': ''},
-                           'XGL_APPLICATION_INFO': {'add_txt': 'add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo)',
+                           'XGL_INSTANCE_CREATE_INFO': {'add_txt': 'add_XGL_INSTANCE_CREATE_INFO_to_packet(pHeader, (XGL_INSTANCE_CREATE_INFO**)&(pPacket->pCreateInfo), pCreateInfo)',
                                                 'finalize_txt': ''},
                            'XGL_PHYSICAL_GPU': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(XGL_PHYSICAL_GPU), pGpus)',
                                                 'finalize_txt': 'default'},
@@ -550,7 +550,7 @@ class Subcommand(object):
                     if 'void' not in proto.ret or '*' in proto.ret:
                         func_body.append('    pPacket->result = result;')
                     for pp_dict in ptr_packet_update_list:
-                        if ('DEVICE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('ppUpdateArray' != proto.params[pp_dict['index']].name):
+                        if ('DEVICE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('INSTANCE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('ppUpdateArray' != proto.params[pp_dict['index']].name):
                             func_body.append('    %s;' % (pp_dict['finalize_txt']))
                     func_body.append('    FINISH_TRACE_PACKET();')
                     if 'AllocMemory' in proto.name:
@@ -729,6 +729,25 @@ class Subcommand(object):
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
+        pid_enum.append('static void add_XGL_INSTANCE_CREATE_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_INSTANCE_CREATE_INFO** ppStruct, const XGL_INSTANCE_CREATE_INFO *pInStruct)')
+        pid_enum.append('{')
+        pid_enum.append('    uint32_t i = 0;')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_INSTANCE_CREATE_INFO), pInStruct);')
+        pid_enum.append('    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**) &((*ppStruct)->pAppInfo), pInStruct->pAppInfo);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pInStruct->pAllocCb);')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAllocCb));')
+        pid_enum.append('    if (pInStruct->extensionCount > 0) ')
+        pid_enum.append('    {')
+        pid_enum.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(char *), pInStruct->ppEnabledExtensionNames);')
+        pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++)')
+        pid_enum.append('        {')
+        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])), strlen(pInStruct->ppEnabledExtensionNames[i]) + 1, pInStruct->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            glv_finalize_buffer_address(pHeader, (void**)(&((*ppStruct)->ppEnabledExtensionNames[i])));')
+        pid_enum.append('        }')
+        pid_enum.append('        glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
+        pid_enum.append('    }')
+        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
+        pid_enum.append('};\n')
         pid_enum.append('//=============================================================================\n')
         pid_enum.append('static void add_XGL_DEVICE_CREATE_INFO_to_packet(glv_trace_packet_header*  pHeader, XGL_DEVICE_CREATE_INFO** ppStruct, const XGL_DEVICE_CREATE_INFO *pInStruct)')
         pid_enum.append('{')
@@ -736,7 +755,7 @@ class Subcommand(object):
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(XGL_DEVICE_CREATE_INFO), pInStruct);')
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(XGL_DEVICE_QUEUE_CREATE_INFO), pInStruct->pRequestedQueues);')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
-        pid_enum.append('    if (pInStruct->extensionCount > 0) ')
+        pid_enum.append('    if (pInStruct->extensionCount > 0)')
         pid_enum.append('    {')
         pid_enum.append('        glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(char *), pInStruct->ppEnabledExtensionNames);')
         pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++)')
@@ -825,9 +844,21 @@ class Subcommand(object):
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
-        custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['XGL_APPLICATION_INFO* pInfo = (XGL_APPLICATION_INFO*)pPacket->pAppInfo;\n',
-                                                       'pInfo->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
-                                                       'pInfo->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
+        custom_case_dict = { 'CreateInstance' : {'param': 'pCreateInfo', 'txt': ['XGL_INSTANCE_CREATE_INFO *pInfo = (XGL_INSTANCE_CREATE_INFO *) pPacket->pCreateInfo;\n',
+                                                       'XGL_APPLICATION_INFO **ppAppInfo = (XGL_APPLICATION_INFO**) &pInfo->pAppInfo;\n',
+                                                       '*ppAppInfo = (XGL_APPLICATION_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t) pInfo->pAppInfo);\n',
+                                                       '(*ppAppInfo)->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(*ppAppInfo)->pAppName);\n',
+                                                       '(*ppAppInfo)->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(*ppAppInfo)->pEngineName);',
+                                                       'if (pInfo->extensionCount > 0)\n',
+                                                       '{',
+                                                       '    pInfo->ppEnabledExtensionNames = (const char *const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->ppEnabledExtensionNames);\n',
+                                                       '    const char **pNames = (const char**)pInfo->ppEnabledExtensionNames;\n',
+                                                       '    uint32_t i;\n'
+                                                       '    for (i = 0; i < pInfo->extensionCount; i++)\n',
+                                                       '    {\n',
+                                                       '        pNames[i] = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pInfo->ppEnabledExtensionNames[i]));\n',
+                                                       '    }\n',
+                                                       '}']},
                              'CreateShader' : {'param': 'pCreateInfo', 'txt': ['XGL_SHADER_CREATE_INFO* pInfo = (XGL_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n',
                                                'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
                              'CreateDynamicViewportState' : {'param': 'pCreateInfo', 'txt': ['XGL_DYNAMIC_VP_STATE_CREATE_INFO* pInfo = (XGL_DYNAMIC_VP_STATE_CREATE_INFO*)pPacket->pCreateInfo;\n',

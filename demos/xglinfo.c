@@ -652,19 +652,28 @@ int main(int argc, char **argv)
         .engineVersion = 1,
         .apiVersion = XGL_API_VERSION,
     };
+    static const XGL_INSTANCE_CREATE_INFO inst_info = {
+        .sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = NULL,
+        .pAppInfo = &app_info,
+        .pAllocCb = NULL,
+        .extensionCount = 0,
+        .ppEnabledExtensionNames = NULL,
+    };
     struct app_gpu gpus[MAX_GPUS];
     XGL_PHYSICAL_GPU objs[MAX_GPUS];
     XGL_INSTANCE inst;
     uint32_t gpu_count, i;
     XGL_RESULT err;
 
-    err = xglCreateInstance(&app_info, NULL, &inst);
+    err = xglCreateInstance(&inst_info, &inst);
     if (err == XGL_ERROR_INCOMPATIBLE_DRIVER) {
         printf("Cannot find a compatible Vulkan installable client driver "
                "(ICD).\nExiting ...\n");
         fflush(stdout);
         exit(1);
     } else if (err) {
+
         ERR_EXIT(err);
     }
     err = xglEnumerateGpus(inst, MAX_GPUS, &gpu_count, objs);

@@ -123,10 +123,10 @@ void PostCreateInstance(XGL_RESULT result, XGL_INSTANCE* pInstance)
     }
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_INSTANCE_CREATE_INFO* pCreateInfo, XGL_INSTANCE* pInstance)
 {
-    PreCreateInstance(pAppInfo, pAllocCb);
-    XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
+    PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
+    XGL_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
     PostCreateInstance(result, pInstance);
     return result;
 }

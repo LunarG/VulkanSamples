@@ -57,8 +57,14 @@ XglRenderFramework::~XglRenderFramework()
 void XglRenderFramework::InitFramework()
 {
     XGL_RESULT err;
-
-    err = xglCreateInstance(&app_info, NULL, &this->inst);
+    XGL_INSTANCE_CREATE_INFO instInfo = {};
+    instInfo.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instInfo.pNext = NULL;
+    instInfo.pAppInfo = &app_info;
+    instInfo.pAllocCb = NULL;
+    instInfo.extensionCount = 0;
+    instInfo.ppEnabledExtensionNames = NULL;
+    err = xglCreateInstance(&instInfo, &this->inst);
     ASSERT_XGL_SUCCESS(err);
     err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &this->gpu_count,
                            objs);

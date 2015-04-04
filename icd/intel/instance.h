@@ -38,6 +38,7 @@ struct intel_instance {
     struct icd_instance *icd;
 
     struct intel_gpu *gpus;
+    bool exts[INTEL_EXT_COUNT];
 };
 
 static inline struct intel_instance *intel_instance(XGL_INSTANCE instance)
