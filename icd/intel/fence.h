@@ -59,6 +59,9 @@ void intel_fence_destroy(struct intel_fence *fence);
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
 
+void intel_fence_copy(struct intel_fence *fence,
+                      const struct intel_fence *src);
+
 void intel_fence_set_seqno(struct intel_fence *fence,
                            struct intel_bo *seqno_bo);
 

@@ -743,9 +743,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
     XGL_FENCE                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
-    struct intel_fence *fence = intel_fence(fence_);
     struct intel_wsi_x11 *x11 =
         (struct intel_wsi_x11 *) queue->dev->gpu->wsi_data;
+    struct intel_x11_fence_data *data =
+        (struct intel_x11_fence_data *) queue->fence->wsi_data;
+    struct intel_img *img = intel_img(pPresentInfo->srcImage);
     struct intel_wsi_x11_window *win;
     XGL_RESULT ret;
 
@@ -757,16 +759,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
     if (ret != XGL_SUCCESS)
         return ret;
 
-    if (fence) {
-        struct intel_img *img = intel_img(pPresentInfo->srcImage);
-        struct intel_x11_fence_data *data =
-            (struct intel_x11_fence_data *) fence->wsi_data;
+    data->x11 = x11;
+    data->win = win;
+    data->serial = win->local.serial;
+    intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
 
-        data->x11 = x11;
-        data->win = win;
-        data->serial = win->local.serial;
-
-        intel_fence_set_seqno(fence, img->obj.mem->bo);
+    if (fence_ != XGL_NULL_HANDLE) {
+        struct intel_fence *fence = intel_fence(fence_);
+        intel_fence_copy(fence, queue->fence);
     }
 
     return XGL_SUCCESS;

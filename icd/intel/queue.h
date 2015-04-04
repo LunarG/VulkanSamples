@@ -36,6 +36,7 @@
 #define INTEL_QUEUE_ATOMIC_COUNTER_COUNT 1024
 
 struct intel_dev;
+struct intel_fence;
 
 struct intel_queue {
     struct intel_base base;
@@ -47,8 +48,9 @@ struct intel_queue {
     struct intel_bo *select_graphics_bo;
     struct intel_bo *select_compute_bo;
 
-    struct intel_bo *seqno_bo;
     int last_pipeline_select;
+
+    struct intel_fence *fence;
 };
 
 static inline struct intel_queue *intel_queue(XGL_QUEUE queue)

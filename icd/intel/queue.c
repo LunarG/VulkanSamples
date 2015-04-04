@@ -259,6 +259,8 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
+    XGL_FENCE_CREATE_INFO fence_info;
+    XGL_RESULT ret;
 
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -282,6 +284,14 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
         return XGL_ERROR_INITIALIZATION_FAILED;
     }
 
+    memset(&fence_info, 0, sizeof(fence_info));
+    fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    ret = intel_fence_create(dev, &fence_info, &queue->fence);
+    if (ret != XGL_SUCCESS) {
+        intel_queue_destroy(queue);
+        return ret;
+    }
+
     *queue_ret = queue;
 
     return XGL_SUCCESS;
@@ -289,7 +299,9 @@ XGL_RESULT intel_queue_create(struct intel_dev *dev,
 
 void intel_queue_destroy(struct intel_queue *queue)
 {
-    intel_bo_unref(queue->seqno_bo);
+    if (queue->fence)
+        intel_fence_destroy(queue->fence);
+
     intel_bo_unref(queue->atomic_bo);
     intel_bo_unref(queue->select_graphics_bo);
     intel_bo_unref(queue->select_compute_bo);
@@ -299,11 +311,11 @@ void intel_queue_destroy(struct intel_queue *queue)
 
 XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 {
-    if (!queue->seqno_bo)
+    /* return XGL_SUCCESS instead of XGL_ERROR_UNAVAILABLE */
+    if (!queue->fence->seqno_bo)
         return XGL_SUCCESS;
 
-    return (intel_bo_wait(queue->seqno_bo, timeout) == 0) ?
-        XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+    return intel_fence_wait(queue->fence, timeout);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
@@ -363,12 +375,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     last_cmd = intel_cmd(pCmdBuffers[i - 1]);
 
     if (ret == XGL_SUCCESS) {
-        intel_bo_unref(queue->seqno_bo);
-        queue->seqno_bo = intel_bo_ref(intel_cmd_get_batch(last_cmd, NULL));
+        intel_fence_set_seqno(queue->fence,
+                intel_bo_ref(intel_cmd_get_batch(last_cmd, NULL)));
 
         if (fence_ != XGL_NULL_HANDLE) {
             struct intel_fence *fence = intel_fence(fence_);
-            intel_fence_set_seqno(fence, queue->seqno_bo);
+            intel_fence_copy(fence, queue->fence);
         }
     } else {
         struct intel_bo *last_bo;

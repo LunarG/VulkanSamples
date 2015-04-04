@@ -74,6 +74,13 @@ void intel_fence_destroy(struct intel_fence *fence)
     intel_base_destroy(&fence->obj.base);
 }
 
+void intel_fence_copy(struct intel_fence *fence,
+                      const struct intel_fence *src)
+{
+    intel_wsi_fence_copy(fence, src);
+    intel_fence_set_seqno(fence, src->seqno_bo);
+}
+
 void intel_fence_set_seqno(struct intel_fence *fence,
                            struct intel_bo *seqno_bo)
 {
