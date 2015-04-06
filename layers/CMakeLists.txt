@@ -66,6 +66,7 @@ run_xgl_helper(gen_struct_wrappers
 	xgl_struct_string_helper_no_addr.h
 	xgl_struct_string_helper_no_addr_cpp.h
         xgl_struct_size_helper.h
+        xgl_struct_size_helper.c
 	xgl_struct_wrappers.h
 	xgl_struct_wrappers.cpp
 )
@@ -80,7 +81,8 @@ add_custom_target(generate_xgl_layer_helpers DEPENDS
         xgl_struct_string_helper_cpp.h
 	xgl_struct_string_helper_no_addr_cpp.h
         xgl_struct_size_helper.h
-	xgl_struct_wrappers.h
+        xgl_struct_size_helper.c
+        xgl_struct_wrappers.h
 	xgl_struct_wrappers.cpp
 	xgl_struct_graphviz_helper.h
 )
@@ -105,6 +107,7 @@ add_xgl_layer(Basic basic.cpp)
 add_xgl_layer(Multi multi.cpp)
 add_xgl_layer(DrawState draw_state.cpp)
 add_xgl_layer(MemTracker mem_tracker.cpp)
+add_xgl_layer(GlaveSnapshot glave_snapshot.c)
 # generated
 add_xgl_layer(Generic generic_layer.c)
 add_xgl_layer(APIDump api_dump.c)

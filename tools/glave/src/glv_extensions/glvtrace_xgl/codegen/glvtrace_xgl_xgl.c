@@ -26,6 +26,7 @@
 
 #include "glv_platform.h"
 #include "glv_common.h"
+#include "glvtrace_xgl_helpers.h"
 #include "glvtrace_xgl_xgl.h"
 #include "glvtrace_xgl_xgldbg.h"
 #include "glvtrace_xgl_xglwsix11ext.h"
@@ -39,43 +40,43 @@
 #include <stdio.h>
 
 
-static XGL_RESULT( XGLAPI * real_xglCreateInstance)(
+XGL_RESULT( XGLAPI * real_xglCreateInstance)(
     const XGL_APPLICATION_INFO* pAppInfo,
     const XGL_ALLOC_CALLBACKS* pAllocCb,
     XGL_INSTANCE* pInstance) = xglCreateInstance;
 
-static XGL_RESULT( XGLAPI * real_xglDestroyInstance)(
+XGL_RESULT( XGLAPI * real_xglDestroyInstance)(
     XGL_INSTANCE instance) = xglDestroyInstance;
 
-static XGL_RESULT( XGLAPI * real_xglEnumerateGpus)(
+XGL_RESULT( XGLAPI * real_xglEnumerateGpus)(
     XGL_INSTANCE instance,
     uint32_t maxGpus,
     uint32_t* pGpuCount,
     XGL_PHYSICAL_GPU* pGpus) = xglEnumerateGpus;
 
-static XGL_RESULT( XGLAPI * real_xglGetGpuInfo)(
+XGL_RESULT( XGLAPI * real_xglGetGpuInfo)(
     XGL_PHYSICAL_GPU gpu,
     XGL_PHYSICAL_GPU_INFO_TYPE infoType,
     size_t* pDataSize,
     void* pData) = xglGetGpuInfo;
 
-static void*( XGLAPI * real_xglGetProcAddr)(
+void*( XGLAPI * real_xglGetProcAddr)(
     XGL_PHYSICAL_GPU gpu,
     const char* pName) = xglGetProcAddr;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDevice)(
+XGL_RESULT( XGLAPI * real_xglCreateDevice)(
     XGL_PHYSICAL_GPU gpu,
     const XGL_DEVICE_CREATE_INFO* pCreateInfo,
     XGL_DEVICE* pDevice) = xglCreateDevice;
 
-static XGL_RESULT( XGLAPI * real_xglDestroyDevice)(
+XGL_RESULT( XGLAPI * real_xglDestroyDevice)(
     XGL_DEVICE device) = xglDestroyDevice;
 
-static XGL_RESULT( XGLAPI * real_xglGetExtensionSupport)(
+XGL_RESULT( XGLAPI * real_xglGetExtensionSupport)(
     XGL_PHYSICAL_GPU gpu,
     const char* pExtName) = xglGetExtensionSupport;
 
-static XGL_RESULT( XGLAPI * real_xglEnumerateLayers)(
+XGL_RESULT( XGLAPI * real_xglEnumerateLayers)(
     XGL_PHYSICAL_GPU gpu,
     size_t maxLayerCount,
     size_t maxStringSize,
@@ -83,13 +84,13 @@ static XGL_RESULT( XGLAPI * real_xglEnumerateLayers)(
     char* const* pOutLayers,
     void* pReserved) = xglEnumerateLayers;
 
-static XGL_RESULT( XGLAPI * real_xglGetDeviceQueue)(
+XGL_RESULT( XGLAPI * real_xglGetDeviceQueue)(
     XGL_DEVICE device,
     XGL_QUEUE_TYPE queueType,
     uint32_t queueIndex,
     XGL_QUEUE* pQueue) = xglGetDeviceQueue;
 
-static XGL_RESULT( XGLAPI * real_xglQueueSubmit)(
+XGL_RESULT( XGLAPI * real_xglQueueSubmit)(
     XGL_QUEUE queue,
     uint32_t cmdBufferCount,
     const XGL_CMD_BUFFER* pCmdBuffers,
@@ -97,85 +98,85 @@ static XGL_RESULT( XGLAPI * real_xglQueueSubmit)(
     const XGL_MEMORY_REF* pMemRefs,
     XGL_FENCE fence) = xglQueueSubmit;
 
-static XGL_RESULT( XGLAPI * real_xglQueueSetGlobalMemReferences)(
+XGL_RESULT( XGLAPI * real_xglQueueSetGlobalMemReferences)(
     XGL_QUEUE queue,
     uint32_t memRefCount,
     const XGL_MEMORY_REF* pMemRefs) = xglQueueSetGlobalMemReferences;
 
-static XGL_RESULT( XGLAPI * real_xglQueueWaitIdle)(
+XGL_RESULT( XGLAPI * real_xglQueueWaitIdle)(
     XGL_QUEUE queue) = xglQueueWaitIdle;
 
-static XGL_RESULT( XGLAPI * real_xglDeviceWaitIdle)(
+XGL_RESULT( XGLAPI * real_xglDeviceWaitIdle)(
     XGL_DEVICE device) = xglDeviceWaitIdle;
 
-static XGL_RESULT( XGLAPI * real_xglAllocMemory)(
+XGL_RESULT( XGLAPI * real_xglAllocMemory)(
     XGL_DEVICE device,
     const XGL_MEMORY_ALLOC_INFO* pAllocInfo,
     XGL_GPU_MEMORY* pMem) = xglAllocMemory;
 
-static XGL_RESULT( XGLAPI * real_xglFreeMemory)(
+XGL_RESULT( XGLAPI * real_xglFreeMemory)(
     XGL_GPU_MEMORY mem) = xglFreeMemory;
 
-static XGL_RESULT( XGLAPI * real_xglSetMemoryPriority)(
+XGL_RESULT( XGLAPI * real_xglSetMemoryPriority)(
     XGL_GPU_MEMORY mem,
     XGL_MEMORY_PRIORITY priority) = xglSetMemoryPriority;
 
-static XGL_RESULT( XGLAPI * real_xglMapMemory)(
+XGL_RESULT( XGLAPI * real_xglMapMemory)(
     XGL_GPU_MEMORY mem,
     XGL_FLAGS flags,
     void** ppData) = xglMapMemory;
 
-static XGL_RESULT( XGLAPI * real_xglUnmapMemory)(
+XGL_RESULT( XGLAPI * real_xglUnmapMemory)(
     XGL_GPU_MEMORY mem) = xglUnmapMemory;
 
-static XGL_RESULT( XGLAPI * real_xglPinSystemMemory)(
+XGL_RESULT( XGLAPI * real_xglPinSystemMemory)(
     XGL_DEVICE device,
     const void* pSysMem,
     size_t memSize,
     XGL_GPU_MEMORY* pMem) = xglPinSystemMemory;
 
-static XGL_RESULT( XGLAPI * real_xglGetMultiGpuCompatibility)(
+XGL_RESULT( XGLAPI * real_xglGetMultiGpuCompatibility)(
     XGL_PHYSICAL_GPU gpu0,
     XGL_PHYSICAL_GPU gpu1,
     XGL_GPU_COMPATIBILITY_INFO* pInfo) = xglGetMultiGpuCompatibility;
 
-static XGL_RESULT( XGLAPI * real_xglOpenSharedMemory)(
+XGL_RESULT( XGLAPI * real_xglOpenSharedMemory)(
     XGL_DEVICE device,
     const XGL_MEMORY_OPEN_INFO* pOpenInfo,
     XGL_GPU_MEMORY* pMem) = xglOpenSharedMemory;
 
-static XGL_RESULT( XGLAPI * real_xglOpenSharedQueueSemaphore)(
+XGL_RESULT( XGLAPI * real_xglOpenSharedQueueSemaphore)(
     XGL_DEVICE device,
     const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo,
     XGL_QUEUE_SEMAPHORE* pSemaphore) = xglOpenSharedQueueSemaphore;
 
-static XGL_RESULT( XGLAPI * real_xglOpenPeerMemory)(
+XGL_RESULT( XGLAPI * real_xglOpenPeerMemory)(
     XGL_DEVICE device,
     const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo,
     XGL_GPU_MEMORY* pMem) = xglOpenPeerMemory;
 
-static XGL_RESULT( XGLAPI * real_xglOpenPeerImage)(
+XGL_RESULT( XGLAPI * real_xglOpenPeerImage)(
     XGL_DEVICE device,
     const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo,
     XGL_IMAGE* pImage,
     XGL_GPU_MEMORY* pMem) = xglOpenPeerImage;
 
-static XGL_RESULT( XGLAPI * real_xglDestroyObject)(
+XGL_RESULT( XGLAPI * real_xglDestroyObject)(
     XGL_OBJECT object) = xglDestroyObject;
 
-static XGL_RESULT( XGLAPI * real_xglGetObjectInfo)(
+XGL_RESULT( XGLAPI * real_xglGetObjectInfo)(
     XGL_BASE_OBJECT object,
     XGL_OBJECT_INFO_TYPE infoType,
     size_t* pDataSize,
     void* pData) = xglGetObjectInfo;
 
-static XGL_RESULT( XGLAPI * real_xglBindObjectMemory)(
+XGL_RESULT( XGLAPI * real_xglBindObjectMemory)(
     XGL_OBJECT object,
     uint32_t allocationIdx,
     XGL_GPU_MEMORY mem,
     XGL_GPU_SIZE offset) = xglBindObjectMemory;
 
-static XGL_RESULT( XGLAPI * real_xglBindObjectMemoryRange)(
+XGL_RESULT( XGLAPI * real_xglBindObjectMemoryRange)(
     XGL_OBJECT object,
     uint32_t allocationIdx,
     XGL_GPU_SIZE rangeOffset,
@@ -183,157 +184,157 @@ static XGL_RESULT( XGLAPI * real_xglBindObjectMemoryRange)(
     XGL_GPU_MEMORY mem,
     XGL_GPU_SIZE memOffset) = xglBindObjectMemoryRange;
 
-static XGL_RESULT( XGLAPI * real_xglBindImageMemoryRange)(
+XGL_RESULT( XGLAPI * real_xglBindImageMemoryRange)(
     XGL_IMAGE image,
     uint32_t allocationIdx,
     const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo,
     XGL_GPU_MEMORY mem,
     XGL_GPU_SIZE memOffset) = xglBindImageMemoryRange;
 
-static XGL_RESULT( XGLAPI * real_xglCreateFence)(
+XGL_RESULT( XGLAPI * real_xglCreateFence)(
     XGL_DEVICE device,
     const XGL_FENCE_CREATE_INFO* pCreateInfo,
     XGL_FENCE* pFence) = xglCreateFence;
 
-static XGL_RESULT( XGLAPI * real_xglGetFenceStatus)(
+XGL_RESULT( XGLAPI * real_xglGetFenceStatus)(
     XGL_FENCE fence) = xglGetFenceStatus;
 
-static XGL_RESULT( XGLAPI * real_xglWaitForFences)(
+XGL_RESULT( XGLAPI * real_xglWaitForFences)(
     XGL_DEVICE device,
     uint32_t fenceCount,
     const XGL_FENCE* pFences,
     bool32_t waitAll,
     uint64_t timeout) = xglWaitForFences;
 
-static XGL_RESULT( XGLAPI * real_xglCreateQueueSemaphore)(
+XGL_RESULT( XGLAPI * real_xglCreateQueueSemaphore)(
     XGL_DEVICE device,
     const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo,
     XGL_QUEUE_SEMAPHORE* pSemaphore) = xglCreateQueueSemaphore;
 
-static XGL_RESULT( XGLAPI * real_xglSignalQueueSemaphore)(
+XGL_RESULT( XGLAPI * real_xglSignalQueueSemaphore)(
     XGL_QUEUE queue,
     XGL_QUEUE_SEMAPHORE semaphore) = xglSignalQueueSemaphore;
 
-static XGL_RESULT( XGLAPI * real_xglWaitQueueSemaphore)(
+XGL_RESULT( XGLAPI * real_xglWaitQueueSemaphore)(
     XGL_QUEUE queue,
     XGL_QUEUE_SEMAPHORE semaphore) = xglWaitQueueSemaphore;
 
-static XGL_RESULT( XGLAPI * real_xglCreateEvent)(
+XGL_RESULT( XGLAPI * real_xglCreateEvent)(
     XGL_DEVICE device,
     const XGL_EVENT_CREATE_INFO* pCreateInfo,
     XGL_EVENT* pEvent) = xglCreateEvent;
 
-static XGL_RESULT( XGLAPI * real_xglGetEventStatus)(
+XGL_RESULT( XGLAPI * real_xglGetEventStatus)(
     XGL_EVENT event) = xglGetEventStatus;
 
-static XGL_RESULT( XGLAPI * real_xglSetEvent)(
+XGL_RESULT( XGLAPI * real_xglSetEvent)(
     XGL_EVENT event) = xglSetEvent;
 
-static XGL_RESULT( XGLAPI * real_xglResetEvent)(
+XGL_RESULT( XGLAPI * real_xglResetEvent)(
     XGL_EVENT event) = xglResetEvent;
 
-static XGL_RESULT( XGLAPI * real_xglCreateQueryPool)(
+XGL_RESULT( XGLAPI * real_xglCreateQueryPool)(
     XGL_DEVICE device,
     const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo,
     XGL_QUERY_POOL* pQueryPool) = xglCreateQueryPool;
 
-static XGL_RESULT( XGLAPI * real_xglGetQueryPoolResults)(
+XGL_RESULT( XGLAPI * real_xglGetQueryPoolResults)(
     XGL_QUERY_POOL queryPool,
     uint32_t startQuery,
     uint32_t queryCount,
     size_t* pDataSize,
     void* pData) = xglGetQueryPoolResults;
 
-static XGL_RESULT( XGLAPI * real_xglGetFormatInfo)(
+XGL_RESULT( XGLAPI * real_xglGetFormatInfo)(
     XGL_DEVICE device,
     XGL_FORMAT format,
     XGL_FORMAT_INFO_TYPE infoType,
     size_t* pDataSize,
     void* pData) = xglGetFormatInfo;
 
-static XGL_RESULT( XGLAPI * real_xglCreateBuffer)(
+XGL_RESULT( XGLAPI * real_xglCreateBuffer)(
     XGL_DEVICE device,
     const XGL_BUFFER_CREATE_INFO* pCreateInfo,
     XGL_BUFFER* pBuffer) = xglCreateBuffer;
 
-static XGL_RESULT( XGLAPI * real_xglCreateBufferView)(
+XGL_RESULT( XGLAPI * real_xglCreateBufferView)(
     XGL_DEVICE device,
     const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo,
     XGL_BUFFER_VIEW* pView) = xglCreateBufferView;
 
-static XGL_RESULT( XGLAPI * real_xglCreateImage)(
+XGL_RESULT( XGLAPI * real_xglCreateImage)(
     XGL_DEVICE device,
     const XGL_IMAGE_CREATE_INFO* pCreateInfo,
     XGL_IMAGE* pImage) = xglCreateImage;
 
-static XGL_RESULT( XGLAPI * real_xglSetFastClearColor)(
+XGL_RESULT( XGLAPI * real_xglSetFastClearColor)(
     XGL_IMAGE image,
     const float color[4]) = xglSetFastClearColor;
 
-static XGL_RESULT( XGLAPI * real_xglSetFastClearDepth)(
+XGL_RESULT( XGLAPI * real_xglSetFastClearDepth)(
     XGL_IMAGE image,
     float depth) = xglSetFastClearDepth;
 
-static XGL_RESULT( XGLAPI * real_xglGetImageSubresourceInfo)(
+XGL_RESULT( XGLAPI * real_xglGetImageSubresourceInfo)(
     XGL_IMAGE image,
     const XGL_IMAGE_SUBRESOURCE* pSubresource,
     XGL_SUBRESOURCE_INFO_TYPE infoType,
     size_t* pDataSize,
     void* pData) = xglGetImageSubresourceInfo;
 
-static XGL_RESULT( XGLAPI * real_xglCreateImageView)(
+XGL_RESULT( XGLAPI * real_xglCreateImageView)(
     XGL_DEVICE device,
     const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
     XGL_IMAGE_VIEW* pView) = xglCreateImageView;
 
-static XGL_RESULT( XGLAPI * real_xglCreateColorAttachmentView)(
+XGL_RESULT( XGLAPI * real_xglCreateColorAttachmentView)(
     XGL_DEVICE device,
     const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
     XGL_COLOR_ATTACHMENT_VIEW* pView) = xglCreateColorAttachmentView;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDepthStencilView)(
+XGL_RESULT( XGLAPI * real_xglCreateDepthStencilView)(
     XGL_DEVICE device,
     const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo,
     XGL_DEPTH_STENCIL_VIEW* pView) = xglCreateDepthStencilView;
 
-static XGL_RESULT( XGLAPI * real_xglCreateShader)(
+XGL_RESULT( XGLAPI * real_xglCreateShader)(
     XGL_DEVICE device,
     const XGL_SHADER_CREATE_INFO* pCreateInfo,
     XGL_SHADER* pShader) = xglCreateShader;
 
-static XGL_RESULT( XGLAPI * real_xglCreateGraphicsPipeline)(
+XGL_RESULT( XGLAPI * real_xglCreateGraphicsPipeline)(
     XGL_DEVICE device,
     const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo,
     XGL_PIPELINE* pPipeline) = xglCreateGraphicsPipeline;
 
-static XGL_RESULT( XGLAPI * real_xglCreateComputePipeline)(
+XGL_RESULT( XGLAPI * real_xglCreateComputePipeline)(
     XGL_DEVICE device,
     const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo,
     XGL_PIPELINE* pPipeline) = xglCreateComputePipeline;
 
-static XGL_RESULT( XGLAPI * real_xglStorePipeline)(
+XGL_RESULT( XGLAPI * real_xglStorePipeline)(
     XGL_PIPELINE pipeline,
     size_t* pDataSize,
     void* pData) = xglStorePipeline;
 
-static XGL_RESULT( XGLAPI * real_xglLoadPipeline)(
+XGL_RESULT( XGLAPI * real_xglLoadPipeline)(
     XGL_DEVICE device,
     size_t dataSize,
     const void* pData,
     XGL_PIPELINE* pPipeline) = xglLoadPipeline;
 
-static XGL_RESULT( XGLAPI * real_xglCreatePipelineDelta)(
+XGL_RESULT( XGLAPI * real_xglCreatePipelineDelta)(
     XGL_DEVICE device,
     XGL_PIPELINE p1,
     XGL_PIPELINE p2,
     XGL_PIPELINE_DELTA* delta) = xglCreatePipelineDelta;
 
-static XGL_RESULT( XGLAPI * real_xglCreateSampler)(
+XGL_RESULT( XGLAPI * real_xglCreateSampler)(
     XGL_DEVICE device,
     const XGL_SAMPLER_CREATE_INFO* pCreateInfo,
     XGL_SAMPLER* pSampler) = xglCreateSampler;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDescriptorSetLayout)(
+XGL_RESULT( XGLAPI * real_xglCreateDescriptorSetLayout)(
     XGL_DEVICE device,
     XGL_FLAGS stageFlags,
     const uint32_t* pSetBindPoints,
@@ -341,25 +342,25 @@ static XGL_RESULT( XGLAPI * real_xglCreateDescriptorSetLayout)(
     const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
     XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout) = xglCreateDescriptorSetLayout;
 
-static XGL_RESULT( XGLAPI * real_xglBeginDescriptorRegionUpdate)(
+XGL_RESULT( XGLAPI * real_xglBeginDescriptorRegionUpdate)(
     XGL_DEVICE device,
     XGL_DESCRIPTOR_UPDATE_MODE updateMode) = xglBeginDescriptorRegionUpdate;
 
-static XGL_RESULT( XGLAPI * real_xglEndDescriptorRegionUpdate)(
+XGL_RESULT( XGLAPI * real_xglEndDescriptorRegionUpdate)(
     XGL_DEVICE device,
     XGL_CMD_BUFFER cmd) = xglEndDescriptorRegionUpdate;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDescriptorRegion)(
+XGL_RESULT( XGLAPI * real_xglCreateDescriptorRegion)(
     XGL_DEVICE device,
     XGL_DESCRIPTOR_REGION_USAGE regionUsage,
     uint32_t maxSets,
     const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo,
     XGL_DESCRIPTOR_REGION* pDescriptorRegion) = xglCreateDescriptorRegion;
 
-static XGL_RESULT( XGLAPI * real_xglClearDescriptorRegion)(
+XGL_RESULT( XGLAPI * real_xglClearDescriptorRegion)(
     XGL_DESCRIPTOR_REGION descriptorRegion) = xglClearDescriptorRegion;
 
-static XGL_RESULT( XGLAPI * real_xglAllocDescriptorSets)(
+XGL_RESULT( XGLAPI * real_xglAllocDescriptorSets)(
     XGL_DESCRIPTOR_REGION descriptorRegion,
     XGL_DESCRIPTOR_SET_USAGE setUsage,
     uint32_t count,
@@ -367,91 +368,91 @@ static XGL_RESULT( XGLAPI * real_xglAllocDescriptorSets)(
     XGL_DESCRIPTOR_SET* pDescriptorSets,
     uint32_t* pCount) = xglAllocDescriptorSets;
 
-static void( XGLAPI * real_xglClearDescriptorSets)(
+void( XGLAPI * real_xglClearDescriptorSets)(
     XGL_DESCRIPTOR_REGION descriptorRegion,
     uint32_t count,
     const XGL_DESCRIPTOR_SET* pDescriptorSets) = xglClearDescriptorSets;
 
-static void( XGLAPI * real_xglUpdateDescriptors)(
+void( XGLAPI * real_xglUpdateDescriptors)(
     XGL_DESCRIPTOR_SET descriptorSet,
     const void* pUpdateChain) = xglUpdateDescriptors;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDynamicViewportState)(
+XGL_RESULT( XGLAPI * real_xglCreateDynamicViewportState)(
     XGL_DEVICE device,
     const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo,
     XGL_DYNAMIC_VP_STATE_OBJECT* pState) = xglCreateDynamicViewportState;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDynamicRasterState)(
+XGL_RESULT( XGLAPI * real_xglCreateDynamicRasterState)(
     XGL_DEVICE device,
     const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo,
     XGL_DYNAMIC_RS_STATE_OBJECT* pState) = xglCreateDynamicRasterState;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDynamicColorBlendState)(
+XGL_RESULT( XGLAPI * real_xglCreateDynamicColorBlendState)(
     XGL_DEVICE device,
     const XGL_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo,
     XGL_DYNAMIC_CB_STATE_OBJECT* pState) = xglCreateDynamicColorBlendState;
 
-static XGL_RESULT( XGLAPI * real_xglCreateDynamicDepthStencilState)(
+XGL_RESULT( XGLAPI * real_xglCreateDynamicDepthStencilState)(
     XGL_DEVICE device,
     const XGL_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo,
     XGL_DYNAMIC_DS_STATE_OBJECT* pState) = xglCreateDynamicDepthStencilState;
 
-static XGL_RESULT( XGLAPI * real_xglCreateCommandBuffer)(
+XGL_RESULT( XGLAPI * real_xglCreateCommandBuffer)(
     XGL_DEVICE device,
     const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo,
     XGL_CMD_BUFFER* pCmdBuffer) = xglCreateCommandBuffer;
 
-static XGL_RESULT( XGLAPI * real_xglBeginCommandBuffer)(
+XGL_RESULT( XGLAPI * real_xglBeginCommandBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo) = xglBeginCommandBuffer;
 
-static XGL_RESULT( XGLAPI * real_xglEndCommandBuffer)(
+XGL_RESULT( XGLAPI * real_xglEndCommandBuffer)(
     XGL_CMD_BUFFER cmdBuffer) = xglEndCommandBuffer;
 
-static XGL_RESULT( XGLAPI * real_xglResetCommandBuffer)(
+XGL_RESULT( XGLAPI * real_xglResetCommandBuffer)(
     XGL_CMD_BUFFER cmdBuffer) = xglResetCommandBuffer;
 
-static void( XGLAPI * real_xglCmdBindPipeline)(
+void( XGLAPI * real_xglCmdBindPipeline)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_PIPELINE_BIND_POINT pipelineBindPoint,
     XGL_PIPELINE pipeline) = xglCmdBindPipeline;
 
-static void( XGLAPI * real_xglCmdBindPipelineDelta)(
+void( XGLAPI * real_xglCmdBindPipelineDelta)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_PIPELINE_BIND_POINT pipelineBindPoint,
     XGL_PIPELINE_DELTA delta) = xglCmdBindPipelineDelta;
 
-static void( XGLAPI * real_xglCmdBindDynamicStateObject)(
+void( XGLAPI * real_xglCmdBindDynamicStateObject)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_STATE_BIND_POINT stateBindPoint,
     XGL_DYNAMIC_STATE_OBJECT state) = xglCmdBindDynamicStateObject;
 
-static void( XGLAPI * real_xglCmdBindDescriptorSet)(
+void( XGLAPI * real_xglCmdBindDescriptorSet)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_PIPELINE_BIND_POINT pipelineBindPoint,
     XGL_DESCRIPTOR_SET descriptorSet,
     const uint32_t* pUserData) = xglCmdBindDescriptorSet;
 
-static void( XGLAPI * real_xglCmdBindVertexBuffer)(
+void( XGLAPI * real_xglCmdBindVertexBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER buffer,
     XGL_GPU_SIZE offset,
     uint32_t binding) = xglCmdBindVertexBuffer;
 
-static void( XGLAPI * real_xglCmdBindIndexBuffer)(
+void( XGLAPI * real_xglCmdBindIndexBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER buffer,
     XGL_GPU_SIZE offset,
     XGL_INDEX_TYPE indexType) = xglCmdBindIndexBuffer;
 
-static void( XGLAPI * real_xglCmdDraw)(
+void( XGLAPI * real_xglCmdDraw)(
     XGL_CMD_BUFFER cmdBuffer,
     uint32_t firstVertex,
     uint32_t vertexCount,
     uint32_t firstInstance,
     uint32_t instanceCount) = xglCmdDraw;
 
-static void( XGLAPI * real_xglCmdDrawIndexed)(
+void( XGLAPI * real_xglCmdDrawIndexed)(
     XGL_CMD_BUFFER cmdBuffer,
     uint32_t firstIndex,
     uint32_t indexCount,
@@ -459,95 +460,95 @@ static void( XGLAPI * real_xglCmdDrawIndexed)(
     uint32_t firstInstance,
     uint32_t instanceCount) = xglCmdDrawIndexed;
 
-static void( XGLAPI * real_xglCmdDrawIndirect)(
+void( XGLAPI * real_xglCmdDrawIndirect)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER buffer,
     XGL_GPU_SIZE offset,
     uint32_t count,
     uint32_t stride) = xglCmdDrawIndirect;
 
-static void( XGLAPI * real_xglCmdDrawIndexedIndirect)(
+void( XGLAPI * real_xglCmdDrawIndexedIndirect)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER buffer,
     XGL_GPU_SIZE offset,
     uint32_t count,
     uint32_t stride) = xglCmdDrawIndexedIndirect;
 
-static void( XGLAPI * real_xglCmdDispatch)(
+void( XGLAPI * real_xglCmdDispatch)(
     XGL_CMD_BUFFER cmdBuffer,
     uint32_t x,
     uint32_t y,
     uint32_t z) = xglCmdDispatch;
 
-static void( XGLAPI * real_xglCmdDispatchIndirect)(
+void( XGLAPI * real_xglCmdDispatchIndirect)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER buffer,
     XGL_GPU_SIZE offset) = xglCmdDispatchIndirect;
 
-static void( XGLAPI * real_xglCmdCopyBuffer)(
+void( XGLAPI * real_xglCmdCopyBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER srcBuffer,
     XGL_BUFFER destBuffer,
     uint32_t regionCount,
     const XGL_BUFFER_COPY* pRegions) = xglCmdCopyBuffer;
 
-static void( XGLAPI * real_xglCmdCopyImage)(
+void( XGLAPI * real_xglCmdCopyImage)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE srcImage,
     XGL_IMAGE destImage,
     uint32_t regionCount,
     const XGL_IMAGE_COPY* pRegions) = xglCmdCopyImage;
 
-static void( XGLAPI * real_xglCmdCopyBufferToImage)(
+void( XGLAPI * real_xglCmdCopyBufferToImage)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER srcBuffer,
     XGL_IMAGE destImage,
     uint32_t regionCount,
     const XGL_BUFFER_IMAGE_COPY* pRegions) = xglCmdCopyBufferToImage;
 
-static void( XGLAPI * real_xglCmdCopyImageToBuffer)(
+void( XGLAPI * real_xglCmdCopyImageToBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE srcImage,
     XGL_BUFFER destBuffer,
     uint32_t regionCount,
     const XGL_BUFFER_IMAGE_COPY* pRegions) = xglCmdCopyImageToBuffer;
 
-static void( XGLAPI * real_xglCmdCloneImageData)(
+void( XGLAPI * real_xglCmdCloneImageData)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE srcImage,
     XGL_IMAGE_LAYOUT srcImageLayout,
     XGL_IMAGE destImage,
     XGL_IMAGE_LAYOUT destImageLayout) = xglCmdCloneImageData;
 
-static void( XGLAPI * real_xglCmdUpdateBuffer)(
+void( XGLAPI * real_xglCmdUpdateBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER destBuffer,
     XGL_GPU_SIZE destOffset,
     XGL_GPU_SIZE dataSize,
     const uint32_t* pData) = xglCmdUpdateBuffer;
 
-static void( XGLAPI * real_xglCmdFillBuffer)(
+void( XGLAPI * real_xglCmdFillBuffer)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_BUFFER destBuffer,
     XGL_GPU_SIZE destOffset,
     XGL_GPU_SIZE fillSize,
     uint32_t data) = xglCmdFillBuffer;
 
-static void( XGLAPI * real_xglCmdClearColorImage)(
+void( XGLAPI * real_xglCmdClearColorImage)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE image,
     const float color[4],
     uint32_t rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges) = xglCmdClearColorImage;
 
-static void( XGLAPI * real_xglCmdClearColorImageRaw)(
+void( XGLAPI * real_xglCmdClearColorImageRaw)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE image,
     const uint32_t color[4],
     uint32_t rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges) = xglCmdClearColorImageRaw;
 
-static void( XGLAPI * real_xglCmdClearDepthStencil)(
+void( XGLAPI * real_xglCmdClearDepthStencil)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE image,
     float depth,
@@ -555,61 +556,61 @@ static void( XGLAPI * real_xglCmdClearDepthStencil)(
     uint32_t rangeCount,
     const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges) = xglCmdClearDepthStencil;
 
-static void( XGLAPI * real_xglCmdResolveImage)(
+void( XGLAPI * real_xglCmdResolveImage)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_IMAGE srcImage,
     XGL_IMAGE destImage,
     uint32_t rectCount,
     const XGL_IMAGE_RESOLVE* pRects) = xglCmdResolveImage;
 
-static void( XGLAPI * real_xglCmdSetEvent)(
+void( XGLAPI * real_xglCmdSetEvent)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_EVENT event,
     XGL_SET_EVENT pipeEvent) = xglCmdSetEvent;
 
-static void( XGLAPI * real_xglCmdResetEvent)(
+void( XGLAPI * real_xglCmdResetEvent)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_EVENT event) = xglCmdResetEvent;
 
-static void( XGLAPI * real_xglCmdWaitEvents)(
+void( XGLAPI * real_xglCmdWaitEvents)(
     XGL_CMD_BUFFER cmdBuffer,
     const XGL_EVENT_WAIT_INFO* pWaitInfo) = xglCmdWaitEvents;
 
-static void( XGLAPI * real_xglCmdPipelineBarrier)(
+void( XGLAPI * real_xglCmdPipelineBarrier)(
     XGL_CMD_BUFFER cmdBuffer,
     const XGL_PIPELINE_BARRIER* pBarrier) = xglCmdPipelineBarrier;
 
-static void( XGLAPI * real_xglCmdBeginQuery)(
+void( XGLAPI * real_xglCmdBeginQuery)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_QUERY_POOL queryPool,
     uint32_t slot,
     XGL_FLAGS flags) = xglCmdBeginQuery;
 
-static void( XGLAPI * real_xglCmdEndQuery)(
+void( XGLAPI * real_xglCmdEndQuery)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_QUERY_POOL queryPool,
     uint32_t slot) = xglCmdEndQuery;
 
-static void( XGLAPI * real_xglCmdResetQueryPool)(
+void( XGLAPI * real_xglCmdResetQueryPool)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_QUERY_POOL queryPool,
     uint32_t startQuery,
     uint32_t queryCount) = xglCmdResetQueryPool;
 
-static void( XGLAPI * real_xglCmdWriteTimestamp)(
+void( XGLAPI * real_xglCmdWriteTimestamp)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_TIMESTAMP_TYPE timestampType,
     XGL_BUFFER destBuffer,
     XGL_GPU_SIZE destOffset) = xglCmdWriteTimestamp;
 
-static void( XGLAPI * real_xglCmdInitAtomicCounters)(
+void( XGLAPI * real_xglCmdInitAtomicCounters)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_PIPELINE_BIND_POINT pipelineBindPoint,
     uint32_t startCounter,
     uint32_t counterCount,
     const uint32_t* pData) = xglCmdInitAtomicCounters;
 
-static void( XGLAPI * real_xglCmdLoadAtomicCounters)(
+void( XGLAPI * real_xglCmdLoadAtomicCounters)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_PIPELINE_BIND_POINT pipelineBindPoint,
     uint32_t startCounter,
@@ -617,7 +618,7 @@ static void( XGLAPI * real_xglCmdLoadAtomicCounters)(
     XGL_BUFFER srcBuffer,
     XGL_GPU_SIZE srcOffset) = xglCmdLoadAtomicCounters;
 
-static void( XGLAPI * real_xglCmdSaveAtomicCounters)(
+void( XGLAPI * real_xglCmdSaveAtomicCounters)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_PIPELINE_BIND_POINT pipelineBindPoint,
     uint32_t startCounter,
@@ -625,25 +626,26 @@ static void( XGLAPI * real_xglCmdSaveAtomicCounters)(
     XGL_BUFFER destBuffer,
     XGL_GPU_SIZE destOffset) = xglCmdSaveAtomicCounters;
 
-static XGL_RESULT( XGLAPI * real_xglCreateFramebuffer)(
+XGL_RESULT( XGLAPI * real_xglCreateFramebuffer)(
     XGL_DEVICE device,
     const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo,
     XGL_FRAMEBUFFER* pFramebuffer) = xglCreateFramebuffer;
 
-static XGL_RESULT( XGLAPI * real_xglCreateRenderPass)(
+XGL_RESULT( XGLAPI * real_xglCreateRenderPass)(
     XGL_DEVICE device,
     const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo,
     XGL_RENDER_PASS* pRenderPass) = xglCreateRenderPass;
 
-static void( XGLAPI * real_xglCmdBeginRenderPass)(
+void( XGLAPI * real_xglCmdBeginRenderPass)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_RENDER_PASS renderPass) = xglCmdBeginRenderPass;
 
-static void( XGLAPI * real_xglCmdEndRenderPass)(
+void( XGLAPI * real_xglCmdEndRenderPass)(
     XGL_CMD_BUFFER cmdBuffer,
     XGL_RENDER_PASS renderPass) = xglCmdEndRenderPass;
 
-static BOOL isHooked = FALSE;
+// declared as extern in glvtrace_xgl_helpers.h
+BOOL isHooked = FALSE;
 
 void AttachHooks()
 {
@@ -1044,7 +1046,7 @@ void send_xgl_api_version_packet()
     FINISH_TRACE_PACKET();
 }
 
-static GLV_CRITICAL_SECTION g_memInfoLock;
+extern GLV_CRITICAL_SECTION g_memInfoLock;
 void InitTracer(void)
 {
     char *ipAddr = glv_get_global_var("GLVLIB_TRACE_IPADDR");
@@ -1058,527 +1060,7 @@ void InitTracer(void)
     send_xgl_api_version_packet();
 }
 
-// Support for shadowing CPU mapped memory
-typedef struct _XGLAllocInfo {
-    XGL_GPU_SIZE   size;
-    XGL_GPU_MEMORY handle;
-    void           *pData;
-    BOOL           valid;
-} XGLAllocInfo;
-typedef struct _XGLMemInfo {
-    unsigned int numEntrys;
-    XGLAllocInfo *pEntrys;
-    XGLAllocInfo *pLastMapped;
-    unsigned int capacity;
-} XGLMemInfo;
-
-static XGLMemInfo g_memInfo = {0, NULL, NULL, 0};
-
-static void init_mem_info_entrys(XGLAllocInfo *ptr, const unsigned int num)
-{
-    unsigned int i;
-    for (i = 0; i < num; i++)
-    {
-        XGLAllocInfo *entry = ptr + i;
-        entry->pData = NULL;
-        entry->size  = 0;
-        entry->handle = NULL;
-        entry->valid = FALSE;
-    }
-}
-
-// caller must hold the g_memInfoLock
-static void init_mem_info()
-{
-    g_memInfo.numEntrys = 0;
-    g_memInfo.capacity = 4096;
-    g_memInfo.pLastMapped = NULL;
-
-    g_memInfo.pEntrys = GLV_NEW_ARRAY(XGLAllocInfo, g_memInfo.capacity);
-
-    if (g_memInfo.pEntrys == NULL)
-        glv_LogError("init_mem_info()  malloc failed\n");
-    else
-        init_mem_info_entrys(g_memInfo.pEntrys, g_memInfo.capacity);
-}
-
-// caller must hold the g_memInfoLock
-static void delete_mem_info()
-{
-    GLV_DELETE(g_memInfo.pEntrys);
-    g_memInfo.pEntrys = NULL;
-    g_memInfo.numEntrys = 0;
-    g_memInfo.capacity = 0;
-    g_memInfo.pLastMapped = NULL;
-}
-
-// caller must hold the g_memInfoLock
-static XGLAllocInfo * get_mem_info_entry()
-{
-    unsigned int i;
-    XGLAllocInfo *entry;
-    if (g_memInfo.numEntrys > g_memInfo.capacity)
-    {
-        glv_LogError("get_mem_info_entry() bad internal state numEntrys %u\n", g_memInfo.numEntrys);
-        return NULL;
-    }
-
-    entry = g_memInfo.pEntrys;
-    for (i = 0; i < g_memInfo.numEntrys; i++)
-    {
-        if ((entry + i)->valid == FALSE)
-            return entry + i;
-    }
-    if (g_memInfo.numEntrys == g_memInfo.capacity)
-    {  // grow the array 2x
-        g_memInfo.capacity *= 2;
-        g_memInfo.pEntrys = (XGLAllocInfo *) GLV_REALLOC(g_memInfo.pEntrys, g_memInfo.capacity * sizeof(XGLAllocInfo));
-        if (g_memInfo.pEntrys == NULL)
-            glv_LogError("get_mem_info_entry() realloc failed\n");
-        //glv_LogInfo("realloc memInfo from %u to %u\n", g_memInfo.capacity /2, g_memInfo.capacity);
-        //init the newly added entrys
-        init_mem_info_entrys(g_memInfo.pEntrys + g_memInfo.capacity / 2, g_memInfo.capacity / 2);
-    }
-
-    assert(g_memInfo.numEntrys < g_memInfo.capacity);
-    entry = g_memInfo.pEntrys + g_memInfo.numEntrys;
-    g_memInfo.numEntrys++;
-    assert(entry->valid == FALSE);
-    return entry;
-}
-
-// caller must hold the g_memInfoLock
-static XGLAllocInfo * find_mem_info_entry(const XGL_GPU_MEMORY handle)
-{
-    XGLAllocInfo *entry;
-    unsigned int i;
-    entry = g_memInfo.pEntrys;
-    if (g_memInfo.pLastMapped && g_memInfo.pLastMapped->handle == handle && g_memInfo.pLastMapped->valid)
-    {
-        return g_memInfo.pLastMapped;
-    }
-    for (i = 0; i < g_memInfo.numEntrys; i++)
-    {
-        if ((entry + i)->valid && (handle == (entry + i)->handle))
-        {
-            return entry + i;
-        }
-    }
-
-    return NULL;
-}
-
-static XGLAllocInfo * find_mem_info_entry_lock(const XGL_GPU_MEMORY handle)
-{
-    XGLAllocInfo *res;
-    glv_enter_critical_section(&g_memInfoLock);
-    res = find_mem_info_entry(handle);
-    glv_leave_critical_section(&g_memInfoLock);
-    return res;
-}
-
-static void add_new_handle_to_mem_info(const XGL_GPU_MEMORY handle, XGL_GPU_SIZE size, void *pData)
-{
-    XGLAllocInfo *entry;
-
-    glv_enter_critical_section(&g_memInfoLock);
-    if (g_memInfo.capacity == 0)
-        init_mem_info();
-
-    entry = get_mem_info_entry();
-    if (entry)
-    {
-        entry->valid = TRUE;
-        entry->handle = handle;
-        entry->size = size;
-        entry->pData = pData;   // NOTE: xglFreeMemory will free this mem, so no malloc()
-    }
-    glv_leave_critical_section(&g_memInfoLock);
-}
-
-static void add_data_to_mem_info(const XGL_GPU_MEMORY handle, void *pData)
-{
-    XGLAllocInfo *entry;
-
-    glv_enter_critical_section(&g_memInfoLock);
-    entry = find_mem_info_entry(handle);
-    if (entry)
-    {
-        entry->pData = pData;
-    }
-    g_memInfo.pLastMapped = entry;
-    glv_leave_critical_section(&g_memInfoLock);
-}
-
-static void rm_handle_from_mem_info(const XGL_GPU_MEMORY handle)
-{
-    XGLAllocInfo *entry;
-
-    glv_enter_critical_section(&g_memInfoLock);
-    entry = find_mem_info_entry(handle);
-    if (entry)
-    {
-        entry->valid = FALSE;
-        entry->pData = NULL;
-        entry->size = 0;
-        entry->handle = NULL;
-
-        if (entry == g_memInfo.pLastMapped)
-            g_memInfo.pLastMapped = NULL;
-        // adjust numEntrys to be last valid entry in list
-        do {
-            entry =  g_memInfo.pEntrys + g_memInfo.numEntrys - 1;
-            if (entry->valid == FALSE)
-                g_memInfo.numEntrys--;
-        } while ((entry->valid == FALSE) && (g_memInfo.numEntrys > 0));
-        if (g_memInfo.numEntrys == 0)
-            delete_mem_info();
-    }
-    glv_leave_critical_section(&g_memInfoLock);
-}
-
-static void add_begin_cmdbuf_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
-{
-    const XGL_CMD_BUFFER_BEGIN_INFO* pInNow = pIn;
-    XGL_CMD_BUFFER_BEGIN_INFO** ppOutNext = (XGL_CMD_BUFFER_BEGIN_INFO**)ppOut;
-    while (pInNow != NULL)
-    {
-        XGL_CMD_BUFFER_BEGIN_INFO** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
-
-        switch (pInNow->sType)
-        {
-            case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO), pInNow);
-                ppOutNext = (XGL_CMD_BUFFER_BEGIN_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            default:
-                assert(!"Encountered an unexpected type in cmdbuffer_begin_info list");
-        }
-        pInNow = (XGL_CMD_BUFFER_BEGIN_INFO*)pInNow->pNext;
-    }
-    return;
-}
-
-static void add_alloc_memory_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
-{
-    const XGL_MEMORY_ALLOC_INFO* pInNow = pIn;
-    XGL_MEMORY_ALLOC_INFO** ppOutNext = (XGL_MEMORY_ALLOC_INFO**)ppOut;
-    while (pInNow != NULL)
-    {
-        XGL_MEMORY_ALLOC_INFO** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
-
-        switch (pInNow->sType)
-        {
-        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO), pInNow);
-            ppOutNext = (XGL_MEMORY_ALLOC_INFO**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO), pInNow);
-            ppOutNext = (XGL_MEMORY_ALLOC_INFO**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        default:
-            assert(!"Encountered an unexpected type in memory_alloc_info list");
-        }
-        pInNow = (XGL_MEMORY_ALLOC_INFO*)pInNow->pNext;
-    }
-    return;
-}
-
-static size_t calculate_memory_barrier_size(uint32_t mbCount, const void** ppMemBarriers)
-{
-    uint32_t i, siz=0;
-    for (i = 0; i < mbCount; i++) {
-        XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) ppMemBarriers[i];
-        switch (pNext->sType) {
-            case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
-                siz += sizeof(XGL_MEMORY_BARRIER);
-                break;
-            case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-                siz += sizeof(XGL_BUFFER_MEMORY_BARRIER);
-                break;
-            case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-                siz += sizeof(XGL_IMAGE_MEMORY_BARRIER);
-                break;
-            default:
-                assert(0);
-                break;
-        }
-    }
-    return siz;
-}
-
-static void add_pipeline_shader_to_trace_packet(glv_trace_packet_header* pHeader, XGL_PIPELINE_SHADER* packetShader, const XGL_PIPELINE_SHADER* paramShader)
-{
-    uint32_t i;
-    // constant buffers
-    if (paramShader->linkConstBufferCount > 0 && paramShader->pLinkConstBufferInfo != NULL)
-    {
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->pLinkConstBufferInfo), sizeof(XGL_LINK_CONST_BUFFER) * paramShader->linkConstBufferCount, paramShader->pLinkConstBufferInfo);
-        for (i = 0; i < paramShader->linkConstBufferCount; i++)
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(packetShader->pLinkConstBufferInfo[i].pBufferData), packetShader->pLinkConstBufferInfo[i].bufferSize, paramShader->pLinkConstBufferInfo[i].pBufferData);
-        }
-    }
-}
-
-static void finalize_pipeline_shader_address(glv_trace_packet_header* pHeader, const XGL_PIPELINE_SHADER* packetShader)
-{
-    uint32_t i;
-    // constant buffers
-    if (packetShader->linkConstBufferCount > 0 && packetShader->pLinkConstBufferInfo != NULL)
-    {
-        for (i = 0; i < packetShader->linkConstBufferCount; i++)
-        {
-            glv_finalize_buffer_address(pHeader, (void**)&(packetShader->pLinkConstBufferInfo[i].pBufferData));
-        }
-        glv_finalize_buffer_address(pHeader, (void**)&(packetShader->pLinkConstBufferInfo));
-    }
-}
-
-static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
-{
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pInNow = pIn;
-    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO** ppOutNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO**)ppOut;
-    while (pInNow != NULL)
-    {
-        XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
-        glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), pInNow);
-        ppOutNext = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO**)&(*ppOutNow)->pNext;
-        glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-        pInNow = (XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pInNow->pNext;
-    }
-    return;
-}
-
-static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
-{
-    const XGL_UPDATE_SAMPLERS* pInNow = pIn;
-    XGL_UPDATE_SAMPLERS** ppOutNext = (XGL_UPDATE_SAMPLERS**)ppOut;
-    while (pInNow != NULL)
-    {
-        XGL_UPDATE_SAMPLERS** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
-        switch (pInNow->sType)
-        {
-        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_SAMPLERS), pInNow);
-            XGL_UPDATE_SAMPLERS* pPacket = (XGL_UPDATE_SAMPLERS*)*ppOutNow;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplers, ((XGL_UPDATE_SAMPLERS*)pInNow)->count * sizeof(XGL_SAMPLER), ((XGL_UPDATE_SAMPLERS*)pInNow)->pSamplers);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplers));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_SAMPLER_TEXTURES), pInNow);
-            XGL_UPDATE_SAMPLER_TEXTURES* pPacket = (XGL_UPDATE_SAMPLER_TEXTURES*)*ppOutNow;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews, ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count * sizeof(XGL_SAMPLER_IMAGE_VIEW_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews);
-            uint32_t i;
-            for (i = 0; i < ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->count; i++) {
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pSamplerImageViews[i].pImageView, sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_SAMPLER_TEXTURES*)pInNow)->pSamplerImageViews[i].pImageView);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews[i].pImageView));
-            }
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSamplerImageViews));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_IMAGES), pInNow);
-            XGL_UPDATE_IMAGES* pPacket = (XGL_UPDATE_IMAGES*)*ppOutNow;
-            uint32_t i;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews, ((XGL_UPDATE_IMAGES*)pInNow)->count * sizeof(XGL_IMAGE_VIEW_ATTACH_INFO *), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews);
-            for (i = 0; i < ((XGL_UPDATE_IMAGES*)pInNow)->count; i++) {
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pImageViews[i], sizeof(XGL_IMAGE_VIEW_ATTACH_INFO), ((XGL_UPDATE_IMAGES*)pInNow)->pImageViews[i]);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews[i]));
-            }
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pImageViews));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_BUFFERS), pInNow);
-            XGL_UPDATE_BUFFERS* pPacket = (XGL_UPDATE_BUFFERS*)*ppOutNow;
-            glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews, ((XGL_UPDATE_BUFFERS*)pInNow)->count * sizeof(XGL_BUFFER_VIEW_ATTACH_INFO *), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews);
-            uint32_t i;
-            for (i = 0; i < ((XGL_UPDATE_BUFFERS*)pInNow)->count; i++) {
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pBufferViews[i], sizeof(XGL_BUFFER_VIEW_ATTACH_INFO), ((XGL_UPDATE_BUFFERS*)pInNow)->pBufferViews[i]);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews[i]));
-            }
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBufferViews));
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_UPDATE_AS_COPY), pInNow);
-            ppOutNext = (XGL_UPDATE_SAMPLERS**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-            default:
-                assert(0);
-        }
-        pInNow = (XGL_UPDATE_SAMPLERS*)pInNow->pNext;
-    }
-    return;
-}
-
-static void add_pipeline_state_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
-{
-    const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pInNow = pIn;
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO** ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)ppOut;
-    while (pInNow != NULL)
-    {
-        XGL_GRAPHICS_PIPELINE_CREATE_INFO** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
-
-        switch (pInNow->sType)
-        {
-            case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_IA_STATE_CREATE_INFO), pInNow);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_TESS_STATE_CREATE_INFO), pInNow);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_RS_STATE_CREATE_INFO), pInNow);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_DS_STATE_CREATE_INFO), pInNow);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_VP_STATE_CREATE_INFO), pInNow);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
-            {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_MS_STATE_CREATE_INFO), pInNow);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-            {
-                XGL_PIPELINE_CB_STATE_CREATE_INFO *pPacket = NULL;
-                XGL_PIPELINE_CB_STATE_CREATE_INFO *pIn = NULL;
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_CB_STATE_CREATE_INFO), pInNow);
-                pPacket = (XGL_PIPELINE_CB_STATE_CREATE_INFO*) *ppOutNow;
-                pIn = (XGL_PIPELINE_CB_STATE_CREATE_INFO*) pInNow;
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pAttachments, pIn->attachmentCount * sizeof(XGL_PIPELINE_CB_ATTACHMENT_STATE), pIn->pAttachments);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAttachments));
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-            {
-                XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacket = NULL;
-                XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* pInPacket = NULL;
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_SHADER_STAGE_CREATE_INFO), pInNow);
-                pPacket = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) *ppOutNow;
-                pInPacket = (XGL_PIPELINE_SHADER_STAGE_CREATE_INFO*) pInNow;
-                add_pipeline_shader_to_trace_packet(pHeader, &pPacket->shader, &pInPacket->shader);
-                finalize_pipeline_shader_address(pHeader, &pPacket->shader);
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
-            {
-                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pPacket = NULL;
-                XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO *pIn = NULL;
-                glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO), pInNow);
-                pPacket = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*) *ppOutNow;
-                pIn = (XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO*) pInNow;
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pVertexBindingDescriptions, pIn->bindingCount * sizeof(XGL_VERTEX_INPUT_BINDING_DESCRIPTION), pIn->pVertexBindingDescriptions);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexBindingDescriptions));
-                glv_add_buffer_to_trace_packet(pHeader, (void **) &pPacket->pVertexAttributeDescriptions, pIn->attributeCount * sizeof(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION), pIn->pVertexAttributeDescriptions);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexAttributeDescriptions));
-                ppOutNext = (XGL_GRAPHICS_PIPELINE_CREATE_INFO**)&(*ppOutNow)->pNext;
-                glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-                break;
-            }
-            default:
-                assert(!"Encountered an unexpected type in pipeline state list");
-        }
-        pInNow = (XGL_GRAPHICS_PIPELINE_CREATE_INFO*)pInNow->pNext;
-    }
-    return;
-}
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateInstance(
-    const XGL_APPLICATION_INFO* pAppInfo,
-    const XGL_ALLOC_CALLBACKS* pAllocCb,
-    XGL_INSTANCE* pInstance)
-{
-    glv_trace_packet_header* pHeader;
-    XGL_RESULT result;
-    struct_xglCreateInstance* pPacket = NULL;
-    uint64_t startTime;
-    glv_platform_thread_once(&gInitOnce, InitTracer);
-    SEND_ENTRYPOINT_ID(xglCreateInstance);
-    if (real_xglCreateInstance == xglCreateInstance)
-    {
-        glv_platform_get_next_lib_sym((void **) &real_xglCreateInstance,"xglCreateInstance");
-    }
-    startTime = glv_get_time();
-    result = real_xglCreateInstance(pAppInfo, pAllocCb, pInstance);
-    CREATE_TRACE_PACKET(xglCreateInstance, sizeof(XGL_INSTANCE) + get_struct_chain_size((void*)pAppInfo) + ((pAllocCb == NULL) ? 0 :sizeof(XGL_ALLOC_CALLBACKS)));
-    pHeader->entrypoint_begin_time = startTime;
-    if (isHooked == FALSE) {
-        AttachHooks();
-        AttachHooks_xgldbg();
-        AttachHooks_xglwsix11ext();
-    }
-    pPacket = interpret_body_as_xglCreateInstance(pHeader);
-
-    add_XGL_APPLICATION_INFO_to_packet(pHeader, (XGL_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocCb), sizeof(XGL_ALLOC_CALLBACKS), pAllocCb);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(XGL_INSTANCE), pInstance);
-    pPacket->result = result;
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocCb));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInstance));
-    FINISH_TRACE_PACKET();
-    return result;
-}
+// __HOOKED_xglCreateInstance is manually written. Look in glvtrace_xgl_trace.c
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglDestroyInstance(
     XGL_INSTANCE instance)
@@ -1595,32 +1077,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglDestroyInstance(
     return result;
 }
 
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglEnumerateGpus(
-    XGL_INSTANCE instance,
-    uint32_t maxGpus,
-    uint32_t* pGpuCount,
-    XGL_PHYSICAL_GPU* pGpus)
-{
-    glv_trace_packet_header* pHeader;
-    XGL_RESULT result;
-    struct_xglEnumerateGpus* pPacket = NULL;
-    uint64_t startTime;
-    SEND_ENTRYPOINT_ID(xglEnumerateGpus);
-    startTime = glv_get_time();
-    result = real_xglEnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
-    CREATE_TRACE_PACKET(xglEnumerateGpus, sizeof(uint32_t) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(XGL_PHYSICAL_GPU) : 0));
-    pHeader->entrypoint_begin_time = startTime;
-    pPacket = interpret_body_as_xglEnumerateGpus(pHeader);
-    pPacket->instance = instance;
-    pPacket->maxGpus = maxGpus;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpuCount), sizeof(uint32_t), pGpuCount);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(XGL_PHYSICAL_GPU), pGpus);
-    pPacket->result = result;
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpuCount));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpus));
-    FINISH_TRACE_PACKET();
-    return result;
-}
+// __HOOKED_xglEnumerateGpus is manually written. Look in glvtrace_xgl_trace.c
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetGpuInfo(
     XGL_PHYSICAL_GPU gpu,
@@ -1718,46 +1175,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetExtensionSupport(
     return result;
 }
 
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglEnumerateLayers(
-    XGL_PHYSICAL_GPU gpu,
-    size_t maxLayerCount,
-    size_t maxStringSize,
-    size_t* pOutLayerCount,
-    char* const* pOutLayers,
-    void* pReserved)
-{
-    glv_trace_packet_header* pHeader;
-    XGL_RESULT result;
-    struct_xglEnumerateLayers* pPacket = NULL;
-    uint64_t startTime;
-    SEND_ENTRYPOINT_ID(xglEnumerateLayers);
-    startTime = glv_get_time();
-    result = real_xglEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
-    size_t totStringSize = 0;
-    uint32_t i = 0;
-    for (i = 0; i < *pOutLayerCount; i++)
-        totStringSize += (pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1: 0;
-    CREATE_TRACE_PACKET(xglEnumerateLayers, totStringSize + sizeof(size_t));
-    pHeader->entrypoint_begin_time = startTime;
-    pPacket = interpret_body_as_xglEnumerateLayers(pHeader);
-    pPacket->gpu = gpu;
-    pPacket->maxLayerCount = maxLayerCount;
-    pPacket->maxStringSize = maxStringSize;
-    pPacket->pReserved = pReserved;
-    pPacket->gpu = gpu;
-    pPacket->maxLayerCount = maxLayerCount;
-    pPacket->maxStringSize = maxStringSize;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayerCount), sizeof(size_t), pOutLayerCount);
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pOutLayerCount));
-    for (i = 0; i < *pOutLayerCount; i++) {
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pOutLayers[i]), ((pOutLayers[i] != NULL) ? strlen(pOutLayers[i]) + 1 : 0), pOutLayers[i]);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pOutLayers[i]));
-    }
-    pPacket->pReserved = pReserved;
-    pPacket->result = result;
-    FINISH_TRACE_PACKET();
-    return result;
-}
+// __HOOKED_xglEnumerateLayers is manually written. Look in glvtrace_xgl_trace.c
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglGetDeviceQueue(
     XGL_DEVICE device,
@@ -1914,61 +1332,9 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglSetMemoryPriority(
     return result;
 }
 
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglMapMemory(
-    XGL_GPU_MEMORY mem,
-    XGL_FLAGS flags,
-    void** ppData)
-{
-    glv_trace_packet_header* pHeader;
-    XGL_RESULT result;
-    struct_xglMapMemory* pPacket = NULL;
-    CREATE_TRACE_PACKET(xglMapMemory, sizeof(void*));
-    result = real_xglMapMemory(mem, flags, ppData);
-    pPacket = interpret_body_as_xglMapMemory(pHeader);
-    pPacket->mem = mem;
-    pPacket->flags = flags;
-    if (ppData != NULL)
-    {
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->ppData), sizeof(void*), *ppData);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->ppData));
-        add_data_to_mem_info(mem, *ppData);
-    }
-    pPacket->result = result;
-    FINISH_TRACE_PACKET();
-    return result;
-}
+// __HOOKED_xglMapMemory is manually written. Look in glvtrace_xgl_trace.c
 
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglUnmapMemory(
-    XGL_GPU_MEMORY mem)
-{
-    glv_trace_packet_header* pHeader;
-    XGL_RESULT result;
-    struct_xglUnmapMemory* pPacket;
-    XGLAllocInfo *entry;
-    SEND_ENTRYPOINT_PARAMS("xglUnmapMemory(mem %p)\n", mem);
-    // insert into packet the data that was written by CPU between the xglMapMemory call and here
-    // Note must do this prior to the real xglUnMap() or else may get a FAULT
-    glv_enter_critical_section(&g_memInfoLock);
-    entry = find_mem_info_entry(mem);
-    CREATE_TRACE_PACKET(xglUnmapMemory, (entry) ? entry->size : 0);
-    pPacket = interpret_body_as_xglUnmapMemory(pHeader);
-    if (entry)
-    {
-        assert(entry->handle == mem);
-        glv_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pData), entry->size, entry->pData);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
-        entry->pData = NULL;
-    } else
-    {
-         glv_LogError("Failed to copy app memory into trace packet (idx = %u) on xglUnmapMemory\n", pHeader->global_packet_index);
-    }
-    glv_leave_critical_section(&g_memInfoLock);
-    result = real_xglUnmapMemory(mem);
-    pPacket->mem = mem;
-    pPacket->result = result;
-    FINISH_TRACE_PACKET();
-    return result;
-}
+// __HOOKED_xglUnmapMemory is manually written. Look in glvtrace_xgl_trace.c
 
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglPinSystemMemory(
     XGL_DEVICE device,
@@ -2918,38 +2284,7 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglClearDescriptorRegion(
     return result;
 }
 
-GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglAllocDescriptorSets(
-    XGL_DESCRIPTOR_REGION descriptorRegion,
-    XGL_DESCRIPTOR_SET_USAGE setUsage,
-    uint32_t count,
-    const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts,
-    XGL_DESCRIPTOR_SET* pDescriptorSets,
-    uint32_t* pCount)
-{
-    glv_trace_packet_header* pHeader;
-    XGL_RESULT result;
-    struct_xglAllocDescriptorSets* pPacket = NULL;
-    uint64_t startTime;
-    SEND_ENTRYPOINT_ID(xglAllocDescriptorSets);
-    startTime = glv_get_time();
-    result = real_xglAllocDescriptorSets(descriptorRegion, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
-    size_t customSize = (*pCount <= 0) ? (sizeof(XGL_DESCRIPTOR_SET)) : (*pCount * sizeof(XGL_DESCRIPTOR_SET));
-    CREATE_TRACE_PACKET(xglAllocDescriptorSets, sizeof(XGL_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));
-    pHeader->entrypoint_begin_time = startTime;
-    pPacket = interpret_body_as_xglAllocDescriptorSets(pHeader);
-    pPacket->descriptorRegion = descriptorRegion;
-    pPacket->setUsage = setUsage;
-    pPacket->count = count;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count*sizeof(XGL_DESCRIPTOR_SET_LAYOUT), pSetLayouts);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
-    pPacket->result = result;
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayouts));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorSets));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
-    FINISH_TRACE_PACKET();
-    return result;
-}
+// __HOOKED_xglAllocDescriptorSets is manually written. Look in glvtrace_xgl_trace.c
 
 GLVTRACER_EXPORT void XGLAPI __HOOKED_xglClearDescriptorSets(
     XGL_DESCRIPTOR_REGION descriptorRegion,
@@ -3621,93 +2956,9 @@ GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdResetEvent(
     FINISH_TRACE_PACKET();
 }
 
-GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdWaitEvents(
-    XGL_CMD_BUFFER cmdBuffer,
-    const XGL_EVENT_WAIT_INFO* pWaitInfo)
-{
-    glv_trace_packet_header* pHeader;
-    struct_xglCmdWaitEvents* pPacket = NULL;
-    size_t customSize;
-    uint32_t eventCount = (pWaitInfo != NULL && pWaitInfo->pEvents != NULL) ? pWaitInfo->eventCount : 0;
-    uint32_t mbCount = (pWaitInfo != NULL && pWaitInfo->ppMemBarriers != NULL) ? pWaitInfo->memBarrierCount : 0;
-    customSize = (eventCount * sizeof(XGL_EVENT)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pWaitInfo->ppMemBarriers);
-    CREATE_TRACE_PACKET(xglCmdWaitEvents, sizeof(XGL_EVENT_WAIT_INFO) + customSize);
-    real_xglCmdWaitEvents(cmdBuffer, pWaitInfo);
-    pPacket = interpret_body_as_xglCmdWaitEvents(pHeader);
-    pPacket->cmdBuffer = cmdBuffer;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo), sizeof(XGL_EVENT_WAIT_INFO), pWaitInfo);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo->pEvents), eventCount * sizeof(XGL_EVENT), pWaitInfo->pEvents);
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pWaitInfo->pEvents));
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo->ppMemBarriers), mbCount * sizeof(void*), pWaitInfo->ppMemBarriers);
-    uint32_t i, siz;
-    for (i = 0; i < mbCount; i++) {
-        XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) pWaitInfo->ppMemBarriers[i];
-        switch (pNext->sType) {
-            case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
-                siz = sizeof(XGL_MEMORY_BARRIER);
-                break;
-            case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-                siz = sizeof(XGL_BUFFER_MEMORY_BARRIER);
-                break;
-            case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-                siz = sizeof(XGL_IMAGE_MEMORY_BARRIER);
-                break;
-            default:
-                assert(0);
-                siz = 0;
-                break;
-        }
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo->ppMemBarriers[i]), siz, pWaitInfo->ppMemBarriers[i]);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pWaitInfo->ppMemBarriers[i]));
-    }
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pWaitInfo->ppMemBarriers));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pWaitInfo));
-    FINISH_TRACE_PACKET();
-}
+// __HOOKED_xglCmdWaitEvents is manually written. Look in glvtrace_xgl_trace.c
 
-GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdPipelineBarrier(
-    XGL_CMD_BUFFER cmdBuffer,
-    const XGL_PIPELINE_BARRIER* pBarrier)
-{
-    glv_trace_packet_header* pHeader;
-    struct_xglCmdPipelineBarrier* pPacket = NULL;
-    size_t customSize;
-    uint32_t eventCount = (pBarrier != NULL && pBarrier->pEvents != NULL) ? pBarrier->eventCount : 0;
-    uint32_t mbCount = (pBarrier != NULL && pBarrier->ppMemBarriers != NULL) ? pBarrier->memBarrierCount : 0;
-    customSize = (eventCount * sizeof(XGL_SET_EVENT)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pBarrier->ppMemBarriers);
-    CREATE_TRACE_PACKET(xglCmdPipelineBarrier, sizeof(XGL_PIPELINE_BARRIER) + customSize);
-    real_xglCmdPipelineBarrier(cmdBuffer, pBarrier);
-    pPacket = interpret_body_as_xglCmdPipelineBarrier(pHeader);
-    pPacket->cmdBuffer = cmdBuffer;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier), sizeof(XGL_PIPELINE_BARRIER), pBarrier);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->pEvents), eventCount * sizeof(XGL_SET_EVENT), pBarrier->pEvents);
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBarrier->pEvents));
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->ppMemBarriers), mbCount * sizeof(void*), pBarrier->ppMemBarriers);
-    uint32_t i, siz;
-    for (i = 0; i < mbCount; i++) {
-        XGL_MEMORY_BARRIER *pNext = (XGL_MEMORY_BARRIER *) pBarrier->ppMemBarriers[i];
-        switch (pNext->sType) {
-            case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
-                siz = sizeof(XGL_MEMORY_BARRIER);
-                break;
-            case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-                siz = sizeof(XGL_BUFFER_MEMORY_BARRIER);
-                break;
-            case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-                siz = sizeof(XGL_IMAGE_MEMORY_BARRIER);
-                break;
-            default:
-                assert(0);
-                siz = 0;
-                break;
-        }
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->ppMemBarriers[i]), siz, pBarrier->ppMemBarriers[i]);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBarrier->ppMemBarriers[i]));
-    }
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBarrier->ppMemBarriers));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBarrier));
-    FINISH_TRACE_PACKET();
-}
+// __HOOKED_xglCmdPipelineBarrier is manually written. Look in glvtrace_xgl_trace.c
 
 GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdBeginQuery(
     XGL_CMD_BUFFER cmdBuffer,

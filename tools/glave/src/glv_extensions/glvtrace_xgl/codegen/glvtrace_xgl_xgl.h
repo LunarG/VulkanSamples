@@ -381,3 +381,608 @@ GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateFramebuffer(XGL_DEVICE devi
 GLVTRACER_EXPORT XGL_RESULT XGLAPI __HOOKED_xglCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo, XGL_RENDER_PASS* pRenderPass);
 GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass);
 GLVTRACER_EXPORT void XGLAPI __HOOKED_xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_RENDER_PASS renderPass);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateInstance)(
+    const XGL_APPLICATION_INFO* pAppInfo,
+    const XGL_ALLOC_CALLBACKS* pAllocCb,
+    XGL_INSTANCE* pInstance);
+
+extern XGL_RESULT( XGLAPI * real_xglDestroyInstance)(
+    XGL_INSTANCE instance);
+
+extern XGL_RESULT( XGLAPI * real_xglEnumerateGpus)(
+    XGL_INSTANCE instance,
+    uint32_t maxGpus,
+    uint32_t* pGpuCount,
+    XGL_PHYSICAL_GPU* pGpus);
+
+extern XGL_RESULT( XGLAPI * real_xglGetGpuInfo)(
+    XGL_PHYSICAL_GPU gpu,
+    XGL_PHYSICAL_GPU_INFO_TYPE infoType,
+    size_t* pDataSize,
+    void* pData);
+
+extern void*( XGLAPI * real_xglGetProcAddr)(
+    XGL_PHYSICAL_GPU gpu,
+    const char* pName);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDevice)(
+    XGL_PHYSICAL_GPU gpu,
+    const XGL_DEVICE_CREATE_INFO* pCreateInfo,
+    XGL_DEVICE* pDevice);
+
+extern XGL_RESULT( XGLAPI * real_xglDestroyDevice)(
+    XGL_DEVICE device);
+
+extern XGL_RESULT( XGLAPI * real_xglGetExtensionSupport)(
+    XGL_PHYSICAL_GPU gpu,
+    const char* pExtName);
+
+extern XGL_RESULT( XGLAPI * real_xglEnumerateLayers)(
+    XGL_PHYSICAL_GPU gpu,
+    size_t maxLayerCount,
+    size_t maxStringSize,
+    size_t* pOutLayerCount,
+    char* const* pOutLayers,
+    void* pReserved);
+
+extern XGL_RESULT( XGLAPI * real_xglGetDeviceQueue)(
+    XGL_DEVICE device,
+    XGL_QUEUE_TYPE queueType,
+    uint32_t queueIndex,
+    XGL_QUEUE* pQueue);
+
+extern XGL_RESULT( XGLAPI * real_xglQueueSubmit)(
+    XGL_QUEUE queue,
+    uint32_t cmdBufferCount,
+    const XGL_CMD_BUFFER* pCmdBuffers,
+    uint32_t memRefCount,
+    const XGL_MEMORY_REF* pMemRefs,
+    XGL_FENCE fence);
+
+extern XGL_RESULT( XGLAPI * real_xglQueueSetGlobalMemReferences)(
+    XGL_QUEUE queue,
+    uint32_t memRefCount,
+    const XGL_MEMORY_REF* pMemRefs);
+
+extern XGL_RESULT( XGLAPI * real_xglQueueWaitIdle)(
+    XGL_QUEUE queue);
+
+extern XGL_RESULT( XGLAPI * real_xglDeviceWaitIdle)(
+    XGL_DEVICE device);
+
+extern XGL_RESULT( XGLAPI * real_xglAllocMemory)(
+    XGL_DEVICE device,
+    const XGL_MEMORY_ALLOC_INFO* pAllocInfo,
+    XGL_GPU_MEMORY* pMem);
+
+extern XGL_RESULT( XGLAPI * real_xglFreeMemory)(
+    XGL_GPU_MEMORY mem);
+
+extern XGL_RESULT( XGLAPI * real_xglSetMemoryPriority)(
+    XGL_GPU_MEMORY mem,
+    XGL_MEMORY_PRIORITY priority);
+
+extern XGL_RESULT( XGLAPI * real_xglMapMemory)(
+    XGL_GPU_MEMORY mem,
+    XGL_FLAGS flags,
+    void** ppData);
+
+extern XGL_RESULT( XGLAPI * real_xglUnmapMemory)(
+    XGL_GPU_MEMORY mem);
+
+extern XGL_RESULT( XGLAPI * real_xglPinSystemMemory)(
+    XGL_DEVICE device,
+    const void* pSysMem,
+    size_t memSize,
+    XGL_GPU_MEMORY* pMem);
+
+extern XGL_RESULT( XGLAPI * real_xglGetMultiGpuCompatibility)(
+    XGL_PHYSICAL_GPU gpu0,
+    XGL_PHYSICAL_GPU gpu1,
+    XGL_GPU_COMPATIBILITY_INFO* pInfo);
+
+extern XGL_RESULT( XGLAPI * real_xglOpenSharedMemory)(
+    XGL_DEVICE device,
+    const XGL_MEMORY_OPEN_INFO* pOpenInfo,
+    XGL_GPU_MEMORY* pMem);
+
+extern XGL_RESULT( XGLAPI * real_xglOpenSharedQueueSemaphore)(
+    XGL_DEVICE device,
+    const XGL_QUEUE_SEMAPHORE_OPEN_INFO* pOpenInfo,
+    XGL_QUEUE_SEMAPHORE* pSemaphore);
+
+extern XGL_RESULT( XGLAPI * real_xglOpenPeerMemory)(
+    XGL_DEVICE device,
+    const XGL_PEER_MEMORY_OPEN_INFO* pOpenInfo,
+    XGL_GPU_MEMORY* pMem);
+
+extern XGL_RESULT( XGLAPI * real_xglOpenPeerImage)(
+    XGL_DEVICE device,
+    const XGL_PEER_IMAGE_OPEN_INFO* pOpenInfo,
+    XGL_IMAGE* pImage,
+    XGL_GPU_MEMORY* pMem);
+
+extern XGL_RESULT( XGLAPI * real_xglDestroyObject)(
+    XGL_OBJECT object);
+
+extern XGL_RESULT( XGLAPI * real_xglGetObjectInfo)(
+    XGL_BASE_OBJECT object,
+    XGL_OBJECT_INFO_TYPE infoType,
+    size_t* pDataSize,
+    void* pData);
+
+extern XGL_RESULT( XGLAPI * real_xglBindObjectMemory)(
+    XGL_OBJECT object,
+    uint32_t allocationIdx,
+    XGL_GPU_MEMORY mem,
+    XGL_GPU_SIZE offset);
+
+extern XGL_RESULT( XGLAPI * real_xglBindObjectMemoryRange)(
+    XGL_OBJECT object,
+    uint32_t allocationIdx,
+    XGL_GPU_SIZE rangeOffset,
+    XGL_GPU_SIZE rangeSize,
+    XGL_GPU_MEMORY mem,
+    XGL_GPU_SIZE memOffset);
+
+extern XGL_RESULT( XGLAPI * real_xglBindImageMemoryRange)(
+    XGL_IMAGE image,
+    uint32_t allocationIdx,
+    const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo,
+    XGL_GPU_MEMORY mem,
+    XGL_GPU_SIZE memOffset);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateFence)(
+    XGL_DEVICE device,
+    const XGL_FENCE_CREATE_INFO* pCreateInfo,
+    XGL_FENCE* pFence);
+
+extern XGL_RESULT( XGLAPI * real_xglGetFenceStatus)(
+    XGL_FENCE fence);
+
+extern XGL_RESULT( XGLAPI * real_xglWaitForFences)(
+    XGL_DEVICE device,
+    uint32_t fenceCount,
+    const XGL_FENCE* pFences,
+    bool32_t waitAll,
+    uint64_t timeout);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateQueueSemaphore)(
+    XGL_DEVICE device,
+    const XGL_QUEUE_SEMAPHORE_CREATE_INFO* pCreateInfo,
+    XGL_QUEUE_SEMAPHORE* pSemaphore);
+
+extern XGL_RESULT( XGLAPI * real_xglSignalQueueSemaphore)(
+    XGL_QUEUE queue,
+    XGL_QUEUE_SEMAPHORE semaphore);
+
+extern XGL_RESULT( XGLAPI * real_xglWaitQueueSemaphore)(
+    XGL_QUEUE queue,
+    XGL_QUEUE_SEMAPHORE semaphore);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateEvent)(
+    XGL_DEVICE device,
+    const XGL_EVENT_CREATE_INFO* pCreateInfo,
+    XGL_EVENT* pEvent);
+
+extern XGL_RESULT( XGLAPI * real_xglGetEventStatus)(
+    XGL_EVENT event);
+
+extern XGL_RESULT( XGLAPI * real_xglSetEvent)(
+    XGL_EVENT event);
+
+extern XGL_RESULT( XGLAPI * real_xglResetEvent)(
+    XGL_EVENT event);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateQueryPool)(
+    XGL_DEVICE device,
+    const XGL_QUERY_POOL_CREATE_INFO* pCreateInfo,
+    XGL_QUERY_POOL* pQueryPool);
+
+extern XGL_RESULT( XGLAPI * real_xglGetQueryPoolResults)(
+    XGL_QUERY_POOL queryPool,
+    uint32_t startQuery,
+    uint32_t queryCount,
+    size_t* pDataSize,
+    void* pData);
+
+extern XGL_RESULT( XGLAPI * real_xglGetFormatInfo)(
+    XGL_DEVICE device,
+    XGL_FORMAT format,
+    XGL_FORMAT_INFO_TYPE infoType,
+    size_t* pDataSize,
+    void* pData);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateBuffer)(
+    XGL_DEVICE device,
+    const XGL_BUFFER_CREATE_INFO* pCreateInfo,
+    XGL_BUFFER* pBuffer);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateBufferView)(
+    XGL_DEVICE device,
+    const XGL_BUFFER_VIEW_CREATE_INFO* pCreateInfo,
+    XGL_BUFFER_VIEW* pView);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateImage)(
+    XGL_DEVICE device,
+    const XGL_IMAGE_CREATE_INFO* pCreateInfo,
+    XGL_IMAGE* pImage);
+
+extern XGL_RESULT( XGLAPI * real_xglSetFastClearColor)(
+    XGL_IMAGE image,
+    const float color[4]);
+
+extern XGL_RESULT( XGLAPI * real_xglSetFastClearDepth)(
+    XGL_IMAGE image,
+    float depth);
+
+extern XGL_RESULT( XGLAPI * real_xglGetImageSubresourceInfo)(
+    XGL_IMAGE image,
+    const XGL_IMAGE_SUBRESOURCE* pSubresource,
+    XGL_SUBRESOURCE_INFO_TYPE infoType,
+    size_t* pDataSize,
+    void* pData);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateImageView)(
+    XGL_DEVICE device,
+    const XGL_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
+    XGL_IMAGE_VIEW* pView);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateColorAttachmentView)(
+    XGL_DEVICE device,
+    const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
+    XGL_COLOR_ATTACHMENT_VIEW* pView);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDepthStencilView)(
+    XGL_DEVICE device,
+    const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo,
+    XGL_DEPTH_STENCIL_VIEW* pView);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateShader)(
+    XGL_DEVICE device,
+    const XGL_SHADER_CREATE_INFO* pCreateInfo,
+    XGL_SHADER* pShader);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateGraphicsPipeline)(
+    XGL_DEVICE device,
+    const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo,
+    XGL_PIPELINE* pPipeline);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateComputePipeline)(
+    XGL_DEVICE device,
+    const XGL_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo,
+    XGL_PIPELINE* pPipeline);
+
+extern XGL_RESULT( XGLAPI * real_xglStorePipeline)(
+    XGL_PIPELINE pipeline,
+    size_t* pDataSize,
+    void* pData);
+
+extern XGL_RESULT( XGLAPI * real_xglLoadPipeline)(
+    XGL_DEVICE device,
+    size_t dataSize,
+    const void* pData,
+    XGL_PIPELINE* pPipeline);
+
+extern XGL_RESULT( XGLAPI * real_xglCreatePipelineDelta)(
+    XGL_DEVICE device,
+    XGL_PIPELINE p1,
+    XGL_PIPELINE p2,
+    XGL_PIPELINE_DELTA* delta);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateSampler)(
+    XGL_DEVICE device,
+    const XGL_SAMPLER_CREATE_INFO* pCreateInfo,
+    XGL_SAMPLER* pSampler);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDescriptorSetLayout)(
+    XGL_DEVICE device,
+    XGL_FLAGS stageFlags,
+    const uint32_t* pSetBindPoints,
+    XGL_DESCRIPTOR_SET_LAYOUT priorSetLayout,
+    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pSetLayoutInfoList,
+    XGL_DESCRIPTOR_SET_LAYOUT* pSetLayout);
+
+extern XGL_RESULT( XGLAPI * real_xglBeginDescriptorRegionUpdate)(
+    XGL_DEVICE device,
+    XGL_DESCRIPTOR_UPDATE_MODE updateMode);
+
+extern XGL_RESULT( XGLAPI * real_xglEndDescriptorRegionUpdate)(
+    XGL_DEVICE device,
+    XGL_CMD_BUFFER cmd);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDescriptorRegion)(
+    XGL_DEVICE device,
+    XGL_DESCRIPTOR_REGION_USAGE regionUsage,
+    uint32_t maxSets,
+    const XGL_DESCRIPTOR_REGION_CREATE_INFO* pCreateInfo,
+    XGL_DESCRIPTOR_REGION* pDescriptorRegion);
+
+extern XGL_RESULT( XGLAPI * real_xglClearDescriptorRegion)(
+    XGL_DESCRIPTOR_REGION descriptorRegion);
+
+extern XGL_RESULT( XGLAPI * real_xglAllocDescriptorSets)(
+    XGL_DESCRIPTOR_REGION descriptorRegion,
+    XGL_DESCRIPTOR_SET_USAGE setUsage,
+    uint32_t count,
+    const XGL_DESCRIPTOR_SET_LAYOUT* pSetLayouts,
+    XGL_DESCRIPTOR_SET* pDescriptorSets,
+    uint32_t* pCount);
+
+extern void( XGLAPI * real_xglClearDescriptorSets)(
+    XGL_DESCRIPTOR_REGION descriptorRegion,
+    uint32_t count,
+    const XGL_DESCRIPTOR_SET* pDescriptorSets);
+
+extern void( XGLAPI * real_xglUpdateDescriptors)(
+    XGL_DESCRIPTOR_SET descriptorSet,
+    const void* pUpdateChain);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDynamicViewportState)(
+    XGL_DEVICE device,
+    const XGL_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo,
+    XGL_DYNAMIC_VP_STATE_OBJECT* pState);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDynamicRasterState)(
+    XGL_DEVICE device,
+    const XGL_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo,
+    XGL_DYNAMIC_RS_STATE_OBJECT* pState);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDynamicColorBlendState)(
+    XGL_DEVICE device,
+    const XGL_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo,
+    XGL_DYNAMIC_CB_STATE_OBJECT* pState);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateDynamicDepthStencilState)(
+    XGL_DEVICE device,
+    const XGL_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo,
+    XGL_DYNAMIC_DS_STATE_OBJECT* pState);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateCommandBuffer)(
+    XGL_DEVICE device,
+    const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo,
+    XGL_CMD_BUFFER* pCmdBuffer);
+
+extern XGL_RESULT( XGLAPI * real_xglBeginCommandBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo);
+
+extern XGL_RESULT( XGLAPI * real_xglEndCommandBuffer)(
+    XGL_CMD_BUFFER cmdBuffer);
+
+extern XGL_RESULT( XGLAPI * real_xglResetCommandBuffer)(
+    XGL_CMD_BUFFER cmdBuffer);
+
+extern void( XGLAPI * real_xglCmdBindPipeline)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+    XGL_PIPELINE pipeline);
+
+extern void( XGLAPI * real_xglCmdBindPipelineDelta)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+    XGL_PIPELINE_DELTA delta);
+
+extern void( XGLAPI * real_xglCmdBindDynamicStateObject)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_STATE_BIND_POINT stateBindPoint,
+    XGL_DYNAMIC_STATE_OBJECT state);
+
+extern void( XGLAPI * real_xglCmdBindDescriptorSet)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+    XGL_DESCRIPTOR_SET descriptorSet,
+    const uint32_t* pUserData);
+
+extern void( XGLAPI * real_xglCmdBindVertexBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER buffer,
+    XGL_GPU_SIZE offset,
+    uint32_t binding);
+
+extern void( XGLAPI * real_xglCmdBindIndexBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER buffer,
+    XGL_GPU_SIZE offset,
+    XGL_INDEX_TYPE indexType);
+
+extern void( XGLAPI * real_xglCmdDraw)(
+    XGL_CMD_BUFFER cmdBuffer,
+    uint32_t firstVertex,
+    uint32_t vertexCount,
+    uint32_t firstInstance,
+    uint32_t instanceCount);
+
+extern void( XGLAPI * real_xglCmdDrawIndexed)(
+    XGL_CMD_BUFFER cmdBuffer,
+    uint32_t firstIndex,
+    uint32_t indexCount,
+    int32_t vertexOffset,
+    uint32_t firstInstance,
+    uint32_t instanceCount);
+
+extern void( XGLAPI * real_xglCmdDrawIndirect)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER buffer,
+    XGL_GPU_SIZE offset,
+    uint32_t count,
+    uint32_t stride);
+
+extern void( XGLAPI * real_xglCmdDrawIndexedIndirect)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER buffer,
+    XGL_GPU_SIZE offset,
+    uint32_t count,
+    uint32_t stride);
+
+extern void( XGLAPI * real_xglCmdDispatch)(
+    XGL_CMD_BUFFER cmdBuffer,
+    uint32_t x,
+    uint32_t y,
+    uint32_t z);
+
+extern void( XGLAPI * real_xglCmdDispatchIndirect)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER buffer,
+    XGL_GPU_SIZE offset);
+
+extern void( XGLAPI * real_xglCmdCopyBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER srcBuffer,
+    XGL_BUFFER destBuffer,
+    uint32_t regionCount,
+    const XGL_BUFFER_COPY* pRegions);
+
+extern void( XGLAPI * real_xglCmdCopyImage)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE srcImage,
+    XGL_IMAGE destImage,
+    uint32_t regionCount,
+    const XGL_IMAGE_COPY* pRegions);
+
+extern void( XGLAPI * real_xglCmdCopyBufferToImage)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER srcBuffer,
+    XGL_IMAGE destImage,
+    uint32_t regionCount,
+    const XGL_BUFFER_IMAGE_COPY* pRegions);
+
+extern void( XGLAPI * real_xglCmdCopyImageToBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE srcImage,
+    XGL_BUFFER destBuffer,
+    uint32_t regionCount,
+    const XGL_BUFFER_IMAGE_COPY* pRegions);
+
+extern void( XGLAPI * real_xglCmdCloneImageData)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE srcImage,
+    XGL_IMAGE_LAYOUT srcImageLayout,
+    XGL_IMAGE destImage,
+    XGL_IMAGE_LAYOUT destImageLayout);
+
+extern void( XGLAPI * real_xglCmdUpdateBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER destBuffer,
+    XGL_GPU_SIZE destOffset,
+    XGL_GPU_SIZE dataSize,
+    const uint32_t* pData);
+
+extern void( XGLAPI * real_xglCmdFillBuffer)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_BUFFER destBuffer,
+    XGL_GPU_SIZE destOffset,
+    XGL_GPU_SIZE fillSize,
+    uint32_t data);
+
+extern void( XGLAPI * real_xglCmdClearColorImage)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE image,
+    const float color[4],
+    uint32_t rangeCount,
+    const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
+
+extern void( XGLAPI * real_xglCmdClearColorImageRaw)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE image,
+    const uint32_t color[4],
+    uint32_t rangeCount,
+    const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
+
+extern void( XGLAPI * real_xglCmdClearDepthStencil)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE image,
+    float depth,
+    uint32_t stencil,
+    uint32_t rangeCount,
+    const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges);
+
+extern void( XGLAPI * real_xglCmdResolveImage)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_IMAGE srcImage,
+    XGL_IMAGE destImage,
+    uint32_t rectCount,
+    const XGL_IMAGE_RESOLVE* pRects);
+
+extern void( XGLAPI * real_xglCmdSetEvent)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_EVENT event,
+    XGL_SET_EVENT pipeEvent);
+
+extern void( XGLAPI * real_xglCmdResetEvent)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_EVENT event);
+
+extern void( XGLAPI * real_xglCmdWaitEvents)(
+    XGL_CMD_BUFFER cmdBuffer,
+    const XGL_EVENT_WAIT_INFO* pWaitInfo);
+
+extern void( XGLAPI * real_xglCmdPipelineBarrier)(
+    XGL_CMD_BUFFER cmdBuffer,
+    const XGL_PIPELINE_BARRIER* pBarrier);
+
+extern void( XGLAPI * real_xglCmdBeginQuery)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_QUERY_POOL queryPool,
+    uint32_t slot,
+    XGL_FLAGS flags);
+
+extern void( XGLAPI * real_xglCmdEndQuery)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_QUERY_POOL queryPool,
+    uint32_t slot);
+
+extern void( XGLAPI * real_xglCmdResetQueryPool)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_QUERY_POOL queryPool,
+    uint32_t startQuery,
+    uint32_t queryCount);
+
+extern void( XGLAPI * real_xglCmdWriteTimestamp)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_TIMESTAMP_TYPE timestampType,
+    XGL_BUFFER destBuffer,
+    XGL_GPU_SIZE destOffset);
+
+extern void( XGLAPI * real_xglCmdInitAtomicCounters)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+    uint32_t startCounter,
+    uint32_t counterCount,
+    const uint32_t* pData);
+
+extern void( XGLAPI * real_xglCmdLoadAtomicCounters)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+    uint32_t startCounter,
+    uint32_t counterCount,
+    XGL_BUFFER srcBuffer,
+    XGL_GPU_SIZE srcOffset);
+
+extern void( XGLAPI * real_xglCmdSaveAtomicCounters)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+    uint32_t startCounter,
+    uint32_t counterCount,
+    XGL_BUFFER destBuffer,
+    XGL_GPU_SIZE destOffset);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateFramebuffer)(
+    XGL_DEVICE device,
+    const XGL_FRAMEBUFFER_CREATE_INFO* pCreateInfo,
+    XGL_FRAMEBUFFER* pFramebuffer);
+
+extern XGL_RESULT( XGLAPI * real_xglCreateRenderPass)(
+    XGL_DEVICE device,
+    const XGL_RENDER_PASS_CREATE_INFO* pCreateInfo,
+    XGL_RENDER_PASS* pRenderPass);
+
+extern void( XGLAPI * real_xglCmdBeginRenderPass)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_RENDER_PASS renderPass);
+
+extern void( XGLAPI * real_xglCmdEndRenderPass)(
+    XGL_CMD_BUFFER cmdBuffer,
+    XGL_RENDER_PASS renderPass);
+
