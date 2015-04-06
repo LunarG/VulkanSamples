@@ -2582,8 +2582,9 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBeginRenderPass(XGL_CMD_BUFFER cmdBuffer, con
         addCmd(pCB, CMD_BEGINRENDERPASS);
         pCB->activeRenderPass = pRenderPassBegin->renderPass;
         pCB->framebuffer = pRenderPassBegin->framebuffer;
-        if (pCB->lastBoundPipeline)
+        if (pCB->lastBoundPipeline) {
             validatePipelineState(pCB, XGL_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+        }
     } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
