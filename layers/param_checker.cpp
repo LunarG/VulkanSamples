@@ -76,7 +76,7 @@ void PreCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CAL
     if(pAppInfo == nullptr)
     {
         char const str[] = "xglCreateInstance parameter, XGL_APPLICATION_INFO* pAppInfo, is "\
-            "nullptr (postcondition).";
+            "nullptr (precondition).";
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
@@ -124,10 +124,10 @@ void PostCreateInstance(XGL_RESULT result, XGL_INSTANCE* pInstance)
     }
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_INSTANCE_CREATE_INFO* pCreateInfo, XGL_INSTANCE* pInstance)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(const XGL_APPLICATION_INFO* pAppInfo, const XGL_ALLOC_CALLBACKS* pAllocCb, XGL_INSTANCE* pInstance)
 {
-    PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
-    XGL_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
+    PreCreateInstance(pAppInfo, pAllocCb);
+    XGL_RESULT result = nextTable.CreateInstance(pAppInfo, pAllocCb, pInstance);
     PostCreateInstance(result, pInstance);
     return result;
 }
@@ -300,25 +300,14 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, uint32_t
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_FENCE fence)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     char str[1024];
     uint32_t i;
-    XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, fence);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
-{
-    XGL_RESULT result = nextTable.QueueAddMemReference(queue, mem);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
-{
-    XGL_RESULT result = nextTable.QueueRemoveMemReference(queue, mem);
-    return result;
-}
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
 {
 
@@ -530,13 +519,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t 
 {
 
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetFences(XGL_DEVICE device, uint32_t fenceCount, XGL_FENCE* pFences)
-{
-
-    XGL_RESULT result = nextTable.ResetFences(device, fenceCount, pFences);
     return result;
 }
 
