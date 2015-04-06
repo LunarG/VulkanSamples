@@ -32,7 +32,7 @@
 #define LAYER_NAME_STR "GlaveSnapshot"
 #define LAYER_ABBREV_STR "GLVSnap"
 
-static VK_LAYER_DISPATCH_TABLE nextTable;
+static VkLayerDispatchTable nextTable;
 static VK_BASE_LAYER_OBJECT *pCurObj;
 
 // The following is #included again to catch certain OS-specific functions being used:

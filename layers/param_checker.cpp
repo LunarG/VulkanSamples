@@ -40,8 +40,8 @@
 
 #include "layers_msg.h"
 
-static VK_LAYER_DISPATCH_TABLE nextTable;
-static VK_BASE_LAYER_OBJECT *pCurObj;
+static VkLayerDispatchTable nextTable;
+static VkBaseLayerObject *pCurObj;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);
 
 #include "vk_dispatch_table_helper.h"
@@ -148,7 +148,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateGpus(VkInstance instance, uint32_t max
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
     char str[1024];
@@ -243,7 +243,7 @@ void PostCreateDevice(VkResult result, VkDevice* pDevice)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
     PreCreateDevice(gpu, pCreateInfo);
@@ -261,7 +261,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
@@ -273,7 +273,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
 {
     char str[1024];
     if (gpu != NULL) {
-        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         sprintf(str, "At start of layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         pCurObj = gpuw;
@@ -386,7 +386,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pS
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu0;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu0;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
@@ -1932,7 +1932,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 
 VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
@@ -1966,7 +1966,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_
 #include "vk_generic_intercept_proc_helper.h"
 VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     void* addr;
     if (gpu == NULL)
         return NULL;

@@ -154,15 +154,19 @@ class LoaderEntrypointsSubcommand(Subcommand):
             func.append("{")
 
             # declare local variables
-            func.append("    const VK_LAYER_DISPATCH_TABLE *disp;")
+            func.append("    const VkLayerDispatchTable *disp;")
             if proto.ret != 'void' and obj_setup:
                 func.append("    VkResult res;")
             func.append("")
 
             # active layers before dispatching CreateDevice
             if proto.name == "CreateDevice":
-                func.append("    loader_activate_layers(%s, %s);" %
-                        (proto.params[0].name, proto.params[1].name))
+                func.append("    {")
+                func.append("        uint32_t gpu_index;")
+                func.append("        struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);")
+                func.append("        loader_activate_layers((void *) icd, gpu_index, %s->extensionCount, %s->ppEnabledExtensionNames);"
+                        % (proto.params[1].name, proto.params[1].name))
+                func.append("    }")
                 func.append("")
 
             # get dispatch table and unwrap GPUs
@@ -235,7 +239,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         stmts.append("#endif")
 
         func = []
-        func.append("static inline void %s_initialize_dispatch_table(VK_LAYER_DISPATCH_TABLE *table,"
+        func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
                 % self.prefix)
         func.append("%s                                              PFN_vkGetProcAddr gpa,"
                 % (" " * len(self.prefix)))
@@ -258,7 +262,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         lookups.append("#endif")
 
         func = []
-        func.append("static inline void *%s_lookup_dispatch_table(const VK_LAYER_DISPATCH_TABLE *table,"
+        func.append("static inline void *%s_lookup_dispatch_table(const VkLayerDispatchTable *table,"
                 % self.prefix)
         func.append("%s                                           const char *name)"
                 % (" " * len(self.prefix)))

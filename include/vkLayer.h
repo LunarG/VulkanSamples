@@ -18,14 +18,14 @@
 #endif
 
 
-typedef struct _VK_BASE_LAYER_OBJECT
+typedef struct VkBaseLayerObject_
 {
     PFN_vkGetProcAddr pGPA;
     VkBaseObject nextObject;
     VkBaseObject baseObject;
-} VK_BASE_LAYER_OBJECT;
+} VkBaseLayerObject;
 
-typedef struct _VK_LAYER_DISPATCH_TABLE
+typedef struct VkLayerDispatchTable_
 {
     PFN_vkGetProcAddr GetProcAddr;
     PFN_vkCreateInstance CreateInstance;
@@ -156,7 +156,7 @@ typedef struct _VK_LAYER_DISPATCH_TABLE
     PFN_vkWsiX11CreatePresentableImage WsiX11CreatePresentableImage;
     PFN_vkWsiX11QueuePresent WsiX11QueuePresent;
 #endif // WIN32
-} VK_LAYER_DISPATCH_TABLE;
+} VkLayerDispatchTable;
 
 // LL node for tree of dbg callback functions
 typedef struct _VK_LAYER_DBG_FUNCTION_NODE

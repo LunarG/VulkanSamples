@@ -199,6 +199,28 @@ class Subcommand(object):
         ges_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
         ges_body.append('{')
         ges_body.append('    VkResult result;')
+        ges_body.append('    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;')
+        ges_body.append('')
+        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
+        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
+        ges_body.append('    {')
+        ges_body.append('        result = VK_SUCCESS;')
+        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
+        ges_body.append('    {')
+        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);')
+        ges_body.append('    } else')
+        ges_body.append('    {')
+        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
+        ges_body.append('    }')
+        ges_body.append('    return result;')
+        ges_body.append('}')
+        return "\n".join(ges_body)
+
+    def _gen_layer_get_extension_support(self, layer="Generic"):
+        ges_body = []
+        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
+        ges_body.append('{')
+        ges_body.append('    VkResult result;')
         ges_body.append('    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;')
         ges_body.append('')
         ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
@@ -295,6 +317,20 @@ class Subcommand(object):
         exts.append('    }')
         exts.append('    return VK_SUCCESS;')
         exts.append('}')
+
+    def _generate_layer_gpa_function(self, extensions=[]):
+        func_body = []
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
+                         "{\n"
+                         "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
+                         "    void* addr;\n"
+                         "    if (gpu == NULL)\n"
+                         "        return NULL;\n"
+                         "    pCurObj = gpuw;\n"
+                         "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
+                         "    addr = layer_intercept_proc(funcName);\n"
+                         "    if (addr)\n"
+                         "        return addr;" % self.layer_name)
 
         return "\n".join(exts)
 
@@ -394,7 +430,7 @@ class LayerDispatchSubcommand(Subcommand):
 
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VK_LAYER_DISPATCH_TABLE nextTable;\nstatic VK_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkBaseLayerObject *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' , 'GetExtensionSupport']:
@@ -416,7 +452,7 @@ class GenericLayerSubcommand(Subcommand):
                      '{\n'
                      '    char str[1024];\n'
                      '    if (gpu != NULL) {\n'
-                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '        sprintf(str, "At start of layered %s\\n");\n'
                      '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '        pCurObj = gpuw;\n'
@@ -446,7 +482,7 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];'
-                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '    sprintf(str, "At start of layered %s\\n");\n'
                      '    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    pCurObj = gpuw;\n'
@@ -508,8 +544,8 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('')
-        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;')
+        header_txt.append('static VkLayerDispatchTable nextTable;')
+        header_txt.append('static VkBaseLayerObject *pCurObj;')
         header_txt.append('')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
@@ -702,7 +738,7 @@ class APIDumpSubcommand(Subcommand):
                      '{\n'
                      '    using namespace StreamControl;\n'
                      '    if (gpu != NULL) {\n'
-                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '        pCurObj = gpuw;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
@@ -721,7 +757,7 @@ class APIDumpSubcommand(Subcommand):
             c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                         '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                          '    VkResult result;\n'
                          '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
                          '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
@@ -741,6 +777,18 @@ class APIDumpSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
+                     '    %snextTable.%s;\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+        else:
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    using namespace StreamControl;\n'
+                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
+                     '    pCurObj = gpuw;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
                      '    %s%s%s\n'
                      '%s'
@@ -777,7 +825,7 @@ class APIDumpSubcommand(Subcommand):
 #        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr_cpp.h"\n')
 #        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
 #        header_txt.append('#include "loader_platform.h"')
-#        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+#        header_txt.append('static VkLayerDispatchTable nextTable;')
 #        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
 #        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
 #        header_txt.append('static int printLockInitialized = 0;')
@@ -814,7 +862,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"')
-        header_txt.append('#include "object_track.h"\n\nstatic VK_LAYER_DISPATCH_TABLE nextTable;\nstatic VK_BASE_LAYER_OBJECT *pCurObj;')
+        header_txt.append('#include "object_track.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkBaseLayerObject *pCurObj;')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "layers_config.h"')
@@ -1352,7 +1400,7 @@ class ObjectTrackerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != NULL) {\n'
-                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '    %s'
                      '        pCurObj = gpuw;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
@@ -1372,7 +1420,7 @@ class ObjectTrackerSubcommand(Subcommand):
             c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
-                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '    VkResult result;\n'
                      '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
                      '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
@@ -1409,7 +1457,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 gpu_state += '    }\n'
             funcs.append('%s%s\n'
                      '{\n'
-                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '%s'
                      '    pCurObj = gpuw;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'

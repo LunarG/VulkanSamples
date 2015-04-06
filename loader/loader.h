@@ -67,14 +67,22 @@ static inline void loader_init_data(void *obj, const void *data)
 
 static inline void *loader_unwrap_gpu(VkPhysicalGpu *gpu)
 {
-    const VK_BASE_LAYER_OBJECT *wrap = (const VK_BASE_LAYER_OBJECT *) *gpu;
+    const VkBaseLayerObject *wrap = (const VkBaseLayerObject *) *gpu;
 
     *gpu = (VkPhysicalGpu) wrap->nextObject;
 
     return loader_get_data(wrap->baseObject);
 }
 
-extern uint32_t loader_activate_layers(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo);
+struct loader_instance {
+    struct loader_icd *icds;
+    struct loader_instance *next;
+    uint32_t  extension_count;
+    char **extension_names;
+};
+
+extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names);
+extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index);
 #define MAX_LAYER_LIBRARIES 64
 
 #endif /* LOADER_H */

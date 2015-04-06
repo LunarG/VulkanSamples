@@ -48,13 +48,6 @@
 // being used:
 #include "loader_platform.h"
 
-struct loader_instance {
-    struct loader_icd *icds;
-    struct loader_instance *next;
-    uint32_t  extension_count;
-    char **extension_names;
-};
-
 struct loader_layers {
     loader_platform_dl_handle lib_handle;
     char name[256];
@@ -68,12 +61,12 @@ struct layer_name_pair {
 struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
-    VK_LAYER_DISPATCH_TABLE *loader_dispatch;
+    VkLayerDispatchTable *loader_dispatch;
     uint32_t layer_count[VK_MAX_PHYSICAL_GPUS];
     struct loader_layers layer_libs[VK_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
-    VK_BASE_LAYER_OBJECT *wrappedGpus[VK_MAX_PHYSICAL_GPUS];
+    VkBaseLayerObject *wrappedGpus[VK_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
-    VK_BASE_LAYER_OBJECT *gpus;
+    VkBaseLayerObject *gpus;
 
     struct loader_icd *next;
 };
@@ -517,7 +510,7 @@ static void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void loader_init_dispatch_table(VK_LAYER_DISPATCH_TABLE *tab, PFN_vkGetProcAddr fpGPA, VkPhysicalGpu gpu)
+static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcAddr fpGPA, VkPhysicalGpu gpu)
 {
     loader_initialize_dispatch_table(tab, fpGPA, gpu);
 
@@ -525,7 +518,7 @@ static void loader_init_dispatch_table(VK_LAYER_DISPATCH_TABLE *tab, PFN_vkGetPr
         tab->EnumerateLayers = vkEnumerateLayers;
 }
 
-static struct loader_icd * loader_get_icd(const VK_BASE_LAYER_OBJECT *gpu, uint32_t *gpu_index)
+extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index)
 {
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
@@ -716,7 +709,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
     return count;
 }
 
-static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const VkDeviceCreateInfo* pCreateInfo, struct layer_name_pair **ppLayerNames)
+static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
     const char *lib_name = NULL;
@@ -726,8 +719,8 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
     /* Load any layers specified in the environment first */
     count = loader_get_layer_env(icd, gpu_index, layerNames);
 
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
-        const char *pExtName = pCreateInfo->ppEnabledExtensionNames[i];
+    for (uint32_t i = 0; i < ext_count; i++) {
+        const char *pExtName = ext_names[i];
 
         if (find_layer_extension(icd, gpu_index, pExtName, &lib_name) == VK_SUCCESS) {
             uint32_t len;
@@ -790,29 +783,28 @@ static void loader_deactivate_layer(const struct loader_instance *instance)
     }
 }
 
-extern uint32_t loader_activate_layers(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo)
+extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names)
 {
-    uint32_t gpu_index;
     uint32_t count;
+    VkBaseLayerObject *gpu;
     struct layer_name_pair *pLayerNames;
-    struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
-
     if (!icd)
         return 0;
     assert(gpu_index < VK_MAX_PHYSICAL_GPUS);
 
+    gpu = icd->gpus + gpu_index;
     /* activate any layer libraries */
     if (!loader_layers_activated(icd, gpu_index)) {
-        VK_BASE_LAYER_OBJECT *gpuObj = (VK_BASE_LAYER_OBJECT *) gpu;
-        VK_BASE_LAYER_OBJECT *nextGpuObj, *baseObj = gpuObj->baseObject;
+        VkBaseLayerObject *gpuObj = gpu;
+        VkBaseLayerObject *nextGpuObj, *baseObj = gpuObj->baseObject;
         PFN_vkGetProcAddr nextGPA = vkGetProcAddr;
 
-        count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
+        count = loader_get_layer_libs(icd, gpu_index, ext_count, ext_names, &pLayerNames);
         if (!count)
             return 0;
         loader_init_layer_libs(icd, gpu_index, pLayerNames, count);
 
-        icd->wrappedGpus[gpu_index] = malloc(sizeof(VK_BASE_LAYER_OBJECT) * icd->layer_count[gpu_index]);
+        icd->wrappedGpus[gpu_index] = malloc(sizeof(VkBaseLayerObject) * icd->layer_count[gpu_index]);
         if (! icd->wrappedGpus[gpu_index])
                 loader_log(VK_DBG_MSG_ERROR, 0, "Failed to malloc Gpu objects for layer");
         for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
@@ -834,8 +826,8 @@ extern uint32_t loader_activate_layers(VkPhysicalGpu gpu, const VkDeviceCreateIn
             if (i == 0) {
                 loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, gpuObj);
                 //Insert the new wrapped objects into the list with loader object at head
-                ((VK_BASE_LAYER_OBJECT *) gpu)->nextObject = gpuObj;
-                ((VK_BASE_LAYER_OBJECT *) gpu)->pGPA = nextGPA;
+                gpu->nextObject = gpuObj;
+                gpu->pGPA = nextGPA;
                 gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
                 gpuObj->nextObject = baseObj;
                 gpuObj->pGPA = icd->scanned_icds->GetProcAddr;
@@ -845,7 +837,7 @@ extern uint32_t loader_activate_layers(VkPhysicalGpu gpu, const VkDeviceCreateIn
     }
     else {
         //make sure requested Layers matches currently activated Layers
-        count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
+        count = loader_get_layer_libs(icd, gpu_index, ext_count, ext_names, &pLayerNames);
         for (uint32_t i = 0; i < count; i++) {
             if (strcmp(icd->layer_libs[gpu_index][i].name, pLayerNames[i].layer_name)) {
                 loader_log(VK_DBG_MSG_ERROR, 0, "Layers activated != Layers requested");
@@ -986,7 +978,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
     icd = ptr_instance->icds;
     while (icd) {
         VkPhysicalGpu gpus[VK_MAX_PHYSICAL_GPUS];
-        VK_BASE_LAYER_OBJECT * wrapped_gpus;
+        VkBaseLayerObject * wrapped_gpus;
         PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
         uint32_t n, max = maxGpus - count;
 
@@ -998,12 +990,12 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
                                                max, &n,
                                                gpus);
         if (res == VK_SUCCESS && n) {
-            wrapped_gpus = (VK_BASE_LAYER_OBJECT*) malloc(n *
-                                        sizeof(VK_BASE_LAYER_OBJECT));
+            wrapped_gpus = (VkBaseLayerObject*) malloc(n *
+                                        sizeof(VkBaseLayerObject));
             icd->gpus = wrapped_gpus;
             icd->gpu_count = n;
-            icd->loader_dispatch = (VK_LAYER_DISPATCH_TABLE *) malloc(n *
-                                        sizeof(VK_LAYER_DISPATCH_TABLE));
+            icd->loader_dispatch = (VkLayerDispatchTable *) malloc(n *
+                                        sizeof(VkLayerDispatchTable));
             for (unsigned int i = 0; i < n; i++) {
                 (wrapped_gpus + i)->baseObject = gpus[i];
                 (wrapped_gpus + i)->pGPA = get_proc_addr;
@@ -1019,8 +1011,8 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
                     assert(0);
                 }
 
-                const VK_LAYER_DISPATCH_TABLE **disp;
-                disp = (const VK_LAYER_DISPATCH_TABLE **) gpus[i];
+                const VkLayerDispatchTable **disp;
+                disp = (const VkLayerDispatchTable **) gpus[i];
                 *disp = icd->loader_dispatch + i;
             }
 
@@ -1044,8 +1036,8 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
     if (gpu == NULL) {
         return NULL;
     }
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
-    VK_LAYER_DISPATCH_TABLE * disp_table = * (VK_LAYER_DISPATCH_TABLE **) gpuw->baseObject;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
+    VkLayerDispatchTable * disp_table = * (VkLayerDispatchTable **) gpuw->baseObject;
     void *addr;
 
     if (disp_table == NULL)
@@ -1064,7 +1056,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
 LOADER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char *pExtName)
 {
     uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
 
     if (!icd)
         return VK_ERROR_UNAVAILABLE;
@@ -1077,7 +1069,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLaye
     uint32_t gpu_index;
     size_t count = 0;
     char *lib_name;
-    struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
     loader_platform_dl_handle handle;
     PFN_vkEnumerateLayers fpEnumerateLayers;
     char layer_buf[16][256];

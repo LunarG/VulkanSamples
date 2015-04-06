@@ -1024,11 +1024,11 @@ def parse_vk_h(filename):
     print("core =", str(ext))
 
     print("")
-    print("typedef struct _VK_LAYER_DISPATCH_TABLE")
+    print("typedef struct VkLayerDispatchTable_")
     print("{")
     for proto in ext.protos:
         print("    vk%sType %s;" % (proto.name, proto.name))
-    print("} VK_LAYER_DISPATCH_TABLE;")
+    print("} VkLayerDispatchTable;")
 
 if __name__ == "__main__":
     parse_vk_h("include/vulkan.h")

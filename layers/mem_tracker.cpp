@@ -41,8 +41,8 @@ using namespace std;
 #include "loader_platform.h"
 #include "layers_msg.h"
 
-static VK_LAYER_DISPATCH_TABLE nextTable;
-static VK_BASE_LAYER_OBJECT *pCurObj;
+static VkLayerDispatchTable nextTable;
+static VkBaseLayerObject *pCurObj;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -823,7 +823,7 @@ static void initMemTracker(void)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&g_initOnce, initMemTracker);
     VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
@@ -867,7 +867,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     VkResult result;
     /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */
     if (!strcmp(pExtName, "MemTracker"))
@@ -888,7 +888,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
 {
         if (gpu != NULL)
     {
-        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         pCurObj = gpuw;
         loader_platform_thread_once(&g_initOnce, initMemTracker);
         VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount,
@@ -1905,7 +1905,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_
 
 VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
 
     if (gpu == NULL)
         return NULL;
