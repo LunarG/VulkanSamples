@@ -46,6 +46,8 @@ set(OS_REPLAYER_LIBS
 )
 endif()
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES")
+
 set(SRC_LIST
     ${SRC_LIST}
     glvreplay_xgl.cpp

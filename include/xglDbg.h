@@ -119,6 +119,7 @@ typedef XGL_RESULT (XGLAPI *xglDbgSetDeviceOptionType)(XGL_DEVICE device, XGL_DB
 typedef void (XGLAPI *xglCmdDbgMarkerBeginType)(XGL_CMD_BUFFER cmdBuffer, const char* pMarker);
 typedef void (XGLAPI *xglCmdDbgMarkerEndType)(XGL_CMD_BUFFER cmdBuffer);
 
+#ifdef XGL_PROTOTYPES
 XGL_RESULT XGLAPI xglDbgSetValidationLevel(
     XGL_DEVICE           device,
     XGL_VALIDATION_LEVEL validationLevel);
@@ -160,6 +161,8 @@ void XGLAPI xglCmdDbgMarkerBegin(
 
 void XGLAPI xglCmdDbgMarkerEnd(
     XGL_CMD_BUFFER  cmdBuffer);
+
+#endif // XGL_PROTOTYPES
 
 #ifdef __cplusplus
 }; // extern "C"
