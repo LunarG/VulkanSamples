@@ -912,7 +912,7 @@ static XGL_SHADER demo_prepare_shader(struct demo *demo,
 static XGL_SHADER demo_prepare_vs(struct demo *demo)
 {
     static const char *vertShaderText =
-            "#version 130\n"
+            "#version 140\n"
             "#extension GL_ARB_explicit_attrib_location : require\n"
             "layout(location = 0) in vec4 pos;\n"
             "layout(location = 1) in vec2 attr;\n"
@@ -930,7 +930,7 @@ static XGL_SHADER demo_prepare_vs(struct demo *demo)
 static XGL_SHADER demo_prepare_fs(struct demo *demo)
 {
     static const char *fragShaderText =
-            "#version 130\n"
+            "#version 140\n"
             "uniform sampler2D tex;\n"
             "in vec2 texcoord;\n"
             "void main() {\n"
