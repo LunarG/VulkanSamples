@@ -676,32 +676,32 @@ void PreCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo)
 {
     if(pCreateInfo == nullptr)
     {
-        char const str[] = "xglCreateImage parameter, XGL_IMAGE_CREATE_INFO* pCreateInfo, is "\
-            "nullptr (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_IMAGE_CREATE_INFO* pCreateInfo, is \
+            nullptr (precondition).";
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if(pCreateInfo->sType != XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
     {
-        char const str[] = "xglCreateImage parameter, XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO "\
-            "pCreateInfo->sType, is not XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO \
+            pCreateInfo->sType, is not XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO (precondition).";
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if (!validate_XGL_IMAGE_TYPE(pCreateInfo->imageType))
     {
-        char const str[] = "xglCreateImage parameter, XGL_IMAGE_TYPE pCreateInfo->imageType, is "\
-            "unrecognized (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_IMAGE_TYPE pCreateInfo->imageType, is \
+            unrecognized (precondition).";
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if (!validate_XGL_FORMAT(pCreateInfo->format))
     {
-        char const str[] = "xglCreateImage parameter, XGL_FORMAT pCreateInfo->format, is "\
-            "unrecognized (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_FORMAT pCreateInfo->format, is \
+            unrecognized (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
@@ -712,16 +712,16 @@ void PreCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo)
         XGL_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
     if(result != XGL_SUCCESS)
     {
-        char const str[] = "xglCreateImage parameter, XGL_FORMAT pCreateInfo->format, cannot be "\
-            "validated (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_FORMAT pCreateInfo->format, cannot be \
+            validated (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
     {
-        char const str[] = "xglCreateImage parameter, XGL_FORMAT pCreateInfo->format, contains "\
-            "unsupported format (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_FORMAT pCreateInfo->format, contains \
+            unsupported format (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
@@ -729,16 +729,16 @@ void PreCreateImage(XGL_DEVICE device, const XGL_IMAGE_CREATE_INFO* pCreateInfo)
     // TODO: Can we check device-specific limits?
     if (!xgl_validate_xgl_extent3d(&pCreateInfo->extent))
     {
-        char const str[] = "xglCreateImage parameter, XGL_EXTENT3D pCreateInfo->extent, is invalid "\
-            "(precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_EXTENT3D pCreateInfo->extent, is invalid \
+            (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if (!validate_XGL_IMAGE_TILING(pCreateInfo->tiling))
     {
-        char const str[] = "xglCreateImage parameter, XGL_IMAGE_TILING pCreateInfo->tiling, is "\
-            "unrecoginized (precondition).";
+        char const str[] = "xglCreateImage parameter, XGL_IMAGE_TILING pCreateInfo->tiling, is \
+            unrecoginized (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
