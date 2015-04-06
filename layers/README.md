@@ -45,10 +45,10 @@ layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers per 
 (build dir>/layer/object_track.c (name=ObjectTracker) - Print object CREATE/USE/DESTROY stats. Individually track objects by category. XGL\_OBJECT\_TYPE enum defined in object_track.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number of live objects of given type  "XGL\_UINT64 objTrackGetObjectCount(XGL\_OBJECT\_TYPE type)" and a secondary call to return an array of those objects "XGL\_RESULT objTrackGetObjects(XGL\_OBJECT\_TYPE type, XGL\_UINT64 objCount, OBJTRACK\_NODE* pObjNodeArray)".
 
 ### Report Draw State
-layer/draw\_state.c (name=DrawState) - NOTE: This layer is currently non-functional due to a number of changes in xgl.h. When updated, it will report the Descriptor Set, Pipeline State, and dynamic state at each Draw call. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
+layer/draw\_state.c (name=DrawState) - DrawState reports the Descriptor Set, Pipeline State, and dynamic state at each Draw call. DrawState layer performs a number of validation checks on this state. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
 
 ### Track GPU Memory
-layer/mem\_tracker.c (name=MemTracker) - NOTE: This layer is currently non-functional due to a number of changes in xgl.h. When updated, it will track GPU Memory and any binding it has to objects and/or Cmd Buffers. Report issues with freeing memory, memory dependencies on Cmd Buffers, and any memory leaks at DestroyDevice time. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layer/mem\_tracker.c (name=MemTracker) - MemTracker functions mostly as a validation layer, attempting to ensure that memory objects are managed correctly by the application.  These memory objects are bound to pipelines, objects, and command buffers, and then submitted to the GPU for work.  As an example, the layer validates that the correct memory objects have been bound, and that they are specified correctly when the command buffers are submitted.  Also, that only existing memory objects are referenced, and that any destroyed memory objects are not referenced.  Another type of validation done is that before any memory objects are reused or destroyed, the layer ensures that the application has confirmed that they are no longer in use, and that they have been properly unbound before destruction. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Check parameters
 <build dir>/layer/param_checker.c (name=ParamChecker) - Check the input parameters to API calls for validity. Currently this only checks ENUM params directly passed to API calls and ENUMs embedded in struct params. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
@@ -107,7 +107,6 @@ xglCreateDevice XGL\_LAYER\_CREATE\_INFO struct or environment variable LIBXGL\_
 
 ### Current known issues
 
-- DrawState and MemTracker layers are both non-functional due to updates to xgl.h. Work is ongoing to bring these layers up to latest header.
 - Layers with multiple threads are not well tested and some layers likely to have issues. APIDump family of layers should be thread-safe.
 - layer libraries (except Basic) don't support multiple dispatch tables for multi-gpus;
 - layer libraries not yet include loader init functionality for full LD\_PRELOAD of entire API including xglInitAndEnumerateGpus;
