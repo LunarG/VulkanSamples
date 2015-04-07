@@ -31,16 +31,16 @@ extern "C" {
 // Mem Tracker ERROR codes
 typedef enum _MEM_TRACK_ERROR
 {
-    MEMTRACK_NONE                          = 0, // Used for INFO & other non-error messages
-    MEMTRACK_INVALID_CB                    = 1, // Cmd Buffer invalid
-    MEMTRACK_CB_MISSING_MEM_REF            = 2, // pMemRefs for CB is missing a mem ref
-    MEMTRACK_INVALID_MEM_OBJ               = 3, // Invalid Memory Object
-    MEMTRACK_INTERNAL_ERROR                = 4, // Bug in Mem Track Layer internal data structures
-    MEMTRACK_CB_MISSING_FENCE              = 5, // Cmd Buffer does not have fence
-    MEMTRACK_FREED_MEM_REF                 = 6, // MEM Obj freed while it still has obj and/or CB refs
-    MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS  = 7, // Clearing bindings on mem obj that doesn't have any bindings
-    MEMTRACK_MISSING_MEM_BINDINGS          = 8, // Trying to retrieve mem bindings, but none found (may be internal error)
-    MEMTRACK_INVALID_OBJECT                = 9, // Attempting to reference generic XGL Object that is invalid
+    MEMTRACK_NONE                          = 0,  // Used for INFO & other non-error messages
+    MEMTRACK_INVALID_CB                    = 1,  // Cmd Buffer invalid
+    MEMTRACK_INVALID_MEM_REF               = 2,  // Requested mem ref is missing or invalid
+    MEMTRACK_INVALID_MEM_OBJ               = 3,  // Invalid Memory Object
+    MEMTRACK_INTERNAL_ERROR                = 4,  // Bug in Mem Track Layer internal data structures
+    MEMTRACK_CB_MISSING_FENCE              = 5,  // Cmd Buffer does not have fence
+    MEMTRACK_FREED_MEM_REF                 = 6,  // MEM Obj freed while it still has obj and/or CB refs
+    MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS  = 7,  // Clearing bindings on mem obj that doesn't have any bindings
+    MEMTRACK_MISSING_MEM_BINDINGS          = 8,  // Trying to retrieve mem bindings, but none found (may be internal error)
+    MEMTRACK_INVALID_OBJECT                = 9,  // Attempting to reference generic XGL Object that is invalid
     MEMTRACK_FREE_MEM_ERROR                = 10, // Error while calling xglFreeMemory
     MEMTRACK_DESTROY_OBJECT_ERROR          = 11, // Destroying an object that has a memory reference
     MEMTRACK_MEMORY_BINDING_ERROR          = 12, // Error during one of many calls that bind memory to object or CB
@@ -48,6 +48,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
     MEMTRACK_INVALID_STATE                 = 15, // Memory not in the correct state
     MEMTRACK_RESET_CB_WHILE_IN_FLIGHT      = 16, // xglResetCommandBuffer() called on a CB that hasn't completed
+    MEMTRACK_INVALID_QUEUE                 = 17, // Invalid queue requested or selected
 } MEM_TRACK_ERROR;
 
 /*
@@ -138,6 +139,7 @@ struct MT_QUEUE_INFO {
     uint64_t                      lastRetiredId;
     uint64_t                      lastSubmittedId;
     list<XGL_CMD_BUFFER>          pQueueCmdBuffers;
+    list<XGL_GPU_MEMORY>          pMemRefList;
 };
 
 #ifdef __cplusplus
