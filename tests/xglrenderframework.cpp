@@ -486,14 +486,34 @@ void XglImage::SetLayout(XglCommandBufferObj *cmd_buf,
     m_imageInfo.layout = image_layout;
 }
 
+void XglImage::SetLayout(XGL_IMAGE_ASPECT aspect,
+                         XGL_IMAGE_LAYOUT image_layout)
+{
+    XGL_RESULT err;
+    XglCommandBufferObj cmd_buf(m_device);
+
+    /* Build command buffer to set image layout in the driver */
+    err = cmd_buf.BeginCommandBuffer();
+    assert(!err);
+
+    SetLayout(&cmd_buf, aspect, image_layout);
+
+    err = cmd_buf.EndCommandBuffer();
+    assert(!err);
+
+    cmd_buf.QueueCommandBuffer();
+}
+
 bool XglImage::IsCompatible(XGL_FLAGS usage, XGL_FLAGS features)
 {
     if ((usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
             !(features & XGL_FORMAT_IMAGE_SHADER_READ_BIT))
         return false;
+
     if ((usage & XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT) &&
             !(features & XGL_FORMAT_IMAGE_SHADER_WRITE_BIT))
         return false;
+
     return true;
 }
 
@@ -552,7 +572,11 @@ void XglImage::init(uint32_t w, uint32_t h,
 
     xgl_testing::Image::init(*m_device, imageCreateInfo);
 
-    m_imageInfo.layout = XGL_IMAGE_LAYOUT_UNDEFINED;
+    if (usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+        SetLayout(XGL_IMAGE_ASPECT_COLOR, XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    } else {
+        SetLayout(XGL_IMAGE_ASPECT_COLOR, XGL_IMAGE_LAYOUT_GENERAL);
+    }
 }
 
 XGL_RESULT XglImage::MapMemory(void** ptr)
@@ -613,16 +637,7 @@ XGL_RESULT XglImage::CopyImage(XglImage &src_image)
     err = cmd_buf.EndCommandBuffer();
     assert(!err);
 
-    /*
-     * Tell driver about memory references made in this command buffer
-     * Note: Since this command buffer only has a PipelineBarrier
-     * command there really aren't any memory refs to worry about.
-     */
-    cmd_buf.mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
-
     cmd_buf.QueueCommandBuffer();
-
-    cmd_buf.mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
 
     return XGL_SUCCESS;
 }

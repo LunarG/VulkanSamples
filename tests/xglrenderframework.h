@@ -288,6 +288,7 @@ public:
     }
 
     void SetLayout(XglCommandBufferObj *cmd_buf, XGL_IMAGE_ASPECT aspect, XGL_IMAGE_LAYOUT image_layout);
+    void SetLayout(XGL_IMAGE_ASPECT aspect, XGL_IMAGE_LAYOUT image_layout);
 
     XGL_IMAGE_LAYOUT layout() const
     {
