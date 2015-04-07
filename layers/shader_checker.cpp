@@ -250,6 +250,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
 }
 
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
+                                                             const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                                                             VkPipeline *pPipeline)
+{
+    /* TODO: run cross-stage validation */
+    /* - Validate vertex fetch -> VS interface */
+    /* - Validate FS output -> CB */
+    /* - Support GS, TCS, TES stages */
+
+    VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
+    VkResult res = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    return res;
+}
+
+
 VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     if (gpu == NULL)
@@ -265,6 +280,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
     ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShader);
+    ADD_HOOK(vkCreateGraphicsPipeline);
 
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     if (gpuw->pGPA == NULL)
