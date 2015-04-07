@@ -530,10 +530,6 @@ void Queue::submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_
     submit(cmd, mem_refs, fence);
 }
 
-void Queue::set_global_mem_references(const std::vector<XGL_MEMORY_REF> &mem_refs)
-{
-    EXPECT(xglQueueSetGlobalMemReferences(obj(), mem_refs.size(), &mem_refs[0]) == XGL_SUCCESS);
-}
 
 void Queue::wait()
 {

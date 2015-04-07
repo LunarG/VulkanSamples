@@ -259,9 +259,6 @@ public:
     void submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence);
     void submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_refs);
 
-    // xglQueueSetGlobalMemReferences()
-    void set_global_mem_references(const std::vector<XGL_MEMORY_REF> &mem_refs);
-
     // xglQueueWaitIdle()
     void wait();
 

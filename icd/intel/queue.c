@@ -318,18 +318,6 @@ XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
     return intel_fence_wait(queue->fence, timeout);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    uint32_t                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs)
-{
-    /*
-     * The winsys maintains the list of memory references.  These are ignored
-     * until we move away from the winsys.
-     */
-    return XGL_SUCCESS;
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(
     XGL_QUEUE                                   queue,
     XGL_GPU_MEMORY                              mem)

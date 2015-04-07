@@ -2270,7 +2270,6 @@ typedef XGL_RESULT (XGLAPI *xglGetExtensionSupportType)(XGL_PHYSICAL_GPU gpu, co
 typedef XGL_RESULT (XGLAPI *xglEnumerateLayersType)(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
 typedef XGL_RESULT (XGLAPI *xglGetDeviceQueueType)(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue);
 typedef XGL_RESULT (XGLAPI *xglQueueSubmitType)(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
-typedef XGL_RESULT (XGLAPI *xglQueueSetGlobalMemReferencesType)(XGL_QUEUE queue, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs);
 typedef XGL_RESULT (XGLAPI *xglQueueAddMemReferenceType)(XGL_QUEUE queue, XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglQueueRemoveMemReferenceType)(XGL_QUEUE queue, XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglQueueWaitIdleType)(XGL_QUEUE queue);
@@ -2443,11 +2442,6 @@ XGL_RESULT XGLAPI xglQueueSubmit(
     uint32_t                                    memRefCount,
     const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence);
-
-XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    uint32_t                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs);
 
 XGL_RESULT XGLAPI xglQueueAddMemReference(
     XGL_QUEUE                                   queue,

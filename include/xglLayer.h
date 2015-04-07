@@ -38,7 +38,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglEnumerateLayersType EnumerateLayers;
     xglGetDeviceQueueType GetDeviceQueue;
     xglQueueSubmitType QueueSubmit;
-    xglQueueSetGlobalMemReferencesType QueueSetGlobalMemReferences;
     xglQueueAddMemReferenceType QueueAddMemReference;
     xglQueueRemoveMemReferenceType QueueRemoveMemReference;
     xglQueueWaitIdleType QueueWaitIdle;

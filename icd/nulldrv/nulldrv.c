@@ -1718,15 +1718,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(
     return XGL_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(
-    XGL_QUEUE                                   queue,
-    uint32_t                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs)
-{
-    NULLDRV_LOG_FUNC;
-    return XGL_SUCCESS;
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(
     XGL_QUEUE                                   queue,
     XGL_GPU_MEMORY                              mem)

@@ -951,13 +951,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSetGlobalMemReferences(XGL_QUEUE queue, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs)
-{
-    // TODO : Use global mem references as part of list checked on QueueSubmit above
-    XGL_RESULT result = nextTable.QueueSetGlobalMemReferences(queue, memRefCount, pMemRefs);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
     XGL_DEVICE                                  device,
     uint32_t                                    queueNodeIndex,
@@ -1922,8 +1915,6 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglEnumerateLayers;
     if (!strcmp(funcName, "xglQueueSubmit"))
         return (void*) xglQueueSubmit;
-    if (!strcmp(funcName, "xglQueueSetGlobalMemReferences"))
-        return (void*) xglQueueSetGlobalMemReferences;
     if (!strcmp(funcName, "xglGetDeviceQueue"))
         return (void*) xglGetDeviceQueue;
     if (!strcmp(funcName, "xglQueueAddMemReference"))
