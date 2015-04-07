@@ -53,14 +53,14 @@ typedef enum _MEM_TRACK_ERROR
 /*
  * Data Structure overview
  *  There are 4 global STL maps
- *  cbMap -- map of command Buffer (CB) objects to GLOBAL_CB_NODE structures
- *    Each GLOBAL_CB_NODE struct has an stl list container with
+ *  cbMap -- map of command Buffer (CB) objects to MT_CB_INFO structures
+ *    Each MT_CB_INFO struct has an stl list container with
  *    memory objects that are referenced by this CB
- *  memObjMap -- map of Memory Objects to GLOBAL_MEM_OBJ_NODE structures
- *    Each GLOBAL_MEM_OBJ_NODE has two stl list containers with:
+ *  memObjMap -- map of Memory Objects to MT_MEM_OBJ_INFO structures
+ *    Each MT_MEM_OBJ_INFO has two stl list containers with:
  *      -- all CBs referencing this mem obj
  *      -- all XGL Objects that are bound to this memory
- *  objectMap -- map of objects to GLOBAL_OBJECT_NODE structures
+ *  objectMap -- map of objects to MT_OBJ_INFO structures
  *
  * Algorithm overview
  * These are the primary events that should happen related to different objects
@@ -75,15 +75,13 @@ typedef enum _MEM_TRACK_ERROR
  *   DESTROY  - Flag as errors any remaining refs and remove from map
  * 3. Generic Objects
  *   MEM BIND - DESTROY any previous binding, Add obj node w/ ref to map, add obj ref to list container for that mem node
- *   DESTROY - If mem bound, remove reference list container for that mem Node, remove object ref from map
+ *   DESTROY - If mem bound, remove reference list container for that memInfo, remove object ref from map
  */
 // TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
 
-struct GLOBAL_MEM_OBJ_NODE;
-
 // Data struct for tracking memory object
-struct GLOBAL_MEM_OBJ_NODE {
+struct MT_MEM_OBJ_INFO {
     uint32_t                     refCount;           // Count of references (obj bindings or CB use)
     XGL_GPU_MEMORY               mem;
     XGL_MEMORY_ALLOC_INFO        allocInfo;
@@ -91,8 +89,8 @@ struct GLOBAL_MEM_OBJ_NODE {
     list<XGL_CMD_BUFFER>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
 };
 
-struct GLOBAL_OBJECT_NODE {
-    GLOBAL_MEM_OBJ_NODE*        pMemNode;
+struct MT_OBJ_INFO {
+    MT_MEM_OBJ_INFO*            pMemObjInfo;
     XGL_OBJECT                  object;
     XGL_STRUCTURE_TYPE          sType;
     uint32_t                    ref_count;
@@ -116,9 +114,9 @@ struct GLOBAL_OBJECT_NODE {
 };
 
 // Track all command buffers
-struct GLOBAL_CB_NODE {
+struct MT_CB_INFO {
     XGL_CMD_BUFFER_CREATE_INFO      createInfo;
-    GLOBAL_OBJECT_NODE*             pDynamicState[XGL_NUM_STATE_BIND_POINT];
+    MT_OBJ_INFO*                    pDynamicState[XGL_NUM_STATE_BIND_POINT];
     XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
     uint32_t                        colorAttachmentCount;
     XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
@@ -128,10 +126,18 @@ struct GLOBAL_CB_NODE {
     list<XGL_GPU_MEMORY>            pMemObjList; // List container of Mem objs referenced by this CB
 };
 
-//  Associate fenceId with a fence object
-struct GLOBAL_FENCE_NODE {
-    XGL_FENCE   fence;
-    bool32_t    localFence;
+// Associate fenceId with a fence object
+struct MT_FENCE_INFO {
+    XGL_FENCE   fence;         // Handle to fence object
+    XGL_QUEUE   queue;         // Queue that this fence is submitted against
+    bool32_t    localFence;    // Is fence created by layer?
+};
+
+// Track Queue information
+struct MT_QUEUE_INFO {
+    uint64_t                      lastRetiredId;
+    uint64_t                      lastSubmittedId;
+    list<XGL_CMD_BUFFER>          pQueueCmdBuffers;
 };
 
 #ifdef __cplusplus

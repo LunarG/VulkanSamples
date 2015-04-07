@@ -50,84 +50,115 @@ static loader_platform_thread_mutex globalLock;
 
 #define MAX_BINDING 0xFFFFFFFF
 
-map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*>      cbMap;
-map<XGL_GPU_MEMORY, GLOBAL_MEM_OBJ_NODE*> memObjMap;
-map<XGL_OBJECT,     GLOBAL_OBJECT_NODE*>  objectMap;
-map<uint64_t,       GLOBAL_FENCE_NODE*>   fenceMap;    // Map fenceId to fence node
+map<XGL_CMD_BUFFER, MT_CB_INFO*>      cbMap;
+map<XGL_GPU_MEMORY, MT_MEM_OBJ_INFO*> memObjMap;
+map<XGL_OBJECT,     MT_OBJ_INFO*>     objectMap;
+map<uint64_t,       MT_FENCE_INFO*>   fenceMap;    // Map fenceId to fence info
+map<XGL_QUEUE,      MT_QUEUE_INFO*>   queueMap;
 
-// TODO : Add support for per-queue and per-device fence completion
+// TODO : Add per-device fence completion
 static uint64_t     g_currentFenceId  = 1;
-static uint64_t     g_lastRetiredId   = 0;
 static XGL_DEVICE   globalDevice      = NULL;
 
-// Add new CB node for this cb to map container
-static void insertGlobalCB(const XGL_CMD_BUFFER cb)
+// Add new queue for this device to map container
+static void addQueueInfo(const XGL_QUEUE queue)
 {
-    GLOBAL_CB_NODE* pTrav = new GLOBAL_CB_NODE;
-    memset(pTrav, 0, (sizeof(GLOBAL_CB_NODE) - sizeof(list<XGL_GPU_MEMORY>)));
-    pTrav->cmdBuffer = cb;
-    cbMap[cb] = pTrav;
+    MT_QUEUE_INFO* pInfo   = new MT_QUEUE_INFO;
+    pInfo->lastRetiredId   = 0;
+    pInfo->lastSubmittedId = 0;
+    queueMap[queue]        = pInfo;
 }
 
-// Return ptr to node in CB map, or NULL if not found
-static GLOBAL_CB_NODE* getGlobalCBNode(const XGL_CMD_BUFFER cb)
+static void deleteQueueInfoList(void)
 {
-    GLOBAL_CB_NODE* pCBNode = NULL;
-    if (cbMap.find(cb) != cbMap.end()) {
-        pCBNode = cbMap[cb];
+    // Process queue list, cleaning up each entry before deleting
+    for (map<XGL_QUEUE, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
+        (*ii).second->pQueueCmdBuffers.clear();
     }
-    return pCBNode;
+    queueMap.clear();
+}
+
+// Add new CBInfo for this cb to map container
+static void addCBInfo(const XGL_CMD_BUFFER cb)
+{
+    MT_CB_INFO* pInfo = new MT_CB_INFO;
+    memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<XGL_GPU_MEMORY>)));
+    pInfo->cmdBuffer = cb;
+    cbMap[cb]        = pInfo;
+}
+
+// Return ptr to Info in CB map, or NULL if not found
+static MT_CB_INFO* getCBInfo(const XGL_CMD_BUFFER cb)
+{
+    MT_CB_INFO* pCBInfo = NULL;
+    if (cbMap.find(cb) != cbMap.end()) {
+        pCBInfo = cbMap[cb];
+    }
+    return pCBInfo;
 }
 
 // Add a fence, creating one if necessary to our list of fences/fenceIds
-static uint64_t addFenceNode(XGL_FENCE fence)
+static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
 {
-    // Create fence node
-    GLOBAL_FENCE_NODE* pFenceNode = new GLOBAL_FENCE_NODE;
-    memset(pFenceNode, 0, sizeof(GLOBAL_FENCE_NODE));
+    // Create fence object
+    MT_FENCE_INFO* pFenceInfo = new MT_FENCE_INFO;
+    MT_QUEUE_INFO* pQueueInfo = queueMap[queue];
+    uint64_t       fenceId    = g_currentFenceId++;
+    memset(pFenceInfo, 0, sizeof(MT_FENCE_INFO));
     // If no fence, create an internal fence to track the submissions
     if (fence == NULL) {
         XGL_FENCE_CREATE_INFO fci;
         fci.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fci.pNext = NULL;
         fci.flags = 0;
-        nextTable.CreateFence(globalDevice, &fci, &pFenceNode->fence);
-        pFenceNode->localFence = XGL_TRUE;
+        nextTable.CreateFence(globalDevice, &fci, &pFenceInfo->fence);
+        pFenceInfo->localFence = XGL_TRUE;
     } else {
-        pFenceNode->localFence = XGL_FALSE;
-        pFenceNode->fence      = fence;
+        pFenceInfo->localFence = XGL_FALSE;
+        pFenceInfo->fence      = fence;
     }
-    uint64_t fenceId  = g_currentFenceId++;
-    fenceMap[fenceId] = pFenceNode;
+    pFenceInfo->queue = queue;
+    fenceMap[fenceId] = pFenceInfo;
+    // Update most recently submitted fenceId for Queue
+    pQueueInfo->lastSubmittedId = fenceId;
     return fenceId;
 }
 
-// Remove a node from our list of fences/fenceIds
-static void deleteFenceNode(uint64_t fenceId)
+// Remove a fenceInfo from our list of fences/fenceIds
+static void deleteFenceInfo(uint64_t fenceId)
 {
     if (fenceId != 0) {
         if (fenceMap.find(fenceId) != fenceMap.end()) {
-            GLOBAL_FENCE_NODE* pDelNode = fenceMap[fenceId];
-            if (pDelNode->localFence == XGL_TRUE) {
-                nextTable.DestroyObject(pDelNode->fence);
+            map<uint64_t, MT_FENCE_INFO*>::iterator item;
+            MT_FENCE_INFO* pDelInfo = fenceMap[fenceId];
+            if (pDelInfo != NULL) {
+                if (pDelInfo->localFence == XGL_TRUE) {
+                    nextTable.DestroyObject(pDelInfo->fence);
+                }
+                delete pDelInfo;
             }
-            delete pDelNode;
-            fenceMap.erase(fenceId);
+            item = fenceMap.find(fenceId);
+            fenceMap.erase(item);
         }
     }
 }
 
-// Search through list for this fence, deleting all nodes before it (with lower IDs) and updating lastRetiredId
+// Search through list for this fence, deleting all items before it (with lower IDs) and updating lastRetiredId
 static void updateFenceTracking(XGL_FENCE fence)
 {
-    GLOBAL_FENCE_NODE *pCurFenceNode = NULL;
-    uint64_t           fenceId       = 0;
+    MT_FENCE_INFO *pCurFenceInfo = NULL;
+    uint64_t       fenceId       = 0;
+    XGL_QUEUE      queue         = NULL;
 
-    for (map<uint64_t, GLOBAL_FENCE_NODE*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
-        if (fence == ((*ii).second)->fence) {
-            g_lastRetiredId = (*ii).first;
-        } else {
-            deleteFenceNode((*ii).first);
+    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
+        if ((*ii).second != NULL) {
+            if (fence == ((*ii).second)->fence) {
+                queue = ((*ii).second)->queue;
+                MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+                pQueueInfo->lastRetiredId = (*ii).first;
+            } else {
+                deleteFenceInfo((*ii).first);
+            }
         }
     }
 }
@@ -136,8 +167,16 @@ static void updateFenceTracking(XGL_FENCE fence)
 static bool32_t fenceRetired(uint64_t fenceId)
 {
     bool32_t result = XGL_FALSE;
-    if (fenceId <= g_lastRetiredId) {
+    if (fenceId == 0) {      // Uninitialized fences will have IDs of zero, ignore
         result = XGL_TRUE;
+    } else if (fenceMap.find(fenceId) != fenceMap.end()) {
+        MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
+        MT_QUEUE_INFO* pQueueInfo = queueMap[pFenceInfo->queue];
+        if (fenceId <= pQueueInfo->lastRetiredId) {
+            result = XGL_TRUE;
+        }
+    } else {                 // If not in list, fence has been retired and deleted
+       result = XGL_TRUE;
     }
     return result;
 }
@@ -147,34 +186,57 @@ static XGL_FENCE getFenceFromId(uint64_t fenceId)
 {
     XGL_FENCE fence = NULL;
     if (fenceId != 0) {
-        // Search for a node with this fenceId
-        if (fenceId > g_lastRetiredId) {
-            if (fenceMap.find(fenceId) != fenceMap.end()) {
-                fence = (fenceMap[fenceId])->fence;
+        // Search for an item with this fenceId
+        if (fenceMap.find(fenceId) != fenceMap.end()) {
+            MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
+            if (pFenceInfo != NULL) {
+                MT_QUEUE_INFO* pQueueInfo = queueMap[pFenceInfo->queue];
+                if (fenceId > pQueueInfo->lastRetiredId) {
+                    fence = pFenceInfo->fence;
+                }
             }
         }
     }
     return fence;
 }
 
-// Helper routine that updates the fence list to all-retired, as for Queue/DeviceWaitIdle
-static void retireAllFences(void)
+// Helper routine that updates the fence list for a specific queue to all-retired
+static void retireQueueFences(XGL_QUEUE queue)
 {
-    // In this case, we go throught the whole list, retiring each node and update the global retired ID until the list is empty
-    GLOBAL_FENCE_NODE* pDelNode = NULL;
-    for (map<uint64_t, GLOBAL_FENCE_NODE*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
-        g_lastRetiredId = (*ii).first;
-        deleteFenceNode((*ii).first);
+    MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+    pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
+    // Set Queue's lastRetired to lastSubmitted, free items in queue's fence list
+    map<uint64_t, MT_FENCE_INFO*>::iterator it = fenceMap.begin();
+    map<uint64_t, MT_FENCE_INFO*>::iterator temp;
+    while (it != fenceMap.end()) {
+        if (((*it).second)->queue == queue) {
+            temp = it;
+            ++temp;
+            deleteFenceInfo((*it).first);
+            it = temp;
+        } else {
+            ++it;
+        }
+    }
+}
+
+// Helper routine that updates fence list for all queues to all-retired
+static void retireDeviceFences(XGL_DEVICE device)
+{
+    // Process each queue for device
+    // TODO: Add multiple device support
+    for (map<XGL_QUEUE, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
+        retireQueueFences((*ii).first);
     }
 }
 
 static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs)
 {
     bool32_t result = XGL_TRUE;
-    GLOBAL_CB_NODE* pTrav = getGlobalCBNode(cb);
-    if (!pTrav) {
+    MT_CB_INFO* pInfo = getCBInfo(cb);
+    if (!pInfo) {
         char str[1024];
-        sprintf(str, "Unable to find node for CB %p in order to check memory references", (void*)cb);
+        sprintf(str, "Unable to find info for CB %p in order to check memory references", (void*)cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
@@ -183,7 +245,7 @@ static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, 
         uint8_t  found = 0;
         uint64_t foundCount = 0;
 
-        for (list<XGL_GPU_MEMORY>::iterator it = pTrav->pMemObjList.begin(); it != pTrav->pMemObjList.end(); ++it) {
+        for (list<XGL_GPU_MEMORY>::iterator it = pInfo->pMemObjList.begin(); it != pInfo->pMemObjList.end(); ++it) {
             for (i = 0; i < memRefCount; i++) {
                 if ((*it) == pMemRefs[i].mem) {
                     char str[1024];
@@ -217,49 +279,49 @@ static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, 
     }
     return result;
 }
-// Return ptr to node in map container containing mem, or NULL if not found
+// Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
-static GLOBAL_MEM_OBJ_NODE* getGlobalMemNode(const XGL_GPU_MEMORY mem)
+static MT_MEM_OBJ_INFO* getMemObjInfo(const XGL_GPU_MEMORY mem)
 {
-    GLOBAL_MEM_OBJ_NODE* pMemNode = NULL;
+    MT_MEM_OBJ_INFO* pMemObjInfo = NULL;
 
     if (memObjMap.find(mem) != memObjMap.end()) {
-        pMemNode = memObjMap[mem];
+        pMemObjInfo = memObjMap[mem];
     }
-    return pMemNode;
+    return pMemObjInfo;
 }
 
-static void insertGlobalMemObj(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo)
+static void addMemObjInfo(const XGL_GPU_MEMORY mem, const XGL_MEMORY_ALLOC_INFO* pAllocInfo)
 {
-    GLOBAL_MEM_OBJ_NODE* pTrav = new GLOBAL_MEM_OBJ_NODE;
-    pTrav->refCount           = 0;
-    memset(&pTrav->allocInfo, 0, sizeof(XGL_MEMORY_ALLOC_INFO));
+    MT_MEM_OBJ_INFO* pInfo = new MT_MEM_OBJ_INFO;
+    pInfo->refCount           = 0;
+    memset(&pInfo->allocInfo, 0, sizeof(XGL_MEMORY_ALLOC_INFO));
 
     if (pAllocInfo) {  // MEM alloc created by xglWsiX11CreatePresentableImage() doesn't have alloc info struct
-        memcpy(&pTrav->allocInfo, pAllocInfo, sizeof(XGL_MEMORY_ALLOC_INFO));
+        memcpy(&pInfo->allocInfo, pAllocInfo, sizeof(XGL_MEMORY_ALLOC_INFO));
         // TODO:  Update for real hardware, actually process allocation info structures
-        pTrav->allocInfo.pNext = NULL;
+        pInfo->allocInfo.pNext = NULL;
     }
-    pTrav->mem = mem;
-    memObjMap[mem] = pTrav;
+    pInfo->mem = mem;
+    memObjMap[mem] = pInfo;
 }
 
-// Find Global CB Node and add mem binding to list container
-// Find Global Mem Obj Node and add CB binding to list container
+// Find CB Info and add mem binding to list container
+// Find Mem Obj Info and add CB binding to list container
 static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY mem)
 {
     bool32_t result = XGL_TRUE;
     // First update CB binding in MemObj mini CB list
-    GLOBAL_MEM_OBJ_NODE* pMemTrav = getGlobalMemNode(mem);
-    if (!pMemTrav) {
+    MT_MEM_OBJ_INFO* pMemInfo = getMemObjInfo(mem);
+    if (!pMemInfo) {
         char str[1024];
-        sprintf(str, "Trying to bind mem obj %p to CB %p but no Node for that mem obj.\n    Was it correctly allocated? Did it already get freed?", mem, cb);
+        sprintf(str, "Trying to bind mem obj %p to CB %p but no info for that mem obj.\n    Was it correctly allocated? Did it already get freed?", mem, cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         result = XGL_FALSE;
     } else {
         // Search for cmd buffer object in memory object's binding list
         bool32_t found  = XGL_FALSE;
-        for (list<XGL_CMD_BUFFER>::iterator it = pMemTrav->pCmdBufferBindings.begin(); it != pMemTrav->pCmdBufferBindings.end(); ++it) {
+        for (list<XGL_CMD_BUFFER>::iterator it = pMemInfo->pCmdBufferBindings.begin(); it != pMemInfo->pCmdBufferBindings.end(); ++it) {
             if ((*it) == cb) {
                 found = XGL_TRUE;
                 break;
@@ -267,21 +329,21 @@ static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY me
         }
         // If not present, add to list
         if (found == XGL_FALSE) {
-            pMemTrav->pCmdBufferBindings.push_front(cb);
-            pMemTrav->refCount++;
+            pMemInfo->pCmdBufferBindings.push_front(cb);
+            pMemInfo->refCount++;
         }
 
-        // Now update Global CB's Mem binding list
-        GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cb);
-        if (!pCBTrav) {
+        // Now update CBInfo's Mem binding list
+        MT_CB_INFO* pCBInfo = getCBInfo(cb);
+        if (!pCBInfo) {
             char str[1024];
-            sprintf(str, "Trying to bind mem obj %p to CB %p but no Node for that CB.    Was it CB incorrectly destroyed?", mem, cb);
+            sprintf(str, "Trying to bind mem obj %p to CB %p but no info for that CB.    Was it CB incorrectly destroyed?", mem, cb);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             result = XGL_FALSE;
         } else {
             // Search for memory object in cmd buffer's binding list
             bool32_t found  = XGL_FALSE;
-            for (list<XGL_GPU_MEMORY>::iterator it = pCBTrav->pMemObjList.begin(); it != pCBTrav->pMemObjList.end(); ++it) {
+            for (list<XGL_GPU_MEMORY>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
                 if ((*it) == mem) {
                     found = XGL_TRUE;
                     break;
@@ -289,7 +351,7 @@ static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY me
             }
             // If not present, add to list
             if (found == XGL_FALSE) {
-                pCBTrav->pMemObjList.push_front(mem);
+                pCBInfo->pMemObjList.push_front(mem);
             }
         }
     }
@@ -300,13 +362,13 @@ static bool32_t updateCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY me
 //  Calls to this function should be wrapped in mutex
 static void clearCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY mem)
 {
-    GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
-    // TODO : Having this check is not ideal, really if mem node was deleted,
+    MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
+    // TODO : Having this check is not ideal, really if memInfo was deleted,
     //   its CB bindings should be cleared and then freeCBBindings wouldn't call
     //   us here with stale mem objs
-    if (pTrav) {
-        pTrav->pCmdBufferBindings.remove(cb);
-        pTrav->refCount--;
+    if (pInfo) {
+        pInfo->pCmdBufferBindings.remove(cb);
+        pInfo->refCount--;
     }
 }
 
@@ -314,37 +376,37 @@ static void clearCBBinding(const XGL_CMD_BUFFER cb, const XGL_GPU_MEMORY mem)
 static bool32_t freeCBBindings(const XGL_CMD_BUFFER cb)
 {
     bool32_t result = XGL_TRUE;
-    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cb);
-    if (!pCBTrav) {
+    MT_CB_INFO* pCBInfo = getCBInfo(cb);
+    if (!pCBInfo) {
         char str[1024];
-        sprintf(str, "Unable to find global CB node %p for deletion", cb);
+        sprintf(str, "Unable to find global CB info %p for deletion", cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if (!fenceRetired(pCBTrav->fenceId)) {
-            deleteFenceNode(pCBTrav->fenceId);
+        if (!fenceRetired(pCBInfo->fenceId)) {
+            deleteFenceInfo(pCBInfo->fenceId);
         }
 
-        for (list<XGL_GPU_MEMORY>::iterator it=pCBTrav->pMemObjList.begin(); it!=pCBTrav->pMemObjList.end(); ++it) {
+        for (list<XGL_GPU_MEMORY>::iterator it=pCBInfo->pMemObjList.begin(); it!=pCBInfo->pMemObjList.end(); ++it) {
             clearCBBinding(cb, (*it));
         }
-        pCBTrav->pMemObjList.clear();
+        pCBInfo->pMemObjList.clear();
     }
     return result;
 }
 
-// Delete Global CB Node from list along with all of it's mini mem obj node
-//   and also clear Global mem references to CB
+// Delete CBInfo from list along with all of it's mini MemObjInfo
+//   and also clear mem references to CB
 // TODO : When should this be called?  There's no Destroy of CBs that I see
-static bool32_t deleteGlobalCBNode(const XGL_CMD_BUFFER cb)
+static bool32_t deleteCBInfo(const XGL_CMD_BUFFER cb)
 {
     bool32_t result = XGL_TRUE;
     result = freeCBBindings(cb);
-    // Delete the Global CB node
+    // Delete the CBInfo info
     if (result == XGL_TRUE) {
         if (cbMap.find(cb) != cbMap.end()) {
-            GLOBAL_CB_NODE* pDelNode = cbMap[cb];
-            delete pDelNode;
+            MT_CB_INFO* pDelInfo = cbMap[cb];
+            delete pDelInfo;
             cbMap.erase(cb);
         }
     }
@@ -352,45 +414,45 @@ static bool32_t deleteGlobalCBNode(const XGL_CMD_BUFFER cb)
 }
 
 // Delete the entire CB list
-static bool32_t deleteGlobalCBList()
+static bool32_t deleteCBInfoList()
 {
     bool32_t result = XGL_TRUE;
-    for (map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
+    for (map<XGL_CMD_BUFFER, MT_CB_INFO*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
         freeCBBindings((*ii).first);
         delete (*ii).second;
     }
     return result;
 }
 
-// For given MemObj node, report Obj & CB bindings
-static void reportMemReferences(const GLOBAL_MEM_OBJ_NODE* pMemObjTrav)
+// For given MemObjInfo, report Obj & CB bindings
+static void reportMemReferences(const MT_MEM_OBJ_INFO* pMemObjInfo)
 {
     uint32_t refCount = 0; // Count found references
 
-    for (list<XGL_CMD_BUFFER>::const_iterator it = pMemObjTrav->pCmdBufferBindings.begin(); it != pMemObjTrav->pCmdBufferBindings.end(); ++it) {
+    for (list<XGL_CMD_BUFFER>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
         refCount++;
         char str[1024];
-        sprintf(str, "Command Buffer %p has reference to mem obj %p", (*it), pMemObjTrav->mem);
+        sprintf(str, "Command Buffer %p has reference to mem obj %p", (*it), pMemObjInfo->mem);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
     }
-    for (list<XGL_OBJECT>::const_iterator it = pMemObjTrav->pObjBindings.begin(); it != pMemObjTrav->pObjBindings.end(); ++it) {
+    for (list<XGL_OBJECT>::const_iterator it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
         char str[1024];
-        sprintf(str, "XGL Object %p has reference to mem obj %p", (*it), pMemObjTrav->mem);
+        sprintf(str, "XGL Object %p has reference to mem obj %p", (*it), pMemObjInfo->mem);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
     }
-    if (refCount != pMemObjTrav->refCount) {
+    if (refCount != pMemObjInfo->refCount) {
         char str[1024];
-        sprintf(str, "Refcount of %u for Mem Obj %p does't match reported refs of %u", pMemObjTrav->refCount, pMemObjTrav->mem, refCount);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pMemObjTrav->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        sprintf(str, "Refcount of %u for Mem Obj %p does't match reported refs of %u", pMemObjInfo->refCount, pMemObjInfo->mem, refCount);
+        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
 }
 
-static void deleteGlobalMemNode(XGL_GPU_MEMORY mem)
+static void deleteMemObjInfo(XGL_GPU_MEMORY mem)
 {
-    GLOBAL_MEM_OBJ_NODE* pDelNode = memObjMap[mem];
+    MT_MEM_OBJ_INFO* pDelInfo = memObjMap[mem];
     if (memObjMap.find(mem) != memObjMap.end()) {
-        GLOBAL_MEM_OBJ_NODE* pDelNode = memObjMap[mem];
-        delete pDelNode;
+        MT_MEM_OBJ_INFO* pDelInfo = memObjMap[mem];
+        delete pDelInfo;
         memObjMap.erase(mem);
     }
 }
@@ -399,38 +461,35 @@ static void deleteGlobalMemNode(XGL_GPU_MEMORY mem)
 static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
 {
     bool32_t result = XGL_TRUE;
-    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cb);
-    if (!pCBTrav) {
+    MT_CB_INFO* pCBInfo = getCBInfo(cb);
+    if (!pCBInfo) {
         char str[1024];
-        sprintf(str, "Unable to find global CB node %p to check for completion", cb);
+        sprintf(str, "Unable to find global CB info %p to check for completion", cb);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if (!fenceRetired(pCBTrav->fenceId)) {
-            // Explicitly call the internal xglGetFenceStatus routine
-            if (XGL_SUCCESS != xglGetFenceStatus(getFenceFromId(pCBTrav->fenceId))) {
-                char str[1024];
-                sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not completed", pCBTrav->fenceId, getFenceFromId(pCBTrav->fenceId), cb);
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-                result = XGL_FALSE;
-            }
+        if (!fenceRetired(pCBInfo->fenceId)) {
+            char str[1024];
+            sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not been checked for completion", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+            result = XGL_FALSE;
         }
     }
     return result;
 }
 
-static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
+static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem)
 {
     bool32_t result = XGL_TRUE;
-    // Parse global list to find node w/ mem
-    GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
-    if (!pTrav) {
+    // Parse global list to find info w/ mem
+    MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
+    if (!pInfo) {
         char str[1024];
-        sprintf(str, "Couldn't find mem node object for %p\n    Was %p never allocated or previously freed?", (void*)mem, (void*)mem);
+        sprintf(str, "Couldn't find mem info object for %p\n    Was %p never allocated or previously freed?", (void*)mem, (void*)mem);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         result = XGL_FALSE;
     } else {
-        if (pTrav->allocInfo.allocationSize == 0) {
+        if (pInfo->allocInfo.allocationSize == 0) {
             char str[1024];
             sprintf(str, "Attempting to free memory associated with a Presentable Image, %p, this should not be explicitly freed\n", (void*)mem);
             layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
@@ -439,9 +498,9 @@ static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
             // Clear any CB bindings for completed CBs
             //   TODO : Is there a better place to do this?
 
-            list<XGL_CMD_BUFFER>::iterator it = pTrav->pCmdBufferBindings.begin();
+            list<XGL_CMD_BUFFER>::iterator it = pInfo->pCmdBufferBindings.begin();
             list<XGL_CMD_BUFFER>::iterator temp;
-            while (it != pTrav->pCmdBufferBindings.end()) {
+            while (it != pInfo->pCmdBufferBindings.end()) {
                 if (XGL_TRUE == checkCBCompleted(*it)) {
                     temp = it;
                     ++temp;
@@ -453,76 +512,76 @@ static bool32_t freeMemNode(XGL_GPU_MEMORY mem)
             }
 
             // Now verify that no references to this mem obj remain
-            if (0 != pTrav->refCount) {
+            if (0 != pInfo->refCount) {
                 // If references remain, report the error and can search CB list to find references
                 char str[1024];
                 sprintf(str, "Freeing mem obj %p while it still has references", (void*)mem);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREED_MEM_REF, "MEM", str);
-                reportMemReferences(pTrav);
+                reportMemReferences(pInfo);
                 result = XGL_FALSE;
             }
-            // Delete global node
-            deleteGlobalMemNode(mem);
+            // Delete mem obj info
+            deleteMemObjInfo(mem);
         }
     }
     return result;
 }
 
-// Return object node for 'object' or return NULL if no node exists
-static GLOBAL_OBJECT_NODE* getGlobalObjectNode(const XGL_OBJECT object)
+// Return object info for 'object' or return NULL if no info exists
+static MT_OBJ_INFO* getObjectInfo(const XGL_OBJECT object)
 {
-    GLOBAL_OBJECT_NODE* pObjNode = NULL;
+    MT_OBJ_INFO* pObjInfo = NULL;
 
     if (objectMap.find(object) != objectMap.end()) {
-        pObjNode = objectMap[object];
+        pObjInfo = objectMap[object];
     }
-    return pObjNode;
+    return pObjInfo;
 }
 
-static GLOBAL_OBJECT_NODE* insertGlobalObjectNode(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, const char *name_prefix)
+static MT_OBJ_INFO* addObjectInfo(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, const char *name_prefix)
 {
-    GLOBAL_OBJECT_NODE* pTrav = new GLOBAL_OBJECT_NODE;
-    memset(pTrav, 0, sizeof(GLOBAL_OBJECT_NODE));
-    memcpy(&pTrav->create_info, pCreateInfo, struct_size);
-    sprintf(pTrav->object_name, "%s_%p", name_prefix, object);
+    MT_OBJ_INFO* pInfo = new MT_OBJ_INFO;
+    memset(pInfo, 0, sizeof(MT_OBJ_INFO));
+    memcpy(&pInfo->create_info, pCreateInfo, struct_size);
+    sprintf(pInfo->object_name, "%s_%p", name_prefix, object);
 
-    pTrav->object     = object;
-    pTrav->ref_count  = 1;
-    pTrav->sType      = sType;
-    objectMap[object] = pTrav;
+    pInfo->object     = object;
+    pInfo->ref_count  = 1;
+    pInfo->sType      = sType;
+    objectMap[object] = pInfo;
 
-    return pTrav;
+    return pInfo;
 }
 
 // Remove object binding performs 3 tasks:
-// 1. Remove object node from Global Mem Obj list container of obj bindings & free it
-// 2. Decrement refCount for Global Mem Obj
-// 3. Clear Global Mem Obj ptr from Global Object Node
+// 1. Remove ObjectInfo from MemObjInfo list container of obj bindings & free it
+// 2. Decrement refCount for MemObjInfo
+// 3. Clear MemObjInfo ptr from ObjectInfo
 static bool32_t clearObjectBinding(XGL_OBJECT object)
 {
     bool32_t result = XGL_FALSE;
-    GLOBAL_OBJECT_NODE* pGlobalObjTrav = getGlobalObjectNode(object);
-    if (!pGlobalObjTrav) {
+    MT_OBJ_INFO* pObjInfo = getObjectInfo(object);
+    if (!pObjInfo) {
         char str[1024];
         sprintf(str, "Attempting to clear mem binding for object %p: devices, queues, command buffers, shaders and memory objects do not have external memory requirements and it is unneccessary to call bind/unbindObjectMemory on them.", object);
         layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
     } else {
-        if (!pGlobalObjTrav->pMemNode) {
+        if (!pObjInfo->pMemObjInfo) {
             char str[1024];
             sprintf(str, "Attempting to clear mem binding on obj %p but it has no binding.", (void*)object);
             layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM", str);
         } else {
-            for (list<XGL_OBJECT>::iterator it = pGlobalObjTrav->pMemNode->pObjBindings.begin(); it != pGlobalObjTrav->pMemNode->pObjBindings.end(); ++it) {
-                pGlobalObjTrav->pMemNode->refCount--;
-                pGlobalObjTrav->pMemNode = NULL;
-                it = pGlobalObjTrav->pMemNode->pObjBindings.erase(it);
+            for (list<XGL_OBJECT>::iterator it = pObjInfo->pMemObjInfo->pObjBindings.begin(); it != pObjInfo->pMemObjInfo->pObjBindings.end(); ++it) {
+                pObjInfo->pMemObjInfo->refCount--;
+                pObjInfo->pMemObjInfo = NULL;
+                it = pObjInfo->pMemObjInfo->pObjBindings.erase(it);
                 result = XGL_TRUE;
                 break;
             }
             if (result == XGL_FALSE) {
                 char str[1024];
                 sprintf(str, "While trying to clear mem binding for object %p, unable to find that object referenced by mem obj %p",
-                    object, pGlobalObjTrav->pMemNode->mem);
+                    object, pObjInfo->pMemObjInfo->mem);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
             }
         }
@@ -533,8 +592,8 @@ static bool32_t clearObjectBinding(XGL_OBJECT object)
 // For NULL mem case, clear any previous binding Else...
 // Make sure given object is in global object map
 //  IF a previous binding existed, clear it
-//  Add reference from global object node to global memory node
-//  Add reference off of global obj node
+//  Add reference from objectInfo to memoryInfo
+//  Add reference off of objInfo
 // Return XGL_TRUE if addition is successful, XGL_FALSE otherwise
 static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
 {
@@ -545,21 +604,21 @@ static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
         result = XGL_TRUE;
     } else {
         char str[1024];
-        GLOBAL_OBJECT_NODE* pGlobalObjTrav = getGlobalObjectNode(object);
-        if (!pGlobalObjTrav) {
+        MT_OBJ_INFO* pObjInfo = getObjectInfo(object);
+        if (!pObjInfo) {
             sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
             return XGL_FALSE;
         }
         // non-null case so should have real mem obj
-        GLOBAL_MEM_OBJ_NODE* pTrav = getGlobalMemNode(mem);
-        if (!pTrav) {
-            sprintf(str, "While trying to bind mem for obj %p, couldn't find node for mem obj %p", (void*)object, (void*)mem);
+        MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
+        if (!pInfo) {
+            sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         } else {
             // Search for object in memory object's binding list
             bool32_t found  = XGL_FALSE;
-            for (list<XGL_OBJECT>::iterator it = pTrav->pObjBindings.begin(); it != pTrav->pObjBindings.end(); ++it) {
+            for (list<XGL_OBJECT>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
                 if ((*it) == object) {
                     found = XGL_TRUE;
                     break;
@@ -567,23 +626,23 @@ static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
             }
             // If not present, add to list
             if (found == XGL_FALSE) {
-                pTrav->pObjBindings.push_front(object);
-                pTrav->refCount++;
+                pInfo->pObjBindings.push_front(object);
+                pInfo->refCount++;
             }
 
-            if (pGlobalObjTrav->pMemNode) {
+            if (pObjInfo->pMemObjInfo) {
                 clearObjectBinding(object); // Need to clear the previous object binding before setting new binding
-                sprintf(str, "Updating memory binding for object %p from mem obj %p to %p", object, pGlobalObjTrav->pMemNode->mem, mem);
+                sprintf(str, "Updating memory binding for object %p from mem obj %p to %p", object, pObjInfo->pMemObjInfo->mem, mem);
                 layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_NONE, "MEM", str);
             }
             // For image objects, make sure default memory state is correctly set
             // TODO : What's the best/correct way to handle this?
-            if (XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pGlobalObjTrav->sType) {
-                if (pGlobalObjTrav->create_info.image_create_info.usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
+            if (XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pObjInfo->sType) {
+                if (pObjInfo->create_info.image_create_info.usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
                     // TODO::  More memory state transition stuff.
                 }
             }
-            pGlobalObjTrav->pMemNode = pTrav;
+            pObjInfo->pMemObjInfo = pInfo;
         }
     }
     return XGL_TRUE;
@@ -592,14 +651,14 @@ static bool32_t updateObjectBinding(XGL_OBJECT object, XGL_GPU_MEMORY mem)
 // Print details of global Obj tracking list
 static void printObjList()
 {
-    GLOBAL_OBJECT_NODE* pTrav = NULL;
+    MT_OBJ_INFO* pInfo = NULL;
     char str[1024];
-    sprintf(str, "Details of Global Object list of size %lu elements", objectMap.size());
+    sprintf(str, "Details of Object list of size %lu elements", objectMap.size());
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-    for (map<XGL_OBJECT, GLOBAL_OBJECT_NODE*>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
-        pTrav = (*ii).second;
-        sprintf(str, "    GlobObjNode %p has object %p, pMemNode %p", pTrav, pTrav->object, pTrav->pMemNode);
-        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pTrav->object, 0, MEMTRACK_NONE, "MEM", str);
+    for (map<XGL_OBJECT, MT_OBJ_INFO*>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
+        pInfo = (*ii).second;
+        sprintf(str, "    ObjInfo %p has object %p, pMemObjInfo %p", pInfo, pInfo->object, pInfo->pMemObjInfo);
+        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pInfo->object, 0, MEMTRACK_NONE, "MEM", str);
     }
 }
 
@@ -607,10 +666,10 @@ static void printObjList()
 static XGL_GPU_MEMORY getMemBindingFromObject(const XGL_OBJECT object)
 {
     XGL_GPU_MEMORY mem = NULL;
-    GLOBAL_OBJECT_NODE* pObjNode = getGlobalObjectNode(object);
-    if (pObjNode) {
-        if (pObjNode->pMemNode) {
-            mem = pObjNode->pMemNode->mem;
+    MT_OBJ_INFO* pObjInfo = getObjectInfo(object);
+    if (pObjInfo) {
+        if (pObjInfo->pMemObjInfo) {
+            mem = pObjInfo->pMemObjInfo->mem;
         }
         else {
             char str[1024];
@@ -628,26 +687,26 @@ static XGL_GPU_MEMORY getMemBindingFromObject(const XGL_OBJECT object)
     return mem;
 }
 
-// Print details of global Mem Obj list
+// Print details of MemObjInfo list
 static void printMemList()
 {
-    GLOBAL_MEM_OBJ_NODE* pTrav = NULL;
+    MT_MEM_OBJ_INFO* pInfo = NULL;
     // Just printing each msg individually for now, may want to package these into single large print
     char str[1024];
-    sprintf(str, "MEM INFO : Details of Global Memory Object list of size %lu elements", memObjMap.size());
+    sprintf(str, "MEM INFO : Details of Memory Object list of size %lu elements", memObjMap.size());
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
-    for (map<XGL_GPU_MEMORY, GLOBAL_MEM_OBJ_NODE*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
-        pTrav = (*ii).second;
+    for (map<XGL_GPU_MEMORY, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+        pInfo = (*ii).second;
 
-        sprintf(str, "    ===MemObj Node at %p===", (void*)pTrav);
+        sprintf(str, "    ===MemObjInfo at %p===", (void*)pInfo);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        sprintf(str, "    Mem object: %p", (void*)pTrav->mem);
+        sprintf(str, "    Mem object: %p", (void*)pInfo->mem);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        sprintf(str, "    Ref Count: %u", pTrav->refCount);
+        sprintf(str, "    Ref Count: %u", pInfo->refCount);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        if (0 != pTrav->allocInfo.allocationSize) {
-            string pAllocInfoMsg = xgl_print_xgl_memory_alloc_info(&pTrav->allocInfo, "{MEM}INFO :       ");
+        if (0 != pInfo->allocInfo.allocationSize) {
+            string pAllocInfoMsg = xgl_print_xgl_memory_alloc_info(&pInfo->allocInfo, "{MEM}INFO :       ");
             sprintf(str, "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         } else {
@@ -655,38 +714,38 @@ static void printMemList()
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
 
-        sprintf(str, "    XGL OBJECT Binding list of size %lu elements:", pTrav->pObjBindings.size());
+        sprintf(str, "    XGL OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        for (list<XGL_OBJECT>::iterator it = pTrav->pObjBindings.begin(); it != pTrav->pObjBindings.end(); ++it) {
+        for (list<XGL_OBJECT>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
             sprintf(str, "       XGL OBJECT %p", (*it));
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
 
-        sprintf(str, "    XGL Command Buffer (CB) binding list of size %lu elements", pTrav->pCmdBufferBindings.size());
+        sprintf(str, "    XGL Command Buffer (CB) binding list of size %lu elements", pInfo->pCmdBufferBindings.size());
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        for (list<XGL_CMD_BUFFER>::iterator it = pTrav->pCmdBufferBindings.begin(); it != pTrav->pCmdBufferBindings.end(); ++it) {
+        for (list<XGL_CMD_BUFFER>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
             sprintf(str, "      XGL CB %p", (*it));
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
     }
 }
 
-static void printGlobalCB()
+static void printCBList()
 {
     char str[1024] = {0};
-    GLOBAL_CB_NODE* pNode = NULL;
-    sprintf(str, "Details of Global CB list of size %lu elements", cbMap.size());
+    MT_CB_INFO* pCBInfo = NULL;
+    sprintf(str, "Details of CB list of size %lu elements", cbMap.size());
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
-    for (map<XGL_CMD_BUFFER, GLOBAL_CB_NODE*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
-        pNode = (*ii).second;
+    for (map<XGL_CMD_BUFFER, MT_CB_INFO*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
+        pCBInfo = (*ii).second;
 
-        sprintf(str, "    Global CB Node (%p) has CB %p, fenceId %" PRIx64", and fence %p",
-            (void*)pNode, (void*)pNode->cmdBuffer, pNode->fenceId,
-            (void*)getFenceFromId(pNode->fenceId));
+        sprintf(str, "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %p",
+            (void*)pCBInfo, (void*)pCBInfo->cmdBuffer, pCBInfo->fenceId,
+            (void*)getFenceFromId(pCBInfo->fenceId));
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
-        for (list<XGL_GPU_MEMORY>::iterator it = pNode->pMemObjList.begin(); it != pNode->pMemObjList.end(); ++it) {
+        for (list<XGL_GPU_MEMORY>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
             sprintf(str, "      Mem obj %p", (*it));
             layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
@@ -752,23 +811,27 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyDevice(XGL_DEVICE device)
     loader_platform_thread_lock_mutex(&globalLock);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, device, 0, MEMTRACK_NONE, "MEM", str);
     printMemList();
-    printGlobalCB();
+    printCBList();
     printObjList();
-    if (XGL_FALSE == deleteGlobalCBList()) {
+    if (XGL_FALSE == deleteCBInfoList()) {
         sprintf(str, "Issue deleting global CB list in xglDestroyDevice()");
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
     // Report any memory leaks
-    GLOBAL_MEM_OBJ_NODE* pTrav = NULL;
-    for (map<XGL_GPU_MEMORY, GLOBAL_MEM_OBJ_NODE*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
-        pTrav = (*ii).second; 
+    MT_MEM_OBJ_INFO* pInfo = NULL;
+    for (map<XGL_GPU_MEMORY, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+        pInfo = (*ii).second; 
 
-        if (pTrav->allocInfo.allocationSize != 0) {
+        if (pInfo->allocInfo.allocationSize != 0) {
             sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling xglFreeMemory(%p) prior to xglDestroyDevice().",
-                pTrav->mem, pTrav->mem);
-            layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pTrav->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+                pInfo->mem, pInfo->mem);
+            layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
         }
     }
+
+    // Queues persist until device is destroyed
+    deleteQueueInfoList();
+
     loader_platform_thread_unlock_mutex(&globalLock);
     XGL_RESULT result = nextTable.DestroyDevice(device);
     return result;
@@ -796,21 +859,28 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     }
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(XGL_DEVICE device, XGL_QUEUE_TYPE queueType, uint32_t queueIndex, XGL_QUEUE* pQueue)
+{
+    XGL_RESULT result = nextTable.GetDeviceQueue(device, queueType, queueIndex, pQueue);
+    addQueueInfo(*pQueue);
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers,
     uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Need to track fence and clear mem references when fence clears
-    GLOBAL_CB_NODE* pCBNode = NULL;
-    uint64_t        fenceId = addFenceNode(fence);
-    char            str[1024];
+    MT_CB_INFO* pCBInfo = NULL;
+    uint64_t    fenceId = addFenceInfo(fence, queue);
+    char        str[1024];
     sprintf(str, "In xglQueueSubmit(), checking %u cmdBuffers with %u memRefs", cmdBufferCount, memRefCount);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
     printMemList();
-    printGlobalCB();
+    printCBList();
     for (uint32_t i = 0; i < cmdBufferCount; i++) {
-        pCBNode = getGlobalCBNode(pCmdBuffers[i]);
-        pCBNode->fenceId = fenceId;
+        pCBInfo = getCBInfo(pCmdBuffers[i]);
+        pCBInfo->fenceId = fenceId;
         sprintf(str, "Verifying mem refs for CB %p", pCmdBuffers[i]);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
         if (XGL_FALSE == validateCBMemRef(pCmdBuffers[i], memRefCount, pMemRefs)) {
@@ -818,7 +888,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_CB_MISSING_MEM_REF, "MEM", str);
         }
     }
-    printGlobalCB();
+    printCBList();
     loader_platform_thread_unlock_mutex(&globalLock);
     XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, getFenceFromId(fenceId));
     return result;
@@ -836,7 +906,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglAllocMemory(XGL_DEVICE device, const XGL_M
     XGL_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
-    insertGlobalMemObj(*pMem, pAllocInfo);
+    addMemObjInfo(*pMem, pAllocInfo);
     printMemList();
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
@@ -849,14 +919,14 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglFreeMemory(XGL_GPU_MEMORY mem)
      * all API objects referencing it and that it is not referenced by any queued command buffers
      */
     loader_platform_thread_lock_mutex(&globalLock);
-    if (XGL_FALSE == freeMemNode(mem)) {
+    if (XGL_FALSE == freeMemObjInfo(mem)) {
         char str[1024];
         sprintf(str, "Issue while freeing mem obj %p", (void*)mem);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREE_MEM_ERROR, "MEM", str);
     }
     printMemList();
     printObjList();
-    printGlobalCB();
+    printCBList();
     loader_platform_thread_unlock_mutex(&globalLock);
     XGL_RESULT result = nextTable.FreeMemory(mem);
     return result;
@@ -874,7 +944,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglMapMemory(XGL_GPU_MEMORY mem, XGL_FLAGS fl
 {
     // TODO : Track when memory is mapped
     loader_platform_thread_lock_mutex(&globalLock);
-    GLOBAL_MEM_OBJ_NODE *pMemObj = getGlobalMemNode(mem);
+    MT_MEM_OBJ_INFO *pMemObj = getMemObjInfo(mem);
     if ((pMemObj->allocInfo.memProps & XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT) == 0) {
         char str[1024];
         sprintf(str, "Mapping Memory (%p) without XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT set", (void*)mem);
@@ -927,27 +997,27 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDestroyObject(XGL_OBJECT object)
     loader_platform_thread_lock_mutex(&globalLock);
 
     // First check if this is a CmdBuffer
-    if (NULL != getGlobalCBNode((XGL_CMD_BUFFER)object)) {
-        deleteGlobalCBNode((XGL_CMD_BUFFER)object);
+    if (NULL != getCBInfo((XGL_CMD_BUFFER)object)) {
+        deleteCBInfo((XGL_CMD_BUFFER)object);
     }
 
     if (objectMap.find(object) != objectMap.end()) {
-        GLOBAL_OBJECT_NODE* pDelNode = objectMap[object];
-        if (pDelNode->pMemNode) {
+        MT_OBJ_INFO* pDelInfo = objectMap[object];
+        if (pDelInfo->pMemObjInfo) {
             // Wsi allocated Memory is tied to image object so clear the binding and free that memory automatically
-            if (0 == pDelNode->pMemNode->allocInfo.allocationSize) { // Wsi allocated memory has NULL allocInfo w/ 0 size
-                XGL_GPU_MEMORY memToFree = pDelNode->pMemNode->mem;
+            if (0 == pDelInfo->pMemObjInfo->allocInfo.allocationSize) { // Wsi allocated memory has NULL allocInfo w/ 0 size
+                XGL_GPU_MEMORY memToFree = pDelInfo->pMemObjInfo->mem;
                 clearObjectBinding(object);
-                freeMemNode(memToFree);
+                freeMemObjInfo(memToFree);
             } else {
                 char str[1024];
-                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE, 0)", object, (void*)pDelNode->pMemNode->mem, object);
+                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling xglBindObjectMemory(%p, 0, XGL_NULL_HANDLE, 0)", object, (void*)pDelInfo->pMemObjInfo->mem, object);
                 layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
                 // From the spec : If an object has previous memory binding, it is required to unbind memory from an API object before it is destroyed.
                 clearObjectBinding(object);
             }
         }
-        delete pDelNode;
+        delete pDelInfo;
         objectMap.erase(object);
     }
 
@@ -986,7 +1056,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_F
     XGL_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pFence, pCreateInfo->sType, pCreateInfo, sizeof(XGL_FENCE_CREATE_INFO), "fence");
+        addObjectInfo(*pFence, pCreateInfo->sType, pCreateInfo, sizeof(XGL_FENCE_CREATE_INFO), "fence");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1007,17 +1077,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t 
 {
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
+
     if (XGL_SUCCESS == result) {
-        if (waitAll) { // Clear all the fences
+        if (waitAll || fenceCount == 1) { // Clear all the fences
             for(uint32_t i = 0; i < fenceCount; i++) {
                 updateFenceTracking(pFences[i]);
-            }
-        }
-        else { // Clear only completed fences
-            for(uint32_t i = 0; i < fenceCount; i++) {
-                if (XGL_SUCCESS == nextTable.GetFenceStatus(pFences[i])) {
-                    updateFenceTracking(pFences[i]);
-                }
             }
         }
     }
@@ -1030,7 +1094,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
     XGL_RESULT result = nextTable.QueueWaitIdle(queue);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        retireAllFences();
+        retireQueueFences(queue);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1041,7 +1105,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDeviceWaitIdle(XGL_DEVICE device)
     XGL_RESULT result = nextTable.DeviceWaitIdle(device);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        retireAllFences();
+        retireDeviceFences(device);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1052,7 +1116,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateEvent(XGL_DEVICE device, const XGL_E
     XGL_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pEvent, pCreateInfo->sType, pCreateInfo, sizeof(XGL_EVENT_CREATE_INFO), "event");
+        addObjectInfo(*pEvent, pCreateInfo->sType, pCreateInfo, sizeof(XGL_EVENT_CREATE_INFO), "event");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1063,7 +1127,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(XGL_DEVICE device, const X
     XGL_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pQueryPool, pCreateInfo->sType, pCreateInfo, sizeof(XGL_QUERY_POOL_CREATE_INFO), "query_pool");
+        addObjectInfo(*pQueryPool, pCreateInfo->sType, pCreateInfo, sizeof(XGL_QUERY_POOL_CREATE_INFO), "query_pool");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1074,7 +1138,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(XGL_DEVICE device, const XGL_
     XGL_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_CREATE_INFO), "buffer");
+        addObjectInfo(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_CREATE_INFO), "buffer");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1085,7 +1149,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(XGL_DEVICE device, const 
     XGL_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_VIEW_CREATE_INFO), "buffer_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_BUFFER_VIEW_CREATE_INFO), "buffer_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1096,7 +1160,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_I
     XGL_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
     if (XGL_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_CREATE_INFO), "image");
+        addObjectInfo(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_CREATE_INFO), "image");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1107,7 +1171,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
     XGL_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO), "image_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_IMAGE_VIEW_CREATE_INFO), "image_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1119,7 +1183,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(XGL_DEVICE devic
     XGL_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO), "color_attachment_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO), "color_attachment_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1130,7 +1194,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(XGL_DEVICE device, 
     XGL_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO), "ds_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO), "ds_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1147,7 +1211,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
+        addObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1158,7 +1222,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(XGL_DEVICE device, c
     XGL_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), "compute_pipeline");
+        addObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_COMPUTE_PIPELINE_CREATE_INFO), "compute_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1169,7 +1233,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL
     XGL_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pSampler, pCreateInfo->sType, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO), "sampler");
+        addObjectInfo(*pSampler, pCreateInfo->sType, pCreateInfo, sizeof(XGL_SAMPLER_CREATE_INFO), "sampler");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1181,7 +1245,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(XGL_DEVICE devi
     XGL_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO), "viewport_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO), "viewport_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1193,7 +1257,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(XGL_DEVICE device
     XGL_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO), "raster_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO), "raster_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1205,7 +1269,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(XGL_DEVICE de
     XGL_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO), "cb_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO), "cb_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1217,7 +1281,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE 
     XGL_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO), "ds_state");
+        addObjectInfo(*pState, pCreateInfo->sType, pCreateInfo, sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO), "ds_state");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1226,11 +1290,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(XGL_DEVICE 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, const XGL_CMD_BUFFER_CREATE_INFO* pCreateInfo, XGL_CMD_BUFFER* pCmdBuffer)
 {
     XGL_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
-    // At time of cmd buffer creation, create global cmd buffer node for the returned cmd buffer
+    // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
-        insertGlobalCB(*pCmdBuffer);
-    printGlobalCB();
+        addCBInfo(*pCmdBuffer);
+    printCBList();
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1238,8 +1302,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(XGL_DEVICE device, con
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(XGL_CMD_BUFFER cmdBuffer, const XGL_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
 {
     // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
-    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
-    if (pCBTrav && (!fenceRetired(pCBTrav->fenceId))) {
+    MT_CB_INFO* pCBInfo = getCBInfo(cmdBuffer);
+    if (pCBInfo && (!fenceRetired(pCBInfo->fenceId))) {
         bool32_t cbDone = checkCBCompleted(cmdBuffer);
         if (XGL_FALSE == cbDone) {
             char str[1024];
@@ -1264,8 +1328,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(XGL_CMD_BUFFER cmdBuffer)
 {
     // Verify that CB is complete (not in-flight)
-    GLOBAL_CB_NODE* pCBTrav = getGlobalCBNode(cmdBuffer);
-    if (pCBTrav && (!fenceRetired(pCBTrav->fenceId))) {
+    MT_CB_INFO* pCBInfo = getCBInfo(cmdBuffer);
+    if (pCBInfo && (!fenceRetired(pCBInfo->fenceId))) {
         bool32_t cbDone = checkCBCompleted(cmdBuffer);
         if (XGL_FALSE == cbDone) {
             char str[1024];
@@ -1287,9 +1351,9 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
 #if 0
     // TODO : If memory bound to pipeline, then need to tie that mem to cmdBuffer
     if (getPipeline(pipeline)) {
-        GLOBAL_CB_NODE *pCBTrav = getGlobalCBNode(cmdBuffer);
-        if (pCBTrav) {
-            pCBTrav->pipelines[pipelineBindPoint] = pipeline;
+        MT_CB_INFO *pCBInfo = getCBInfo(cmdBuffer);
+        if (pCBInfo) {
+            pCBInfo->pipelines[pipelineBindPoint] = pipeline;
         } else {
             char str[1024];
             sprintf(str, "Attempt to bind Pipeline %p to non-existant command buffer %p!", (void*)pipeline, cmdBuffer);
@@ -1307,21 +1371,21 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
 {
-    GLOBAL_OBJECT_NODE *pNode;
+    MT_OBJ_INFO *pObjInfo;
     loader_platform_thread_lock_mutex(&globalLock);
-    GLOBAL_CB_NODE *pCmdBuf = getGlobalCBNode(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = getCBInfo(cmdBuffer);
     if (!pCmdBuf) {
         char str[1024];
         sprintf(str, "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, "DD", str);
     }
-    pNode = getGlobalObjectNode(state);
-    if (!pNode) {
+    pObjInfo = getObjectInfo(state);
+    if (!pObjInfo) {
         char str[1024];
         sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, state, 0, MEMTRACK_INVALID_OBJECT, "DD", str);
     }
-    pCmdBuf->pDynamicState[stateBindPoint] = pNode;
+    pCmdBuf->pDynamicState[stateBindPoint] = pObjInfo;
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
@@ -1623,18 +1687,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBAC
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
-    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
-    while (pTrav) {
-        if (pTrav->pfnMsgCallback == pfnMsgCallback) {
-            pPrev->pNext = pTrav->pNext;
-            if (g_pDbgFunctionHead == pTrav)
-                g_pDbgFunctionHead = pTrav->pNext;
-            free(pTrav);
+    XGL_LAYER_DBG_FUNCTION_NODE *pInfo = g_pDbgFunctionHead;
+    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pInfo;
+    while (pInfo) {
+        if (pInfo->pfnMsgCallback == pfnMsgCallback) {
+            pPrev->pNext = pInfo->pNext;
+            if (g_pDbgFunctionHead == pInfo)
+                g_pDbgFunctionHead = pInfo->pNext;
+            free(pInfo);
             break;
         }
-        pPrev = pTrav;
-        pTrav = pTrav->pNext;
+        pPrev = pInfo;
+        pInfo = pInfo->pNext;
     }
     if (g_pDbgFunctionHead == NULL)
     {
@@ -1656,8 +1720,8 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE de
     loader_platform_thread_lock_mutex(&globalLock);
     if (XGL_SUCCESS == result) {
         // Add image object, then insert the new Mem Object and then bind it to created image
-        insertGlobalObjectNode(*pImage, _XGL_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
-        insertGlobalMemObj(*pMem, NULL);
+        addObjectInfo(*pImage, _XGL_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
+        addMemObjInfo(*pMem, NULL);
         if (XGL_FALSE == updateObjectBinding(*pImage, *pMem)) {
             char str[1024];
             sprintf(str, "In xglWsiX11CreatePresentableImage(), unable to set image %p binding to mem obj %p", (void*)*pImage, (void*)*pMem);
@@ -1673,7 +1737,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(XGL_DEVICE de
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(XGL_QUEUE queue, const XGL_WSI_X11_PRESENT_INFO*  pPresentInfo, XGL_FENCE fence)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    addFenceNode(fence);
+    addFenceInfo(fence, queue);
     char            str[1024];
     sprintf(str, "In xglWsiX11QueuePresent(), checking queue %p for fence %p", queue, fence);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
@@ -1826,6 +1890,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglDbgRegisterMsgCallback;
     if (!strcmp(funcName, "xglDbgUnregisterMsgCallback"))
         return (void*) xglDbgUnregisterMsgCallback;
+    if (!strcmp(funcName, "xglGetDeviceQueue"))
+        return (void*) xglGetDeviceQueue;
 #if !defined(WIN32)
     if (!strcmp(funcName, "xglWsiX11CreatePresentableImage"))
         return (void*) xglWsiX11CreatePresentableImage;
