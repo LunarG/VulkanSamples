@@ -295,6 +295,59 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
 }
 
 
+enum FORMAT_TYPE {
+    FORMAT_TYPE_UNDEFINED,
+    FORMAT_TYPE_FLOAT,  /* UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader */
+    FORMAT_TYPE_SINT,
+    FORMAT_TYPE_UINT,
+};
+
+
+static unsigned
+get_format_type(VkFormat fmt) {
+    switch (fmt) {
+    case VK_FMT_UNDEFINED:
+        return FORMAT_TYPE_UNDEFINED;
+    case VK_FMT_R8_SINT:
+    case VK_FMT_R8G8_SINT:
+    case VK_FMT_R8G8B8_SINT:
+    case VK_FMT_R8G8B8A8_SINT:
+    case VK_FMT_R16_SINT:
+    case VK_FMT_R16G16_SINT:
+    case VK_FMT_R16G16B16_SINT:
+    case VK_FMT_R16G16B16A16_SINT:
+    case VK_FMT_R32_SINT:
+    case VK_FMT_R32G32_SINT:
+    case VK_FMT_R32G32B32_SINT:
+    case VK_FMT_R32G32B32A32_SINT:
+    case VK_FMT_B8G8R8_SINT:
+    case VK_FMT_B8G8R8A8_SINT:
+    case VK_FMT_R10G10B10A2_SINT:
+    case VK_FMT_B10G10R10A2_SINT:
+        return FORMAT_TYPE_SINT;
+    case VK_FMT_R8_UINT:
+    case VK_FMT_R8G8_UINT:
+    case VK_FMT_R8G8B8_UINT:
+    case VK_FMT_R8G8B8A8_UINT:
+    case VK_FMT_R16_UINT:
+    case VK_FMT_R16G16_UINT:
+    case VK_FMT_R16G16B16_UINT:
+    case VK_FMT_R16G16B16A16_UINT:
+    case VK_FMT_R32_UINT:
+    case VK_FMT_R32G32_UINT:
+    case VK_FMT_R32G32B32_UINT:
+    case VK_FMT_R32G32B32A32_UINT:
+    case VK_FMT_B8G8R8_UINT:
+    case VK_FMT_B8G8R8A8_UINT:
+    case VK_FMT_R10G10B10A2_UINT:
+    case VK_FMT_B10G10R10A2_UINT:
+        return FORMAT_TYPE_UINT;
+    default:
+        return FORMAT_TYPE_FLOAT;
+    }
+}
+
+
 static void
 validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
 {
@@ -340,12 +393,80 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
 }
 
 
+static void
+validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateInfo const *cb)
+{
+    std::map<uint32_t, interface_var> outputs;
+    std::map<uint32_t, interface_var> builtin_outputs;
+
+    printf("Begin validate_fs_outputs_against_cb\n");
+
+    /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
+
+    collect_interface_by_location(fs, spv::StorageOutput, outputs, builtin_outputs);
+
+    /* Check for legacy gl_FragColor broadcast: In this case, we should have no user-defined outputs,
+     * and all color attachment should be UNORM/SNORM/FLOAT.
+     */
+    if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
+        bool broadcast_err = false;
+        if (outputs.size()) {
+            printf("  ERR: should not have user-defined FS outputs when using broadcast\n");
+            broadcast_err = true;
+        }
+
+        for (int i = 0; i < cb->attachmentCount; i++) {
+            unsigned attachmentType = get_format_type(cb->pAttachments[i].format);
+            if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
+                printf("  ERR: CB fomat should not be SINT or UINT when using broadcast\n");
+                broadcast_err = true;
+            }
+        }
+
+        if (!broadcast_err)
+            printf("  OK: FS broadcast to all color attachments\n");
+
+        /* Skip the usual matching -- all attachments are considered written to. */
+        printf("End validate_fs_outputs_against_cb\n");
+        return;
+    }
+
+    auto it = outputs.begin();
+    uint32_t attachment = 0;
+
+    /* Walk attachment list and outputs together -- this is a little overpowered since attachments
+     * are currently dense, but the parallel with matching between shader stages is nice.
+     */
+
+    while (it != outputs.end() || attachment < cb->attachmentCount) {
+        if (attachment == cb->attachmentCount || it->first < attachment) {
+            printf("  ERR: fragment shader writes to output location %d with no matching attachment\n",
+                   it->first);
+            it++;
+        }
+        else if (it == outputs.end() || it->first > attachment) {
+            printf("  ERR: attachment %d not written by fragment shader\n",
+                   attachment);
+            attachment++;
+        }
+        else {
+            printf("  OK: match on attachment index %d\n",
+                   it->first);
+            /* TODO: typecheck */
+            it++;
+            attachment++;
+        }
+    }
+
+    printf("End validate_fs_outputs_against_cb\n");
+}
+
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
                                                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
                                                              VkPipeline *pPipeline)
 {
     /* TODO: run cross-stage validation */
-    /* - Validate FS output -> CB */
     /* - Support GS, TCS, TES stages */
 
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
@@ -384,6 +505,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     if (vs_source && fs_source) {
         validate_interface_between_stages(vs_source, "vertex shader",
                                           fs_source, "fragment shader");
+    }
+
+    if (fs_source && cb) {
+        validate_fs_outputs_against_cb(fs_source, cb);
     }
 
     VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
