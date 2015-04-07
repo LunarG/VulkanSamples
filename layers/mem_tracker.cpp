@@ -1400,13 +1400,13 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuff
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSets(
-        XGL_CMD_BUFFER cmdBuffer,
-        XGL_PIPELINE_BIND_POINT pipelineBindPoint,
-        XGL_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain,
-        uint32_t layoutChainSlot,
-        uint32_t count,
-        const XGL_DESCRIPTOR_SET* pDescriptorSets,
-        const uint32_t* pUserData)
+    XGL_CMD_BUFFER                              cmdBuffer,
+    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
+    uint32_t                                    layoutChainSlot,
+    uint32_t                                    count,
+    const XGL_DESCRIPTOR_SET*                   pDescriptorSets,
+    const uint32_t*                             pUserData)
 {
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
