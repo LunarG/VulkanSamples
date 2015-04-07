@@ -96,4 +96,10 @@ set_target_properties(xgl_blit_tests
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xgl_blit_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
+add_executable(xgl_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP})
+set_target_properties(xgl_layer_validation_tests
+   PROPERTIES
+   COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
+target_link_libraries(xgl_layer_validation_tests XGL gtest gtest_main ${TEST_LIBRARIES})
+
 add_subdirectory(gtest-1.7.0)
