@@ -40,8 +40,8 @@ extern "C"
 // ------------------------------------------------------------------------------------------------
 // Objects
 
-VK_DEFINE_HANDLE(VkDisplayWSI);
-VK_DEFINE_HANDLE(VkSwapChainWSI);
+VK_DEFINE_DISP_SUBCLASS_HANDLE(VkDisplayWSI, VkObject)
+VK_DEFINE_DISP_SUBCLASS_HANDLE(VkSwapChainWSI, VkObject)
 
 // ------------------------------------------------------------------------------------------------
 // Enumeration constants
@@ -58,6 +58,10 @@ VK_DEFINE_HANDLE(VkSwapChainWSI);
 
 // Extend VkImageLayout enum with extension specific constants
 #define VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI                          VK_WSI_LUNARG_ENUM(VkImageLayout, 0)
+
+// Extend VkObjectType enum for new objects
+#define VK_OBJECT_TYPE_DISPLAY_WSI                                  VK_WSI_LUNARG_ENUM(VkObjectType, 0)
+#define VK_OBJECT_TYPE_SWAP_CHAIN_WSI                               VK_WSI_LUNARG_ENUM(VkObjectType, 1)
 
 // ------------------------------------------------------------------------------------------------
 // Enumerations
