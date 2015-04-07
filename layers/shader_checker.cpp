@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unordered_map>
+#include <vector>
 #include "loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vkLayer.h"
@@ -35,6 +36,19 @@
 #include "SPIRV/spirv.h"
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+
+
+struct shader_source {
+    std::vector<uint32_t> words;
+
+    shader_source(VkShaderCreateInfo const *pCreateInfo) :
+        words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)) {
+    }
+};
+
+
+static std::unordered_map<void *, shader_source *> shader_map;
+
 
 static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
 {
@@ -139,6 +153,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
 {
     VkLayerDispatchTable* pTable = tableMap[(VkBaseLayerObject *)device];
     VkResult res = pTable->CreateShader(device, pCreateInfo, pShader);
+
+    shader_map[(VkBaseLayerObject *) *pShader] = new shader_source(pCreateInfo);
     return res;
 }
 
