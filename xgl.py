@@ -374,6 +374,11 @@ core = Extension(
              Param("const XGL_FENCE_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_FENCE*", "pFence")]),
 
+        Proto("XGL_RESULT", "ResetFences",
+            [Param("XGL_DEVICE", "device"),
+             Param("uint32_t", "fenceCount"),
+             Param("XGL_FENCE*", "pFences")]),
+
         Proto("XGL_RESULT", "GetFenceStatus",
             [Param("XGL_FENCE", "fence")]),
 

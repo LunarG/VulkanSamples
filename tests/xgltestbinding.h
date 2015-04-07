@@ -312,7 +312,8 @@ public:
     // xglGetFenceStatus()
     XGL_RESULT status() const { return xglGetFenceStatus(obj()); }
 
-    static XGL_FENCE_CREATE_INFO create_info(XGL_FLAGS flags);
+    static XGL_FENCE_CREATE_INFO create_info(XGL_FENCE_CREATE_FLAGS flags);
+    static XGL_FENCE_CREATE_INFO create_info();
 };
 
 class Semaphore : public DerivedObject<XGL_SEMAPHORE, Object> {
@@ -641,11 +642,18 @@ inline XGL_BUFFER_CREATE_INFO Buffer::create_info(XGL_GPU_SIZE size, XGL_FLAGS u
     return info;
 }
 
-inline XGL_FENCE_CREATE_INFO Fence::create_info(XGL_FLAGS flags)
+inline XGL_FENCE_CREATE_INFO Fence::create_info(XGL_FENCE_CREATE_FLAGS flags)
 {
     XGL_FENCE_CREATE_INFO info = {};
     info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     info.flags = flags;
+    return info;
+}
+
+inline XGL_FENCE_CREATE_INFO Fence::create_info()
+{
+    XGL_FENCE_CREATE_INFO info = {};
+    info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     return info;
 }
 

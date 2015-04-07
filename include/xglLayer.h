@@ -60,6 +60,7 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglBindImageMemoryRangeType BindImageMemoryRange;
     xglCreateFenceType CreateFence;
     xglGetFenceStatusType GetFenceStatus;
+    xglResetFencesType ResetFences;
     xglWaitForFencesType WaitForFences;
     xglCreateSemaphoreType CreateSemaphore;
     xglQueueSignalSemaphoreType QueueSignalSemaphore;

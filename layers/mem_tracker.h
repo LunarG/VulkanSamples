@@ -49,6 +49,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_INVALID_STATE                 = 15, // Memory not in the correct state
     MEMTRACK_RESET_CB_WHILE_IN_FLIGHT      = 16, // xglResetCommandBuffer() called on a CB that hasn't completed
     MEMTRACK_INVALID_QUEUE                 = 17, // Invalid queue requested or selected
+    MEMTRACK_INVALID_FENCE_STATE           = 18, // Invalid Fence State signaled or used
 } MEM_TRACK_ERROR;
 
 /*

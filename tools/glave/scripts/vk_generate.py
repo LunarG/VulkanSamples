@@ -1750,6 +1750,17 @@ class Subcommand(object):
         wf_body.append('            returnValue = manually_handle_xglWaitForFences(pPacket);')
         return "\n".join(wf_body)
 
+    def _gen_replay_reset_fences(self):
+        wf_body = []
+        wf_body.append('            XGL_FENCE *pFence = GLV_NEW_ARRAY(XGL_FENCE, pPacket->fenceCount);')
+        wf_body.append('            for (uint32_t i = 0; i < pPacket->fenceCount; i++)')
+        wf_body.append('            {')
+        wf_body.append('                *(pFence + i) = m_objMapper.remap(*(pPacket->pFences + i));')
+        wf_body.append('            }')
+        wf_body.append('            replayResult = m_xglFuncs.real_xglResetFences(m_objMapper.remap(pPacket->device), pPacket->fenceCount, pFence);')
+        wf_body.append('            GLV_DELETE(pFence);')
+        return "\n".join(wf_body)
+
     def _gen_replay_wsi_associate_connection(self):
         wac_body = []
         wac_body.append('            returnValue = manually_handle_xglWsiX11AssociateConnection(pPacket);')
@@ -1840,6 +1851,7 @@ class Subcommand(object):
                             'GetMultiGpuCompatibility': self._gen_replay_get_multi_gpu_compatibility,
                             'DestroyObject': self._gen_replay_destroy_object,
                             'WaitForFences': self._gen_replay_wait_for_fences,
+                            'ResetFences': self._gen_replay_reset_fences,
                             'WsiX11AssociateConnection': self._gen_replay_wsi_associate_connection,
                             'WsiX11GetMSC': self._gen_replay_wsi_get_msc,
                             'WsiX11CreatePresentableImage': self._gen_replay_wsi_create_presentable_image,

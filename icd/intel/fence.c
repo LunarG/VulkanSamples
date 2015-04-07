@@ -60,6 +60,7 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
     fence->obj.destroy = fence_destroy;
 
     *fence_ret = fence;
+    fence->signaled = (info->flags & XGL_FENCE_CREATE_SIGNALED_BIT);
 
     return XGL_SUCCESS;
 }
@@ -86,6 +87,8 @@ void intel_fence_set_seqno(struct intel_fence *fence,
 {
     intel_bo_unref(fence->seqno_bo);
     fence->seqno_bo = intel_bo_ref(seqno_bo);
+
+    fence->signaled = false;
 }
 
 XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
@@ -96,9 +99,17 @@ XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
     if (ret != XGL_SUCCESS)
         return ret;
 
+    if (fence->signaled) {
+        return XGL_SUCCESS;
+    }
+
     if (fence->seqno_bo) {
-        return (intel_bo_wait(fence->seqno_bo, timeout_ns)) ?
+        ret = (intel_bo_wait(fence->seqno_bo, timeout_ns)) ?
             XGL_NOT_READY : XGL_SUCCESS;
+        if (ret == XGL_SUCCESS) {
+            fence->signaled = true;
+        }
+        return ret;
     }
 
     return XGL_ERROR_UNAVAILABLE;
@@ -150,4 +161,18 @@ ICD_EXPORT XGL_RESULT XGLAPI xglWaitForFences(
     }
 
     return ret;
+}
+ICD_EXPORT XGL_RESULT XGLAPI xglResetFences(
+    XGL_DEVICE                                  device,
+    uint32_t                                    fenceCount,
+    XGL_FENCE*                                  pFences)
+{
+    uint32_t i;
+
+    for (i = 0; i < fenceCount; i++) {
+        struct intel_fence *fence = intel_fence(pFences[i]);
+        fence->signaled = false;
+    }
+
+    return XGL_SUCCESS;
 }

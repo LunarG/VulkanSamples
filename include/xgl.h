@@ -33,7 +33,7 @@
 #include "xglPlatform.h"
 
 // XGL API version supported by this file
-#define XGL_API_VERSION XGL_MAKE_VERSION(0, 65, 0)
+#define XGL_API_VERSION XGL_MAKE_VERSION(0, 67, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1220,6 +1220,13 @@ typedef enum _XGL_PIPELINE_CREATE_FLAGS
     XGL_MAX_ENUM(_XGL_PIPELINE_CREATE_FLAGS)
 } XGL_PIPELINE_CREATE_FLAGS;
 
+// Fence creation flags
+typedef enum _XGL_FENCE_CREATE_FLAGS
+{
+    XGL_FENCE_CREATE_SIGNALED_BIT                           = 0x00000001,
+    XGL_MAX_ENUM(_XGL_FENCE_CREATE_FLAGS)
+} XGL_FENCE_CREATE_FLAGS;
+
 // Semaphore creation flags
 typedef enum _XGL_SEMAPHORE_CREATE_FLAGS
 {
@@ -1877,8 +1884,7 @@ typedef struct _XGL_COMPUTE_PIPELINE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
     XGL_PIPELINE_SHADER                     cs;
     XGL_FLAGS                               flags;      // XGL_PIPELINE_CREATE_FLAGS
-    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN         setLayoutChain;
-    // For local size fields zero is treated an invalid value
+    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN         setLayoutChain; // For local size fields zero is treated an invalid value
     uint32_t                                localSizeX;
     uint32_t                                localSizeY;
     uint32_t                                localSizeZ;
@@ -2164,7 +2170,7 @@ typedef struct _XGL_FENCE_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO
     const void*                             pNext;      // Pointer to next structure
-    XGL_FLAGS                               flags;      // Reserved
+    XGL_FENCE_CREATE_FLAGS                  flags;      // XGL_FENCE_CREATE_FLAGS
 } XGL_FENCE_CREATE_INFO;
 
 typedef struct _XGL_SEMAPHORE_CREATE_INFO
@@ -2278,6 +2284,7 @@ typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryType)(XGL_OBJECT object, uint32_t
 typedef XGL_RESULT (XGLAPI *xglBindObjectMemoryRangeType)(XGL_OBJECT object, uint32_t allocationIdx, XGL_GPU_SIZE rangeOffset,XGL_GPU_SIZE rangeSize, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
 typedef XGL_RESULT (XGLAPI *xglBindImageMemoryRangeType)(XGL_IMAGE image, uint32_t allocationIdx, const XGL_IMAGE_MEMORY_BIND_INFO* bindInfo, XGL_GPU_MEMORY mem, XGL_GPU_SIZE memOffset);
 typedef XGL_RESULT (XGLAPI *xglCreateFenceType)(XGL_DEVICE device, const XGL_FENCE_CREATE_INFO* pCreateInfo, XGL_FENCE* pFence);
+typedef XGL_RESULT (XGLAPI *xglResetFencesType)(XGL_DEVICE device, uint32_t fenceCount, XGL_FENCE* pFences);
 typedef XGL_RESULT (XGLAPI *xglGetFenceStatusType)(XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglWaitForFencesType)(XGL_DEVICE device, uint32_t fenceCount, const XGL_FENCE* pFences, bool32_t waitAll, uint64_t timeout);
 typedef XGL_RESULT (XGLAPI *xglCreateSemaphoreType)(XGL_DEVICE device, const XGL_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_SEMAPHORE* pSemaphore);
@@ -2536,6 +2543,11 @@ XGL_RESULT XGLAPI xglCreateFence(
     XGL_DEVICE                                  device,
     const XGL_FENCE_CREATE_INFO*                pCreateInfo,
     XGL_FENCE*                                  pFence);
+
+XGL_RESULT XGLAPI xglResetFences(
+    XGL_DEVICE                                  device,
+    uint32_t                                    fenceCount,
+    XGL_FENCE*                                  pFences);
 
 XGL_RESULT XGLAPI xglGetFenceStatus(
     XGL_FENCE fence);

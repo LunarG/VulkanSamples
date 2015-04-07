@@ -97,6 +97,32 @@ static MT_CB_INFO* getCBInfo(const XGL_CMD_BUFFER cb)
     return pCBInfo;
 }
 
+// Return object info for 'object' or return NULL if no info exists
+static MT_OBJ_INFO* getObjectInfo(const XGL_OBJECT object)
+{
+    MT_OBJ_INFO* pObjInfo = NULL;
+
+    if (objectMap.find(object) != objectMap.end()) {
+        pObjInfo = objectMap[object];
+    }
+    return pObjInfo;
+}
+
+static MT_OBJ_INFO* addObjectInfo(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, const char *name_prefix)
+{
+    MT_OBJ_INFO* pInfo = new MT_OBJ_INFO;
+    memset(pInfo, 0, sizeof(MT_OBJ_INFO));
+    memcpy(&pInfo->create_info, pCreateInfo, struct_size);
+    sprintf(pInfo->object_name, "%s_%p", name_prefix, object);
+
+    pInfo->object     = object;
+    pInfo->ref_count  = 1;
+    pInfo->sType      = sType;
+    objectMap[object] = pInfo;
+
+    return pInfo;
+}
+
 // Add a fence, creating one if necessary to our list of fences/fenceIds
 static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
 {
@@ -110,8 +136,9 @@ static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
         XGL_FENCE_CREATE_INFO fci;
         fci.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fci.pNext = NULL;
-        fci.flags = 0;
+        fci.flags = static_cast<XGL_FENCE_CREATE_FLAGS>(0);
         nextTable.CreateFence(globalDevice, &fci, &pFenceInfo->fence);
+        addObjectInfo(pFenceInfo->fence, fci.sType, &fci, sizeof(XGL_FENCE_CREATE_INFO), "internalFence");
         pFenceInfo->localFence = XGL_TRUE;
     } else {
         pFenceInfo->localFence = XGL_FALSE;
@@ -158,6 +185,11 @@ static void updateFenceTracking(XGL_FENCE fence)
                 pQueueInfo->lastRetiredId = (*ii).first;
             } else {
                 deleteFenceInfo((*ii).first);
+            }
+            // Update fence state in fenceCreateInfo structure
+            MT_OBJ_INFO* pObjectInfo = getObjectInfo(fence);
+            if (pObjectInfo != NULL) {
+                pObjectInfo->create_info.fence_create_info.flags = XGL_FENCE_CREATE_SIGNALED_BIT;
             }
         }
     }
@@ -241,8 +273,8 @@ static bool32_t checkMemRef(
     MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
     for (it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
         if ((*it) == mem) {
-            result = XGL_TRUE; 
-            break; 
+            result = XGL_TRUE;
+            break;
         }
     }
     return result;
@@ -261,7 +293,7 @@ static bool32_t validateQueueMemRefs(
         char str[1024];
         sprintf(str, "Unknown Queue %p specified in xglQueueSubmit", queue);
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-    } 
+    }
     else {
         //  Iterate through all CBs in pCmdBuffers
         for (uint32_t i = 0; i < cmdBufferCount; i++) {
@@ -547,32 +579,6 @@ static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem, bool internal)
         }
     }
     return result;
-}
-
-// Return object info for 'object' or return NULL if no info exists
-static MT_OBJ_INFO* getObjectInfo(const XGL_OBJECT object)
-{
-    MT_OBJ_INFO* pObjInfo = NULL;
-
-    if (objectMap.find(object) != objectMap.end()) {
-        pObjInfo = objectMap[object];
-    }
-    return pObjInfo;
-}
-
-static MT_OBJ_INFO* addObjectInfo(XGL_OBJECT object, XGL_STRUCTURE_TYPE sType, const void *pCreateInfo, const int struct_size, const char *name_prefix)
-{
-    MT_OBJ_INFO* pInfo = new MT_OBJ_INFO;
-    memset(pInfo, 0, sizeof(MT_OBJ_INFO));
-    memcpy(&pInfo->create_info, pCreateInfo, struct_size);
-    sprintf(pInfo->object_name, "%s_%p", name_prefix, object);
-
-    pInfo->object     = object;
-    pInfo->ref_count  = 1;
-    pInfo->sType      = sType;
-    objectMap[object] = pInfo;
-
-    return pInfo;
 }
 
 // Remove object binding performs 3 tasks:
@@ -903,10 +909,10 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(XGL_QUEUE queue, XGL_
             char str[1024];
             sprintf(str, "Unknown Queue %p", queue);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        } 
+        }
         else {
             if (checkMemRef(queue, mem) == XGL_TRUE) {
-                // Alread in list, just warn 
+                // Alread in list, just warn
                 char str[1024];
                 sprintf(str, "Request to add a memory reference (%p) to Queue %p -- ref is already present in the queue's reference list", mem, queue);
                 layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
@@ -927,13 +933,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(XGL_QUEUE queue, X
     XGL_RESULT result = nextTable.QueueRemoveMemReference(queue, mem);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-       
+
         MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
         if (pQueueInfo == NULL) {
             char str[1024];
             sprintf(str, "Unknown Queue %p", queue);
             layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        } 
+        }
         else {
             for (list<XGL_GPU_MEMORY>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
                 if ((*it) == mem) {
@@ -1137,6 +1143,24 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateFence(XGL_DEVICE device, const XGL_F
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetFences(XGL_DEVICE device, uint32_t fenceCount, XGL_FENCE* pFences)
+{
+    XGL_RESULT result = nextTable.ResetFences(device, fenceCount, pFences);
+    if (XGL_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        // Reset fence state in fenceCreateInfo structure
+        for (uint32_t i = 0; i < fenceCount; i++) {
+            MT_OBJ_INFO* pObjectInfo = getObjectInfo(pFences[i]);
+            if (pObjectInfo != NULL) {
+                pObjectInfo->create_info.fence_create_info.flags =
+                    static_cast<XGL_FENCE_CREATE_FLAGS>(pObjectInfo->create_info.fence_create_info.flags & ~XGL_FENCE_CREATE_SIGNALED_BIT);
+            }
+        }
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 {
     XGL_RESULT result = nextTable.GetFenceStatus(fence);
@@ -1150,6 +1174,18 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(XGL_FENCE fence)
 
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t fenceCount, const XGL_FENCE* pFences, bool32_t waitAll, uint64_t timeout)
 {
+    // Verify fence status of submitted fences
+    for(uint32_t i = 0; i < fenceCount; i++) {
+        MT_OBJ_INFO* pObjectInfo = getObjectInfo(pFences[i]);
+        if (pObjectInfo != NULL) {
+            if (pObjectInfo->create_info.fence_create_info.flags == XGL_FENCE_CREATE_SIGNALED_BIT) {
+                char str[1024];
+                sprintf(str, "xglWaitForFences specified signaled-state Fence %p.  Fences must be reset before being submitted", pFences[i]);
+                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+            }
+        }
+    }
+
     XGL_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
 
@@ -1896,6 +1932,8 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglCreateFence;
     if (!strcmp(funcName, "xglGetFenceStatus"))
         return (void*) xglGetFenceStatus;
+    if (!strcmp(funcName, "xglResetFences"))
+        return (void*) xglResetFences;
     if (!strcmp(funcName, "xglWaitForFences"))
         return (void*) xglWaitForFences;
     if (!strcmp(funcName, "xglQueueWaitIdle"))

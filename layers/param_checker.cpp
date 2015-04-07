@@ -519,6 +519,13 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglWaitForFences(XGL_DEVICE device, uint32_t 
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglResetFences(XGL_DEVICE device, uint32_t fenceCount, XGL_FENCE* pFences)
+{
+
+    XGL_RESULT result = nextTable.ResetFences(device, fenceCount, pFences);
+    return result;
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSemaphore(XGL_DEVICE device, const XGL_SEMAPHORE_CREATE_INFO* pCreateInfo, XGL_SEMAPHORE* pSemaphore)
 {
     char str[1024];

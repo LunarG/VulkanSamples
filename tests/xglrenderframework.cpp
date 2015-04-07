@@ -797,7 +797,7 @@ void XglConstantBufferObj::BufferMemoryBarrier(
 
     if (!m_commandBuffer)
     {
-        m_fence.init(*m_device, xgl_testing::Fence::create_info(0));
+        m_fence.init(*m_device, xgl_testing::Fence::create_info());
 
         m_commandBuffer = new XglCommandBufferObj(m_device);
     }

@@ -38,6 +38,7 @@ struct intel_fence {
     struct intel_obj obj;
 
     struct intel_bo *seqno_bo;
+    bool    signaled;
 
     void *wsi_data;
 };
