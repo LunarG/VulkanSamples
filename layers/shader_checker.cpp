@@ -259,6 +259,35 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     /* - Validate FS output -> CB */
     /* - Support GS, TCS, TES stages */
 
+    /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
+     * before trying to do anything more: */
+
+    shader_source const *vs_source = 0;
+    shader_source const *fs_source = 0;
+    VkPipelineCbStateCreateInfo const *cb = 0;
+    VkPipelineVertexInputCreateInfo const *vi = 0;
+
+    for (auto stage = pCreateInfo; stage; stage = (decltype(stage))stage->pNext) {
+        if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
+            auto shader_stage = (VkPipelineShaderStageCreateInfo const *)stage;
+
+            if (shader_stage->shader.stage == VK_SHADER_STAGE_VERTEX)
+                vs_source = shader_map[(void *)(shader_stage->shader.shader)];
+            else if (shader_stage->shader.stage == VK_SHADER_STAGE_FRAGMENT)
+                fs_source = shader_map[(void *)(shader_stage->shader.shader)];
+            else
+                printf("Unknown shader stage %d\n", shader_stage->shader.stage);
+        }
+        else if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO) {
+            cb = (VkPipelineCbStateCreateInfo const *)stage;
+        }
+        else if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO) {
+            vi = (VkPipelineVertexInputCreateInfo const *)stage;
+        }
+    }
+
+    printf("Pipeline: vi=%p vs=%p fs=%p cb=%p\n", vi, vs_source, fs_source, cb);
+
     VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
     VkResult res = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     return res;
