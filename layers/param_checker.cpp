@@ -1664,8 +1664,8 @@ void PreCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* p
 
     if(pCreateInfo->pColorStoreOps == nullptr)
     {
-        char const str[] = "xglCreateRenderPass parameter, XGL_ATTACHMENT_STORE_OP* pCreateInfo->pColorStoreOps, \
-            is nullptr (precondition).";
+        char const str[] = "xglCreateRenderPass parameter, XGL_ATTACHMENT_STORE_OP* pCreateInfo->pColorStoreOps, "\
+            "is nullptr (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
@@ -1684,8 +1684,8 @@ void PreCreateRenderPass(XGL_DEVICE device, const XGL_RENDER_PASS_CREATE_INFO* p
 
     if(pCreateInfo->pColorLoadClearValues == nullptr)
     {
-        char const str[] = "xglCreateRenderPass parameter, XGL_CLEAR_COLOR* pCreateInfo->\
-            pColorLoadClearValues, is nullptr (precondition).";
+        char const str[] = "xglCreateRenderPass parameter, XGL_CLEAR_COLOR* pCreateInfo->"\
+            "pColorLoadClearValues, is nullptr (precondition).";
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
