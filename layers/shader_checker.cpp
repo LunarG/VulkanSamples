@@ -295,12 +295,56 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
 }
 
 
+static void
+validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
+{
+    std::map<uint32_t, interface_var> inputs;
+    /* we collect builtin inputs, but they will never appear in the VI state --
+     * the vs builtin inputs are generated in the pipeline, not sourced from buffers (VertexID, etc)
+     */
+    std::map<uint32_t, interface_var> builtin_inputs;
+
+    printf("Begin validate_vi_against_vs_inputs\n");
+
+    collect_interface_by_location(vs, spv::StorageInput, inputs, builtin_inputs);
+
+    /* Build index by location */
+    std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
+    for (int i = 0; i < vi->attributeCount; i++)
+        attribs[vi->pVertexAttributeDescriptions[i].location] = &vi->pVertexAttributeDescriptions[i];
+
+    auto it_a = attribs.begin();
+    auto it_b = inputs.begin();
+
+    while (it_a != attribs.end() || it_b != inputs.end()) {
+        if (it_b == inputs.end() || it_a->first < it_b->first) {
+            printf("  WARN: attribute at location %d not consumed by the vertex shader\n",
+                   it_a->first);
+            it_a++;
+        }
+        else if (it_a == attribs.end() || it_b->first < it_a->first) {
+            printf("  ERR: vertex shader consumes input at location %d but not provided\n",
+                   it_b->first);
+            it_b++;
+        }
+        else {
+            /* TODO: type check */
+            printf("  OK: match on attribute location %d\n",
+                   it_a->first);
+            it_a++;
+            it_b++;
+        }
+    }
+
+    printf("End validate_vi_against_vs_inputs\n");
+}
+
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
                                                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
                                                              VkPipeline *pPipeline)
 {
     /* TODO: run cross-stage validation */
-    /* - Validate vertex fetch -> VS interface */
     /* - Validate FS output -> CB */
     /* - Support GS, TCS, TES stages */
 
@@ -332,6 +376,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     }
 
     printf("Pipeline: vi=%p vs=%p fs=%p cb=%p\n", vi, vs_source, fs_source, cb);
+
+    if (vi && vs_source) {
+        validate_vi_against_vs_inputs(vi, vs_source);
+    }
 
     if (vs_source && fs_source) {
         validate_interface_between_stages(vs_source, "vertex shader",
