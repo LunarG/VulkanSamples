@@ -1341,7 +1341,6 @@ typedef struct _XGL_PHYSICAL_GPU_PROPERTIES
     uint32_t                                deviceId;
     XGL_PHYSICAL_GPU_TYPE                   gpuType;
     char                                    gpuName[XGL_MAX_PHYSICAL_GPU_NAME];
-    uint32_t                                maxMemRefsPerSubmission;
     XGL_GPU_SIZE                            maxInlineMemoryUpdateSize;
     uint32_t                                maxBoundDescriptorSets;
     uint32_t                                maxThreadGroupSize;

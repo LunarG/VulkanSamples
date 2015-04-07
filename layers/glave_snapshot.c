@@ -44,10 +44,6 @@ static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);
 static int objLockInitialized = 0;
 static loader_platform_thread_mutex objLock;
 
-// GPU Info state
-static uint32_t maxMemRefsPerSubmission = 0;
-
-
 // The 'masterSnapshot' which gets the delta merged into it when 'GetSnapshot()' is called.
 static GLV_VK_SNAPSHOT s_snapshot = {0};
 
@@ -432,10 +428,6 @@ static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS stat
     layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 }
 
-static void setGpuInfoState(void *pData) {
-    maxMemRefsPerSubmission = ((XGL_PHYSICAL_GPU_PROPERTIES *)pData)->maxMemRefsPerSubmission;
-}
-
 #include "xgl_dispatch_table_helper.h"
 static void initGlaveSnapshot(void)
 {
@@ -504,11 +496,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(XGL_PHYSICAL_GPU gpu, XGL_PHYSI
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     XGL_RESULT result = nextTable.GetGpuInfo((XGL_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
-    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES) {
-        if (pData != NULL) {
-            setGpuInfoState(pData);
-        }
-    }
     return result;
 }
 

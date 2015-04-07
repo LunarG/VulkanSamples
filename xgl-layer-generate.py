@@ -1005,7 +1005,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static objNode *pGlobalHead = NULL;')
         header_txt.append('static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};')
         header_txt.append('static uint64_t numTotalObjs = 0;')
-        header_txt.append('static uint32_t maxMemRefsPerSubmission = 0;')
+        header_txt.append('static uint32_t maxMemReferences = 0;')
         header_txt.append('// Debug function to print global list and each individual object list')
         header_txt.append('static void ll_print_lists()')
         header_txt.append('{')
@@ -1249,21 +1249,21 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void validate_mem_ref_count(uint32_t numRefs) {')
-        header_txt.append('    if (maxMemRefsPerSubmission == 0) {')
+        header_txt.append('    if (maxMemReferences == 0) {')
         header_txt.append('        char str[1024];')
         header_txt.append('        sprintf(str, "xglQueueSubmit called before calling xglGetGpuInfo");')
         header_txt.append('        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_GETGPUINFO_NOT_CALLED, "OBJTRACK", str);')
         header_txt.append('    } else {')
-        header_txt.append('        if (numRefs > maxMemRefsPerSubmission) {')
+        header_txt.append('        if (numRefs > maxMemReferences) {')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "xglQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemRefsPerSubmission);')
+        header_txt.append('            sprintf(str, "xglQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemReferences);')
         header_txt.append('            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('static void setGpuInfoState(void *pData) {')
-        header_txt.append('    maxMemRefsPerSubmission = ((XGL_PHYSICAL_GPU_PROPERTIES *)pData)->maxMemRefsPerSubmission;')
+        header_txt.append('static void setGpuQueueInfoState(void *pData) {')
+        header_txt.append('    maxMemReferences = ((XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *)pData)->maxMemReferences;')
         header_txt.append('}')
         return "\n".join(header_txt)
 
@@ -1389,9 +1389,9 @@ class ObjectTrackerSubcommand(Subcommand):
             c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
             gpu_state = ''
             if 'GetGpuInfo' in proto.name:
-                gpu_state =  '    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES) {\n'
+                gpu_state =  '    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'
                 gpu_state += '        if (pData != NULL) {\n'
-                gpu_state += '            setGpuInfoState(pData);\n'
+                gpu_state += '            setGpuQueueInfoState(pData);\n'
                 gpu_state += '        }\n'
                 gpu_state += '    }\n'
             funcs.append('%s%s\n'

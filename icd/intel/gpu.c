@@ -237,11 +237,9 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     memcpy(props->gpuName, name, name_len);
     props->gpuName[name_len] = '\0';
 
-    props->maxMemRefsPerSubmission = gpu->batch_buffer_reloc_count;
 
     /* no size limit, but no bounded buffer could exceed 2GB */
     props->maxInlineMemoryUpdateSize = 2u << 30;
-
     props->maxBoundDescriptorSets = 1;
     props->maxThreadGroupSize = 512;
 

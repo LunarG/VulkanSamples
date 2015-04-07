@@ -563,7 +563,6 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tdeviceId = 0x%04x\n",                 props->deviceId);
     printf("\tgpuType = %s\n",                      xgl_gpu_type_string(props->gpuType));
     printf("\tgpuName = %s\n",                      props->gpuName);
-    printf("\tmaxMemRefsPerSubmission = %u\n",      props->maxMemRefsPerSubmission);
     printf("\tmaxInlineMemoryUpdateSize = %zu\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
     printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);

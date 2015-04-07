@@ -284,7 +284,7 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
     cmd->pipeline_select = pipeline_select;
 
     /*
-     * XXX This is not quite right.  intel_gpu sets maxMemRefsPerSubmission to
+     * XXX This is not quite right.  intel_gpu sets maxMemReferences to
      * batch_buffer_reloc_count, but we may emit up to two relocs, for start
      * and end offsets, for each referenced memories.
      */
