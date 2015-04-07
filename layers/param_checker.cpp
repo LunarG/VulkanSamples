@@ -117,8 +117,7 @@ void PostCreateInstance(XGL_RESULT result, XGL_INSTANCE* pInstance)
 
     if(pInstance == nullptr)
     {
-        char const str[] = "xglCreateInstance parameter, XGL_INSTANCE* pInstance, is nullptr "\
-            "(postcondition).";
+        char const str[] = "xglCreateInstance parameter, XGL_INSTANCE* pInstance, is nullptr (postcondition).";
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
