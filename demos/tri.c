@@ -78,8 +78,6 @@ struct demo {
     } vertices;
 
     XGL_CMD_BUFFER cmd;  // Buffer for initialization commands
-    XGL_MEMORY_REF mem_refs[16];
-    int num_refs;
     XGL_DESCRIPTOR_SET_LAYOUT_CHAIN desc_layout_chain;
     XGL_DESCRIPTOR_SET_LAYOUT desc_layout;
     XGL_PIPELINE pipeline;
@@ -112,8 +110,7 @@ static void demo_flush_init_cmd(struct demo *demo)
 
     const XGL_CMD_BUFFER cmd_bufs[] = { demo->cmd };
 
-    err = xglQueueSubmit(demo->queue, 1, cmd_bufs,
-                         demo->num_refs, demo->mem_refs, XGL_NULL_HANDLE);
+    err = xglQueueSubmit(demo->queue, 1, cmd_bufs, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglQueueWaitIdle(demo->queue);
@@ -121,19 +118,13 @@ static void demo_flush_init_cmd(struct demo *demo)
 
     xglDestroyObject(demo->cmd);
     demo->cmd = XGL_NULL_HANDLE;
-    demo->num_refs = 0;
 }
 
 static void demo_add_mem_refs(
         struct demo *demo,
-        XGL_MEMORY_REF_FLAGS flags,
         int num_refs, XGL_GPU_MEMORY *mem)
 {
     for (int i = 0; i < num_refs; i++) {
-        demo->mem_refs[demo->num_refs].flags = flags;
-        demo->mem_refs[demo->num_refs].mem = mem[i];
-        demo->num_refs++;
-        assert(demo->num_refs < 16);
         xglQueueAddMemReference(demo->queue, mem[i]);
     }
 }
@@ -332,29 +323,7 @@ static void demo_draw(struct demo *demo)
     err = xglWaitForFences(demo->device, 1, &fence, XGL_TRUE, ~((uint64_t) 0));
     assert(err == XGL_SUCCESS || err == XGL_ERROR_UNAVAILABLE);
 
-    uint32_t i, idx = 0;
-    XGL_MEMORY_REF *memRefs = 0;
-    memRefs = malloc(sizeof(XGL_MEMORY_REF) * (DEMO_BUFFER_COUNT +
-                demo->depth.num_mem + demo->textures[0].num_mem +
-                demo->vertices.num_mem));
-    for (i = 0; i < demo->depth.num_mem; i++, idx++) {
-        memRefs[idx].mem = demo->depth.mem[i];
-        memRefs[idx].flags = 0;
-    }
-    for (i = 0; i < demo->textures[0].num_mem; i++, idx++) {
-        memRefs[idx].mem = demo->textures[0].mem[i];
-        memRefs[idx].flags = 0;
-    }
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        memRefs[idx].mem = demo->buffers[i].mem;
-        memRefs[idx++].flags = 0;
-    }
-    for (i = 0; i < demo->vertices.num_mem; i++, idx++) {
-        memRefs[idx].mem = demo->vertices.mem[i];
-        memRefs[idx].flags = 0;
-    }
-    err = xglQueueSubmit(demo->queue, 1, &demo->cmd,
-            idx, memRefs, XGL_NULL_HANDLE);
+    err = xglQueueSubmit(demo->queue, 1, &demo->cmd, XGL_NULL_HANDLE);
     assert(!err);
 
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
@@ -396,7 +365,7 @@ static void demo_prepare_buffers(struct demo *demo)
                 &demo->buffers[i].image, &demo->buffers[i].mem);
         assert(!err);
 
-        demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, 1, &demo->buffers[i].mem);
+        demo_add_mem_refs(demo, 1, &demo->buffers[i].mem);
         demo_set_image_layout(demo, demo->buffers[i].image,
                                XGL_IMAGE_LAYOUT_UNDEFINED,
                                XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -502,7 +471,7 @@ static void demo_prepare_depth(struct demo *demo)
                            XGL_IMAGE_LAYOUT_UNDEFINED,
                            XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-    demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, num_allocations, demo->depth.mem);
+    demo_add_mem_refs(demo, demo->depth.num_mem, demo->depth.mem);
 
     /* create image view */
     view.image = demo->depth.image;
@@ -700,8 +669,8 @@ static void demo_prepare_textures(struct demo *demo)
                             demo->textures[i].image, XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                             1, &copy_region);
 
-            demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, staging_texture.num_mem, staging_texture.mem);
-            demo_add_mem_refs(demo, 0, demo->textures[i].num_mem, demo->textures[i].mem);
+            demo_add_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
+            demo_add_mem_refs(demo, demo->textures[i].num_mem, demo->textures[i].mem);
 
             demo_set_image_layout(demo, demo->textures[i].image,
                                    XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
@@ -834,7 +803,7 @@ static void demo_prepare_vertices(struct demo *demo)
         assert(!err);
     }
 
-    demo_add_mem_refs(demo, XGL_MEMORY_REF_READ_ONLY_BIT, demo->vertices.num_mem, demo->vertices.mem);
+    demo_add_mem_refs(demo, demo->vertices.num_mem, demo->vertices.mem);
 
     demo->vertices.vi.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
     demo->vertices.vi.pNext = NULL;

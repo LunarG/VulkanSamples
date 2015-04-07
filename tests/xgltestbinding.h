@@ -138,7 +138,7 @@ public:
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to get
-    // the memories (for XGL_MEMORY_REFs), or to map/unmap the primary memory.
+    // the memories (for xglQueueAddMemReference), or to map/unmap the primary memory.
     std::vector<XGL_GPU_MEMORY> memories() const;
 
     const void *map(XGL_FLAGS flags) const;
@@ -255,9 +255,14 @@ public:
     explicit Queue(XGL_QUEUE queue) : DerivedObject(queue) {}
 
     // xglQueueSubmit()
-    void submit(const std::vector<const CmdBuffer *> &cmds, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence);
-    void submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence);
-    void submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_refs);
+    void submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence);
+    void submit(const CmdBuffer &cmd, Fence &fence);
+    void submit(const CmdBuffer &cmd);
+
+    // xglQueueAddMemReference()
+    // xglQueueRemoveMemReference()
+    void add_mem_references(const std::vector<XGL_GPU_MEMORY> &mem_refs);
+    void remove_mem_references(const std::vector<XGL_GPU_MEMORY> &mem_refs);
 
     // xglQueueWaitIdle()
     void wait();

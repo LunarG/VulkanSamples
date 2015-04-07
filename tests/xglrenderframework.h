@@ -46,6 +46,20 @@ public:
     XGL_QUEUE m_queue;
 };
 
+class XglMemoryRefManager
+{
+public:
+    void AddMemoryRefs(xgl_testing::Object &xglObject);
+    void AddMemoryRefs(vector<XGL_GPU_MEMORY> mem);
+    void EmitAddMemoryRefs(XGL_QUEUE queue);
+    void EmitRemoveMemoryRefs(XGL_QUEUE queue);
+    vector<XGL_GPU_MEMORY> mem_refs() const;
+
+protected:
+    vector<XGL_GPU_MEMORY>      mem_refs_;
+
+};
+
 class XglDepthStencilObj : public xgl_testing::Image
 {
 public:
@@ -92,7 +106,6 @@ protected:
     XGL_CMD_BUFFER                          m_cmdBuffer;
     XGL_RENDER_PASS                         m_renderPass;
     XGL_FRAMEBUFFER                         m_framebuffer;
-    XGL_MEMORY_REF                          m_memRefs[5];
     XGL_DYNAMIC_RS_STATE_OBJECT             m_stateRaster;
     XGL_DYNAMIC_CB_STATE_OBJECT             m_colorBlend;
     XGL_DYNAMIC_VP_STATE_OBJECT             m_stateViewport;
@@ -106,6 +119,7 @@ protected:
     float                                   m_depth_clear_color;
     uint32_t                                m_stencil_clear_color;
     XglDepthStencilObj                     *m_depthStencil;
+    XglMemoryRefManager                     m_mem_ref_mgr;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
@@ -131,23 +145,28 @@ protected:
 class XglDescriptorSetObj;
 class XglIndexBufferObj;
 class XglConstantBufferObj;
+class XglPipelineObj;
+class XglDescriptorSetObj;
 
 class XglCommandBufferObj : public xgl_testing::CmdBuffer
 {
 public:
     XglCommandBufferObj(XglDevice *device);
     XGL_CMD_BUFFER GetBufferHandle();
+    XGL_RESULT BeginCommandBuffer();
     XGL_RESULT BeginCommandBuffer(XGL_CMD_BUFFER_BEGIN_INFO *pInfo);
     XGL_RESULT BeginCommandBuffer(XGL_RENDER_PASS renderpass_obj, XGL_FRAMEBUFFER framebuffer_obj);
-    XGL_RESULT BeginCommandBuffer();
     XGL_RESULT EndCommandBuffer();
     void PipelineBarrier(XGL_PIPELINE_BARRIER *barrierPtr);
     void AddRenderTarget(XglImage *renderTarget);
     void AddDepthStencil();
-    void ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color, XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage);
+    void ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color, XglDepthStencilObj *depthStencilObj);
     void PrepareAttachments();
-    void BindPipeline(XGL_PIPELINE pipeline);
-    void BindDescriptorSet(const XglDescriptorSetObj *set);
+    void AddMemoryRefs(xgl_testing::Object &xglObject);
+    void AddMemoryRefs(uint32_t ref_count, const XGL_GPU_MEMORY *mem);
+    void AddMemoryRefs(vector<xgl_testing::Object *> images);
+    void BindPipeline(XglPipelineObj &pipeline);
+    void BindDescriptorSet(XglDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding);
     void BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT stateObject);
@@ -155,12 +174,13 @@ public:
     void EndRenderPass(XGL_RENDER_PASS renderpass);
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
-    void QueueCommandBuffer(XGL_MEMORY_REF *memRefs, uint32_t numMemRefs);
+    void QueueCommandBuffer();
+
+    XglMemoryRefManager             mem_ref_mgr;
 
 protected:
     XglDevice                      *m_device;
     vector<XglImage*>               m_renderTargets;
-
 };
 
 class XglConstantBufferObj : public xgl_testing::Buffer
@@ -216,30 +236,39 @@ class XglImage : public xgl_testing::Image
 {
 public:
     XglImage(XglDevice *dev);
+    bool IsCompatible(XGL_FLAGS usage, XGL_FLAGS features);
 
 public:
-    void init( uint32_t w, uint32_t h,
-                     XGL_FORMAT fmt, XGL_FLAGS usage,
-                     XGL_IMAGE_TILING tiling=XGL_LINEAR_TILING);
+    void init(uint32_t w, uint32_t h,
+              XGL_FORMAT fmt, XGL_FLAGS usage,
+              XGL_IMAGE_TILING tiling=XGL_LINEAR_TILING);
 
     //    void clear( CommandBuffer*, uint32_t[4] );
-    //    void prepare( CommandBuffer*, XGL_IMAGE_STATE );
 
     void layout( XGL_IMAGE_LAYOUT layout )
     {
         m_imageInfo.layout = layout;
     }
+
     XGL_GPU_MEMORY memory() const
     {
         const std::vector<XGL_GPU_MEMORY> mems = memories();
         return mems.empty() ? XGL_NULL_HANDLE : mems[0];
     }
 
-    XGL_RESULT CopyImage(XglImage &fromImage);
+    void ImageMemoryBarrier(XglCommandBufferObj *cmd,
+                            XGL_IMAGE_ASPECT aspect,
+                            XGL_FLAGS output_mask,
+                            XGL_FLAGS input_mask,
+                            XGL_IMAGE_LAYOUT image_layout);
+
+    XGL_RESULT CopyImage(XglImage &src_image);
+
     XGL_IMAGE image() const
     {
         return obj();
     }
+
     XGL_COLOR_ATTACHMENT_VIEW targetView()
     {
         if (!m_targetView.initialized())
@@ -257,6 +286,8 @@ public:
         }
         return m_targetView.obj();
     }
+
+    void SetLayout(XglCommandBufferObj *cmd_buf, XGL_IMAGE_ASPECT aspect, XGL_IMAGE_LAYOUT image_layout);
 
     XGL_IMAGE_LAYOUT layout() const
     {
@@ -315,12 +346,14 @@ public:
     ~XglDescriptorSetObj();
 
     int AppendDummy();
-    int AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBufferObj* constantBuffer);
+    int AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBufferObj &constantBuffer);
     int AppendSamplerTexture(XglSamplerObj* sampler, XglTextureObj* texture);
     void CreateXGLDescriptorSet(XglCommandBufferObj *cmdBuffer);
 
     XGL_DESCRIPTOR_SET GetDescriptorSetHandle() const;
     XGL_DESCRIPTOR_SET_LAYOUT_CHAIN GetLayoutChain() const;
+
+    XglMemoryRefManager                  mem_ref_mgr;
 
 protected:
     XglDevice                           *m_device;
@@ -355,15 +388,13 @@ class XglPipelineObj : public xgl_testing::Pipeline
 {
 public:
     XglPipelineObj(XglDevice *device);
-    void BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet);
     void AddShader(XglShaderObj* shaderObj);
     void AddVertexInputAttribs(XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
     void AddVertexInputBindings(XGL_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
     void AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding);
     void AddColorAttachment(uint32_t binding, const XGL_PIPELINE_CB_ATTACHMENT_STATE *att);
     void SetDepthStencil(XGL_PIPELINE_DS_STATE_CREATE_INFO *);
-    void CreateXGLPipeline(XglDescriptorSetObj *descriptorSet);
-    XGL_PIPELINE GetPipelineHandle();
+    void CreateXGLPipeline(XglDescriptorSetObj &descriptorSet);
 
 protected:
     XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO m_vi_state;
@@ -380,20 +411,5 @@ protected:
     int m_vertexBufferCount;
 
 };
-class XglMemoryRefManager{
-public:
-    XglMemoryRefManager();
-    void AddMemoryRef(xgl_testing::Object *xglObject);
-    void AddMemoryRef(XGL_GPU_MEMORY *mem, uint32_t refCount);
-    void AddRTMemoryRefs(vector<XglImage *>images, uint32_t rtCount);
-    XGL_MEMORY_REF* GetMemoryRefList();
-    int GetNumRefs();
-
-protected:
-    int m_numRefs;
-    vector<XGL_GPU_MEMORY> m_bufferObjs;
-
-};
-
 
 #endif // XGLRENDERFRAMEWORK_H

@@ -352,8 +352,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     XGL_QUEUE                                   queue_,
     uint32_t                                    cmdBufferCount,
     const XGL_CMD_BUFFER*                       pCmdBuffers,
-    uint32_t                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
@@ -361,7 +359,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     struct intel_cmd *last_cmd;
     uint32_t i;
 
-    /* XGL_MEMORY_REFs are ignored as the winsys already knows them */
     if (unlikely(intel_debug)) {
         for (i = 0; i < cmdBufferCount; i++) {
             struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);

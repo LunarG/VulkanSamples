@@ -171,7 +171,6 @@ void XglRenderFramework::InitViewport()
 }
 void XglRenderFramework::InitRenderTarget()
 {
-
     InitRenderTarget(1);
 }
 
@@ -204,6 +203,7 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets, XGL_DEPTH_STENCIL_BI
         load_ops.push_back(XGL_ATTACHMENT_LOAD_OP_LOAD);
         store_ops.push_back(XGL_ATTACHMENT_STORE_OP_STORE);
         clear_colors.push_back(m_clear_color);
+//        m_mem_ref_mgr.AddMemoryRefs(*img);
     }
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     XGL_FRAMEBUFFER_CREATE_INFO fb_info = {};
@@ -283,7 +283,7 @@ int XglDescriptorSetObj::AppendDummy()
     return m_nextSlot++;
 }
 
-int XglDescriptorSetObj::AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBufferObj *constantBuffer)
+int XglDescriptorSetObj::AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBufferObj &constantBuffer)
 {
     XGL_DESCRIPTOR_TYPE_COUNT tc = {};
     tc.type = type;
@@ -291,7 +291,10 @@ int XglDescriptorSetObj::AppendBuffer(XGL_DESCRIPTOR_TYPE type, XglConstantBuffe
     m_type_counts.push_back(tc);
 
     m_updateBuffers.push_back(xgl_testing::DescriptorSet::update(type,
-                m_nextSlot, 0, 1, &constantBuffer->m_bufferViewInfo));
+                m_nextSlot, 0, 1, &constantBuffer.m_bufferViewInfo));
+
+    // Track mem references for this descriptor set object
+    mem_ref_mgr.AddMemoryRefs(constantBuffer);
 
     return m_nextSlot++;
 }
@@ -310,6 +313,9 @@ int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextur
 
     m_updateSamplerTextures.push_back(xgl_testing::DescriptorSet::update(m_nextSlot, 0, 1,
                 (const XGL_SAMPLER_IMAGE_VIEW_INFO *) NULL));
+
+    // Track mem references for the texture referenced here
+    mem_ref_mgr.AddMemoryRefs(*texture);
 
     return m_nextSlot++;
 }
@@ -383,7 +389,104 @@ XglImage::XglImage(XglDevice *dev)
     m_imageInfo.layout = XGL_IMAGE_LAYOUT_GENERAL;
 }
 
-static bool IsCompatible(XGL_FLAGS usage, XGL_FLAGS features)
+void XglImage::ImageMemoryBarrier(
+        XglCommandBufferObj *cmd_buf,
+        XGL_IMAGE_ASPECT aspect,
+        XGL_FLAGS output_mask /*=
+            XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |
+            XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
+            XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            XGL_MEMORY_OUTPUT_COPY_BIT*/,
+        XGL_FLAGS input_mask /*=
+            XGL_MEMORY_INPUT_CPU_READ_BIT |
+            XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
+            XGL_MEMORY_INPUT_INDEX_FETCH_BIT |
+            XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
+            XGL_MEMORY_INPUT_UNIFORM_READ_BIT |
+            XGL_MEMORY_INPUT_SHADER_READ_BIT |
+            XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
+            XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            XGL_MEMORY_INPUT_COPY_BIT*/,
+        XGL_IMAGE_LAYOUT image_layout)
+{
+    const XGL_IMAGE_SUBRESOURCE_RANGE subresourceRange = subresource_range(aspect, 0, 1, 0, 1);
+    XGL_IMAGE_MEMORY_BARRIER barrier;
+    barrier = image_memory_barrier(output_mask, input_mask, layout(), image_layout,
+                                   subresourceRange);
+
+    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &barrier;
+
+    XGL_PIPE_EVENT pipe_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
+    XGL_PIPELINE_BARRIER pipeline_barrier = {};
+    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
+    pipeline_barrier.pNext = NULL;
+    pipeline_barrier.eventCount = 1;
+    pipeline_barrier.pEvents = pipe_events;
+    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
+    pipeline_barrier.memBarrierCount = 1;
+    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+
+    // write barrier to the command buffer
+    xglCmdPipelineBarrier(cmd_buf->obj(), &pipeline_barrier);
+}
+
+void XglImage::SetLayout(XglCommandBufferObj *cmd_buf,
+                         XGL_IMAGE_ASPECT aspect,
+                         XGL_IMAGE_LAYOUT image_layout)
+{
+    XGL_FLAGS output_mask, input_mask;
+    const XGL_FLAGS all_cache_outputs =
+            XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |
+            XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
+            XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            XGL_MEMORY_OUTPUT_COPY_BIT;
+    const XGL_FLAGS all_cache_inputs =
+            XGL_MEMORY_INPUT_CPU_READ_BIT |
+            XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
+            XGL_MEMORY_INPUT_INDEX_FETCH_BIT |
+            XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
+            XGL_MEMORY_INPUT_UNIFORM_READ_BIT |
+            XGL_MEMORY_INPUT_SHADER_READ_BIT |
+            XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
+            XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            XGL_MEMORY_INPUT_COPY_BIT;
+
+    if (image_layout == m_imageInfo.layout) {
+        return;
+    }
+
+    switch (image_layout) {
+    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+        output_mask = XGL_MEMORY_OUTPUT_COPY_BIT;
+        input_mask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+        break;
+
+    case XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+        output_mask = XGL_MEMORY_OUTPUT_COPY_BIT;
+        input_mask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+        break;
+
+    case XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL:
+        break;
+
+    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        output_mask = XGL_MEMORY_OUTPUT_COPY_BIT;
+        input_mask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
+        break;
+
+    default:
+        output_mask =  all_cache_outputs;
+        input_mask = all_cache_inputs;
+        break;
+    }
+
+    ImageMemoryBarrier(cmd_buf, aspect, output_mask, input_mask, image_layout);
+    m_imageInfo.layout = image_layout;
+}
+
+bool XglImage::IsCompatible(XGL_FLAGS usage, XGL_FLAGS features)
 {
     if ((usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
             !(features & XGL_FORMAT_IMAGE_SHADER_READ_BIT))
@@ -449,7 +552,7 @@ void XglImage::init(uint32_t w, uint32_t h,
 
     xgl_testing::Image::init(*m_device, imageCreateInfo);
 
-    m_imageInfo.layout = XGL_IMAGE_LAYOUT_GENERAL;
+    m_imageInfo.layout = XGL_IMAGE_LAYOUT_UNDEFINED;
 }
 
 XGL_RESULT XglImage::MapMemory(void** ptr)
@@ -464,84 +567,22 @@ XGL_RESULT XglImage::UnmapMemory()
     return XGL_SUCCESS;
 }
 
-XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
+XGL_RESULT XglImage::CopyImage(XglImage &src_image)
 {
     XGL_RESULT err;
+    XglCommandBufferObj cmd_buf(m_device);
+    XGL_IMAGE_LAYOUT src_image_layout, dest_image_layout;
 
-    XGL_CMD_BUFFER cmd_buf;
-    XGL_CMD_BUFFER_CREATE_INFO  cmd_buf_create_info = {};
-    cmd_buf_create_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    cmd_buf_create_info.pNext = NULL;
-    cmd_buf_create_info.queueNodeIndex = m_device->graphics_queue_node_index_;
-    cmd_buf_create_info.flags = 0;
-
-    err = xglCreateCommandBuffer(m_device->device(), &cmd_buf_create_info, &cmd_buf);
+    /* Build command buffer to copy staging texture to usable texture */
+    err = cmd_buf.BeginCommandBuffer();
     assert(!err);
 
-    /* Copy staging texture to usable texture */
-    XGL_CMD_BUFFER_BEGIN_INFO cmd_buf_begin_info = {};
-    cmd_buf_begin_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cmd_buf_begin_info.pNext = NULL;
-    cmd_buf_begin_info.flags = 0;
+    /* TODO: Can we determine image aspect from image object? */
+    src_image_layout = src_image.layout();
+    src_image.SetLayout(&cmd_buf, XGL_IMAGE_ASPECT_COLOR, XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
-    err = xglResetCommandBuffer(cmd_buf);
-    assert(!err);
-
-    err = xglBeginCommandBuffer(cmd_buf, &cmd_buf_begin_info);
-    assert(!err);
-
-    XGL_IMAGE_MEMORY_BARRIER image_memory_barrier = {};
-    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = NULL;
-    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
-    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
-    image_memory_barrier.oldLayout = fromImage.layout();
-    image_memory_barrier.newLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
-    image_memory_barrier.image = fromImage.obj();
-    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.baseArraySlice = 0;
-    image_memory_barrier.subresourceRange.arraySize = 0;
-
-    XGL_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
-
-    XGL_PIPE_EVENT pipe_events[] = { XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-    XGL_PIPELINE_BARRIER pipeline_barrier;
-    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.pNext = NULL;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = pipe_events;
-    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-
-    // write barrier to the command buffer
-    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
-
-    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = NULL;
-    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
-    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
-    image_memory_barrier.oldLayout = this->layout();
-    image_memory_barrier.newLayout = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
-    image_memory_barrier.image = this->obj();
-    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.baseArraySlice = 0;
-    image_memory_barrier.subresourceRange.arraySize = 0;
-
-    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.pNext = NULL;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = pipe_events;
-    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-
-    // write barrier to the command buffer
-    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
+    dest_image_layout = this->layout();
+    this->SetLayout(&cmd_buf, XGL_IMAGE_ASPECT_COLOR, XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
     XGL_IMAGE_COPY copy_region = {};
     copy_region.srcSubresource.aspect = XGL_IMAGE_ASPECT_COLOR;
@@ -556,91 +597,32 @@ XGL_RESULT XglImage::CopyImage(XglImage &fromImage)
     copy_region.destOffset.x = 0;
     copy_region.destOffset.y = 0;
     copy_region.destOffset.z = 0;
-    copy_region.extent = fromImage.extent();
+    copy_region.extent = src_image.extent();
 
-    xglCmdCopyImage(cmd_buf, fromImage.obj(), fromImage.layout(),
-                    obj(), XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+    xglCmdCopyImage(cmd_buf.obj(),
+                    src_image.obj(), src_image.layout(),
+                    obj(), layout(),
                     1, &copy_region);
+    cmd_buf.mem_ref_mgr.AddMemoryRefs(src_image);
+    cmd_buf.mem_ref_mgr.AddMemoryRefs(*this);
 
-    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = NULL;
-    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
-    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
-    image_memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
-    image_memory_barrier.newLayout = fromImage.layout();
-    image_memory_barrier.image = fromImage.obj();
-    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.baseArraySlice = 0;
-    image_memory_barrier.subresourceRange.arraySize = 0;
+    src_image.SetLayout(&cmd_buf, XGL_IMAGE_ASPECT_COLOR, src_image_layout);
 
-    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.pNext = NULL;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = pipe_events;
-    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+    this->SetLayout(&cmd_buf, XGL_IMAGE_ASPECT_COLOR, dest_image_layout);
 
-    // write barrier to the command buffer
-    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
-
-    image_memory_barrier.sType = XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = NULL;
-    image_memory_barrier.outputMask = XGL_MEMORY_OUTPUT_COPY_BIT;
-    image_memory_barrier.inputMask = XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_COPY_BIT;
-    image_memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
-    image_memory_barrier.newLayout = this->layout();
-    image_memory_barrier.image = this->obj();
-    image_memory_barrier.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.baseArraySlice = 0;
-    image_memory_barrier.subresourceRange.arraySize = 0;
-
-    pipeline_barrier.sType = XGL_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.pNext = NULL;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = pipe_events;
-    pipeline_barrier.waitEvent = XGL_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-
-    // write barrier to the command buffer
-    xglCmdPipelineBarrier(cmd_buf, &pipeline_barrier);
-
-    err = xglEndCommandBuffer(cmd_buf);
+    err = cmd_buf.EndCommandBuffer();
     assert(!err);
 
-    const XGL_CMD_BUFFER cmd_bufs[] = { cmd_buf };
-    XGL_MEMORY_REF mem_refs[16];
-    uint32_t num_refs = 0;
-    const std::vector<XGL_GPU_MEMORY> from_mems = fromImage.memories();
-    const std::vector<XGL_GPU_MEMORY> to_mems = memories();
+    /*
+     * Tell driver about memory references made in this command buffer
+     * Note: Since this command buffer only has a PipelineBarrier
+     * command there really aren't any memory refs to worry about.
+     */
+    cmd_buf.mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
 
-    for (uint32_t j = 0; j < from_mems.size(); j++) {
-        mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
-        mem_refs[num_refs].mem = from_mems[j];
-        num_refs++;
-        assert(num_refs < 16);
-    }
+    cmd_buf.QueueCommandBuffer();
 
-    for (uint32_t j = 0; j < to_mems.size(); j++) {
-        mem_refs[num_refs].flags = XGL_MEMORY_REF_READ_ONLY_BIT;
-        mem_refs[num_refs].mem = to_mems[j];
-        num_refs++;
-        assert(num_refs < 16);
-    }
-
-    err = xglQueueSubmit(m_device->m_queue, 1, cmd_bufs,
-                         num_refs, mem_refs, XGL_NULL_HANDLE);
-    assert(!err);
-
-    err = xglQueueWaitIdle(m_device->m_queue);
-    assert(!err);
-
-    xglDestroyObject(cmd_buf);
+    cmd_buf.mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
 
     return XGL_SUCCESS;
 }
@@ -737,6 +719,7 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
 
 XglConstantBufferObj::~XglConstantBufferObj()
 {
+    // TODO: Should we call QueueRemoveMemReference for the constant buffer memory here?
     if (m_commandBuffer) {
         delete m_commandBuffer;
     }
@@ -802,11 +785,11 @@ void XglConstantBufferObj::BufferMemoryBarrier(
         m_fence.init(*m_device, xgl_testing::Fence::create_info(0));
 
         m_commandBuffer = new XglCommandBufferObj(m_device);
-
     }
     else
     {
         m_device->wait(m_fence);
+        m_commandBuffer->mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
     }
 
     // open the command buffer
@@ -838,16 +821,17 @@ void XglConstantBufferObj::BufferMemoryBarrier(
     err = m_commandBuffer->EndCommandBuffer();
     ASSERT_XGL_SUCCESS(err);
 
-    uint32_t     numMemRefs=1;
-    XGL_MEMORY_REF memRefs;
-    // this command buffer only uses the vertex buffer memory
-    memRefs.flags = 0;
-    memRefs.mem = memories()[0];
+    /*
+     * Tell driver about memory references made in this command buffer
+     * Note: Since this command buffer only has a PipelineBarrier
+     * command there really aren't any memory refs to worry about.
+     */
+    m_commandBuffer->mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
 
     // submit the command buffer to the universal queue
     XGL_CMD_BUFFER bufferArray[1];
     bufferArray[0] = m_commandBuffer->GetBufferHandle();
-    err = xglQueueSubmit( m_device->m_queue, 1, bufferArray, numMemRefs, &memRefs, m_fence.obj() );
+    err = xglQueueSubmit( m_device->m_queue, 1, bufferArray, m_fence.obj() );
     ASSERT_XGL_SUCCESS(err);
 }
 
@@ -1072,7 +1056,7 @@ void XglPipelineObj::SetDepthStencil(XGL_PIPELINE_DS_STATE_CREATE_INFO *ds_state
     m_ds_state.front = ds_state->front;
 }
 
-void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
+void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj &descriptorSet)
 {
     void* head_ptr = &m_ds_state;
     XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
@@ -1096,7 +1080,7 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
     info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = head_ptr;
     info.flags = 0;
-    info.pSetLayoutChain = descriptorSet->GetLayoutChain();
+    info.pSetLayoutChain = descriptorSet.GetLayoutChain();
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];
@@ -1104,91 +1088,45 @@ void XglPipelineObj::CreateXGLPipeline(XglDescriptorSetObj *descriptorSet)
     init(*m_device, info);
 }
 
-XGL_PIPELINE XglPipelineObj::GetPipelineHandle()
+vector<XGL_GPU_MEMORY> XglMemoryRefManager::mem_refs() const
 {
-    return obj();
+    std::vector<XGL_GPU_MEMORY> mems;
+    if (this->mem_refs_.size()) {
+        mems.reserve(this->mem_refs_.size());
+        for (uint32_t i = 0; i < this->mem_refs_.size(); i++)
+            mems.push_back(this->mem_refs_[i]);
+    }
+
+    return mems;
 }
 
-void XglPipelineObj::BindPipelineCommandBuffer(XGL_CMD_BUFFER m_cmdBuffer, XglDescriptorSetObj *descriptorSet)
+void XglMemoryRefManager::AddMemoryRefs(xgl_testing::Object &xglObject)
 {
-    void* head_ptr = &m_ds_state;
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO info = {};
+    const std::vector<XGL_GPU_MEMORY> mems = xglObject.memories();
+    AddMemoryRefs(mems);
+}
 
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO* shaderCreateInfo;
-
-    for (int i=0; i<m_shaderObjs.size(); i++)
-    {
-        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo();
-        shaderCreateInfo->pNext = head_ptr;
-        head_ptr = shaderCreateInfo;
-    }
-
-    if (m_vi_state.attributeCount && m_vi_state.bindingCount)
-    {
-        m_vi_state.sType = XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
-        m_vi_state.pNext = head_ptr;
-        head_ptr = &m_vi_state;
-    }
-
-    info.sType = XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.pNext = head_ptr;
-    info.flags = 0;
-    info.pSetLayoutChain = descriptorSet->GetLayoutChain();
-
-    init(*m_device, info);
-
-    xglCmdBindPipeline( m_cmdBuffer, XGL_PIPELINE_BIND_POINT_GRAPHICS, obj() );
-
-
-    for (int i=0; i < m_vertexBufferCount; i++)
-    {
-        m_vertexBufferObjs[i]->Bind(m_cmdBuffer, 0,  m_vertexBufferBindings[i]);
+void XglMemoryRefManager::AddMemoryRefs(vector<XGL_GPU_MEMORY> mem)
+{
+    for (size_t i = 0; i < mem.size(); i++) {
+        if (mem[i] != NULL) {
+            this->mem_refs_.push_back(mem[i]);
+        }
     }
 }
 
-XglMemoryRefManager::XglMemoryRefManager() {
-
-}
-
-void XglMemoryRefManager::AddMemoryRef(xgl_testing::Object *xglObject) {
-    const std::vector<XGL_GPU_MEMORY> mems = xglObject->memories();
-    for (size_t i = 0; i < mems.size(); i++) {
-        m_bufferObjs.push_back(mems[i]);
+void XglMemoryRefManager::EmitAddMemoryRefs(XGL_QUEUE queue)
+{
+    for (uint32_t i = 0; i < mem_refs_.size(); i++) {
+        xglQueueAddMemReference(queue, mem_refs_[i]);
     }
 }
 
-void XglMemoryRefManager::AddMemoryRef(XGL_GPU_MEMORY *mem, uint32_t refCount) {
-    for (size_t i = 0; i < refCount; i++) {
-        m_bufferObjs.push_back(mem[i]);
+void XglMemoryRefManager::EmitRemoveMemoryRefs(XGL_QUEUE queue)
+{
+    for (uint32_t i = 0; i < mem_refs_.size(); i++) {
+        xglQueueRemoveMemReference(queue, mem_refs_[i]);
     }
-}
-
-void XglMemoryRefManager::AddRTMemoryRefs(vector<XglImage*>images, uint32_t rtCount) {
-    for (uint32_t i = 0; i < rtCount; i++) {
-        const std::vector<XGL_GPU_MEMORY> mems = images[i]->memories();
-        if (!mems.empty())
-            m_bufferObjs.push_back(mems[0]);
-    }
-}
-
-XGL_MEMORY_REF* XglMemoryRefManager::GetMemoryRefList() {
-
-    XGL_MEMORY_REF *localRefs;
-    uint32_t       numRefs=m_bufferObjs.size();
-
-    if (numRefs <= 0)
-        return NULL;
-
-    localRefs = (XGL_MEMORY_REF*) malloc( numRefs * sizeof(XGL_MEMORY_REF) );
-    for (int i=0; i<numRefs; i++)
-    {
-        localRefs[i].flags = 0;
-        localRefs[i].mem = m_bufferObjs[i];
-    }
-    return localRefs;
-}
-int XglMemoryRefManager::GetNumRefs() {
-    return m_bufferObjs.size();
 }
 
 XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
@@ -1232,7 +1170,7 @@ void XglCommandBufferObj::PipelineBarrier(XGL_PIPELINE_BARRIER *barrierPtr)
 }
 
 void XglCommandBufferObj::ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color,
-                                          XGL_DEPTH_STENCIL_BIND_INFO *depthStencilBinding, XGL_IMAGE depthStencilImage)
+                                          XglDepthStencilObj *depthStencilObj)
 {
     uint32_t i;
     const XGL_FLAGS output_mask =
@@ -1277,9 +1215,11 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float dep
         xglCmdClearColorImage(obj(),
                m_renderTargets[i]->image(), XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                clear_color, 1, &srRange );
+
+        mem_ref_mgr.AddMemoryRefs(*m_renderTargets[i]);
     }
 
-    if (depthStencilImage)
+    if (depthStencilObj)
     {
         XGL_IMAGE_SUBRESOURCE_RANGE dsRange = {};
         dsRange.aspect = XGL_IMAGE_ASPECT_DEPTH;
@@ -1290,26 +1230,25 @@ void XglCommandBufferObj::ClearAllBuffers(XGL_CLEAR_COLOR clear_color, float dep
 
         // prepare the depth buffer for clear
 
-        memory_barrier.oldLayout = depthStencilBinding->layout;
+        memory_barrier.oldLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.newLayout = XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL;
-        memory_barrier.image = depthStencilImage;
+        memory_barrier.image = depthStencilObj->obj();
         memory_barrier.subresourceRange = dsRange;
 
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
-        depthStencilBinding->layout = memory_barrier.newLayout;
 
         xglCmdClearDepthStencil(obj(),
-                                depthStencilImage, XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                                depthStencilObj->obj(), XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                                 depth_clear_color,  stencil_clear_color,
                                 1, &dsRange);
+        mem_ref_mgr.AddMemoryRefs(*depthStencilObj);
 
         // prepare depth buffer for rendering
-        memory_barrier.image = depthStencilImage;
+        memory_barrier.image = depthStencilObj->obj();
         memory_barrier.oldLayout = XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL;
-        memory_barrier.newLayout = depthStencilBinding->layout;
+        memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
         xglCmdPipelineBarrier( obj(), &pipeline_barrier);
-        depthStencilBinding->layout = memory_barrier.newLayout;
     }
 }
 
@@ -1401,12 +1340,14 @@ void XglCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint3
     xglCmdDraw(obj(), firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
-void XglCommandBufferObj::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, uint32_t numMemRefs)
+void XglCommandBufferObj::QueueCommandBuffer()
 {
     XGL_RESULT err = XGL_SUCCESS;
 
+    mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
+
     // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &obj(), numMemRefs, memRefs, NULL );
+    err = xglQueueSubmit( m_device->m_queue, 1, &obj(), NULL );
     ASSERT_XGL_SUCCESS( err );
 
     err = xglQueueWaitIdle( m_device->m_queue );
@@ -1415,28 +1356,44 @@ void XglCommandBufferObj::QueueCommandBuffer(XGL_MEMORY_REF *memRefs, uint32_t n
     // Wait for work to finish before cleaning up.
     xglDeviceWaitIdle(m_device->device());
 
-}
-void XglCommandBufferObj::BindPipeline(XGL_PIPELINE pipeline)
-{
-        xglCmdBindPipeline( obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+    /*
+     * Now that processing on this command buffer is complete
+     * we can remove the memory references.
+     */
+    mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
 }
 
-void XglCommandBufferObj::BindDescriptorSet(const XglDescriptorSetObj *set)
+void XglCommandBufferObj::BindPipeline(XglPipelineObj &pipeline)
 {
-    XGL_DESCRIPTOR_SET set_obj = set->GetDescriptorSetHandle();
+    xglCmdBindPipeline( obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS, pipeline.obj() );
+    mem_ref_mgr.AddMemoryRefs(pipeline);
+}
+
+void XglCommandBufferObj::BindDescriptorSet(XglDescriptorSetObj &descriptorSet)
+{
+    XGL_DESCRIPTOR_SET set_obj = descriptorSet.GetDescriptorSetHandle();
 
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
     xglCmdBindDescriptorSets(obj(), XGL_PIPELINE_BIND_POINT_GRAPHICS,
-            set->GetLayoutChain(), 0, 1, &set_obj, NULL );
+           descriptorSet.GetLayoutChain(), 0, 1, &set_obj, NULL );
+
+    // Add descriptor set mem refs to command buffer's list
+    mem_ref_mgr.AddMemoryRefs(descriptorSet.memories());
+    mem_ref_mgr.AddMemoryRefs(descriptorSet.mem_ref_mgr.mem_refs());
 }
+
 void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset)
 {
     xglCmdBindIndexBuffer(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
+    mem_ref_mgr.AddMemoryRefs(*indexBuffer);
 }
+
 void XglCommandBufferObj::BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding)
 {
     xglCmdBindVertexBuffer(obj(), vertexBuffer->obj(), offset, binding);
+    mem_ref_mgr.AddMemoryRefs(*vertexBuffer);
 }
+
 XglDepthStencilObj::XglDepthStencilObj()
 {
     m_initialized = false;

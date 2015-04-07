@@ -271,8 +271,6 @@ core = Extension(
             [Param("XGL_QUEUE", "queue"),
              Param("uint32_t", "cmdBufferCount"),
              Param("const XGL_CMD_BUFFER*", "pCmdBuffers"),
-             Param("uint32_t", "memRefCount"),
-             Param("const XGL_MEMORY_REF*", "pMemRefs"),
              Param("XGL_FENCE", "fence")]),
 
         Proto("XGL_RESULT", "QueueAddMemReference",

@@ -97,70 +97,6 @@ static MT_CB_INFO* getCBInfo(const XGL_CMD_BUFFER cb)
     return pCBInfo;
 }
 
-// Add new Queue node for this cb at end of global CB LL
-static void insertGlobalQueue(const XGL_QUEUE queue)
-{
-#if 0 // TODO: Add tracking of Queue's
-    MT_QUEUE_NODE* pTrav = pGlobalQueueHead;
-    if (!pTrav) {
-        pTrav = (MT_QUEUE_NODE*)malloc(sizeof(MT_QUEUE_NODE));
-        pGlobalQueueHead = pTrav;
-    }
-    else {
-        while (NULL != pTrav->pNextGlobalQueueNode)
-            pTrav = pTrav->pNextGlobalQueueNode;
-        pTrav->pNextGlobalQueueNode = (MT_QUEUE_NODE*)malloc(sizeof(MT_QUEUE_NODE));
-        pTrav = pTrav->pNextGlobalQueueNode;
-    }
-    if (!pTrav) {
-        char str[1024];
-        sprintf(str, "Malloc failed to alloc node for Queue %p", (void*)queue);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_OUT_OF_MEMORY_ERROR, "MEM", str);
-    }
-    else {
-        numQueueNodes++;
-        memset(pTrav, 0, sizeof(MT_QUEUE_NODE));
-        pTrav->queue = queue;
-    }
-#endif
-}
-
-// Return ptr to node in global LL containing cb, or NULL if not found
-static MT_QUEUE_NODE* getGlobalQueueNode(const XGL_QUEUE queue)
-{
-#if 0
-    MT_QUEUE_NODE* pTrav = pGlobalQueueHead;
-    while (pTrav && (pTrav->queue != queue)) {
-        pTrav = pTrav->pNextGlobalQueueNode;
-    }
-    return pTrav;
-#endif
-}
-
-static void insertQueueMemRef(MT_QUEUE_NODE *pQueueNode, XGL_GPU_MEMORY mem)
-{
-#if 0
-    if (pQueueNode->numMemRefs >= pQueueNode->refListSize) {
-        pQueueNode->refListSize += 16;
-        pQueueNode->pMemRefList = realloc(pQueueNode->pMemRefList, pQueueNode->refListSize);
-    }
-    pQueueNode->pMemRefList[pQueueNode->numMemRefs++] = mem;
-#endif
-}
-
-static void removeQueueMemRef(MT_QUEUE_NODE *pQueueNode, XGL_GPU_MEMORY mem)
-{
-    uint32_t idx;
-
-    for (idx = 0; idx < pQueueNode->numMemRefs; idx++) {
-        if (pQueueNode->pMemRefList[idx] == mem) {
-            pQueueNode->numMemRefs--;
-            memcpy(&pQueueNode->pMemRefList[idx], pQueueNode->pMemRefList[idx+1],
-                    pQueueNode->numMemRefs * sizeof(XGL_GPU_MEMORY));
-        }
-    }
-}
-
 // Add a fence, creating one if necessary to our list of fences/fenceIds
 static uint64_t addFenceInfo(XGL_FENCE fence, XGL_QUEUE queue)
 {
@@ -294,55 +230,56 @@ static void retireDeviceFences(XGL_DEVICE device)
     }
 }
 
-static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs)
-{
-    bool32_t result = XGL_TRUE;
-    MT_CB_INFO* pInfo = getCBInfo(cb);
-    if (!pInfo) {
-        char str[1024];
-        sprintf(str, "Unable to find info for CB %p in order to check memory references", (void*)cb);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
-        result = XGL_FALSE;
-    } else {
-        // Validate that all actual references are accounted for in pMemRefs
-        uint32_t i;
-        uint8_t  found = 0;
-        uint64_t foundCount = 0;
+//static bool32_t validateCBMemRef(const XGL_CMD_BUFFER cb, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs)
+//{
+//    bool32_t result = XGL_TRUE;
+//    MT_CB_INFO* pInfo = getCBInfo(cb);
+//    if (!pInfo) {
+//        char str[1024];
+//        sprintf(str, "Unable to find info for CB %p in order to check memory references", (void*)cb);
+//        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
+//        result = XGL_FALSE;
+//    } else {
+//        // Validate that all actual references are accounted for in pMemRefs
+//        uint32_t i;
+//        uint8_t  found = 0;
+//        uint64_t foundCount = 0;
 
-        for (list<XGL_GPU_MEMORY>::iterator it = pInfo->pMemObjList.begin(); it != pInfo->pMemObjList.end(); ++it) {
-            for (i = 0; i < memRefCount; i++) {
-                if ((*it) == pMemRefs[i].mem) {
-                    char str[1024];
-                    sprintf(str, "Found Mem Obj %p binding to CB %p", (*it), cb);
-                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-                    found = 1;
-                    foundCount++;
-                    break;
-                }
-            }
-            if (!found) {
-                char str[1024];
-                sprintf(str, "Memory reference list for Command Buffer %p is missing ref to mem obj %p", cb, (*it));
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_CB_MISSING_MEM_REF, "MEM", str);
-                result = XGL_FALSE;
-            }
-            found = 0;
-        }
+//        for (list<XGL_GPU_MEMORY>::iterator it = pInfo->pMemObjList.begin(); it != pInfo->pMemObjList.end(); ++it) {
+//            for (i = 0; i < memRefCount; i++) {
+//                if ((*it) == pMemRefs[i].mem) {
+//                    char str[1024];
+//                    sprintf(str, "Found Mem Obj %p binding to CB %p", (*it), cb);
+//                    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+//                    found = 1;
+//                    foundCount++;
+//                    break;
+//                }
+//            }
+//            if (!found) {
+//                char str[1024];
+//                sprintf(str, "Memory reference list for Command Buffer %p is missing ref to mem obj %p", cb, (*it));
+//                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_CB_MISSING_MEM_REF, "MEM", str);
+//                result = XGL_FALSE;
+//            }
+//            found = 0;
+//        }
 
-        if (result == XGL_TRUE) {
-            char str[1024];
-            sprintf(str, "Verified all %lu memory dependencies for CB %p are included in pMemRefs list", foundCount, cb);
-            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-            // TODO : Could report mem refs in pMemRefs that AREN'T in mem list, that would be primarily informational
-            //   Currently just noting that there is a difference
-            if (foundCount != memRefCount) {
-                sprintf(str, "There are %u mem refs included in pMemRefs list, but only %lu are required", memRefCount, foundCount);
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-            }
-        }
-    }
-    return result;
-}
+//        if (result == XGL_TRUE) {
+//            char str[1024];
+//            sprintf(str, "Verified all %lu memory dependencies for CB %p are included in pMemRefs list", foundCount, cb);
+//            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+//            // TODO : Could report mem refs in pMemRefs that AREN'T in mem list, that would be primarily informational
+//            //   Currently just noting that there is a difference
+//            if (foundCount != memRefCount) {
+//                sprintf(str, "There are %u mem refs included in pMemRefs list, but only %lu are required", memRefCount, foundCount);
+//                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+//            }
+//        }
+//    }
+//    return result;
+//}
+
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
 static MT_MEM_OBJ_INFO* getMemObjInfo(const XGL_GPU_MEMORY mem)
@@ -923,15 +860,14 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
     }
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers,
-    uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_FENCE fence)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Need to track fence and clear mem references when fence clears
     MT_CB_INFO* pCBInfo = NULL;
     uint64_t    fenceId = addFenceInfo(fence, queue);
     char        str[1024];
-    sprintf(str, "In xglQueueSubmit(), checking %u cmdBuffers with %u memRefs", cmdBufferCount, memRefCount);
+    sprintf(str, "In xglQueueSubmit(), checking %u cmdBuffers memRefs", cmdBufferCount);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
     printMemList();
     printCBList();
@@ -940,84 +876,14 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
         pCBInfo->fenceId = fenceId;
         sprintf(str, "Verifying mem refs for CB %p", pCmdBuffers[i]);
         layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
-        if (XGL_FALSE == validateCBMemRef(pCmdBuffers[i], memRefCount, pMemRefs)) {
-            sprintf(str, "Unable to verify memory references for CB %p", (void*)pCmdBuffers[i]);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_CB_MISSING_MEM_REF, "MEM", str);
-        }
+//        if (XGL_FALSE == validateCBMemRef(pCmdBuffers[i], memRefCount, pMemRefs)) {
+//            sprintf(str, "Unable to verify memory references for CB %p", (void*)pCmdBuffers[i]);
+//            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_CB_MISSING_MEM_REF, "MEM", str);
+//        }
     }
     printCBList();
     loader_platform_thread_unlock_mutex(&globalLock);
-    XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, memRefCount, pMemRefs, getFenceFromId(fenceId));
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetDeviceQueue(
-    XGL_DEVICE                                  device,
-    uint32_t                                    queueNodeIndex,
-    uint32_t                                    queueIndex,
-    XGL_QUEUE*                                  pQueue)
-{
-    XGL_RESULT result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
-    if (result == XGL_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        MT_QUEUE_NODE *pQueueNode = getGlobalQueueNode(*pQueue);
-        if (pQueueNode == NULL) {
-            addQueueInfo(*pQueue);
-            insertGlobalQueue(*pQueue);
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
-{
-    XGL_RESULT result = nextTable.QueueAddMemReference(queue, mem);
-    if (result == XGL_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        MT_QUEUE_NODE *pQueueNode = getGlobalQueueNode(queue);
-        if (pQueueNode == NULL) {
-            char str[1024];
-            sprintf(str, "Unknown Queue %p", queue);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        } else {
-            MT_MEM_OBJ_INFO *pMem = getMemObjInfo(mem);
-            if (pMem == NULL) {
-                char str[1024];
-                sprintf(str, "Unknown GPU Memory Object %p", mem);
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
-            } else {
-                insertQueueMemRef(pQueueNode, mem);
-            }
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
-{
-    // TODO : Decrement ref count for this memory reference on this queue. Remove if ref count is zero.
-    XGL_RESULT result = nextTable.QueueRemoveMemReference(queue, mem);
-    if (result == XGL_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        MT_QUEUE_NODE *pQueueNode = getGlobalQueueNode(queue);
-        if (pQueueNode == NULL) {
-            char str[1024];
-            sprintf(str, "Unknown Queue %p", queue);
-            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        } else {
-            MT_MEM_OBJ_INFO *pMem = getMemObjInfo(mem);
-            if (pMem == NULL) {
-                char str[1024];
-                sprintf(str, "Unknown GPU Memory Object %p", mem);
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
-            } else {
-                removeQueueMemRef(pQueueNode, mem);
-            }
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
+    XGL_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, getFenceFromId(fenceId));
     return result;
 }
 
@@ -1527,15 +1393,14 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuff
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDescriptorSets(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
-    uint32_t                                    layoutChainSlot,
-    uint32_t                                    count,
-    const XGL_DESCRIPTOR_SET*                   pDescriptorSets,
-    const uint32_t*                             pUserData)
+        XGL_CMD_BUFFER cmdBuffer,
+        XGL_PIPELINE_BIND_POINT pipelineBindPoint,
+        XGL_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain,
+        uint32_t layoutChainSlot,
+        uint32_t count,
+        const XGL_DESCRIPTOR_SET* pDescriptorSets,
+        const uint32_t* pUserData)
 {
-
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
@@ -1915,12 +1780,6 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglEnumerateLayers;
     if (!strcmp(funcName, "xglQueueSubmit"))
         return (void*) xglQueueSubmit;
-    if (!strcmp(funcName, "xglGetDeviceQueue"))
-        return (void*) xglGetDeviceQueue;
-    if (!strcmp(funcName, "xglQueueAddMemReference"))
-        return (void*) xglQueueAddMemReference;
-    if (!strcmp(funcName, "xglQueueRemoveMemReference"))
-        return (void*) xglQueueRemoveMemReference;
     if (!strcmp(funcName, "xglAllocMemory"))
         return (void*) xglAllocMemory;
     if (!strcmp(funcName, "xglFreeMemory"))

@@ -375,20 +375,11 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglQueueSubmit(struct_x
             *(remappedBuffers + i) = m_objMapper.remap(*(pPacket->pCmdBuffers + i));
         }
     }
-    XGL_MEMORY_REF* memRefs = NULL;
-    if (pPacket->pMemRefs != NULL)
-    {
-        memRefs = GLV_NEW_ARRAY(XGL_MEMORY_REF, pPacket->memRefCount);
-        memcpy(memRefs, pPacket->pMemRefs, sizeof(XGL_MEMORY_REF) * pPacket->memRefCount);
-        for (uint32_t i = 0; i < pPacket->memRefCount; i++)
-        {
-            memRefs[i].mem = m_objMapper.remap(pPacket->pMemRefs[i].mem);
-        }
-    }
-    replayResult = m_xglFuncs.real_xglQueueSubmit(m_objMapper.remap(pPacket->queue), pPacket->cmdBufferCount, remappedBuffers, pPacket->memRefCount,
-        memRefs, m_objMapper.remap(pPacket->fence));
+    replayResult = m_xglFuncs.real_xglQueueSubmit(m_objMapper.remap(pPacket->queue),
+                                                  pPacket->cmdBufferCount,
+                                                  remappedBuffers,
+                                                  m_objMapper.remap(pPacket->fence));
     GLV_DELETE(remappedBuffers);
-    GLV_DELETE(memRefs);
     CHECK_RETURN_VALUE(xglQueueSubmit);
     return returnValue;
 }

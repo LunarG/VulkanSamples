@@ -523,19 +523,17 @@ void TestFrameworkXglPresent::CreatePresentableImages()
                 1, &region);
         m_cmdbuf.end();
 
-        uint32_t     numMemRefs=2;
-        XGL_MEMORY_REF memRefs[2];
-        memRefs[0].flags = 0;
-        memRefs[0].mem = m_display_image->m_presentableMemory;
-        memRefs[1].flags = 0;
-        memRefs[1].mem = buf.memories()[0];
+        xglQueueAddMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
+        xglQueueAddMemReference(m_queue.obj(), buf.memories()[0]);
 
         XGL_CMD_BUFFER cmdBufs[1];
         cmdBufs[0] = m_cmdbuf.obj();
 
-        xglQueueSubmit(m_queue.obj(), 1, cmdBufs, numMemRefs, memRefs, NULL);
+        xglQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
         m_queue.wait();
 
+        xglQueueRemoveMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
+        xglQueueRemoveMemReference(m_queue.obj(), buf.memories()[0]);
 
         if (m_display_image->m_width > m_width)
             m_width = m_display_image->m_width;
@@ -594,6 +592,10 @@ void  TestFrameworkXglPresent::CreateMyWindow()
 
 void TestFrameworkXglPresent::TearDown()
 {
+    std::list<XglTestImageRecord>::const_iterator iterator;
+    for (iterator = m_images.begin(); iterator != m_images.end(); ++iterator) {
+        xglDestroyObject(iterator->m_presentableImage);
+    }
     xcb_destroy_window(environment->m_connection, m_window);
 }
 

@@ -514,29 +514,24 @@ protected:
 
     bool submit_and_done()
     {
-        queue_.submit(cmd_, mem_refs_);
+        queue_.submit(cmd_);
         queue_.wait();
         mem_refs_.clear();
         return true;
     }
 
-    void add_memory_ref(const xgl_testing::Object &obj, XGL_FLAGS flags)
+    void add_memory_ref(const xgl_testing::Object &obj)
     {
         const std::vector<XGL_GPU_MEMORY> mems = obj.memories();
         for (std::vector<XGL_GPU_MEMORY>::const_iterator it = mems.begin(); it != mems.end(); it++) {
-            std::vector<XGL_MEMORY_REF>::iterator ref;
+            std::vector<XGL_GPU_MEMORY>::iterator ref;
             for (ref = mem_refs_.begin(); ref != mem_refs_.end(); ref++) {
-                if (ref->mem == *it)
+                if (*ref == *it)
                     break;
             }
 
             if (ref == mem_refs_.end()) {
-                XGL_MEMORY_REF tmp = {};
-                tmp.mem = *it;
-                tmp.flags = flags;
-                mem_refs_.push_back(tmp);
-            } else {
-                ref->flags &= flags;
+                mem_refs_.push_back(*it);
             }
         }
     }
@@ -545,7 +540,7 @@ protected:
     xgl_testing::Queue &queue_;
     xgl_testing::CmdBuffer cmd_;
 
-    std::vector<XGL_MEMORY_REF> mem_refs_;
+    std::vector<XGL_GPU_MEMORY> mem_refs_;
 };
 
 typedef XglCmdBlitTest XglCmdFillBufferTest;
@@ -555,7 +550,7 @@ TEST_F(XglCmdFillBufferTest, Basic)
     xgl_testing::Buffer buf;
 
     buf.init(dev_, 20);
-    add_memory_ref(buf, 0);
+    add_memory_ref(buf);
 
     cmd_.begin();
     xglCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 4, 0x11111111);
@@ -579,7 +574,7 @@ TEST_F(XglCmdFillBufferTest, Large)
     xgl_testing::Buffer buf;
 
     buf.init(dev_, size);
-    add_memory_ref(buf, 0);
+    add_memory_ref(buf);
 
     cmd_.begin();
     xglCmdFillBuffer(cmd_.obj(), buf.obj(), 0, size / 2, 0x11111111);
@@ -602,7 +597,7 @@ TEST_F(XglCmdFillBufferTest, Overlap)
     xgl_testing::Buffer buf;
 
     buf.init(dev_, 64);
-    add_memory_ref(buf, 0);
+    add_memory_ref(buf);
 
     cmd_.begin();
     xglCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 48, 0x11111111);
@@ -628,7 +623,7 @@ TEST_F(XglCmdFillBufferTest, MultiAlignments)
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init(dev_, size);
-        add_memory_ref(bufs[i], 0);
+        add_memory_ref(bufs[i]);
         xglCmdFillBuffer(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
         size <<= 1;
     }
@@ -659,10 +654,10 @@ TEST_F(XglCmdCopyBufferTest, Basic)
     uint32_t *data = static_cast<uint32_t *>(src.map());
     data[0] = 0x11111111;
     src.unmap();
-    add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+    add_memory_ref(src);
 
     dst.init(dev_, 4);
-    add_memory_ref(dst, 0);
+    add_memory_ref(dst);
 
     cmd_.begin();
     XGL_BUFFER_COPY region = {};
@@ -688,10 +683,10 @@ TEST_F(XglCmdCopyBufferTest, Large)
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
     src.unmap();
-    add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+    add_memory_ref(src);
 
     dst.init(dev_, size);
-    add_memory_ref(dst, 0);
+    add_memory_ref(dst);
 
     cmd_.begin();
     XGL_BUFFER_COPY region = {};
@@ -732,10 +727,10 @@ TEST_F(XglCmdCopyBufferTest, MultiAlignments)
     for (int i = 0; i < 256; i++)
         data[i] = i;
     src.unmap();
-    add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+    add_memory_ref(src);
 
     dst.init(dev_, 1024);
-    add_memory_ref(dst, 0);
+    add_memory_ref(dst);
 
     cmd_.begin();
     xglCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
@@ -807,7 +802,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init(dev_, 4);
-        add_memory_ref(bufs[i], 0);
+        add_memory_ref(bufs[i]);
 
         uint32_t *data = static_cast<uint32_t *>(bufs[i].map());
         data[0] = 0x22222222 * (i + 1);
@@ -927,8 +922,8 @@ protected:
         in_buf.init(dev_, checker.buffer_size());
         checker.fill(in_buf);
 
-        add_memory_ref(in_buf, XGL_MEMORY_REF_READ_ONLY_BIT);
-        add_memory_ref(img, 0);
+        add_memory_ref(in_buf);
+        add_memory_ref(img);
 
         // copy in and tile
         cmd_.begin();
@@ -952,8 +947,8 @@ protected:
         xgl_testing::Buffer out_buf;
         out_buf.init(dev_, checker.buffer_size());
 
-        add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
-        add_memory_ref(out_buf, 0);
+        add_memory_ref(img);
+        add_memory_ref(out_buf);
 
         // copy out and linearize
         cmd_.begin();
@@ -989,10 +984,10 @@ protected:
 
         buf.init(dev_, checker.buffer_size());
         checker.fill(buf);
-        add_memory_ref(buf, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(buf);
 
         img.init(dev_, img_info);
-        add_memory_ref(img, 0);
+        add_memory_ref(img);
 
         cmd_.begin();
         xglCmdCopyBufferToImage(cmd_.obj(),
@@ -1057,10 +1052,10 @@ protected:
 
         img.init(dev_, img_info);
         fill_src(img, checker);
-        add_memory_ref(img, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(img);
 
         buf.init(dev_, checker.buffer_size());
-        add_memory_ref(buf, 0);
+        add_memory_ref(buf);
 
         cmd_.begin();
         xglCmdCopyImageToBuffer(cmd_.obj(),
@@ -1150,11 +1145,11 @@ protected:
         xgl_testing::Image src;
         src.init(dev_, src_info);
         fill_src(src, src_checker);
-        add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(src);
 
         xgl_testing::Image dst;
         dst.init(dev_, dst_info);
-        add_memory_ref(dst, 0);
+        add_memory_ref(dst);
 
         cmd_.begin();
         xglCmdCopyImage(cmd_.obj(),
@@ -1213,10 +1208,10 @@ protected:
         src.init(dev_, img_info);
         if (src.transparent() || src.copyable())
             fill_src(src, checker);
-        add_memory_ref(src, XGL_MEMORY_REF_READ_ONLY_BIT);
+        add_memory_ref(src);
 
         dst.init(dev_, img_info);
-        add_memory_ref(dst, 0);
+        add_memory_ref(dst);
 
         const XGL_IMAGE_LAYOUT layout = XGL_IMAGE_LAYOUT_GENERAL;
 
@@ -1356,7 +1351,7 @@ protected:
     {
         xgl_testing::Image img;
         img.init(dev_, img_info);
-        add_memory_ref(img, 0);
+        add_memory_ref(img);
         const XGL_FLAGS all_cache_outputs =
                 XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
                 XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |
@@ -1587,7 +1582,7 @@ protected:
     {
         xgl_testing::Image img;
         img.init(dev_, img_info);
-        add_memory_ref(img, 0);
+        add_memory_ref(img);
         const XGL_FLAGS all_cache_outputs =
                 XGL_MEMORY_OUTPUT_CPU_WRITE_BIT |
                 XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT |

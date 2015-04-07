@@ -1227,13 +1227,6 @@ typedef enum _XGL_SEMAPHORE_CREATE_FLAGS
     XGL_MAX_ENUM(_XGL_SEMAPHORE_CREATE_FLAGS)
 } XGL_SEMAPHORE_CREATE_FLAGS;
 
-// Memory reference flags
-typedef enum _XGL_MEMORY_REF_FLAGS
-{
-    XGL_MEMORY_REF_READ_ONLY_BIT                            = 0x00000001,
-    XGL_MAX_ENUM(_XGL_MEMORY_REF_FLAGS)
-} XGL_MEMORY_REF_FLAGS;
-
 // Format capability flags
 typedef enum _XGL_FORMAT_FEATURE_FLAGS
 {
@@ -2160,12 +2153,6 @@ typedef struct _XGL_RENDER_PASS_CREATE_INFO
     XGL_ATTACHMENT_STORE_OP                 stencilStoreOp;
 } XGL_RENDER_PASS_CREATE_INFO;
 
-typedef struct _XGL_MEMORY_REF
-{
-    XGL_GPU_MEMORY                          mem;
-    XGL_FLAGS                               flags;      // XGL_MEMORY_REF_FLAGS
-} XGL_MEMORY_REF;
-
 typedef struct _XGL_EVENT_CREATE_INFO
 {
     XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO
@@ -2269,7 +2256,7 @@ typedef XGL_RESULT (XGLAPI *xglDestroyDeviceType)(XGL_DEVICE device);
 typedef XGL_RESULT (XGLAPI *xglGetExtensionSupportType)(XGL_PHYSICAL_GPU gpu, const char* pExtName);
 typedef XGL_RESULT (XGLAPI *xglEnumerateLayersType)(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
 typedef XGL_RESULT (XGLAPI *xglGetDeviceQueueType)(XGL_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, XGL_QUEUE* pQueue);
-typedef XGL_RESULT (XGLAPI *xglQueueSubmitType)(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, uint32_t memRefCount, const XGL_MEMORY_REF* pMemRefs, XGL_FENCE fence);
+typedef XGL_RESULT (XGLAPI *xglQueueSubmitType)(XGL_QUEUE queue, uint32_t cmdBufferCount, const XGL_CMD_BUFFER* pCmdBuffers, XGL_FENCE fence);
 typedef XGL_RESULT (XGLAPI *xglQueueAddMemReferenceType)(XGL_QUEUE queue, XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglQueueRemoveMemReferenceType)(XGL_QUEUE queue, XGL_GPU_MEMORY mem);
 typedef XGL_RESULT (XGLAPI *xglQueueWaitIdleType)(XGL_QUEUE queue);
@@ -2439,8 +2426,6 @@ XGL_RESULT XGLAPI xglQueueSubmit(
     XGL_QUEUE                                   queue,
     uint32_t                                    cmdBufferCount,
     const XGL_CMD_BUFFER*                       pCmdBuffers,
-    uint32_t                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence);
 
 XGL_RESULT XGLAPI xglQueueAddMemReference(

@@ -1745,8 +1745,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     XGL_QUEUE                                   queue_,
     uint32_t                                    cmdBufferCount,
     const XGL_CMD_BUFFER*                       pCmdBuffers,
-    uint32_t                                    memRefCount,
-    const XGL_MEMORY_REF*                       pMemRefs,
     XGL_FENCE                                   fence_)
 {
     NULLDRV_LOG_FUNC;

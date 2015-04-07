@@ -115,7 +115,7 @@ XGL_RESULT XGLAPI xglWsiX11GetMSC(
 /**
  * Create an XGL_IMAGE that can be presented.  An XGL_GPU_MEMORY is created
  * and bound automatically.  The memory returned can only be used in
- * XGL_MEMORY_REF.  Destroying the memory or binding another memory to the
+ * xglQueue[Add|Remove]MemReference.  Destroying the memory or binding another memory to the
  * image is not allowed.
  */
 XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(

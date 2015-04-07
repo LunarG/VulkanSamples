@@ -1235,14 +1235,14 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('static void validate_memory_mapping_status(const XGL_MEMORY_REF* pMemRefs, uint32_t numRefs) {')
+        header_txt.append('static void validate_memory_mapping_status(const XGL_GPU_MEMORY* pMemRefs, uint32_t numRefs) {')
         header_txt.append('    uint32_t i;')
         header_txt.append('    for (i = 0; i < numRefs; i++) {')
-        header_txt.append('        if(pMemRefs[i].mem) {')
-        header_txt.append('            // If mem reference is in presentable image memory list, skip the check of the GPU_MEMORY list')
-        header_txt.append('            if (!validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, OBJTRACK_NONE, NULL) == XGL_TRUE)')
+        header_txt.append('        if (pMemRefs[i]) {')
+        header_txt.append('            // If mem reference is in a presentable image memory list, skip the check of the GPU_MEMORY list')
+        header_txt.append('            if (!validate_status((void *)pMemRefs[i], XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, OBJTRACK_NONE, NULL) == XGL_TRUE)')
         header_txt.append('            {')
-        header_txt.append('                validate_status((void *)pMemRefs[i].mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
+        header_txt.append('                validate_status((void *)pMemRefs[i], XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
         header_txt.append('            }')
         header_txt.append('        }')
         header_txt.append('    }')
@@ -1291,8 +1291,9 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'QueueSubmit' in proto.name:
             using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
-            using_line += '    validate_memory_mapping_status(pMemRefs, memRefCount);\n'
-            using_line += '    validate_mem_ref_count(memRefCount);\n'
+            using_line += '    // TODO: Fix for updated memory reference mechanism\n'
+            using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
+            using_line += '    // validate_mem_ref_count(memRefCount);\n'
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
             using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'

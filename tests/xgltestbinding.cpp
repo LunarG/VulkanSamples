@@ -513,23 +513,36 @@ void Device::end_descriptor_pool_update(CmdBuffer &cmd)
     EXPECT(xglEndDescriptorPoolUpdate(obj(), cmd.obj()) == XGL_SUCCESS);
 }
 
-void Queue::submit(const std::vector<const CmdBuffer *> &cmds, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence)
+void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<XGL_CMD_BUFFER> cmd_objs = make_objects<XGL_CMD_BUFFER>(cmds);
-    EXPECT(xglQueueSubmit(obj(), cmd_objs.size(), &cmd_objs[0], mem_refs.size(), &mem_refs[0], fence.obj()) == XGL_SUCCESS);
+    EXPECT(xglQueueSubmit(obj(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == XGL_SUCCESS);
 }
 
-void Queue::submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_refs, Fence &fence)
+void Queue::submit(const CmdBuffer &cmd, Fence &fence)
 {
-    submit(std::vector<const CmdBuffer*>(1, &cmd), mem_refs, fence);
+    submit(std::vector<const CmdBuffer*>(1, &cmd), fence);
 }
 
-void Queue::submit(const CmdBuffer &cmd, const std::vector<XGL_MEMORY_REF> &mem_refs)
+void Queue::submit(const CmdBuffer &cmd)
 {
     Fence fence;
-    submit(cmd, mem_refs, fence);
+    submit(cmd, fence);
 }
 
+void Queue::add_mem_references(const std::vector<XGL_GPU_MEMORY> &mem_refs)
+{
+    for (int i = 0; i < mem_refs.size(); i++) {
+        EXPECT(xglQueueAddMemReference(obj(), mem_refs[i]) == XGL_SUCCESS);
+    }
+}
+
+void Queue::remove_mem_references(const std::vector<XGL_GPU_MEMORY> &mem_refs)
+{
+    for (int i = 0; i < mem_refs.size(); i++) {
+        EXPECT(xglQueueRemoveMemReference(obj(), mem_refs[i]) == XGL_SUCCESS);
+    }
+}
 
 void Queue::wait()
 {
