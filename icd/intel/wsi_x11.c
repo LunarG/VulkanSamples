@@ -105,6 +105,38 @@ static bool wsi_x11_is_format_presentable(struct intel_wsi_x11 *x11,
     }
 }
 
+static int x11_export_prime_fd(struct intel_dev *dev,
+                               struct intel_bo *bo,
+                               const struct intel_layout *layout)
+{
+    struct intel_winsys_handle export;
+    enum intel_tiling_mode tiling;
+
+    export.type = INTEL_WINSYS_HANDLE_FD;
+
+    switch (layout->tiling) {
+    case GEN6_TILING_X:
+        tiling = INTEL_TILING_X;
+        break;
+    case GEN6_TILING_Y:
+        tiling = INTEL_TILING_Y;
+        break;
+    default:
+        assert(layout->tiling == GEN6_TILING_NONE);
+        tiling = INTEL_TILING_NONE;
+        break;
+    }
+
+    if (intel_bo_set_tiling(bo, tiling, layout->bo_stride))
+        return -1;
+
+    if (intel_winsys_export_handle(dev->winsys, bo, tiling,
+                layout->bo_stride, layout->bo_height, &export))
+        return -1;
+
+    return (int) export.handle;
+}
+
 /**
  * Return true if x11->fd points to the primary or render node of the GPU.
  */
@@ -196,6 +228,27 @@ static bool wsi_x11_dri3_open(struct intel_wsi_x11 *x11)
 }
 
 /**
+ * Send a DRI3PixmapFromBuffer to create a pixmap from \p prime_fd.
+ */
+static xcb_pixmap_t x11_dri3_pixmap_from_buffer(xcb_connection_t *c,
+                                                xcb_drawable_t drawable,
+                                                uint8_t depth, int prime_fd,
+                                                const struct intel_layout *layout)
+{
+    xcb_pixmap_t pixmap;
+
+    pixmap = xcb_generate_id(c);
+
+    xcb_dri3_pixmap_from_buffer(c, pixmap, drawable,
+            layout->bo_stride * layout->bo_height,
+            layout->width0, layout->height0,
+            layout->bo_stride, depth,
+            layout->block_size * 8, prime_fd);
+
+    return pixmap;
+}
+
+/**
  * Send DRI3QueryVersion and PresentQueryVersion to query extension versions.
  */
 static bool wsi_x11_dri3_and_present_query_version(struct intel_wsi_x11 *x11)
@@ -255,9 +308,6 @@ static XGL_RESULT x11_swap_chain_present_select_input(struct intel_x11_swap_chai
     return XGL_SUCCESS;
 }
 
-/**
- * Send a DRI3PixmapFromBuffer to create a Pixmap from \p mem for \p img.
- */
 static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
                                                   struct intel_dev *dev,
                                                   struct intel_img *img,
@@ -265,43 +315,15 @@ static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
 {
     struct intel_x11_img_data *data =
         (struct intel_x11_img_data *) img->wsi_data;
-    struct intel_winsys_handle export;
-    enum intel_tiling_mode tiling;
-    xcb_pixmap_t pixmap;
 
-    switch (img->layout.tiling) {
-    case GEN6_TILING_X:
-        tiling = INTEL_TILING_X;
-        break;
-    case GEN6_TILING_Y:
-        tiling = INTEL_TILING_Y;
-        break;
-    default:
-        assert(img->layout.tiling == GEN6_TILING_NONE);
-        tiling = INTEL_TILING_NONE;
-        break;
-    }
-
-    /* get prime fd of the bo first */
-    if (intel_bo_set_tiling(mem->bo, tiling, img->layout.bo_stride))
-        return XGL_ERROR_UNKNOWN;
-    export.type = INTEL_WINSYS_HANDLE_FD;
-    if (intel_winsys_export_handle(dev->winsys, mem->bo, tiling,
-                img->layout.bo_stride, img->layout.bo_height, &export))
+    data->prime_fd = x11_export_prime_fd(dev, mem->bo, &img->layout);
+    if (data->prime_fd < 0)
         return XGL_ERROR_UNKNOWN;
 
-    pixmap = xcb_generate_id(x11->c);
-
-    /* create a pixmap from the prime fd */
-    xcb_dri3_pixmap_from_buffer(x11->c, pixmap,
-            x11->root, img->total_size,
-            img->layout.width0, img->layout.height0,
-            img->layout.bo_stride, x11->root_depth,
-            img->layout.block_size * 8, export.handle);
+    data->pixmap = x11_dri3_pixmap_from_buffer(x11->c, x11->root,
+            x11->root_depth, data->prime_fd, &img->layout);
 
     data->mem = mem;
-    data->prime_fd = export.handle;
-    data->pixmap = pixmap;
 
     return XGL_SUCCESS;
 }
