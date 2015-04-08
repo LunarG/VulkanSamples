@@ -60,11 +60,6 @@ static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
-#define ALLOC_DEBUG 0
-#if ALLOC_DEBUG
-static uint64_t g_alloc_count = 0;
-static uint64_t g_free_count = 0;
-#endif
 #define MAX_TID 513
 static loader_platform_thread_id g_tidMapping[MAX_TID] = {0};
 static uint32_t g_maxTID = 0;
@@ -231,7 +226,7 @@ static void insertDynamicState(const VK_DYNAMIC_STATE_OBJECT state, const GENERI
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Free all allocated nodes for Dynamic State objs
-static void freeDynamicState()
+static void deleteDynamicState()
 {
     for (unordered_map<VK_DYNAMIC_STATE_OBJECT, DYNAMIC_STATE_NODE*>::iterator ii=dynamicStateMap.begin(); ii!=dynamicStateMap.end(); ++ii) {
         if (VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == (*ii).second->create_info.vpci.sType) {
@@ -242,7 +237,7 @@ static void freeDynamicState()
     }
 }
 // Free all sampler nodes
-static void freeSamplers()
+static void deleteSamplers()
 {
     for (unordered_map<VK_SAMPLER, SAMPLER_NODE*>::iterator ii=sampleMap.begin(); ii!=sampleMap.end(); ++ii) {
         delete (*ii).second;
@@ -261,7 +256,7 @@ static VK_IMAGE_VIEW_CREATE_INFO* getImageViewCreateInfo(VK_IMAGE_VIEW view)
     }
 }
 // Free all image nodes
-static void freeImages()
+static void deleteImages()
 {
     for (unordered_map<VK_IMAGE_VIEW, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
         delete (*ii).second;
@@ -280,7 +275,7 @@ static VK_BUFFER_VIEW_CREATE_INFO* getBufferViewCreateInfo(VK_BUFFER_VIEW view)
     }
 }
 // Free all buffer nodes
-static void freeBuffers()
+static void deleteBuffers()
 {
     for (unordered_map<VK_BUFFER_VIEW, BUFFER_NODE*>::iterator ii=bufferMap.begin(); ii!=bufferMap.end(); ++ii) {
         delete (*ii).second;
@@ -479,7 +474,7 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VK_GRAPHICS_PIPELINE_CR
     pipelineMap[pPipeline->pipeline] = pPipeline;
 }
 // Free the Pipeline nodes
-static void freePipelines()
+static void deletePipelines()
 {
     for (unordered_map<VK_PIPELINE, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
         if ((*ii).second->pVertexBindingDescriptions) {
@@ -709,86 +704,61 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
 static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pNewNode = NULL;
+    VK_UPDATE_SAMPLERS* pUS = NULL;
+    VK_UPDATE_SAMPLER_TEXTURES* pUST = NULL;
+    VK_UPDATE_BUFFERS* pUB = NULL;
+    VK_UPDATE_IMAGES* pUI = NULL;
+    VK_UPDATE_AS_COPY* pUAC = NULL;
     size_t array_size = 0;
     size_t base_array_size = 0;
     size_t total_array_size = 0;
     size_t baseBuffAddr = 0;
-    VK_UPDATE_BUFFERS* pUBCI;
-    VK_UPDATE_IMAGES* pUICI;
     VK_IMAGE_VIEW_ATTACH_INFO** ppLocalImageViews = NULL;
     VK_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferViews = NULL;
     char str[1024];
     switch (pUpdate->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            pNewNode = (GENERIC_HEADER*)malloc(sizeof(VK_UPDATE_SAMPLERS));
-#if ALLOC_DEBUG
-            printf("Alloc10 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
-            memcpy(pNewNode, pUpdate, sizeof(VK_UPDATE_SAMPLERS));
-            array_size = sizeof(VK_SAMPLER) * ((VK_UPDATE_SAMPLERS*)pNewNode)->count;
-            ((VK_UPDATE_SAMPLERS*)pNewNode)->pSamplers = (VK_SAMPLER*)malloc(array_size);
-#if ALLOC_DEBUG
-            printf("Alloc11 #%lu pNewNode->pSamplers addr(%p)\n", ++g_alloc_count, (void*)((VK_UPDATE_SAMPLERS*)pNewNode)->pSamplers);
-#endif
-            memcpy((VK_SAMPLER*)((VK_UPDATE_SAMPLERS*)pNewNode)->pSamplers, ((VK_UPDATE_SAMPLERS*)pUpdate)->pSamplers, array_size);
+            pUS = new VK_UPDATE_SAMPLERS;
+            pNewNode = (GENERIC_HEADER*)pUS;
+            memcpy(pUS, pUpdate, sizeof(VK_UPDATE_SAMPLERS));
+            pUS->pSamplers = new VK_SAMPLER[pUS->count];
+            array_size = sizeof(VK_SAMPLER) * pUS->count;
+            memcpy((void*)pUS->pSamplers, ((VK_UPDATE_SAMPLERS*)pUpdate)->pSamplers, array_size);
             break;
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            pNewNode = (GENERIC_HEADER*)malloc(sizeof(VK_UPDATE_SAMPLER_TEXTURES));
-#if ALLOC_DEBUG
-            printf("Alloc12 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
-            memcpy(pNewNode, pUpdate, sizeof(VK_UPDATE_SAMPLER_TEXTURES));
-            array_size = sizeof(VK_SAMPLER_IMAGE_VIEW_INFO) * ((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->count;
-            ((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews = (VK_SAMPLER_IMAGE_VIEW_INFO*)malloc(array_size);
-#if ALLOC_DEBUG
-            printf("Alloc13 #%lu pNewNode->pSamplerImageViews addr(%p)\n", ++g_alloc_count, (void*)((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews);
-#endif
-            for (uint32_t i = 0; i < ((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->count; i++) {
-                memcpy((VK_SAMPLER_IMAGE_VIEW_INFO*)&((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews[i], &((VK_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i], sizeof(VK_SAMPLER_IMAGE_VIEW_INFO));
-                ((VK_SAMPLER_IMAGE_VIEW_INFO*)((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView = (VK_IMAGE_VIEW_ATTACH_INFO*)malloc(sizeof(VK_IMAGE_VIEW_ATTACH_INFO));
-#if ALLOC_DEBUG
-                printf("Alloc14 #%lu pSamplerImageViews)[%u].pImageView addr(%p)\n", ++g_alloc_count, i, (void*)((VK_SAMPLER_IMAGE_VIEW_INFO*)((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews)[i].pImageView);
-#endif
-                memcpy((VK_IMAGE_VIEW_ATTACH_INFO*)((VK_UPDATE_SAMPLER_TEXTURES*)pNewNode)->pSamplerImageViews[i].pImageView, ((VK_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i].pImageView, sizeof(VK_IMAGE_VIEW_ATTACH_INFO));
+            pUST = new VK_UPDATE_SAMPLER_TEXTURES;
+            pNewNode = (GENERIC_HEADER*)pUST;
+            memcpy(pUST, pUpdate, sizeof(VK_UPDATE_SAMPLER_TEXTURES));
+            pUST->pSamplerImageViews = new VK_SAMPLER_IMAGE_VIEW_INFO[pUST->count];
+            array_size = sizeof(VK_SAMPLER_IMAGE_VIEW_INFO) * pUST->count;
+            memcpy((void*)pUST->pSamplerImageViews, ((VK_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews, array_size);
+            for (uint32_t i = 0; i < pUST->count; i++) {
+                VK_IMAGE_VIEW_ATTACH_INFO** ppIV = (VK_IMAGE_VIEW_ATTACH_INFO**)&pUST->pSamplerImageViews[i].pImageView;
+                *ppIV = new VK_IMAGE_VIEW_ATTACH_INFO;
+                memcpy((void*)*ppIV, ((VK_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i].pImageView, sizeof(VK_IMAGE_VIEW_ATTACH_INFO));
             }
             break;
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            pUICI = (VK_UPDATE_IMAGES*)pUpdate;
-            pNewNode = (GENERIC_HEADER*)malloc(sizeof(VK_UPDATE_IMAGES));
-#if ALLOC_DEBUG
-            printf("Alloc15 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
-            memcpy(pNewNode, pUpdate, sizeof(VK_UPDATE_IMAGES));
-            total_array_size = (sizeof(VK_IMAGE_VIEW_ATTACH_INFO) * ((VK_UPDATE_IMAGES*)pNewNode)->count);
-            ppLocalImageViews = (VK_IMAGE_VIEW_ATTACH_INFO**)&(((VK_UPDATE_IMAGES*)pNewNode)->pImageViews);
-            *ppLocalImageViews = (VK_IMAGE_VIEW_ATTACH_INFO*)malloc(total_array_size);
-#if ALLOC_DEBUG
-            printf("Alloc16 #%lu *pppLocalImageViews addr(%p)\n", ++g_alloc_count, (void*)*ppLocalImageViews);
-#endif
-            memcpy((void*)*ppLocalImageViews, pUICI->pImageViews, total_array_size);
+            pUI = new VK_UPDATE_IMAGES;
+            pNewNode = (GENERIC_HEADER*)pUI;
+            memcpy(pUI, pUpdate, sizeof(VK_UPDATE_IMAGES));
+            pUI->pImageViews = new VK_IMAGE_VIEW_ATTACH_INFO[pUI->count];
+            array_size = (sizeof(VK_IMAGE_VIEW_ATTACH_INFO) * pUI->count);
+            memcpy((void*)pUI->pImageViews, ((VK_UPDATE_IMAGES*)pUpdate)->pImageViews, array_size);
             break;
         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            pUBCI = (VK_UPDATE_BUFFERS*)pUpdate;
-            pNewNode = (GENERIC_HEADER*)malloc(sizeof(VK_UPDATE_BUFFERS));
-#if ALLOC_DEBUG
-            printf("Alloc17 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
-            memcpy(pNewNode, pUpdate, sizeof(VK_UPDATE_BUFFERS));
-            total_array_size = (sizeof(VK_BUFFER_VIEW_ATTACH_INFO) * pUBCI->count);
-            ppLocalBufferViews = (VK_BUFFER_VIEW_ATTACH_INFO**)&(((VK_UPDATE_BUFFERS*)pNewNode)->pBufferViews);
-            *ppLocalBufferViews = (VK_BUFFER_VIEW_ATTACH_INFO*)malloc(total_array_size);
-#if ALLOC_DEBUG
-            printf("Alloc18 #%lu *pppLocalBufferViews addr(%p)\n", ++g_alloc_count, (void*)*ppLocalBufferViews);
-#endif
-            memcpy((void*)*ppLocalBufferViews, pUBCI->pBufferViews, total_array_size);
+            pUB = new VK_UPDATE_BUFFERS;
+            pNewNode = (GENERIC_HEADER*)pUB;
+            memcpy(pUB, pUpdate, sizeof(VK_UPDATE_BUFFERS));
+            pUB->pBufferViews = new VK_BUFFER_VIEW_ATTACH_INFO[pUB->count];
+            array_size = (sizeof(VK_BUFFER_VIEW_ATTACH_INFO) * pUB->count);
+            memcpy((void*)pUB->pBufferViews, ((VK_UPDATE_BUFFERS*)pUpdate)->pBufferViews, array_size);
             break;
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            pNewNode = (GENERIC_HEADER*)malloc(sizeof(VK_UPDATE_AS_COPY));
-#if ALLOC_DEBUG
-            printf("Alloc19 #%lu pNewNode addr(%p)\n", ++g_alloc_count, (void*)pNewNode);
-#endif
-            memcpy(pNewNode, pUpdate, sizeof(VK_UPDATE_AS_COPY));
+            pUAC = new VK_UPDATE_AS_COPY;
+            pUpdate = (GENERIC_HEADER*)pUAC;
+            memcpy(pUAC, pUpdate, sizeof(VK_UPDATE_AS_COPY));
             break;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VK_STRUCTURE_TYPE(pUpdate->sType), pUpdate->sType);
@@ -882,50 +852,29 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         {
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
                 pUS = (VK_UPDATE_SAMPLERS*)pFreeUpdate;
-                if (pUS->pSamplers) {
-                    ppToFree = (void**)&pUS->pSamplers;
-#if ALLOC_DEBUG
-                    printf("Free11 #%lu pSamplers addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                    free(*ppToFree);
-                }
+                if (pUS->pSamplers)
+                    delete[] pUS->pSamplers;
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
                 pUST = (VK_UPDATE_SAMPLER_TEXTURES*)pFreeUpdate;
-                for (index = 0; index < pUST->count; index++) {
-                    if (pUST->pSamplerImageViews[index].pImageView) {
-                        ppToFree = (void**)&pUST->pSamplerImageViews[index].pImageView;
-#if ALLOC_DEBUG
-                        printf("Free14 #%lu pImageView addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                        free(*ppToFree);
+                if (pUST->pSamplerImageViews) {
+                    for (index = 0; index < pUST->count; index++) {
+                        if (pUST->pSamplerImageViews[index].pImageView) {
+                            delete pUST->pSamplerImageViews[index].pImageView;
+                        }
                     }
+                    delete[] pUST->pSamplerImageViews;
                 }
-                ppToFree = (void**)&pUST->pSamplerImageViews;
-#if ALLOC_DEBUG
-                printf("Free13 #%lu pSamplerImageViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                free(*ppToFree);
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
                 pUI = (VK_UPDATE_IMAGES*)pFreeUpdate;
-                if (pUI->pImageViews) {
-                    ppToFree = (void**)&pUI->pImageViews;
-#if ALLOC_DEBUG
-                    printf("Free16 #%lu pImageViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                    free(*ppToFree);
-                }
+                if (pUI->pImageViews)
+                    delete[] pUI->pImageViews;
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
                 pUB = (VK_UPDATE_BUFFERS*)pFreeUpdate;
-                if (pUB->pBufferViews) {
-                    ppToFree = (void**)&pUB->pBufferViews;
-#if ALLOC_DEBUG
-                    printf("Free18 #%lu pBufferViews addr(%p)\n", ++g_free_count, (void*)*ppToFree);
-#endif
-                    free(*ppToFree);
-                }
+                if (pUB->pBufferViews)
+                    delete[] pUB->pBufferViews;
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
                 break;
@@ -933,15 +882,12 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
                 assert(0);
                 break;
         }
-#if ALLOC_DEBUG
-        printf("Free10, Free12, Free15, Free17, Free19 #%lu pUpdateNode addr(%p)\n", ++g_free_count, (void*)pFreeUpdate);
-#endif
-        free(pFreeUpdate);
+        delete pFreeUpdate;
     }
 }
 // Free all DS Pools including their Sets & related sub-structs
 // NOTE : Calls to this function should be wrapped in mutex
-static void freePools()
+static void deletePools()
 {
     for (unordered_map<VK_DESCRIPTOR_POOL, POOL_NODE*>::iterator ii=poolMap.begin(); ii!=poolMap.end(); ++ii) {
         SET_NODE* pSet = (*ii).second->pSets;
@@ -949,7 +895,7 @@ static void freePools()
         while (pSet) {
             pFreeSet = pSet;
             pSet = pSet->pNext;
-            // Freeing layouts handled in freeLayouts() function
+            // Freeing layouts handled in deleteLayouts() function
             // Free Update shadow struct tree
             freeShadowUpdateTree(pFreeSet);
             if (pFreeSet->ppDescriptors) {
@@ -963,12 +909,19 @@ static void freePools()
         delete (*ii).second;
     }
 }
-// WARN : Once freeLayouts() called, any layout ptrs in Pool/Set data structure will be invalid
+// WARN : Once deleteLayouts() called, any layout ptrs in Pool/Set data structure will be invalid
 // NOTE : Calls to this function should be wrapped in mutex
-static void freeLayouts()
+static void deleteLayouts()
 {
     for (unordered_map<VK_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*>::iterator ii=layoutMap.begin(); ii!=layoutMap.end(); ++ii) {
         LAYOUT_NODE* pLayout = (*ii).second;
+        if (pLayout->createInfo.pBinding) {
+            for (uint32_t i=0; i<pLayout->createInfo.count; i++) {
+                if (pLayout->createInfo.pBinding[i].pImmutableSamplers)
+                    delete[] pLayout->createInfo.pBinding[i].pImmutableSamplers;
+            }
+            delete[] pLayout->createInfo.pBinding;
+        }
         if (pLayout->pTypes) {
             delete pLayout->pTypes;
         }
@@ -1020,7 +973,7 @@ static GLOBAL_CB_NODE* getCBNode(VK_CMD_BUFFER cb)
 }
 // Free all CB Nodes
 // NOTE : Calls to this function should be wrapped in mutex
-static void freeCmdBuffers()
+static void deleteCmdBuffers()
 {
     for (unordered_map<VK_CMD_BUFFER, GLOBAL_CB_NODE*>::iterator ii=cmdBufferMap.begin(); ii!=cmdBufferMap.end(); ++ii) {
         while (!(*ii).second->pCmds.empty()) {
@@ -1501,14 +1454,14 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyDevice(VK_DEVICE device)
 {
     // Free all the memory
     loader_platform_thread_lock_mutex(&globalLock);
-    freePipelines();
-    freeSamplers();
-    freeImages();
-    freeBuffers();
-    freeCmdBuffers();
-    freeDynamicState();
-    freePools();
-    freeLayouts();
+    deletePipelines();
+    deleteSamplers();
+    deleteImages();
+    deleteBuffers();
+    deleteCmdBuffers();
+    deleteDynamicState();
+    deletePools();
+    deleteLayouts();
     loader_platform_thread_unlock_mutex(&globalLock);
     VK_RESULT result = nextTable.DestroyDevice(device);
     return result;
@@ -1670,9 +1623,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(VK_DEVICE device, co
         for (uint32_t i=0; i<pCreateInfo->count; i++) {
             totalCount += pCreateInfo->pBinding[i].count;
             if (pCreateInfo->pBinding[i].pImmutableSamplers) {
-                void** ppImmutableSamplers = (void**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
-                *ppImmutableSamplers = malloc(sizeof(VK_SAMPLER)*pCreateInfo->pBinding[i].count);
-                memcpy(*ppImmutableSamplers, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].count*sizeof(VK_SAMPLER));
+                VK_SAMPLER** ppIS = (VK_SAMPLER**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
+                *ppIS = new VK_SAMPLER[pCreateInfo->pBinding[i].count];
+                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].count*sizeof(VK_SAMPLER));
             }
         }
         if (totalCount > 0) {
@@ -2627,10 +2580,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VK_CMD_BUFFER cmdBuffer, VK_RENDER
 VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     // This layer intercepts callbacks
-    VK_LAYER_DBG_FUNCTION_NODE* pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
-#if ALLOC_DEBUG
-    printf("Alloc34 #%lu pNewDbgFuncNode addr(%p)\n", ++g_alloc_count, (void*)pNewDbgFuncNode);
-#endif
+    VK_LAYER_DBG_FUNCTION_NODE* pNewDbgFuncNode = new VK_LAYER_DBG_FUNCTION_NODE;
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_MEMORY;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
@@ -2654,10 +2604,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance,
             pPrev->pNext = pTrav->pNext;
             if (g_pDbgFunctionHead == pTrav)
                 g_pDbgFunctionHead = pTrav->pNext;
-#if ALLOC_DEBUG
-    printf("Free34 #%lu pNewDbgFuncNode addr(%p)\n", ++g_alloc_count, (void*)pTrav);
-#endif
-            free(pTrav);
+            delete pTrav;
             break;
         }
         pPrev = pTrav;
