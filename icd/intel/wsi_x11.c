@@ -90,6 +90,64 @@ struct intel_x11_fence_data {
     uint32_t serial;
 };
 
+static bool wsi_x11_is_format_presentable(struct intel_wsi_x11 *x11,
+                                          struct intel_dev *dev,
+                                          XGL_FORMAT format)
+{
+    /* this is what DDX expects */
+    switch (format) {
+    case XGL_FMT_B5G6R5_UNORM:
+    case XGL_FMT_B8G8R8A8_UNORM:
+    case XGL_FMT_B8G8R8A8_SRGB:
+        return true;
+    default:
+        return false;
+    }
+}
+
+/**
+ * Return true if x11->fd points to the primary or render node of the GPU.
+ */
+static bool wsi_x11_uses_gpu(const struct intel_wsi_x11 *x11,
+                             const struct intel_gpu *gpu)
+{
+    struct stat x11_stat, gpu_stat;
+
+    if (fstat(x11->fd, &x11_stat))
+        return false;
+
+    /* is it the primary node? */
+    if (!stat(gpu->primary_node, &gpu_stat) &&
+        !memcmp(&x11_stat, &gpu_stat, sizeof(x11_stat)))
+        return true;
+
+    /* is it the render node? */
+    if (gpu->render_node && !stat(gpu->render_node, &gpu_stat) &&
+        !memcmp(&x11_stat, &gpu_stat, sizeof(x11_stat)))
+        return true;
+
+    return false;
+}
+
+/**
+ * Return the depth of the root window.
+ */
+static int wsi_x11_get_root_depth(struct intel_wsi_x11 *x11)
+{
+    const xcb_setup_t *setup;
+    xcb_screen_iterator_t iter;
+
+    setup = xcb_get_setup(x11->c);
+
+    iter = xcb_setup_roots_iterator(setup);
+    for (; iter.rem; xcb_screen_next(&iter)) {
+        if (iter.data->root == x11->root)
+            return iter.data->root_depth;
+    }
+
+    return 0;
+}
+
 /**
  * Return true if DRI3 and Present are supported by the server.
  */
@@ -112,22 +170,29 @@ static bool wsi_x11_has_dri3_and_present(struct intel_wsi_x11 *x11)
 }
 
 /**
- * Return the depth of the root window.
+ * Send a DRI3Open to get the server GPU fd.
  */
-static int wsi_x11_get_root_depth(struct intel_wsi_x11 *x11)
+static bool wsi_x11_dri3_open(struct intel_wsi_x11 *x11)
 {
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
+    xcb_dri3_open_cookie_t cookie;
+    xcb_dri3_open_reply_t *reply;
+    int fd;
 
-    setup = xcb_get_setup(x11->c);
+    cookie = xcb_dri3_open(x11->c, x11->root, x11->provider);
+    reply = xcb_dri3_open_reply(x11->c, cookie, NULL);
+    if (!reply)
+        return false;
 
-    iter = xcb_setup_roots_iterator(setup);
-    for (; iter.rem; xcb_screen_next(&iter)) {
-        if (iter.data->root == x11->root)
-            return iter.data->root_depth;
-    }
+    fd = (reply->nfd == 1) ? xcb_dri3_open_reply_fds(x11->c, reply)[0] : -1;
+    free(reply);
 
-    return 0;
+    if (fd < 0)
+        return false;
+
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+    x11->fd = fd;
+
+    return true;
 }
 
 /**
@@ -165,53 +230,29 @@ static bool wsi_x11_dri3_and_present_query_version(struct intel_wsi_x11 *x11)
 }
 
 /**
- * Return true if x11->fd points to the primary or render node of the GPU.
+ * Send a PresentSelectInput to select interested events.
  */
-static bool wsi_x11_uses_gpu(const struct intel_wsi_x11 *x11,
-                             const struct intel_gpu *gpu)
+static XGL_RESULT x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
 {
-    struct stat x11_stat, gpu_stat;
+    xcb_void_cookie_t cookie;
+    xcb_generic_error_t *error;
 
-    if (fstat(x11->fd, &x11_stat))
-        return false;
+    /* create the event queue */
+    sc->present_special_event_id = xcb_generate_id(sc->c);
+    sc->present_special_event = xcb_register_for_special_xge(sc->c,
+            &xcb_present_id, sc->present_special_event_id, NULL);
 
-    /* is it the primary node? */
-    if (!stat(gpu->primary_node, &gpu_stat) &&
-        !memcmp(&x11_stat, &gpu_stat, sizeof(x11_stat)))
-        return true;
+    cookie = xcb_present_select_input_checked(sc->c,
+            sc->present_special_event_id, sc->window,
+            XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY);
 
-    /* is it the render node? */
-    if (gpu->render_node && !stat(gpu->render_node, &gpu_stat) &&
-        !memcmp(&x11_stat, &gpu_stat, sizeof(x11_stat)))
-        return true;
+    error = xcb_request_check(sc->c, cookie);
+    if (error) {
+        free(error);
+        return XGL_ERROR_UNKNOWN;
+    }
 
-    return false;
-}
-
-/**
- * Send a DRI3Open to get the server GPU fd.
- */
-static bool wsi_x11_dri3_open(struct intel_wsi_x11 *x11)
-{
-    xcb_dri3_open_cookie_t cookie;
-    xcb_dri3_open_reply_t *reply;
-    int fd;
-
-    cookie = xcb_dri3_open(x11->c, x11->root, x11->provider);
-    reply = xcb_dri3_open_reply(x11->c, cookie, NULL);
-    if (!reply)
-        return false;
-
-    fd = (reply->nfd == 1) ? xcb_dri3_open_reply_fds(x11->c, reply)[0] : -1;
-    free(reply);
-
-    if (fd < 0)
-        return false;
-
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-    x11->fd = fd;
-
-    return true;
+    return XGL_SUCCESS;
 }
 
 /**
@@ -266,27 +307,68 @@ static XGL_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
 }
 
 /**
- * Send a PresentSelectInput to select interested events.
+ * Create a presentable image.
  */
-static XGL_RESULT x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
+static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
+                                     struct intel_dev *dev,
+                                     const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO *info,
+                                     struct intel_img **img_ret)
 {
-    xcb_void_cookie_t cookie;
-    xcb_generic_error_t *error;
+    XGL_IMAGE_CREATE_INFO img_info;
+    XGL_MEMORY_ALLOC_INFO mem_info;
+    struct intel_img *img;
+    struct intel_mem *mem;
+    XGL_RESULT ret;
 
-    /* create the event queue */
-    sc->present_special_event_id = xcb_generate_id(sc->c);
-    sc->present_special_event = xcb_register_for_special_xge(sc->c,
-            &xcb_present_id, sc->present_special_event_id, NULL);
-
-    cookie = xcb_present_select_input_checked(sc->c,
-            sc->present_special_event_id, sc->window,
-            XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY);
-
-    error = xcb_request_check(sc->c, cookie);
-    if (error) {
-        free(error);
-        return XGL_ERROR_UNKNOWN;
+    if (!wsi_x11_is_format_presentable(x11, dev, info->format)) {
+        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
+                XGL_NULL_HANDLE, 0, 0, "invalid presentable image format");
+        return XGL_ERROR_INVALID_VALUE;
     }
+
+    /* create image */
+    memset(&img_info, 0, sizeof(img_info));
+    img_info.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    img_info.imageType = XGL_IMAGE_2D;
+    img_info.format = info->format;
+    img_info.extent.width = info->extent.width;
+    img_info.extent.height = info->extent.height;
+    img_info.extent.depth = 1;
+    img_info.mipLevels = 1;
+    img_info.arraySize = 1;
+    img_info.samples = 1;
+    img_info.tiling = XGL_OPTIMAL_TILING;
+    img_info.usage = info->usage;
+    img_info.flags = 0;
+
+    ret = intel_img_create(dev, &img_info, true, &img);
+    if (ret != XGL_SUCCESS)
+        return ret;
+
+    /* allocate memory */
+    memset(&mem_info, 0, sizeof(mem_info));
+    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.allocationSize = img->total_size;
+    mem_info.memProps =  0;
+    mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
+    mem_info.memPriority = XGL_MEMORY_PRIORITY_HIGH;
+
+    ret = intel_mem_alloc(dev, &mem_info, &mem);
+    if (ret != XGL_SUCCESS) {
+        intel_img_destroy(img);
+        return ret;
+    }
+
+    ret = wsi_x11_dri3_pixmap_from_buffer(x11, dev, img, mem);
+    if (ret != XGL_SUCCESS) {
+        intel_mem_free(mem);
+        intel_img_destroy(img);
+        return ret;
+    }
+
+    intel_obj_bind_mem(&img->obj, mem, 0);
+
+    *img_ret = img;
 
     return XGL_SUCCESS;
 }
@@ -367,12 +449,87 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
     }
 }
 
+static XGL_RESULT x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
+                                      uint32_t serial, int64_t timeout)
+{
+    const bool wait = (timeout != 0);
+
+    while (sc->remote.serial < serial) {
+        xcb_present_generic_event_t *ev;
+
+        if (wait) {
+            ev = (xcb_present_generic_event_t *)
+                xcb_wait_for_special_event(sc->c, sc->present_special_event);
+            if (!ev)
+                return XGL_ERROR_UNKNOWN;
+        } else {
+            ev = (xcb_present_generic_event_t *)
+                xcb_poll_for_special_event(sc->c, sc->present_special_event);
+            if (!ev)
+                return XGL_NOT_READY;
+        }
+
+        x11_swap_chain_present_event(sc, ev);
+
+        free(ev);
+    }
+
+    return XGL_SUCCESS;
+}
+
 static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
 {
     if (sc->present_special_event)
         xcb_unregister_for_special_event(sc->c, sc->present_special_event);
 
     intel_free(sc, sc);
+}
+
+static void wsi_x11_destroy(struct intel_wsi_x11 *x11)
+{
+    struct intel_x11_swap_chain *sc = x11->swap_chains;
+
+    while (sc) {
+        struct intel_x11_swap_chain *next = sc->next;
+        x11_swap_chain_destroy(sc);
+        sc = next;
+    }
+
+    if (x11->fd >= 0)
+        close(x11->fd);
+
+    intel_free(x11, x11);
+}
+
+static struct intel_wsi_x11 *wsi_x11_create(struct intel_gpu *gpu,
+                                            const XGL_WSI_X11_CONNECTION_INFO *info)
+{
+    struct intel_wsi_x11 *x11;
+
+    x11 = intel_alloc(gpu, sizeof(*x11), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    if (!x11)
+        return NULL;
+
+    memset(x11, 0, sizeof(*x11));
+    /* there is no XGL_DBG_OBJECT_WSI_DISPLAY */
+    intel_handle_init(&x11->handle, XGL_DBG_OBJECT_UNKNOWN, gpu->handle.icd);
+    x11->fd = -1;
+
+    x11->c = info->pConnection;
+    x11->root = info->root;
+    x11->provider = info->provider;
+
+    x11->root_depth = wsi_x11_get_root_depth(x11);
+
+    if (!wsi_x11_has_dri3_and_present(x11) ||
+        !wsi_x11_dri3_and_present_query_version(x11) ||
+        !wsi_x11_dri3_open(x11) ||
+        !wsi_x11_uses_gpu(x11, gpu)) {
+        wsi_x11_destroy(x11);
+        return NULL;
+    }
+
+    return x11;
 }
 
 static struct intel_x11_swap_chain *x11_swap_chain_create(struct intel_dev *dev,
@@ -423,163 +580,6 @@ static struct intel_x11_swap_chain *x11_swap_chain_lookup(struct intel_dev *dev,
     }
 
     return sc;
-}
-
-static XGL_RESULT x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
-                                      uint32_t serial, int64_t timeout)
-{
-    const bool wait = (timeout != 0);
-
-    while (sc->remote.serial < serial) {
-        xcb_present_generic_event_t *ev;
-
-        if (wait) {
-            ev = (xcb_present_generic_event_t *)
-                xcb_wait_for_special_event(sc->c, sc->present_special_event);
-            if (!ev)
-                return XGL_ERROR_UNKNOWN;
-        } else {
-            ev = (xcb_present_generic_event_t *)
-                xcb_poll_for_special_event(sc->c, sc->present_special_event);
-            if (!ev)
-                return XGL_NOT_READY;
-        }
-
-        x11_swap_chain_present_event(sc, ev);
-
-        free(ev);
-    }
-
-    return XGL_SUCCESS;
-}
-
-static bool wsi_x11_is_format_presentable(struct intel_wsi_x11 *x11,
-                                          struct intel_dev *dev,
-                                          XGL_FORMAT format)
-{
-    /* this is what DDX expects */
-    switch (format) {
-    case XGL_FMT_B5G6R5_UNORM:
-    case XGL_FMT_B8G8R8A8_UNORM:
-    case XGL_FMT_B8G8R8A8_SRGB:
-        return true;
-    default:
-        return false;
-    }
-}
-
-/**
- * Create a presentable image.
- */
-static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
-                                     struct intel_dev *dev,
-                                     const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO *info,
-                                     struct intel_img **img_ret)
-{
-    XGL_IMAGE_CREATE_INFO img_info;
-    XGL_MEMORY_ALLOC_INFO mem_info;
-    struct intel_img *img;
-    struct intel_mem *mem;
-    XGL_RESULT ret;
-
-    if (!wsi_x11_is_format_presentable(x11, dev, info->format)) {
-        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "invalid presentable image format");
-        return XGL_ERROR_INVALID_VALUE;
-    }
-
-    /* create image */
-    memset(&img_info, 0, sizeof(img_info));
-    img_info.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    img_info.imageType = XGL_IMAGE_2D;
-    img_info.format = info->format;
-    img_info.extent.width = info->extent.width;
-    img_info.extent.height = info->extent.height;
-    img_info.extent.depth = 1;
-    img_info.mipLevels = 1;
-    img_info.arraySize = 1;
-    img_info.samples = 1;
-    img_info.tiling = XGL_OPTIMAL_TILING;
-    img_info.usage = info->usage;
-    img_info.flags = 0;
-
-    ret = intel_img_create(dev, &img_info, true, &img);
-    if (ret != XGL_SUCCESS)
-        return ret;
-
-    /* allocate memory */
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = img->total_size;
-    mem_info.memProps =  0;
-    mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_HIGH;
-
-    ret = intel_mem_alloc(dev, &mem_info, &mem);
-    if (ret != XGL_SUCCESS) {
-        intel_img_destroy(img);
-        return ret;
-    }
-
-    ret = wsi_x11_dri3_pixmap_from_buffer(x11, dev, img, mem);
-    if (ret != XGL_SUCCESS) {
-        intel_mem_free(mem);
-        intel_img_destroy(img);
-        return ret;
-    }
-
-    intel_obj_bind_mem(&img->obj, mem, 0);
-
-    *img_ret = img;
-
-    return XGL_SUCCESS;
-}
-
-static void wsi_x11_destroy(struct intel_wsi_x11 *x11)
-{
-    struct intel_x11_swap_chain *sc = x11->swap_chains;
-
-    while (sc) {
-        struct intel_x11_swap_chain *next = sc->next;
-        x11_swap_chain_destroy(sc);
-        sc = next;
-    }
-
-    if (x11->fd >= 0)
-        close(x11->fd);
-
-    intel_free(x11, x11);
-}
-
-static struct intel_wsi_x11 *wsi_x11_create(struct intel_gpu *gpu,
-                                            const XGL_WSI_X11_CONNECTION_INFO *info)
-{
-    struct intel_wsi_x11 *x11;
-
-    x11 = intel_alloc(gpu, sizeof(*x11), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
-    if (!x11)
-        return NULL;
-
-    memset(x11, 0, sizeof(*x11));
-    /* there is no XGL_DBG_OBJECT_WSI_DISPLAY */
-    intel_handle_init(&x11->handle, XGL_DBG_OBJECT_UNKNOWN, gpu->handle.icd);
-    x11->fd = -1;
-
-    x11->c = info->pConnection;
-    x11->root = info->root;
-    x11->provider = info->provider;
-
-    x11->root_depth = wsi_x11_get_root_depth(x11);
-
-    if (!wsi_x11_has_dri3_and_present(x11) ||
-        !wsi_x11_dri3_and_present_query_version(x11) ||
-        !wsi_x11_dri3_open(x11) ||
-        !wsi_x11_uses_gpu(x11, gpu)) {
-        wsi_x11_destroy(x11);
-        return NULL;
-    }
-
-    return x11;
 }
 
 static XGL_RESULT intel_wsi_gpu_init(struct intel_gpu *gpu,
