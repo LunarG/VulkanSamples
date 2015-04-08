@@ -103,7 +103,7 @@ void icd_instance_destroy(struct icd_instance *instance)
 {
     struct icd_instance_logger *logger;
 
-    for (logger = instance->loggers; logger; logger = logger->next) {
+    for (logger = instance->loggers; logger; ) {
         struct icd_instance_logger *next = logger->next;
 
         icd_instance_free(instance, logger);
